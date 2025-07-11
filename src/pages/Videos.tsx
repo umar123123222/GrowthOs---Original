@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,79 @@ import {
   ChevronRight
 } from "lucide-react";
 
+// Memoized lesson component for better performance
+const LessonRow = React.memo(({ 
+  lesson, 
+  moduleId, 
+  onWatchNow, 
+  onAssignmentClick 
+}: {
+  lesson: any;
+  moduleId: number;
+  onWatchNow: (moduleId: number, lessonId: number) => void;
+  onAssignmentClick: (lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean) => void;
+}) => (
+  <tr 
+    className={`border-b hover:bg-muted/20 transition-colors ${
+      lesson.locked ? "opacity-50" : ""
+    }`}
+  >
+    <td className="p-4 pl-8">
+      <div className="flex items-center gap-3">
+        <div className="flex-shrink-0">
+          {lesson.locked ? (
+            <Lock className="w-4 h-4 text-muted-foreground" />
+          ) : lesson.completed ? (
+            <CheckCircle className="w-4 h-4 text-green-600" />
+          ) : (
+            <Play className="w-4 h-4 text-blue-600" />
+          )}
+        </div>
+        <span className={lesson.locked ? "text-muted-foreground" : ""}>
+          {lesson.title}
+        </span>
+      </div>
+    </td>
+    <td className="p-4">
+      <div className="flex items-center gap-2">
+        <Clock className="w-4 h-4 text-muted-foreground" />
+        <span className="text-sm">{lesson.duration}</span>
+      </div>
+    </td>
+    <td className="p-4">
+      <Button
+        variant="ghost"
+        size="sm"
+        className={`flex items-center gap-2 transition-colors ${
+          lesson.assignmentSubmitted 
+            ? "text-green-600 hover:text-green-700" 
+            : "text-blue-600 hover:text-blue-700"
+        }`}
+        onClick={() => !lesson.locked && onAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
+        disabled={lesson.locked}
+      >
+        <FileText className="w-4 h-4" />
+        <span className="text-sm">
+          {lesson.assignmentSubmitted ? "✓ " : ""}{lesson.assignmentTitle}
+        </span>
+      </Button>
+    </td>
+    <td className="p-4">
+      <Button
+        size="sm"
+        onClick={() => !lesson.locked && onWatchNow(moduleId, lesson.id)}
+        disabled={lesson.locked}
+        className="text-blue-600 hover:text-blue-700 transition-colors"
+        variant="ghost"
+      >
+        Watch Now
+      </Button>
+    </td>
+  </tr>
+));
+
+LessonRow.displayName = "LessonRow";
+
 const Videos = () => {
   const navigate = useNavigate();
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
@@ -27,7 +100,8 @@ const Videos = () => {
     1: true // First module expanded by default
   });
 
-  const modules = [
+  // Memoize modules data to prevent unnecessary re-renders
+  const modules = useMemo(() => [
     {
       id: 1,
       title: "Introduction to E-commerce",
@@ -133,30 +207,31 @@ const Videos = () => {
         }
       ]
     }
-  ];
+  ], []);
 
-  const handleWatchNow = (moduleId: number, lessonId: number) => {
+  // Memoized callbacks to prevent unnecessary re-renders
+  const handleWatchNow = useCallback((moduleId: number, lessonId: number) => {
     navigate(`/videos/${moduleId}/${lessonId}`);
-  };
+  }, [navigate]);
 
-  const handleAssignmentClick = (lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean) => {
+  const handleAssignmentClick = useCallback((lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean) => {
     setSelectedAssignment({
       title: assignmentTitle,
       lessonTitle: lessonTitle,
       submitted: assignmentSubmitted
     });
     setAssignmentDialogOpen(true);
-  };
+  }, []);
 
-  const toggleModule = (moduleId: number) => {
+  const toggleModule = useCallback((moduleId: number) => {
     setExpandedModules(prev => ({
       ...prev,
       [moduleId]: !prev[moduleId]
     }));
-  };
+  }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
         <h1 className="text-3xl font-bold mb-2">Available Lessons</h1>
         <p className="text-muted-foreground">
@@ -164,7 +239,7 @@ const Videos = () => {
         </p>
       </div>
 
-      <Card>
+      <Card className="shadow-lg">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -178,19 +253,18 @@ const Videos = () => {
               </thead>
               <tbody>
                 {modules.map((module) => (
-                  <>
+                  <React.Fragment key={`module-${module.id}`}>
                     {/* Module Header */}
                     <tr 
-                      key={`module-${module.id}`} 
-                      className="border-b bg-blue-50/50 cursor-pointer hover:bg-blue-50"
+                      className="border-b bg-blue-50/50 cursor-pointer hover:bg-blue-50 transition-colors"
                       onClick={() => toggleModule(module.id)}
                     >
                       <td className="p-4">
                         <div className="flex items-center gap-2">
                           {expandedModules[module.id] ? (
-                            <ChevronDown className="w-4 h-4" />
+                            <ChevronDown className="w-4 h-4 transition-transform" />
                           ) : (
-                            <ChevronRight className="w-4 h-4" />
+                            <ChevronRight className="w-4 h-4 transition-transform" />
                           )}
                           <span className="font-semibold">{module.title}</span>
                           <Badge variant="outline" className="ml-2">
@@ -213,66 +287,15 @@ const Videos = () => {
 
                     {/* Module Lessons */}
                     {expandedModules[module.id] && module.lessons.map((lesson) => (
-                      <tr 
-                        key={`lesson-${lesson.id}`} 
-                        className={`border-b hover:bg-muted/20 ${
-                          lesson.locked ? "opacity-50" : ""
-                        }`}
-                      >
-                        <td className="p-4 pl-8">
-                          <div className="flex items-center gap-3">
-                            <div className="flex-shrink-0">
-                              {lesson.locked ? (
-                                <Lock className="w-4 h-4 text-muted-foreground" />
-                              ) : lesson.completed ? (
-                                <CheckCircle className="w-4 h-4 text-green-600" />
-                              ) : (
-                                <Play className="w-4 h-4 text-blue-600" />
-                              )}
-                            </div>
-                            <span className={lesson.locked ? "text-muted-foreground" : ""}>
-                              {lesson.title}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <div className="flex items-center gap-2">
-                            <Clock className="w-4 h-4 text-muted-foreground" />
-                            <span className="text-sm">{lesson.duration}</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={`flex items-center gap-2 ${
-                              lesson.assignmentSubmitted 
-                                ? "text-green-600 hover:text-green-700" 
-                                : "text-blue-600 hover:text-blue-700"
-                            }`}
-                            onClick={() => !lesson.locked && handleAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
-                            disabled={lesson.locked}
-                          >
-                            <FileText className="w-4 h-4" />
-                            <span className="text-sm">
-                              {lesson.assignmentSubmitted ? "✓ " : ""}{lesson.assignmentTitle}
-                            </span>
-                          </Button>
-                        </td>
-                        <td className="p-4">
-                          <Button
-                            size="sm"
-                            onClick={() => !lesson.locked && handleWatchNow(module.id, lesson.id)}
-                            disabled={lesson.locked}
-                            className="text-blue-600 hover:text-blue-700"
-                            variant="ghost"
-                          >
-                            Watch Now
-                          </Button>
-                        </td>
-                      </tr>
+                      <LessonRow
+                        key={`lesson-${lesson.id}`}
+                        lesson={lesson}
+                        moduleId={module.id}
+                        onWatchNow={handleWatchNow}
+                        onAssignmentClick={handleAssignmentClick}
+                      />
                     ))}
-                  </>
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

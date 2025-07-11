@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import React, { useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -19,23 +19,24 @@ import {
 const Dashboard = () => {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   
-  const progressData = {
+  // Memoize static data to prevent unnecessary re-renders
+  const progressData = useMemo(() => ({
     videosWatched: 12,
     totalVideos: 16,
     assignmentsCompleted: 8,
     totalAssignments: 12,
     overallProgress: 75
-  };
+  }), []);
 
-  const leaderboardData = [
+  const leaderboardData = useMemo(() => [
     { name: "Ahmed Khan", score: 95, rank: 1 },
     { name: "Fatima Ali", score: 89, rank: 2 },
     { name: "You", score: 85, rank: 3 },
     { name: "Hassan Sheikh", score: 82, rank: 4 },
     { name: "Ayesha Malik", score: 78, rank: 5 }
-  ];
+  ], []);
 
-  const milestones = [
+  const milestones = useMemo(() => [
     { title: "First Login", completed: true, icon: "🎯" },
     { title: "Profile Complete", completed: true, icon: "✅" },
     { title: "First Video Watched", completed: true, icon: "📹" },
@@ -43,10 +44,14 @@ const Dashboard = () => {
     { title: "Quiz Master", completed: false, icon: "🧠" },
     { title: "Store Live", completed: false, icon: "🛒" },
     { title: "First Sale", completed: false, icon: "💰" }
-  ];
+  ], []);
+
+  const handleConnectAccounts = useCallback(() => {
+    setConnectDialogOpen(true);
+  }, []);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fade-in">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Welcome back! 👋</h1>
