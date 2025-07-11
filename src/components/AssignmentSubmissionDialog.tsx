@@ -19,13 +19,15 @@ interface AssignmentSubmissionDialogProps {
   onOpenChange: (open: boolean) => void;
   assignmentTitle: string;
   lessonTitle: string;
+  isSubmitted?: boolean;
 }
 
 export const AssignmentSubmissionDialog = ({ 
   open, 
   onOpenChange, 
   assignmentTitle, 
-  lessonTitle 
+  lessonTitle,
+  isSubmitted = false
 }: AssignmentSubmissionDialogProps) => {
   const { toast } = useToast();
   const [submissionType, setSubmissionType] = useState("text");
@@ -91,28 +93,37 @@ export const AssignmentSubmissionDialog = ({
         </DialogHeader>
         
         <div className="space-y-4">
-          <Card>
+            <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Assignment Details</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Complete the assignment based on the lesson content and submit your work below.
-              </p>
+              {isSubmitted ? (
+                <div className="flex items-center gap-2 text-green-600">
+                  <div className="w-2 h-2 bg-green-600 rounded-full"></div>
+                  <p className="text-sm font-medium">
+                    Assignment already submitted and under review
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Complete the assignment based on the lesson content and submit your work below.
+                </p>
+              )}
             </CardContent>
           </Card>
 
           <Tabs value={submissionType} onValueChange={setSubmissionType}>
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="text" className="flex items-center gap-2">
+            <TabsList className={`grid w-full grid-cols-3 ${isSubmitted ? "opacity-50 pointer-events-none" : ""}`}>
+              <TabsTrigger value="text" className="flex items-center gap-2" disabled={isSubmitted}>
                 <FileText className="w-4 h-4" />
                 Text
               </TabsTrigger>
-              <TabsTrigger value="link" className="flex items-center gap-2">
+              <TabsTrigger value="link" className="flex items-center gap-2" disabled={isSubmitted}>
                 <Link className="w-4 h-4" />
                 Link
               </TabsTrigger>
-              <TabsTrigger value="file" className="flex items-center gap-2">
+              <TabsTrigger value="file" className="flex items-center gap-2" disabled={isSubmitted}>
                 <Upload className="w-4 h-4" />
                 File
               </TabsTrigger>
@@ -126,6 +137,7 @@ export const AssignmentSubmissionDialog = ({
                 value={textResponse}
                 onChange={(e) => setTextResponse(e.target.value)}
                 rows={6}
+                disabled={isSubmitted}
               />
             </TabsContent>
 
@@ -137,6 +149,7 @@ export const AssignmentSubmissionDialog = ({
                 placeholder="https://example.com/your-assignment"
                 value={externalLink}
                 onChange={(e) => setExternalLink(e.target.value)}
+                disabled={isSubmitted}
               />
               <p className="text-xs text-muted-foreground">
                 Share a link to your Google Doc, GitHub repo, or other online assignment.
@@ -145,7 +158,7 @@ export const AssignmentSubmissionDialog = ({
 
             <TabsContent value="file" className="space-y-3">
               <Label htmlFor="file-upload">Upload File</Label>
-              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+              <div className={`border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center ${isSubmitted ? "opacity-50" : ""}`}>
                 <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
                 <Input
                   id="file-upload"
@@ -153,10 +166,11 @@ export const AssignmentSubmissionDialog = ({
                   onChange={handleFileChange}
                   className="hidden"
                   accept=".pdf,.doc,.docx,.txt,.jpg,.png"
+                  disabled={isSubmitted}
                 />
                 <Label 
                   htmlFor="file-upload" 
-                  className="cursor-pointer text-sm font-medium"
+                  className={`text-sm font-medium ${isSubmitted ? "cursor-not-allowed" : "cursor-pointer"}`}
                 >
                   {file ? file.name : "Click to upload or drag and drop"}
                 </Label>
@@ -169,11 +183,13 @@ export const AssignmentSubmissionDialog = ({
 
           <div className="flex gap-3 pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-              Cancel
+              {isSubmitted ? "Close" : "Cancel"}
             </Button>
-            <Button onClick={handleSubmit} className="flex-1">
-              Submit Assignment
-            </Button>
+            {!isSubmitted && (
+              <Button onClick={handleSubmit} className="flex-1">
+                Submit Assignment
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

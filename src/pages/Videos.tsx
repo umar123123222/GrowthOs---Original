@@ -21,6 +21,7 @@ const Videos = () => {
   const [selectedAssignment, setSelectedAssignment] = useState<{
     title: string;
     lessonTitle: string;
+    submitted: boolean;
   } | null>(null);
   const [expandedModules, setExpandedModules] = useState<{ [key: number]: boolean }>({
     1: true // First module expanded by default
@@ -39,7 +40,8 @@ const Videos = () => {
           duration: "5:30", 
           completed: true, 
           locked: false,
-          assignmentTitle: "Course Introduction Assignment"
+          assignmentTitle: "Course Introduction Assignment",
+          assignmentSubmitted: true
         },
         { 
           id: 2, 
@@ -47,7 +49,8 @@ const Videos = () => {
           duration: "12:45", 
           completed: true, 
           locked: false,
-          assignmentTitle: "E-commerce Basics Quiz"
+          assignmentTitle: "E-commerce Basics Quiz",
+          assignmentSubmitted: false
         },
         { 
           id: 3, 
@@ -55,7 +58,8 @@ const Videos = () => {
           duration: "18:20", 
           completed: false, 
           locked: false,
-          assignmentTitle: "Market Research Report"
+          assignmentTitle: "Market Research Report",
+          assignmentSubmitted: false
         }
       ]
     },
@@ -71,7 +75,8 @@ const Videos = () => {
           duration: "22:15", 
           completed: false, 
           locked: false,
-          assignmentTitle: "Product Research Assignment"
+          assignmentTitle: "Product Research Assignment",
+          assignmentSubmitted: false
         },
         { 
           id: 5, 
@@ -79,7 +84,8 @@ const Videos = () => {
           duration: "16:30", 
           completed: false, 
           locked: false,
-          assignmentTitle: "Competitor Analysis Report"
+          assignmentTitle: "Competitor Analysis Report",
+          assignmentSubmitted: false
         },
         { 
           id: 6, 
@@ -87,7 +93,8 @@ const Videos = () => {
           duration: "14:45", 
           completed: false, 
           locked: true,
-          assignmentTitle: "Trend Analysis Assignment"
+          assignmentTitle: "Trend Analysis Assignment",
+          assignmentSubmitted: false
         }
       ]
     },
@@ -103,7 +110,8 @@ const Videos = () => {
           duration: "25:00", 
           completed: false, 
           locked: true,
-          assignmentTitle: "Store Setup Assignment"
+          assignmentTitle: "Store Setup Assignment",
+          assignmentSubmitted: false
         },
         { 
           id: 8, 
@@ -111,7 +119,8 @@ const Videos = () => {
           duration: "20:30", 
           completed: false, 
           locked: true,
-          assignmentTitle: "Theme Customization Task"
+          assignmentTitle: "Theme Customization Task",
+          assignmentSubmitted: false
         },
         { 
           id: 9, 
@@ -119,7 +128,8 @@ const Videos = () => {
           duration: "15:15", 
           completed: false, 
           locked: true,
-          assignmentTitle: "Payment Integration Assignment"
+          assignmentTitle: "Payment Integration Assignment",
+          assignmentSubmitted: false
         }
       ]
     }
@@ -129,10 +139,11 @@ const Videos = () => {
     navigate(`/videos/${moduleId}/${lessonId}`);
   };
 
-  const handleAssignmentClick = (lessonTitle: string, assignmentTitle: string) => {
+  const handleAssignmentClick = (lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean) => {
     setSelectedAssignment({
       title: assignmentTitle,
-      lessonTitle: lessonTitle
+      lessonTitle: lessonTitle,
+      submitted: assignmentSubmitted
     });
     setAssignmentDialogOpen(true);
   };
@@ -234,12 +245,18 @@ const Videos = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="flex items-center gap-2 text-blue-600 hover:text-blue-700"
-                            onClick={() => !lesson.locked && handleAssignmentClick(lesson.title, lesson.assignmentTitle)}
+                            className={`flex items-center gap-2 ${
+                              lesson.assignmentSubmitted 
+                                ? "text-green-600 hover:text-green-700" 
+                                : "text-blue-600 hover:text-blue-700"
+                            }`}
+                            onClick={() => !lesson.locked && handleAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
                             disabled={lesson.locked}
                           >
                             <FileText className="w-4 h-4" />
-                            <span className="text-sm">{lesson.assignmentTitle}</span>
+                            <span className="text-sm">
+                              {lesson.assignmentSubmitted ? "✓ " : ""}{lesson.assignmentTitle}
+                            </span>
                           </Button>
                         </td>
                         <td className="p-4">
@@ -269,6 +286,7 @@ const Videos = () => {
           onOpenChange={setAssignmentDialogOpen}
           assignmentTitle={selectedAssignment.title}
           lessonTitle={selectedAssignment.lessonTitle}
+          isSubmitted={selectedAssignment.submitted}
         />
       )}
     </div>
