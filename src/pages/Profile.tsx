@@ -15,7 +15,11 @@ import {
   Bell, 
   Download,
   Target,
-  Trophy
+  Trophy,
+  Award,
+  Calendar,
+  CheckCircle,
+  ExternalLink
 } from "lucide-react";
 
 interface UserProfile {
@@ -46,10 +50,19 @@ interface Progress {
   score: number;
 }
 
+interface Certificate {
+  id: string;
+  track: string;
+  certificate_url: string;
+  issued_at: string;
+  downloaded: boolean;
+}
+
 const Profile = () => {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const [userProgress, setUserProgress] = useState<Progress[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [leaderboardPosition, setLeaderboardPosition] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -65,6 +78,7 @@ const Profile = () => {
     fetchUserData();
     fetchUserBadges();
     fetchUserProgress();
+    fetchCertificates();
     fetchLeaderboardPosition();
   }, []);
 
@@ -131,6 +145,24 @@ const Profile = () => {
     }
   };
 
+  const fetchCertificates = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('certificates')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('issued_at', { ascending: false });
+
+      if (error) throw error;
+      setCertificates(data || []);
+    } catch (error) {
+      console.error('Error fetching certificates:', error);
+    }
+  };
+
   const fetchLeaderboardPosition = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -180,6 +212,42 @@ const Profile = () => {
       toast({
         title: "Error",
         description: "Failed to update profile",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const downloadCertificate = async (certificate: Certificate) => {
+    try {
+      // Mark as downloaded
+      const { error } = await supabase
+        .from('certificates')
+        .update({ downloaded: true })
+        .eq('id', certificate.id);
+
+      if (error) throw error;
+
+      // Open certificate URL
+      window.open(certificate.certificate_url, '_blank');
+      
+      // Update local state
+      setCertificates(prev => 
+        prev.map(cert => 
+          cert.id === certificate.id 
+            ? { ...cert, downloaded: true }
+            : cert
+        )
+      );
+
+      toast({
+        title: "Certificate Downloaded",
+        description: "Your certificate has been opened in a new tab",
+      });
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      toast({
+        title: "Error",
+        description: "Failed to download certificate",
         variant: "destructive",
       });
     }
@@ -338,6 +406,66 @@ const Profile = () => {
                   onCheckedChange={(checked) => setNotifications({...notifications, progress: checked})}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Certificates Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Award className="w-5 h-5 mr-2" />
+                My Certificates
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {certificates.length === 0 ? (
+                <div className="text-center py-8">
+                  <Award className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                  <h3 className="text-lg font-medium mb-2">No Certificates Yet</h3>
+                  <p className="text-gray-600 mb-4">
+                    Complete course requirements to earn your first certificate
+                  </p>
+                  <Button variant="outline">
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    View Requirements
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {certificates.map((certificate) => (
+                    <div key={certificate.id} className="border border-yellow-200 bg-yellow-50 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-yellow-100 rounded-full">
+                            <Award className="w-5 h-5 text-yellow-600" />
+                          </div>
+                          <div>
+                            <h3 className="font-semibold">{certificate.track}</h3>
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Calendar className="w-4 h-4" />
+                              <span>Issued on {new Date(certificate.issued_at).toLocaleDateString()}</span>
+                              {certificate.downloaded && (
+                                <Badge variant="secondary" className="ml-2">
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Downloaded
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <Button 
+                          onClick={() => downloadCertificate(certificate)}
+                          size="sm"
+                          className="flex items-center gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          {certificate.downloaded ? 'Download Again' : 'Download'}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
