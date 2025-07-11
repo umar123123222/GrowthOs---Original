@@ -1,0 +1,264 @@
+import React, { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { 
+  Users, 
+  MessageSquare, 
+  User, 
+  Plus,
+  Clock,
+  Star
+} from "lucide-react";
+
+interface Pod {
+  id: string;
+  name: string;
+  notes: string;
+  mentor_id: string;
+  created_at: string;
+  mentor?: {
+    full_name: string;
+    email: string;
+  };
+}
+
+interface MentorshipNote {
+  id: string;
+  note: string;
+  added_at: string;
+  mentor_id: string;
+  student_id: string;
+  mentor?: {
+    full_name: string;
+  };
+}
+
+const Mentorship = () => {
+  const [userPod, setUserPod] = useState<Pod | null>(null);
+  const [mentorshipNotes, setMentorshipNotes] = useState<MentorshipNote[]>([]);
+  const [newNote, setNewNote] = useState("");
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    fetchUserPod();
+    fetchMentorshipNotes();
+  }, []);
+
+  const fetchUserPod = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get user's pod info
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('pod_id')
+        .eq('id', user.id)
+        .single();
+
+      if (userError) throw userError;
+
+      if (userData?.pod_id) {
+        const { data: podData, error: podError } = await supabase
+          .from('pods')
+          .select(`
+            *,
+            mentor:users!fk_mentor(full_name, email)
+          `)
+          .eq('id', userData.pod_id)
+          .single();
+
+        if (podError) throw podError;
+        setUserPod(podData);
+      }
+    } catch (error) {
+      console.error('Error fetching user pod:', error);
+    }
+  };
+
+  const fetchMentorshipNotes = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('mentorship_notes')
+        .select(`
+          *,
+          mentor:users!mentorship_notes_mentor_id_fkey(full_name)
+        `)
+        .eq('student_id', user.id)
+        .order('added_at', { ascending: false });
+
+      if (error) throw error;
+      setMentorshipNotes(data || []);
+    } catch (error) {
+      console.error('Error fetching mentorship notes:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addNote = async () => {
+    if (!newNote.trim() || !userPod) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const { error } = await supabase
+        .from('mentorship_notes')
+        .insert({
+          student_id: user.id,
+          mentor_id: userPod.mentor_id,
+          note: newNote
+        });
+
+      if (error) throw error;
+
+      setNewNote("");
+      fetchMentorshipNotes();
+      
+      toast({
+        title: "Note Added",
+        description: "Your note has been shared with your mentor",
+      });
+    } catch (error) {
+      console.error('Error adding note:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add note",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold mb-2">Mentorship Program</h1>
+        <p className="text-muted-foreground">
+          Connect with your mentor and learning pod
+        </p>
+      </div>
+
+      {/* Pod Information */}
+      {userPod ? (
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5" />
+              Your Learning Pod: {userPod.name}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-start gap-4">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <User className="w-4 h-4" />
+                  <span className="font-medium">Mentor: {userPod.mentor?.full_name}</span>
+                  <Badge variant="outline">
+                    <Star className="w-3 h-3 mr-1" />
+                    Mentor
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-600 mb-2">
+                  Contact: {userPod.mentor?.email}
+                </p>
+                {userPod.notes && (
+                  <div className="bg-blue-50 p-3 rounded-lg">
+                    <p className="text-sm text-blue-800">{userPod.notes}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Users className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+            <h3 className="text-lg font-medium mb-2">No Pod Assigned</h3>
+            <p className="text-gray-600">You haven't been assigned to a learning pod yet</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Add New Note */}
+      {userPod && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Add Mentorship Note
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              placeholder="Share your progress, challenges, or questions with your mentor..."
+              value={newNote}
+              onChange={(e) => setNewNote(e.target.value)}
+              rows={4}
+            />
+            <Button 
+              onClick={addNote}
+              disabled={!newNote.trim()}
+              className="w-full"
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Send to Mentor
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Mentorship Notes History */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="w-5 h-5" />
+            Mentorship Conversations
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {mentorshipNotes.length === 0 ? (
+            <div className="text-center py-8">
+              <MessageSquare className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-gray-600">No mentorship notes yet</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {mentorshipNotes.map((note) => (
+                <div key={note.id} className="border-l-4 border-blue-500 pl-4 py-2">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-medium">{note.mentor?.full_name || 'Mentor'}</span>
+                    <div className="flex items-center gap-1 text-gray-500 text-sm">
+                      <Clock className="w-3 h-3" />
+                      <span>{new Date(note.added_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                  <p className="text-gray-700">{note.note}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default Mentorship;

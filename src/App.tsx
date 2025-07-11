@@ -15,6 +15,11 @@ import Assignments from "./pages/Assignments";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
+import LiveSessions from "./pages/LiveSessions";
+import Mentorship from "./pages/Mentorship";
+import Quizzes from "./pages/Quizzes";
+import Certificates from "./pages/Certificates";
+import Messages from "./pages/Messages";
 import Layout from "./components/Layout";
 
 const queryClient = new QueryClient();
@@ -48,6 +53,11 @@ const App = () => {
                 <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
                 <Route path="assignments" element={<Assignments />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
+                <Route path="live-sessions" element={<LiveSessions />} />
+                <Route path="mentorship" element={<Mentorship />} />
+                <Route path="quizzes" element={<Quizzes />} />
+                <Route path="certificates" element={<Certificates />} />
+                <Route path="messages" element={<Messages />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="*" element={<Navigate to="/" />} />

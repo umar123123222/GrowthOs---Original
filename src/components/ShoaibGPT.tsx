@@ -38,7 +38,7 @@ const ShoaibGPT = ({ onClose }: ShoaibGPTProps) => {
       id: messages.length + 2,
       type: "ai",
       content: mode === "course" 
-        ? `Great question about the course! Based on your progress, I see you're on Module 3. ${message.includes("video") ? "You can rewatch the video at timestamp 5:30 for that specific concept." : "Keep up the good work! You're doing better than 70% of your batch."}`
+        ? `Great question about the course! Based on your progress, I see you're on Module 3. ${message.includes("video") ? "You can rewatch the video at timestamp 5:30 for that specific concept." : "Keep up the good work! You're doing better than 70% of your cohort."}`
         : `I understand this can be challenging. Remember your goal - you want to achieve PKR 100,000 monthly income to support your family. Every small step counts. You've got this! 💪`,
       timestamp: new Date()
     };

@@ -5,7 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { Trophy, Star, TrendingUp, Award } from "lucide-react";
 
 const Leaderboard = () => {
-  const batchData = [
+  const studentData = [
     {
       id: 1,
       name: "Ahmed Khan",
@@ -94,7 +94,7 @@ const Leaderboard = () => {
     { name: "Store Live", icon: "🛒", description: "Launched your store", count: 5 },
     { name: "Quiz Master", icon: "🧠", description: "Scored 90%+ on all quizzes", count: 8 },
     { name: "Speed Learner", icon: "⚡", description: "Completed module ahead of time", count: 4 },
-    { name: "Helper", icon: "🤝", description: "Helped other batch members", count: 2 }
+    { name: "Helper", icon: "🤝", description: "Helped other students", count: 2 }
   ];
 
   const getRankIcon = (rank: number) => {
@@ -122,14 +122,14 @@ const Leaderboard = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Batch Leaderboard 🏆</h1>
-          <p className="text-gray-600 mt-2">See how you stack up against your batchmates</p>
+          <h1 className="text-3xl font-bold text-gray-900">Leaderboard 🏆</h1>
+          <p className="text-gray-600 mt-2">See how you stack up against fellow students</p>
         </div>
         <Card className="p-4 bg-gradient-to-r from-blue-50 to-green-50">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">Batch 2025-A</div>
-            <div className="text-sm text-gray-600">32 Students</div>
-          </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600">Current Cohort</div>
+          <div className="text-sm text-gray-600">32 Students</div>
+        </div>
         </Card>
       </div>
 
@@ -145,7 +145,7 @@ const Leaderboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {batchData.map((student) => (
+                {studentData.map((student) => (
                   <div
                     key={student.id}
                     className={`p-4 rounded-lg border transition-all ${

@@ -12,7 +12,11 @@ import {
   User, 
   Settings,
   MessageSquare,
-  Bell
+  Bell,
+  Brain,
+  Video,
+  Users,
+  Award
 } from "lucide-react";
 import ShoaibGPT from "./ShoaibGPT";
 import NotificationDropdown from "./NotificationDropdown";
@@ -30,7 +34,12 @@ const Layout = ({ user }: LayoutProps) => {
     { name: "Dashboard", href: "/", icon: Monitor },
     { name: "Videos", href: "/videos", icon: BookOpen },
     { name: "Assignments", href: "/assignments", icon: FileText },
+    { name: "Quizzes", href: "/quizzes", icon: Brain },
+    { name: "Live Sessions", href: "/live-sessions", icon: Video },
+    { name: "Mentorship", href: "/mentorship", icon: Users },
     { name: "Leaderboard", href: "/leaderboard", icon: Star },
+    { name: "Certificates", href: "/certificates", icon: Award },
+    { name: "Messages", href: "/messages", icon: MessageSquare },
     { name: "Profile", href: "/profile", icon: User },
   ], []);
 

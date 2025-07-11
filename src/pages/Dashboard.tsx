@@ -205,7 +205,7 @@ const Dashboard = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Trophy className="w-5 h-5 mr-2 text-yellow-600" />
-              Batch Leaderboard
+              Leaderboard
             </CardTitle>
           </CardHeader>
           <CardContent>
