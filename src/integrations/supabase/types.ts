@@ -1049,11 +1049,13 @@ export type Database = {
           "LMS Password": string | null
           "LMS User ID": string | null
           mentor_id: string | null
+          "Meta Ads Credentials": string | null
           onboarding_done: boolean | null
           path: string | null
           phone: string | null
           pod_id: string | null
           role: string
+          "Shopify Credentials": string | null
           status: string | null
           "status After 3 Months": string | null
           tenant_id: string | null
@@ -1088,11 +1090,13 @@ export type Database = {
           "LMS Password"?: string | null
           "LMS User ID"?: string | null
           mentor_id?: string | null
+          "Meta Ads Credentials"?: string | null
           onboarding_done?: boolean | null
           path?: string | null
           phone?: string | null
           pod_id?: string | null
           role?: string
+          "Shopify Credentials"?: string | null
           status?: string | null
           "status After 3 Months"?: string | null
           tenant_id?: string | null
@@ -1127,11 +1131,13 @@ export type Database = {
           "LMS Password"?: string | null
           "LMS User ID"?: string | null
           mentor_id?: string | null
+          "Meta Ads Credentials"?: string | null
           onboarding_done?: boolean | null
           path?: string | null
           phone?: string | null
           pod_id?: string | null
           role?: string
+          "Shopify Credentials"?: string | null
           status?: string | null
           "status After 3 Months"?: string | null
           tenant_id?: string | null
