@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
+
 
 interface LoginProps {
   onLogin: (user: any) => void;
@@ -49,12 +49,7 @@ const Login = ({ onLogin }: LoginProps) => {
         return;
       }
 
-      // Log successful login
-      await logUserActivity({
-        user_id: user.id,
-        activity_type: ACTIVITY_TYPES.LOGIN,
-        metadata: { email, timestamp: new Date().toISOString() }
-      });
+      console.log('User logged in successfully:', user.email);
 
       toast({
         title: "Welcome!",
