@@ -4,18 +4,74 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 
 interface LoginProps {
-  onLogin: () => void;
+  onLogin: (user: any) => void;
 }
 
 const Login = ({ onLogin }: LoginProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin();
+    setIsLoading(true);
+
+    try {
+      // Check if user exists in our database
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (error || !user) {
+        toast({
+          title: "Access Denied",
+          description: "You are not authorized to access this system. Please contact your administrator.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check if password matches (using LMS Password column)
+      if (user["LMS Password"] !== password) {
+        toast({
+          title: "Invalid Credentials",
+          description: "Incorrect email or password.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Log successful login
+      await logUserActivity({
+        user_id: user.id,
+        activity_type: ACTIVITY_TYPES.LOGIN,
+        metadata: { email, timestamp: new Date().toISOString() }
+      });
+
+      toast({
+        title: "Welcome!",
+        description: `Hello ${user.full_name}, you've successfully logged in.`,
+      });
+
+      onLogin(user);
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "Login Failed",
+        description: "An error occurred during login. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -68,8 +124,9 @@ const Login = ({ onLogin }: LoginProps) => {
             <Button 
               type="submit" 
               className="w-full h-11 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-medium"
+              disabled={isLoading}
             >
-              Sign In to Growth OS
+              {isLoading ? "Signing In..." : "Sign In to Growth OS"}
             </Button>
           </form>
           

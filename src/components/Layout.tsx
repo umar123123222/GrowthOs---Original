@@ -1,6 +1,7 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Outlet, Link, useLocation } from "react-router-dom";
+import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -14,9 +15,27 @@ import {
 } from "lucide-react";
 import ShoaibGPT from "./ShoaibGPT";
 
-const Layout = () => {
+interface LayoutProps {
+  user: any;
+}
+
+const Layout = ({ user }: LayoutProps) => {
   const location = useLocation();
   const [showShoaibGPT, setShowShoaibGPT] = useState(false);
+
+  // Log page visits
+  useEffect(() => {
+    if (user?.id) {
+      logUserActivity({
+        user_id: user.id,
+        activity_type: ACTIVITY_TYPES.PAGE_VISIT,
+        metadata: { 
+          page: location.pathname,
+          timestamp: new Date().toISOString()
+        }
+      });
+    }
+  }, [location.pathname, user?.id]);
 
   const navigation = [
     { name: "Dashboard", href: "/", icon: Monitor },

@@ -8,12 +8,17 @@ import { Progress } from "@/components/ui/progress";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 
 interface OnboardingProps {
+  user: any;
   onComplete: () => void;
 }
 
-const Onboarding = ({ onComplete }: OnboardingProps) => {
+const Onboarding = ({ user, onComplete }: OnboardingProps) => {
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     incomeGoal: "",
@@ -150,15 +155,61 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!validateStep()) return;
     
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
-      // Trigger webhook to n8n here
-      console.log("Sending onboarding data to n8n:", formData);
+      await handleSubmit();
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      // Log activity
+      await logUserActivity({
+        user_id: user.id,
+        activity_type: ACTIVITY_TYPES.ONBOARDING_COMPLETED,
+        metadata: formData
+      });
+
+      // Update user record with onboarding data
+      const { error } = await supabase
+        .from('users')
+        .update({
+          "What's your income goal in the next 3 months?": formData.incomeGoal === 'custom' ? formData.customIncomeGoal : formData.incomeGoal,
+          "Why do you want to make this income?": formData.whyIncome,
+          "If you succeed in this program, what would that mean for you pe": formData.successMeaning.includes('other') ? 
+            formData.successMeaning.filter(item => item !== 'other').concat([formData.otherSuccessReason]).join(', ') : 
+            formData.successMeaning.join(', '),
+          "How much time can you give to this program every week?": formData.timeCommitment,
+          "Have you ever tried starting an ecommerce store before?": formData.ecommerceExperience === 'explain' ? formData.ecommerceExplain : formData.ecommerceExperience,
+          "Do you know how to run Facebook Ads?": formData.facebookAdsExperience === 'explain' ? formData.facebookAdsExplain : formData.facebookAdsExperience,
+          "What is your experience with Shopify?": formData.shopifyExperience === 'explain' ? formData.shopifyExplain : formData.shopifyExperience,
+          "What do you feel is your biggest blocker right now?": formData.biggestBlocker === 'explain' || formData.biggestBlocker === 'other' ? formData.blockerExplain : formData.biggestBlocker,
+          "Which of these excites you most to achieve in the next 30 days?": formData.thirtyDayGoal === 'explain' ? formData.goalExplain : formData.thirtyDayGoal,
+          onboarding_done: true
+        })
+        .eq('id', user.id);
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "Onboarding Complete!",
+        description: "Welcome to Growth OS. Let's start your journey!",
+      });
+
       onComplete();
+    } catch (error) {
+      console.error('Onboarding error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save onboarding data. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 

@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -18,7 +19,14 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+
+  const handleLogin = (user: any) => {
+    setCurrentUser(user);
+    setIsAuthenticated(true);
+    setHasCompletedOnboarding(user.onboarding_done || false);
+  };
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -28,11 +36,11 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             {!isAuthenticated ? (
-              <Route path="*" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
+              <Route path="*" element={<Login onLogin={handleLogin} />} />
             ) : !hasCompletedOnboarding ? (
-              <Route path="*" element={<Onboarding onComplete={() => setHasCompletedOnboarding(true)} />} />
+              <Route path="*" element={<Onboarding user={currentUser} onComplete={() => setHasCompletedOnboarding(true)} />} />
             ) : (
-              <Route path="/" element={<Layout />}>
+              <Route path="/" element={<Layout user={currentUser} />}>
                 <Route index element={<Dashboard />} />
                 <Route path="videos" element={<Videos />} />
                 <Route path="assignments" element={<Assignments />} />
