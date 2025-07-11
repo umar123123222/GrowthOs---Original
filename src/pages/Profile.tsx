@@ -1,5 +1,6 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { 
   User, 
   Settings, 
@@ -16,15 +18,41 @@ import {
   Trophy
 } from "lucide-react";
 
+interface UserProfile {
+  id: string;
+  full_name: string;
+  email: string;
+  phone?: string;
+  "What's your income goal in the next 3 months?"?: string;
+  "Why do you want to make this income?"?: string;
+  "Final Goal"?: string;
+}
+
+interface UserBadge {
+  id: string;
+  badge: {
+    name: string;
+    description: string;
+    image_url: string;
+  };
+  earned_at: string;
+}
+
+interface Progress {
+  module: {
+    title: string;
+  };
+  status: string;
+  score: number;
+}
+
 const Profile = () => {
-  const [profileData, setProfileData] = useState({
-    name: "Your Name",
-    email: "your@email.com",
-    phone: "+92 300 1234567",
-    incomeGoal: "PKR 100,000",
-    whySuccess: "I want to support my family and achieve financial freedom",
-    dreamGoal: "Go for Umrah with family and buy a BMW within 2 years"
-  });
+  const [profileData, setProfileData] = useState<UserProfile | null>(null);
+  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
+  const [userProgress, setUserProgress] = useState<Progress[]>([]);
+  const [leaderboardPosition, setLeaderboardPosition] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   const [notifications, setNotifications] = useState({
     whatsapp: true,
@@ -33,12 +61,137 @@ const Profile = () => {
     progress: true
   });
 
-  const achievements = [
-    { name: "Early Bird", icon: "🌅", date: "2025-01-15" },
-    { name: "First Video", icon: "📹", date: "2025-01-16" },
-    { name: "Quiz Master", icon: "🧠", date: "2025-01-20" },
-    { name: "Week Warrior", icon: "⚡", date: "2025-01-25" }
-  ];
+  useEffect(() => {
+    fetchUserData();
+    fetchUserBadges();
+    fetchUserProgress();
+    fetchLeaderboardPosition();
+  }, []);
+
+  const fetchUserData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (error) throw error;
+      setProfileData(data as UserProfile);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
+
+  const fetchUserBadges = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('user_badges')
+        .select(`
+          id,
+          earned_at,
+          badge:badges(name, description, image_url)
+        `)
+        .eq('user_id', user.id)
+        .order('earned_at', { ascending: false })
+        .limit(4);
+
+      if (error) throw error;
+      setUserBadges(data || []);
+    } catch (error) {
+      console.error('Error fetching user badges:', error);
+    }
+  };
+
+  const fetchUserProgress = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('progress')
+        .select(`
+          status,
+          score,
+          module:modules(title)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'completed');
+
+      if (error) throw error;
+      setUserProgress(data || []);
+    } catch (error) {
+      console.error('Error fetching user progress:', error);
+    }
+  };
+
+  const fetchLeaderboardPosition = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('leaderboard')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      setLeaderboardPosition(data);
+    } catch (error) {
+      console.error('Error fetching leaderboard position:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const updateProfile = async () => {
+    if (!profileData) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: profileData.full_name,
+          phone: profileData.phone,
+          "What's your income goal in the next 3 months?": profileData["What's your income goal in the next 3 months?"],
+          "Why do you want to make this income?": profileData["Why do you want to make this income?"],
+          "Final Goal": profileData["Final Goal"]
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Profile updated successfully",
+      });
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update profile",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading || !profileData) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -64,8 +217,8 @@ const Profile = () => {
                   <Label htmlFor="name">Full Name</Label>
                   <Input
                     id="name"
-                    value={profileData.name}
-                    onChange={(e) => setProfileData({...profileData, name: e.target.value})}
+                    value={profileData.full_name}
+                    onChange={(e) => setProfileData({...profileData, full_name: e.target.value})}
                   />
                 </div>
                 <div>
@@ -74,7 +227,8 @@ const Profile = () => {
                     id="email"
                     type="email"
                     value={profileData.email}
-                    onChange={(e) => setProfileData({...profileData, email: e.target.value})}
+                    disabled
+                    className="bg-gray-50"
                   />
                 </div>
               </div>
@@ -83,7 +237,7 @@ const Profile = () => {
                 <Label htmlFor="phone">Phone Number</Label>
                 <Input
                   id="phone"
-                  value={profileData.phone}
+                  value={profileData.phone || ""}
                   onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
                 />
               </div>
@@ -99,30 +253,30 @@ const Profile = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <Label htmlFor="incomeGoal">Monthly Income Goal</Label>
+                <Label htmlFor="incomeGoal">Income Goal (Next 3 Months)</Label>
                 <Input
                   id="incomeGoal"
-                  value={profileData.incomeGoal}
-                  onChange={(e) => setProfileData({...profileData, incomeGoal: e.target.value})}
+                  value={profileData["What's your income goal in the next 3 months?"] || ""}
+                  onChange={(e) => setProfileData({...profileData, "What's your income goal in the next 3 months?": e.target.value})}
                 />
               </div>
               
               <div>
-                <Label htmlFor="whySuccess">Why do you want to succeed?</Label>
+                <Label htmlFor="whySuccess">Why do you want to make this income?</Label>
                 <Textarea
                   id="whySuccess"
-                  value={profileData.whySuccess}
-                  onChange={(e) => setProfileData({...profileData, whySuccess: e.target.value})}
+                  value={profileData["Why do you want to make this income?"] || ""}
+                  onChange={(e) => setProfileData({...profileData, "Why do you want to make this income?": e.target.value})}
                   rows={3}
                 />
               </div>
               
               <div>
-                <Label htmlFor="dreamGoal">Dream Goal</Label>
+                <Label htmlFor="dreamGoal">Final Goal</Label>
                 <Textarea
                   id="dreamGoal"
-                  value={profileData.dreamGoal}
-                  onChange={(e) => setProfileData({...profileData, dreamGoal: e.target.value})}
+                  value={profileData["Final Goal"] || ""}
+                  onChange={(e) => setProfileData({...profileData, "Final Goal": e.target.value})}
                   rows={3}
                 />
               </div>
@@ -188,7 +342,7 @@ const Profile = () => {
           </Card>
 
           <div className="flex space-x-4">
-            <Button className="bg-blue-600 hover:bg-blue-700">
+            <Button className="bg-blue-600 hover:bg-blue-700" onClick={updateProfile}>
               Save Changes
             </Button>
             <Button variant="outline">
@@ -208,20 +362,24 @@ const Profile = () => {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-sm">Overall Progress</span>
-                  <span className="font-bold text-blue-600">75%</span>
+                  <span className="text-sm">Completed Modules</span>
+                  <span className="font-bold text-blue-600">{userProgress.length}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Current Rank</span>
-                  <span className="font-bold text-green-600">#3</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Login Streak</span>
-                  <span className="font-bold text-orange-600">🔥 7 days</span>
+                  <span className="font-bold text-green-600">
+                    {leaderboardPosition ? `#${leaderboardPosition.rank}` : 'Unranked'}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm">Total Points</span>
-                  <span className="font-bold text-purple-600">1,250</span>
+                  <span className="font-bold text-purple-600">
+                    {leaderboardPosition ? leaderboardPosition.points : 0}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Badges Earned</span>
+                  <span className="font-bold text-orange-600">{userBadges.length}</span>
                 </div>
               </div>
             </CardContent>
@@ -237,15 +395,25 @@ const Profile = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {achievements.map((achievement, index) => (
-                  <div key={index} className="flex items-center space-x-3 p-2 rounded-lg bg-gray-50">
-                    <span className="text-lg">{achievement.icon}</span>
-                    <div className="flex-1">
-                      <div className="font-medium text-sm">{achievement.name}</div>
-                      <div className="text-xs text-gray-500">{achievement.date}</div>
+                {userBadges.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    No badges earned yet. Keep learning to unlock achievements!
+                  </p>
+                ) : (
+                  userBadges.map((userBadge) => (
+                    <div key={userBadge.id} className="flex items-center space-x-3 p-2 rounded-lg bg-gray-50">
+                      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                        🏆
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{userBadge.badge.name}</div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(userBadge.earned_at).toLocaleDateString()}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>

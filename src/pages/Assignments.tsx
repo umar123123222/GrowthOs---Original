@@ -1,9 +1,11 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
 import { 
   FileText, 
   Clock, 
@@ -12,108 +14,198 @@ import {
   Upload
 } from "lucide-react";
 
+interface Assignment {
+  "Assignment ID": string;
+  "Assignment Title": string;
+  "Assignment Description": string;
+  "Due Date": string;
+  sequence_order: number;
+  Status: string;
+}
+
+interface Submission {
+  id: string;
+  assignment_id: number;
+  status: string;
+  text_response: string;
+  submitted_at: string;
+  feedback: string;
+  score: number;
+}
+
 const Assignments = () => {
-  const [selectedAssignment, setSelectedAssignment] = useState(1);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
   const [submission, setSubmission] = useState("");
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const assignments = [
-    {
-      id: 1,
-      title: "Market Research Assignment",
-      module: "Module 2",
-      dueDate: "2025-07-10",
-      status: "overdue",
-      description: "Research and identify 3 potential product niches with market analysis",
-      points: 25,
-      submitted: false
-    },
-    {
-      id: 2,
-      title: "Product Research Report",
-      module: "Module 3",
-      dueDate: "2025-07-15",
-      status: "pending",
-      description: "Find 5 winning products using the taught methodology",
-      points: 30,
-      submitted: false
-    },
-    {
-      id: 3,
-      title: "Competitor Analysis",
-      module: "Module 4",
-      dueDate: "2025-07-20",
-      status: "upcoming",
-      description: "Analyze top 3 competitors in your chosen niche",
-      points: 35,
-      submitted: false
-    },
-    {
-      id: 4,
-      title: "Store Concept Plan",
-      module: "Module 5",
-      dueDate: "2025-07-25",
-      status: "locked",
-      description: "Create a detailed plan for your Shopify store",
-      points: 40,
-      submitted: false
-    }
-  ];
+  useEffect(() => {
+    fetchAssignments();
+    fetchSubmissions();
+  }, []);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "overdue":
-        return <Badge variant="destructive">Overdue</Badge>;
-      case "pending":
-        return <Badge className="bg-orange-100 text-orange-800">Due Soon</Badge>;
-      case "upcoming":
-        return <Badge variant="outline">Upcoming</Badge>;
-      case "locked":
-        return <Badge variant="secondary">Locked</Badge>;
-      default:
-        return <Badge>Unknown</Badge>;
+  const fetchAssignments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('Assignment')
+        .select('*')
+        .order('sequence_order');
+
+      if (error) throw error;
+      setAssignments(data || []);
+      if (data && data.length > 0) {
+        setSelectedAssignment(data[0]["Assignment ID"]);
+      }
+    } catch (error) {
+      console.error('Error fetching assignments:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load assignments",
+        variant: "destructive",
+      });
     }
   };
 
-  const selectedAssignmentData = assignments.find(a => a.id === selectedAssignment);
+  const fetchSubmissions = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('assignment_submissions')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (error) throw error;
+      setSubmissions(data || []);
+    } catch (error) {
+      console.error('Error fetching submissions:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const submitAssignment = async () => {
+    if (!submission.trim() || !selectedAssignment) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No authenticated user');
+
+      const assignment = assignments.find(a => a["Assignment ID"] === selectedAssignment);
+      if (!assignment) throw new Error('Assignment not found');
+
+      const { error } = await supabase
+        .from('assignment_submissions')
+        .insert({
+          user_id: user.id,
+          assignment_id: assignment.sequence_order,
+          submission_type: 'text',
+          text_response: submission,
+          status: 'submitted'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Assignment submitted successfully",
+      });
+
+      setSubmission("");
+      fetchSubmissions();
+    } catch (error) {
+      console.error('Error submitting assignment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit assignment",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const getStatusBadge = (assignment: Assignment) => {
+    const submissionForAssignment = submissions.find(s => s.assignment_id === assignment.sequence_order);
+    const dueDate = new Date(assignment["Due Date"]);
+    const today = new Date();
+    
+    if (submissionForAssignment) {
+      return <Badge className="bg-green-100 text-green-800">Submitted</Badge>;
+    }
+    
+    if (dueDate < today) {
+      return <Badge variant="destructive">Overdue</Badge>;
+    }
+    
+    const daysUntilDue = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilDue <= 3) {
+      return <Badge className="bg-orange-100 text-orange-800">Due Soon</Badge>;
+    }
+    
+    return <Badge variant="outline">Upcoming</Badge>;
+  };
+
+  const selectedAssignmentData = assignments.find(a => a["Assignment ID"] === selectedAssignment);
+  const selectedSubmission = selectedAssignmentData ? 
+    submissions.find(s => s.assignment_id === selectedAssignmentData.sequence_order) : null;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Assignment List */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold">Assignments</h2>
-        {assignments.map((assignment) => (
-          <Card 
-            key={assignment.id}
-            className={`cursor-pointer transition-all ${
-              selectedAssignment === assignment.id 
-                ? "border-blue-500 shadow-md" 
-                : "hover:shadow-sm"
-            } ${assignment.status === "locked" ? "opacity-50" : ""}`}
-            onClick={() => assignment.status !== "locked" && setSelectedAssignment(assignment.id)}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-sm">{assignment.title}</h3>
-                {getStatusBadge(assignment.status)}
-              </div>
-              
-              <div className="flex items-center justify-between text-xs text-gray-500">
-                <span>{assignment.module}</span>
-                <span className="flex items-center">
-                  <Clock className="w-3 h-3 mr-1" />
-                  Due: {new Date(assignment.dueDate).toLocaleDateString()}
-                </span>
-              </div>
-              
-              <div className="mt-2 flex items-center justify-between">
-                <span className="text-xs text-gray-600">{assignment.points} points</span>
-                {assignment.status === "overdue" && (
-                  <AlertTriangle className="w-4 h-4 text-red-500" />
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {assignments.map((assignment) => {
+          const isSubmitted = submissions.some(s => s.assignment_id === assignment.sequence_order);
+          const isOverdue = new Date(assignment["Due Date"]) < new Date() && !isSubmitted;
+          
+          return (
+            <Card 
+              key={assignment["Assignment ID"]}
+              className={`cursor-pointer transition-all ${
+                selectedAssignment === assignment["Assignment ID"] 
+                  ? "border-blue-500 shadow-md" 
+                  : "hover:shadow-sm"
+              }`}
+              onClick={() => setSelectedAssignment(assignment["Assignment ID"])}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-sm">{assignment["Assignment Title"]}</h3>
+                  {getStatusBadge(assignment)}
+                </div>
+                
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Assignment {assignment.sequence_order}</span>
+                  <span className="flex items-center">
+                    <Clock className="w-3 h-3 mr-1" />
+                    Due: {new Date(assignment["Due Date"]).toLocaleDateString()}
+                  </span>
+                </div>
+                
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-xs text-gray-600">Status: {assignment.Status}</span>
+                  {isOverdue && (
+                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                  )}
+                  {isSubmitted && (
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Assignment Details */}
@@ -122,15 +214,15 @@ const Assignments = () => {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">{selectedAssignmentData.title}</CardTitle>
-                {getStatusBadge(selectedAssignmentData.status)}
+                <CardTitle className="text-xl">{selectedAssignmentData["Assignment Title"]}</CardTitle>
+                {getStatusBadge(selectedAssignmentData)}
               </div>
               <div className="flex items-center space-x-4 text-sm text-gray-600">
-                <span>{selectedAssignmentData.module}</span>
+                <span>Assignment {selectedAssignmentData.sequence_order}</span>
                 <span>•</span>
-                <span>{selectedAssignmentData.points} points</span>
+                <span>Status: {selectedAssignmentData.Status}</span>
                 <span>•</span>
-                <span>Due: {new Date(selectedAssignmentData.dueDate).toLocaleDateString()}</span>
+                <span>Due: {new Date(selectedAssignmentData["Due Date"]).toLocaleDateString()}</span>
               </div>
             </CardHeader>
             
@@ -138,7 +230,7 @@ const Assignments = () => {
               {/* Description */}
               <div>
                 <h3 className="font-semibold mb-2">Assignment Description</h3>
-                <p className="text-gray-600">{selectedAssignmentData.description}</p>
+                <p className="text-gray-600">{selectedAssignmentData["Assignment Description"]}</p>
               </div>
 
               {/* Requirements */}
@@ -155,7 +247,30 @@ const Assignments = () => {
               {/* Submission Area */}
               <div>
                 <h3 className="font-semibold mb-2">Your Submission</h3>
-                {selectedAssignmentData.status !== "locked" ? (
+                {selectedSubmission ? (
+                  <div className="space-y-4">
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-green-800">Submitted</span>
+                        <span className="text-xs text-green-600">
+                          {new Date(selectedSubmission.submitted_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700">{selectedSubmission.text_response}</p>
+                      {selectedSubmission.feedback && (
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                          <h4 className="text-sm font-medium text-blue-800 mb-1">Feedback</h4>
+                          <p className="text-sm text-blue-700">{selectedSubmission.feedback}</p>
+                          {selectedSubmission.score && (
+                            <p className="text-sm font-medium text-blue-800 mt-2">
+                              Score: {selectedSubmission.score}/100
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
                   <div className="space-y-4">
                     <Textarea
                       placeholder="Write your assignment submission here..."
@@ -165,7 +280,11 @@ const Assignments = () => {
                     />
                     
                     <div className="flex items-center space-x-4">
-                      <Button className="bg-blue-600 hover:bg-blue-700">
+                      <Button 
+                        className="bg-blue-600 hover:bg-blue-700"
+                        onClick={submitAssignment}
+                        disabled={!submission.trim()}
+                      >
                         <FileText className="w-4 h-4 mr-2" />
                         Submit Assignment
                       </Button>
@@ -176,16 +295,11 @@ const Assignments = () => {
                       </Button>
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    <FileText className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                    <p>Complete previous assignments to unlock this one</p>
-                  </div>
                 )}
               </div>
 
               {/* AI Feedback */}
-              {selectedAssignmentData.status === "overdue" && (
+              {selectedAssignmentData && new Date(selectedAssignmentData["Due Date"]) < new Date() && !selectedSubmission && (
                 <Card className="bg-red-50 border-red-200">
                   <CardContent className="p-4">
                     <div className="flex items-start space-x-3">
@@ -193,8 +307,7 @@ const Assignments = () => {
                       <div>
                         <h4 className="font-semibold text-red-800">Assignment Overdue</h4>
                         <p className="text-red-700 text-sm mt-1">
-                          This assignment is past due. Submit as soon as possible to maintain your progress. 
-                          Consider reviewing Module 2 videos again if you need help.
+                          This assignment is past due. Submit as soon as possible to maintain your progress.
                         </p>
                       </div>
                     </div>
