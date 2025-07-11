@@ -10,6 +10,7 @@ import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Videos from "./pages/Videos";
+import VideoPlayer from "./pages/VideoPlayer";
 import Assignments from "./pages/Assignments";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
@@ -44,6 +45,7 @@ const App = () => {
               <Route path="/" element={<Layout user={currentUser} />}>
                 <Route index element={<Dashboard />} />
                 <Route path="videos" element={<Videos />} />
+                <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
                 <Route path="assignments" element={<Assignments />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
                 <Route path="profile" element={<Profile />} />
