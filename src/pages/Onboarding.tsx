@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 
 interface OnboardingProps {
   user: any;
@@ -167,14 +167,9 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
 
   const handleSubmit = async () => {
     try {
-      // Log activity
-      await logUserActivity({
-        user_id: user.id,
-        activity_type: ACTIVITY_TYPES.ONBOARDING_COMPLETED,
-        metadata: formData
-      });
+      console.log('Submitting onboarding data:', formData);
 
-      // Update user record with onboarding data
+      // Update user record with onboarding data using correct column names
       const { error } = await supabase
         .from('users')
         .update({
@@ -194,8 +189,11 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
         .eq('id', user.id);
 
       if (error) {
+        console.error('Database update error:', error);
         throw error;
       }
+
+      console.log('Onboarding data saved successfully');
 
       toast({
         title: "Onboarding Complete!",
