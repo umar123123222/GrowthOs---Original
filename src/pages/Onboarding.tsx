@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,10 +21,20 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
     whyIncome: "",
     successMeaning: [] as string[],
     otherSuccessReason: "",
-    timeCommitment: ""
+    timeCommitment: "",
+    ecommerceExperience: "",
+    ecommerceExplain: "",
+    facebookAdsExperience: "",
+    facebookAdsExplain: "",
+    shopifyExperience: "",
+    shopifyExplain: "",
+    biggestBlocker: "",
+    blockerExplain: "",
+    thirtyDayGoal: "",
+    goalExplain: ""
   });
 
-  const totalSteps = 4;
+  const totalSteps = 9;
   const progress = (step / totalSteps) * 100;
 
   const incomeOptions = [
@@ -54,6 +63,54 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
     { value: "20_plus", label: "20+ hours (I'm fully committed)" }
   ];
 
+  const ecommerceOptions = [
+    { value: "complete_beginner", label: "No, I'm a complete beginner" },
+    { value: "tried_not_launched", label: "I tried but didn't launch" },
+    { value: "launched_no_sales", label: "I launched but didn't get sales" },
+    { value: "few_sales", label: "I made a few sales" },
+    { value: "running_actively", label: "I'm running a store actively right now" },
+    { value: "explain", label: "Explain" }
+  ];
+
+  const facebookAdsOptions = [
+    { value: "never_run", label: "I've never run ads" },
+    { value: "seen_tutorials", label: "I've seen tutorials but never tried" },
+    { value: "boosted_posts", label: "I boosted posts only" },
+    { value: "tried_confused", label: "I tried Ads Manager but got confused" },
+    { value: "full_campaigns", label: "I've run full campaigns before" },
+    { value: "explain", label: "Explain" }
+  ];
+
+  const shopifyOptions = [
+    { value: "never_opened", label: "Never opened it" },
+    { value: "opened_not_built", label: "Opened but didn't build a store" },
+    { value: "built_not_launched", label: "I built a store but didn't launch" },
+    { value: "store_live", label: "I have a store live" },
+    { value: "making_sales", label: "I'm making sales right now" },
+    { value: "explain", label: "Explain" }
+  ];
+
+  const blockerOptions = [
+    { value: "dont_know_start", label: "I don't know how to start" },
+    { value: "product_research", label: "I'm stuck on product research" },
+    { value: "facebook_ads_confusing", label: "Facebook Ads are confusing" },
+    { value: "shopify_confusing", label: "Shopify is confusing" },
+    { value: "no_motivation", label: "No motivation, I start but stop" },
+    { value: "no_time", label: "I don't have time" },
+    { value: "other", label: "Other" },
+    { value: "explain", label: "Explain" }
+  ];
+
+  const thirtyDayOptions = [
+    { value: "launch_product", label: "Launch my first product" },
+    { value: "run_first_ad", label: "Run my first ad" },
+    { value: "first_sale", label: "Get my first sale" },
+    { value: "freelance_client", label: "Close a freelance client" },
+    { value: "automate_ai", label: "Automate something using AI" },
+    { value: "dont_know", label: "Don't know yet, just want to start" },
+    { value: "explain", label: "Explain" }
+  ];
+
   const validateStep = () => {
     switch (step) {
       case 1:
@@ -68,6 +125,26 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
         return true;
       case 4:
         return formData.timeCommitment !== "";
+      case 5:
+        if (!formData.ecommerceExperience) return false;
+        if (formData.ecommerceExperience === "explain" && !formData.ecommerceExplain.trim()) return false;
+        return true;
+      case 6:
+        if (!formData.facebookAdsExperience) return false;
+        if (formData.facebookAdsExperience === "explain" && !formData.facebookAdsExplain.trim()) return false;
+        return true;
+      case 7:
+        if (!formData.shopifyExperience) return false;
+        if (formData.shopifyExperience === "explain" && !formData.shopifyExplain.trim()) return false;
+        return true;
+      case 8:
+        if (!formData.biggestBlocker) return false;
+        if (formData.biggestBlocker === "explain" && !formData.blockerExplain.trim()) return false;
+        return true;
+      case 9:
+        if (!formData.thirtyDayGoal) return false;
+        if (formData.thirtyDayGoal === "explain" && !formData.goalExplain.trim()) return false;
+        return true;
       default:
         return true;
     }
@@ -101,13 +178,18 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
 
   const canProceed = validateStep();
 
+  const getStepTitle = () => {
+    if (step <= 4) return "Let's Set Your Goals";
+    return "Skill Level & Knowledge Check";
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl shadow-lg">
         <CardHeader>
           <div className="flex items-center justify-between mb-4">
             <CardTitle className="text-2xl font-bold text-gray-800">
-              Let's Set Your Goals
+              {getStepTitle()}
             </CardTitle>
             <span className="text-sm text-gray-500">Step {step} of {totalSteps}</span>
           </div>
@@ -236,6 +318,201 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
                     </div>
                   ))}
                 </RadioGroup>
+              </div>
+            </div>
+          )}
+
+          {step === 5 && (
+            <div className="space-y-6">
+              <div>
+                <Label className="text-lg font-medium mb-4 block">
+                  Have you ever tried starting an ecommerce store before? 🛍️
+                </Label>
+                <RadioGroup
+                  value={formData.ecommerceExperience}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, ecommerceExperience: value }))}
+                  className="space-y-3"
+                >
+                  {ecommerceOptions.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <Label htmlFor={option.value} className="text-base cursor-pointer">
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                
+                {formData.ecommerceExperience === "explain" && (
+                  <div className="mt-4">
+                    <Label htmlFor="ecommerceExplain" className="text-base font-medium">
+                      Please explain:
+                    </Label>
+                    <Textarea
+                      id="ecommerceExplain"
+                      value={formData.ecommerceExplain}
+                      onChange={(e) => setFormData(prev => ({ ...prev, ecommerceExplain: e.target.value }))}
+                      placeholder="Tell us about your ecommerce experience..."
+                      className="mt-2 min-h-24 text-base"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 6 && (
+            <div className="space-y-6">
+              <div>
+                <Label className="text-lg font-medium mb-4 block">
+                  Do you know how to run Facebook Ads? 📱
+                </Label>
+                <RadioGroup
+                  value={formData.facebookAdsExperience}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, facebookAdsExperience: value }))}
+                  className="space-y-3"
+                >
+                  {facebookAdsOptions.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <Label htmlFor={option.value} className="text-base cursor-pointer">
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                
+                {formData.facebookAdsExperience === "explain" && (
+                  <div className="mt-4">
+                    <Label htmlFor="facebookAdsExplain" className="text-base font-medium">
+                      Please explain:
+                    </Label>
+                    <Textarea
+                      id="facebookAdsExplain"
+                      value={formData.facebookAdsExplain}
+                      onChange={(e) => setFormData(prev => ({ ...prev, facebookAdsExplain: e.target.value }))}
+                      placeholder="Tell us about your Facebook Ads experience..."
+                      className="mt-2 min-h-24 text-base"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 7 && (
+            <div className="space-y-6">
+              <div>
+                <Label className="text-lg font-medium mb-4 block">
+                  What is your experience with Shopify? 🛒
+                </Label>
+                <RadioGroup
+                  value={formData.shopifyExperience}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, shopifyExperience: value }))}
+                  className="space-y-3"
+                >
+                  {shopifyOptions.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <Label htmlFor={option.value} className="text-base cursor-pointer">
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                
+                {formData.shopifyExperience === "explain" && (
+                  <div className="mt-4">
+                    <Label htmlFor="shopifyExplain" className="text-base font-medium">
+                      Please explain:
+                    </Label>
+                    <Textarea
+                      id="shopifyExplain"
+                      value={formData.shopifyExplain}
+                      onChange={(e) => setFormData(prev => ({ ...prev, shopifyExplain: e.target.value }))}
+                      placeholder="Tell us about your Shopify experience..."
+                      className="mt-2 min-h-24 text-base"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 8 && (
+            <div className="space-y-6">
+              <div>
+                <Label className="text-lg font-medium mb-4 block">
+                  What do you feel is your biggest blocker right now? 🚧
+                </Label>
+                <RadioGroup
+                  value={formData.biggestBlocker}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, biggestBlocker: value }))}
+                  className="space-y-3"
+                >
+                  {blockerOptions.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <Label htmlFor={option.value} className="text-base cursor-pointer">
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                
+                {(formData.biggestBlocker === "other" || formData.biggestBlocker === "explain") && (
+                  <div className="mt-4">
+                    <Label htmlFor="blockerExplain" className="text-base font-medium">
+                      Please explain:
+                    </Label>
+                    <Textarea
+                      id="blockerExplain"
+                      value={formData.blockerExplain}
+                      onChange={(e) => setFormData(prev => ({ ...prev, blockerExplain: e.target.value }))}
+                      placeholder="Tell us about your biggest blocker..."
+                      className="mt-2 min-h-24 text-base"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {step === 9 && (
+            <div className="space-y-6">
+              <div>
+                <Label className="text-lg font-medium mb-4 block">
+                  Which of these excites you most to achieve in the next 30 days? 🎯
+                </Label>
+                <RadioGroup
+                  value={formData.thirtyDayGoal}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, thirtyDayGoal: value }))}
+                  className="space-y-3"
+                >
+                  {thirtyDayOptions.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <Label htmlFor={option.value} className="text-base cursor-pointer">
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                
+                {formData.thirtyDayGoal === "explain" && (
+                  <div className="mt-4">
+                    <Label htmlFor="goalExplain" className="text-base font-medium">
+                      Please explain:
+                    </Label>
+                    <Textarea
+                      id="goalExplain"
+                      value={formData.goalExplain}
+                      onChange={(e) => setFormData(prev => ({ ...prev, goalExplain: e.target.value }))}
+                      placeholder="Tell us what excites you most..."
+                      className="mt-2 min-h-24 text-base"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
