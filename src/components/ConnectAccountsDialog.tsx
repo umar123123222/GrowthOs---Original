@@ -1,0 +1,170 @@
+import { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Check, Edit, Settings } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface ConnectAccountsDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export const ConnectAccountsDialog = ({ open, onOpenChange }: ConnectAccountsDialogProps) => {
+  const { toast } = useToast();
+  const [metaConnected, setMetaConnected] = useState(false);
+  const [shopifyConnected, setShopifyConnected] = useState(false);
+  const [editingMeta, setEditingMeta] = useState(false);
+  const [editingShopify, setEditingShopify] = useState(false);
+  const [metaKey, setMetaKey] = useState("");
+  const [shopifyKey, setShopifyKey] = useState("");
+
+  const handleMetaConnect = () => {
+    if (metaKey.trim()) {
+      setMetaConnected(true);
+      setEditingMeta(false);
+      toast({
+        title: "Meta API Connected",
+        description: "Your Meta Ads account has been successfully connected.",
+      });
+    }
+  };
+
+  const handleShopifyConnect = () => {
+    if (shopifyKey.trim()) {
+      setShopifyConnected(true);
+      setEditingShopify(false);
+      toast({
+        title: "Shopify Connected",
+        description: "Your Shopify store has been successfully connected.",
+      });
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="w-5 h-5" />
+            Connect Your Accounts
+          </DialogTitle>
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          {/* Meta API Connection */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center justify-between">
+                Meta Ads API
+                {metaConnected && !editingMeta && (
+                  <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Connected
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(!metaConnected || editingMeta) && (
+                <>
+                  <div>
+                    <Label htmlFor="meta-key" className="text-xs">
+                      Meta API Access Token
+                    </Label>
+                    <Input
+                      id="meta-key"
+                      type="password"
+                      placeholder="Enter your Meta API access token"
+                      value={metaKey}
+                      onChange={(e) => setMetaKey(e.target.value)}
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleMetaConnect} 
+                    size="sm" 
+                    className="w-full"
+                    disabled={!metaKey.trim()}
+                  >
+                    {editingMeta ? "Update Connection" : "Connect Meta API"}
+                  </Button>
+                </>
+              )}
+              {metaConnected && !editingMeta && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setEditingMeta(true)}
+                  className="w-full"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Connection
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Shopify Connection */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm flex items-center justify-between">
+                Shopify Store
+                {shopifyConnected && !editingShopify && (
+                  <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Connected
+                  </Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {(!shopifyConnected || editingShopify) && (
+                <>
+                  <div>
+                    <Label htmlFor="shopify-key" className="text-xs">
+                      Shopify API Key
+                    </Label>
+                    <Input
+                      id="shopify-key"
+                      type="password"
+                      placeholder="Enter your Shopify API key"
+                      value={shopifyKey}
+                      onChange={(e) => setShopifyKey(e.target.value)}
+                    />
+                  </div>
+                  <Button 
+                    onClick={handleShopifyConnect} 
+                    size="sm" 
+                    className="w-full"
+                    disabled={!shopifyKey.trim()}
+                  >
+                    {editingShopify ? "Update Connection" : "Connect Shopify"}
+                  </Button>
+                </>
+              )}
+              {shopifyConnected && !editingShopify && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setEditingShopify(true)}
+                  className="w-full"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Connection
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};

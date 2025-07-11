@@ -1,8 +1,10 @@
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConnectAccountsDialog } from "@/components/ConnectAccountsDialog";
 import { 
   BookOpen, 
   FileText, 
@@ -15,6 +17,8 @@ import {
 } from "lucide-react";
 
 const Dashboard = () => {
+  const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  
   const progressData = {
     videosWatched: 12,
     totalVideos: 16,
@@ -150,7 +154,12 @@ const Dashboard = () => {
                 <span className="text-sm">Meta Ads</span>
                 <Badge variant="secondary">Not Connected</Badge>
               </div>
-              <Button variant="outline" className="w-full" size="sm">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                size="sm"
+                onClick={() => setConnectDialogOpen(true)}
+              >
                 Connect Accounts
               </Button>
             </div>
@@ -215,6 +224,11 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+
+      <ConnectAccountsDialog 
+        open={connectDialogOpen} 
+        onOpenChange={setConnectDialogOpen} 
+      />
     </div>
   );
 };
