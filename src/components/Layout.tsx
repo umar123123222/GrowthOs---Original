@@ -42,10 +42,11 @@ const Layout = ({ user }: LayoutProps) => {
     { name: "Profile", href: "/profile", icon: User },
   ], []);
 
-  // Optimized logging with throttling
+  // Optimized logging with error handling
   useEffect(() => {
     if (user?.id) {
       const timeoutId = setTimeout(() => {
+        // Don't await the activity log to prevent blocking the UI
         logUserActivity({
           user_id: user.id,
           activity_type: ACTIVITY_TYPES.PAGE_VISIT,
@@ -53,6 +54,9 @@ const Layout = ({ user }: LayoutProps) => {
             page: location.pathname,
             timestamp: new Date().toISOString()
           }
+        }).catch(error => {
+          // Silently handle activity logging errors
+          console.warn('Page visit logging failed:', error);
         });
       }, 100); // Small delay to prevent excessive logging
 

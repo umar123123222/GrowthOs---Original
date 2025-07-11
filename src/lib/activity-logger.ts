@@ -9,6 +9,20 @@ export interface ActivityLogData {
 
 export const logUserActivity = async (activityData: ActivityLogData) => {
   try {
+    // Check if user is authenticated first
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      // Silently skip logging if user is not authenticated
+      return;
+    }
+
+    // Ensure the user_id matches the authenticated user
+    if (activityData.user_id !== user.id) {
+      console.warn('Activity log user_id mismatch, skipping log');
+      return;
+    }
+
     const { error } = await supabase
       .from('user_activity_logs')
       .insert([{
@@ -17,10 +31,12 @@ export const logUserActivity = async (activityData: ActivityLogData) => {
       }]);
 
     if (error) {
-      console.error('Failed to log activity:', error);
+      // Don't throw errors for activity logging - just log them
+      console.warn('Failed to log activity:', error);
     }
   } catch (error) {
-    console.error('Activity logging error:', error);
+    // Silently handle all activity logging errors to prevent blocking the UI
+    console.warn('Activity logging error:', error);
   }
 };
 
