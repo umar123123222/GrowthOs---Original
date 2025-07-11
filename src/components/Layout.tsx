@@ -15,6 +15,7 @@ import {
   Bell
 } from "lucide-react";
 import ShoaibGPT from "./ShoaibGPT";
+import NotificationDropdown from "./NotificationDropdown";
 
 interface LayoutProps {
   user: any;
@@ -62,12 +63,7 @@ const Layout = ({ user }: LayoutProps) => {
             </div>
             
             <div className="flex items-center space-x-4">
-              <Link to="/notifications">
-                <Button variant="outline" size="icon" className="relative">
-                  <Bell className="h-4 w-4" />
-                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full"></span>
-                </Button>
-              </Link>
+              <NotificationDropdown />
               
               <Button
                 onClick={() => setShowShoaibGPT(true)}
