@@ -1050,6 +1050,7 @@ export type Database = {
           "LMS User ID": string | null
           mentor_id: string | null
           "Meta Ads Credentials": string | null
+          onboarding_data: Json | null
           onboarding_done: boolean | null
           path: string | null
           phone: string | null
@@ -1091,6 +1092,7 @@ export type Database = {
           "LMS User ID"?: string | null
           mentor_id?: string | null
           "Meta Ads Credentials"?: string | null
+          onboarding_data?: Json | null
           onboarding_done?: boolean | null
           path?: string | null
           phone?: string | null
@@ -1132,6 +1134,7 @@ export type Database = {
           "LMS User ID"?: string | null
           mentor_id?: string | null
           "Meta Ads Credentials"?: string | null
+          onboarding_data?: Json | null
           onboarding_done?: boolean | null
           path?: string | null
           phone?: string | null

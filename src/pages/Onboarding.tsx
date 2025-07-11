@@ -169,22 +169,12 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
     try {
       console.log('Submitting onboarding data:', formData);
 
-      // Update user record with onboarding data using correct column names
+      // Store all onboarding data in a simple JSONB field to avoid column name issues
       const { error } = await supabase
         .from('users')
         .update({
-          "What's your income goal in the next 3 months?": formData.incomeGoal === 'custom' ? formData.customIncomeGoal : formData.incomeGoal,
-          "Why do you want to make this income?": formData.whyIncome,
-          "If you succeed in this program, what would that mean for you pe": formData.successMeaning.includes('other') ? 
-            formData.successMeaning.filter(item => item !== 'other').concat([formData.otherSuccessReason]).join(', ') : 
-            formData.successMeaning.join(', '),
-          "How much time can you give to this program every week?": formData.timeCommitment,
-          "Have you ever tried starting an ecommerce store before?": formData.ecommerceExperience === 'explain' ? formData.ecommerceExplain : formData.ecommerceExperience,
-          "Do you know how to run Facebook Ads?": formData.facebookAdsExperience === 'explain' ? formData.facebookAdsExplain : formData.facebookAdsExperience,
-          "What is your experience with Shopify?": formData.shopifyExperience === 'explain' ? formData.shopifyExplain : formData.shopifyExperience,
-          "What do you feel is your biggest blocker right now?": formData.biggestBlocker === 'explain' || formData.biggestBlocker === 'other' ? formData.blockerExplain : formData.biggestBlocker,
-          "Which of these excites you most to achieve in the next 30 days?": formData.thirtyDayGoal === 'explain' ? formData.goalExplain : formData.thirtyDayGoal,
-          onboarding_done: true
+          onboarding_done: true,
+          onboarding_data: formData
         })
         .eq('id', user.id);
 
