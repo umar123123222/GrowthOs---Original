@@ -169,12 +169,46 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
     try {
       console.log('Submitting onboarding data:', formData);
 
-      // Store all onboarding data in a simple JSONB field to avoid column name issues
+      // Map form data to the specific database columns
+      const incomeGoal = formData.incomeGoal === "custom" ? formData.customIncomeGoal : formData.incomeGoal;
+      const successMeaning = formData.successMeaning.includes("other") 
+        ? [...formData.successMeaning.filter(s => s !== "other"), formData.otherSuccessReason].join(", ")
+        : formData.successMeaning.join(", ");
+      
+      const ecommerceExp = formData.ecommerceExperience === "explain" 
+        ? formData.ecommerceExplain 
+        : formData.ecommerceExperience;
+      
+      const facebookAdsExp = formData.facebookAdsExperience === "explain" 
+        ? formData.facebookAdsExplain 
+        : formData.facebookAdsExperience;
+      
+      const shopifyExp = formData.shopifyExperience === "explain" 
+        ? formData.shopifyExplain 
+        : formData.shopifyExperience;
+      
+      const blocker = formData.biggestBlocker === "explain" || formData.biggestBlocker === "other"
+        ? formData.blockerExplain 
+        : formData.biggestBlocker;
+      
+      const thirtyDayGoal = formData.thirtyDayGoal === "explain" 
+        ? formData.goalExplain 
+        : formData.thirtyDayGoal;
+
       const { error } = await supabase
         .from('users')
         .update({
           onboarding_done: true,
-          onboarding_data: formData
+          onboarding_data: formData, // Keep the original JSON for reference
+          "What's your income goal in the next 3 months?": incomeGoal,
+          "Why do you want to make this income?": formData.whyIncome,
+          "If you succeed in this program, what would that mean for you pe": successMeaning,
+          "How much time can you give to this program every week?": formData.timeCommitment,
+          "Have you ever tried starting an ecommerce store before?": ecommerceExp,
+          "Do you know how to run Facebook Ads?": facebookAdsExp,
+          "What is your experience with Shopify?": shopifyExp,
+          "What do you feel is your biggest blocker right now?": blocker,
+          "Which of these excites you most to achieve in the next 30 days?": thirtyDayGoal
         })
         .eq('id', user.id);
 
