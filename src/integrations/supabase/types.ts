@@ -1033,6 +1033,7 @@ export type Database = {
           created_at: string | null
           "Do you know how to run Facebook Ads?": string | null
           email: string
+          "Final Goal": string | null
           full_name: string
           "Have you ever tried starting an ecommerce store before?":
             | string
@@ -1071,6 +1072,7 @@ export type Database = {
           created_at?: string | null
           "Do you know how to run Facebook Ads?"?: string | null
           email: string
+          "Final Goal"?: string | null
           full_name: string
           "Have you ever tried starting an ecommerce store before?"?:
             | string
@@ -1109,6 +1111,7 @@ export type Database = {
           created_at?: string | null
           "Do you know how to run Facebook Ads?"?: string | null
           email?: string
+          "Final Goal"?: string | null
           full_name?: string
           "Have you ever tried starting an ecommerce store before?"?:
             | string

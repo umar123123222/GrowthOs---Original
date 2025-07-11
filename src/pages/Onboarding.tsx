@@ -6,6 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -15,16 +18,64 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     incomeGoal: "",
-    whySuccess: "",
-    dreamGoal: "",
-    timeline: "",
-    experience: ""
+    customIncomeGoal: "",
+    whyIncome: "",
+    successMeaning: [] as string[],
+    otherSuccessReason: "",
+    timeCommitment: ""
   });
 
-  const totalSteps = 3;
+  const totalSteps = 4;
   const progress = (step / totalSteps) * 100;
 
+  const incomeOptions = [
+    { value: "20000", label: "Rs. 20,000/month" },
+    { value: "50000", label: "Rs. 50,000/month" },
+    { value: "100000", label: "Rs. 100,000/month" },
+    { value: "200000", label: "Rs. 200,000+/month" },
+    { value: "custom", label: "Custom amount" }
+  ];
+
+  const successOptions = [
+    { value: "help_family", label: "Help my family" },
+    { value: "quit_job", label: "Quit my job" },
+    { value: "launch_store", label: "Launch my dream Ecommerce store" },
+    { value: "help_someone", label: "Help someone dear" },
+    { value: "buy_car", label: "Buy a car" },
+    { value: "travel_abroad", label: "Travel abroad" },
+    { value: "fund_education", label: "Fund my education" },
+    { value: "other", label: "Other" }
+  ];
+
+  const timeOptions = [
+    { value: "less_5", label: "Less than 5 hours" },
+    { value: "5_10", label: "5–10 hours" },
+    { value: "10_20", label: "10–20 hours" },
+    { value: "20_plus", label: "20+ hours (I'm fully committed)" }
+  ];
+
+  const validateStep = () => {
+    switch (step) {
+      case 1:
+        if (!formData.incomeGoal) return false;
+        if (formData.incomeGoal === "custom" && !formData.customIncomeGoal) return false;
+        return true;
+      case 2:
+        return formData.whyIncome.trim() !== "";
+      case 3:
+        if (formData.successMeaning.length === 0) return false;
+        if (formData.successMeaning.includes("other") && !formData.otherSuccessReason.trim()) return false;
+        return true;
+      case 4:
+        return formData.timeCommitment !== "";
+      default:
+        return true;
+    }
+  };
+
   const handleNext = () => {
+    if (!validateStep()) return;
+    
     if (step < totalSteps) {
       setStep(step + 1);
     } else {
@@ -34,9 +85,21 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleSuccessMeaningChange = (value: string, checked: boolean) => {
+    if (checked) {
+      setFormData(prev => ({
+        ...prev,
+        successMeaning: [...prev.successMeaning, value]
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        successMeaning: prev.successMeaning.filter(item => item !== value)
+      }));
+    }
   };
+
+  const canProceed = validateStep();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
@@ -55,31 +118,39 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
           {step === 1 && (
             <div className="space-y-6">
               <div>
-                <Label htmlFor="incomeGoal" className="text-lg font-medium">
-                  What's your monthly income goal? 💰
+                <Label className="text-lg font-medium mb-4 block">
+                  What's your income goal in the next 3 months? 💰
                 </Label>
-                <Input
-                  id="incomeGoal"
-                  type="text"
+                <RadioGroup
                   value={formData.incomeGoal}
-                  onChange={(e) => handleInputChange("incomeGoal", e.target.value)}
-                  placeholder="e.g., PKR 100,000"
-                  className="mt-2 h-12 text-lg"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="timeline" className="text-lg font-medium">
-                  When do you want to achieve this? ⏰
-                </Label>
-                <Input
-                  id="timeline"
-                  type="text"
-                  value={formData.timeline}
-                  onChange={(e) => handleInputChange("timeline", e.target.value)}
-                  placeholder="e.g., Within 6 months"
-                  className="mt-2 h-12 text-lg"
-                />
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, incomeGoal: value }))}
+                  className="space-y-3"
+                >
+                  {incomeOptions.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <Label htmlFor={option.value} className="text-base cursor-pointer">
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                
+                {formData.incomeGoal === "custom" && (
+                  <div className="mt-4">
+                    <Label htmlFor="customAmount" className="text-base font-medium">
+                      Enter your custom monthly income goal:
+                    </Label>
+                    <Input
+                      id="customAmount"
+                      type="text"
+                      value={formData.customIncomeGoal}
+                      onChange={(e) => setFormData(prev => ({ ...prev, customIncomeGoal: e.target.value }))}
+                      placeholder="e.g., Rs. 150,000"
+                      className="mt-2 h-12 text-lg"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -87,16 +158,19 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
           {step === 2 && (
             <div className="space-y-6">
               <div>
-                <Label htmlFor="whySuccess" className="text-lg font-medium">
-                  Why do you want to succeed? What's your deeper motivation? 🎯
+                <Label htmlFor="whyIncome" className="text-lg font-medium">
+                  Why do you want to make this income? 🎯
                 </Label>
                 <Textarea
-                  id="whySuccess"
-                  value={formData.whySuccess}
-                  onChange={(e) => handleInputChange("whySuccess", e.target.value)}
-                  placeholder="e.g., I want to support my family, buy a house, travel the world..."
+                  id="whyIncome"
+                  value={formData.whyIncome}
+                  onChange={(e) => setFormData(prev => ({ ...prev, whyIncome: e.target.value }))}
+                  placeholder="e.g., For taking my parents to Umrah, to buy a new car, to quit job..."
                   className="mt-2 min-h-32 text-lg"
                 />
+                <p className="text-sm text-gray-500 mt-2">
+                  Examples: For taking my parents to Umrah, to buy a new car, to quit job, for Umrah etc.
+                </p>
               </div>
             </div>
           )}
@@ -104,30 +178,64 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
           {step === 3 && (
             <div className="space-y-6">
               <div>
-                <Label htmlFor="dreamGoal" className="text-lg font-medium">
-                  What's your ultimate dream goal? 🌟
+                <Label className="text-lg font-medium mb-4 block">
+                  If you succeed in this program, what would that mean for you personally? 🌟
                 </Label>
-                <Textarea
-                  id="dreamGoal"
-                  value={formData.dreamGoal}
-                  onChange={(e) => handleInputChange("dreamGoal", e.target.value)}
-                  placeholder="e.g., Go for Umrah, buy a BMW, own a villa..."
-                  className="mt-2 min-h-32 text-lg"
-                />
+                <p className="text-sm text-gray-600 mb-4">Select all that apply:</p>
+                <div className="space-y-3">
+                  {successOptions.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={option.value}
+                        checked={formData.successMeaning.includes(option.value)}
+                        onCheckedChange={(checked) => handleSuccessMeaningChange(option.value, checked as boolean)}
+                      />
+                      <Label htmlFor={option.value} className="text-base cursor-pointer">
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+                
+                {formData.successMeaning.includes("other") && (
+                  <div className="mt-4">
+                    <Label htmlFor="otherReason" className="text-base font-medium">
+                      Please specify:
+                    </Label>
+                    <Input
+                      id="otherReason"
+                      type="text"
+                      value={formData.otherSuccessReason}
+                      onChange={(e) => setFormData(prev => ({ ...prev, otherSuccessReason: e.target.value }))}
+                      placeholder="Enter your reason..."
+                      className="mt-2 h-12 text-lg"
+                    />
+                  </div>
+                )}
               </div>
-              
+            </div>
+          )}
+
+          {step === 4 && (
+            <div className="space-y-6">
               <div>
-                <Label htmlFor="experience" className="text-lg font-medium">
-                  Previous business experience? 📈
+                <Label className="text-lg font-medium mb-4 block">
+                  How much time can you give to this program every week? ⏰
                 </Label>
-                <Input
-                  id="experience"
-                  type="text"
-                  value={formData.experience}
-                  onChange={(e) => handleInputChange("experience", e.target.value)}
-                  placeholder="e.g., Beginner, Some experience, Expert"
-                  className="mt-2 h-12 text-lg"
-                />
+                <RadioGroup
+                  value={formData.timeCommitment}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, timeCommitment: value }))}
+                  className="space-y-3"
+                >
+                  {timeOptions.map((option) => (
+                    <div key={option.value} className="flex items-center space-x-2">
+                      <RadioGroupItem value={option.value} id={option.value} />
+                      <Label htmlFor={option.value} className="text-base cursor-pointer">
+                        {option.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
               </div>
             </div>
           )}
@@ -143,7 +251,12 @@ const Onboarding = ({ onComplete }: OnboardingProps) => {
             
             <Button
               onClick={handleNext}
-              className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white px-8"
+              disabled={!canProceed}
+              className={`px-8 ${
+                canProceed 
+                  ? "bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white" 
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
             >
               {step === totalSteps ? "Complete Setup" : "Next"}
             </Button>
