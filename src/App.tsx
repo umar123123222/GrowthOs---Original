@@ -13,6 +13,7 @@ import Videos from "./pages/Videos";
 import Assignments from "./pages/Assignments";
 import Leaderboard from "./pages/Leaderboard";
 import Profile from "./pages/Profile";
+import Notifications from "./pages/Notifications";
 import Layout from "./components/Layout";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => {
                 <Route path="assignments" element={<Assignments />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
                 <Route path="profile" element={<Profile />} />
+                <Route path="notifications" element={<Notifications />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </Route>
             )}
