@@ -59,7 +59,7 @@ const LiveSessions = () => {
       console.error('Error fetching sessions:', error);
       toast({
         title: "Error",
-        description: "Failed to load live sessions",
+        description: "Failed to load live success sessions",
         variant: "destructive",
       });
     }
@@ -144,9 +144,9 @@ const LiveSessions = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Live Sessions</h1>
+        <h1 className="text-3xl font-bold mb-2">Live Success Sessions</h1>
         <p className="text-muted-foreground">
-          Join live sessions with mentors and fellow students
+          Join live success sessions with mentors and fellow students
         </p>
       </div>
 
@@ -154,8 +154,8 @@ const LiveSessions = () => {
         <Card>
           <CardContent className="text-center py-12">
             <Video className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium mb-2">No Live Sessions Scheduled</h3>
-            <p className="text-gray-600">Check back soon for upcoming sessions</p>
+            <h3 className="text-lg font-medium mb-2">No Live Success Sessions Scheduled</h3>
+            <p className="text-gray-600">Check back soon for upcoming success sessions</p>
           </CardContent>
         </Card>
       ) : (
@@ -179,18 +179,41 @@ const LiveSessions = () => {
                 </CardHeader>
                 
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-500" />
-                      <span>{session["Schedule Date"]}</span>
+                      <div>
+                        <div className="font-medium">Date</div>
+                        <div>{session["Schedule Date"] || new Date(session.start_time).toLocaleDateString()}</div>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-gray-500" />
-                      <span>{session["Schedule Day & Time"]}</span>
+                      <div>
+                        <div className="font-medium">Time</div>
+                        <div>{session["Schedule Day & Time"] || `${new Date(session.start_time).toLocaleTimeString()} - ${new Date(session.end_time).toLocaleTimeString()}`}</div>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Users className="w-4 h-4 text-gray-500" />
-                      <span>Mentor: {session["Mentor Name"]}</span>
+                      <div>
+                        <div className="font-medium">Mentor</div>
+                        <div>{session["Mentor Name"] || "TBA"}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Additional session details */}
+                  <div className="pt-2 border-t border-gray-100">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-700">Session ID:</span>
+                        <span className="ml-2 text-gray-600">{session.id.slice(0, 8)}...</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Status:</span>
+                        <span className="ml-2 text-gray-600">{session.status || 'upcoming'}</span>
+                      </div>
                     </div>
                   </div>
                   
