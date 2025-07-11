@@ -506,6 +506,39 @@ export type Database = {
           },
         ]
       }
+      onboarding_responses: {
+        Row: {
+          answer_data: Json | null
+          answer_value: string | null
+          created_at: string
+          id: string
+          question_text: string
+          question_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer_data?: Json | null
+          answer_value?: string | null
+          created_at?: string
+          id?: string
+          question_text: string
+          question_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer_data?: Json | null
+          answer_value?: string | null
+          created_at?: string
+          id?: string
+          question_text?: string
+          question_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       "Performance Record": {
         Row: {
           id: number

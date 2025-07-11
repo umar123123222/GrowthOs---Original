@@ -169,52 +169,95 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
     try {
       console.log('Submitting onboarding data:', formData);
 
-      // Map form data to the specific database columns
-      const incomeGoal = formData.incomeGoal === "custom" ? formData.customIncomeGoal : formData.incomeGoal;
-      const successMeaning = formData.successMeaning.includes("other") 
-        ? [...formData.successMeaning.filter(s => s !== "other"), formData.otherSuccessReason].join(", ")
-        : formData.successMeaning.join(", ");
-      
-      const ecommerceExp = formData.ecommerceExperience === "explain" 
-        ? formData.ecommerceExplain 
-        : formData.ecommerceExperience;
-      
-      const facebookAdsExp = formData.facebookAdsExperience === "explain" 
-        ? formData.facebookAdsExplain 
-        : formData.facebookAdsExperience;
-      
-      const shopifyExp = formData.shopifyExperience === "explain" 
-        ? formData.shopifyExplain 
-        : formData.shopifyExperience;
-      
-      const blocker = formData.biggestBlocker === "explain" || formData.biggestBlocker === "other"
-        ? formData.blockerExplain 
-        : formData.biggestBlocker;
-      
-      const thirtyDayGoal = formData.thirtyDayGoal === "explain" 
-        ? formData.goalExplain 
-        : formData.thirtyDayGoal;
+      // Prepare responses for the new table structure
+      const responses = [
+        {
+          question_type: 'income_goal',
+          question_text: "What's your income goal in the next 3 months?",
+          answer_value: formData.incomeGoal === "custom" ? formData.customIncomeGoal : formData.incomeGoal,
+          answer_data: { selected: formData.incomeGoal, custom: formData.customIncomeGoal }
+        },
+        {
+          question_type: 'why_income',
+          question_text: "Why do you want to make this income?",
+          answer_value: formData.whyIncome,
+          answer_data: { text: formData.whyIncome }
+        },
+        {
+          question_type: 'success_meaning',
+          question_text: "If you succeed in this program, what would that mean for you personally?",
+          answer_value: formData.successMeaning.includes("other") 
+            ? [...formData.successMeaning.filter(s => s !== "other"), formData.otherSuccessReason].join(", ")
+            : formData.successMeaning.join(", "),
+          answer_data: { selected: formData.successMeaning, other: formData.otherSuccessReason }
+        },
+        {
+          question_type: 'time_commitment',
+          question_text: "How much time can you give to this program every week?",
+          answer_value: formData.timeCommitment,
+          answer_data: { selected: formData.timeCommitment }
+        },
+        {
+          question_type: 'ecommerce_experience',
+          question_text: "Have you ever tried starting an ecommerce store before?",
+          answer_value: formData.ecommerceExperience === "explain" ? formData.ecommerceExplain : formData.ecommerceExperience,
+          answer_data: { selected: formData.ecommerceExperience, explanation: formData.ecommerceExplain }
+        },
+        {
+          question_type: 'facebook_ads_knowledge',
+          question_text: "Do you know how to run Facebook Ads?",
+          answer_value: formData.facebookAdsExperience === "explain" ? formData.facebookAdsExplain : formData.facebookAdsExperience,
+          answer_data: { selected: formData.facebookAdsExperience, explanation: formData.facebookAdsExplain }
+        },
+        {
+          question_type: 'shopify_experience',
+          question_text: "What is your experience with Shopify?",
+          answer_value: formData.shopifyExperience === "explain" ? formData.shopifyExplain : formData.shopifyExperience,
+          answer_data: { selected: formData.shopifyExperience, explanation: formData.shopifyExplain }
+        },
+        {
+          question_type: 'biggest_blocker',
+          question_text: "What do you feel is your biggest blocker right now?",
+          answer_value: formData.biggestBlocker === "explain" || formData.biggestBlocker === "other" ? formData.blockerExplain : formData.biggestBlocker,
+          answer_data: { selected: formData.biggestBlocker, explanation: formData.blockerExplain }
+        },
+        {
+          question_type: 'thirty_day_goal',
+          question_text: "Which of these excites you most to achieve in the next 30 days?",
+          answer_value: formData.thirtyDayGoal === "explain" ? formData.goalExplain : formData.thirtyDayGoal,
+          answer_data: { selected: formData.thirtyDayGoal, explanation: formData.goalExplain }
+        }
+      ];
 
-      const { error } = await supabase
+      // Insert responses with user_id
+      const responsesWithUserId = responses.map(response => ({
+        ...response,
+        user_id: user.id
+      }));
+
+      const { error: responsesError } = await supabase
+        .from('onboarding_responses')
+        .upsert(responsesWithUserId, { 
+          onConflict: 'user_id,question_type',
+          ignoreDuplicates: false 
+        });
+
+      if (responsesError) {
+        console.error('Error saving responses:', responsesError);
+        throw responsesError;
+      }
+
+      // Update user table to mark onboarding as complete
+      const { error: userError } = await supabase
         .from('users')
         .update({
-          onboarding_done: true,
-          onboarding_data: formData, // Keep the original JSON for reference
-          "What's your income goal in the next 3 months?": incomeGoal,
-          "Why do you want to make this income?": formData.whyIncome,
-          "If you succeed in this program, what would that mean for you pe": successMeaning,
-          "How much time can you give to this program every week?": formData.timeCommitment,
-          "Have you ever tried starting an ecommerce store before?": ecommerceExp,
-          "Do you know how to run Facebook Ads?": facebookAdsExp,
-          "What is your experience with Shopify?": shopifyExp,
-          "What do you feel is your biggest blocker right now?": blocker,
-          "Which of these excites you most to achieve in the next 30 days?": thirtyDayGoal
+          onboarding_done: true
         })
         .eq('id', user.id);
 
-      if (error) {
-        console.error('Database update error:', error);
-        throw error;
+      if (userError) {
+        console.error('Error updating user:', userError);
+        throw userError;
       }
 
       console.log('Onboarding data saved successfully');
