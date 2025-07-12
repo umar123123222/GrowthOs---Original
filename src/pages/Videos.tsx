@@ -89,7 +89,11 @@ const LessonRow = React.memo(({
 
 LessonRow.displayName = "LessonRow";
 
-const Videos = () => {
+interface VideosProps {
+  user?: any;
+}
+
+const Videos = ({ user }: VideosProps = {}) => {
   const navigate = useNavigate();
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<{
@@ -103,13 +107,17 @@ const Videos = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchModulesAndRecordings();
-  }, []);
+    if (user?.id) {
+      fetchModulesAndRecordings();
+    }
+  }, [user?.id]);
 
   const fetchModulesAndRecordings = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.id) {
+        setLoading(false);
+        return;
+      }
 
       // Fetch modules
       const { data: modulesData, error: modulesError } = await supabase

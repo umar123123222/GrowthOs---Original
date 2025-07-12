@@ -49,7 +49,7 @@ const App = () => {
             ) : (
               <Route path="/" element={<Layout user={currentUser} />}>
                 <Route index element={<Dashboard />} />
-                <Route path="videos" element={<Videos />} />
+                <Route path="videos" element={<Videos user={currentUser} />} />
                 <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
                 <Route path="assignments" element={<Assignments user={currentUser} />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
