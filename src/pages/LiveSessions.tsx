@@ -61,8 +61,12 @@ const LiveSessions = () => {
         .limit(1);
 
       console.log('Upcoming sessions found:', data);
+      console.log('Query error:', error);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
       setSessions(data || []);
     } catch (error) {
       console.error('Error fetching sessions:', error);
