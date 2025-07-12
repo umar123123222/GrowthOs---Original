@@ -40,7 +40,7 @@ const Login = ({ onLogin }: LoginProps) => {
       }
 
       // Check if password matches (using LMS Password column)
-      if (user["LMS Password"] !== password) {
+      if (user.lms_password !== password) {
         toast({
           title: "Invalid Credentials",
           description: "Incorrect email or password.",
