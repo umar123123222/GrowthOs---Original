@@ -48,10 +48,11 @@ const LiveSessions = () => {
 
   const fetchSessions = async () => {
     try {
+      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from('Segmented_Weekly_Success_sessions')
         .select('*')
-        .gte('start_time', new Date().toISOString())
+        .gte('start_time', now)
         .order('start_time', { ascending: true })
         .limit(1);
 
@@ -185,15 +186,15 @@ const LiveSessions = () => {
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4 text-gray-500" />
                       <div>
-                        <div className="font-medium">Date</div>
-                        <div>{session["Schedule Date"] || new Date(session.start_time).toLocaleDateString()}</div>
+                        <div className="font-medium">Day & Date</div>
+                        <div>{new Date(session.start_time).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-gray-500" />
                       <div>
                         <div className="font-medium">Time</div>
-                        <div>{`${new Date(session.start_time).toLocaleTimeString()} - ${new Date(session.end_time).toLocaleTimeString()}`}</div>
+                        <div>{new Date(session.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })} - {new Date(session.end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -241,12 +242,12 @@ const LiveSessions = () => {
                       {sessionStatus.status === 'live' ? (
                         <>
                           <Play className="w-4 h-4 mr-2" />
-                          Join Live
+                          Join Now
                         </>
                       ) : sessionStatus.status === 'upcoming' ? (
                         <>
                           <Calendar className="w-4 h-4 mr-2" />
-                          Schedule Reminder
+                          Join Now
                         </>
                       ) : (
                         <>
