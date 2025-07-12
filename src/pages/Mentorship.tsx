@@ -279,7 +279,7 @@ const Mentorship = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5" />
-            Mentorship Conversations
+            Pod Conversation
           </CardTitle>
         </CardHeader>
         <CardContent>
