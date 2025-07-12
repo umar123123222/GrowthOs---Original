@@ -47,13 +47,20 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchAssignments();
-    fetchSubmissions();
-  }, []);
+    console.log('Assignments useEffect triggered, user:', user);
+    if (user?.id) {
+      fetchAssignments();
+      fetchSubmissions();
+    }
+  }, [user?.id]);
 
   const fetchAssignments = async () => {
+    console.log('fetchAssignments called, user:', user);
     try {
-      if (!user?.id) return;
+      if (!user?.id) {
+        console.log('No user ID, returning');
+        return;
+      }
 
       // Fetch all assignments
       const { data: assignmentsData, error: assignmentsError } = await supabase
@@ -205,50 +212,60 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
       {/* Assignment List */}
       <div className="space-y-4">
         <h2 className="text-2xl font-bold">Assignments</h2>
-        {assignments.map((assignment) => {
-          const isSubmitted = submissions.some(s => s.assignment_id === assignment.assignment_id);
-          const isOverdue = new Date(assignment.due_date) < new Date() && !isSubmitted;
-          const isLocked = !assignment.isUnlocked;
-          
-          return (
-            <Card 
-              key={assignment.assignment_id}
-              className={`cursor-pointer transition-all ${
-                selectedAssignment === assignment.assignment_id 
-                  ? "border-blue-500 shadow-md" 
-                  : "hover:shadow-sm"
-              } ${isLocked ? "opacity-50" : ""}`}
-              onClick={() => !isLocked && setSelectedAssignment(assignment.assignment_id)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className={`font-semibold text-sm ${isLocked ? "text-gray-400" : ""}`}>
-                    {isLocked ? "🔒 " : ""}{assignment.assignment_title}
-                  </h3>
-                  {getStatusBadge(assignment)}
-                </div>
-                
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Assignment {assignment.sequence_order}</span>
-                  <span className="flex items-center">
-                    <Clock className="w-3 h-3 mr-1" />
-                    Due: {new Date(assignment.due_date).toLocaleDateString()}
-                  </span>
-                </div>
-                
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-gray-600">Status: {assignment.Status}</span>
-                  {isOverdue && (
-                    <AlertTriangle className="w-4 h-4 text-red-500" />
-                  )}
-                  {isSubmitted && (
-                    <CheckCircle className="w-4 h-4 text-green-500" />
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {assignments.length === 0 ? (
+          <Card className="p-8 text-center">
+            <div className="text-gray-500">
+              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No Assignments Available</h3>
+              <p>Check back later for new assignments or contact your instructor.</p>
+            </div>
+          </Card>
+        ) : (
+          assignments.map((assignment) => {
+            const isSubmitted = submissions.some(s => s.assignment_id === assignment.assignment_id);
+            const isOverdue = new Date(assignment.due_date) < new Date() && !isSubmitted;
+            const isLocked = !assignment.isUnlocked;
+            
+            return (
+              <Card 
+                key={assignment.assignment_id}
+                className={`cursor-pointer transition-all ${
+                  selectedAssignment === assignment.assignment_id 
+                    ? "border-blue-500 shadow-md" 
+                    : "hover:shadow-sm"
+                } ${isLocked ? "opacity-50" : ""}`}
+                onClick={() => !isLocked && setSelectedAssignment(assignment.assignment_id)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className={`font-semibold text-sm ${isLocked ? "text-gray-400" : ""}`}>
+                      {isLocked ? "🔒 " : ""}{assignment.assignment_title}
+                    </h3>
+                    {getStatusBadge(assignment)}
+                  </div>
+                  
+                  <div className="flex items-center justify-between text-xs text-gray-500">
+                    <span>Assignment {assignment.sequence_order}</span>
+                    <span className="flex items-center">
+                      <Clock className="w-3 h-3 mr-1" />
+                      Due: {assignment.due_date ? new Date(assignment.due_date).toLocaleDateString() : 'No due date'}
+                    </span>
+                  </div>
+                  
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xs text-gray-600">Status: {assignment.Status || 'Pending'}</span>
+                    {isOverdue && (
+                      <AlertTriangle className="w-4 h-4 text-red-500" />
+                    )}
+                    {isSubmitted && (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
 
       {/* Assignment Details */}

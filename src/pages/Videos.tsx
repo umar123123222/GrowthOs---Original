@@ -113,8 +113,10 @@ const Videos = ({ user }: VideosProps = {}) => {
   }, [user?.id]);
 
   const fetchModulesAndRecordings = async () => {
+    console.log('fetchModulesAndRecordings called, user:', user);
     try {
       if (!user?.id) {
+        console.log('No user ID in Videos, returning');
         setLoading(false);
         return;
       }
@@ -286,7 +288,18 @@ const Videos = ({ user }: VideosProps = {}) => {
                 </tr>
               </thead>
               <tbody>
-                {modules.map((module) => (
+                {modules.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-8 text-center">
+                      <div className="text-gray-500">
+                        <Play className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <h3 className="text-lg font-medium mb-2">No Video Lessons Available</h3>
+                        <p>Check back later for new lessons or contact your instructor.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  modules.map((module) => (
                   <React.Fragment key={`module-${module.id}`}>
                     {/* Module Header */}
                     <tr 
@@ -330,7 +343,7 @@ const Videos = ({ user }: VideosProps = {}) => {
                       />
                     ))}
                   </React.Fragment>
-                ))}
+                )))}
               </tbody>
             </table>
           </div>
