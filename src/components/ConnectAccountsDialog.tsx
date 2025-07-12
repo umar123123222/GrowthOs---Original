@@ -34,7 +34,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId }: ConnectAcc
       try {
         const { error } = await supabase
           .from('users')
-          .update({ "Meta Ads Credentials": metaKey })
+          .update({ meta_ads_credentials: metaKey })
           .eq('id', userId);
 
         if (error) throw error;
@@ -61,7 +61,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId }: ConnectAcc
       try {
         const { error } = await supabase
           .from('users')
-          .update({ "Shopify Credentials": shopifyKey })
+          .update({ shopify_credentials: shopifyKey })
           .eq('id', userId);
 
         if (error) throw error;

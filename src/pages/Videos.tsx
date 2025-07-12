@@ -1,10 +1,11 @@
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AssignmentSubmissionDialog } from "@/components/AssignmentSubmissionDialog";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Play, 
   CheckCircle, 
@@ -96,118 +97,135 @@ const Videos = () => {
     lessonTitle: string;
     submitted: boolean;
   } | null>(null);
-  const [expandedModules, setExpandedModules] = useState<{ [key: number]: boolean }>({
-    1: true // First module expanded by default
-  });
+  const [expandedModules, setExpandedModules] = useState<{ [key: number]: boolean }>({});
+  const [modules, setModules] = useState<any[]>([]);
+  const [recordings, setRecordings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Memoize modules data to prevent unnecessary re-renders
-  const modules = useMemo(() => [
-    {
-      id: 1,
-      title: "Introduction to E-commerce",
-      totalLessons: 3,
-      completedLessons: 2,
-      lessons: [
-        { 
-          id: 1, 
-          title: "Welcome to the Course", 
-          duration: "5:30", 
-          completed: true, 
-          locked: false,
-          assignmentTitle: "Course Introduction Assignment",
-          assignmentSubmitted: true
-        },
-        { 
-          id: 2, 
-          title: "E-commerce Fundamentals", 
-          duration: "12:45", 
-          completed: true, 
-          locked: false,
-          assignmentTitle: "E-commerce Basics Quiz",
-          assignmentSubmitted: false
-        },
-        { 
-          id: 3, 
-          title: "Market Research Basics", 
-          duration: "18:20", 
-          completed: false, 
-          locked: false,
-          assignmentTitle: "Market Research Report",
-          assignmentSubmitted: false
-        }
-      ]
-    },
-    {
-      id: 2,
-      title: "Product Research & Selection",
-      totalLessons: 3,
-      completedLessons: 0,
-      lessons: [
-        { 
-          id: 4, 
-          title: "Finding Winning Products", 
-          duration: "22:15", 
-          completed: false, 
-          locked: false,
-          assignmentTitle: "Product Research Assignment",
-          assignmentSubmitted: false
-        },
-        { 
-          id: 5, 
-          title: "Competitor Analysis", 
-          duration: "16:30", 
-          completed: false, 
-          locked: false,
-          assignmentTitle: "Competitor Analysis Report",
-          assignmentSubmitted: false
-        },
-        { 
-          id: 6, 
-          title: "Trend Identification", 
-          duration: "14:45", 
-          completed: false, 
-          locked: true,
-          assignmentTitle: "Trend Analysis Assignment",
-          assignmentSubmitted: false
-        }
-      ]
-    },
-    {
-      id: 3,
-      title: "Shopify Store Setup",
-      totalLessons: 3,
-      completedLessons: 0,
-      lessons: [
-        { 
-          id: 7, 
-          title: "Creating Your Store", 
-          duration: "25:00", 
-          completed: false, 
-          locked: true,
-          assignmentTitle: "Store Setup Assignment",
-          assignmentSubmitted: false
-        },
-        { 
-          id: 8, 
-          title: "Theme Customization", 
-          duration: "20:30", 
-          completed: false, 
-          locked: true,
-          assignmentTitle: "Theme Customization Task",
-          assignmentSubmitted: false
-        },
-        { 
-          id: 9, 
-          title: "Payment Setup", 
-          duration: "15:15", 
-          completed: false, 
-          locked: true,
-          assignmentTitle: "Payment Integration Assignment",
-          assignmentSubmitted: false
-        }
-      ]
+  useEffect(() => {
+    fetchModulesAndRecordings();
+  }, []);
+
+  const fetchModulesAndRecordings = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch modules
+      const { data: modulesData, error: modulesError } = await supabase
+        .from('modules')
+        .select('*')
+        .order('order');
+
+      if (modulesError) throw modulesError;
+
+      // Fetch recordings with assignment info
+      const { data: recordingsData, error: recordingsError } = await supabase
+        .from('session_recordings')
+        .select('*')
+        .order('sequence_order');
+
+      // Fetch assignments separately
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('assignment')
+        .select('*');
+
+      if (recordingsError) throw recordingsError;
+      if (assignmentsError) throw assignmentsError;
+
+      // Fetch user's assignment submissions
+      const { data: submissions, error: submissionsError } = await supabase
+        .from('assignment_submissions')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (submissionsError) throw submissionsError;
+
+      // Fetch manual unlocks
+      const { data: unlocks, error: unlocksError } = await supabase
+        .from('user_unlocks')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_unlocked', true);
+
+      if (unlocksError) throw unlocksError;
+
+      // Process data to determine locked/unlocked status
+      const processedModules = modulesData?.map(module => {
+        const moduleRecordings = recordingsData?.filter(r => r.module === module.id) || [];
+        
+        const lessons = moduleRecordings.map(recording => {
+          // Find associated assignment
+          const associatedAssignment = assignmentsData?.find(a => a.assignment_id === recording.assignment_id);
+          
+          // Check if recording is manually unlocked
+          const manualUnlock = unlocks?.find(u => u.recording_id === recording.id);
+          if (manualUnlock?.is_unlocked) {
+            return {
+              id: recording.id,
+              title: recording.recording_title || 'Untitled Recording',
+              duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
+              completed: false,
+              locked: false,
+              assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
+              assignmentSubmitted: false,
+              recording_url: recording.recording_url
+            };
+          }
+
+          // Check assignment unlock logic
+          if (recording.assignment_id) {
+            const submission = submissions?.find(s => s.assignment_id === recording.assignment_id);
+            const isLocked = !submission || submission.status !== 'accepted';
+            
+            return {
+              id: recording.id,
+              title: recording.recording_title || 'Untitled Recording',
+              duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
+              completed: submission?.status === 'accepted',
+              locked: isLocked,
+              assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
+              assignmentSubmitted: !!submission,
+              recording_url: recording.recording_url
+            };
+          }
+
+          // No assignment required - unlocked
+          return {
+            id: recording.id,
+            title: recording.recording_title || 'Untitled Recording',
+            duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
+            completed: false,
+            locked: false,
+            assignmentTitle: 'No Assignment Required',
+            assignmentSubmitted: false,
+            recording_url: recording.recording_url
+          };
+        });
+
+        return {
+          id: module.id,
+          title: module.title,
+          totalLessons: lessons.length,
+          completedLessons: lessons.filter(l => l.completed).length,
+          lessons
+        };
+      }) || [];
+
+      setModules(processedModules);
+      setRecordings(recordingsData || []);
+      
+      // Auto-expand first module
+      if (processedModules.length > 0) {
+        setExpandedModules({ [processedModules[0].id]: true });
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
     }
-  ], []);
+  };
+
 
   // Memoized callbacks to prevent unnecessary re-renders
   const handleWatchNow = useCallback((moduleId: number, lessonId: number) => {
@@ -229,6 +247,14 @@ const Videos = () => {
       [moduleId]: !prev[moduleId]
     }));
   }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">

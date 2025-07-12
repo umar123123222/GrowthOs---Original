@@ -39,6 +39,7 @@ interface MentorshipNote {
 
 const Mentorship = () => {
   const [userPod, setUserPod] = useState<Pod | null>(null);
+  const [podMembers, setPodMembers] = useState<any[]>([]);
   const [mentorshipNotes, setMentorshipNotes] = useState<MentorshipNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [loading, setLoading] = useState(true);
@@ -48,6 +49,20 @@ const Mentorship = () => {
     fetchUserPod();
     fetchMentorshipNotes();
   }, []);
+
+  const fetchPodMembers = async (podId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, email, role')
+        .eq('pod_id', podId);
+
+      if (error) throw error;
+      setPodMembers(data || []);
+    } catch (error) {
+      console.error('Error fetching pod members:', error);
+    }
+  };
 
   const fetchUserPod = async () => {
     try {
@@ -75,6 +90,11 @@ const Mentorship = () => {
 
         if (podError) throw podError;
         setUserPod(podData);
+        
+        // Fetch pod members
+        if (podData) {
+          await fetchPodMembers(podData.id);
+        }
       }
     } catch (error) {
       console.error('Error fetching user pod:', error);
@@ -149,9 +169,9 @@ const Mentorship = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Mentorship Program</h1>
+        <h1 className="text-3xl font-bold mb-2">Study Pod</h1>
         <p className="text-muted-foreground">
-          Connect with your mentor and learning pod
+          Connect with your pod members and mentor
         </p>
       </div>
 
@@ -183,6 +203,35 @@ const Mentorship = () => {
                     <p className="text-sm text-blue-800">{userPod.notes}</p>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Pod Members */}
+            {podMembers.length > 0 && (
+              <div className="mt-6">
+                <h4 className="font-medium mb-3">Pod Members</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {podMembers.map((member) => (
+                    <div key={member.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <User className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{member.full_name}</div>
+                        <div className="text-xs text-gray-500">{member.role}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Private Forum Embed */}
+            <div className="mt-6">
+              <h4 className="font-medium mb-3">Pod Discussion Forum</h4>
+              <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <p className="text-gray-600">Private forum embed will be placed here</p>
+                <p className="text-sm text-gray-500 mt-1">Contact admin for forum integration</p>
               </div>
             </div>
           </CardContent>

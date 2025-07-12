@@ -22,8 +22,8 @@ interface LiveSession {
   end_time: string;
   link: string;
   status: string;
-  "Mentor Name": string;
-  "Schedule Date": string;
+  mentor_name: string;
+  schedule_date: string;
   created_at: string;
   created_by: string;
 }
@@ -54,7 +54,7 @@ const LiveSessions = () => {
       console.log('Current time for comparison:', currentDateTime);
       
       const { data, error } = await supabase
-        .from('Segmented_Weekly_Success_sessions')
+        .from('segmented_weekly_success_sessions')
         .select('*')
         .gte('start_time', currentDateTime)
         .order('start_time', { ascending: true })
@@ -211,7 +211,7 @@ const LiveSessions = () => {
                       <Users className="w-4 h-4 text-gray-500" />
                       <div>
                         <div className="font-medium">Mentor</div>
-                        <div>{session["Mentor Name"] || "TBA"}</div>
+                        <div>{session.mentor_name || "TBA"}</div>
                       </div>
                     </div>
                   </div>

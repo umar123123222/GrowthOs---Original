@@ -15,17 +15,18 @@ import {
 } from "lucide-react";
 
 interface Assignment {
-  "Assignment ID": string;
-  "Assignment Title": string;
-  "Assignment Description": string;
-  "Due Date": string;
+  assignment_id: string;
+  assignment_title: string;
+  assignment_description: string;
+  due_date: string;
   sequence_order: number;
   Status: string;
+  isUnlocked?: boolean;
 }
 
 interface Submission {
   id: string;
-  assignment_id: number;
+  assignment_id: string;
   status: string;
   text_response: string;
   submitted_at: string;
@@ -48,15 +49,46 @@ const Assignments = () => {
 
   const fetchAssignments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('Assignment')
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Fetch all assignments
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('assignment')
         .select('*')
         .order('sequence_order');
 
-      if (error) throw error;
-      setAssignments(data || []);
-      if (data && data.length > 0) {
-        setSelectedAssignment(data[0]["Assignment ID"]);
+      if (assignmentsError) throw assignmentsError;
+
+      // Fetch user's submissions
+      const { data: submissions, error: submissionsError } = await supabase
+        .from('assignment_submissions')
+        .select('*')
+        .eq('user_id', user.id);
+
+      if (submissionsError) throw submissionsError;
+
+      // Determine which assignments are unlocked based on sequence
+      const processedAssignments = assignmentsData?.map(assignment => {
+        // Check if all previous assignments are completed
+        const previousAssignments = assignmentsData.filter(a => a.sequence_order < assignment.sequence_order);
+        const allPreviousCompleted = previousAssignments.every(prevAssignment => {
+          const submission = submissions?.find(s => s.assignment_id === prevAssignment.assignment_id);
+          return submission && submission.status === 'accepted';
+        });
+
+        // First assignment is always unlocked, others need previous ones completed
+        const isUnlocked = assignment.sequence_order === 1 || allPreviousCompleted;
+
+        return {
+          ...assignment,
+          isUnlocked
+        };
+      }) || [];
+
+      setAssignments(processedAssignments);
+      if (processedAssignments && processedAssignments.length > 0) {
+        setSelectedAssignment(processedAssignments[0].assignment_id);
       }
     } catch (error) {
       console.error('Error fetching assignments:', error);
@@ -94,14 +126,14 @@ const Assignments = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
 
-      const assignment = assignments.find(a => a["Assignment ID"] === selectedAssignment);
+      const assignment = assignments.find(a => a.assignment_id === selectedAssignment);
       if (!assignment) throw new Error('Assignment not found');
 
       const { error } = await supabase
         .from('assignment_submissions')
         .insert({
           user_id: user.id,
-          assignment_id: assignment.sequence_order,
+          assignment_id: assignment.assignment_id,
           submission_type: 'text',
           text_response: submission,
           status: 'submitted'
@@ -126,13 +158,20 @@ const Assignments = () => {
     }
   };
 
-  const getStatusBadge = (assignment: Assignment) => {
-    const submissionForAssignment = submissions.find(s => s.assignment_id === assignment.sequence_order);
-    const dueDate = new Date(assignment["Due Date"]);
+  const getStatusBadge = (assignment: Assignment & { isUnlocked?: boolean }) => {
+    const submissionForAssignment = submissions.find(s => s.assignment_id === assignment.assignment_id);
+    const dueDate = new Date(assignment.due_date);
     const today = new Date();
     
+    if (!assignment.isUnlocked) {
+      return <Badge variant="secondary">Locked</Badge>;
+    }
+    
     if (submissionForAssignment) {
-      return <Badge className="bg-green-100 text-green-800">Submitted</Badge>;
+      if (submissionForAssignment.status === 'accepted') {
+        return <Badge className="bg-green-100 text-green-800">Accepted</Badge>;
+      }
+      return <Badge className="bg-blue-100 text-blue-800">Submitted</Badge>;
     }
     
     if (dueDate < today) {
@@ -148,9 +187,9 @@ const Assignments = () => {
     return <Badge variant="outline">Upcoming</Badge>;
   };
 
-  const selectedAssignmentData = assignments.find(a => a["Assignment ID"] === selectedAssignment);
+  const selectedAssignmentData = assignments.find(a => a.assignment_id === selectedAssignment);
   const selectedSubmission = selectedAssignmentData ? 
-    submissions.find(s => s.assignment_id === selectedAssignmentData.sequence_order) : null;
+    submissions.find(s => s.assignment_id === selectedAssignmentData.assignment_id) : null;
 
   if (loading) {
     return (
@@ -166,22 +205,25 @@ const Assignments = () => {
       <div className="space-y-4">
         <h2 className="text-2xl font-bold">Assignments</h2>
         {assignments.map((assignment) => {
-          const isSubmitted = submissions.some(s => s.assignment_id === assignment.sequence_order);
-          const isOverdue = new Date(assignment["Due Date"]) < new Date() && !isSubmitted;
+          const isSubmitted = submissions.some(s => s.assignment_id === assignment.assignment_id);
+          const isOverdue = new Date(assignment.due_date) < new Date() && !isSubmitted;
+          const isLocked = !assignment.isUnlocked;
           
           return (
             <Card 
-              key={assignment["Assignment ID"]}
+              key={assignment.assignment_id}
               className={`cursor-pointer transition-all ${
-                selectedAssignment === assignment["Assignment ID"] 
+                selectedAssignment === assignment.assignment_id 
                   ? "border-blue-500 shadow-md" 
                   : "hover:shadow-sm"
-              }`}
-              onClick={() => setSelectedAssignment(assignment["Assignment ID"])}
+              } ${isLocked ? "opacity-50" : ""}`}
+              onClick={() => !isLocked && setSelectedAssignment(assignment.assignment_id)}
             >
               <CardContent className="p-4">
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-sm">{assignment["Assignment Title"]}</h3>
+                  <h3 className={`font-semibold text-sm ${isLocked ? "text-gray-400" : ""}`}>
+                    {isLocked ? "🔒 " : ""}{assignment.assignment_title}
+                  </h3>
                   {getStatusBadge(assignment)}
                 </div>
                 
@@ -189,7 +231,7 @@ const Assignments = () => {
                   <span>Assignment {assignment.sequence_order}</span>
                   <span className="flex items-center">
                     <Clock className="w-3 h-3 mr-1" />
-                    Due: {new Date(assignment["Due Date"]).toLocaleDateString()}
+                    Due: {new Date(assignment.due_date).toLocaleDateString()}
                   </span>
                 </div>
                 
@@ -214,7 +256,7 @@ const Assignments = () => {
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">{selectedAssignmentData["Assignment Title"]}</CardTitle>
+                <CardTitle className="text-xl">{selectedAssignmentData.assignment_title}</CardTitle>
                 {getStatusBadge(selectedAssignmentData)}
               </div>
               <div className="flex items-center space-x-4 text-sm text-gray-600">
@@ -222,7 +264,7 @@ const Assignments = () => {
                 <span>•</span>
                 <span>Status: {selectedAssignmentData.Status}</span>
                 <span>•</span>
-                <span>Due: {new Date(selectedAssignmentData["Due Date"]).toLocaleDateString()}</span>
+                <span>Due: {new Date(selectedAssignmentData.due_date).toLocaleDateString()}</span>
               </div>
             </CardHeader>
             
@@ -230,7 +272,7 @@ const Assignments = () => {
               {/* Description */}
               <div>
                 <h3 className="font-semibold mb-2">Assignment Description</h3>
-                <p className="text-gray-600">{selectedAssignmentData["Assignment Description"]}</p>
+                <p className="text-gray-600">{selectedAssignmentData.assignment_description}</p>
               </div>
 
               {/* Requirements */}
@@ -299,7 +341,7 @@ const Assignments = () => {
               </div>
 
               {/* AI Feedback */}
-              {selectedAssignmentData && new Date(selectedAssignmentData["Due Date"]) < new Date() && !selectedSubmission && (
+              {selectedAssignmentData && new Date(selectedAssignmentData.due_date) < new Date() && !selectedSubmission && (
                 <Card className="bg-red-50 border-red-200">
                   <CardContent className="p-4">
                     <div className="flex items-start space-x-3">

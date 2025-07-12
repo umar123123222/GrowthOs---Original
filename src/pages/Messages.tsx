@@ -28,6 +28,7 @@ interface Message {
 const Messages = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
+  const [messageType, setMessageType] = useState("feedback");
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [loading, setLoading] = useState(true);
@@ -73,13 +74,13 @@ const Messages = () => {
         .from('messages')
         .insert({
           user_id: user.id,
-          template_name: 'user_message',
+          template_name: messageType,
           context: { 
             message: newMessage,
-            type: 'user_sent',
+            type: messageType,
             timestamp: new Date().toISOString()
           },
-          status: 'sent'
+          status: 'queued'
         });
 
       if (error) throw error;
@@ -103,12 +104,12 @@ const Messages = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case 'queued':
+        return <Badge className="bg-yellow-100 text-yellow-800">Queued</Badge>;
       case 'sent':
         return <Badge className="bg-green-100 text-green-800">Sent</Badge>;
-      case 'delivered':
-        return <Badge className="bg-blue-100 text-blue-800">Delivered</Badge>;
-      case 'read':
-        return <Badge className="bg-gray-100 text-gray-800">Read</Badge>;
+      case 'replied':
+        return <Badge className="bg-blue-100 text-blue-800">Replied</Badge>;
       case 'failed':
         return <Badge variant="destructive">Failed</Badge>;
       default:
@@ -145,9 +146,9 @@ const Messages = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Messages</h1>
+        <h1 className="text-3xl font-bold mb-2">Complaints & Feedbacks</h1>
         <p className="text-muted-foreground">
-          Send and receive messages within the platform
+          Submit complaints and feedback to improve your learning experience
         </p>
       </div>
 
@@ -156,12 +157,23 @@ const Messages = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Send className="w-5 h-5" />
-            Send New Message
+            Submit Complaint or Feedback
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">Type</label>
+            <select
+              value={messageType}
+              onChange={(e) => setMessageType(e.target.value)}
+              className="w-full px-3 py-2 border rounded-md bg-white"
+            >
+              <option value="feedback">Feedback</option>
+              <option value="complaint">Complaint</option>
+            </select>
+          </div>
           <Textarea
-            placeholder="Type your message here..."
+            placeholder={`Describe your ${messageType} in detail...`}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             rows={4}
@@ -172,7 +184,7 @@ const Messages = () => {
             className="w-full"
           >
             <Send className="w-4 h-4 mr-2" />
-            Send Message
+            Submit {messageType.charAt(0).toUpperCase() + messageType.slice(1)}
           </Button>
         </CardContent>
       </Card>
@@ -200,9 +212,9 @@ const Messages = () => {
                 className="px-3 py-2 border rounded-md bg-white"
               >
                 <option value="all">All Status</option>
+                <option value="queued">Queued</option>
                 <option value="sent">Sent</option>
-                <option value="delivered">Delivered</option>
-                <option value="read">Read</option>
+                <option value="replied">Replied</option>
                 <option value="failed">Failed</option>
               </select>
             </div>

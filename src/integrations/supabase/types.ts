@@ -55,31 +55,31 @@ export type Database = {
           },
         ]
       }
-      Assignment: {
+      assignment: {
         Row: {
-          "Assignment Description": string | null
-          "Assignment ID": string
-          "Assignment Title": string | null
+          assignment_description: string | null
+          assignment_id: string
+          assignment_title: string | null
           created_at: string
-          "Due Date": string | null
+          due_date: string | null
           sequence_order: number
           Status: string | null
         }
         Insert: {
-          "Assignment Description"?: string | null
-          "Assignment ID"?: string
-          "Assignment Title"?: string | null
+          assignment_description?: string | null
+          assignment_id?: string
+          assignment_title?: string | null
           created_at: string
-          "Due Date"?: string | null
+          due_date?: string | null
           sequence_order: number
           Status?: string | null
         }
         Update: {
-          "Assignment Description"?: string | null
-          "Assignment ID"?: string
-          "Assignment Title"?: string | null
+          assignment_description?: string | null
+          assignment_id?: string
+          assignment_title?: string | null
           created_at?: string
-          "Due Date"?: string | null
+          due_date?: string | null
           sequence_order?: number
           Status?: string | null
         }
@@ -87,14 +87,13 @@ export type Database = {
       }
       assignment_submissions: {
         Row: {
-          assignment_id: number | null
+          assignment_id: string | null
           external_link: string | null
           feedback: string | null
-          Feedback: string | null
           file_url: string | null
           id: string
-          Mentor: string | null
-          Result: string | null
+          mentor: string | null
+          result: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           score: number | null
@@ -105,14 +104,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          assignment_id?: number | null
+          assignment_id?: string | null
           external_link?: string | null
           feedback?: string | null
-          Feedback?: string | null
           file_url?: string | null
           id?: string
-          Mentor?: string | null
-          Result?: string | null
+          mentor?: string | null
+          result?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           score?: number | null
@@ -123,14 +121,13 @@ export type Database = {
           user_id: string
         }
         Update: {
-          assignment_id?: number | null
+          assignment_id?: string | null
           external_link?: string | null
           feedback?: string | null
-          Feedback?: string | null
           file_url?: string | null
           id?: string
-          Mentor?: string | null
-          Result?: string | null
+          mentor?: string | null
+          result?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           score?: number | null
@@ -141,6 +138,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignment"
+            referencedColumns: ["assignment_id"]
+          },
           {
             foreignKeyName: "assignment_submissions_reviewed_by_fkey"
             columns: ["reviewed_by"]
@@ -547,26 +551,26 @@ export type Database = {
           },
         ]
       }
-      "Performance Record": {
+      performance_record: {
         Row: {
           id: number
-          "Times Recovered": number | null
-          user_ID: string | null
+          times_recovered: number | null
+          user_id: string | null
         }
         Insert: {
           id?: number
-          "Times Recovered"?: number | null
-          user_ID?: string | null
+          times_recovered?: number | null
+          user_id?: string | null
         }
         Update: {
           id?: number
-          "Times Recovered"?: number | null
-          user_ID?: string | null
+          times_recovered?: number | null
+          user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "Performance Record_user_ID_fkey"
-            columns: ["user_ID"]
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -753,7 +757,46 @@ export type Database = {
           },
         ]
       }
-      Segmented_Weekly_Success_sessions: {
+      recording_views: {
+        Row: {
+          id: string
+          recording_id: string
+          user_id: string
+          watched: boolean | null
+          watched_at: string | null
+        }
+        Insert: {
+          id?: string
+          recording_id: string
+          user_id: string
+          watched?: boolean | null
+          watched_at?: string | null
+        }
+        Update: {
+          id?: string
+          recording_id?: string
+          user_id?: string
+          watched?: boolean | null
+          watched_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_views_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "session_recordings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_views_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      segmented_weekly_success_sessions: {
         Row: {
           created_at: string | null
           created_by: string | null
@@ -761,8 +804,8 @@ export type Database = {
           end_time: string | null
           id: string
           link: string
-          "Mentor Name": string | null
-          "Schedule Date": string | null
+          mentor_name: string | null
+          schedule_date: string | null
           start_time: string
           status: string | null
           title: string
@@ -774,8 +817,8 @@ export type Database = {
           end_time?: string | null
           id?: string
           link: string
-          "Mentor Name"?: string | null
-          "Schedule Date"?: string | null
+          mentor_name?: string | null
+          schedule_date?: string | null
           start_time: string
           status?: string | null
           title: string
@@ -787,8 +830,8 @@ export type Database = {
           end_time?: string | null
           id?: string
           link?: string
-          "Mentor Name"?: string | null
-          "Schedule Date"?: string | null
+          mentor_name?: string | null
+          schedule_date?: string | null
           start_time?: string
           status?: string | null
           title?: string
@@ -830,7 +873,7 @@ export type Database = {
             foreignKeyName: "session_attendance_live_session_id_fkey"
             columns: ["live_session_id"]
             isOneToOne: false
-            referencedRelation: "Segmented_Weekly_Success_sessions"
+            referencedRelation: "segmented_weekly_success_sessions"
             referencedColumns: ["id"]
           },
           {
@@ -844,39 +887,42 @@ export type Database = {
       }
       session_recordings: {
         Row: {
-          "Assignment ID": string | null
+          assignment_id: string | null
           batch_id: string | null
           duration_min: number | null
           id: string
-          "Last Assignment Completed?": string | null
+          last_assignment_completed: string | null
+          module: string | null
           notes: string | null
-          "Recording title": string | null
+          recording_title: string | null
           recording_url: string | null
           sequence_order: number | null
           uploaded_at: string | null
           uploaded_by: string | null
         }
         Insert: {
-          "Assignment ID"?: string | null
+          assignment_id?: string | null
           batch_id?: string | null
           duration_min?: number | null
           id?: string
-          "Last Assignment Completed?"?: string | null
+          last_assignment_completed?: string | null
+          module?: string | null
           notes?: string | null
-          "Recording title"?: string | null
+          recording_title?: string | null
           recording_url?: string | null
           sequence_order?: number | null
           uploaded_at?: string | null
           uploaded_by?: string | null
         }
         Update: {
-          "Assignment ID"?: string | null
+          assignment_id?: string | null
           batch_id?: string | null
           duration_min?: number | null
           id?: string
-          "Last Assignment Completed?"?: string | null
+          last_assignment_completed?: string | null
+          module?: string | null
           notes?: string | null
-          "Recording title"?: string | null
+          recording_title?: string | null
           recording_url?: string | null
           sequence_order?: number | null
           uploaded_at?: string | null
@@ -892,9 +938,16 @@ export type Database = {
           },
           {
             foreignKeyName: "session_recordings_Last Assignment Completed?_fkey"
-            columns: ["Last Assignment Completed?"]
+            columns: ["last_assignment_completed"]
             isOneToOne: false
             referencedRelation: "assignment_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_recordings_module_fkey"
+            columns: ["module"]
+            isOneToOne: false
+            referencedRelation: "modules"
             referencedColumns: ["id"]
           },
           {
@@ -1033,132 +1086,129 @@ export type Database = {
           },
         ]
       }
+      user_unlocks: {
+        Row: {
+          is_unlocked: boolean | null
+          recording_id: string
+          unlocked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          is_unlocked?: boolean | null
+          recording_id: string
+          unlocked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          is_unlocked?: boolean | null
+          recording_id?: string
+          unlocked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           avatar_url: string | null
           batch_id: string | null
+          biggest_blocker: string | null
           course_track_id: string | null
           created_at: string | null
-          "Do you know how to run Facebook Ads?": string | null
           email: string
-          "Final Goal": string | null
+          final_goal: string | null
           full_name: string
-          "Have you ever tried starting an ecommerce store before?":
-            | string
-            | null
-          "How much time can you give to this program every week?":
-            | string
-            | null
           id: string
-          "If you succeed in this program, what would that mean for you pe":
-            | string
-            | null
+          income_goal_3_months: string | null
+          income_reason: string | null
+          knows_facebook_ads: string | null
           last_active_at: string | null
-          "LMS Password": string | null
-          "LMS User ID": string | null
+          lms_password: string | null
+          lms_user_id: string | null
           mentor_id: string | null
-          "Meta Ads Credentials": string | null
+          meta_ads_credentials: string | null
           onboarding_data: Json | null
           onboarding_done: boolean | null
           path: string | null
           phone: string | null
           pod_id: string | null
           role: string
-          "Shopify Credentials": string | null
+          shopify_credentials: string | null
+          shopify_experience: string | null
+          short_term_goal: string | null
           status: string | null
-          "status After 3 Months": string | null
+          status_after_3_months: string | null
+          success_meaning: string | null
           tenant_id: string | null
-          "What do you feel is your biggest blocker right now?": string | null
-          "What is your experience with Shopify?": string | null
-          "What’s your income goal in the next 3 months?": string | null
-          "Which of these excites you most to achieve in the next 30 days?":
-            | string
-            | null
-          "Why do you want to make this income?": string | null
+          tried_ecommerce_before: string | null
+          weekly_time_commitment: string | null
         }
         Insert: {
           avatar_url?: string | null
           batch_id?: string | null
+          biggest_blocker?: string | null
           course_track_id?: string | null
           created_at?: string | null
-          "Do you know how to run Facebook Ads?"?: string | null
           email: string
-          "Final Goal"?: string | null
+          final_goal?: string | null
           full_name: string
-          "Have you ever tried starting an ecommerce store before?"?:
-            | string
-            | null
-          "How much time can you give to this program every week?"?:
-            | string
-            | null
           id?: string
-          "If you succeed in this program, what would that mean for you pe"?:
-            | string
-            | null
+          income_goal_3_months?: string | null
+          income_reason?: string | null
+          knows_facebook_ads?: string | null
           last_active_at?: string | null
-          "LMS Password"?: string | null
-          "LMS User ID"?: string | null
+          lms_password?: string | null
+          lms_user_id?: string | null
           mentor_id?: string | null
-          "Meta Ads Credentials"?: string | null
+          meta_ads_credentials?: string | null
           onboarding_data?: Json | null
           onboarding_done?: boolean | null
           path?: string | null
           phone?: string | null
           pod_id?: string | null
           role?: string
-          "Shopify Credentials"?: string | null
+          shopify_credentials?: string | null
+          shopify_experience?: string | null
+          short_term_goal?: string | null
           status?: string | null
-          "status After 3 Months"?: string | null
+          status_after_3_months?: string | null
+          success_meaning?: string | null
           tenant_id?: string | null
-          "What do you feel is your biggest blocker right now?"?: string | null
-          "What is your experience with Shopify?"?: string | null
-          "What’s your income goal in the next 3 months?"?: string | null
-          "Which of these excites you most to achieve in the next 30 days?"?:
-            | string
-            | null
-          "Why do you want to make this income?"?: string | null
+          tried_ecommerce_before?: string | null
+          weekly_time_commitment?: string | null
         }
         Update: {
           avatar_url?: string | null
           batch_id?: string | null
+          biggest_blocker?: string | null
           course_track_id?: string | null
           created_at?: string | null
-          "Do you know how to run Facebook Ads?"?: string | null
           email?: string
-          "Final Goal"?: string | null
+          final_goal?: string | null
           full_name?: string
-          "Have you ever tried starting an ecommerce store before?"?:
-            | string
-            | null
-          "How much time can you give to this program every week?"?:
-            | string
-            | null
           id?: string
-          "If you succeed in this program, what would that mean for you pe"?:
-            | string
-            | null
+          income_goal_3_months?: string | null
+          income_reason?: string | null
+          knows_facebook_ads?: string | null
           last_active_at?: string | null
-          "LMS Password"?: string | null
-          "LMS User ID"?: string | null
+          lms_password?: string | null
+          lms_user_id?: string | null
           mentor_id?: string | null
-          "Meta Ads Credentials"?: string | null
+          meta_ads_credentials?: string | null
           onboarding_data?: Json | null
           onboarding_done?: boolean | null
           path?: string | null
           phone?: string | null
           pod_id?: string | null
           role?: string
-          "Shopify Credentials"?: string | null
+          shopify_credentials?: string | null
+          shopify_experience?: string | null
+          short_term_goal?: string | null
           status?: string | null
-          "status After 3 Months"?: string | null
+          status_after_3_months?: string | null
+          success_meaning?: string | null
           tenant_id?: string | null
-          "What do you feel is your biggest blocker right now?"?: string | null
-          "What is your experience with Shopify?"?: string | null
-          "What’s your income goal in the next 3 months?"?: string | null
-          "Which of these excites you most to achieve in the next 30 days?"?:
-            | string
-            | null
-          "Why do you want to make this income?"?: string | null
+          tried_ecommerce_before?: string | null
+          weekly_time_commitment?: string | null
         }
         Relationships: [
           {
