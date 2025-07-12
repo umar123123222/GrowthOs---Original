@@ -51,7 +51,9 @@ const LiveSessions = () => {
       const { data, error } = await supabase
         .from('Segmented_Weekly_Success_sessions')
         .select('*')
-        .order('start_time', { ascending: true });
+        .gte('start_time', new Date().toISOString())
+        .order('start_time', { ascending: true })
+        .limit(1);
 
       if (error) throw error;
       setSessions(data || []);
@@ -144,9 +146,9 @@ const LiveSessions = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Live Success Sessions</h1>
+        <h1 className="text-3xl font-bold mb-2">Next Success Session</h1>
         <p className="text-muted-foreground">
-          Join live success sessions with mentors and fellow students
+          Your upcoming success session with mentors and fellow students
         </p>
       </div>
 
@@ -154,8 +156,8 @@ const LiveSessions = () => {
         <Card>
           <CardContent className="text-center py-12">
             <Video className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium mb-2">No Live Success Sessions Scheduled</h3>
-            <p className="text-gray-600">Check back soon for upcoming success sessions</p>
+            <h3 className="text-lg font-medium mb-2">No Upcoming Success Session</h3>
+            <p className="text-gray-600">Check back soon for your next scheduled success session</p>
           </CardContent>
         </Card>
       ) : (
