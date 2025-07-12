@@ -755,7 +755,6 @@ export type Database = {
       }
       Segmented_Weekly_Success_sessions: {
         Row: {
-          batch_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
@@ -763,16 +762,12 @@ export type Database = {
           id: string
           link: string
           "Mentor Name": string | null
-          module_id: string | null
-          pod_id: string | null
           "Schedule Date": string | null
-          "Schedule Day & Time": string | null
           start_time: string
           status: string | null
           title: string
         }
         Insert: {
-          batch_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -780,16 +775,12 @@ export type Database = {
           id?: string
           link: string
           "Mentor Name"?: string | null
-          module_id?: string | null
-          pod_id?: string | null
           "Schedule Date"?: string | null
-          "Schedule Day & Time"?: string | null
           start_time: string
           status?: string | null
           title: string
         }
         Update: {
-          batch_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
@@ -797,41 +788,17 @@ export type Database = {
           id?: string
           link?: string
           "Mentor Name"?: string | null
-          module_id?: string | null
-          pod_id?: string | null
           "Schedule Date"?: string | null
-          "Schedule Day & Time"?: string | null
           start_time?: string
           status?: string | null
           title?: string
         }
         Relationships: [
           {
-            foreignKeyName: "live_sessions_batch_id_fkey"
-            columns: ["batch_id"]
-            isOneToOne: false
-            referencedRelation: "batches"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "live_sessions_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "live_sessions_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "modules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "live_sessions_pod_id_fkey"
-            columns: ["pod_id"]
-            isOneToOne: false
-            referencedRelation: "pods"
             referencedColumns: ["id"]
           },
         ]

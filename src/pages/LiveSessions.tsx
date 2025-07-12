@@ -24,8 +24,8 @@ interface LiveSession {
   status: string;
   "Mentor Name": string;
   "Schedule Date": string;
-  "Schedule Day & Time": string;
-  module_id: string;
+  created_at: string;
+  created_by: string;
 }
 
 interface SessionAttendance {
@@ -191,7 +191,7 @@ const LiveSessions = () => {
                       <Clock className="w-4 h-4 text-gray-500" />
                       <div>
                         <div className="font-medium">Time</div>
-                        <div>{session["Schedule Day & Time"] || `${new Date(session.start_time).toLocaleTimeString()} - ${new Date(session.end_time).toLocaleTimeString()}`}</div>
+                        <div>{`${new Date(session.start_time).toLocaleTimeString()} - ${new Date(session.end_time).toLocaleTimeString()}`}</div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">

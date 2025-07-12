@@ -34,7 +34,7 @@ const Layout = ({ user }: LayoutProps) => {
     { name: "Dashboard", href: "/", icon: Monitor },
     { name: "Videos", href: "/videos", icon: BookOpen },
     { name: "Assignments", href: "/assignments", icon: FileText },
-    { name: "Live Sessions", href: "/live-sessions", icon: Video },
+    { name: "Success Sessions", href: "/live-sessions", icon: Video },
     { name: "Mentorship", href: "/mentorship", icon: Users },
     { name: "Leaderboard", href: "/leaderboard", icon: Star },
     { name: "Messages", href: "/messages", icon: MessageSquare },
