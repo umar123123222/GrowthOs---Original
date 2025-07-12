@@ -48,14 +48,20 @@ const LiveSessions = () => {
 
   const fetchSessions = async () => {
     try {
-      const now = new Date().toISOString();
+      // Get current date in simpler format to match database format
+      const now = new Date();
+      const currentDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
+      console.log('Current time for comparison:', currentDateTime);
+      
       const { data, error } = await supabase
         .from('Segmented_Weekly_Success_sessions')
         .select('*')
-        .gte('start_time', now)
+        .gte('start_time', currentDateTime)
         .order('start_time', { ascending: true })
         .limit(1);
 
+      console.log('Upcoming sessions found:', data);
+      
       if (error) throw error;
       setSessions(data || []);
     } catch (error) {
