@@ -34,7 +34,11 @@ interface Submission {
   score: number;
 }
 
-const Assignments = () => {
+interface AssignmentsProps {
+  user?: any;
+}
+
+const Assignments = ({ user }: AssignmentsProps = {}) => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
@@ -49,8 +53,7 @@ const Assignments = () => {
 
   const fetchAssignments = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.id) return;
 
       // Fetch all assignments
       const { data: assignmentsData, error: assignmentsError } = await supabase
@@ -102,8 +105,7 @@ const Assignments = () => {
 
   const fetchSubmissions = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.id) return;
 
       const { data, error } = await supabase
         .from('assignment_submissions')
@@ -123,8 +125,7 @@ const Assignments = () => {
     if (!submission.trim() || !selectedAssignment) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
+      if (!user?.id) throw new Error('No authenticated user');
 
       const assignment = assignments.find(a => a.assignment_id === selectedAssignment);
       if (!assignment) throw new Error('Assignment not found');

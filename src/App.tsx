@@ -51,7 +51,7 @@ const App = () => {
                 <Route index element={<Dashboard />} />
                 <Route path="videos" element={<Videos />} />
                 <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
-                <Route path="assignments" element={<Assignments />} />
+                <Route path="assignments" element={<Assignments user={currentUser} />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
                 <Route path="live-sessions" element={<LiveSessions />} />
                 <Route path="mentorship" element={<Mentorship />} />
