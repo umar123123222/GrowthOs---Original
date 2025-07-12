@@ -58,7 +58,11 @@ interface Certificate {
   downloaded: boolean;
 }
 
-const Profile = () => {
+interface ProfileProps {
+  user?: any;
+}
+
+const Profile = ({ user }: ProfileProps = {}) => {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
   const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
   const [userProgress, setUserProgress] = useState<Progress[]>([]);
@@ -84,8 +88,7 @@ const Profile = () => {
 
   const fetchUserData = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.id) return;
 
       const { data, error } = await supabase
         .from('users')
@@ -102,8 +105,7 @@ const Profile = () => {
 
   const fetchUserBadges = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.id) return;
 
       const { data, error } = await supabase
         .from('user_badges')
@@ -125,8 +127,7 @@ const Profile = () => {
 
   const fetchUserProgress = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.id) return;
 
       const { data, error } = await supabase
         .from('progress')
@@ -147,8 +148,7 @@ const Profile = () => {
 
   const fetchCertificates = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.id) return;
 
       const { data, error } = await supabase
         .from('certificates')
@@ -165,8 +165,7 @@ const Profile = () => {
 
   const fetchLeaderboardPosition = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.id) return;
 
       const { data, error } = await supabase
         .from('leaderboard')
@@ -184,20 +183,17 @@ const Profile = () => {
   };
 
   const updateProfile = async () => {
-    if (!profileData) return;
+    if (!profileData || !user?.id) return;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
-
       const { error } = await supabase
         .from('users')
         .update({
           full_name: profileData.full_name,
           phone: profileData.phone,
-          "What's your income goal in the next 3 months?": profileData["What's your income goal in the next 3 months?"],
-          "Why do you want to make this income?": profileData["Why do you want to make this income?"],
-          "Final Goal": profileData["Final Goal"]
+          income_goal_3_months: profileData["What's your income goal in the next 3 months?"],
+          income_reason: profileData["Why do you want to make this income?"],
+          final_goal: profileData["Final Goal"]
         })
         .eq('id', user.id);
 

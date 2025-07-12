@@ -56,7 +56,7 @@ const App = () => {
                 <Route path="live-sessions" element={<LiveSessions />} />
                 <Route path="mentorship" element={<Mentorship />} />
                 <Route path="messages" element={<Messages />} />
-                <Route path="profile" element={<Profile />} />
+                <Route path="profile" element={<Profile user={currentUser} />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </Route>
