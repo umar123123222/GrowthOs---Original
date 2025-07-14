@@ -16,10 +16,12 @@ import {
   Brain,
   Video,
   Users,
-  Award
+  Award,
+  Lock
 } from "lucide-react";
 import ShoaibGPT from "./ShoaibGPT";
 import NotificationDropdown from "./NotificationDropdown";
+import { supabase } from "@/integrations/supabase/client";
 
 interface LayoutProps {
   user: any;
@@ -28,18 +30,52 @@ interface LayoutProps {
 const Layout = ({ user }: LayoutProps) => {
   const location = useLocation();
   const [showShoaibGPT, setShowShoaibGPT] = useState(false);
+  const [assignments, setAssignments] = useState<any[]>([]);
+
+  // Fetch assignments
+  useEffect(() => {
+    const fetchAssignments = async () => {
+      if (!user?.id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('assignment')
+          .select('*')
+          .order('sequence_order', { ascending: true });
+        
+        if (error) {
+          console.error('Error fetching assignments:', error);
+          return;
+        }
+        
+        setAssignments(data || []);
+      } catch (error) {
+        console.error('Error fetching assignments:', error);
+      }
+    };
+
+    fetchAssignments();
+  }, [user?.id]);
 
   // Memoize navigation to prevent unnecessary re-renders
   const navigation = useMemo(() => [
     { name: "Dashboard", href: "/", icon: Monitor },
     { name: "Videos", href: "/videos", icon: BookOpen },
-    { name: "Assignments", href: "/assignments", icon: FileText },
     { name: "Success Sessions", href: "/live-sessions", icon: Video },
     { name: "Study Pod", href: "/mentorship", icon: Users },
     { name: "Leaderboard", href: "/leaderboard", icon: Star },
     { name: "Messages", href: "/messages", icon: MessageSquare },
     { name: "Profile", href: "/profile", icon: User },
   ], []);
+
+  // Get limited assignments for sidebar (1 unlocked + 3 locked)
+  const sidebarAssignments = useMemo(() => {
+    return assignments.slice(0, 4).map((assignment, index) => ({
+      ...assignment,
+      isUnlocked: index === 0, // Only first assignment is unlocked
+      href: "/assignments"
+    }));
+  }, [assignments]);
 
   // Optimized logging with error handling
   useEffect(() => {
@@ -127,6 +163,47 @@ const Layout = ({ user }: LayoutProps) => {
                 );
               })}
             </div>
+
+            {/* Assignments Section */}
+            {sidebarAssignments.length > 0 && (
+              <div className="mt-6">
+                <h3 className="px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  Assignments
+                </h3>
+                <div className="space-y-1">
+                  {sidebarAssignments.map((assignment, index) => {
+                    const isActive = location.pathname === assignment.href;
+                    const isUnlocked = assignment.isUnlocked;
+                    
+                    return (
+                      <div key={assignment.assignment_id} className="relative">
+                        {isUnlocked ? (
+                          <Link
+                            to={assignment.href}
+                            className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
+                              isActive
+                                ? "bg-gradient-to-r from-blue-50 to-green-50 text-blue-700 border-l-4 border-blue-600"
+                                : "text-gray-600 hover:bg-gray-50"
+                            }`}
+                          >
+                            <FileText className={`mr-3 h-4 w-4 ${isActive ? "text-blue-600" : "text-gray-400"}`} />
+                            <span className="truncate">{assignment.assignment_title}</span>
+                          </Link>
+                        ) : (
+                          <div className="flex items-center px-4 py-2 text-sm font-medium rounded-lg text-gray-400 cursor-not-allowed">
+                            <Lock className="mr-3 h-4 w-4 text-gray-300" />
+                            <span className="truncate">{assignment.assignment_title}</span>
+                            <Badge variant="secondary" className="ml-auto text-xs">
+                              Locked
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Quick Stats */}
             <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg">
