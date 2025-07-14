@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -29,57 +29,119 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId }: ConnectAcc
   const [metaKey, setMetaKey] = useState("");
   const [shopifyKey, setShopifyKey] = useState("");
 
-  const handleMetaConnect = async () => {
-    if (metaKey.trim() && userId) {
-      try {
-        const { error } = await supabase
-          .from('users')
-          .update({ meta_ads_credentials: metaKey })
-          .eq('id', userId);
+  // Load existing credentials when dialog opens
+  useEffect(() => {
+    const loadExistingCredentials = async () => {
+      if (userId && open) {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('meta_ads_credentials, shopify_credentials')
+            .eq('id', userId)
+            .single();
 
-        if (error) throw error;
+          if (error) throw error;
 
-        setMetaConnected(true);
-        setEditingMeta(false);
-        toast({
-          title: "Meta API Connected",
-          description: "Your Meta Ads account has been successfully connected.",
-        });
-      } catch (error) {
-        console.error('Error saving Meta credentials:', error);
-        toast({
-          title: "Error",
-          description: "Failed to save Meta credentials. Please try again.",
-          variant: "destructive",
-        });
+          if (data?.meta_ads_credentials) {
+            setMetaConnected(true);
+          }
+          if (data?.shopify_credentials) {
+            setShopifyConnected(true);
+          }
+        } catch (error) {
+          console.error('Error loading existing credentials:', error);
+        }
       }
+    };
+
+    loadExistingCredentials();
+  }, [userId, open]);
+
+  const handleMetaConnect = async () => {
+    if (!metaKey.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid Meta API access token.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "User not authenticated. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ meta_ads_credentials: metaKey })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      setMetaConnected(true);
+      setEditingMeta(false);
+      setMetaKey(""); // Clear the input for security
+      toast({
+        title: "Meta API Connected",
+        description: "Your Meta Ads account has been successfully connected.",
+      });
+    } catch (error) {
+      console.error('Error saving Meta credentials:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save Meta credentials. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleShopifyConnect = async () => {
-    if (shopifyKey.trim() && userId) {
-      try {
-        const { error } = await supabase
-          .from('users')
-          .update({ shopify_credentials: shopifyKey })
-          .eq('id', userId);
+    if (!shopifyKey.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid Shopify API key.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-        if (error) throw error;
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "User not authenticated. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-        setShopifyConnected(true);
-        setEditingShopify(false);
-        toast({
-          title: "Shopify Connected",
-          description: "Your Shopify store has been successfully connected.",
-        });
-      } catch (error) {
-        console.error('Error saving Shopify credentials:', error);
-        toast({
-          title: "Error",
-          description: "Failed to save Shopify credentials. Please try again.",
-          variant: "destructive",
-        });
-      }
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ shopify_credentials: shopifyKey })
+        .eq('id', userId);
+
+      if (error) throw error;
+
+      setShopifyConnected(true);
+      setEditingShopify(false);
+      setShopifyKey(""); // Clear the input for security
+      toast({
+        title: "Shopify Connected",
+        description: "Your Shopify store has been successfully connected.",
+      });
+    } catch (error) {
+      console.error('Error saving Shopify credentials:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save Shopify credentials. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 

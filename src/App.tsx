@@ -48,7 +48,7 @@ const App = () => {
               <Route path="*" element={<Onboarding user={currentUser} onComplete={() => setHasCompletedOnboarding(true)} />} />
             ) : (
               <Route path="/" element={<Layout user={currentUser} />}>
-                <Route index element={<Dashboard />} />
+                <Route index element={<Dashboard user={currentUser} />} />
                 <Route path="videos" element={<Videos user={currentUser} />} />
                 <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
                 <Route path="video-player" element={<VideoPlayer />} />
