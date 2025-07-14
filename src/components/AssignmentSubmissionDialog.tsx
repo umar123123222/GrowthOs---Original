@@ -13,13 +13,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Link, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface AssignmentSubmissionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   assignmentTitle: string;
   lessonTitle: string;
+  assignmentId: string;
+  userId: string;
   isSubmitted?: boolean;
+  onSubmissionComplete?: () => void;
 }
 
 export const AssignmentSubmissionDialog = ({ 
@@ -27,15 +31,19 @@ export const AssignmentSubmissionDialog = ({
   onOpenChange, 
   assignmentTitle, 
   lessonTitle,
-  isSubmitted = false
+  assignmentId,
+  userId,
+  isSubmitted = false,
+  onSubmissionComplete
 }: AssignmentSubmissionDialogProps) => {
   const { toast } = useToast();
   const [submissionType, setSubmissionType] = useState("text");
   const [textResponse, setTextResponse] = useState("");
   const [externalLink, setExternalLink] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (submissionType === "text" && !textResponse.trim()) {
       toast({
         title: "Error",
@@ -63,16 +71,73 @@ export const AssignmentSubmissionDialog = ({
       return;
     }
 
-    toast({
-      title: "Assignment Submitted",
-      description: "Your assignment has been successfully submitted for review.",
-    });
+    setIsSubmitting(true);
 
-    // Reset form
-    setTextResponse("");
-    setExternalLink("");
-    setFile(null);
-    onOpenChange(false);
+    try {
+      let fileUrl = null;
+      
+      // Handle file upload if file submission type
+      if (submissionType === "file" && file) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userId}/${assignmentId}/${Date.now()}.${fileExt}`;
+        
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('assignment-files')
+          .upload(fileName, file);
+
+        if (uploadError) {
+          console.error('File upload error:', uploadError);
+          toast({
+            title: "Upload Error",
+            description: "Failed to upload file. Please try again.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('assignment-files')
+          .getPublicUrl(fileName);
+        
+        fileUrl = publicUrl;
+      }
+
+      // Save submission to database
+      const { error } = await supabase
+        .from('assignment_submissions')
+        .insert({
+          user_id: userId,
+          assignment_id: assignmentId,
+          submission_type: submissionType,
+          text_response: submissionType === "text" ? textResponse : null,
+          external_link: submissionType === "link" ? externalLink : null,
+          file_url: fileUrl,
+          status: 'submitted'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Assignment Submitted",
+        description: "Your assignment has been successfully submitted for review.",
+      });
+
+      // Reset form
+      setTextResponse("");
+      setExternalLink("");
+      setFile(null);
+      onOpenChange(false);
+      onSubmissionComplete?.();
+    } catch (error) {
+      console.error('Submission error:', error);
+      toast({
+        title: "Submission Error",
+        description: "Failed to submit assignment. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -186,8 +251,8 @@ export const AssignmentSubmissionDialog = ({
               {isSubmitted ? "Close" : "Cancel"}
             </Button>
             {!isSubmitted && (
-              <Button onClick={handleSubmit} className="flex-1">
-                Submit Assignment
+              <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
+                {isSubmitting ? "Submitting..." : "Submit Assignment"}
               </Button>
             )}
           </div>

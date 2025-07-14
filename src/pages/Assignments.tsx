@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { AssignmentSubmissionDialog } from "@/components/AssignmentSubmissionDialog";
 import { 
   FileText, 
   Clock, 
@@ -44,6 +45,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
   const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
   const [submission, setSubmission] = useState("");
   const [loading, setLoading] = useState(true);
+  const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -381,12 +383,16 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                         disabled={!submission.trim()}
                       >
                         <FileText className="w-4 h-4 mr-2" />
-                        Submit Assignment
+                        Submit Text
                       </Button>
                       
-                      <Button variant="outline">
+                      <Button 
+                        variant="outline"
+                        onClick={() => setSubmissionDialogOpen(true)}
+                        disabled={!selectedAssignmentData?.isUnlocked}
+                      >
                         <Upload className="w-4 h-4 mr-2" />
-                        Upload File
+                        Submit with Options
                       </Button>
                     </div>
                   </div>
@@ -413,6 +419,23 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
           </Card>
         )}
       </div>
+
+      {/* Assignment Submission Dialog */}
+      {selectedAssignmentData && (
+        <AssignmentSubmissionDialog
+          open={submissionDialogOpen}
+          onOpenChange={setSubmissionDialogOpen}
+          assignmentTitle={selectedAssignmentData.assignment_title}
+          lessonTitle="Assignment Submission"
+          assignmentId={selectedAssignmentData.assignment_id}
+          userId={user?.id || ""}
+          isSubmitted={!!selectedSubmission}
+          onSubmissionComplete={() => {
+            fetchSubmissions();
+            fetchAssignments();
+          }}
+        />
+      )}
     </div>
   );
 };
