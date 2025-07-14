@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,26 +15,53 @@ import ShoaibGPT from "@/components/ShoaibGPT";
 
 const VideoPlayer = () => {
   const { moduleId, lessonId } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [showShoaibGPT, setShowShoaibGPT] = useState(false);
   const [checkedItems, setCheckedItems] = useState<{ [key: number]: boolean }>({});
+  const [currentVideo, setCurrentVideo] = useState<any>(null);
 
-  // Mock data - in real app, fetch based on moduleId and lessonId
-  const currentVideo = {
-    id: lessonId,
-    title: "Market Research Basics",
-    description: "Learn how to conduct effective market research to identify profitable niches and understand your target audience.",
-    videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-    duration: "18:20",
-    module: "Introduction to E-commerce",
-    checklist: [
-      "Identify your target market",
-      "Analyze market size and potential", 
-      "Study competitor pricing strategies",
-      "Research customer pain points",
-      "Create buyer personas"
-    ]
-  };
+  // Initialize video data from URL params or route params
+  useEffect(() => {
+    const videoUrl = searchParams.get('url');
+    const videoTitle = searchParams.get('title');
+    const videoId = searchParams.get('id');
+    
+    if (videoUrl && videoTitle) {
+      // From query parameters (new way)
+      setCurrentVideo({
+        id: videoId,
+        title: decodeURIComponent(videoTitle),
+        description: "Watch this lesson to continue your learning journey.",
+        videoUrl: decodeURIComponent(videoUrl),
+        duration: "N/A",
+        module: "Current Module",
+        checklist: [
+          "Watch the complete video",
+          "Take notes on key concepts",
+          "Complete any related assignments",
+          "Mark lesson as complete"
+        ]
+      });
+    } else {
+      // Mock data for old route structure
+      setCurrentVideo({
+        id: lessonId,
+        title: "Market Research Basics",
+        description: "Learn how to conduct effective market research to identify profitable niches and understand your target audience.",
+        videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        duration: "18:20",
+        module: "Introduction to E-commerce",
+        checklist: [
+          "Identify your target market",
+          "Analyze market size and potential", 
+          "Study competitor pricing strategies",
+          "Research customer pain points",
+          "Create buyer personas"
+        ]
+      });
+    }
+  }, [searchParams, lessonId]);
 
   const modules = [
     {
@@ -89,21 +116,23 @@ const VideoPlayer = () => {
         <Card>
           <CardContent className="p-0">
             <div className="aspect-video bg-gray-900 rounded-t-lg">
-              <iframe
-                src={currentVideo.videoUrl}
-                className="w-full h-full rounded-t-lg"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                title={currentVideo.title}
-              />
+              {currentVideo && (
+                <iframe
+                  src={currentVideo.videoUrl}
+                  className="w-full h-full rounded-t-lg"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  title={currentVideo.title}
+                />
+              )}
             </div>
             <div className="p-6">
-              <h2 className="text-2xl font-bold mb-2">{currentVideo.title}</h2>
-              <p className="text-muted-foreground mb-4">{currentVideo.description}</p>
+              <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
+              <p className="text-muted-foreground mb-4">{currentVideo?.description}</p>
               
               <div className="flex items-center space-x-4 mb-6">
-                <Badge className="bg-blue-100 text-blue-800">{currentVideo.module}</Badge>
-                <Badge variant="outline">{currentVideo.duration} duration</Badge>
+                <Badge className="bg-blue-100 text-blue-800">{currentVideo?.module}</Badge>
+                <Badge variant="outline">{currentVideo?.duration} duration</Badge>
                 <Button size="sm" className="bg-green-600 hover:bg-green-700">
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Mark Complete
@@ -117,7 +146,7 @@ const VideoPlayer = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {currentVideo.checklist.map((item, index) => (
+                    {currentVideo?.checklist?.map((item, index) => (
                       <div key={index} className="flex items-center space-x-3">
                         <input 
                           type="checkbox" 

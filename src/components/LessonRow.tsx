@@ -59,7 +59,7 @@ export const LessonRow = React.memo(({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
+            onClick={() => navigate('/assignments')}
             className={`${
               lesson.assignmentSubmitted ? 'bg-green-50 text-green-700 border-green-200' : ''
             }`}
