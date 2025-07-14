@@ -1,11 +1,12 @@
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectAccountsDialog } from "@/components/ConnectAccountsDialog";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   BookOpen, 
   FileText, 
@@ -19,7 +20,57 @@ import {
 
 const Dashboard = ({ user }: { user?: any }) => {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [shopifyConnected, setShopifyConnected] = useState(false);
+  const [metaConnected, setMetaConnected] = useState(false);
   const navigate = useNavigate();
+
+  // Fetch connection status when component mounts or user changes
+  useEffect(() => {
+    const fetchConnectionStatus = async () => {
+      if (user?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('shopify_credentials, meta_ads_credentials')
+            .eq('id', user.id)
+            .single();
+
+          if (error) throw error;
+
+          setShopifyConnected(!!data?.shopify_credentials);
+          setMetaConnected(!!data?.meta_ads_credentials);
+        } catch (error) {
+          console.error('Error fetching connection status:', error);
+        }
+      }
+    };
+
+    fetchConnectionStatus();
+  }, [user?.id]);
+
+  // Refetch connection status when dialog closes
+  const handleDialogClose = (open: boolean) => {
+    setConnectDialogOpen(open);
+    if (!open && user?.id) {
+      // Refetch status when dialog closes
+      setTimeout(async () => {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('shopify_credentials, meta_ads_credentials')
+            .eq('id', user.id)
+            .single();
+
+          if (error) throw error;
+
+          setShopifyConnected(!!data?.shopify_credentials);
+          setMetaConnected(!!data?.meta_ads_credentials);
+        } catch (error) {
+          console.error('Error refetching connection status:', error);
+        }
+      }, 500);
+    }
+  };
   
   // Memoize static data to prevent unnecessary re-renders
   const progressData = useMemo(() => ({
@@ -159,11 +210,21 @@ const Dashboard = ({ user }: { user?: any }) => {
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Shopify Store</span>
-                <Badge variant="secondary">Not Connected</Badge>
+                <Badge 
+                  variant={shopifyConnected ? "default" : "secondary"}
+                  className={shopifyConnected ? "bg-green-100 text-green-800" : ""}
+                >
+                  {shopifyConnected ? "Connected" : "Not Connected"}
+                </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Meta Ads</span>
-                <Badge variant="secondary">Not Connected</Badge>
+                <Badge 
+                  variant={metaConnected ? "default" : "secondary"}
+                  className={metaConnected ? "bg-green-100 text-green-800" : ""}
+                >
+                  {metaConnected ? "Connected" : "Not Connected"}
+                </Badge>
               </div>
               <Button 
                 variant="outline" 
@@ -238,7 +299,7 @@ const Dashboard = ({ user }: { user?: any }) => {
 
       <ConnectAccountsDialog 
         open={connectDialogOpen} 
-        onOpenChange={setConnectDialogOpen} 
+        onOpenChange={handleDialogClose} 
         userId={user?.id}
       />
     </div>
