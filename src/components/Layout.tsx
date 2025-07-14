@@ -37,7 +37,7 @@ const Layout = ({ user }: LayoutProps) => {
     { name: "Success Sessions", href: "/live-sessions", icon: Video },
     { name: "Study Pod", href: "/mentorship", icon: Users },
     { name: "Leaderboard", href: "/leaderboard", icon: Star },
-    { name: "Messages", href: "/messages", icon: MessageSquare },
+    { name: "Complaints & Feedback", href: "/messages", icon: MessageSquare },
     { name: "Profile", href: "/profile", icon: User },
   ], []);
 
