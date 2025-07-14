@@ -101,6 +101,7 @@ export type Database = {
           submission_type: string
           submitted_at: string | null
           text_response: string | null
+          updated_at: string | null
           user_id: string
         }
         Insert: {
@@ -118,6 +119,7 @@ export type Database = {
           submission_type: string
           submitted_at?: string | null
           text_response?: string | null
+          updated_at?: string | null
           user_id: string
         }
         Update: {
@@ -135,6 +137,7 @@ export type Database = {
           submission_type?: string
           submitted_at?: string | null
           text_response?: string | null
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: [
@@ -158,6 +161,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_assignment_submissions_assignment_id"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignment"
+            referencedColumns: ["assignment_id"]
           },
         ]
       }
