@@ -1,5 +1,6 @@
 
 import React, { useState, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import {
 
 const Dashboard = () => {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const navigate = useNavigate();
   
   // Memoize static data to prevent unnecessary re-renders
   const progressData = useMemo(() => ({
@@ -133,7 +135,11 @@ const Dashboard = () => {
                 <Badge variant="destructive">Due in 2 days</Badge>
                 <Badge variant="outline">Module 4</Badge>
               </div>
-              <Button className="w-full" size="sm">
+              <Button 
+                className="w-full" 
+                size="sm"
+                onClick={() => navigate('/assignments')}
+              >
                 <FileText className="w-4 h-4 mr-2" />
                 Start Assignment
               </Button>
