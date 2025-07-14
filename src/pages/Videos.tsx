@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AssignmentSubmissionDialog } from "@/components/AssignmentSubmissionDialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   Play, 
@@ -289,80 +290,117 @@ const Videos = ({ user }: VideosProps = {}) => {
         </p>
       </div>
 
-      <Card className="shadow-lg">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b bg-muted/20">
-                <tr>
-                  <th className="text-left p-4 font-medium">Lesson</th>
-                  <th className="text-left p-4 font-medium">Duration</th>
-                  <th className="text-left p-4 font-medium">Assignment</th>
-                  <th className="text-left p-4 font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {modules.length === 0 ? (
-                  <tr>
-                    <td colSpan={4} className="p-8 text-center">
-                      <div className="text-gray-500">
-                        <Play className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <h3 className="text-lg font-medium mb-2">No Video Lessons Available</h3>
-                        <p>Check back later for new lessons or contact your instructor.</p>
+      {modules.length === 0 ? (
+        <Card className="shadow-lg">
+          <CardContent className="p-8 text-center">
+            <div className="text-gray-500">
+              <Play className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">No Video Lessons Available</h3>
+              <p>Check back later for new lessons or contact your instructor.</p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {modules.map((module) => (
+            <div key={module.id} className="bg-white rounded-lg shadow-sm border border-border">
+              <Collapsible
+                open={expandedModules[module.id]}
+                onOpenChange={(open) => setExpandedModules(prev => ({ ...prev, [module.id]: open }))}
+              >
+                <CollapsibleTrigger className="w-full p-6 flex items-center justify-between hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center justify-center w-10 h-10 bg-primary/10 text-primary rounded-lg">
+                      <Play className="h-5 w-5" />
+                    </div>
+                    <div className="text-left">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        {module.title}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {module.completedLessons}/{module.totalLessons} completed • {module.lessons.reduce((acc, lesson) => acc + (parseInt(lesson.duration) || 0), 0)} min
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4">
+                    <div className="text-right">
+                      <div className="text-sm font-medium text-foreground">
+                        {module.totalLessons} assignments
                       </div>
-                    </td>
-                  </tr>
-                ) : (
-                  modules.map((module) => (
-                  <React.Fragment key={`module-${module.id}`}>
-                    {/* Module Header */}
-                    <tr 
-                      className="border-b bg-blue-50/50 cursor-pointer hover:bg-blue-50 transition-colors"
-                      onClick={() => toggleModule(module.id)}
-                    >
-                      <td className="p-4">
-                        <div className="flex items-center gap-2">
-                          {expandedModules[module.id] ? (
-                            <ChevronDown className="w-4 h-4 transition-transform" />
-                          ) : (
-                            <ChevronRight className="w-4 h-4 transition-transform" />
-                          )}
-                          <span className="font-semibold">{module.title}</span>
-                          <Badge variant="outline" className="ml-2">
-                            {module.completedLessons}/{module.totalLessons} completed
-                          </Badge>
+                      <div className="text-xs text-muted-foreground">
+                        {module.totalLessons > 0 ? 'Track progress' : 'No assignments'}
+                      </div>
+                    </div>
+                    <ChevronDown 
+                      className={`h-5 w-5 text-muted-foreground transition-transform ${
+                        expandedModules[module.id] ? 'rotate-180' : ''
+                      }`} 
+                    />
+                  </div>
+                </CollapsibleTrigger>
+                
+                <CollapsibleContent>
+                  <div className="border-t border-border">
+                    <div className="p-6 space-y-4">
+                      {module.lessons.map((lesson) => (
+                        <div key={lesson.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center space-x-4 flex-1">
+                            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                              lesson.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                            }`}>
+                              {lesson.completed ? (
+                                <CheckCircle className="h-4 w-4" />
+                              ) : (
+                                <Play className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-medium text-foreground truncate">
+                                {lesson.title}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {lesson.duration}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center space-x-3">
+                            {lesson.assignmentTitle !== 'No Assignment' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
+                                className={`${
+                                  lesson.assignmentSubmitted ? 'bg-green-50 text-green-700 border-green-200' : ''
+                                }`}
+                              >
+                                {lesson.assignmentSubmitted ? 'View Submission' : 'Submit Assignment'}
+                              </Button>
+                            )}
+                            
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => {
+                                if (lesson.recording_url) {
+                                  navigate(`/video-player?url=${encodeURIComponent(lesson.recording_url)}&title=${encodeURIComponent(lesson.title)}&id=${lesson.id}`);
+                                }
+                              }}
+                              disabled={!lesson.recording_url}
+                            >
+                              {lesson.completed ? 'Watch Again' : 'Watch Now'}
+                            </Button>
+                          </div>
                         </div>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-sm text-muted-foreground">Module</span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-sm text-muted-foreground">
-                          {module.totalLessons} assignments
-                        </span>
-                      </td>
-                      <td className="p-4">
-                        <span className="text-sm text-muted-foreground">-</span>
-                      </td>
-                    </tr>
-
-                    {/* Module Lessons */}
-                    {expandedModules[module.id] && module.lessons.map((lesson) => (
-                      <LessonRow
-                        key={`lesson-${lesson.id}`}
-                        lesson={lesson}
-                        moduleId={module.id}
-                        onWatchNow={handleWatchNow}
-                        onAssignmentClick={handleAssignmentClick}
-                      />
-                    ))}
-                  </React.Fragment>
-                )))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                      ))}
+                    </div>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            </div>
+          ))}
+        </div>
+      )}
 
       {selectedAssignment && (
         <AssignmentSubmissionDialog

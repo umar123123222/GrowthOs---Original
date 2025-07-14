@@ -4,7 +4,6 @@ import { Outlet, Link, useLocation } from "react-router-dom";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { supabase } from "@/integrations/supabase/client";
 import { 
   Monitor, 
   BookOpen, 
@@ -17,21 +16,10 @@ import {
   Brain,
   Video,
   Users,
-  Award,
-  Lock
+  Award
 } from "lucide-react";
 import ShoaibGPT from "./ShoaibGPT";
 import NotificationDropdown from "./NotificationDropdown";
-
-interface Assignment {
-  assignment_id: string;
-  assignment_title: string;
-  sequence_order: number;
-  Status: string;
-  due_date: string;
-  isUnlocked?: boolean;
-  isSubmitted?: boolean;
-}
 
 interface LayoutProps {
   user: any;
@@ -40,78 +28,18 @@ interface LayoutProps {
 const Layout = ({ user }: LayoutProps) => {
   const location = useLocation();
   const [showShoaibGPT, setShowShoaibGPT] = useState(false);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
 
-  // Memoize main navigation to prevent unnecessary re-renders
-  const mainNavigation = useMemo(() => [
+  // Memoize navigation to prevent unnecessary re-renders
+  const navigation = useMemo(() => [
     { name: "Dashboard", href: "/", icon: Monitor },
     { name: "Videos", href: "/videos", icon: BookOpen },
+    { name: "Assignments", href: "/assignments", icon: FileText },
     { name: "Success Sessions", href: "/live-sessions", icon: Video },
     { name: "Study Pod", href: "/mentorship", icon: Users },
     { name: "Leaderboard", href: "/leaderboard", icon: Star },
     { name: "Messages", href: "/messages", icon: MessageSquare },
     { name: "Profile", href: "/profile", icon: User },
   ], []);
-
-  // Fetch assignments for sidebar
-  useEffect(() => {
-    const fetchAssignments = async () => {
-      if (!user?.id) return;
-
-      try {
-        const { data: assignmentsData, error: assignmentsError } = await supabase
-          .from('assignment')
-          .select('*')
-          .order('sequence_order');
-
-        if (assignmentsError) throw assignmentsError;
-
-        const { data: submissions, error: submissionsError } = await supabase
-          .from('assignment_submissions')
-          .select('*')
-          .eq('user_id', user.id);
-
-        if (submissionsError) throw submissionsError;
-
-        const processedAssignments = assignmentsData?.map(assignment => {
-          const previousAssignments = assignmentsData.filter(a => a.sequence_order < assignment.sequence_order);
-          const allPreviousCompleted = previousAssignments.every(prevAssignment => {
-            const submission = submissions?.find(s => s.assignment_id === prevAssignment.assignment_id);
-            return submission && submission.status === 'accepted';
-          });
-
-          const isUnlocked = assignment.sequence_order === 1 || allPreviousCompleted;
-          const isSubmitted = submissions?.some(s => s.assignment_id === assignment.assignment_id);
-
-          return {
-            ...assignment,
-            isUnlocked,
-            isSubmitted
-          };
-        }) || [];
-
-        setAssignments(processedAssignments);
-      } catch (error) {
-        console.error('Error fetching assignments:', error);
-      }
-    };
-
-    fetchAssignments();
-  }, [user?.id]);
-
-  // Get current assignment and next 3 unlocked assignments
-  const visibleAssignments = useMemo(() => {
-    const unlockedAssignments = assignments.filter(a => a.isUnlocked);
-    const currentAssignment = unlockedAssignments.find(a => !a.isSubmitted) || unlockedAssignments[0];
-    
-    if (!currentAssignment) return [];
-    
-    const currentIndex = assignments.findIndex(a => a.assignment_id === currentAssignment.assignment_id);
-    const startIndex = Math.max(0, currentIndex);
-    const endIndex = Math.min(assignments.length, startIndex + 4);
-    
-    return assignments.slice(startIndex, endIndex);
-  }, [assignments]);
 
   // Optimized logging with error handling
   useEffect(() => {
@@ -178,9 +106,8 @@ const Layout = ({ user }: LayoutProps) => {
         {/* Sidebar */}
         <aside className="w-64 bg-white shadow-lg min-h-screen">
           <nav className="mt-8 px-4">
-            {/* Main Navigation */}
-            <div className="space-y-2 mb-6">
-              {mainNavigation.map((item) => {
+            <div className="space-y-2">
+              {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 const Icon = item.icon;
                 
@@ -199,72 +126,6 @@ const Layout = ({ user }: LayoutProps) => {
                   </Link>
                 );
               })}
-            </div>
-
-            {/* Assignments Section */}
-            <div className="border-t pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Assignments</h3>
-                <Link 
-                  to="/assignments"
-                  className="text-xs text-blue-600 hover:text-blue-700"
-                >
-                  View All
-                </Link>
-              </div>
-              
-              <div className="space-y-2">
-                {visibleAssignments.map((assignment) => {
-                  const isLocked = !assignment.isUnlocked;
-                  const isCompleted = assignment.isSubmitted;
-                  
-                  return (
-                    <div
-                      key={assignment.assignment_id}
-                      className={`flex items-center px-3 py-2 text-sm rounded-lg transition-all duration-200 ${
-                        isLocked 
-                          ? "text-gray-400 bg-gray-50" 
-                          : isCompleted
-                          ? "text-green-700 bg-green-50"
-                          : "text-gray-700 hover:bg-gray-50"
-                      }`}
-                    >
-                      {isLocked ? (
-                        <Lock className="mr-3 h-4 w-4 text-gray-400" />
-                      ) : (
-                        <FileText className={`mr-3 h-4 w-4 ${isCompleted ? "text-green-600" : "text-gray-400"}`} />
-                      )}
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between">
-                          <span className={`truncate ${isLocked ? "text-gray-400" : ""}`}>
-                            {assignment.assignment_title}
-                          </span>
-                          {isCompleted && (
-                            <Badge variant="outline" className="ml-2 text-xs bg-green-100 text-green-700 border-green-200">
-                              ✓
-                            </Badge>
-                          )}
-                          {isLocked && (
-                            <Badge variant="outline" className="ml-2 text-xs bg-gray-100 text-gray-500 border-gray-200">
-                              Locked
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          Assignment {assignment.sequence_order}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-                
-                {assignments.length > 4 && (
-                  <div className="text-xs text-gray-500 text-center py-2">
-                    +{assignments.length - 4} more assignments
-                  </div>
-                )}
-              </div>
             </div>
 
             {/* Quick Stats */}
