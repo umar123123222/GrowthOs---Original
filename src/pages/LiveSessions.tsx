@@ -47,37 +47,29 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
 
   useEffect(() => {
     console.log('LiveSessions useEffect triggered, user:', user);
+    fetchSessions();
     if (user?.id) {
-      fetchSessions();
       fetchAttendance();
     } else {
-      console.log('No user ID in LiveSessions, setting loading to false');
       setLoading(false);
     }
   }, [user?.id]);
 
   const fetchSessions = async () => {
-    console.log('fetchSessions called, user:', user);
+    console.log('fetchSessions called');
     try {
-      if (!user?.id) {
-        console.log('No user ID in fetchSessions, returning');
-        setLoading(false);
-        return;
-      }
-
       // Get current date in simpler format to match database format
       const now = new Date();
       const currentDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
       console.log('Current time for comparison:', currentDateTime);
       
       const { data, error } = await supabase
-        .from('segmented_weekly_success_sessions')
+        .from('success_sessions')
         .select('*')
         .gte('start_time', currentDateTime)
-        .order('start_time', { ascending: true })
-        .limit(1);
+        .order('start_time', { ascending: true });
 
-      console.log('Upcoming sessions found:', data);
+      console.log('All sessions found:', data);
       console.log('Query error:', error);
       
       if (error) {
@@ -89,7 +81,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       console.error('Error fetching sessions:', error);
       toast({
         title: "Error",
-        description: "Failed to load live success sessions",
+        description: "Failed to load success sessions",
         variant: "destructive",
       });
     }
@@ -177,9 +169,9 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Next Success Session</h1>
+        <h1 className="text-3xl font-bold mb-2">Success Sessions</h1>
         <p className="text-muted-foreground">
-          Your upcoming success session with mentors and fellow students
+          Upcoming success sessions with mentors and fellow students
         </p>
       </div>
 
@@ -189,10 +181,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
             <Video className="w-12 h-12 mx-auto mb-4 text-gray-400" />
             <h3 className="text-lg font-medium mb-2">No Upcoming Success Sessions</h3>
             <p className="text-gray-600">
-              {!user?.id 
-                ? "Please log in to view your success sessions" 
-                : "Check back soon for your next scheduled success session"
-              }
+              Check back soon for scheduled success sessions
             </p>
           </CardContent>
         </Card>

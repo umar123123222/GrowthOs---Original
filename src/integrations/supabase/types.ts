@@ -880,7 +880,46 @@ export type Database = {
           },
         ]
       }
-      segmented_weekly_success_sessions: {
+      session_attendance: {
+        Row: {
+          id: string
+          joined_at: string | null
+          left_at: string | null
+          live_session_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          live_session_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          id?: string
+          joined_at?: string | null
+          left_at?: string | null
+          live_session_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_attendance_live_session_id_fkey"
+            columns: ["live_session_id"]
+            isOneToOne: false
+            referencedRelation: "success_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_attendance_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      success_sessions: {
         Row: {
           created_at: string | null
           created_by: string | null
@@ -924,45 +963,6 @@ export type Database = {
           {
             foreignKeyName: "live_sessions_created_by_fkey"
             columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      session_attendance: {
-        Row: {
-          id: string
-          joined_at: string | null
-          left_at: string | null
-          live_session_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          id?: string
-          joined_at?: string | null
-          left_at?: string | null
-          live_session_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          id?: string
-          joined_at?: string | null
-          left_at?: string | null
-          live_session_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "session_attendance_live_session_id_fkey"
-            columns: ["live_session_id"]
-            isOneToOne: false
-            referencedRelation: "segmented_weekly_success_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "session_attendance_user_id_fkey"
-            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
