@@ -181,6 +181,32 @@ const Videos = ({ user }: VideosProps = {}) => {
         };
       }) || [];
 
+      // If no modules found but we have recordings, create a default module
+      if (processedModules.length === 0 && recordingsData?.length > 0) {
+        const defaultModule = {
+          id: 'default',
+          title: 'Available Recordings',
+          totalLessons: recordingsData.length,
+          completedLessons: 0,
+          lessons: recordingsData.map(recording => {
+            const associatedAssignment = assignmentsData?.find(a => a.assignment_id === recording.assignment_id);
+            const submission = submissions?.find(s => s.assignment_id === recording.assignment_id);
+            
+            return {
+              id: recording.id,
+              title: recording.recording_title || 'Untitled Recording',
+              duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
+              completed: submission?.status === 'accepted',
+              locked: false,
+              assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
+              assignmentSubmitted: !!submission,
+              recording_url: recording.recording_url
+            };
+          })
+        };
+        processedModules.push(defaultModule);
+      }
+
       setModules(processedModules);
       setRecordings(recordingsData || []);
       
