@@ -17,7 +17,7 @@ import {
   Zap
 } from "lucide-react";
 
-const Dashboard = () => {
+const Dashboard = ({ user }: { user?: any }) => {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const navigate = useNavigate();
   
@@ -239,6 +239,7 @@ const Dashboard = () => {
       <ConnectAccountsDialog 
         open={connectDialogOpen} 
         onOpenChange={setConnectDialogOpen} 
+        userId={user?.id}
       />
     </div>
   );
