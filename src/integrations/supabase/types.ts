@@ -171,6 +171,80 @@ export type Database = {
           },
         ]
       }
+      available_lessons: {
+        Row: {
+          assignment_id: string | null
+          batch_id: string | null
+          duration_min: number | null
+          id: string
+          last_assignment_completed: string | null
+          module: string | null
+          notes: string | null
+          recording_title: string | null
+          recording_url: string | null
+          sequence_order: number | null
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          batch_id?: string | null
+          duration_min?: number | null
+          id?: string
+          last_assignment_completed?: string | null
+          module?: string | null
+          notes?: string | null
+          recording_title?: string | null
+          recording_url?: string | null
+          sequence_order?: number | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          batch_id?: string | null
+          duration_min?: number | null
+          id?: string
+          last_assignment_completed?: string | null
+          module?: string | null
+          notes?: string | null
+          recording_title?: string | null
+          recording_url?: string | null
+          sequence_order?: number | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_recordings_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_recordings_Last Assignment Completed?_fkey"
+            columns: ["last_assignment_completed"]
+            isOneToOne: false
+            referencedRelation: "assignment_submissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_recordings_module_fkey"
+            columns: ["module"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_recordings_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       badges: {
         Row: {
           description: string | null
@@ -794,7 +868,7 @@ export type Database = {
             foreignKeyName: "recording_views_recording_id_fkey"
             columns: ["recording_id"]
             isOneToOne: false
-            referencedRelation: "session_recordings"
+            referencedRelation: "available_lessons"
             referencedColumns: ["id"]
           },
           {
@@ -889,80 +963,6 @@ export type Database = {
           {
             foreignKeyName: "session_attendance_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      session_recordings: {
-        Row: {
-          assignment_id: string | null
-          batch_id: string | null
-          duration_min: number | null
-          id: string
-          last_assignment_completed: string | null
-          module: string | null
-          notes: string | null
-          recording_title: string | null
-          recording_url: string | null
-          sequence_order: number | null
-          uploaded_at: string | null
-          uploaded_by: string | null
-        }
-        Insert: {
-          assignment_id?: string | null
-          batch_id?: string | null
-          duration_min?: number | null
-          id?: string
-          last_assignment_completed?: string | null
-          module?: string | null
-          notes?: string | null
-          recording_title?: string | null
-          recording_url?: string | null
-          sequence_order?: number | null
-          uploaded_at?: string | null
-          uploaded_by?: string | null
-        }
-        Update: {
-          assignment_id?: string | null
-          batch_id?: string | null
-          duration_min?: number | null
-          id?: string
-          last_assignment_completed?: string | null
-          module?: string | null
-          notes?: string | null
-          recording_title?: string | null
-          recording_url?: string | null
-          sequence_order?: number | null
-          uploaded_at?: string | null
-          uploaded_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "session_recordings_batch_id_fkey"
-            columns: ["batch_id"]
-            isOneToOne: false
-            referencedRelation: "batches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "session_recordings_Last Assignment Completed?_fkey"
-            columns: ["last_assignment_completed"]
-            isOneToOne: false
-            referencedRelation: "assignment_submissions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "session_recordings_module_fkey"
-            columns: ["module"]
-            isOneToOne: false
-            referencedRelation: "modules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "session_recordings_uploaded_by_fkey"
-            columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]

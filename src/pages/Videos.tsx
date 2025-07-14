@@ -124,7 +124,7 @@ const Videos = ({ user }: VideosProps = {}) => {
 
       // Fetch recordings with assignment info
       const { data: recordingsData, error: recordingsError } = await supabase
-        .from('session_recordings')
+        .from('available_lessons')
         .select('*')
         .order('sequence_order');
 
