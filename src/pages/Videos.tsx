@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,65 +36,61 @@ const LessonRow = React.memo(({
   moduleId: number;
   onWatchNow: (moduleId: number, lessonId: number) => void;
   onAssignmentClick: (lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean) => void;
-}) => (
-  <tr 
-    className={`border-b hover:bg-muted/20 transition-colors ${
-      lesson.locked ? "opacity-50" : ""
-    }`}
-  >
-    <td className="p-4 pl-8">
-      <div className="flex items-center gap-3">
-        <div className="flex-shrink-0">
-          {lesson.locked ? (
-            <Lock className="w-4 h-4 text-muted-foreground" />
-          ) : lesson.completed ? (
-            <CheckCircle className="w-4 h-4 text-green-600" />
+}) => {
+  const navigate = useNavigate();
+  
+  return (
+    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+      <div className="flex items-center space-x-4 flex-1">
+        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+          lesson.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+        }`}>
+          {lesson.completed ? (
+            <CheckCircle className="h-4 w-4" />
           ) : (
-            <Play className="w-4 h-4 text-blue-600" />
+            <Play className="h-4 w-4" />
           )}
         </div>
-        <span className={lesson.locked ? "text-muted-foreground" : ""}>
-          {lesson.title}
-        </span>
+        <div className="flex-1 min-w-0">
+          <h4 className="text-sm font-medium text-foreground truncate">
+            {lesson.title}
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            {lesson.duration}
+          </p>
+        </div>
       </div>
-    </td>
-    <td className="p-4">
-      <div className="flex items-center gap-2">
-        <Clock className="w-4 h-4 text-muted-foreground" />
-        <span className="text-sm">{lesson.duration}</span>
+      
+      <div className="flex items-center space-x-3">
+        {lesson.assignmentTitle !== 'No Assignment' && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
+            className={`${
+              lesson.assignmentSubmitted ? 'bg-green-50 text-green-700 border-green-200' : ''
+            }`}
+          >
+            {lesson.assignmentSubmitted ? 'View Submission' : 'Submit Assignment'}
+          </Button>
+        )}
+        
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => {
+            if (lesson.recording_url) {
+              navigate(`/video-player?url=${encodeURIComponent(lesson.recording_url)}&title=${encodeURIComponent(lesson.title)}&id=${lesson.id}`);
+            }
+          }}
+          disabled={!lesson.recording_url}
+        >
+          {lesson.completed ? 'Watch Again' : 'Watch Now'}
+        </Button>
       </div>
-    </td>
-    <td className="p-4">
-      <Button
-        variant="ghost"
-        size="sm"
-        className={`flex items-center gap-2 transition-colors ${
-          lesson.assignmentSubmitted 
-            ? "text-green-600 hover:text-green-700" 
-            : "text-blue-600 hover:text-blue-700"
-        }`}
-        onClick={() => !lesson.locked && onAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
-        disabled={lesson.locked}
-      >
-        <FileText className="w-4 h-4" />
-        <span className="text-sm">
-          {lesson.assignmentSubmitted ? "✓ " : ""}{lesson.assignmentTitle}
-        </span>
-      </Button>
-    </td>
-    <td className="p-4">
-      <Button
-        size="sm"
-        onClick={() => !lesson.locked && onWatchNow(moduleId, lesson.id)}
-        disabled={lesson.locked}
-        className="text-blue-600 hover:text-blue-700 transition-colors"
-        variant="ghost"
-      >
-        Watch Now
-      </Button>
-    </td>
-  </tr>
-));
+    </div>
+  );
+});
 
 LessonRow.displayName = "LessonRow";
 
@@ -376,10 +371,10 @@ const Videos = ({ user }: VideosProps = {}) => {
                     <div className="flex items-center space-x-4">
                       <div className="text-right">
                         <div className="text-sm font-medium text-foreground">
-                          {module.totalLessons} assignments
+                          {module.totalLessons} lessons
                         </div>
                         <div className="text-xs text-muted-foreground">
-                          {module.totalLessons > 0 ? 'Track progress' : 'No assignments'}
+                          {module.totalLessons > 0 ? 'Track progress' : 'No lessons'}
                         </div>
                       </div>
                       <div className="p-2 hover:bg-white/50 rounded-full transition-all duration-300">
@@ -392,55 +387,13 @@ const Videos = ({ user }: VideosProps = {}) => {
                     <div className="border-t border-border">
                       <div className="p-6 space-y-4">
                         {module.lessons.map((lesson) => (
-                          <div key={lesson.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                            <div className="flex items-center space-x-4 flex-1">
-                              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                                lesson.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                              }`}>
-                                {lesson.completed ? (
-                                  <CheckCircle className="h-4 w-4" />
-                                ) : (
-                                  <Play className="h-4 w-4" />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-sm font-medium text-foreground truncate">
-                                  {lesson.title}
-                                </h4>
-                                <p className="text-xs text-muted-foreground">
-                                  {lesson.duration}
-                                </p>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center space-x-3">
-                              {lesson.assignmentTitle !== 'No Assignment' && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
-                                  className={`${
-                                    lesson.assignmentSubmitted ? 'bg-green-50 text-green-700 border-green-200' : ''
-                                  }`}
-                                >
-                                  {lesson.assignmentSubmitted ? 'View Submission' : 'Submit Assignment'}
-                                </Button>
-                              )}
-                              
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() => {
-                                  if (lesson.recording_url) {
-                                    navigate(`/video-player?url=${encodeURIComponent(lesson.recording_url)}&title=${encodeURIComponent(lesson.title)}&id=${lesson.id}`);
-                                  }
-                                }}
-                                disabled={!lesson.recording_url}
-                              >
-                                {lesson.completed ? 'Watch Again' : 'Watch Now'}
-                              </Button>
-                            </div>
-                          </div>
+                          <LessonRow
+                            key={lesson.id}
+                            lesson={lesson}
+                            moduleId={module.id}
+                            onWatchNow={handleWatchNow}
+                            onAssignmentClick={handleAssignmentClick}
+                          />
                         ))}
                       </div>
                     </div>
