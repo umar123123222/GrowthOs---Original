@@ -107,19 +107,12 @@ const Videos = ({ user }: VideosProps = {}) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.id) {
-      fetchModulesAndRecordings();
-    }
-  }, [user?.id]);
+    fetchModulesAndRecordings();
+  }, []);
 
   const fetchModulesAndRecordings = async () => {
-    console.log('fetchModulesAndRecordings called, user:', user);
+    console.log('fetchModulesAndRecordings called');
     try {
-      if (!user?.id) {
-        console.log('No user ID in Videos, returning');
-        setLoading(false);
-        return;
-      }
 
       // Fetch modules
       const { data: modulesData, error: modulesError } = await supabase
@@ -143,22 +136,17 @@ const Videos = ({ user }: VideosProps = {}) => {
       if (recordingsError) throw recordingsError;
       if (assignmentsError) throw assignmentsError;
 
-      // Fetch user's assignment submissions
-      const { data: submissions, error: submissionsError } = await supabase
-        .from('assignment_submissions')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (submissionsError) throw submissionsError;
-
-      // Fetch manual unlocks
-      const { data: unlocks, error: unlocksError } = await supabase
-        .from('user_unlocks')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_unlocked', true);
-
-      if (unlocksError) throw unlocksError;
+      // Fetch user's assignment submissions (if user is logged in)
+      let submissions = [];
+      if (user?.id) {
+        const { data: submissionsData, error: submissionsError } = await supabase
+          .from('assignment_submissions')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        if (submissionsError) throw submissionsError;
+        submissions = submissionsData || [];
+      }
 
       // Process data to determine locked/unlocked status
       const processedModules = modulesData?.map(module => {
@@ -168,47 +156,18 @@ const Videos = ({ user }: VideosProps = {}) => {
           // Find associated assignment
           const associatedAssignment = assignmentsData?.find(a => a.assignment_id === recording.assignment_id);
           
-          // Check if recording is manually unlocked
-          const manualUnlock = unlocks?.find(u => u.recording_id === recording.id);
-          if (manualUnlock?.is_unlocked) {
-            return {
-              id: recording.id,
-              title: recording.recording_title || 'Untitled Recording',
-              duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
-              completed: false,
-              locked: false,
-              assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
-              assignmentSubmitted: false,
-              recording_url: recording.recording_url
-            };
-          }
-
-          // Check assignment unlock logic
-          if (recording.assignment_id) {
-            const submission = submissions?.find(s => s.assignment_id === recording.assignment_id);
-            const isLocked = !submission || submission.status !== 'accepted';
-            
-            return {
-              id: recording.id,
-              title: recording.recording_title || 'Untitled Recording',
-              duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
-              completed: submission?.status === 'accepted',
-              locked: isLocked,
-              assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
-              assignmentSubmitted: !!submission,
-              recording_url: recording.recording_url
-            };
-          }
-
-          // No assignment required - unlocked
+          // Check if user has submitted assignment for this recording
+          const submission = submissions?.find(s => s.assignment_id === recording.assignment_id);
+          
+          // All recordings are now unlocked for all users to view
           return {
             id: recording.id,
             title: recording.recording_title || 'Untitled Recording',
             duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
-            completed: false,
-            locked: false,
-            assignmentTitle: 'No Assignment Required',
-            assignmentSubmitted: false,
+            completed: submission?.status === 'accepted',
+            locked: false, // All recordings are now unlocked
+            assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
+            assignmentSubmitted: !!submission,
             recording_url: recording.recording_url
           };
         });
