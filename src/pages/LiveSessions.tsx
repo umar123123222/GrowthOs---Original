@@ -40,8 +40,8 @@ interface LiveSessionsProps {
 }
 
 const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
-  const [upcomingSessions, setUpcomingSessions] = useState<LiveSession[]>([]);
-  const [attendedSessions, setAttendedSessions] = useState<LiveSession[]>([]);
+  const [nextUpcomingSession, setNextUpcomingSession] = useState<LiveSession | null>(null);
+  const [recordedSessions, setRecordedSessions] = useState<LiveSession[]>([]);
   const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -86,15 +86,12 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       
       console.log('Upcoming sessions after filtering:', upcoming);
       console.log('Past sessions after filtering:', pastSessions);
-      setUpcomingSessions(upcoming);
       
-      // Filter past sessions to only show attended ones
-      if (user?.id && attendance.length > 0) {
-        const attendedPastSessions = pastSessions.filter(session =>
-          attendance.some(a => a.live_session_id === session.id)
-        );
-        setAttendedSessions(attendedPastSessions);
-      }
+      // Set only the most upcoming session (first one)
+      setNextUpcomingSession(upcoming.length > 0 ? upcoming[0] : null);
+      
+      // Set all past sessions as recorded sessions
+      setRecordedSessions(pastSessions);
     } catch (error) {
       console.error('Error fetching sessions:', error);
       toast({
@@ -284,7 +281,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
               ) : (
                 <>
                   <Video className="w-4 h-4 mr-2" />
-                  Watch Recording
+                  Watch Now
                 </>
               )}
             </Button>
@@ -303,14 +300,21 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         </p>
       </div>
 
-      {/* Upcoming Sessions */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="w-1 h-6 bg-primary rounded-full"></div>
-          <h2 className="text-xl font-semibold">Upcoming Sessions</h2>
+      {/* Next Upcoming Session */}
+      {nextUpcomingSession ? (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-6 bg-primary rounded-full"></div>
+            <h2 className="text-xl font-semibold">Next Session</h2>
+          </div>
+          <SessionCard session={nextUpcomingSession} isUpcoming={true} />
         </div>
-        
-        {upcomingSessions.length === 0 ? (
+      ) : (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-6 bg-primary rounded-full"></div>
+            <h2 className="text-xl font-semibold">Next Session</h2>
+          </div>
           <Card className="border-dashed">
             <CardContent className="text-center py-12">
               <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
@@ -320,44 +324,26 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
               </p>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-6">
-            {upcomingSessions.map((session) => (
-              <SessionCard key={session.id} session={session} isUpcoming={true} />
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
-      {/* Attended Past Sessions */}
-      {attendedSessions.length > 0 && (
+      {/* Recorded Sessions */}
+      {recordedSessions.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <div className="w-1 h-6 bg-secondary rounded-full"></div>
-            <h2 className="text-xl font-semibold">Your Session Recordings</h2>
+            <h2 className="text-xl font-semibold">Session Recordings</h2>
             <Badge variant="secondary" className="ml-auto">
-              {attendedSessions.length} session{attendedSessions.length !== 1 ? 's' : ''}
+              {recordedSessions.length} recording{recordedSessions.length !== 1 ? 's' : ''}
             </Badge>
           </div>
           
           <div className="grid gap-6">
-            {attendedSessions.map((session) => (
+            {recordedSessions.map((session) => (
               <SessionCard key={session.id} session={session} isUpcoming={false} />
             ))}
           </div>
         </div>
-      )}
-      
-      {attendedSessions.length === 0 && upcomingSessions.length > 0 && (
-        <Card className="border-dashed bg-muted/20">
-          <CardContent className="text-center py-8">
-            <Video className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
-            <h3 className="font-medium mb-1">Session Recordings</h3>
-            <p className="text-sm text-muted-foreground">
-              Your attended session recordings will appear here
-            </p>
-          </CardContent>
-        </Card>
       )}
     </div>
   );
