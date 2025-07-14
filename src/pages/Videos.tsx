@@ -168,32 +168,31 @@ const Videos = ({ user }: VideosProps = {}) => {
       // Process data to determine locked/unlocked status
       console.log('Processing modules...');
       const processedModules = modulesData?.map(module => {
-        console.log('Processing module:', module.title);
+        console.log('Processing module:', module.title, 'ID:', module.id);
         const moduleRecordings = recordingsData?.filter(r => r.module === module.id) || [];
-        console.log('Module recordings for', module.title, ':', moduleRecordings);
+        console.log('Module recordings for', module.title, ':', moduleRecordings.length, 'recordings');
         
         const lessons = moduleRecordings.map(recording => {
-          // Find associated assignment
-          const associatedAssignment = assignmentsData?.find(a => a.assignment_id === recording.assignment_id);
-          console.log('Recording:', recording.recording_title, 'Assignment ID:', recording.assignment_id, 'Found assignment:', associatedAssignment);
+          // Find associated assignment based on sequence_order matching
+          const associatedAssignment = assignmentsData?.find(a => a.sequence_order === recording.sequence_order);
+          console.log('Recording:', recording.recording_title, 'Sequence:', recording.sequence_order, 'Found assignment:', associatedAssignment?.assignment_title);
           
           // Check if user has submitted assignment for this recording
-          const submission = submissions?.find(s => s.assignment_id === recording.assignment_id);
+          const submission = submissions?.find(s => s.assignment_id === associatedAssignment?.assignment_id);
           
-          // All recordings are now unlocked for all users to view
           return {
             id: recording.id,
             title: recording.recording_title || 'Untitled Recording',
             duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
             completed: submission?.status === 'accepted',
-            locked: false, // All recordings are now unlocked
+            locked: false,
             assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
             assignmentSubmitted: !!submission,
             recording_url: recording.recording_url
           };
         });
 
-        console.log('Processed lessons for', module.title, ':', lessons);
+        console.log('Processed lessons for', module.title, ':', lessons.length, 'lessons');
         return {
           id: module.id,
           title: module.title,
@@ -203,19 +202,21 @@ const Videos = ({ user }: VideosProps = {}) => {
         };
       }) || [];
 
-      console.log('Processed modules:', processedModules);
+      // Filter out modules with no lessons to keep the interface clean
+      const modulesWithLessons = processedModules.filter(module => module.lessons.length > 0);
+      console.log('Modules with lessons:', modulesWithLessons.length);
 
-      // If no modules found but we have recordings, create a default module
-      if (processedModules.length === 0 && recordingsData?.length > 0) {
-        console.log('No modules found, creating default module for', recordingsData.length, 'recordings');
+      // Only create default module if NO modules exist at all
+      if (modulesWithLessons.length === 0 && recordingsData?.length > 0) {
+        console.log('No modules with lessons found, creating default module for', recordingsData.length, 'recordings');
         const defaultModule = {
           id: 'default',
-          title: 'Available Recordings',
+          title: 'Uncategorized Recordings',
           totalLessons: recordingsData.length,
           completedLessons: 0,
           lessons: recordingsData.map(recording => {
-            const associatedAssignment = assignmentsData?.find(a => a.assignment_id === recording.assignment_id);
-            const submission = submissions?.find(s => s.assignment_id === recording.assignment_id);
+            const associatedAssignment = assignmentsData?.find(a => a.sequence_order === recording.sequence_order);
+            const submission = submissions?.find(s => s.assignment_id === associatedAssignment?.assignment_id);
             
             return {
               id: recording.id,
@@ -229,18 +230,18 @@ const Videos = ({ user }: VideosProps = {}) => {
             };
           })
         };
-        processedModules.push(defaultModule);
+        modulesWithLessons.push(defaultModule);
         console.log('Created default module:', defaultModule);
       }
 
-      console.log('Final processed modules:', processedModules);
+      console.log('Final processed modules:', modulesWithLessons);
 
-      setModules(processedModules);
+      setModules(modulesWithLessons);
       setRecordings(recordingsData || []);
       
       // Start with the first module expanded to show recordings
-      if (processedModules.length > 0) {
-        setExpandedModules({ [processedModules[0].id]: true });
+      if (modulesWithLessons.length > 0) {
+        setExpandedModules({ [modulesWithLessons[0].id]: true });
       }
     } catch (error) {
       console.error('Error fetching data:', error);
