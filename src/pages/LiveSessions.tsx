@@ -58,15 +58,9 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   const fetchSessions = async () => {
     console.log('fetchSessions called');
     try {
-      // Get current date in simpler format to match database format
-      const now = new Date();
-      const currentDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
-      console.log('Current time for comparison:', currentDateTime);
-      
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
-        .gte('start_time', currentDateTime)
         .order('start_time', { ascending: true });
 
       console.log('All sessions found:', data);
@@ -76,7 +70,16 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         console.error('Supabase error:', error);
         throw error;
       }
-      setSessions(data || []);
+      
+      // Filter sessions on the client side to get upcoming sessions
+      const now = new Date();
+      const upcomingSessions = (data || []).filter(session => {
+        const sessionStart = new Date(session.start_time);
+        return sessionStart >= now;
+      });
+      
+      console.log('Upcoming sessions after filtering:', upcomingSessions);
+      setSessions(upcomingSessions);
     } catch (error) {
       console.error('Error fetching sessions:', error);
       toast({
