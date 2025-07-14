@@ -14,7 +14,16 @@ import {
   Lock,
   FileText,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ChevronUp,
+  RotateCw,
+  ArrowDown,
+  ArrowRight,
+  Plus,
+  Minus,
+  Triangle,
+  Square,
+  Circle
 } from "lucide-react";
 
 // Memoized lesson component for better performance
@@ -302,103 +311,144 @@ const Videos = ({ user }: VideosProps = {}) => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {modules.map((module) => (
-            <div key={module.id} className="bg-white rounded-lg shadow-sm border border-border">
-              <Collapsible
-                open={expandedModules[module.id]}
-                onOpenChange={(open) => setExpandedModules(prev => ({ ...prev, [module.id]: open }))}
-              >
-                <CollapsibleTrigger className="w-full p-6 flex items-center justify-between hover:bg-muted/50 transition-colors">
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center justify-center w-10 h-10 bg-primary/10 text-primary rounded-lg">
-                      <Play className="h-5 w-5" />
-                    </div>
-                    <div className="text-left">
-                      <h3 className="text-lg font-semibold text-foreground">
-                        {module.title}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {module.completedLessons}/{module.totalLessons} completed • {module.lessons.reduce((acc, lesson) => acc + (parseInt(lesson.duration) || 0), 0)} min
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <div className="text-sm font-medium text-foreground">
-                        {module.totalLessons} assignments
+          {modules.map((module, index) => {
+            // Different expandable styles for each module
+            const getExpandableIcon = (moduleIndex: number, isExpanded: boolean) => {
+              const icons = [
+                { 
+                  expanded: <ChevronUp className="h-5 w-5 text-blue-600 transition-all duration-300 hover:scale-110" />, 
+                  collapsed: <ChevronDown className="h-5 w-5 text-blue-600 transition-all duration-300 hover:scale-110" /> 
+                },
+                { 
+                  expanded: <Minus className="h-5 w-5 text-green-600 transition-all duration-300 rotate-0" />, 
+                  collapsed: <Plus className="h-5 w-5 text-green-600 transition-all duration-300" /> 
+                },
+                { 
+                  expanded: <ArrowDown className="h-5 w-5 text-purple-600 transition-all duration-500 rotate-180" />, 
+                  collapsed: <ArrowRight className="h-5 w-5 text-purple-600 transition-all duration-500" /> 
+                },
+                { 
+                  expanded: <Triangle className="h-5 w-5 text-orange-600 transition-all duration-300 rotate-180" />, 
+                  collapsed: <Triangle className="h-5 w-5 text-orange-600 transition-all duration-300" /> 
+                },
+                { 
+                  expanded: <Square className="h-5 w-5 text-red-600 transition-all duration-300 rotate-45" />, 
+                  collapsed: <Square className="h-5 w-5 text-red-600 transition-all duration-300" /> 
+                }
+              ];
+              const iconSet = icons[moduleIndex % icons.length];
+              return isExpanded ? iconSet.expanded : iconSet.collapsed;
+            };
+
+            const getModuleColorScheme = (moduleIndex: number) => {
+              const schemes = [
+                { bg: "bg-blue-50", border: "border-blue-200", accent: "text-blue-700" },
+                { bg: "bg-green-50", border: "border-green-200", accent: "text-green-700" },
+                { bg: "bg-purple-50", border: "border-purple-200", accent: "text-purple-700" },
+                { bg: "bg-orange-50", border: "border-orange-200", accent: "text-orange-700" },
+                { bg: "bg-red-50", border: "border-red-200", accent: "text-red-700" }
+              ];
+              return schemes[moduleIndex % schemes.length];
+            };
+
+            const colorScheme = getModuleColorScheme(index);
+            
+            return (
+              <div key={module.id} className={`bg-white rounded-lg shadow-sm border ${colorScheme.border} hover:shadow-md transition-all duration-300`}>
+                <Collapsible
+                  open={expandedModules[module.id]}
+                  onOpenChange={(open) => setExpandedModules(prev => ({ ...prev, [module.id]: open }))}
+                >
+                  <CollapsibleTrigger className={`w-full p-6 flex items-center justify-between hover:${colorScheme.bg} transition-all duration-300 rounded-t-lg`}>
+                    <div className="flex items-center space-x-4">
+                      <div className={`flex items-center justify-center w-10 h-10 ${colorScheme.bg} ${colorScheme.accent} rounded-lg transition-all duration-300 hover:scale-105`}>
+                        <Play className="h-5 w-5" />
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        {module.totalLessons > 0 ? 'Track progress' : 'No assignments'}
+                      <div className="text-left">
+                        <h3 className="text-lg font-semibold text-foreground">
+                          {module.title}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {module.completedLessons}/{module.totalLessons} completed • {module.lessons.reduce((acc, lesson) => acc + (parseInt(lesson.duration) || 0), 0)} min
+                        </p>
                       </div>
                     </div>
-                    <ChevronDown 
-                      className={`h-5 w-5 text-muted-foreground transition-transform ${
-                        expandedModules[module.id] ? 'rotate-180' : ''
-                      }`} 
-                    />
-                  </div>
-                </CollapsibleTrigger>
-                
-                <CollapsibleContent>
-                  <div className="border-t border-border">
-                    <div className="p-6 space-y-4">
-                      {module.lessons.map((lesson) => (
-                        <div key={lesson.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                          <div className="flex items-center space-x-4 flex-1">
-                            <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-                              lesson.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-                            }`}>
-                              {lesson.completed ? (
-                                <CheckCircle className="h-4 w-4" />
-                              ) : (
-                                <Play className="h-4 w-4" />
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-medium text-foreground truncate">
-                                {lesson.title}
-                              </h4>
-                              <p className="text-xs text-muted-foreground">
-                                {lesson.duration}
-                              </p>
-                            </div>
-                          </div>
-                          
-                          <div className="flex items-center space-x-3">
-                            {lesson.assignmentTitle !== 'No Assignment' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
-                                className={`${
-                                  lesson.assignmentSubmitted ? 'bg-green-50 text-green-700 border-green-200' : ''
-                                }`}
-                              >
-                                {lesson.assignmentSubmitted ? 'View Submission' : 'Submit Assignment'}
-                              </Button>
-                            )}
-                            
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => {
-                                if (lesson.recording_url) {
-                                  navigate(`/video-player?url=${encodeURIComponent(lesson.recording_url)}&title=${encodeURIComponent(lesson.title)}&id=${lesson.id}`);
-                                }
-                              }}
-                              disabled={!lesson.recording_url}
-                            >
-                              {lesson.completed ? 'Watch Again' : 'Watch Now'}
-                            </Button>
-                          </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="text-right">
+                        <div className="text-sm font-medium text-foreground">
+                          {module.totalLessons} assignments
                         </div>
-                      ))}
+                        <div className="text-xs text-muted-foreground">
+                          {module.totalLessons > 0 ? 'Track progress' : 'No assignments'}
+                        </div>
+                      </div>
+                      <div className="p-2 hover:bg-white/50 rounded-full transition-all duration-300">
+                        {getExpandableIcon(index, expandedModules[module.id])}
+                      </div>
                     </div>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
-          ))}
+                  </CollapsibleTrigger>
+                
+                  <CollapsibleContent>
+                    <div className="border-t border-border">
+                      <div className="p-6 space-y-4">
+                        {module.lessons.map((lesson) => (
+                          <div key={lesson.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center space-x-4 flex-1">
+                              <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
+                                lesson.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
+                              }`}>
+                                {lesson.completed ? (
+                                  <CheckCircle className="h-4 w-4" />
+                                ) : (
+                                  <Play className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-medium text-foreground truncate">
+                                  {lesson.title}
+                                </h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {lesson.duration}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              {lesson.assignmentTitle !== 'No Assignment' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
+                                  className={`${
+                                    lesson.assignmentSubmitted ? 'bg-green-50 text-green-700 border-green-200' : ''
+                                  }`}
+                                >
+                                  {lesson.assignmentSubmitted ? 'View Submission' : 'Submit Assignment'}
+                                </Button>
+                              )}
+                              
+                              <Button
+                                variant="default"
+                                size="sm"
+                                onClick={() => {
+                                  if (lesson.recording_url) {
+                                    navigate(`/video-player?url=${encodeURIComponent(lesson.recording_url)}&title=${encodeURIComponent(lesson.title)}&id=${lesson.id}`);
+                                  }
+                                }}
+                                disabled={!lesson.recording_url}
+                              >
+                                {lesson.completed ? 'Watch Again' : 'Watch Now'}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            );
+          })}
         </div>
       )}
 
