@@ -14,6 +14,7 @@ const Videos = ({ user }: VideosProps = {}) => {
   const navigate = useNavigate();
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedAssignment, setSelectedAssignment] = useState<{
+    id: string;
     title: string;
     lessonTitle: string;
     submitted: boolean;
@@ -34,8 +35,9 @@ const Videos = ({ user }: VideosProps = {}) => {
     navigate(`/videos/${moduleId}/${lessonId}`);
   }, [navigate]);
 
-  const handleAssignmentClick = useCallback((lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean) => {
+  const handleAssignmentClick = useCallback((lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean, assignmentId?: string) => {
     setSelectedAssignment({
+      id: assignmentId || `temp-${Date.now()}`,
       title: assignmentTitle,
       lessonTitle: lessonTitle,
       submitted: assignmentSubmitted
@@ -99,6 +101,8 @@ const Videos = ({ user }: VideosProps = {}) => {
           onOpenChange={setAssignmentDialogOpen}
           assignmentTitle={selectedAssignment.title}
           lessonTitle={selectedAssignment.lessonTitle}
+          assignmentId={selectedAssignment.id}
+          userId={user?.id || ""}
           isSubmitted={selectedAssignment.submitted}
         />
       )}
