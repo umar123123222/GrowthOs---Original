@@ -1,98 +1,10 @@
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { AssignmentSubmissionDialog } from "@/components/AssignmentSubmissionDialog";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { supabase } from "@/integrations/supabase/client";
-import { 
-  Play, 
-  CheckCircle, 
-  Clock, 
-  Lock,
-  FileText,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  RotateCw,
-  ArrowDown,
-  ArrowRight,
-  Plus,
-  Minus,
-  Triangle,
-  Square,
-  Circle
-} from "lucide-react";
-
-// Memoized lesson component for better performance
-const LessonRow = React.memo(({ 
-  lesson, 
-  moduleId, 
-  onWatchNow, 
-  onAssignmentClick 
-}: {
-  lesson: any;
-  moduleId: number;
-  onWatchNow: (moduleId: number, lessonId: number) => void;
-  onAssignmentClick: (lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean) => void;
-}) => {
-  const navigate = useNavigate();
-  
-  return (
-    <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-      <div className="flex items-center space-x-4 flex-1">
-        <div className={`flex items-center justify-center w-8 h-8 rounded-full ${
-          lesson.completed ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'
-        }`}>
-          {lesson.completed ? (
-            <CheckCircle className="h-4 w-4" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h4 className="text-sm font-medium text-foreground truncate">
-            {lesson.title}
-          </h4>
-          <p className="text-xs text-muted-foreground">
-            {lesson.duration}
-          </p>
-        </div>
-      </div>
-      
-      <div className="flex items-center space-x-3">
-        {lesson.assignmentTitle !== 'No Assignment' && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted)}
-            className={`${
-              lesson.assignmentSubmitted ? 'bg-green-50 text-green-700 border-green-200' : ''
-            }`}
-          >
-            {lesson.assignmentSubmitted ? 'View Submission' : 'Submit Assignment'}
-          </Button>
-        )}
-        
-        <Button
-          variant="default"
-          size="sm"
-          onClick={() => {
-            if (lesson.recording_url) {
-              navigate(`/video-player?url=${encodeURIComponent(lesson.recording_url)}&title=${encodeURIComponent(lesson.title)}&id=${lesson.id}`);
-            }
-          }}
-          disabled={!lesson.recording_url}
-        >
-          {lesson.completed ? 'Watch Again' : 'Watch Now'}
-        </Button>
-      </div>
-    </div>
-  );
-});
-
-LessonRow.displayName = "LessonRow";
+import { ModuleCard } from "@/components/ModuleCard";
+import { useVideosData } from "@/hooks/useVideosData";
+import { Play } from "lucide-react";
 
 interface VideosProps {
   user?: any;
@@ -106,157 +18,18 @@ const Videos = ({ user }: VideosProps = {}) => {
     lessonTitle: string;
     submitted: boolean;
   } | null>(null);
-  const [expandedModules, setExpandedModules] = useState<{ [key: number]: boolean }>({});
-  const [modules, setModules] = useState<any[]>([]);
-  const [recordings, setRecordings] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [expandedModules, setExpandedModules] = useState<{ [key: string | number]: boolean }>({});
+  
+  const { modules, loading } = useVideosData(user);
 
-  useEffect(() => {
-    fetchModulesAndRecordings();
-  }, []);
-
-  const fetchModulesAndRecordings = async () => {
-    console.log('fetchModulesAndRecordings called');
-    try {
-
-      // Fetch modules
-      const { data: modulesData, error: modulesError } = await supabase
-        .from('modules')
-        .select('*')
-        .order('order');
-
-      console.log('Modules data:', modulesData);
-      if (modulesError) {
-        console.error('Modules error:', modulesError);
-        throw modulesError;
-      }
-
-      // Fetch recordings with assignment info
-      const { data: recordingsData, error: recordingsError } = await supabase
-        .from('available_lessons')
-        .select('*')
-        .order('sequence_order');
-
-      console.log('Recordings data:', recordingsData);
-
-      // Fetch assignments separately
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('assignment')
-        .select('*');
-
-      console.log('Assignments data:', assignmentsData);
-      if (recordingsError) {
-        console.error('Recordings error:', recordingsError);
-        throw recordingsError;
-      }
-      if (assignmentsError) {
-        console.error('Assignments error:', assignmentsError);
-        throw assignmentsError;
-      }
-
-      // Fetch user's assignment submissions (if user is logged in)
-      let submissions = [];
-      if (user?.id) {
-        const { data: submissionsData, error: submissionsError } = await supabase
-          .from('assignment_submissions')
-          .select('*')
-          .eq('user_id', user.id);
-        
-        console.log('Submissions data:', submissionsData);
-        if (submissionsError) {
-          console.error('Submissions error:', submissionsError);
-          throw submissionsError;
-        }
-        submissions = submissionsData || [];
-      }
-
-      // Process data to determine locked/unlocked status
-      console.log('Processing modules...');
-      const processedModules = modulesData?.map(module => {
-        console.log('Processing module:', module.title, 'ID:', module.id);
-        const moduleRecordings = recordingsData?.filter(r => r.module === module.id) || [];
-        console.log('Module recordings for', module.title, ':', moduleRecordings.length, 'recordings');
-        
-        const lessons = moduleRecordings.map(recording => {
-          // Find associated assignment based on sequence_order matching
-          const associatedAssignment = assignmentsData?.find(a => a.sequence_order === recording.sequence_order);
-          console.log('Recording:', recording.recording_title, 'Sequence:', recording.sequence_order, 'Found assignment:', associatedAssignment?.assignment_title);
-          
-          // Check if user has submitted assignment for this recording
-          const submission = submissions?.find(s => s.assignment_id === associatedAssignment?.assignment_id);
-          
-          return {
-            id: recording.id,
-            title: recording.recording_title || 'Untitled Recording',
-            duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
-            completed: submission?.status === 'accepted',
-            locked: false,
-            assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
-            assignmentSubmitted: !!submission,
-            recording_url: recording.recording_url
-          };
-        });
-
-        console.log('Processed lessons for', module.title, ':', lessons.length, 'lessons');
-        return {
-          id: module.id,
-          title: module.title,
-          totalLessons: lessons.length,
-          completedLessons: lessons.filter(l => l.completed).length,
-          lessons
-        };
-      }) || [];
-
-      // Filter out modules with no lessons to keep the interface clean
-      const modulesWithLessons = processedModules.filter(module => module.lessons.length > 0);
-      console.log('Modules with lessons:', modulesWithLessons.length);
-
-      // Only create default module if NO modules exist at all
-      if (modulesWithLessons.length === 0 && recordingsData?.length > 0) {
-        console.log('No modules with lessons found, creating default module for', recordingsData.length, 'recordings');
-        const defaultModule = {
-          id: 'default',
-          title: 'Uncategorized Recordings',
-          totalLessons: recordingsData.length,
-          completedLessons: 0,
-          lessons: recordingsData.map(recording => {
-            const associatedAssignment = assignmentsData?.find(a => a.sequence_order === recording.sequence_order);
-            const submission = submissions?.find(s => s.assignment_id === associatedAssignment?.assignment_id);
-            
-            return {
-              id: recording.id,
-              title: recording.recording_title || 'Untitled Recording',
-              duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
-              completed: submission?.status === 'accepted',
-              locked: false,
-              assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
-              assignmentSubmitted: !!submission,
-              recording_url: recording.recording_url
-            };
-          })
-        };
-        modulesWithLessons.push(defaultModule);
-        console.log('Created default module:', defaultModule);
-      }
-
-      console.log('Final processed modules:', modulesWithLessons);
-
-      setModules(modulesWithLessons);
-      setRecordings(recordingsData || []);
-      
-      // Start with the first module expanded to show recordings
-      if (modulesWithLessons.length > 0) {
-        setExpandedModules({ [modulesWithLessons[0].id]: true });
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setLoading(false);
+  // Initialize first module as expanded
+  React.useEffect(() => {
+    if (modules.length > 0 && Object.keys(expandedModules).length === 0) {
+      setExpandedModules({ [modules[0].id]: true });
     }
-  };
+  }, [modules, expandedModules]);
 
 
-  // Memoized callbacks to prevent unnecessary re-renders
   const handleWatchNow = useCallback((moduleId: number, lessonId: number) => {
     navigate(`/videos/${moduleId}/${lessonId}`);
   }, [navigate]);
@@ -270,7 +43,7 @@ const Videos = ({ user }: VideosProps = {}) => {
     setAssignmentDialogOpen(true);
   }, []);
 
-  const toggleModule = useCallback((moduleId: number) => {
+  const toggleModule = useCallback((moduleId: string | number) => {
     setExpandedModules(prev => ({
       ...prev,
       [moduleId]: !prev[moduleId]
@@ -306,102 +79,17 @@ const Videos = ({ user }: VideosProps = {}) => {
         </Card>
       ) : (
         <div className="space-y-4">
-          {modules.map((module, index) => {
-            // Different expandable styles for each module
-            const getExpandableIcon = (moduleIndex: number, isExpanded: boolean) => {
-              const icons = [
-                { 
-                  expanded: <ChevronUp className="h-5 w-5 text-blue-600 transition-all duration-300 hover:scale-110" />, 
-                  collapsed: <ChevronDown className="h-5 w-5 text-blue-600 transition-all duration-300 hover:scale-110" /> 
-                },
-                { 
-                  expanded: <Minus className="h-5 w-5 text-green-600 transition-all duration-300 rotate-0" />, 
-                  collapsed: <Plus className="h-5 w-5 text-green-600 transition-all duration-300" /> 
-                },
-                { 
-                  expanded: <ArrowDown className="h-5 w-5 text-purple-600 transition-all duration-500 rotate-180" />, 
-                  collapsed: <ArrowRight className="h-5 w-5 text-purple-600 transition-all duration-500" /> 
-                },
-                { 
-                  expanded: <Triangle className="h-5 w-5 text-orange-600 transition-all duration-300 rotate-180" />, 
-                  collapsed: <Triangle className="h-5 w-5 text-orange-600 transition-all duration-300" /> 
-                },
-                { 
-                  expanded: <Square className="h-5 w-5 text-red-600 transition-all duration-300 rotate-45" />, 
-                  collapsed: <Square className="h-5 w-5 text-red-600 transition-all duration-300" /> 
-                }
-              ];
-              const iconSet = icons[moduleIndex % icons.length];
-              return isExpanded ? iconSet.expanded : iconSet.collapsed;
-            };
-
-            const getModuleColorScheme = (moduleIndex: number) => {
-              const schemes = [
-                { bg: "bg-blue-50", border: "border-blue-200", accent: "text-blue-700" },
-                { bg: "bg-green-50", border: "border-green-200", accent: "text-green-700" },
-                { bg: "bg-purple-50", border: "border-purple-200", accent: "text-purple-700" },
-                { bg: "bg-orange-50", border: "border-orange-200", accent: "text-orange-700" },
-                { bg: "bg-red-50", border: "border-red-200", accent: "text-red-700" }
-              ];
-              return schemes[moduleIndex % schemes.length];
-            };
-
-            const colorScheme = getModuleColorScheme(index);
-            
-            return (
-              <div key={module.id} className={`bg-white rounded-lg shadow-sm border ${colorScheme.border} hover:shadow-md transition-all duration-300`}>
-                <Collapsible
-                  open={expandedModules[module.id]}
-                  onOpenChange={(open) => setExpandedModules(prev => ({ ...prev, [module.id]: open }))}
-                >
-                  <CollapsibleTrigger className={`w-full p-6 flex items-center justify-between hover:${colorScheme.bg} transition-all duration-300 rounded-t-lg`}>
-                    <div className="flex items-center space-x-4">
-                      <div className={`flex items-center justify-center w-10 h-10 ${colorScheme.bg} ${colorScheme.accent} rounded-lg transition-all duration-300 hover:scale-105`}>
-                        <Play className="h-5 w-5" />
-                      </div>
-                      <div className="text-left">
-                        <h3 className="text-lg font-semibold text-foreground">
-                          {module.title}
-                        </h3>
-                        <p className="text-sm text-muted-foreground">
-                          {module.completedLessons}/{module.totalLessons} completed • {module.lessons.reduce((acc, lesson) => acc + (parseInt(lesson.duration) || 0), 0)} min
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-right">
-                        <div className="text-sm font-medium text-foreground">
-                          {module.totalLessons} lessons
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {module.totalLessons > 0 ? 'Track progress' : 'No lessons'}
-                        </div>
-                      </div>
-                      <div className="p-2 hover:bg-white/50 rounded-full transition-all duration-300">
-                        {getExpandableIcon(index, expandedModules[module.id])}
-                      </div>
-                    </div>
-                  </CollapsibleTrigger>
-                
-                  <CollapsibleContent>
-                    <div className="border-t border-border">
-                      <div className="p-6 space-y-4">
-                        {module.lessons.map((lesson) => (
-                          <LessonRow
-                            key={lesson.id}
-                            lesson={lesson}
-                            moduleId={module.id}
-                            onWatchNow={handleWatchNow}
-                            onAssignmentClick={handleAssignmentClick}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            );
-          })}
+          {modules.map((module, index) => (
+            <ModuleCard
+              key={module.id}
+              module={module}
+              index={index}
+              isExpanded={expandedModules[module.id]}
+              onToggle={toggleModule}
+              onWatchNow={handleWatchNow}
+              onAssignmentClick={handleAssignmentClick}
+            />
+          ))}
         </div>
       )}
 
