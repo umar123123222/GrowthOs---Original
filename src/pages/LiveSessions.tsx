@@ -327,24 +327,27 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         </div>
       )}
 
-      {/* Recorded Sessions */}
-      {recordedSessions.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-6 bg-secondary rounded-full"></div>
-            <h2 className="text-xl font-semibold">Session Recordings</h2>
-            <Badge variant="secondary" className="ml-auto">
-              {recordedSessions.length} recording{recordedSessions.length !== 1 ? 's' : ''}
-            </Badge>
+      {/* Recorded Sessions - Only show sessions the user attended */}
+      {(() => {
+        const attendedSessions = recordedSessions.filter(session => hasAttended(session.id));
+        return attendedSessions.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-6 bg-secondary rounded-full"></div>
+              <h2 className="text-xl font-semibold">My Session Recordings</h2>
+              <Badge variant="secondary" className="ml-auto">
+                {attendedSessions.length} attended recording{attendedSessions.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
+            
+            <div className="grid gap-6">
+              {attendedSessions.map((session) => (
+                <SessionCard key={session.id} session={session} isUpcoming={false} />
+              ))}
+            </div>
           </div>
-          
-          <div className="grid gap-6">
-            {recordedSessions.map((session) => (
-              <SessionCard key={session.id} session={session} isUpcoming={false} />
-            ))}
-          </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
