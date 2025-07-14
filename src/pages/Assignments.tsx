@@ -207,6 +207,16 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
     );
   }
 
+  // Filter assignments to show only top 4 to be completed
+  const incompleteAssignments = assignments
+    .filter(assignment => {
+      const submission = submissions.find(s => s.assignment_id === assignment.assignment_id);
+      return !submission || submission.status !== 'accepted';
+    })
+    .slice(0, 4);
+
+  const remainingAssignments = assignments.length - incompleteAssignments.length;
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Assignment List */}
@@ -221,50 +231,75 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
             </div>
           </Card>
         ) : (
-          assignments.map((assignment) => {
-            const isSubmitted = submissions.some(s => s.assignment_id === assignment.assignment_id);
-            const isOverdue = new Date(assignment.due_date) < new Date() && !isSubmitted;
-            const isLocked = !assignment.isUnlocked;
+          <>
+            {incompleteAssignments.map((assignment) => {
+              const isSubmitted = submissions.some(s => s.assignment_id === assignment.assignment_id);
+              const isOverdue = new Date(assignment.due_date) < new Date() && !isSubmitted;
+              const isLocked = !assignment.isUnlocked;
+              
+              return (
+                <Card 
+                  key={assignment.assignment_id}
+                  className={`cursor-pointer transition-all ${
+                    selectedAssignment === assignment.assignment_id 
+                      ? "border-blue-500 shadow-md" 
+                      : "hover:shadow-sm"
+                  } ${isLocked ? "opacity-50" : ""}`}
+                  onClick={() => !isLocked && setSelectedAssignment(assignment.assignment_id)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className={`font-semibold text-sm ${isLocked ? "text-gray-400" : ""}`}>
+                        {isLocked ? "🔒 " : ""}{assignment.assignment_title}
+                      </h3>
+                      {getStatusBadge(assignment)}
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>Assignment {assignment.sequence_order}</span>
+                      <span className="flex items-center">
+                        <Clock className="w-3 h-3 mr-1" />
+                        Due: {assignment.due_date ? new Date(assignment.due_date).toLocaleDateString() : 'No due date'}
+                      </span>
+                    </div>
+                    
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-xs text-gray-600">Status: {assignment.Status || 'Pending'}</span>
+                      {isOverdue && (
+                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                      )}
+                      {isSubmitted && (
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
             
-            return (
-              <Card 
-                key={assignment.assignment_id}
-                className={`cursor-pointer transition-all ${
-                  selectedAssignment === assignment.assignment_id 
-                    ? "border-blue-500 shadow-md" 
-                    : "hover:shadow-sm"
-                } ${isLocked ? "opacity-50" : ""}`}
-                onClick={() => !isLocked && setSelectedAssignment(assignment.assignment_id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className={`font-semibold text-sm ${isLocked ? "text-gray-400" : ""}`}>
-                      {isLocked ? "🔒 " : ""}{assignment.assignment_title}
-                    </h3>
-                    {getStatusBadge(assignment)}
+            {/* Other Assignments Button */}
+            {remainingAssignments > 0 && (
+              <Card className="border-2 border-dashed border-gray-300 bg-gray-50">
+                <CardContent className="p-4 text-center">
+                  <div className="flex items-center justify-center space-x-2 text-gray-500">
+                    <span className="text-2xl">🔒</span>
+                    <div>
+                      <h3 className="font-semibold text-sm">Other Assignments</h3>
+                      <p className="text-xs">{remainingAssignments} more assignments locked</p>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>Assignment {assignment.sequence_order}</span>
-                    <span className="flex items-center">
-                      <Clock className="w-3 h-3 mr-1" />
-                      Due: {assignment.due_date ? new Date(assignment.due_date).toLocaleDateString() : 'No due date'}
-                    </span>
-                  </div>
-                  
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-xs text-gray-600">Status: {assignment.Status || 'Pending'}</span>
-                    {isOverdue && (
-                      <AlertTriangle className="w-4 h-4 text-red-500" />
-                    )}
-                    {isSubmitted && (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
-                    )}
-                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3 opacity-50 cursor-not-allowed"
+                    disabled
+                  >
+                    🔒 View All Assignments
+                  </Button>
                 </CardContent>
               </Card>
-            );
-          })
+            )}
+          </>
         )}
       </div>
 
