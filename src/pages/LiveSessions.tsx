@@ -35,19 +35,36 @@ interface SessionAttendance {
   left_at: string;
 }
 
-const LiveSessions = () => {
+interface LiveSessionsProps {
+  user?: any;
+}
+
+const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   const [sessions, setSessions] = useState<LiveSession[]>([]);
   const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchSessions();
-    fetchAttendance();
-  }, []);
+    console.log('LiveSessions useEffect triggered, user:', user);
+    if (user?.id) {
+      fetchSessions();
+      fetchAttendance();
+    } else {
+      console.log('No user ID in LiveSessions, setting loading to false');
+      setLoading(false);
+    }
+  }, [user?.id]);
 
   const fetchSessions = async () => {
+    console.log('fetchSessions called, user:', user);
     try {
+      if (!user?.id) {
+        console.log('No user ID in fetchSessions, returning');
+        setLoading(false);
+        return;
+      }
+
       // Get current date in simpler format to match database format
       const now = new Date();
       const currentDateTime = now.toISOString().slice(0, 19).replace('T', ' ');
@@ -79,9 +96,13 @@ const LiveSessions = () => {
   };
 
   const fetchAttendance = async () => {
+    console.log('fetchAttendance called, user:', user);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user?.id) {
+        console.log('No user ID in fetchAttendance, returning');
+        setLoading(false);
+        return;
+      }
 
       const { data, error } = await supabase
         .from('session_attendance')
@@ -99,8 +120,7 @@ const LiveSessions = () => {
 
   const joinSession = async (sessionId: string, sessionLink: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No authenticated user');
+      if (!user?.id) throw new Error('No authenticated user');
 
       // Record attendance
       const { error } = await supabase
@@ -167,8 +187,13 @@ const LiveSessions = () => {
         <Card>
           <CardContent className="text-center py-12">
             <Video className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium mb-2">No Upcoming Success Session</h3>
-            <p className="text-gray-600">Check back soon for your next scheduled success session</p>
+            <h3 className="text-lg font-medium mb-2">No Upcoming Success Sessions</h3>
+            <p className="text-gray-600">
+              {!user?.id 
+                ? "Please log in to view your success sessions" 
+                : "Check back soon for your next scheduled success session"
+              }
+            </p>
           </CardContent>
         </Card>
       ) : (

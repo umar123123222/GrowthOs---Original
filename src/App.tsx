@@ -53,7 +53,7 @@ const App = () => {
                 <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
                 <Route path="assignments" element={<Assignments user={currentUser} />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
-                <Route path="live-sessions" element={<LiveSessions />} />
+                <Route path="live-sessions" element={<LiveSessions user={currentUser} />} />
                 <Route path="mentorship" element={<Mentorship />} />
                 <Route path="messages" element={<Messages />} />
                 <Route path="profile" element={<Profile user={currentUser} />} />
