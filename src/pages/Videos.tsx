@@ -120,7 +120,11 @@ const Videos = ({ user }: VideosProps = {}) => {
         .select('*')
         .order('order');
 
-      if (modulesError) throw modulesError;
+      console.log('Modules data:', modulesData);
+      if (modulesError) {
+        console.error('Modules error:', modulesError);
+        throw modulesError;
+      }
 
       // Fetch recordings with assignment info
       const { data: recordingsData, error: recordingsError } = await supabase
@@ -128,13 +132,22 @@ const Videos = ({ user }: VideosProps = {}) => {
         .select('*')
         .order('sequence_order');
 
+      console.log('Recordings data:', recordingsData);
+
       // Fetch assignments separately
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('assignment')
         .select('*');
 
-      if (recordingsError) throw recordingsError;
-      if (assignmentsError) throw assignmentsError;
+      console.log('Assignments data:', assignmentsData);
+      if (recordingsError) {
+        console.error('Recordings error:', recordingsError);
+        throw recordingsError;
+      }
+      if (assignmentsError) {
+        console.error('Assignments error:', assignmentsError);
+        throw assignmentsError;
+      }
 
       // Fetch user's assignment submissions (if user is logged in)
       let submissions = [];
@@ -144,17 +157,25 @@ const Videos = ({ user }: VideosProps = {}) => {
           .select('*')
           .eq('user_id', user.id);
         
-        if (submissionsError) throw submissionsError;
+        console.log('Submissions data:', submissionsData);
+        if (submissionsError) {
+          console.error('Submissions error:', submissionsError);
+          throw submissionsError;
+        }
         submissions = submissionsData || [];
       }
 
       // Process data to determine locked/unlocked status
+      console.log('Processing modules...');
       const processedModules = modulesData?.map(module => {
+        console.log('Processing module:', module.title);
         const moduleRecordings = recordingsData?.filter(r => r.module === module.id) || [];
+        console.log('Module recordings for', module.title, ':', moduleRecordings);
         
         const lessons = moduleRecordings.map(recording => {
           // Find associated assignment
           const associatedAssignment = assignmentsData?.find(a => a.assignment_id === recording.assignment_id);
+          console.log('Recording:', recording.recording_title, 'Assignment ID:', recording.assignment_id, 'Found assignment:', associatedAssignment);
           
           // Check if user has submitted assignment for this recording
           const submission = submissions?.find(s => s.assignment_id === recording.assignment_id);
@@ -172,6 +193,7 @@ const Videos = ({ user }: VideosProps = {}) => {
           };
         });
 
+        console.log('Processed lessons for', module.title, ':', lessons);
         return {
           id: module.id,
           title: module.title,
@@ -181,8 +203,11 @@ const Videos = ({ user }: VideosProps = {}) => {
         };
       }) || [];
 
+      console.log('Processed modules:', processedModules);
+
       // If no modules found but we have recordings, create a default module
       if (processedModules.length === 0 && recordingsData?.length > 0) {
+        console.log('No modules found, creating default module for', recordingsData.length, 'recordings');
         const defaultModule = {
           id: 'default',
           title: 'Available Recordings',
@@ -205,7 +230,10 @@ const Videos = ({ user }: VideosProps = {}) => {
           })
         };
         processedModules.push(defaultModule);
+        console.log('Created default module:', defaultModule);
       }
+
+      console.log('Final processed modules:', processedModules);
 
       setModules(processedModules);
       setRecordings(recordingsData || []);
