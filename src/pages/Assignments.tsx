@@ -276,6 +276,29 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                 </Card>
               );
             })}
+            
+            {/* Other Assignments Button */}
+            {remainingAssignments > 0 && (
+              <Card className="border-2 border-dashed border-gray-300 bg-gray-50">
+                <CardContent className="p-4 text-center">
+                  <div className="flex items-center justify-center space-x-2 text-gray-500">
+                    <span className="text-2xl">🔒</span>
+                    <div>
+                      <h3 className="font-semibold text-sm">Other Assignments</h3>
+                      <p className="text-xs">{remainingAssignments} more assignments locked</p>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-3 opacity-50 cursor-not-allowed"
+                    disabled
+                  >
+                    🔒 View All Assignments
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </>
         )}
       </div>
