@@ -40,17 +40,18 @@ interface LiveSessionsProps {
 }
 
 const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
-  const [sessions, setSessions] = useState<LiveSession[]>([]);
+  const [upcomingSessions, setUpcomingSessions] = useState<LiveSession[]>([]);
+  const [attendedSessions, setAttendedSessions] = useState<LiveSession[]>([]);
   const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     console.log('LiveSessions useEffect triggered, user:', user);
-    fetchSessions();
     if (user?.id) {
       fetchAttendance();
     } else {
+      fetchSessions();
       setLoading(false);
     }
   }, [user?.id]);
@@ -71,15 +72,29 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         throw error;
       }
       
-      // Filter sessions on the client side to get upcoming sessions
+      // Split sessions into upcoming and past
       const now = new Date();
-      const upcomingSessions = (data || []).filter(session => {
+      const upcoming = (data || []).filter(session => {
         const sessionStart = new Date(session.start_time);
         return sessionStart >= now;
       });
+
+      const pastSessions = (data || []).filter(session => {
+        const sessionEnd = new Date(session.end_time);
+        return sessionEnd < now;
+      });
       
-      console.log('Upcoming sessions after filtering:', upcomingSessions);
-      setSessions(upcomingSessions);
+      console.log('Upcoming sessions after filtering:', upcoming);
+      console.log('Past sessions after filtering:', pastSessions);
+      setUpcomingSessions(upcoming);
+      
+      // Filter past sessions to only show attended ones
+      if (user?.id && attendance.length > 0) {
+        const attendedPastSessions = pastSessions.filter(session =>
+          attendance.some(a => a.live_session_id === session.id)
+        );
+        setAttendedSessions(attendedPastSessions);
+      }
     } catch (error) {
       console.error('Error fetching sessions:', error);
       toast({
@@ -106,6 +121,11 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
 
       if (error) throw error;
       setAttendance(data || []);
+      
+      // Re-fetch sessions after attendance data is loaded to filter attended past sessions
+      if (data && data.length > 0) {
+        await fetchSessions();
+      }
     } catch (error) {
       console.error('Error fetching attendance:', error);
     } finally {
@@ -131,7 +151,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       // Open session link
       window.open(sessionLink, '_blank');
       
-      fetchAttendance();
+      await fetchAttendance();
       
       toast({
         title: "Joined Session",
@@ -169,126 +189,177 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     );
   }
 
+  const SessionCard = ({ session, isUpcoming = false }: { session: LiveSession; isUpcoming?: boolean }) => {
+    const sessionStatus = getSessionStatus(session);
+    const attended = hasAttended(session.id);
+    
+    return (
+      <Card className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-l-4 border-l-primary/20 hover:border-l-primary/60">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                {session.title}
+              </CardTitle>
+              <p className="text-muted-foreground leading-relaxed">{session.description}</p>
+            </div>
+            <Badge variant={
+              sessionStatus.status === 'live' ? 'destructive' : 
+              sessionStatus.status === 'upcoming' ? 'default' : 
+              'secondary'
+            } className="shrink-0">
+              {sessionStatus.status}
+            </Badge>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+              <Calendar className="w-5 h-5 text-primary" />
+              <div>
+                <div className="font-medium text-sm">Date</div>
+                <div className="text-sm text-muted-foreground">
+                  {new Date(session.start_time).toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric',
+                    year: 'numeric' 
+                  })}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+              <Clock className="w-5 h-5 text-primary" />
+              <div>
+                <div className="font-medium text-sm">Time</div>
+                <div className="text-sm text-muted-foreground">
+                  {new Date(session.start_time).toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                  })} - {new Date(session.end_time).toLocaleTimeString('en-US', { 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                  })}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+              <Users className="w-5 h-5 text-primary" />
+              <div>
+                <div className="font-medium text-sm">Mentor</div>
+                <div className="text-sm text-muted-foreground">{session.mentor_name || "TBA"}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between pt-4 border-t">
+            <div className="flex items-center gap-2">
+              {attended && (
+                <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Attended</span>
+                </div>
+              )}
+            </div>
+            
+            <Button
+              onClick={() => joinSession(session.id, session.link)}
+              disabled={sessionStatus.status === 'completed' && !attended}
+              variant={sessionStatus.status === 'live' ? 'destructive' : 'default'}
+              className={sessionStatus.status === 'live' ? "animate-pulse" : ""}
+            >
+              {sessionStatus.status === 'live' ? (
+                <>
+                  <Play className="w-4 h-4 mr-2" />
+                  Join Live
+                </>
+              ) : sessionStatus.status === 'upcoming' ? (
+                <>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Join Session
+                </>
+              ) : (
+                <>
+                  <Video className="w-4 h-4 mr-2" />
+                  Watch Recording
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Success Sessions</h1>
-        <p className="text-muted-foreground">
-          Upcoming success sessions with mentors and fellow students
+    <div className="space-y-8 animate-fade-in">
+      <div className="space-y-2">
+        <h1 className="text-3xl font-bold tracking-tight">Success Sessions</h1>
+        <p className="text-muted-foreground text-lg">
+          Connect with mentors and fellow students in our success sessions
         </p>
       </div>
 
-      {sessions.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Video className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-            <h3 className="text-lg font-medium mb-2">No Upcoming Success Sessions</h3>
-            <p className="text-gray-600">
-              Check back soon for scheduled success sessions
+      {/* Upcoming Sessions */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-6 bg-primary rounded-full"></div>
+          <h2 className="text-xl font-semibold">Upcoming Sessions</h2>
+        </div>
+        
+        {upcomingSessions.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent className="text-center py-12">
+              <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+              <h3 className="text-lg font-medium mb-2">No Upcoming Sessions</h3>
+              <p className="text-muted-foreground">
+                Check back soon for newly scheduled success sessions
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6">
+            {upcomingSessions.map((session) => (
+              <SessionCard key={session.id} session={session} isUpcoming={true} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Attended Past Sessions */}
+      {attendedSessions.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-6 bg-secondary rounded-full"></div>
+            <h2 className="text-xl font-semibold">Your Session Recordings</h2>
+            <Badge variant="secondary" className="ml-auto">
+              {attendedSessions.length} session{attendedSessions.length !== 1 ? 's' : ''}
+            </Badge>
+          </div>
+          
+          <div className="grid gap-6">
+            {attendedSessions.map((session) => (
+              <SessionCard key={session.id} session={session} isUpcoming={false} />
+            ))}
+          </div>
+        </div>
+      )}
+      
+      {attendedSessions.length === 0 && upcomingSessions.length > 0 && (
+        <Card className="border-dashed bg-muted/20">
+          <CardContent className="text-center py-8">
+            <Video className="w-10 h-10 mx-auto mb-3 text-muted-foreground/50" />
+            <h3 className="font-medium mb-1">Session Recordings</h3>
+            <p className="text-sm text-muted-foreground">
+              Your attended session recordings will appear here
             </p>
           </CardContent>
         </Card>
-      ) : (
-        <div className="grid gap-4">
-          {sessions.map((session) => {
-            const sessionStatus = getSessionStatus(session);
-            const attended = hasAttended(session.id);
-            
-            return (
-              <Card key={session.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-xl">{session.title}</CardTitle>
-                      <p className="text-gray-600 mt-1">{session.description}</p>
-                    </div>
-                    <Badge className={sessionStatus.color}>
-                      {sessionStatus.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <div className="font-medium">Day & Date</div>
-                        <div>{new Date(session.start_time).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <div className="font-medium">Time</div>
-                        <div>{new Date(session.start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })} - {new Date(session.end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}</div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <div className="font-medium">Mentor</div>
-                        <div>{session.mentor_name || "TBA"}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Additional session details */}
-                  <div className="pt-2 border-t border-gray-100">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-gray-700">Session ID:</span>
-                        <span className="ml-2 text-gray-600">{session.id.slice(0, 8)}...</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-700">Status:</span>
-                        <span className="ml-2 text-gray-600">{session.status || 'upcoming'}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {attended && (
-                        <div className="flex items-center gap-1 text-green-600">
-                          <CheckCircle className="w-4 h-4" />
-                          <span className="text-sm">Attended</span>
-                        </div>
-                      )}
-                    </div>
-                    
-                    <Button
-                      onClick={() => joinSession(session.id, session.link)}
-                      disabled={sessionStatus.status === 'completed'}
-                      className={
-                        sessionStatus.status === 'live'
-                          ? "bg-red-600 hover:bg-red-700 animate-pulse"
-                          : ""
-                      }
-                    >
-                      {sessionStatus.status === 'live' ? (
-                        <>
-                          <Play className="w-4 h-4 mr-2" />
-                          Join Now
-                        </>
-                      ) : sessionStatus.status === 'upcoming' ? (
-                        <>
-                          <Calendar className="w-4 h-4 mr-2" />
-                          Join Now
-                        </>
-                      ) : (
-                        <>
-                          <ExternalLink className="w-4 h-4 mr-2" />
-                          View Recording
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
       )}
     </div>
   );
