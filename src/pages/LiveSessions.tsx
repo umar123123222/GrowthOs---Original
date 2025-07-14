@@ -122,10 +122,8 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       if (error) throw error;
       setAttendance(data || []);
       
-      // Re-fetch sessions after attendance data is loaded to filter attended past sessions
-      if (data && data.length > 0) {
-        await fetchSessions();
-      }
+      // Always fetch sessions to show upcoming sessions, regardless of attendance
+      await fetchSessions();
     } catch (error) {
       console.error('Error fetching attendance:', error);
     } finally {
