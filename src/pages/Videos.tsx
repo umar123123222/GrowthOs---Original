@@ -210,10 +210,8 @@ const Videos = ({ user }: VideosProps = {}) => {
       setModules(processedModules);
       setRecordings(recordingsData || []);
       
-      // Auto-expand first module
-      if (processedModules.length > 0) {
-        setExpandedModules({ [processedModules[0].id]: true });
-      }
+      // Start with all modules collapsed
+      setExpandedModules({});
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
