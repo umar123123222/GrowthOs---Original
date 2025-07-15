@@ -29,10 +29,16 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId }: ConnectAcc
   const [metaKey, setMetaKey] = useState("");
   const [shopifyKey, setShopifyKey] = useState("");
 
-  // Load existing credentials when dialog opens
+  // Load existing credentials when dialog opens and reset editing states
   useEffect(() => {
     const loadExistingCredentials = async () => {
       if (userId && open) {
+        // Reset editing states and clear input fields when dialog opens
+        setEditingMeta(false);
+        setEditingShopify(false);
+        setMetaKey("");
+        setShopifyKey("");
+        
         try {
           const { data, error } = await supabase
             .from('users')
@@ -44,9 +50,13 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId }: ConnectAcc
 
           if (data?.meta_ads_credentials) {
             setMetaConnected(true);
+          } else {
+            setMetaConnected(false);
           }
           if (data?.shopify_credentials) {
             setShopifyConnected(true);
+          } else {
+            setShopifyConnected(false);
           }
         } catch (error) {
           console.error('Error loading existing credentials:', error);
