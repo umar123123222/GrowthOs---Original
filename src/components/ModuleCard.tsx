@@ -9,13 +9,14 @@ interface ModuleCardProps {
     title: string;
     totalLessons: number;
     completedLessons: number;
+    locked: boolean;
     lessons: any[];
   };
   index: number;
   isExpanded: boolean;
   onToggle: (moduleId: string | number) => void;
   onWatchNow: (moduleId: number, lessonId: number) => void;
-  onAssignmentClick: (lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean) => void;
+  onAssignmentClick: (lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean, assignmentId?: string) => void;
 }
 
 const getModuleColorScheme = (moduleIndex: number) => {
@@ -43,16 +44,32 @@ export const ModuleCard = ({
   );
 
   return (
-    <div className={`bg-white rounded-lg shadow-sm border ${colorScheme.border} hover:shadow-md transition-all duration-300`}>
+    <div className={`bg-white rounded-lg shadow-sm border transition-all duration-300 ${
+      module.locked 
+        ? 'border-gray-200 opacity-60' 
+        : `${colorScheme.border} hover:shadow-md`
+    }`}>
       <Collapsible open={isExpanded} onOpenChange={() => onToggle(module.id)}>
-        <CollapsibleTrigger className={`w-full p-6 flex items-center justify-between hover:${colorScheme.bg} transition-all duration-300 rounded-t-lg`}>
+        <CollapsibleTrigger 
+          className={`w-full p-6 flex items-center justify-between transition-all duration-300 rounded-t-lg ${
+            module.locked ? 'cursor-not-allowed' : `hover:${colorScheme.bg}`
+          }`}
+          disabled={module.locked}
+        >
           <div className="flex items-center space-x-4">
-            <div className={`flex items-center justify-center w-10 h-10 ${colorScheme.bg} ${colorScheme.accent} rounded-lg transition-all duration-300 hover:scale-105`}>
+            <div className={`flex items-center justify-center w-10 h-10 rounded-lg transition-all duration-300 ${
+              module.locked 
+                ? 'bg-gray-100 text-gray-400'
+                : `${colorScheme.bg} ${colorScheme.accent} hover:scale-105`
+            }`}>
               <Play className="h-5 w-5" />
             </div>
             <div className="text-left">
-              <h3 className="text-lg font-semibold text-foreground">
+              <h3 className={`text-lg font-semibold ${
+                module.locked ? 'text-muted-foreground' : 'text-foreground'
+              }`}>
                 {module.title}
+                {module.locked && <span className="ml-2 text-sm font-normal">(Locked)</span>}
               </h3>
               <p className="text-sm text-muted-foreground">
                 {module.completedLessons}/{module.totalLessons} completed • {totalDuration} min
@@ -82,6 +99,7 @@ export const ModuleCard = ({
                   key={lesson.id}
                   lesson={lesson}
                   moduleId={module.id}
+                  moduleLocked={module.locked}
                   onWatchNow={onWatchNow}
                   onAssignmentClick={onAssignmentClick}
                 />

@@ -1058,6 +1058,36 @@ export type Database = {
           },
         ]
       }
+      user_module_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          is_completed: boolean
+          module_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          module_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          is_completed?: boolean
+          module_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_segments: {
         Row: {
           confidence_score: number | null
@@ -1263,7 +1293,27 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_unlock_status: {
+        Args: { _user_id: string }
+        Returns: {
+          module_id: string
+          recording_id: string
+          is_module_unlocked: boolean
+          is_recording_unlocked: boolean
+        }[]
+      }
+      is_assignment_passed: {
+        Args: { _user_id: string; _assignment_id: string }
+        Returns: boolean
+      }
+      is_module_completed: {
+        Args: { _user_id: string; _module_id: string }
+        Returns: boolean
+      }
+      is_recording_watched: {
+        Args: { _user_id: string; _recording_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

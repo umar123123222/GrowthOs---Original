@@ -6,6 +6,7 @@ interface Module {
   title: string;
   totalLessons: number;
   completedLessons: number;
+  locked: boolean;
   lessons: any[];
 }
 
@@ -43,6 +44,9 @@ export const useVideosData = (user?: any) => {
 
       // Fetch user's assignment submissions (if user is logged in)
       let submissions = [];
+      let recordingViews = [];
+      let unlockStatus = [];
+      
       if (user?.id) {
         const { data: submissionsData, error: submissionsError } = await supabase
           .from('assignment_submissions')
@@ -51,25 +55,53 @@ export const useVideosData = (user?: any) => {
         
         if (submissionsError) throw submissionsError;
         submissions = submissionsData || [];
+
+        // Fetch recording views to check what's been watched
+        const { data: viewsData, error: viewsError } = await supabase
+          .from('recording_views')
+          .select('*')
+          .eq('user_id', user.id);
+        
+        if (viewsError) throw viewsError;
+        recordingViews = viewsData || [];
+
+        // Get unlock status for the user
+        const { data: unlockData, error: unlockError } = await supabase
+          .rpc('get_user_unlock_status', { _user_id: user.id });
+        
+        if (unlockError) throw unlockError;
+        unlockStatus = unlockData || [];
       }
 
-      // Process data
+      // Process data with unlock logic
       const processedModules = modulesData?.map(module => {
         const moduleRecordings = recordingsData?.filter(r => r.module === module.id) || [];
+        
+        // Check if this module is unlocked
+        const moduleUnlockStatus = unlockStatus.find(u => u.module_id === module.id && u.recording_id === null);
+        const isModuleUnlocked = user?.id ? (moduleUnlockStatus?.is_module_unlocked ?? false) : true;
         
         const lessons = moduleRecordings.map(recording => {
           const associatedAssignment = assignmentsData?.find(a => a.sequence_order === recording.sequence_order);
           const submission = submissions?.find(s => s.assignment_id === associatedAssignment?.assignment_id);
+          const recordingView = recordingViews?.find(rv => rv.recording_id === recording.id);
+          
+          // Check if this recording is unlocked
+          const recordingUnlockStatus = unlockStatus.find(u => u.recording_id === recording.id);
+          const isRecordingUnlocked = user?.id ? (recordingUnlockStatus?.is_recording_unlocked ?? false) : true;
           
           return {
             id: recording.id,
             title: recording.recording_title || 'Untitled Recording',
             duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
             completed: submission?.status === 'accepted',
-            locked: false,
+            watched: recordingView?.watched ?? false,
+            locked: !isRecordingUnlocked,
             assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
             assignmentSubmitted: !!submission,
-            recording_url: recording.recording_url
+            assignmentId: associatedAssignment?.assignment_id,
+            recording_url: recording.recording_url,
+            sequence_order: recording.sequence_order
           };
         });
 
@@ -78,6 +110,7 @@ export const useVideosData = (user?: any) => {
           title: module.title,
           totalLessons: lessons.length,
           completedLessons: lessons.filter(l => l.completed).length,
+          locked: !isModuleUnlocked,
           lessons
         };
       }) || [];
@@ -92,19 +125,24 @@ export const useVideosData = (user?: any) => {
           title: 'Uncategorized Recordings',
           totalLessons: recordingsData.length,
           completedLessons: 0,
+          locked: false,
           lessons: recordingsData.map(recording => {
             const associatedAssignment = assignmentsData?.find(a => a.sequence_order === recording.sequence_order);
             const submission = submissions?.find(s => s.assignment_id === associatedAssignment?.assignment_id);
+            const recordingView = recordingViews?.find(rv => rv.recording_id === recording.id);
             
             return {
               id: recording.id,
               title: recording.recording_title || 'Untitled Recording',
               duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
               completed: submission?.status === 'accepted',
+              watched: recordingView?.watched ?? false,
               locked: false,
               assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
               assignmentSubmitted: !!submission,
-              recording_url: recording.recording_url
+              assignmentId: associatedAssignment?.assignment_id,
+              recording_url: recording.recording_url,
+              sequence_order: recording.sequence_order
             };
           })
         };
@@ -119,5 +157,9 @@ export const useVideosData = (user?: any) => {
     }
   };
 
-  return { modules, loading };
+  const refreshData = () => {
+    fetchModulesAndRecordings();
+  };
+
+  return { modules, loading, refreshData };
 };

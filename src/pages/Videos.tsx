@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { AssignmentSubmissionDialog } from "@/components/AssignmentSubmissionDialog";
 import { ModuleCard } from "@/components/ModuleCard";
 import { useVideosData } from "@/hooks/useVideosData";
+import { useProgressTracker } from "@/hooks/useProgressTracker";
 import { Play } from "lucide-react";
 
 interface VideosProps {
@@ -21,7 +22,8 @@ const Videos = ({ user }: VideosProps = {}) => {
   } | null>(null);
   const [expandedModules, setExpandedModules] = useState<{ [key: string | number]: boolean }>({});
   
-  const { modules, loading } = useVideosData(user);
+  const { modules, loading, refreshData } = useVideosData(user);
+  const { markModuleComplete, markRecordingWatched } = useProgressTracker(user, modules);
 
   // Initialize first module as expanded
   React.useEffect(() => {
@@ -98,7 +100,13 @@ const Videos = ({ user }: VideosProps = {}) => {
       {selectedAssignment && (
         <AssignmentSubmissionDialog
           open={assignmentDialogOpen}
-          onOpenChange={setAssignmentDialogOpen}
+          onOpenChange={(open) => {
+            setAssignmentDialogOpen(open);
+            if (!open) {
+              // Refresh data when dialog closes to update unlock status
+              setTimeout(refreshData, 500);
+            }
+          }}
           assignmentTitle={selectedAssignment.title}
           lessonTitle={selectedAssignment.lessonTitle}
           assignmentId={selectedAssignment.id}

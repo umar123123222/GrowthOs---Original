@@ -1,0 +1,73 @@
+import { useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
+export const useProgressTracker = (user?: any, modules?: any[]) => {
+  useEffect(() => {
+    const checkAndUpdateUserStatus = async () => {
+      if (!user?.id || !modules?.length) return;
+
+      try {
+        // Check if all modules are completed
+        const allModulesCompleted = modules.every(module => 
+          module.lessons.every((lesson: any) => lesson.completed)
+        );
+
+        if (allModulesCompleted) {
+          // Update user status to "Completed"
+          const { error } = await supabase
+            .from('users')
+            .update({ status: 'Passed out / Completed' })
+            .eq('id', user.id);
+
+          if (error) {
+            console.error('Error updating user status:', error);
+          } else {
+            console.log('User status updated to Completed');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking module completion:', error);
+      }
+    };
+
+    checkAndUpdateUserStatus();
+  }, [user?.id, modules]);
+
+  const markModuleComplete = async (moduleId: string) => {
+    if (!user?.id) return;
+
+    try {
+      await supabase
+        .from('user_module_progress')
+        .upsert({
+          user_id: user.id,
+          module_id: moduleId,
+          is_completed: true,
+          completed_at: new Date().toISOString()
+        });
+    } catch (error) {
+      console.error('Error marking module as complete:', error);
+    }
+  };
+
+  const markRecordingWatched = async (recordingId: string) => {
+    if (!user?.id) return;
+
+    try {
+      await supabase
+        .from('recording_views')
+        .upsert({
+          user_id: user.id,
+          recording_id: recordingId,
+          watched: true
+        });
+    } catch (error) {
+      console.error('Error marking recording as watched:', error);
+    }
+  };
+
+  return {
+    markModuleComplete,
+    markRecordingWatched
+  };
+};
