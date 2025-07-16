@@ -1,61 +1,16 @@
-
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  User, 
-  Settings, 
-  Bell, 
-  Download,
-  Target,
-  Trophy,
-  Award,
-  Calendar,
-  CheckCircle,
-  ExternalLink
-} from "lucide-react";
+import { User, Lock, Eye, EyeOff } from "lucide-react";
 
 interface UserProfile {
   id: string;
   full_name: string;
   email: string;
-  phone?: string;
-  "What's your income goal in the next 3 months?"?: string;
-  "Why do you want to make this income?"?: string;
-  "Final Goal"?: string;
-}
-
-interface UserBadge {
-  id: string;
-  badge: {
-    name: string;
-    description: string;
-    image_url: string;
-  };
-  earned_at: string;
-}
-
-interface Progress {
-  module: {
-    title: string;
-  };
-  status: string;
-  score: number;
-}
-
-interface Certificate {
-  id: string;
-  track: string;
-  certificate_url: string;
-  issued_at: string;
-  downloaded: boolean;
 }
 
 interface ProfileProps {
@@ -64,26 +19,21 @@ interface ProfileProps {
 
 const Profile = ({ user }: ProfileProps = {}) => {
   const [profileData, setProfileData] = useState<UserProfile | null>(null);
-  const [userBadges, setUserBadges] = useState<UserBadge[]>([]);
-  const [userProgress, setUserProgress] = useState<Progress[]>([]);
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [leaderboardPosition, setLeaderboardPosition] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
-  const [notifications, setNotifications] = useState({
-    whatsapp: true,
-    email: true,
-    assignments: true,
-    progress: true
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchUserData();
-    fetchUserBadges();
-    fetchUserProgress();
-    fetchCertificates();
-    fetchLeaderboardPosition();
   }, []);
 
   const fetchUserData = async () => {
@@ -92,7 +42,7 @@ const Profile = ({ user }: ProfileProps = {}) => {
 
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('id, full_name, email')
         .eq('id', user.id)
         .single();
 
@@ -100,83 +50,6 @@ const Profile = ({ user }: ProfileProps = {}) => {
       setProfileData(data as UserProfile);
     } catch (error) {
       console.error('Error fetching user data:', error);
-    }
-  };
-
-  const fetchUserBadges = async () => {
-    try {
-      if (!user?.id) return;
-
-      const { data, error } = await supabase
-        .from('user_badges')
-        .select(`
-          id,
-          earned_at,
-          badge:badges(name, description, image_url)
-        `)
-        .eq('user_id', user.id)
-        .order('earned_at', { ascending: false })
-        .limit(4);
-
-      if (error) throw error;
-      setUserBadges(data || []);
-    } catch (error) {
-      console.error('Error fetching user badges:', error);
-    }
-  };
-
-  const fetchUserProgress = async () => {
-    try {
-      if (!user?.id) return;
-
-      const { data, error } = await supabase
-        .from('progress')
-        .select(`
-          status,
-          score,
-          module:modules(title)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'completed');
-
-      if (error) throw error;
-      setUserProgress(data || []);
-    } catch (error) {
-      console.error('Error fetching user progress:', error);
-    }
-  };
-
-  const fetchCertificates = async () => {
-    try {
-      if (!user?.id) return;
-
-      const { data, error } = await supabase
-        .from('certificates')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('issued_at', { ascending: false });
-
-      if (error) throw error;
-      setCertificates(data || []);
-    } catch (error) {
-      console.error('Error fetching certificates:', error);
-    }
-  };
-
-  const fetchLeaderboardPosition = async () => {
-    try {
-      if (!user?.id) return;
-
-      const { data, error } = await supabase
-        .from('leaderboard')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      setLeaderboardPosition(data);
-    } catch (error) {
-      console.error('Error fetching leaderboard position:', error);
     } finally {
       setLoading(false);
     }
@@ -189,11 +62,7 @@ const Profile = ({ user }: ProfileProps = {}) => {
       const { error } = await supabase
         .from('users')
         .update({
-          full_name: profileData.full_name,
-          phone: profileData.phone,
-          income_goal_3_months: profileData["What's your income goal in the next 3 months?"],
-          income_reason: profileData["Why do you want to make this income?"],
-          final_goal: profileData["Final Goal"]
+          full_name: profileData.full_name
         })
         .eq('id', user.id);
 
@@ -213,355 +82,232 @@ const Profile = ({ user }: ProfileProps = {}) => {
     }
   };
 
-  const downloadCertificate = async (certificate: Certificate) => {
+  const updatePassword = async () => {
+    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Please fill in all password fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordData.newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      // Mark as downloaded
-      const { error } = await supabase
-        .from('certificates')
-        .update({ downloaded: true })
-        .eq('id', certificate.id);
+      const { error } = await supabase.auth.updateUser({
+        password: passwordData.newPassword
+      });
 
       if (error) throw error;
 
-      // Open certificate URL
-      window.open(certificate.certificate_url, '_blank');
-      
-      // Update local state
-      setCertificates(prev => 
-        prev.map(cert => 
-          cert.id === certificate.id 
-            ? { ...cert, downloaded: true }
-            : cert
-        )
-      );
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
 
       toast({
-        title: "Certificate Downloaded",
-        description: "Your certificate has been opened in a new tab",
+        title: "Success!",
+        description: "Password updated successfully",
       });
     } catch (error) {
-      console.error('Error downloading certificate:', error);
+      console.error('Error updating password:', error);
       toast({
         title: "Error",
-        description: "Failed to download certificate",
+        description: "Failed to update password",
         variant: "destructive",
       });
     }
   };
 
+  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
+  };
+
   if (loading || !profileData) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center animate-fade-in">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading profile...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
-        <p className="text-gray-600 mt-2">Manage your account and preferences</p>
+    <div className="max-w-2xl mx-auto space-y-8 animate-fade-in">
+      <div className="animate-fade-in">
+        <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+          Profile Settings
+        </h1>
+        <p className="text-muted-foreground mt-2 text-lg">Manage your account information</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Profile Information */}
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <User className="w-5 h-5 mr-2" />
-                Personal Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Full Name</Label>
-                  <Input
-                    id="name"
-                    value={profileData.full_name}
-                    onChange={(e) => setProfileData({...profileData, full_name: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profileData.email}
-                    disabled
-                    className="bg-gray-50"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <Label htmlFor="phone">Phone Number</Label>
+      <div className="space-y-6">
+        {/* Personal Information */}
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b">
+            <CardTitle className="flex items-center text-xl">
+              <User className="w-6 h-6 mr-3 text-blue-600" />
+              Personal Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6 p-6">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-sm font-medium text-foreground">Full Name</Label>
+              <Input
+                id="name"
+                value={profileData.full_name}
+                onChange={(e) => setProfileData({...profileData, full_name: e.target.value})}
+                placeholder="Enter your full name"
+                className="transition-all duration-200 focus:scale-[1.02]"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email" className="text-sm font-medium text-foreground">User ID (Email)</Label>
+              <Input
+                id="email"
+                type="email"
+                value={profileData.email}
+                disabled
+                className="bg-gray-50 cursor-not-allowed"
+              />
+              <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+            </div>
+
+            <div className="flex justify-end">
+              <Button 
+                onClick={updateProfile}
+                className="hover-scale bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+              >
+                Save Changes
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Password Change */}
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+          <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 border-b">
+            <CardTitle className="flex items-center text-xl">
+              <Lock className="w-6 h-6 mr-3 text-orange-600" />
+              Change Password
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6 p-6">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword" className="text-sm font-medium text-foreground">Current Password</Label>
+              <div className="relative">
                 <Input
-                  id="phone"
-                  value={profileData.phone || ""}
-                  onChange={(e) => setProfileData({...profileData, phone: e.target.value})}
+                  id="currentPassword"
+                  type={showPasswords.current ? "text" : "password"}
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
+                  placeholder="Enter current password"
+                  className="transition-all duration-200 focus:scale-[1.02] pr-10"
                 />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => togglePasswordVisibility('current')}
+                >
+                  {showPasswords.current ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-500" />
+                  )}
+                </Button>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Target className="w-5 h-5 mr-2" />
-                Goals & Motivation
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="incomeGoal">Income Goal (Next 3 Months)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="newPassword" className="text-sm font-medium text-foreground">New Password</Label>
+              <div className="relative">
                 <Input
-                  id="incomeGoal"
-                  value={profileData["What's your income goal in the next 3 months?"] || ""}
-                  onChange={(e) => setProfileData({...profileData, "What's your income goal in the next 3 months?": e.target.value})}
+                  id="newPassword"
+                  type={showPasswords.new ? "text" : "password"}
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
+                  placeholder="Enter new password"
+                  className="transition-all duration-200 focus:scale-[1.02] pr-10"
                 />
-              </div>
-              
-              <div>
-                <Label htmlFor="whySuccess">Why do you want to make this income?</Label>
-                <Textarea
-                  id="whySuccess"
-                  value={profileData["Why do you want to make this income?"] || ""}
-                  onChange={(e) => setProfileData({...profileData, "Why do you want to make this income?": e.target.value})}
-                  rows={3}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="dreamGoal">Final Goal</Label>
-                <Textarea
-                  id="dreamGoal"
-                  value={profileData["Final Goal"] || ""}
-                  onChange={(e) => setProfileData({...profileData, "Final Goal": e.target.value})}
-                  rows={3}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Bell className="w-5 h-5 mr-2" />
-                Notification Preferences
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="whatsapp-notif">WhatsApp Notifications</Label>
-                  <p className="text-sm text-gray-600">Receive reminders and updates via WhatsApp</p>
-                </div>
-                <Switch
-                  id="whatsapp-notif"
-                  checked={notifications.whatsapp}
-                  onCheckedChange={(checked) => setNotifications({...notifications, whatsapp: checked})}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="email-notif">Email Notifications</Label>
-                  <p className="text-sm text-gray-600">Receive updates and progress reports via email</p>
-                </div>
-                <Switch
-                  id="email-notif"
-                  checked={notifications.email}
-                  onCheckedChange={(checked) => setNotifications({...notifications, email: checked})}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="assignment-notif">Assignment Reminders</Label>
-                  <p className="text-sm text-gray-600">Get notified about upcoming assignments</p>
-                </div>
-                <Switch
-                  id="assignment-notif"
-                  checked={notifications.assignments}
-                  onCheckedChange={(checked) => setNotifications({...notifications, assignments: checked})}
-                />
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <Label htmlFor="progress-notif">Progress Updates</Label>
-                  <p className="text-sm text-gray-600">Weekly progress summaries and insights</p>
-                </div>
-                <Switch
-                  id="progress-notif"
-                  checked={notifications.progress}
-                  onCheckedChange={(checked) => setNotifications({...notifications, progress: checked})}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Certificates Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Award className="w-5 h-5 mr-2" />
-                My Certificates
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {certificates.length === 0 ? (
-                <div className="text-center py-8">
-                  <Award className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <h3 className="text-lg font-medium mb-2">No Certificates Yet</h3>
-                  <p className="text-gray-600 mb-4">
-                    Complete course requirements to earn your first certificate
-                  </p>
-                  <Button variant="outline">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View Requirements
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {certificates.map((certificate) => (
-                    <div key={certificate.id} className="border border-yellow-200 bg-yellow-50 rounded-lg p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2 bg-yellow-100 rounded-full">
-                            <Award className="w-5 h-5 text-yellow-600" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold">{certificate.track}</h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <Calendar className="w-4 h-4" />
-                              <span>Issued on {new Date(certificate.issued_at).toLocaleDateString()}</span>
-                              {certificate.downloaded && (
-                                <Badge variant="secondary" className="ml-2">
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Downloaded
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <Button 
-                          onClick={() => downloadCertificate(certificate)}
-                          size="sm"
-                          className="flex items-center gap-2"
-                        >
-                          <Download className="w-4 h-4" />
-                          {certificate.downloaded ? 'Download Again' : 'Download'}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <div className="flex space-x-4">
-            <Button className="bg-blue-600 hover:bg-blue-700" onClick={updateProfile}>
-              Save Changes
-            </Button>
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Download My Data
-            </Button>
-          </div>
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Profile Stats */}
-          <Card className="bg-gradient-to-r from-blue-50 to-green-50">
-            <CardHeader>
-              <CardTitle className="text-lg">Your Progress</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm">Completed Modules</span>
-                  <span className="font-bold text-blue-600">{userProgress.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Current Rank</span>
-                  <span className="font-bold text-green-600">
-                    {leaderboardPosition ? `#${leaderboardPosition.rank}` : 'Unranked'}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Total Points</span>
-                  <span className="font-bold text-purple-600">
-                    {leaderboardPosition ? leaderboardPosition.points : 0}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm">Badges Earned</span>
-                  <span className="font-bold text-orange-600">{userBadges.length}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Achievements */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center text-lg">
-                <Trophy className="w-5 h-5 mr-2 text-yellow-600" />
-                Recent Achievements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {userBadges.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-4">
-                    No badges earned yet. Keep learning to unlock achievements!
-                  </p>
-                ) : (
-                  userBadges.map((userBadge) => (
-                    <div key={userBadge.id} className="flex items-center space-x-3 p-2 rounded-lg bg-gray-50">
-                      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                        🏆
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-medium text-sm">{userBadge.badge.name}</div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(userBadge.earned_at).toLocaleDateString()}
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* ShoaibGPT Preferences */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">ShoaibGPT Style</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <Button variant="outline" className="w-full justify-start">
-                  🔥 Strict Mentor
-                </Button>
-                <Button variant="outline" className="w-full justify-start bg-blue-50 border-blue-200">
-                  😊 Friendly Guide
-                </Button>
-                <Button variant="outline" className="w-full justify-start">
-                  💡 Motivational Coach
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => togglePasswordVisibility('new')}
+                >
+                  {showPasswords.new ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-500" />
+                  )}
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-foreground">Confirm New Password</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showPasswords.confirm ? "text" : "password"}
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                  placeholder="Confirm new password"
+                  className="transition-all duration-200 focus:scale-[1.02] pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                  onClick={() => togglePasswordVisibility('confirm')}
+                >
+                  {showPasswords.confirm ? (
+                    <EyeOff className="h-4 w-4 text-gray-500" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-500" />
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <Button 
+                onClick={updatePassword}
+                className="hover-scale bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+              >
+                Update Password
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
