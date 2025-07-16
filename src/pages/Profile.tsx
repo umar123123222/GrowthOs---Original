@@ -151,11 +151,18 @@ const Profile = ({ user }: ProfileProps = {}) => {
         title: "Success!",
         description: "Password updated successfully",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating password:', error);
+      
+      let errorMessage = "Failed to update password. Please try again.";
+      
+      if (error?.code === 'weak_password') {
+        errorMessage = "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.";
+      }
+      
       toast({
         title: "Error",
-        description: "Failed to update password. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     }
