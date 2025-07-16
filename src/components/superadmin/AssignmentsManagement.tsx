@@ -300,20 +300,30 @@ export function AssignmentsManagement() {
                     <SelectValue placeholder="Select mentor or admin" />
                   </SelectTrigger>
                   <SelectContent className="bg-white z-50">
-                    <optgroup label="Mentors">
-                      {mentors.map((mentor) => (
-                        <SelectItem key={mentor.id} value={mentor.id}>
-                          {mentor.full_name} (Mentor)
-                        </SelectItem>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Admins">
-                      {admins.map((admin) => (
-                        <SelectItem key={admin.id} value={admin.id}>
-                          {admin.full_name} (Admin)
-                        </SelectItem>
-                      ))}
-                    </optgroup>
+                    {mentors.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Mentors
+                        </div>
+                        {mentors.map((mentor) => (
+                          <SelectItem key={mentor.id} value={mentor.id}>
+                            {mentor.full_name}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
+                    {admins.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                          Admins
+                        </div>
+                        {admins.map((admin) => (
+                          <SelectItem key={admin.id} value={admin.id}>
+                            {admin.full_name}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
