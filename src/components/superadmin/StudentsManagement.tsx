@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -46,6 +46,7 @@ export function StudentsManagement() {
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -400,6 +401,58 @@ export function StudentsManagement() {
     }
   };
 
+  const toggleRowExpansion = (studentId: string) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(studentId)) {
+      newExpanded.delete(studentId);
+    } else {
+      newExpanded.add(studentId);
+    }
+    setExpandedRows(newExpanded);
+  };
+
+  const handleToggleLMSSuspension = async (studentId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          lms_suspended: !currentStatus,
+          status: !currentStatus ? 'Suspended' : 'Active'
+        })
+        .eq('id', studentId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `LMS account ${!currentStatus ? 'suspended' : 'activated'} successfully`
+      });
+
+      fetchStudents();
+    } catch (error) {
+      console.error('Error toggling LMS suspension:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update LMS status',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleViewActivityLogs = (studentId: string) => {
+    // TODO: Implement activity logs dialog
+    toast({
+      title: 'Activity Logs',
+      description: 'Activity logs feature coming soon'
+    });
+  };
+
+  const getInvoiceStatus = (student: Student) => {
+    if (student.fees_overdue) return 'Fees Overdue';
+    if (student.last_invoice_sent && !student.fees_overdue) return 'Fees Due';
+    return 'Fees Cleared';
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
   }
@@ -635,105 +688,175 @@ export function StudentsManagement() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Fees Structure</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Last Invoice</TableHead>
-                  <TableHead>Invoice Sent</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {displayStudents.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.student_id}</TableCell>
-                    <TableCell>{student.full_name}</TableCell>
-                    <TableCell>{student.email}</TableCell>
-                    <TableCell>{student.phone || 'N/A'}</TableCell>
-                    <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
-                    <TableCell>
-                      <Badge className={getStatusColor(student.status)}>
-                        {student.status}
-                      </Badge>
-                      {student.lms_suspended && (
-                        <Badge className="ml-2 bg-red-100 text-red-800">
-                          <Ban className="w-3 h-3 mr-1" />
-                          Suspended
+                  <>
+                    <TableRow key={student.id}>
+                      <TableCell className="font-medium">{student.student_id}</TableCell>
+                      <TableCell>{student.full_name}</TableCell>
+                      <TableCell>{student.email}</TableCell>
+                      <TableCell>{student.phone || 'N/A'}</TableCell>
+                      <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusColor(student.status)}>
+                          {student.status}
                         </Badge>
-                      )}
-                      {student.fees_overdue && (
-                        <Badge className="ml-2 bg-orange-100 text-orange-800">
-                          <Clock className="w-3 h-3 mr-1" />
-                          Overdue
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>{formatDate(student.last_invoice_date)}</TableCell>
-                    <TableCell>
-                      {student.last_invoice_sent ? (
-                        <Badge className="bg-green-100 text-green-800">
-                          <CheckCircle className="w-3 h-3 mr-1" />
-                          Sent
-                        </Badge>
-                      ) : (
-                        <Badge className="bg-gray-100 text-gray-800">
-                          <XCircle className="w-3 h-3 mr-1" />
-                          Not Sent
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(student)}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => generateInvoice(student.id)}
-                        >
-                          Generate Invoice
-                        </Button>
-                        {student.last_invoice_date && (
+                        {student.lms_suspended && (
+                          <Badge className="ml-2 bg-red-100 text-red-800">
+                            <Ban className="w-3 h-3 mr-1" />
+                            Suspended
+                          </Badge>
+                        )}
+                        {student.fees_overdue && (
+                          <Badge className="ml-2 bg-orange-100 text-orange-800">
+                            <Clock className="w-3 h-3 mr-1" />
+                            Overdue
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => downloadInvoicePDF(student)}
+                            onClick={() => handleEdit(student)}
+                            title="Edit Student Details"
                           >
-                            <Download className="w-4 h-4" />
+                            <Edit className="w-4 h-4" />
                           </Button>
-                        )}
-                        {student.fees_overdue && (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleFeesReceived(student.id)}
-                              className="text-green-600"
-                            >
-                              <CheckCircle className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleSuspendAccount(student.id)}
-                              className="text-red-600"
-                            >
-                              <Ban className="w-4 h-4" />
-                            </Button>
-                          </>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(student.id)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => toggleRowExpansion(student.id)}
+                            title={expandedRows.has(student.id) ? "Collapse" : "Expand"}
+                          >
+                            {expandedRows.has(student.id) ? 
+                              <ChevronUp className="w-4 h-4" /> : 
+                              <ChevronDown className="w-4 h-4" />
+                            }
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    
+                    {expandedRows.has(student.id) && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="bg-gray-50 p-6">
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
+                                <p className="text-sm text-gray-900">{formatDate(student.last_invoice_date)}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700">Joining Date</Label>
+                                <p className="text-sm text-gray-900">{formatDate(student.created_at)}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
+                                <p className="text-sm text-gray-900">{getInvoiceStatus(student)}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
+                                <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
+                                <div className="flex items-center space-x-2">
+                                  <p className="text-sm text-gray-900">{student.lms_user_id || 'Not set'}</p>
+                                  {student.lms_user_id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => navigator.clipboard.writeText(student.lms_user_id)}
+                                    >
+                                      <Key className="w-3 h-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700">LMS Password</Label>
+                                <div className="flex items-center space-x-2">
+                                  <p className="text-sm text-gray-900">
+                                    {student.lms_password ? '••••••••' : 'Not set'}
+                                  </p>
+                                  {student.lms_password && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => navigator.clipboard.writeText(student.lms_password)}
+                                    >
+                                      <Lock className="w-3 h-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2 pt-4 border-t">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleViewActivityLogs(student.id)}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Activity Logs
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generateInvoice(student.id)}
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                Generate Invoice
+                              </Button>
+                              {student.last_invoice_date && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => downloadInvoicePDF(student)}
+                                >
+                                  <Download className="w-4 h-4 mr-2" />
+                                  Download Invoice
+                                </Button>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleFeesReceived(student.id)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <CheckCircle className="w-4 h-4 mr-2" />
+                                Mark Fees Received
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleToggleLMSSuspension(student.id, student.lms_suspended)}
+                                className={student.lms_suspended ? "text-green-600 hover:text-green-700" : "text-red-600 hover:text-red-700"}
+                              >
+                                {student.lms_suspended ? (
+                                  <>
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    Activate LMS
+                                  </>
+                                ) : (
+                                  <>
+                                    <Ban className="w-4 h-4 mr-2" />
+                                    Suspend LMS
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </>
                 ))}
               </TableBody>
             </Table>
