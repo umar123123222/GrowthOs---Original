@@ -6,10 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
+import { useAuth } from "@/hooks/useAuth";
 
 interface LoginProps {
-  onLogin: (user: any) => void;
+  onLogin?: (user: any) => void;
 }
 
 const Login = ({ onLogin }: LoginProps) => {
@@ -17,30 +17,20 @@ const Login = ({ onLogin }: LoginProps) => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { refreshUser } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Check if user exists in our database
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .single();
+      // First authenticate with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      if (error || !user) {
-        toast({
-          title: "Access Denied",
-          description: "You are not authorized to access this system. Please contact your administrator.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Check if password matches (using LMS Password column)
-      if (user.lms_password !== password) {
+      if (authError) {
         toast({
           title: "Invalid Credentials",
           description: "Incorrect email or password.",
@@ -49,14 +39,36 @@ const Login = ({ onLogin }: LoginProps) => {
         return;
       }
 
-      console.log('User logged in successfully:', user.email);
+      // Check if user exists in our users table and get their role
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (userError || !userData) {
+        toast({
+          title: "Access Denied",
+          description: "You are not authorized to access this system. Please contact your administrator.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('User logged in successfully:', userData.email);
 
       toast({
         title: "Welcome!",
-        description: `Hello ${user.full_name}, you've successfully logged in.`,
+        description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`,
       });
 
-      onLogin(user);
+      // Refresh the user data in our auth hook
+      await refreshUser();
+      
+      // Call the optional onLogin callback if provided
+      if (onLogin) {
+        onLogin(userData);
+      }
     } catch (error) {
       console.error('Login error:', error);
       toast({

@@ -41,7 +41,7 @@ const App = () => {
         <BrowserRouter>
           <Routes>
             {!user ? (
-              <Route path="*" element={<Login onLogin={() => {}} />} />
+              <Route path="*" element={<Login />} />
             ) : (
               <Route path="/" element={<Layout user={user} />}>
                 {/* Role-based dashboard routing */}
