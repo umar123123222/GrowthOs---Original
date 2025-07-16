@@ -122,7 +122,7 @@ export function StudentsManagement() {
     // Apply LMS status filter
     if (lmsStatusFilter === 'suspended') {
       filtered = filtered.filter(student => student.lms_suspended);
-    } else if (lmsStatusFilter === 'not_suspended') {
+    } else if (lmsStatusFilter === 'active') {
       filtered = filtered.filter(student => !student.lms_suspended);
     }
 
@@ -132,12 +132,12 @@ export function StudentsManagement() {
     }
 
     // Apply invoice filter
-    if (invoiceFilter === 'sent') {
-      filtered = filtered.filter(student => student.last_invoice_sent);
-    } else if (invoiceFilter === 'not_sent') {
-      filtered = filtered.filter(student => !student.last_invoice_sent);
-    } else if (invoiceFilter === 'overdue') {
+    if (invoiceFilter === 'fees_due') {
+      filtered = filtered.filter(student => student.last_invoice_sent && !student.fees_overdue);
+    } else if (invoiceFilter === 'fees_overdue') {
       filtered = filtered.filter(student => student.fees_overdue);
+    } else if (invoiceFilter === 'fees_cleared') {
+      filtered = filtered.filter(student => !student.fees_overdue && student.last_invoice_sent);
     }
 
     // Apply status filter
@@ -575,7 +575,7 @@ export function StudentsManagement() {
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-white z-50">
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="Active">Active</SelectItem>
             <SelectItem value="Inactive">Inactive</SelectItem>
@@ -587,10 +587,10 @@ export function StudentsManagement() {
           <SelectTrigger className="w-40">
             <SelectValue placeholder="LMS Status" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All LMS</SelectItem>
-            <SelectItem value="suspended">LMS Suspended</SelectItem>
-            <SelectItem value="not_suspended">LMS Active</SelectItem>
+          <SelectContent className="bg-white z-50">
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
           </SelectContent>
         </Select>
 
@@ -598,8 +598,8 @@ export function StudentsManagement() {
           <SelectTrigger className="w-40">
             <SelectValue placeholder="Fees Structure" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Fees</SelectItem>
+          <SelectContent className="bg-white z-50">
+            <SelectItem value="all">All</SelectItem>
             <SelectItem value="1_installment">1 Installment</SelectItem>
             <SelectItem value="2_installments">2 Installments</SelectItem>
             <SelectItem value="3_installments">3 Installments</SelectItem>
@@ -608,13 +608,13 @@ export function StudentsManagement() {
 
         <Select value={invoiceFilter} onValueChange={setInvoiceFilter}>
           <SelectTrigger className="w-40">
-            <SelectValue placeholder="Invoice" />
+            <SelectValue placeholder="Invoice Status" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Invoices</SelectItem>
-            <SelectItem value="sent">Invoice Sent</SelectItem>
-            <SelectItem value="not_sent">Invoice Not Sent</SelectItem>
-            <SelectItem value="overdue">Fees Overdue</SelectItem>
+          <SelectContent className="bg-white z-50">
+            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="fees_due">Fees Due</SelectItem>
+            <SelectItem value="fees_overdue">Fees Overdue</SelectItem>
+            <SelectItem value="fees_cleared">Fees Cleared</SelectItem>
           </SelectContent>
         </Select>
       </div>
