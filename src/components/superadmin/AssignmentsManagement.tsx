@@ -10,13 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash2, FileText, CalendarIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
 
 interface Assignment {
   assignment_id: string;
   assignment_title: string;
   assignment_description: string;
   due_date: string;
+  due_days_after_unlock: number;
 }
 
 interface User {
@@ -96,7 +96,7 @@ export function AssignmentsManagement() {
           .update({
             assignment_title: formData.assignment_title,
             assignment_description: formData.assignment_description,
-            due_date: new Date(Date.now() + formData.due_days_after_unlock * 24 * 60 * 60 * 1000).toISOString()
+            due_days_after_unlock: formData.due_days_after_unlock
           })
           .eq('assignment_id', editingAssignment.assignment_id);
 
@@ -112,7 +112,7 @@ export function AssignmentsManagement() {
           .insert({
             assignment_title: formData.assignment_title,
             assignment_description: formData.assignment_description,
-            due_date: new Date(Date.now() + formData.due_days_after_unlock * 24 * 60 * 60 * 1000).toISOString(),
+            due_days_after_unlock: formData.due_days_after_unlock,
             sequence_order: 1,
             created_at: new Date().toISOString()
           });
@@ -151,7 +151,7 @@ export function AssignmentsManagement() {
       assignment_description: assignment.assignment_description,
       assigned_to: '',
       submission_type: 'file',
-      due_days_after_unlock: 2
+      due_days_after_unlock: assignment.due_days_after_unlock || 2
     });
     setDialogOpen(true);
   };
@@ -369,7 +369,7 @@ export function AssignmentsManagement() {
                 <TableRow className="bg-gray-50">
                   <TableHead className="font-semibold">Title</TableHead>
                   <TableHead className="font-semibold">Description</TableHead>
-                  <TableHead className="font-semibold">Due Date</TableHead>
+                  <TableHead className="font-semibold">Due Timeline</TableHead>
                   <TableHead className="font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -388,7 +388,7 @@ export function AssignmentsManagement() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="bg-blue-100 text-blue-800">
-                        {assignment.due_date ? format(new Date(assignment.due_date), "PPP") : 'No due date'}
+                        {assignment.due_days_after_unlock} days after unlock
                       </Badge>
                     </TableCell>
                     <TableCell>

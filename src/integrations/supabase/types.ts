@@ -62,6 +62,7 @@ export type Database = {
           assignment_title: string | null
           created_at: string
           due_date: string | null
+          due_days_after_unlock: number | null
           sequence_order: number
           Status: string | null
         }
@@ -71,6 +72,7 @@ export type Database = {
           assignment_title?: string | null
           created_at: string
           due_date?: string | null
+          due_days_after_unlock?: number | null
           sequence_order: number
           Status?: string | null
         }
@@ -80,6 +82,7 @@ export type Database = {
           assignment_title?: string | null
           created_at?: string
           due_date?: string | null
+          due_days_after_unlock?: number | null
           sequence_order?: number
           Status?: string | null
         }
