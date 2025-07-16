@@ -17,8 +17,6 @@ interface Assignment {
   assignment_title: string;
   assignment_description: string;
   due_date: string;
-  sequence_order: number;
-  Status: string;
 }
 
 interface User {
@@ -38,7 +36,6 @@ export function AssignmentsManagement() {
   const [formData, setFormData] = useState({
     assignment_title: '',
     assignment_description: '',
-    sequence_order: 0,
     assigned_to: '',
     submission_type: 'file',
     due_days_after_unlock: 2
@@ -55,7 +52,7 @@ export function AssignmentsManagement() {
       const { data, error } = await supabase
         .from('assignment')
         .select('*')
-        .order('sequence_order');
+        .order('created_at');
 
       if (error) throw error;
       setAssignments(data || []);
@@ -99,8 +96,7 @@ export function AssignmentsManagement() {
           .update({
             assignment_title: formData.assignment_title,
             assignment_description: formData.assignment_description,
-            due_date: new Date(Date.now() + formData.due_days_after_unlock * 24 * 60 * 60 * 1000).toISOString(),
-            sequence_order: formData.sequence_order
+            due_date: new Date(Date.now() + formData.due_days_after_unlock * 24 * 60 * 60 * 1000).toISOString()
           })
           .eq('assignment_id', editingAssignment.assignment_id);
 
@@ -117,8 +113,7 @@ export function AssignmentsManagement() {
             assignment_title: formData.assignment_title,
             assignment_description: formData.assignment_description,
             due_date: new Date(Date.now() + formData.due_days_after_unlock * 24 * 60 * 60 * 1000).toISOString(),
-            sequence_order: formData.sequence_order,
-            Status: 'active',
+            sequence_order: 1,
             created_at: new Date().toISOString()
           });
 
@@ -135,7 +130,6 @@ export function AssignmentsManagement() {
       setFormData({
         assignment_title: '',
         assignment_description: '',
-        sequence_order: 0,
         assigned_to: '',
         submission_type: 'file',
         due_days_after_unlock: 2
@@ -155,7 +149,6 @@ export function AssignmentsManagement() {
     setFormData({
       assignment_title: assignment.assignment_title,
       assignment_description: assignment.assignment_description,
-      sequence_order: assignment.sequence_order,
       assigned_to: '',
       submission_type: 'file',
       due_days_after_unlock: 2
@@ -217,7 +210,6 @@ export function AssignmentsManagement() {
                 setFormData({
                   assignment_title: '',
                   assignment_description: '',
-                  sequence_order: 0,
                   assigned_to: '',
                   submission_type: 'file',
                   due_days_after_unlock: 2
@@ -258,17 +250,6 @@ export function AssignmentsManagement() {
                 />
               </div>
               
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Sequence Order</label>
-                <Input
-                  type="number"
-                  value={formData.sequence_order}
-                  onChange={(e) => setFormData({ ...formData, sequence_order: parseInt(e.target.value) })}
-                  placeholder="Enter sequence order"
-                  className="transition-all duration-200 focus:scale-[1.02]"
-                  required
-                />
-              </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Days After Unlock</label>
@@ -379,8 +360,6 @@ export function AssignmentsManagement() {
                   <TableHead className="font-semibold">Title</TableHead>
                   <TableHead className="font-semibold">Description</TableHead>
                   <TableHead className="font-semibold">Due Date</TableHead>
-                  <TableHead className="font-semibold">Order</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
                   <TableHead className="font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -400,17 +379,6 @@ export function AssignmentsManagement() {
                     <TableCell>
                       <Badge variant="outline" className="bg-blue-100 text-blue-800">
                         {assignment.due_date ? format(new Date(assignment.due_date), "PPP") : 'No due date'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{assignment.sequence_order}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={assignment.Status === 'active' ? 'default' : 'secondary'}
-                        className={assignment.Status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}
-                      >
-                        {assignment.Status}
                       </Badge>
                     </TableCell>
                     <TableCell>
