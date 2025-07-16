@@ -44,11 +44,41 @@ export const useAuth = () => {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        
+        // If user doesn't exist in users table, get email from auth and create basic user
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          console.log('Creating user record for authenticated user:', authUser.email);
+          
+          // Create user record in users table
+          const { data: newUser, error: insertError } = await supabase
+            .from('users')
+            .insert({
+              id: authUser.id,
+              email: authUser.email || '',
+              role: 'student', // Default role
+              full_name: authUser.user_metadata?.full_name || null,
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single();
 
-      setUser(data as User);
+          if (insertError) {
+            console.error('Error creating user record:', insertError);
+            throw insertError;
+          }
+
+          setUser(newUser as User);
+        } else {
+          setUser(null);
+        }
+      } else {
+        setUser(data as User);
+      }
     } catch (error) {
-      console.error('Error fetching user profile:', error);
+      console.error('Error in fetchUserProfile:', error);
       setUser(null);
     } finally {
       setLoading(false);

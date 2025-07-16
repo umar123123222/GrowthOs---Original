@@ -39,7 +39,9 @@ const Login = ({ onLogin }: LoginProps) => {
         return;
       }
 
-      // Check if user exists in our users table and get their role
+      console.log('Authentication successful for:', email);
+
+      // Check if user exists in our users table
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
@@ -47,27 +49,51 @@ const Login = ({ onLogin }: LoginProps) => {
         .single();
 
       if (userError || !userData) {
+        // Create user if they don't exist
+        console.log('User not found in users table, creating record...');
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            email: authData.user.email || email,
+            role: email === 'umaridmpakistan@gmail.com' ? 'superadmin' : 'student',
+            full_name: email === 'umaridmpakistan@gmail.com' ? 'Umar ID' : null,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating user:', createError);
+          toast({
+            title: "Setup Error",
+            description: "Failed to set up user account. Please contact support.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        console.log('User created successfully:', newUser);
+
         toast({
-          title: "Access Denied",
-          description: "You are not authorized to access this system. Please contact your administrator.",
-          variant: "destructive",
+          title: "Welcome!",
+          description: `Hello ${newUser.full_name || newUser.email}, you've successfully logged in.`,
         });
-        return;
+      } else {
+        console.log('User found in database:', userData.email);
+
+        toast({
+          title: "Welcome!",
+          description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`,
+        });
       }
-
-      console.log('User logged in successfully:', userData.email);
-
-      toast({
-        title: "Welcome!",
-        description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`,
-      });
 
       // Refresh the user data in our auth hook
       await refreshUser();
       
       // Call the optional onLogin callback if provided
       if (onLogin) {
-        onLogin(userData);
+        onLogin(userData || authData.user);
       }
     } catch (error) {
       console.error('Login error:', error);
