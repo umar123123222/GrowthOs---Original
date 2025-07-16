@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Edit, Trash2, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -214,90 +215,112 @@ export function RecordingsManagement() {
   };
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center animate-fade-in">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading recordings...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Recordings Management</h2>
-          <p className="text-muted-foreground">Manage video recordings and their assignments</p>
+        <div className="animate-fade-in">
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+            Recordings Management
+          </h2>
+          <p className="text-muted-foreground mt-1 text-lg">Manage video recordings and their assignments</p>
         </div>
         
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingRecording(null);
-              setFormData({
-                recording_title: '',
-                recording_url: '',
-                duration_min: 0,
-                sequence_order: 0,
-                notes: '',
-                module_id: '',
-                assignment_id: ''
-              });
-            }}>
+            <Button 
+              onClick={() => {
+                setEditingRecording(null);
+                setFormData({
+                  recording_title: '',
+                  recording_url: '',
+                  duration_min: 0,
+                  sequence_order: 0,
+                  notes: '',
+                  module_id: '',
+                  assignment_id: ''
+                });
+              }}
+              className="hover-scale bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            >
               <Plus className="w-4 h-4 mr-2" />
               Add Recording
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingRecording ? 'Edit Recording' : 'Add New Recording'}</DialogTitle>
+              <DialogTitle className="text-xl font-semibold">
+                {editingRecording ? 'Edit Recording' : 'Add New Recording'}
+              </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Title</label>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Title</label>
                 <Input
                   value={formData.recording_title}
                   onChange={(e) => setFormData({ ...formData, recording_title: e.target.value })}
+                  placeholder="Enter recording title"
+                  className="transition-all duration-200 focus:scale-[1.02]"
                   required
                 />
               </div>
               
-              <div>
-                <label className="text-sm font-medium">Video URL</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Video URL</label>
                 <Input
                   value={formData.recording_url}
                   onChange={(e) => setFormData({ ...formData, recording_url: e.target.value })}
+                  placeholder="Enter video URL"
+                  className="transition-all duration-200 focus:scale-[1.02]"
                   required
                 />
               </div>
               
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Duration (minutes)</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Duration (minutes)</label>
                   <Input
                     type="number"
                     value={formData.duration_min}
                     onChange={(e) => setFormData({ ...formData, duration_min: parseInt(e.target.value) })}
+                    placeholder="Duration"
+                    className="transition-all duration-200 focus:scale-[1.02]"
                     required
                   />
                 </div>
                 
-                <div>
-                  <label className="text-sm font-medium">Sequence Order</label>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Sequence Order</label>
                   <Input
                     type="number"
                     value={formData.sequence_order}
                     onChange={(e) => setFormData({ ...formData, sequence_order: parseInt(e.target.value) })}
+                    placeholder="Order"
+                    className="transition-all duration-200 focus:scale-[1.02]"
                     required
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="text-sm font-medium">Module</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Module</label>
                 <Select
                   value={formData.module_id}
                   onValueChange={(value) => setFormData({ ...formData, module_id: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
                     <SelectValue placeholder="Select a module" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white z-50">
                     {modules.map((module) => (
                       <SelectItem key={module.id} value={module.id}>
                         {module.title}
@@ -307,16 +330,16 @@ export function RecordingsManagement() {
                 </Select>
               </div>
 
-              <div>
-                <label className="text-sm font-medium">Assignment to Unlock After Watching</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Assignment to Unlock After Watching</label>
                 <Select
                   value={formData.assignment_id}
                   onValueChange={(value) => setFormData({ ...formData, assignment_id: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
                     <SelectValue placeholder="Select an assignment" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white z-50">
                     {assignments.map((assignment) => (
                       <SelectItem key={assignment.assignment_id} value={assignment.assignment_id}>
                         {assignment.assignment_title}
@@ -326,19 +349,29 @@ export function RecordingsManagement() {
                 </Select>
               </div>
               
-              <div>
-                <label className="text-sm font-medium">Notes</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Notes</label>
                 <Textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  placeholder="Additional notes or instructions"
+                  className="transition-all duration-200 focus:scale-[1.02] min-h-[100px]"
                 />
               </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setDialogOpen(false)}
+                  className="hover-scale"
+                >
                   Cancel
                 </Button>
-                <Button type="submit">
+                <Button 
+                  type="submit"
+                  className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                >
                   {editingRecording ? 'Update' : 'Create'} Recording
                 </Button>
               </div>
@@ -347,53 +380,75 @@ export function RecordingsManagement() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Video className="w-5 h-5 mr-2" />
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
+        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
+          <CardTitle className="flex items-center text-xl">
+            <Video className="w-6 h-6 mr-3 text-purple-600" />
             All Recordings
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Module</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Order</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {recordings.map((recording) => (
-                <TableRow key={recording.id}>
-                  <TableCell className="font-medium">{recording.recording_title}</TableCell>
-                  <TableCell>{recording.module?.title || 'No Module'}</TableCell>
-                  <TableCell>{recording.duration_min} min</TableCell>
-                  <TableCell>{recording.sequence_order}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(recording)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(recording.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+        <CardContent className="p-0">
+          {recordings.length === 0 ? (
+            <div className="text-center py-16 animate-fade-in">
+              <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-muted-foreground mb-2">No recordings found</h3>
+              <p className="text-muted-foreground">Upload your first recording to get started</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold">Title</TableHead>
+                  <TableHead className="font-semibold">Module</TableHead>
+                  <TableHead className="font-semibold">Duration</TableHead>
+                  <TableHead className="font-semibold">Order</TableHead>
+                  <TableHead className="font-semibold">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {recordings.map((recording, index) => (
+                  <TableRow 
+                    key={recording.id} 
+                    className="hover:bg-gray-50 transition-colors animate-fade-in"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <TableCell className="font-medium">{recording.recording_title}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-purple-100 text-purple-800">
+                        {recording.module?.title || 'No Module'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{recording.duration_min} min</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{recording.sequence_order}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(recording)}
+                          className="hover-scale hover:bg-blue-50 hover:border-blue-300"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(recording.id)}
+                          className="hover-scale hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>

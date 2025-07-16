@@ -195,61 +195,81 @@ export function ModulesManagement() {
   const availableRecordings = recordings.filter(r => !r.module || r.module === editingModule?.id);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center animate-fade-in">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading modules...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 animate-fade-in">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Modules Management</h2>
-          <p className="text-muted-foreground">Manage course modules and their recordings</p>
+        <div className="animate-fade-in">
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+            Modules Management
+          </h2>
+          <p className="text-muted-foreground mt-1 text-lg">Manage course modules and their recordings</p>
         </div>
         
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => {
-              setEditingModule(null);
-              setFormData({ title: '', description: '', order: 0, selectedRecordings: [] });
-            }}>
+            <Button 
+              onClick={() => {
+                setEditingModule(null);
+                setFormData({ title: '', description: '', order: 0, selectedRecordings: [] });
+              }}
+              className="hover-scale bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
+            >
               <Plus className="w-4 h-4 mr-2" />
               Add Module
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingModule ? 'Edit Module' : 'Add New Module'}</DialogTitle>
+              <DialogTitle className="text-xl font-semibold">
+                {editingModule ? 'Edit Module' : 'Add New Module'}
+              </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Title</label>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Title</label>
                 <Input
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Enter module title"
+                  className="transition-all duration-200 focus:scale-[1.02]"
                   required
                 />
               </div>
               
-              <div>
-                <label className="text-sm font-medium">Description</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Description</label>
                 <Textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Enter module description"
+                  className="transition-all duration-200 focus:scale-[1.02] min-h-[100px]"
                 />
               </div>
               
-              <div>
-                <label className="text-sm font-medium">Order</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Order</label>
                 <Input
                   type="number"
                   value={formData.order}
                   onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
+                  placeholder="Enter display order"
+                  className="transition-all duration-200 focus:scale-[1.02]"
                   required
                 />
               </div>
 
-              <div>
-                <label className="text-sm font-medium">Assign Recordings</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Assign Recordings</label>
                 <Select
                   onValueChange={(value) => {
                     if (!formData.selectedRecordings.includes(value)) {
@@ -260,10 +280,10 @@ export function ModulesManagement() {
                     }
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
                     <SelectValue placeholder="Select recordings to assign" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white z-50">
                     {availableRecordings.map((recording) => (
                       <SelectItem key={recording.id} value={recording.id}>
                         {recording.recording_title}
@@ -272,11 +292,11 @@ export function ModulesManagement() {
                   </SelectContent>
                 </Select>
                 
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {formData.selectedRecordings.map((recordingId) => {
                     const recording = recordings.find(r => r.id === recordingId);
                     return (
-                      <Badge key={recordingId} variant="secondary">
+                      <Badge key={recordingId} variant="secondary" className="animate-scale-in">
                         {recording?.recording_title}
                         <button
                           type="button"
@@ -284,7 +304,7 @@ export function ModulesManagement() {
                             ...formData,
                             selectedRecordings: formData.selectedRecordings.filter(id => id !== recordingId)
                           })}
-                          className="ml-2 text-xs"
+                          className="ml-2 text-xs hover:text-red-500 transition-colors"
                         >
                           ×
                         </button>
@@ -294,11 +314,19 @@ export function ModulesManagement() {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+              <div className="flex justify-end space-x-3 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setDialogOpen(false)}
+                  className="hover-scale"
+                >
                   Cancel
                 </Button>
-                <Button type="submit">
+                <Button 
+                  type="submit"
+                  className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
+                >
                   {editingModule ? 'Update' : 'Create'} Module
                 </Button>
               </div>
@@ -307,55 +335,77 @@ export function ModulesManagement() {
         </Dialog>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <BookOpen className="w-5 h-5 mr-2" />
+      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
+        <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b">
+          <CardTitle className="flex items-center text-xl">
+            <BookOpen className="w-6 h-6 mr-3 text-blue-600" />
             All Modules
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Order</TableHead>
-                <TableHead>Recordings</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {modules.map((module) => (
-                <TableRow key={module.id}>
-                  <TableCell className="font-medium">{module.title}</TableCell>
-                  <TableCell className="max-w-xs truncate">{module.description}</TableCell>
-                  <TableCell>{module.order}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{module.recording_count} recordings</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(module)}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(module.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+        <CardContent className="p-0">
+          {modules.length === 0 ? (
+            <div className="text-center py-16 animate-fade-in">
+              <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-muted-foreground mb-2">No modules found</h3>
+              <p className="text-muted-foreground">Create your first module to get started</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold">Title</TableHead>
+                  <TableHead className="font-semibold">Description</TableHead>
+                  <TableHead className="font-semibold">Order</TableHead>
+                  <TableHead className="font-semibold">Recordings</TableHead>
+                  <TableHead className="font-semibold">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {modules.map((module, index) => (
+                  <TableRow 
+                    key={module.id} 
+                    className="hover:bg-gray-50 transition-colors animate-fade-in"
+                    style={{ animationDelay: `${index * 100}ms` }}
+                  >
+                    <TableCell className="font-medium">{module.title}</TableCell>
+                    <TableCell className="max-w-xs">
+                      <div className="truncate" title={module.description}>
+                        {module.description}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{module.order}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                        {module.recording_count} recordings
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(module)}
+                          className="hover-scale hover:bg-blue-50 hover:border-blue-300"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(module.id)}
+                          className="hover-scale hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
