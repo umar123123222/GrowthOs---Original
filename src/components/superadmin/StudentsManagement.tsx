@@ -42,7 +42,10 @@ export function StudentsManagement() {
   const [overdueStudents, setOverdueStudents] = useState(0);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [lmsStatusFilter, setLmsStatusFilter] = useState('all');
+  const [feesStructureFilter, setFeesStructureFilter] = useState('all');
+  const [invoiceFilter, setInvoiceFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -60,7 +63,7 @@ export function StudentsManagement() {
 
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, filterStatus]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, statusFilter]);
 
   const fetchStudents = async () => {
     try {
@@ -116,11 +119,30 @@ export function StudentsManagement() {
       );
     }
 
-    // Apply status filter
-    if (filterStatus === 'suspended') {
+    // Apply LMS status filter
+    if (lmsStatusFilter === 'suspended') {
       filtered = filtered.filter(student => student.lms_suspended);
-    } else if (filterStatus === 'overdue') {
+    } else if (lmsStatusFilter === 'not_suspended') {
+      filtered = filtered.filter(student => !student.lms_suspended);
+    }
+
+    // Apply fees structure filter
+    if (feesStructureFilter !== 'all') {
+      filtered = filtered.filter(student => student.fees_structure === feesStructureFilter);
+    }
+
+    // Apply invoice filter
+    if (invoiceFilter === 'sent') {
+      filtered = filtered.filter(student => student.last_invoice_sent);
+    } else if (invoiceFilter === 'not_sent') {
+      filtered = filtered.filter(student => !student.last_invoice_sent);
+    } else if (invoiceFilter === 'overdue') {
       filtered = filtered.filter(student => student.fees_overdue);
+    }
+
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(student => student.status === statusFilter);
     }
 
     setFilteredStudents(filtered);
@@ -538,7 +560,7 @@ export function StudentsManagement() {
       </div>
 
       {/* Search and Filter */}
-      <div className="flex gap-4 items-center">
+      <div className="flex gap-4 items-center flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -548,14 +570,50 @@ export function StudentsManagement() {
             className="pl-10"
           />
         </div>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-48">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue />
+        
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Students</SelectItem>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="Active">Active</SelectItem>
+            <SelectItem value="Inactive">Inactive</SelectItem>
+            <SelectItem value="Suspended">Suspended</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={lmsStatusFilter} onValueChange={setLmsStatusFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="LMS Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All LMS</SelectItem>
             <SelectItem value="suspended">LMS Suspended</SelectItem>
+            <SelectItem value="not_suspended">LMS Active</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={feesStructureFilter} onValueChange={setFeesStructureFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Fees Structure" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Fees</SelectItem>
+            <SelectItem value="1_installment">1 Installment</SelectItem>
+            <SelectItem value="2_installments">2 Installments</SelectItem>
+            <SelectItem value="3_installments">3 Installments</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={invoiceFilter} onValueChange={setInvoiceFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Invoice" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Invoices</SelectItem>
+            <SelectItem value="sent">Invoice Sent</SelectItem>
+            <SelectItem value="not_sent">Invoice Not Sent</SelectItem>
             <SelectItem value="overdue">Fees Overdue</SelectItem>
           </SelectContent>
         </Select>
