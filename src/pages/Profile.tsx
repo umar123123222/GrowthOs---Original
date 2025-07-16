@@ -147,11 +147,13 @@ const Profile = ({ user }: ProfileProps = {}) => {
         confirmPassword: ''
       });
 
-      console.log('Password updated successfully, showing toast');
-      toast({
-        title: "Success!",
-        description: "Password updated successfully",
-      });
+      // Delay toast to ensure it shows after auth state changes settle
+      setTimeout(() => {
+        toast({
+          title: "Success!",
+          description: "Password updated successfully",
+        });
+      }, 500);
     } catch (error: any) {
       console.error('Error updating password:', error);
       
