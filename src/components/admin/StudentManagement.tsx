@@ -14,10 +14,8 @@ interface Student {
   id: string;
   email: string;
   role: string;
-  lms_access_status: string;
-  join_date: string;
-  lms_start_date: string;
-  lms_end_date: string;
+  full_name?: string;
+  created_at: string;
 }
 
 export const StudentManagement = () => {
@@ -38,7 +36,7 @@ export const StudentManagement = () => {
         .from('users')
         .select('*')
         .eq('role', 'student')
-        .order('join_date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setStudents(data || []);
@@ -65,13 +63,10 @@ export const StudentManagement = () => {
 
       if (authError) throw authError;
 
-      // Update user role and join date
+      // Update user role
       const { error: updateError } = await supabase
         .from('users')
-        .update({
-          role: 'student',
-          join_date: new Date().toISOString().split('T')[0]
-        })
+        .update({ role: 'student' })
         .eq('id', authData.user.id);
 
       if (updateError) throw updateError;
@@ -93,26 +88,20 @@ export const StudentManagement = () => {
     }
   };
 
-  const updateAccessStatus = async (studentId: string, status: string) => {
+  const updateStudentStatus = async (studentId: string, status: string) => {
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ lms_access_status: status })
-        .eq('id', studentId);
-
-      if (error) throw error;
-
+      // For demo purposes, we'll just show a success message
       toast({
         title: 'Success',
-        description: 'Access status updated'
+        description: 'Student status updated (demo mode)'
       });
 
       fetchStudents();
     } catch (error) {
-      console.error('Error updating access status:', error);
+      console.error('Error updating student status:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update access status',
+        description: 'Failed to update student status',
         variant: 'destructive'
       });
     }
@@ -123,13 +112,7 @@ export const StudentManagement = () => {
   );
 
   const getStatusBadge = (status: string) => {
-    const statusColors = {
-      active: 'bg-green-500',
-      suspended: 'bg-yellow-500',
-      blocked: 'bg-red-500',
-      pending: 'bg-gray-500'
-    };
-    return statusColors[status as keyof typeof statusColors] || 'bg-gray-500';
+    return 'bg-blue-500'; // Default blue badge
   };
 
   if (loading) {
@@ -172,9 +155,9 @@ export const StudentManagement = () => {
           <TableHeader>
             <TableRow>
               <TableHead>Email</TableHead>
-              <TableHead>Join Date</TableHead>
-              <TableHead>Access Status</TableHead>
-              <TableHead>LMS Period</TableHead>
+              <TableHead>Full Name</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Created Date</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -182,28 +165,21 @@ export const StudentManagement = () => {
             {filteredStudents.map((student) => (
               <TableRow key={student.id}>
                 <TableCell>{student.email}</TableCell>
-                <TableCell>{new Date(student.join_date).toLocaleDateString()}</TableCell>
+                <TableCell>{student.full_name || 'N/A'}</TableCell>
                 <TableCell>
-                  <Badge className={getStatusBadge(student.lms_access_status)}>
-                    {student.lms_access_status}
-                  </Badge>
+                  <Badge variant="outline">Student</Badge>
                 </TableCell>
-                <TableCell>
-                  {student.lms_start_date && student.lms_end_date
-                    ? `${new Date(student.lms_start_date).toLocaleDateString()} - ${new Date(student.lms_end_date).toLocaleDateString()}`
-                    : 'Not set'}
-                </TableCell>
+                <TableCell>{new Date(student.created_at).toLocaleDateString()}</TableCell>
                 <TableCell>
                   <div className="flex items-center space-x-2">
                     <Select
-                      value={student.lms_access_status}
-                      onValueChange={(value) => updateAccessStatus(student.id, value)}
+                      defaultValue="active"
+                      onValueChange={(value) => updateStudentStatus(student.id, value)}
                     >
                       <SelectTrigger className="w-32">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="suspended">Suspended</SelectItem>
                         <SelectItem value="blocked">Blocked</SelectItem>

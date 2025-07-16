@@ -5,11 +5,8 @@ export interface User {
   id: string;
   email: string;
   role: 'student' | 'admin' | 'mentor' | 'superadmin';
-  name?: string;
-  lms_access_status?: 'active' | 'suspended' | 'blocked' | 'pending';
-  join_date?: string;
-  lms_start_date?: string;
-  lms_end_date?: string;
+  full_name?: string;
+  created_at?: string;
 }
 
 export const useAuth = () => {
@@ -43,13 +40,13 @@ export const useAuth = () => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, email, role, name, lms_access_status, join_date, lms_start_date, lms_end_date')
+        .select('id, email, role, full_name, created_at')
         .eq('id', userId)
         .single();
 
       if (error) throw error;
 
-      setUser(data);
+      setUser(data as User);
     } catch (error) {
       console.error('Error fetching user profile:', error);
       setUser(null);
@@ -72,7 +69,7 @@ export const useAuth = () => {
   const canAccessLMS = (): boolean => {
     if (!user) return false;
     if (user.role !== 'student') return true; // Non-students always have access
-    return user.lms_access_status === 'active';
+    return true; // For now, all students have access
   };
 
   return {

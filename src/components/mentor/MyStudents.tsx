@@ -3,10 +3,9 @@ import { Badge } from '@/components/ui/badge';
 
 interface Student {
   id: string;
-  name: string;
+  full_name?: string;
   email: string;
-  lms_access_status: string;
-  join_date: string;
+  created_at: string;
 }
 
 export const MyStudents = ({ students }: { students: Student[] }) => {
@@ -15,12 +14,12 @@ export const MyStudents = ({ students }: { students: Student[] }) => {
       {students.map((student) => (
         <Card key={student.id}>
           <CardHeader>
-            <CardTitle>{student.name || student.email}</CardTitle>
-            <Badge variant="outline">{student.lms_access_status}</Badge>
+            <CardTitle>{student.full_name || student.email}</CardTitle>
+            <Badge variant="outline">Student</Badge>
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Joined: {new Date(student.join_date).toLocaleDateString()}
+              Joined: {new Date(student.created_at).toLocaleDateString()}
             </p>
           </CardContent>
         </Card>

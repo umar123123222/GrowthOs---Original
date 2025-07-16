@@ -12,10 +12,9 @@ import { Users, BookOpen, MessageSquare, TrendingUp } from 'lucide-react';
 
 interface AssignedStudent {
   id: string;
-  name: string;
+  full_name?: string;
   email: string;
-  lms_access_status: string;
-  join_date: string;
+  created_at: string;
 }
 
 export default function MentorDashboard() {
@@ -43,17 +42,15 @@ export default function MentorDashboard() {
     const mockStudents: AssignedStudent[] = [
       {
         id: '1',
-        name: 'John Doe',
+        full_name: 'John Doe',
         email: 'john@example.com',
-        lms_access_status: 'active',
-        join_date: '2024-01-15'
+        created_at: '2024-01-15'
       },
       {
         id: '2',
-        name: 'Jane Smith',
+        full_name: 'Jane Smith',
         email: 'jane@example.com',
-        lms_access_status: 'active',
-        join_date: '2024-01-10'
+        created_at: '2024-01-10'
       }
     ];
     setAssignedStudents(mockStudents);

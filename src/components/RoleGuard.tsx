@@ -49,7 +49,7 @@ export const RoleGuard = ({
       <Alert className="m-4">
         <ShieldX className="h-4 w-4" />
         <AlertDescription>
-          Your LMS access is currently {user.lms_access_status}. Please contact support or check your payment status.
+          Your LMS access is currently restricted. Please contact support or check your payment status.
         </AlertDescription>
       </Alert>
     );
