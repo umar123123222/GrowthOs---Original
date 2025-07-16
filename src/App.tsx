@@ -6,9 +6,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "./hooks/useAuth";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import MentorDashboard from "./pages/MentorDashboard";
+import SuperadminDashboard from "./pages/SuperadminDashboard";
 import Videos from "./pages/Videos";
 import VideoPlayer from "./pages/VideoPlayer";
 import Assignments from "./pages/Assignments";
@@ -17,23 +21,17 @@ import Profile from "./pages/Profile";
 import Notifications from "./pages/Notifications";
 import LiveSessions from "./pages/LiveSessions";
 import Mentorship from "./pages/Mentorship";
-
-
 import Messages from "./pages/Messages";
 import Layout from "./components/Layout";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const { user, loading } = useAuth();
 
-  const handleLogin = (user: any) => {
-    setCurrentUser(user);
-    setIsAuthenticated(true);
-    setHasCompletedOnboarding(user.onboarding_done || false);
-  };
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -42,23 +40,35 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <Routes>
-            {!isAuthenticated ? (
-              <Route path="*" element={<Login onLogin={handleLogin} />} />
-            ) : !hasCompletedOnboarding ? (
-              <Route path="*" element={<Onboarding user={currentUser} onComplete={() => setHasCompletedOnboarding(true)} />} />
+            {!user ? (
+              <Route path="*" element={<Login />} />
             ) : (
-              <Route path="/" element={<Layout user={currentUser} />}>
-                <Route index element={<Dashboard user={currentUser} />} />
-                <Route path="videos" element={<Videos user={currentUser} />} />
+              <Route path="/" element={<Layout user={user} />}>
+                {/* Role-based dashboard routing */}
+                <Route index element={
+                  user.role === 'admin' ? <AdminDashboard /> :
+                  user.role === 'mentor' ? <MentorDashboard /> :
+                  user.role === 'superadmin' ? <SuperadminDashboard /> :
+                  <Dashboard user={user} />
+                } />
+                
+                {/* Shared routes */}
+                <Route path="videos" element={<Videos user={user} />} />
                 <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
                 <Route path="video-player" element={<VideoPlayer />} />
-                <Route path="assignments" element={<Assignments user={currentUser} />} />
+                <Route path="assignments" element={<Assignments user={user} />} />
                 <Route path="leaderboard" element={<Leaderboard />} />
-                <Route path="live-sessions" element={<LiveSessions user={currentUser} />} />
+                <Route path="live-sessions" element={<LiveSessions user={user} />} />
                 <Route path="mentorship" element={<Mentorship />} />
                 <Route path="messages" element={<Messages />} />
-                <Route path="profile" element={<Profile user={currentUser} />} />
+                <Route path="profile" element={<Profile user={user} />} />
                 <Route path="notifications" element={<Notifications />} />
+                
+                {/* Role-specific routes */}
+                <Route path="admin" element={<AdminDashboard />} />
+                <Route path="mentor" element={<MentorDashboard />} />
+                <Route path="superadmin" element={<SuperadminDashboard />} />
+                
                 <Route path="*" element={<Navigate to="/" />} />
               </Route>
             )}
