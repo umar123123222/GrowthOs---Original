@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,10 +12,12 @@ import {
   Bell,
   Video,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  LogOut
 } from "lucide-react";
-import ShoaibGPT from "./ShoaibGPT";
 import NotificationDropdown from "./NotificationDropdown";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface LayoutProps {
   user: any;
@@ -23,7 +25,8 @@ interface LayoutProps {
 
 const Layout = ({ user }: LayoutProps) => {
   const location = useLocation();
-  const [showShoaibGPT, setShowShoaibGPT] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
 
   // Check if user is on superadmin route to show appropriate menu
@@ -77,15 +80,31 @@ const Layout = ({ user }: LayoutProps) => {
     }
   }, [location.pathname, user?.id]);
 
-  const handleShoaibGPTToggle = useCallback(() => {
-    setShowShoaibGPT(prev => !prev);
-  }, []);
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out of your account"
+      });
+      
+      navigate('/login');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <img 
@@ -101,16 +120,13 @@ const Layout = ({ user }: LayoutProps) => {
               <NotificationDropdown />
               
               <Button
-                onClick={handleShoaibGPTToggle}
-                className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white transition-all duration-200 hover-scale"
+                onClick={handleLogout}
+                variant="outline"
+                className="text-gray-700 hover:text-red-600 hover:border-red-200"
               >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                ShoaibGPT
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
               </Button>
-              
-              <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 animate-pulse">
-                🔥 Streak: 7 days
-              </Badge>
             </div>
           </div>
         </div>
@@ -197,13 +213,6 @@ const Layout = ({ user }: LayoutProps) => {
           <Outlet />
         </main>
       </div>
-
-      {/* ShoaibGPT Modal */}
-      {showShoaibGPT && (
-        <div className="animate-scale-in">
-          <ShoaibGPT onClose={() => setShowShoaibGPT(false)} />
-        </div>
-      )}
     </div>
   );
 };
