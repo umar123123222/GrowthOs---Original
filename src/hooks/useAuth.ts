@@ -48,22 +48,38 @@ export const useAuth = () => {
 
   const fetchUserProfile = async (userId: string) => {
     console.log('fetchUserProfile: Starting for user ID:', userId);
+    
+    // Add a timeout to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Database query timeout')), 10000);
+    });
+    
     try {
-      const { data, error } = await supabase
+      console.log('fetchUserProfile: About to make database query');
+      
+      const queryPromise = supabase
         .from('users')
         .select('id, email, role, full_name, created_at')
         .eq('id', userId)
         .single();
-
-      console.log('fetchUserProfile: Database query result', { data, error });
+      
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+      
+      console.log('fetchUserProfile: Database query completed', { 
+        data: data ? { ...data, id: data.id } : null, 
+        error: error ? error.message : null 
+      });
 
       if (error) {
         console.error('fetchUserProfile: Database error:', error);
         // If user doesn't exist, we'll set user to null and let login handle user creation
         setUser(null);
-      } else {
-        console.log('fetchUserProfile: Setting user data:', data);
+      } else if (data) {
+        console.log('fetchUserProfile: Setting user data:', { role: data.role, email: data.email });
         setUser(data as User);
+      } else {
+        console.log('fetchUserProfile: No data returned');
+        setUser(null);
       }
     } catch (error) {
       console.error('fetchUserProfile: Catch block error:', error);
