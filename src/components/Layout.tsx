@@ -8,15 +8,11 @@ import {
   Monitor, 
   BookOpen, 
   FileText, 
-  Star, 
-  User, 
-  Settings,
   MessageSquare,
   Bell,
-  Brain,
   Video,
-  Users,
-  Award
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import ShoaibGPT from "./ShoaibGPT";
 import NotificationDropdown from "./NotificationDropdown";
@@ -28,18 +24,36 @@ interface LayoutProps {
 const Layout = ({ user }: LayoutProps) => {
   const location = useLocation();
   const [showShoaibGPT, setShowShoaibGPT] = useState(false);
+  const [courseMenuOpen, setCourseMenuOpen] = useState(false);
+
+  // Check if user is on superadmin route to show appropriate menu
+  const isUserSuperadmin = user?.role === 'superadmin';
 
   // Memoize navigation to prevent unnecessary re-renders
-  const navigation = useMemo(() => [
-    { name: "Dashboard", href: "/", icon: Monitor },
-    { name: "Videos", href: "/videos", icon: BookOpen },
-    { name: "Assignments", href: "/assignments", icon: FileText },
-    { name: "Success Sessions", href: "/live-sessions", icon: Video },
-    { name: "Study Pod", href: "/mentorship", icon: Users },
-    { name: "Leaderboard", href: "/leaderboard", icon: Star },
-    { name: "Complaints & Feedback", href: "/messages", icon: MessageSquare },
-    { name: "Profile", href: "/profile", icon: User },
-  ], []);
+  const navigation = useMemo(() => {
+    if (isUserSuperadmin) {
+      return [
+        { name: "Dashboard", href: "/superadmin", icon: Monitor },
+        { 
+          name: "Course", 
+          icon: BookOpen, 
+          isExpandable: true,
+          subItems: [
+            { name: "Modules", href: "/superadmin?tab=modules", icon: BookOpen },
+            { name: "Recordings", href: "/superadmin?tab=recordings", icon: Video },
+            { name: "Assignments", href: "/superadmin?tab=assignments", icon: FileText },
+          ]
+        }
+      ];
+    }
+    
+    // Default navigation for other users
+    return [
+      { name: "Dashboard", href: "/", icon: Monitor },
+      { name: "Videos", href: "/videos", icon: BookOpen },
+      { name: "Assignments", href: "/assignments", icon: FileText },
+    ];
+  }, [isUserSuperadmin]);
 
   // Optimized logging with error handling
   useEffect(() => {
@@ -108,6 +122,54 @@ const Layout = ({ user }: LayoutProps) => {
           <nav className="mt-8 px-4">
             <div className="space-y-2">
               {navigation.map((item) => {
+                if (item.isExpandable) {
+                  const isExpanded = courseMenuOpen;
+                  const Icon = item.icon;
+                  
+                  return (
+                    <div key={item.name}>
+                      <button
+                        onClick={() => setCourseMenuOpen(!courseMenuOpen)}
+                        className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover-scale"
+                      >
+                        <div className="flex items-center">
+                          <Icon className="mr-3 h-5 w-5 text-gray-400" />
+                          {item.name}
+                        </div>
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </button>
+                      
+                      {isExpanded && (
+                        <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
+                          {item.subItems?.map((subItem) => {
+                            const isActive = location.search.includes(`tab=${subItem.href.split('=')[1]}`);
+                            const SubIcon = subItem.icon;
+                            
+                            return (
+                              <Link
+                                key={subItem.name}
+                                to={subItem.href}
+                                className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 story-link ${
+                                  isActive
+                                    ? "bg-gradient-to-r from-blue-50 to-green-50 text-blue-700 border-l-4 border-blue-600 scale-in"
+                                    : "text-gray-600 hover:bg-gray-50 hover-scale"
+                                }`}
+                              >
+                                <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isActive ? "text-blue-600" : "text-gray-400"}`} />
+                                {subItem.name}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                
                 const isActive = location.pathname === item.href;
                 const Icon = item.icon;
                 
@@ -126,25 +188,6 @@ const Layout = ({ user }: LayoutProps) => {
                   </Link>
                 );
               })}
-            </div>
-
-            {/* Quick Stats */}
-            <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg">
-              <h3 className="font-semibold text-gray-800 mb-2">Quick Stats</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Progress</span>
-                  <span className="font-medium text-blue-600">75%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Rank</span>
-                  <span className="font-medium text-green-600">#3</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Next Due</span>
-                  <span className="font-medium text-orange-600">2 days</span>
-                </div>
-              </div>
             </div>
           </nav>
         </aside>
