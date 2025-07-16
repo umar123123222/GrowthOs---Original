@@ -454,21 +454,28 @@ export function StudentsManagement() {
   };
 
   if (loading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <span className="ml-2 text-muted-foreground">Loading students...</span>
+      </div>
+    );
   }
 
   const displayStudents = filteredStudents.length > 0 ? filteredStudents : students;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Students Management</h1>
-          <p className="text-gray-600">Manage student records and track their progress</p>
+        <div className="animate-fade-in">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+            👥 Students Management
+          </h1>
+          <p className="text-muted-foreground mt-2 text-lg">Manage student records and track their progress</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingStudent(null)}>
+            <Button onClick={() => setEditingStudent(null)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
               <Plus className="w-4 h-4 mr-2" />
               Add Student
             </Button>
@@ -554,57 +561,57 @@ export function StudentsManagement() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
+        <Card className="border-l-4 border-l-blue-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-blue-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-blue-800">Total Students</CardTitle>
+            <Users className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalStudents}</div>
+            <div className="text-3xl font-bold text-blue-900">{totalStudents}</div>
             <p className="text-xs text-muted-foreground">All enrolled</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-green-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-green-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-green-800">Active Students</CardTitle>
+            <Activity className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{activeStudents}</div>
+            <div className="text-3xl font-bold text-green-900">{activeStudents}</div>
             <p className="text-xs text-muted-foreground">Last 30 days</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-yellow-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-yellow-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Suspended</CardTitle>
-            <Ban className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-yellow-800">Suspended</CardTitle>
+            <Ban className="h-5 w-5 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{suspendedStudents}</div>
+            <div className="text-3xl font-bold text-yellow-900">{suspendedStudents}</div>
             <p className="text-xs text-muted-foreground">LMS suspended</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-red-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-red-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Fees Overdue</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-red-800">Fees Overdue</CardTitle>
+            <Clock className="h-5 w-5 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{overdueStudents}</div>
+            <div className="text-3xl font-bold text-red-900">{overdueStudents}</div>
             <p className="text-xs text-muted-foreground">Payment due</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-purple-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-purple-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Engagement</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-purple-800">Engagement</CardTitle>
+            <DollarSign className="h-5 w-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div className="text-3xl font-bold text-purple-900">
               {totalStudents > 0 ? Math.round((activeStudents / totalStudents) * 100) : 0}%
             </div>
             <p className="text-xs text-muted-foreground">Activity rate</p>
@@ -673,9 +680,12 @@ export function StudentsManagement() {
       </div>
 
       {/* Students Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Students ({displayStudents.length})</CardTitle>
+      <Card className="hover-scale transition-all duration-300 hover:shadow-lg animate-fade-in">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b">
+          <CardTitle className="flex items-center text-xl">
+            <Users className="w-5 h-5 mr-2 text-blue-600" />
+            Students Directory ({displayStudents.length})
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
@@ -724,6 +734,7 @@ export function StudentsManagement() {
                             size="sm"
                             onClick={() => handleEdit(student)}
                             title="Edit Student Details"
+                            className="hover-scale hover:border-blue-300 hover:text-blue-600"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
@@ -732,6 +743,7 @@ export function StudentsManagement() {
                             size="sm"
                             onClick={() => toggleRowExpansion(student.id)}
                             title={expandedRows.has(student.id) ? "Collapse" : "Expand"}
+                            className="hover-scale hover:border-green-300 hover:text-green-600"
                           >
                             {expandedRows.has(student.id) ? 
                               <ChevronUp className="w-4 h-4" /> : 
@@ -743,8 +755,8 @@ export function StudentsManagement() {
                     </TableRow>
                     
                     {expandedRows.has(student.id) && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="bg-gray-50 p-6">
+                      <TableRow className="animate-accordion-down">
+                        <TableCell colSpan={7} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>
@@ -797,11 +809,12 @@ export function StudentsManagement() {
                               </div>
                             </div>
                             
-                            <div className="flex flex-wrap gap-2 pt-4 border-t">
+                            <div className="flex flex-wrap gap-2 pt-4 border-t border-blue-200">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleViewActivityLogs(student.id)}
+                                className="hover-scale hover:border-blue-300 hover:text-blue-600"
                               >
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Activity Logs
@@ -810,6 +823,7 @@ export function StudentsManagement() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => generateInvoice(student.id)}
+                                className="hover-scale hover:border-purple-300 hover:text-purple-600"
                               >
                                 <FileText className="w-4 h-4 mr-2" />
                                 Generate Invoice
@@ -819,6 +833,7 @@ export function StudentsManagement() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => downloadInvoicePDF(student)}
+                                  className="hover-scale hover:border-orange-300 hover:text-orange-600"
                                 >
                                   <Download className="w-4 h-4 mr-2" />
                                   Download Invoice
@@ -828,7 +843,7 @@ export function StudentsManagement() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleFeesReceived(student.id)}
-                                className="text-green-600 hover:text-green-700"
+                                className="hover-scale text-green-600 hover:text-green-700 hover:border-green-300"
                               >
                                 <CheckCircle className="w-4 h-4 mr-2" />
                                 Mark Fees Received
@@ -837,7 +852,7 @@ export function StudentsManagement() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleToggleLMSSuspension(student.id, student.lms_suspended)}
-                                className={student.lms_suspended ? "text-green-600 hover:text-green-700" : "text-red-600 hover:text-red-700"}
+                                className={`hover-scale ${student.lms_suspended ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:text-red-700 hover:border-red-300"}`}
                               >
                                 {student.lms_suspended ? (
                                   <>

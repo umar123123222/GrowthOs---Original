@@ -35,6 +35,11 @@ const Layout = ({ user }: LayoutProps) => {
   // Check if user is on superadmin route to show appropriate menu
   const isUserSuperadmin = user?.role === 'superadmin';
 
+  // Check if any course submenu is active to keep it expanded
+  const isCourseMenuActive = location.search.includes('tab=modules') || 
+                            location.search.includes('tab=recordings') || 
+                            location.search.includes('tab=assignments');
+
   // Memoize navigation to prevent unnecessary re-renders
   const navigation = useMemo(() => {
     if (isUserSuperadmin) {
@@ -63,6 +68,13 @@ const Layout = ({ user }: LayoutProps) => {
       { name: "Assignments", href: "/assignments", icon: FileText },
     ];
   }, [isUserSuperadmin]);
+
+  // Auto-expand course menu if any course tab is active
+  useEffect(() => {
+    if (isCourseMenuActive) {
+      setCourseMenuOpen(true);
+    }
+  }, [isCourseMenuActive]);
 
   // Optimized logging with error handling
   useEffect(() => {
@@ -192,7 +204,8 @@ const Layout = ({ user }: LayoutProps) => {
                   );
                 }
                 
-                const isActive = location.pathname === item.href;
+                const isActive = location.pathname === item.href || 
+                                (item.href.includes('?tab=') && location.search.includes(item.href.split('=')[1]));
                 const Icon = item.icon;
                 
                 return (
