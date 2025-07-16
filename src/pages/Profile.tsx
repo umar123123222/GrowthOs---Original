@@ -147,6 +147,7 @@ const Profile = ({ user }: ProfileProps = {}) => {
         confirmPassword: ''
       });
 
+      console.log('Password updated successfully, showing toast');
       toast({
         title: "Success!",
         description: "Password updated successfully",
