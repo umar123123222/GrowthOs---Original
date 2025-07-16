@@ -1155,6 +1155,9 @@ export type Database = {
           course_track_id: string | null
           created_at: string | null
           email: string
+          fees_due_date: string | null
+          fees_overdue: boolean | null
+          fees_structure: string | null
           final_goal: string | null
           full_name: string
           id: string
@@ -1162,7 +1165,10 @@ export type Database = {
           income_reason: string | null
           knows_facebook_ads: string | null
           last_active_at: string | null
+          last_invoice_date: string | null
+          last_invoice_sent: boolean | null
           lms_password: string | null
+          lms_suspended: boolean | null
           lms_user_id: string | null
           mentor_id: string | null
           meta_ads_credentials: string | null
@@ -1177,6 +1183,7 @@ export type Database = {
           short_term_goal: string | null
           status: string | null
           status_after_3_months: string | null
+          student_id: string | null
           success_meaning: string | null
           tenant_id: string | null
           tried_ecommerce_before: string | null
@@ -1189,6 +1196,9 @@ export type Database = {
           course_track_id?: string | null
           created_at?: string | null
           email: string
+          fees_due_date?: string | null
+          fees_overdue?: boolean | null
+          fees_structure?: string | null
           final_goal?: string | null
           full_name: string
           id?: string
@@ -1196,7 +1206,10 @@ export type Database = {
           income_reason?: string | null
           knows_facebook_ads?: string | null
           last_active_at?: string | null
+          last_invoice_date?: string | null
+          last_invoice_sent?: boolean | null
           lms_password?: string | null
+          lms_suspended?: boolean | null
           lms_user_id?: string | null
           mentor_id?: string | null
           meta_ads_credentials?: string | null
@@ -1211,6 +1224,7 @@ export type Database = {
           short_term_goal?: string | null
           status?: string | null
           status_after_3_months?: string | null
+          student_id?: string | null
           success_meaning?: string | null
           tenant_id?: string | null
           tried_ecommerce_before?: string | null
@@ -1223,6 +1237,9 @@ export type Database = {
           course_track_id?: string | null
           created_at?: string | null
           email?: string
+          fees_due_date?: string | null
+          fees_overdue?: boolean | null
+          fees_structure?: string | null
           final_goal?: string | null
           full_name?: string
           id?: string
@@ -1230,7 +1247,10 @@ export type Database = {
           income_reason?: string | null
           knows_facebook_ads?: string | null
           last_active_at?: string | null
+          last_invoice_date?: string | null
+          last_invoice_sent?: boolean | null
           lms_password?: string | null
+          lms_suspended?: boolean | null
           lms_user_id?: string | null
           mentor_id?: string | null
           meta_ads_credentials?: string | null
@@ -1245,6 +1265,7 @@ export type Database = {
           short_term_goal?: string | null
           status?: string | null
           status_after_3_months?: string | null
+          student_id?: string | null
           success_meaning?: string | null
           tenant_id?: string | null
           tried_ecommerce_before?: string | null
