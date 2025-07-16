@@ -588,7 +588,7 @@ export function StudentsManagement() {
             <SelectValue placeholder="LMS Status" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
-            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="all">All LMS Status</SelectItem>
             <SelectItem value="suspended">Suspended</SelectItem>
             <SelectItem value="active">Active</SelectItem>
           </SelectContent>
