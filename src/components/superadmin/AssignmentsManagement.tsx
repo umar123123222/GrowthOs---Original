@@ -40,7 +40,8 @@ export function AssignmentsManagement() {
     assignment_description: '',
     sequence_order: 0,
     assigned_to: '',
-    submission_type: 'file'
+    submission_type: 'file',
+    due_days_after_unlock: 2
   });
   const { toast } = useToast();
 
@@ -98,7 +99,7 @@ export function AssignmentsManagement() {
           .update({
             assignment_title: formData.assignment_title,
             assignment_description: formData.assignment_description,
-            due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
+            due_date: new Date(Date.now() + formData.due_days_after_unlock * 24 * 60 * 60 * 1000).toISOString(),
             sequence_order: formData.sequence_order
           })
           .eq('assignment_id', editingAssignment.assignment_id);
@@ -115,7 +116,7 @@ export function AssignmentsManagement() {
           .insert({
             assignment_title: formData.assignment_title,
             assignment_description: formData.assignment_description,
-            due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
+            due_date: new Date(Date.now() + formData.due_days_after_unlock * 24 * 60 * 60 * 1000).toISOString(),
             sequence_order: formData.sequence_order,
             Status: 'active',
             created_at: new Date().toISOString()
@@ -136,7 +137,8 @@ export function AssignmentsManagement() {
         assignment_description: '',
         sequence_order: 0,
         assigned_to: '',
-        submission_type: 'file'
+        submission_type: 'file',
+        due_days_after_unlock: 2
       });
       fetchAssignments();
     } catch (error) {
@@ -155,7 +157,8 @@ export function AssignmentsManagement() {
       assignment_description: assignment.assignment_description,
       sequence_order: assignment.sequence_order,
       assigned_to: '',
-      submission_type: 'file'
+      submission_type: 'file',
+      due_days_after_unlock: 2
     });
     setDialogOpen(true);
   };
@@ -216,7 +219,8 @@ export function AssignmentsManagement() {
                   assignment_description: '',
                   sequence_order: 0,
                   assigned_to: '',
-                  submission_type: 'file'
+                  submission_type: 'file',
+                  due_days_after_unlock: 2
                 });
               }}
               className="hover-scale bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
@@ -267,13 +271,24 @@ export function AssignmentsManagement() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Due Date</label>
-                <div className="p-3 bg-gray-50 rounded-lg border">
-                  <p className="text-sm text-muted-foreground">
-                    <CalendarIcon className="inline w-4 h-4 mr-2" />
-                    Due date will be automatically set to 2 days after the assignment is unlocked for students
-                  </p>
-                </div>
+                <label className="text-sm font-medium text-foreground">Days After Unlock</label>
+                <Select
+                  value={formData.due_days_after_unlock.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, due_days_after_unlock: parseInt(value) })}
+                >
+                  <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
+                    <SelectValue placeholder="Select days after unlock" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    <SelectItem value="2">2 days after unlock</SelectItem>
+                    <SelectItem value="3">3 days after unlock</SelectItem>
+                    <SelectItem value="4">4 days after unlock</SelectItem>
+                    <SelectItem value="5">5 days after unlock</SelectItem>
+                    <SelectItem value="7">7 days after unlock</SelectItem>
+                    <SelectItem value="10">10 days after unlock</SelectItem>
+                    <SelectItem value="14">14 days after unlock</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -289,7 +304,7 @@ export function AssignmentsManagement() {
                     <SelectItem value="file">File Upload</SelectItem>
                     <SelectItem value="text">Text Response</SelectItem>
                     <SelectItem value="link">External Link</SelectItem>
-                    <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
+                    <SelectItem value="multiple_choice">Multiple Choice (Multiple selections)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
