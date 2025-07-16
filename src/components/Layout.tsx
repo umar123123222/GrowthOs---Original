@@ -13,7 +13,8 @@ import {
   Video,
   ChevronDown,
   ChevronRight,
-  LogOut
+  LogOut,
+  Users
 } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -46,7 +47,8 @@ const Layout = ({ user }: LayoutProps) => {
             { name: "Recordings", href: "/superadmin?tab=recordings", icon: Video },
             { name: "Assignments", href: "/superadmin?tab=assignments", icon: FileText },
           ]
-        }
+        },
+        { name: "Students", href: "/superadmin?tab=students", icon: Users }
       ];
     }
     

@@ -7,6 +7,7 @@ import { RoleGuard } from '@/components/RoleGuard';
 import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
 import { AssignmentsManagement } from '@/components/superadmin/AssignmentsManagement';
+import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
 
 export default function SuperadminDashboard() {
   const [searchParams] = useSearchParams();
@@ -20,6 +21,8 @@ export default function SuperadminDashboard() {
         return <RecordingsManagement />;
       case 'assignments':
         return <AssignmentsManagement />;
+      case 'students':
+        return <StudentsManagement />;
       default:
         return <DashboardContent />;
     }
