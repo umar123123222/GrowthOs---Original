@@ -17,7 +17,9 @@ import {
   Users,
   UserCheck,
   User,
-  Calendar
+  Calendar,
+  Menu,
+  X
 } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,6 +34,7 @@ const Layout = ({ user }: LayoutProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   // Check if user is on superadmin route to show appropriate menu
   const isUserSuperadmin = user?.role === 'superadmin';
@@ -128,6 +131,14 @@ const Layout = ({ user }: LayoutProps) => {
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
+              <Button
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                variant="ghost"
+                size="sm"
+                className="text-gray-600 hover:text-gray-900"
+              >
+                {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+              </Button>
               <img 
                 src="/lovable-uploads/27419a93-c883-4326-ad0d-da831b3cc534.png" 
                 alt="Growth OS" 
@@ -155,32 +166,33 @@ const Layout = ({ user }: LayoutProps) => {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-64 bg-white shadow-lg min-h-screen">
-          <nav className="mt-8 px-4">
+        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white shadow-lg min-h-screen transition-all duration-300`}>
+          <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
             <div className="space-y-2">
               {navigation.map((item) => {
                 if (item.isExpandable) {
-                  const isExpanded = courseMenuOpen;
+                  const isExpanded = courseMenuOpen && !sidebarCollapsed;
                   const Icon = item.icon;
                   
                   return (
                     <div key={item.name}>
                       <button
-                        onClick={() => setCourseMenuOpen(!courseMenuOpen)}
+                        onClick={() => !sidebarCollapsed && setCourseMenuOpen(!courseMenuOpen)}
                         className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover-scale"
+                        title={sidebarCollapsed ? item.name : undefined}
                       >
                         <div className="flex items-center">
-                          <Icon className="mr-3 h-5 w-5 text-gray-400" />
-                          {item.name}
+                          <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 text-gray-400`} />
+                          {!sidebarCollapsed && item.name}
                         </div>
-                        {isExpanded ? (
+                        {!sidebarCollapsed && (isExpanded ? (
                           <ChevronDown className="h-4 w-4" />
                         ) : (
                           <ChevronRight className="h-4 w-4" />
-                        )}
+                        ))}
                       </button>
                       
-                      {isExpanded && (
+                      {isExpanded && !sidebarCollapsed && (
                         <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
                           {item.subItems?.map((subItem) => {
                             const isActive = location.search.includes(`tab=${subItem.href.split('=')[1]}`);
@@ -220,9 +232,10 @@ const Layout = ({ user }: LayoutProps) => {
                         ? "bg-gradient-to-r from-blue-50 to-green-50 text-blue-700 border-l-4 border-blue-600 scale-in"
                         : "text-gray-600 hover:bg-gray-50 hover-scale"
                     }`}
+                    title={sidebarCollapsed ? item.name : undefined}
                   >
-                    <Icon className={`mr-3 h-5 w-5 transition-colors ${isActive ? "text-blue-600" : "text-gray-400"}`} />
-                    {item.name}
+                    <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 transition-colors ${isActive ? "text-blue-600" : "text-gray-400"}`} />
+                    {!sidebarCollapsed && item.name}
                   </Link>
                 );
               })}
