@@ -16,7 +16,8 @@ import {
   LogOut,
   Users,
   UserCheck,
-  User
+  User,
+  Calendar
 } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,7 +39,8 @@ const Layout = ({ user }: LayoutProps) => {
   // Check if any course submenu is active to keep it expanded
   const isCourseMenuActive = location.search.includes('tab=modules') || 
                             location.search.includes('tab=recordings') || 
-                            location.search.includes('tab=assignments');
+                            location.search.includes('tab=assignments') ||
+                            location.search.includes('tab=success-sessions');
 
   // Memoize navigation to prevent unnecessary re-renders
   const navigation = useMemo(() => {
@@ -53,6 +55,7 @@ const Layout = ({ user }: LayoutProps) => {
             { name: "Modules", href: "/superadmin?tab=modules", icon: BookOpen },
             { name: "Recordings", href: "/superadmin?tab=recordings", icon: Video },
             { name: "Assignments", href: "/superadmin?tab=assignments", icon: FileText },
+            { name: "Success Sessions", href: "/superadmin?tab=success-sessions", icon: Calendar },
           ]
         },
         { name: "Students", href: "/superadmin?tab=students", icon: Users },

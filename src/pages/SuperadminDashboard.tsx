@@ -8,6 +8,7 @@ import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
 import { AssignmentsManagement } from '@/components/superadmin/AssignmentsManagement';
 import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
+import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
 
 export default function SuperadminDashboard() {
   const [searchParams] = useSearchParams();
@@ -21,6 +22,8 @@ export default function SuperadminDashboard() {
         return <RecordingsManagement />;
       case 'assignments':
         return <AssignmentsManagement />;
+      case 'success-sessions':
+        return <SuccessSessionsManagement />;
       case 'students':
         return <StudentsManagement />;
       default:
