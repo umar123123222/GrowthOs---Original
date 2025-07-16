@@ -38,6 +38,7 @@ export const useAuth = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching user profile for ID:', userId);
       const { data, error } = await supabase
         .from('users')
         .select('id, email, role, full_name, created_at')
