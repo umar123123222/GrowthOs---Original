@@ -7,13 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Plus, Edit, Trash2, FileText, CalendarIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 interface Assignment {
   assignment_id: string;
@@ -37,7 +34,7 @@ export function AssignmentsManagement() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
-  const [dueDate, setDueDate] = useState<Date>();
+  
   const [formData, setFormData] = useState({
     assignment_title: '',
     assignment_description: '',
@@ -101,7 +98,7 @@ export function AssignmentsManagement() {
           .update({
             assignment_title: formData.assignment_title,
             assignment_description: formData.assignment_description,
-            due_date: dueDate?.toISOString(),
+            due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
             sequence_order: formData.sequence_order
           })
           .eq('assignment_id', editingAssignment.assignment_id);
@@ -118,7 +115,7 @@ export function AssignmentsManagement() {
           .insert({
             assignment_title: formData.assignment_title,
             assignment_description: formData.assignment_description,
-            due_date: dueDate?.toISOString(),
+            due_date: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days from now
             sequence_order: formData.sequence_order,
             Status: 'active',
             created_at: new Date().toISOString()
@@ -141,7 +138,6 @@ export function AssignmentsManagement() {
         assigned_to: '',
         submission_type: 'file'
       });
-      setDueDate(undefined);
       fetchAssignments();
     } catch (error) {
       toast({
@@ -161,7 +157,6 @@ export function AssignmentsManagement() {
       assigned_to: '',
       submission_type: 'file'
     });
-    setDueDate(assignment.due_date ? new Date(assignment.due_date) : undefined);
     setDialogOpen(true);
   };
 
@@ -223,7 +218,6 @@ export function AssignmentsManagement() {
                   assigned_to: '',
                   submission_type: 'file'
                 });
-                setDueDate(undefined);
               }}
               className="hover-scale bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
             >
@@ -274,29 +268,12 @@ export function AssignmentsManagement() {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Due Date</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "w-full justify-start text-left font-normal transition-all duration-200 hover:scale-[1.02]",
-                        !dueDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dueDate ? format(dueDate, "PPP") : <span>Pick a date</span>}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={dueDate}
-                      onSelect={setDueDate}
-                      initialFocus
-                      className="p-3 pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
+                <div className="p-3 bg-gray-50 rounded-lg border">
+                  <p className="text-sm text-muted-foreground">
+                    <CalendarIcon className="inline w-4 h-4 mr-2" />
+                    Due date will be automatically set to 2 days after the assignment is unlocked for students
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -312,6 +289,7 @@ export function AssignmentsManagement() {
                     <SelectItem value="file">File Upload</SelectItem>
                     <SelectItem value="text">Text Response</SelectItem>
                     <SelectItem value="link">External Link</SelectItem>
+                    <SelectItem value="multiple_choice">Multiple Choice</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
