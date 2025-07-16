@@ -19,69 +19,74 @@ export default function SuperadminDashboard() {
       <div className="container mx-auto p-6">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Superadmin Dashboard</h1>
-            <p className="text-muted-foreground">Complete system oversight and management</p>
+            <h1 className="text-3xl font-bold text-red-900">🔧 System Command Center</h1>
+            <p className="text-muted-foreground">Ultimate platform control and global oversight</p>
           </div>
-          <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            System Actions
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button variant="outline" size="sm">
+              <Shield className="w-4 h-4 mr-2" />
+              Security
+            </Button>
+            <Button variant="destructive" size="sm">
+              <AlertTriangle className="w-4 h-4 mr-2" />
+              Critical Actions
+            </Button>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-7 w-full">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="admins">Admins</TabsTrigger>
-            <TabsTrigger value="students">Students</TabsTrigger>
-            <TabsTrigger value="mentors">Mentors</TabsTrigger>
-            <TabsTrigger value="financials">Financials</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
-            <TabsTrigger value="system">System</TabsTrigger>
+          <TabsList className="grid grid-cols-6 w-full bg-red-50">
+            <TabsTrigger value="overview" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Command Center</TabsTrigger>
+            <TabsTrigger value="admins" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Admin Control</TabsTrigger>
+            <TabsTrigger value="financials" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Global Finance</TabsTrigger>
+            <TabsTrigger value="activity" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Global Activity</TabsTrigger>
+            <TabsTrigger value="system" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">System Health</TabsTrigger>
+            <TabsTrigger value="security" className="data-[state=active]:bg-red-600 data-[state=active]:text-white">Security Center</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card>
+              <Card className="border-l-4 border-l-red-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Global Users</CardTitle>
+                  <Users className="h-4 w-4 text-red-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">2,547</div>
-                  <p className="text-xs text-muted-foreground">+15% from last month</p>
+                  <div className="text-2xl font-bold text-red-900">2,547</div>
+                  <p className="text-xs text-muted-foreground">All platform users</p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-orange-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Active Admins</CardTitle>
-                  <Shield className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Admin Network</CardTitle>
+                  <Shield className="h-4 w-4 text-orange-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">12</div>
-                  <p className="text-xs text-muted-foreground">3 online now</p>
+                  <div className="text-2xl font-bold text-orange-900">12</div>
+                  <p className="text-xs text-muted-foreground">Platform administrators</p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-green-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">Global Revenue</CardTitle>
+                  <DollarSign className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$125,847</div>
-                  <p className="text-xs text-muted-foreground">+22% from last month</p>
+                  <div className="text-2xl font-bold text-green-900">$125,847</div>
+                  <p className="text-xs text-muted-foreground">All-time revenue</p>
                 </CardContent>
               </Card>
 
-              <Card>
+              <Card className="border-l-4 border-l-blue-500">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">System Health</CardTitle>
-                  <Activity className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-sm font-medium">System Status</CardTitle>
+                  <Activity className="h-4 w-4 text-blue-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">98.9%</div>
-                  <p className="text-xs text-muted-foreground">Uptime this month</p>
+                  <div className="text-2xl font-bold text-blue-900">98.9%</div>
+                  <p className="text-xs text-muted-foreground">Global uptime</p>
                 </CardContent>
               </Card>
             </div>
@@ -155,12 +160,53 @@ export default function SuperadminDashboard() {
             <AdminManagement />
           </TabsContent>
 
-          <TabsContent value="students">
-            <StudentManagement />
-          </TabsContent>
-
-          <TabsContent value="mentors">
-            <MentorManagement />
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Shield className="w-5 h-5 mr-2 text-red-500" />
+                  Security Command Center
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-red-700">Critical Security Actions</h3>
+                    <div className="space-y-2">
+                      <Button variant="destructive" className="w-full justify-start">
+                        <AlertTriangle className="w-4 h-4 mr-2" />
+                        Emergency Platform Shutdown
+                      </Button>
+                      <Button variant="destructive" className="w-full justify-start">
+                        <Shield className="w-4 h-4 mr-2" />
+                        Revoke All Admin Access
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start border-red-200">
+                        <Users className="w-4 h-4 mr-2" />
+                        Mass User Suspension
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-blue-700">Security Monitoring</h3>
+                    <div className="space-y-3">
+                      <div className="flex justify-between p-3 bg-green-50 rounded">
+                        <span className="text-sm">Failed Login Attempts</span>
+                        <span className="text-sm font-medium text-green-600">Normal</span>
+                      </div>
+                      <div className="flex justify-between p-3 bg-yellow-50 rounded">
+                        <span className="text-sm">Suspicious Activity</span>
+                        <span className="text-sm font-medium text-yellow-600">3 Alerts</span>
+                      </div>
+                      <div className="flex justify-between p-3 bg-red-50 rounded">
+                        <span className="text-sm">Security Breaches</span>
+                        <span className="text-sm font-medium text-red-600">0</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="financials">
