@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface User {
   id: string;
   email: string;
-  role: 'student' | 'admin' | 'mentor' | 'superadmin';
+  role: 'student' | 'admin' | 'mentor' | 'superadmin' | 'Admin';
   full_name?: string;
   created_at?: string;
 }
@@ -38,7 +38,6 @@ export const useAuth = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('Fetching user profile for ID:', userId);
       const { data, error } = await supabase
         .from('users')
         .select('id, email, role, full_name, created_at')
@@ -47,34 +46,7 @@ export const useAuth = () => {
 
       if (error) {
         console.error('Error fetching user profile:', error);
-        
-        // If user doesn't exist in users table, get email from auth and create basic user
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (authUser) {
-          console.log('Creating user record for authenticated user:', authUser.email);
-          
-          // Create user record in users table
-          const { data: newUser, error: insertError } = await supabase
-            .from('users')
-            .insert({
-              id: authUser.id,
-              email: authUser.email || '',
-              role: 'student', // Default role
-              full_name: authUser.user_metadata?.full_name || null,
-              created_at: new Date().toISOString()
-            })
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error('Error creating user record:', insertError);
-            throw insertError;
-          }
-
-          setUser(newUser as User);
-        } else {
-          setUser(null);
-        }
+        setUser(null);
       } else {
         setUser(data as User);
       }

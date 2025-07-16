@@ -4,8 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./hooks/useAuth";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
@@ -46,7 +44,7 @@ const App = () => {
               <Route path="/" element={<Layout user={user} />}>
                 {/* Role-based dashboard routing */}
                 <Route index element={
-                  user.role === 'admin' ? <AdminDashboard /> :
+                  user.role === 'admin' || user.role === 'Admin' ? <AdminDashboard /> :
                   user.role === 'mentor' ? <MentorDashboard /> :
                   user.role === 'superadmin' ? <SuperadminDashboard /> :
                   <Dashboard user={user} />

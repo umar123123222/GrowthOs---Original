@@ -8,11 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
-interface LoginProps {
-  onLogin?: (user: any) => void;
-}
-
-const Login = ({ onLogin }: LoginProps) => {
+const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -39,8 +35,6 @@ const Login = ({ onLogin }: LoginProps) => {
         return;
       }
 
-      console.log('Authentication successful for:', email);
-
       // Check if user exists in our users table
       const { data: userData, error: userError } = await supabase
         .from('users')
@@ -50,14 +44,13 @@ const Login = ({ onLogin }: LoginProps) => {
 
       if (userError || !userData) {
         // Create user if they don't exist
-        console.log('User not found in users table, creating record...');
         const { data: newUser, error: createError } = await supabase
           .from('users')
           .insert({
             id: authData.user.id,
-            email: authData.user.email || email,
-            role: email === 'umaridmpakistan@gmail.com' ? 'superadmin' : 'student',
-            full_name: email === 'umaridmpakistan@gmail.com' ? 'Umar ID' : null,
+             email: authData.user.email || email,
+             role: email === 'umaridmpakistan@gmail.com' ? 'Admin' : 'student',
+             full_name: email === 'umaridmpakistan@gmail.com' ? 'Umar ID' : authData.user.user_metadata?.full_name || null,
             created_at: new Date().toISOString()
           })
           .select()
@@ -73,15 +66,11 @@ const Login = ({ onLogin }: LoginProps) => {
           return;
         }
 
-        console.log('User created successfully:', newUser);
-
         toast({
           title: "Welcome!",
           description: `Hello ${newUser.full_name || newUser.email}, you've successfully logged in.`,
         });
       } else {
-        console.log('User found in database:', userData.email);
-
         toast({
           title: "Welcome!",
           description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`,
@@ -90,11 +79,6 @@ const Login = ({ onLogin }: LoginProps) => {
 
       // Refresh the user data in our auth hook
       await refreshUser();
-      
-      // Call the optional onLogin callback if provided
-      if (onLogin) {
-        onLogin(userData || authData.user);
-      }
     } catch (error) {
       console.error('Login error:', error);
       toast({
