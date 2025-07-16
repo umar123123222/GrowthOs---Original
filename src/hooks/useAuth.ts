@@ -14,20 +14,30 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log('useAuth: Starting authentication check');
+    setLoading(true);
+    
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('useAuth: Initial session check', { session: !!session, error });
       if (session?.user) {
         fetchUserProfile(session.user.id);
       } else {
+        console.log('useAuth: No session found, setting loading to false');
         setLoading(false);
       }
+    }).catch(err => {
+      console.error('useAuth: Error getting initial session:', err);
+      setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('useAuth: Auth state changed', { event, session: !!session });
       if (session?.user) {
         await fetchUserProfile(session.user.id);
       } else {
+        console.log('useAuth: No session in state change, clearing user');
         setUser(null);
         setLoading(false);
       }
@@ -37,6 +47,7 @@ export const useAuth = () => {
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
+    console.log('fetchUserProfile: Starting for user ID:', userId);
     try {
       const { data, error } = await supabase
         .from('users')
@@ -44,16 +55,21 @@ export const useAuth = () => {
         .eq('id', userId)
         .single();
 
+      console.log('fetchUserProfile: Database query result', { data, error });
+
       if (error) {
-        console.error('Error fetching user profile:', error);
+        console.error('fetchUserProfile: Database error:', error);
+        // If user doesn't exist, we'll set user to null and let login handle user creation
         setUser(null);
       } else {
+        console.log('fetchUserProfile: Setting user data:', data);
         setUser(data as User);
       }
     } catch (error) {
-      console.error('Error in fetchUserProfile:', error);
+      console.error('fetchUserProfile: Catch block error:', error);
       setUser(null);
     } finally {
+      console.log('fetchUserProfile: Setting loading to false');
       setLoading(false);
     }
   };
