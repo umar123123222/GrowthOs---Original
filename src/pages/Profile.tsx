@@ -111,12 +111,36 @@ const Profile = ({ user }: ProfileProps = {}) => {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      // First, verify the current password by attempting to sign in with it
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      
+      if (!currentUser?.email) {
+        throw new Error("No user found");
+      }
+
+      // Try to sign in with current password to verify it
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: currentUser.email,
+        password: passwordData.currentPassword,
+      });
+
+      if (signInError) {
+        toast({
+          title: "Error",
+          description: "Current password is incorrect",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // If current password is correct, update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: passwordData.newPassword
       });
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
+      // Clear form
       setPasswordData({
         currentPassword: '',
         newPassword: '',
@@ -131,7 +155,7 @@ const Profile = ({ user }: ProfileProps = {}) => {
       console.error('Error updating password:', error);
       toast({
         title: "Error",
-        description: "Failed to update password",
+        description: "Failed to update password. Please try again.",
         variant: "destructive",
       });
     }
