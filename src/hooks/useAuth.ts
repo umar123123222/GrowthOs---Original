@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 export interface User {
   id: string;
   email: string;
-  role: 'student' | 'admin' | 'mentor' | 'superadmin' | 'Admin';
+  role: 'student' | 'admin' | 'mentor' | 'superadmin';
   full_name?: string;
   created_at?: string;
 }

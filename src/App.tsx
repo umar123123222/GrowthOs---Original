@@ -53,7 +53,7 @@ const App = () => {
               <Route path="/" element={<Layout user={user} />}>
                 {/* Role-based dashboard routing */}
                 <Route index element={
-                  user.role === 'admin' || user.role === 'Admin' ? <AdminDashboard /> :
+                  user.role === 'admin' ? <AdminDashboard /> :
                   user.role === 'mentor' ? <MentorDashboard /> :
                   user.role === 'superadmin' ? <SuperadminDashboard /> :
                   <Dashboard user={user} />
