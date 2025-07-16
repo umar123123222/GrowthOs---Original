@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -31,6 +32,14 @@ interface Student {
   fees_due_date: string;
 }
 
+interface ActivityLog {
+  id: string;
+  activity_type: string;
+  occurred_at: string;
+  metadata: any;
+  reference_id: string;
+}
+
 export function StudentsManagement() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +56,12 @@ export function StudentsManagement() {
   const [invoiceFilter, setInvoiceFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [activityLogsDialog, setActivityLogsDialog] = useState(false);
+  const [selectedStudentForLogs, setSelectedStudentForLogs] = useState<Student | null>(null);
+  const [statusUpdateDialog, setStatusUpdateDialog] = useState(false);
+  const [selectedStudentForStatus, setSelectedStudentForStatus] = useState<Student | null>(null);
+  const [newStatus, setNewStatus] = useState('');
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -439,11 +454,85 @@ export function StudentsManagement() {
     }
   };
 
-  const handleViewActivityLogs = (studentId: string) => {
-    // TODO: Implement activity logs dialog
-    toast({
-      title: 'Activity Logs',
-      description: 'Activity logs feature coming soon'
+  const handleViewActivityLogs = async (studentId: string) => {
+    try {
+      const student = students.find(s => s.id === studentId);
+      if (!student) return;
+      
+      setSelectedStudentForLogs(student);
+      
+      const { data, error } = await supabase
+        .from('user_activity_logs')
+        .select('*')
+        .eq('user_id', studentId)
+        .order('occurred_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      
+      setActivityLogs(data || []);
+      setActivityLogsDialog(true);
+    } catch (error) {
+      console.error('Error fetching activity logs:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch activity logs',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleStatusUpdate = async (studentId: string) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+    
+    setSelectedStudentForStatus(student);
+    setNewStatus(student.status);
+    setStatusUpdateDialog(true);
+  };
+
+  const saveStatusUpdate = async () => {
+    if (!selectedStudentForStatus || !newStatus) return;
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ status: newStatus })
+        .eq('id', selectedStudentForStatus.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Student status updated successfully'
+      });
+
+      setStatusUpdateDialog(false);
+      setSelectedStudentForStatus(null);
+      setNewStatus('');
+      fetchStudents();
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update student status',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const formatActivityType = (type: string) => {
+    return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -851,6 +940,15 @@ export function StudentsManagement() {
                               <Button
                                 variant="outline"
                                 size="sm"
+                                onClick={() => handleStatusUpdate(student.id)}
+                                className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                              >
+                                <Settings className="w-4 h-4 mr-2" />
+                                Update Status
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 onClick={() => handleToggleLMSSuspension(student.id, student.lms_suspended)}
                                 className={`hover-scale ${student.lms_suspended ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:text-red-700 hover:border-red-300"}`}
                               >
@@ -878,6 +976,83 @@ export function StudentsManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Activity Logs Dialog */}
+      <Dialog open={activityLogsDialog} onOpenChange={setActivityLogsDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>
+              Activity Logs - {selectedStudentForLogs?.full_name}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="h-96">
+            <div className="space-y-4">
+              {activityLogs.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  No activity logs found for this student.
+                </p>
+              ) : (
+                activityLogs.map((log) => (
+                  <Card key={log.id} className="p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h4 className="font-medium">{formatActivityType(log.activity_type)}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {formatDateTime(log.occurred_at)}
+                        </p>
+                      </div>
+                      <Badge variant="outline">{log.activity_type}</Badge>
+                    </div>
+                    {log.metadata && (
+                      <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                        <pre className="whitespace-pre-wrap">
+                          {JSON.stringify(log.metadata, null, 2)}
+                        </pre>
+                      </div>
+                    )}
+                  </Card>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Update Dialog */}
+      <Dialog open={statusUpdateDialog} onOpenChange={setStatusUpdateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Update Status - {selectedStudentForStatus?.full_name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={newStatus} onValueChange={setNewStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Inactive">Inactive</SelectItem>
+                  <SelectItem value="Suspended">Suspended</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Dropout">Dropout</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" onClick={() => setStatusUpdateDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={saveStatusUpdate}>
+                Update Status
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
