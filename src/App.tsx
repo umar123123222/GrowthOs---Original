@@ -20,6 +20,7 @@ import Notifications from "./pages/Notifications";
 import LiveSessions from "./pages/LiveSessions";
 import Mentorship from "./pages/Mentorship";
 import Messages from "./pages/Messages";
+import Teams from "./pages/Teams";
 import Layout from "./components/Layout";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ const App = () => {
                 <Route path="messages" element={<Messages />} />
                 <Route path="profile" element={<Profile user={user} />} />
                 <Route path="notifications" element={<Notifications />} />
+                <Route path="teams" element={<Teams />} />
                 
                 {/* Role-specific routes */}
                 <Route path="admin" element={<AdminDashboard />} />

@@ -14,7 +14,9 @@ import {
   ChevronDown,
   ChevronRight,
   LogOut,
-  Users
+  Users,
+  UserCheck,
+  User
 } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,7 +50,9 @@ const Layout = ({ user }: LayoutProps) => {
             { name: "Assignments", href: "/superadmin?tab=assignments", icon: FileText },
           ]
         },
-        { name: "Students", href: "/superadmin?tab=students", icon: Users }
+        { name: "Students", href: "/superadmin?tab=students", icon: Users },
+        { name: "Teams", href: "/teams", icon: UserCheck },
+        { name: "Profile", href: "/profile", icon: User }
       ];
     }
     
