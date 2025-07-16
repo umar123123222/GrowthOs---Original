@@ -252,7 +252,7 @@ export function AssignmentsManagement() {
               
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Days After Unlock</label>
+                <label className="text-sm font-medium text-foreground">Due Date</label>
                 <Select
                   value={formData.due_days_after_unlock.toString()}
                   onValueChange={(value) => setFormData({ ...formData, due_days_after_unlock: parseInt(value) })}
