@@ -22,7 +22,6 @@ interface Student {
   phone: string;
   lms_user_id: string;
   lms_password: string;
-  status: string;
   created_at: string;
   last_active_at: string;
   fees_structure: string;
@@ -65,7 +64,7 @@ export function StudentsManagement() {
   const [lmsStatusFilter, setLmsStatusFilter] = useState('all');
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [activityLogsDialog, setActivityLogsDialog] = useState(false);
@@ -99,7 +98,7 @@ export function StudentsManagement() {
 
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, statusFilter]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter]);
 
   const fetchInstallmentPayments = async () => {
     try {
@@ -198,10 +197,6 @@ export function StudentsManagement() {
       filtered = filtered.filter(student => !student.fees_overdue && student.last_invoice_sent);
     }
 
-    // Apply status filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(student => student.status === statusFilter);
-    }
 
     setFilteredStudents(filtered);
   };
@@ -230,8 +225,7 @@ export function StudentsManagement() {
         phone: formData.phone,
         ...credentials,
         fees_structure: formData.fees_structure,
-        role: 'student',
-        status: 'Active'
+        role: 'student'
       };
 
       if (editingStudent) {
@@ -455,18 +449,6 @@ export function StudentsManagement() {
     });
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Active':
-        return 'bg-green-100 text-green-800';
-      case 'Inactive':
-        return 'bg-red-100 text-red-800';
-      case 'Suspended':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
 
   const getFeesStructureLabel = (structure: string) => {
     switch (structure) {
@@ -957,17 +939,6 @@ export function StudentsManagement() {
           />
         </div>
         
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent className="bg-white z-50">
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="Active">Active</SelectItem>
-            <SelectItem value="Inactive">Inactive</SelectItem>
-            <SelectItem value="Suspended">Suspended</SelectItem>
-          </SelectContent>
-        </Select>
 
         <Select value={lmsStatusFilter} onValueChange={setLmsStatusFilter}>
           <SelectTrigger className="w-40">
@@ -1075,7 +1046,7 @@ export function StudentsManagement() {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Fees Structure</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>LMS Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1094,15 +1065,12 @@ export function StudentsManagement() {
                       <TableCell>{student.email}</TableCell>
                       <TableCell>{student.phone || 'N/A'}</TableCell>
                        <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
-                       <TableCell>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge className={getStatusColor(student.status)}>
-                              {student.status}
-                            </Badge>
-                            <Badge className={getLMSStatusColor(student.lms_status)}>
-                              {getLMSStatusIcon(student.lms_status)}
-                              {getLMSStatusLabel(student.lms_status)}
-                            </Badge>
+                        <TableCell>
+                           <div className="flex flex-wrap gap-2">
+                             <Badge className={getLMSStatusColor(student.lms_status)}>
+                               {getLMSStatusIcon(student.lms_status)}
+                               {getLMSStatusLabel(student.lms_status)}
+                             </Badge>
                             {student.fees_overdue && (
                               <Badge className="bg-orange-100 text-orange-800">
                                 <Clock className="w-3 h-3 mr-1" />
