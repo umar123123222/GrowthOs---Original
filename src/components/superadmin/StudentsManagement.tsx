@@ -1115,11 +1115,14 @@ export function StudentsManagement() {
                             </div>
                             
                             {/* Installment Payment Buttons */}
-                            {(student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && (
+                            {(student.fees_structure === '1_installment' || student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && (
                               <div className="pt-3 border-t border-blue-200">
                                 <Label className="text-sm font-medium text-gray-700 mb-2 block">Installment Payments</Label>
                                 <div className="flex flex-wrap gap-2">
-                                  {Array.from({ length: student.fees_structure === '2_installments' ? 2 : 3 }, (_, index) => {
+                                  {Array.from({ 
+                                    length: student.fees_structure === '1_installment' ? 1 : 
+                                           student.fees_structure === '2_installments' ? 2 : 3 
+                                  }, (_, index) => {
                                     const installmentNumber = index + 1;
                                     const payments = installmentPayments.get(student.id) || [];
                                     const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
