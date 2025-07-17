@@ -594,6 +594,24 @@ export function StudentsManagement() {
       const student = students.find(s => s.id === studentId);
       if (!student) return;
 
+      // Check if this installment payment already exists
+      const { data: existingPayment } = await supabase
+        .from('installment_payments')
+        .select('id')
+        .eq('user_id', studentId)
+        .eq('installment_number', installmentNumber)
+        .eq('status', 'paid')
+        .single();
+
+      if (existingPayment) {
+        toast({
+          title: "Already Paid",
+          description: "This installment has already been marked as paid",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const totalInstallments = student.fees_structure === '2_installments' ? 2 : 
                                 student.fees_structure === '3_installments' ? 3 : 1;
 
