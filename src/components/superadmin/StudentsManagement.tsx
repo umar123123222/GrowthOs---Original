@@ -73,6 +73,7 @@ export function StudentsManagement() {
   const [statusUpdateDialog, setStatusUpdateDialog] = useState(false);
   const [selectedStudentForStatus, setSelectedStudentForStatus] = useState<Student | null>(null);
   const [newStatus, setNewStatus] = useState('');
+  const [newLMSStatus, setNewLMSStatus] = useState('');
   const [installmentPayments, setInstallmentPayments] = useState<Map<string, InstallmentPayment[]>>(new Map());
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [bulkActionDialog, setBulkActionDialog] = useState(false);
@@ -560,16 +561,27 @@ export function StudentsManagement() {
     
     setSelectedStudentForStatus(student);
     setNewStatus(student.status);
+    setNewLMSStatus(student.lms_status);
     setStatusUpdateDialog(true);
   };
 
   const saveStatusUpdate = async () => {
-    if (!selectedStudentForStatus || !newStatus) return;
+    if (!selectedStudentForStatus || !newStatus || !newLMSStatus) return;
 
     try {
+      const updateData: any = { 
+        status: newStatus,
+        lms_status: newLMSStatus
+      };
+
+      // If setting LMS status to suspended, update the last_suspended_date
+      if (newLMSStatus === 'suspended' && selectedStudentForStatus.lms_status !== 'suspended') {
+        updateData.last_suspended_date = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('users')
-        .update({ status: newStatus })
+        .update(updateData)
         .eq('id', selectedStudentForStatus.id);
 
       if (error) throw error;
@@ -582,6 +594,7 @@ export function StudentsManagement() {
       setStatusUpdateDialog(false);
       setSelectedStudentForStatus(null);
       setNewStatus('');
+      setNewLMSStatus('');
       fetchStudents();
     } catch (error) {
       console.error('Error updating status:', error);
@@ -1354,10 +1367,10 @@ export function StudentsManagement() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="status">Status</Label>
+              <Label htmlFor="status">General Status</Label>
               <Select value={newStatus} onValueChange={setNewStatus}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
+                  <SelectValue placeholder="Select general status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Active">Active</SelectItem>
@@ -1365,6 +1378,21 @@ export function StudentsManagement() {
                   <SelectItem value="Suspended">Suspended</SelectItem>
                   <SelectItem value="Completed">Completed</SelectItem>
                   <SelectItem value="Dropout">Dropout</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="lms_status">LMS Status</Label>
+              <Select value={newLMSStatus} onValueChange={setNewLMSStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select LMS status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                  <SelectItem value="dropout">Dropout</SelectItem>
+                  <SelectItem value="complete">Complete</SelectItem>
                 </SelectContent>
               </Select>
             </div>
