@@ -31,6 +31,7 @@ interface Student {
   last_invoice_date: string;
   last_invoice_sent: boolean;
   fees_due_date: string;
+  last_suspended_date: string;
 }
 
 interface InstallmentPayment {
@@ -328,6 +329,7 @@ export function StudentsManagement() {
         .from('users')
         .update({ 
           lms_suspended: true,
+          last_suspended_date: new Date().toISOString(),
           // Don't update status to 'Suspended' since it's not allowed by check constraint
         })
         .eq('id', studentId);
@@ -443,13 +445,20 @@ export function StudentsManagement() {
 
   const handleToggleLMSSuspension = async (studentId: string, currentStatus: boolean) => {
     try {
+      const updateData: any = { 
+        lms_suspended: !currentStatus,
+        // Don't change the status field since 'Suspended' is not allowed by check constraint
+        // Keep the existing status but only update lms_suspended field
+      };
+      
+      // If we're suspending (currentStatus is false, so !currentStatus will be true), set the last_suspended_date
+      if (!currentStatus) {
+        updateData.last_suspended_date = new Date().toISOString();
+      }
+      
       const { error } = await supabase
         .from('users')
-        .update({ 
-          lms_suspended: !currentStatus,
-          // Don't change the status field since 'Suspended' is not allowed by check constraint
-          // Keep the existing status but only update lms_suspended field
-        })
+        .update(updateData)
         .eq('id', studentId);
 
       if (error) throw error;
@@ -1098,6 +1107,18 @@ export function StudentsManagement() {
                                 <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
                                 <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
                               </div>
+                              {student.fees_overdue && student.fees_due_date && (
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-700">Fees Due Date</Label>
+                                  <p className="text-sm text-red-600 font-medium">{formatDate(student.fees_due_date)}</p>
+                                </div>
+                              )}
+                              {student.last_suspended_date && (
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-700">Last Suspended Date</Label>
+                                  <p className="text-sm text-red-600">{formatDate(student.last_suspended_date)}</p>
+                                </div>
+                              )}
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
                                 <div className="flex items-center space-x-2">
