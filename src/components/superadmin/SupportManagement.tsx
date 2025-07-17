@@ -62,7 +62,7 @@ export function SupportManagement() {
         .from('support_tickets')
         .select(`
           *,
-          users!support_tickets_user_id_fkey (
+          users (
             full_name,
             email,
             student_id
@@ -73,6 +73,7 @@ export function SupportManagement() {
       if (error) throw error;
       setTickets((data as any) || []);
     } catch (error) {
+      console.error('Error fetching tickets:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch support tickets',
@@ -89,7 +90,7 @@ export function SupportManagement() {
         .from('ticket_replies')
         .select(`
           *,
-          users!ticket_replies_user_id_fkey (
+          users (
             full_name,
             role
           )
@@ -100,6 +101,7 @@ export function SupportManagement() {
       if (error) throw error;
       setTicketReplies((data as any) || []);
     } catch (error) {
+      console.error('Error fetching replies:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch ticket replies',
