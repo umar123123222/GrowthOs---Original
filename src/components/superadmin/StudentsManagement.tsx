@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -72,6 +73,8 @@ export function StudentsManagement() {
   const [selectedStudentForStatus, setSelectedStudentForStatus] = useState<Student | null>(null);
   const [newStatus, setNewStatus] = useState('');
   const [installmentPayments, setInstallmentPayments] = useState<Map<string, InstallmentPayment[]>>(new Map());
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [bulkActionDialog, setBulkActionDialog] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -662,6 +665,66 @@ export function StudentsManagement() {
     }
   };
 
+  const handleSelectStudent = (studentId: string, checked: boolean) => {
+    const newSelected = new Set(selectedStudents);
+    if (checked) {
+      newSelected.add(studentId);
+    } else {
+      newSelected.delete(studentId);
+    }
+    setSelectedStudents(newSelected);
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedStudents(new Set(displayStudents.map(s => s.id)));
+    } else {
+      setSelectedStudents(new Set());
+    }
+  };
+
+  const handleBulkLMSAction = async (action: 'suspend' | 'activate') => {
+    if (selectedStudents.size === 0) {
+      toast({
+        title: 'Error',
+        description: 'Please select at least one student',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const lms_suspended = action === 'suspend';
+      const status = action === 'suspend' ? 'Suspended' : 'Active';
+
+      const { error } = await supabase
+        .from('users')
+        .update({ 
+          lms_suspended,
+          status
+        })
+        .in('id', Array.from(selectedStudents));
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `${selectedStudents.size} student(s) ${action === 'suspend' ? 'suspended' : 'activated'} successfully`
+      });
+
+      setSelectedStudents(new Set());
+      setBulkActionDialog(false);
+      fetchStudents();
+    } catch (error) {
+      console.error('Error updating bulk LMS status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update LMS status',
+        variant: 'destructive'
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -888,6 +951,49 @@ export function StudentsManagement() {
         </Select>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedStudents.size > 0 && (
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <span className="text-sm font-medium text-blue-800">
+                  {selectedStudents.size} student(s) selected
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setSelectedStudents(new Set())}
+                  className="text-blue-600 border-blue-300 hover:bg-blue-100"
+                >
+                  Clear Selection
+                </Button>
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkLMSAction('suspend')}
+                  className="text-red-600 border-red-300 hover:bg-red-50"
+                >
+                  <Ban className="w-4 h-4 mr-2" />
+                  Suspend LMS
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleBulkLMSAction('activate')}
+                  className="text-green-600 border-green-300 hover:bg-green-50"
+                >
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  Activate LMS
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Students Table */}
       <Card className="hover-scale transition-all duration-300 hover:shadow-lg animate-fade-in">
         <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b">
@@ -901,6 +1007,12 @@ export function StudentsManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead>Student ID</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
@@ -914,6 +1026,12 @@ export function StudentsManagement() {
                 {displayStudents.map((student) => (
                   <>
                     <TableRow key={student.id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedStudents.has(student.id)}
+                          onCheckedChange={(checked) => handleSelectStudent(student.id, checked as boolean)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">{student.student_id}</TableCell>
                       <TableCell>{student.full_name}</TableCell>
                       <TableCell>{student.email}</TableCell>
@@ -971,7 +1089,7 @@ export function StudentsManagement() {
                     
                     {expandedRows.has(student.id) && (
                       <TableRow className="animate-accordion-down">
-                        <TableCell colSpan={7} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
+                        <TableCell colSpan={8} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>
