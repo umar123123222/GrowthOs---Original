@@ -72,7 +72,6 @@ export function StudentsManagement() {
   const [selectedStudentForLogs, setSelectedStudentForLogs] = useState<Student | null>(null);
   const [statusUpdateDialog, setStatusUpdateDialog] = useState(false);
   const [selectedStudentForStatus, setSelectedStudentForStatus] = useState<Student | null>(null);
-  const [newStatus, setNewStatus] = useState('');
   const [newLMSStatus, setNewLMSStatus] = useState('');
   const [installmentPayments, setInstallmentPayments] = useState<Map<string, InstallmentPayment[]>>(new Map());
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
@@ -560,17 +559,15 @@ export function StudentsManagement() {
     if (!student) return;
     
     setSelectedStudentForStatus(student);
-    setNewStatus(student.status);
     setNewLMSStatus(student.lms_status);
     setStatusUpdateDialog(true);
   };
 
   const saveStatusUpdate = async () => {
-    if (!selectedStudentForStatus || !newStatus || !newLMSStatus) return;
+    if (!selectedStudentForStatus || !newLMSStatus) return;
 
     try {
       const updateData: any = { 
-        status: newStatus,
         lms_status: newLMSStatus
       };
 
@@ -588,19 +585,18 @@ export function StudentsManagement() {
 
       toast({
         title: 'Success',
-        description: 'Student status updated successfully'
+        description: 'LMS status updated successfully'
       });
 
       setStatusUpdateDialog(false);
       setSelectedStudentForStatus(null);
-      setNewStatus('');
       setNewLMSStatus('');
       fetchStudents();
     } catch (error) {
-      console.error('Error updating status:', error);
+      console.error('Error updating LMS status:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update student status',
+        description: 'Failed to update LMS status',
         variant: 'destructive'
       });
     }
@@ -1362,32 +1358,17 @@ export function StudentsManagement() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              Update Status - {selectedStudentForStatus?.full_name}
+              Update LMS Status - {selectedStudentForStatus?.full_name}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="status">General Status</Label>
-              <Select value={newStatus} onValueChange={setNewStatus}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select general status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                  <SelectItem value="Suspended">Suspended</SelectItem>
-                  <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Dropout">Dropout</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
             <div>
               <Label htmlFor="lms_status">LMS Status</Label>
               <Select value={newLMSStatus} onValueChange={setNewLMSStatus}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select LMS status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-white z-50">
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="suspended">Suspended</SelectItem>
@@ -1401,7 +1382,7 @@ export function StudentsManagement() {
                 Cancel
               </Button>
               <Button onClick={saveStatusUpdate}>
-                Update Status
+                Update LMS Status
               </Button>
             </div>
           </div>
