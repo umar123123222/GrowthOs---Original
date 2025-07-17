@@ -1107,10 +1107,12 @@ export function StudentsManagement() {
                                 <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
                                 <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
                               </div>
-                              {student.fees_overdue && student.fees_due_date && (
+                              {student.fees_due_date && (
                                 <div>
-                                  <Label className="text-sm font-medium text-gray-700">Fees Due Date</Label>
-                                  <p className="text-sm text-red-600 font-medium">{formatDate(student.fees_due_date)}</p>
+                                  <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
+                                  <p className={`text-sm ${student.fees_overdue ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
+                                    {formatDate(student.fees_due_date)}
+                                  </p>
                                 </div>
                               )}
                               {student.last_suspended_date && (
