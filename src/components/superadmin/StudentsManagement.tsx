@@ -76,6 +76,9 @@ export function StudentsManagement() {
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [bulkActionDialog, setBulkActionDialog] = useState(false);
   const { toast } = useToast();
+  
+  // Debug: Ensure statusFilter is completely removed
+  console.log('StudentsManagement component loaded - statusFilter removed');
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -494,7 +497,7 @@ export function StudentsManagement() {
 
       toast({
         title: 'Success',
-        description: `LMS account ${!currentStatus ? 'suspended' : 'activated'} successfully`
+        description: `LMS account ${newLMSStatus === 'suspended' ? 'suspended' : 'activated'} successfully`
       });
 
       fetchStudents();
