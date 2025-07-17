@@ -62,6 +62,8 @@ const Layout = ({ user }: LayoutProps) => {
           ]
         },
         { name: "Students", href: "/superadmin?tab=students", icon: Users },
+        { name: "Submissions", href: "/superadmin?tab=submissions", icon: FileText },
+        { name: "Support", href: "/superadmin?tab=support", icon: MessageSquare },
         { name: "Teams", href: "/teams", icon: UserCheck },
         { name: "Profile", href: "/profile", icon: User }
       ];
