@@ -1219,7 +1219,7 @@ export type Database = {
           last_invoice_sent: boolean | null
           last_suspended_date: string | null
           lms_password: string | null
-          lms_suspended: boolean | null
+          lms_status: string | null
           lms_user_id: string | null
           mentor_id: string | null
           meta_ads_credentials: string | null
@@ -1261,7 +1261,7 @@ export type Database = {
           last_invoice_sent?: boolean | null
           last_suspended_date?: string | null
           lms_password?: string | null
-          lms_suspended?: boolean | null
+          lms_status?: string | null
           lms_user_id?: string | null
           mentor_id?: string | null
           meta_ads_credentials?: string | null
@@ -1303,7 +1303,7 @@ export type Database = {
           last_invoice_sent?: boolean | null
           last_suspended_date?: string | null
           lms_password?: string | null
-          lms_suspended?: boolean | null
+          lms_status?: string | null
           lms_user_id?: string | null
           mentor_id?: string | null
           meta_ads_credentials?: string | null

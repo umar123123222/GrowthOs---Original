@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +26,7 @@ interface Student {
   created_at: string;
   last_active_at: string;
   fees_structure: string;
-  lms_suspended: boolean;
+  lms_status: string;
   fees_overdue: boolean;
   last_invoice_date: string;
   last_invoice_sent: boolean;
@@ -148,7 +148,7 @@ export function StudentsManagement() {
       setActiveStudents(activeCount);
       
       // Calculate suspended and overdue students
-      const suspendedCount = data?.filter(student => student.lms_suspended).length || 0;
+      const suspendedCount = data?.filter(student => student.lms_status === 'suspended').length || 0;
       const overdueCount = data?.filter(student => student.fees_overdue).length || 0;
       
       setSuspendedStudents(suspendedCount);
@@ -180,10 +180,8 @@ export function StudentsManagement() {
     }
 
     // Apply LMS status filter
-    if (lmsStatusFilter === 'suspended') {
-      filtered = filtered.filter(student => student.lms_suspended);
-    } else if (lmsStatusFilter === 'active') {
-      filtered = filtered.filter(student => !student.lms_suspended);
+    if (lmsStatusFilter !== 'all') {
+      filtered = filtered.filter(student => student.lms_status === lmsStatusFilter);
     }
 
     // Apply fees structure filter
@@ -328,9 +326,8 @@ export function StudentsManagement() {
       const { error } = await supabase
         .from('users')
         .update({ 
-          lms_suspended: true,
+          lms_status: 'suspended',
           last_suspended_date: new Date().toISOString(),
-          // Don't update status to 'Suspended' since it's not allowed by check constraint
         })
         .eq('id', studentId);
 
@@ -398,6 +395,57 @@ export function StudentsManagement() {
     doc.save(`invoice_${student.student_id}.pdf`);
   };
 
+  const getLMSStatusColor = (lmsStatus: string) => {
+    switch (lmsStatus) {
+      case 'active':
+        return 'bg-green-100 text-green-800';
+      case 'inactive':
+        return 'bg-gray-100 text-gray-800';
+      case 'suspended':
+        return 'bg-red-100 text-red-800';
+      case 'dropout':
+        return 'bg-orange-100 text-orange-800';
+      case 'complete':
+        return 'bg-blue-100 text-blue-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getLMSStatusIcon = (lmsStatus: string) => {
+    switch (lmsStatus) {
+      case 'active':
+        return <CheckCircle className="w-3 h-3 mr-1" />;
+      case 'inactive':
+        return <Clock className="w-3 h-3 mr-1" />;
+      case 'suspended':
+        return <Ban className="w-3 h-3 mr-1" />;
+      case 'dropout':
+        return <XCircle className="w-3 h-3 mr-1" />;
+      case 'complete':
+        return <Award className="w-3 h-3 mr-1" />;
+      default:
+        return <Clock className="w-3 h-3 mr-1" />;
+    }
+  };
+
+  const getLMSStatusLabel = (lmsStatus: string) => {
+    switch (lmsStatus) {
+      case 'active':
+        return 'Active';
+      case 'inactive':
+        return 'Inactive';
+      case 'suspended':
+        return 'Suspended';
+      case 'dropout':
+        return 'Dropout';
+      case 'complete':
+        return 'Complete';
+      default:
+        return 'Unknown';
+    }
+  };
+
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -443,16 +491,15 @@ export function StudentsManagement() {
     setExpandedRows(newExpanded);
   };
 
-  const handleToggleLMSSuspension = async (studentId: string, currentStatus: boolean) => {
+  const handleToggleLMSSuspension = async (studentId: string, currentStatus: string) => {
     try {
+      const newStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
       const updateData: any = { 
-        lms_suspended: !currentStatus,
-        // Don't change the status field since 'Suspended' is not allowed by check constraint
-        // Keep the existing status but only update lms_suspended field
+        lms_status: newStatus,
       };
       
-      // If we're suspending (currentStatus is false, so !currentStatus will be true), set the last_suspended_date
-      if (!currentStatus) {
+      // If we're suspending, set the last_suspended_date
+      if (newStatus === 'suspended') {
         updateData.last_suspended_date = new Date().toISOString();
       }
       
@@ -642,7 +689,7 @@ export function StudentsManagement() {
           .from('users')
           .update({ 
             fees_overdue: false,
-            lms_suspended: false,
+            lms_status: 'active',
             fees_due_date: null
           })
           .eq('id', studentId);
@@ -694,13 +741,12 @@ export function StudentsManagement() {
     }
 
     try {
-      const lms_suspended = action === 'suspend';
-      // Only update lms_suspended field, don't change status since 'Suspended' is not allowed
+      const lms_status = action === 'suspend' ? 'suspended' : 'active';
 
       const { error } = await supabase
         .from('users')
         .update({ 
-          lms_suspended
+          lms_status
         })
         .in('id', Array.from(selectedStudents));
 
@@ -920,8 +966,11 @@ export function StudentsManagement() {
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
             <SelectItem value="all">All LMS Status</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
             <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
+            <SelectItem value="dropout">Dropout</SelectItem>
+            <SelectItem value="complete">Complete</SelectItem>
           </SelectContent>
         </Select>
 
@@ -1041,18 +1090,9 @@ export function StudentsManagement() {
                             <Badge className={getStatusColor(student.status)}>
                               {student.status}
                             </Badge>
-                            <Badge className={student.lms_suspended ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
-                              {student.lms_suspended ? (
-                                <>
-                                  <Ban className="w-3 h-3 mr-1" />
-                                  LMS Suspended
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  LMS Active
-                                </>
-                              )}
+                            <Badge className={getLMSStatusColor(student.lms_status)}>
+                              {getLMSStatusIcon(student.lms_status)}
+                              {getLMSStatusLabel(student.lms_status)}
                             </Badge>
                             {student.fees_overdue && (
                               <Badge className="bg-orange-100 text-orange-800">
@@ -1235,10 +1275,10 @@ export function StudentsManagement() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleToggleLMSSuspension(student.id, student.lms_suspended)}
-                                className={`hover-scale ${student.lms_suspended ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:text-red-700 hover:border-red-300"}`}
+                                onClick={() => handleToggleLMSSuspension(student.id, student.lms_status)}
+                                className={`hover-scale ${student.lms_status === 'suspended' ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:text-red-700 hover:border-red-300"}`}
                               >
-                                {student.lms_suspended ? (
+                                {student.lms_status === 'suspended' ? (
                                   <>
                                     <CheckCircle className="w-4 h-4 mr-2" />
                                     Activate LMS
