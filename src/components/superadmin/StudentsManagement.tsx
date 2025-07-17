@@ -356,7 +356,7 @@ export function StudentsManagement() {
         .from('users')
         .update({ 
           lms_suspended: true,
-          status: 'Suspended'
+          // Don't update status to 'Suspended' since it's not allowed by check constraint
         })
         .eq('id', studentId);
 
@@ -475,7 +475,8 @@ export function StudentsManagement() {
         .from('users')
         .update({ 
           lms_suspended: !currentStatus,
-          status: !currentStatus ? 'Suspended' : 'Active'
+          // Don't change the status field since 'Suspended' is not allowed by check constraint
+          // Keep the existing status but only update lms_suspended field
         })
         .eq('id', studentId);
 
@@ -695,13 +696,12 @@ export function StudentsManagement() {
 
     try {
       const lms_suspended = action === 'suspend';
-      const status = action === 'suspend' ? 'Suspended' : 'Active';
+      // Only update lms_suspended field, don't change status since 'Suspended' is not allowed
 
       const { error } = await supabase
         .from('users')
         .update({ 
-          lms_suspended,
-          status
+          lms_suspended
         })
         .in('id', Array.from(selectedStudents));
 
