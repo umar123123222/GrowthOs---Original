@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MessageSquare, AlertCircle, Clock, CheckCircle, Reply, User } from 'lucide-react';
+import { MessageSquare, AlertCircle, Clock, CheckCircle, Reply, User, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface SupportTicket {
@@ -27,7 +27,6 @@ interface SupportTicket {
     email: string;
     student_id?: string;
   };
-  replies?: TicketReply[];
 }
 
 interface TicketReply {
@@ -45,6 +44,7 @@ interface TicketReply {
 
 export function SupportManagement() {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
+  const [ticketReplies, setTicketReplies] = useState<TicketReply[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyMessage, setReplyMessage] = useState('');
@@ -58,44 +58,20 @@ export function SupportManagement() {
 
   const fetchTickets = async () => {
     try {
-      // Note: This would require creating support_tickets table
-      // For now, we'll show a mock implementation
-      const mockTickets: SupportTicket[] = [
-        {
-          id: '1',
-          user_id: 'user1',
-          title: 'Unable to access course videos',
-          description: 'I am having trouble accessing the course videos. The player keeps loading but never starts.',
-          type: 'technical',
-          priority: 'high',
-          status: 'open',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          users: {
-            full_name: 'John Doe',
-            email: 'john@example.com',
-            student_id: 'STU001'
-          }
-        },
-        {
-          id: '2',
-          user_id: 'user2',
-          title: 'Billing inquiry about installments',
-          description: 'I need clarification about my payment installments schedule.',
-          type: 'billing',
-          priority: 'medium',
-          status: 'in_progress',
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          updated_at: new Date().toISOString(),
-          users: {
-            full_name: 'Jane Smith',
-            email: 'jane@example.com',
-            student_id: 'STU002'
-          }
-        }
-      ];
-      
-      setTickets(mockTickets);
+      const { data, error } = await supabase
+        .from('support_tickets')
+        .select(`
+          *,
+          users!support_tickets_user_id_fkey (
+            full_name,
+            email,
+            student_id
+          )
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setTickets((data as any) || []);
     } catch (error) {
       toast({
         title: 'Error',
@@ -107,17 +83,63 @@ export function SupportManagement() {
     }
   };
 
+  const fetchTicketReplies = async (ticketId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('ticket_replies')
+        .select(`
+          *,
+          users!ticket_replies_user_id_fkey (
+            full_name,
+            role
+          )
+        `)
+        .eq('ticket_id', ticketId)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      setTicketReplies((data as any) || []);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to fetch ticket replies',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleReplyToTicket = async (ticketId: string) => {
     if (!replyMessage.trim()) return;
 
     try {
-      // Mock implementation - would need to create ticket_replies table
+      const currentUser = await supabase.auth.getUser();
+      if (!currentUser.data.user) throw new Error('Not authenticated');
+
+      const { error } = await supabase
+        .from('ticket_replies')
+        .insert({
+          ticket_id: ticketId,
+          user_id: currentUser.data.user.id,
+          message: replyMessage,
+          is_staff: true
+        });
+
+      if (error) throw error;
+      // Update ticket status to in_progress if it was open
+      if (selectedTicket?.status === 'open') {
+        await supabase
+          .from('support_tickets')
+          .update({ status: 'in_progress' })
+          .eq('id', ticketId);
+      }
+
       toast({
         title: 'Success',
         description: 'Reply sent successfully'
       });
+      
       setReplyMessage('');
-      setSelectedTicket(null);
+      fetchTicketReplies(ticketId);
       fetchTickets();
     } catch (error) {
       toast({
@@ -130,11 +152,18 @@ export function SupportManagement() {
 
   const updateTicketStatus = async (ticketId: string, status: string) => {
     try {
-      // Mock implementation
+      const { error } = await supabase
+        .from('support_tickets')
+        .update({ status })
+        .eq('id', ticketId);
+
+      if (error) throw error;
+
       toast({
         title: 'Success',
         description: 'Ticket status updated successfully'
       });
+      
       fetchTickets();
     } catch (error) {
       toast({
@@ -279,7 +308,10 @@ export function SupportManagement() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setSelectedTicket(ticket)}
+                          onClick={() => {
+                            setSelectedTicket(ticket);
+                            fetchTicketReplies(ticket.id);
+                          }}
                         >
                           <Reply className="w-4 h-4 mr-2" />
                           View & Reply
@@ -330,23 +362,64 @@ export function SupportManagement() {
                             </div>
 
                             <div className="space-y-4">
+                              <h3 className="font-semibold">Conversation History</h3>
+                              <div className="max-h-60 overflow-y-auto space-y-3 p-4 bg-gray-50 rounded-lg">
+                                {ticketReplies.length === 0 ? (
+                                  <p className="text-muted-foreground text-sm">No replies yet</p>
+                                ) : (
+                                  ticketReplies.map((reply) => (
+                                    <div
+                                      key={reply.id}
+                                      className={`p-3 rounded-lg ${
+                                        reply.is_staff 
+                                          ? 'bg-blue-50 border-l-4 border-blue-500 ml-4' 
+                                          : 'bg-white border-l-4 border-gray-300 mr-4'
+                                      }`}
+                                    >
+                                      <div className="flex justify-between items-start mb-2">
+                                        <span className="font-medium text-sm">
+                                          {reply.users.full_name}
+                                          {reply.is_staff && (
+                                            <Badge variant="outline" className="ml-2 text-xs">
+                                              Staff
+                                            </Badge>
+                                          )}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {new Date(reply.created_at).toLocaleString()}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm whitespace-pre-wrap">{reply.message}</p>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
                               <h3 className="font-semibold">Update Status</h3>
                               <div className="flex gap-2">
                                 <Button
                                   variant="outline"
+                                  size="sm"
                                   onClick={() => updateTicketStatus(selectedTicket.id, 'in_progress')}
+                                  disabled={selectedTicket.status === 'in_progress'}
                                 >
                                   Mark In Progress
                                 </Button>
                                 <Button
                                   variant="outline"
+                                  size="sm"
                                   onClick={() => updateTicketStatus(selectedTicket.id, 'resolved')}
+                                  disabled={selectedTicket.status === 'resolved'}
                                 >
                                   Mark Resolved
                                 </Button>
                                 <Button
                                   variant="outline"
+                                  size="sm"
                                   onClick={() => updateTicketStatus(selectedTicket.id, 'closed')}
+                                  disabled={selectedTicket.status === 'closed'}
                                 >
                                   Close Ticket
                                 </Button>
@@ -354,7 +427,7 @@ export function SupportManagement() {
                             </div>
 
                             <div className="space-y-4">
-                              <h3 className="font-semibold">Reply to Student</h3>
+                              <h3 className="font-semibold">Send Reply</h3>
                               <Textarea
                                 value={replyMessage}
                                 onChange={(e) => setReplyMessage(e.target.value)}
@@ -364,8 +437,9 @@ export function SupportManagement() {
                               <Button
                                 onClick={() => handleReplyToTicket(selectedTicket.id)}
                                 disabled={!replyMessage.trim()}
+                                className="w-full"
                               >
-                                <Reply className="w-4 h-4 mr-2" />
+                                <Send className="w-4 h-4 mr-2" />
                                 Send Reply
                               </Button>
                             </div>
