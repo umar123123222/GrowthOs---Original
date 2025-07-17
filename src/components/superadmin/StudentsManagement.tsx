@@ -493,13 +493,13 @@ export function StudentsManagement() {
 
   const handleToggleLMSSuspension = async (studentId: string, currentStatus: string) => {
     try {
-      const newStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+      const newLMSStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
       const updateData: any = { 
-        lms_status: newStatus,
+        lms_status: newLMSStatus,
       };
       
       // If we're suspending, set the last_suspended_date
-      if (newStatus === 'suspended') {
+      if (newLMSStatus === 'suspended') {
         updateData.last_suspended_date = new Date().toISOString();
       }
       
