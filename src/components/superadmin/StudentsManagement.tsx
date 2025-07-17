@@ -32,6 +32,15 @@ interface Student {
   fees_due_date: string;
 }
 
+interface InstallmentPayment {
+  id: string;
+  installment_number: number;
+  total_installments: number;
+  amount: number;
+  payment_date: string;
+  status: string;
+}
+
 interface ActivityLog {
   id: string;
   activity_type: string;
@@ -62,6 +71,7 @@ export function StudentsManagement() {
   const [statusUpdateDialog, setStatusUpdateDialog] = useState(false);
   const [selectedStudentForStatus, setSelectedStudentForStatus] = useState<Student | null>(null);
   const [newStatus, setNewStatus] = useState('');
+  const [installmentPayments, setInstallmentPayments] = useState<Map<string, InstallmentPayment[]>>(new Map());
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -76,6 +86,12 @@ export function StudentsManagement() {
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  useEffect(() => {
+    if (students.length > 0) {
+      fetchInstallmentPayments();
+    }
+  }, [students]);
 
   useEffect(() => {
     filterStudents();
@@ -119,6 +135,29 @@ export function StudentsManagement() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchInstallmentPayments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('installment_payments')
+        .select('*')
+        .order('installment_number', { ascending: true });
+
+      if (error) throw error;
+
+      // Group payments by user_id
+      const paymentsMap = new Map<string, InstallmentPayment[]>();
+      data?.forEach((payment) => {
+        const userPayments = paymentsMap.get(payment.user_id) || [];
+        userPayments.push(payment);
+        paymentsMap.set(payment.user_id, userPayments);
+      });
+
+      setInstallmentPayments(paymentsMap);
+    } catch (error) {
+      console.error('Error fetching installment payments:', error);
     }
   };
 
@@ -542,6 +581,86 @@ export function StudentsManagement() {
     return 'Fees Cleared';
   };
 
+  const getInstallmentStatus = (student: Student) => {
+    const payments = installmentPayments.get(student.id) || [];
+    const totalInstallments = student.fees_structure === '2_installments' ? 2 : 
+                              student.fees_structure === '3_installments' ? 3 : 1;
+
+    if (payments.length === 0) {
+      return { status: getInvoiceStatus(student), color: 'bg-gray-100 text-gray-800' };
+    }
+
+    const paidPayments = payments.filter(p => p.status === 'paid');
+    
+    if (paidPayments.length === totalInstallments) {
+      return { status: 'Fees Cleared', color: 'bg-green-100 text-green-800' };
+    } else if (paidPayments.length > 0) {
+      const ordinalSuffix = (n: number) => {
+        const j = n % 10;
+        const k = n % 100;
+        if (j === 1 && k !== 11) return `${n}st`;
+        if (j === 2 && k !== 12) return `${n}nd`;
+        if (j === 3 && k !== 13) return `${n}rd`;
+        return `${n}th`;
+      };
+      return { 
+        status: `${ordinalSuffix(paidPayments.length)} Installment Paid`, 
+        color: 'bg-blue-100 text-blue-800' 
+      };
+    }
+
+    return { status: getInvoiceStatus(student), color: 'bg-orange-100 text-orange-800' };
+  };
+
+  const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
+    try {
+      const student = students.find(s => s.id === studentId);
+      if (!student) return;
+
+      const totalInstallments = student.fees_structure === '2_installments' ? 2 : 
+                                student.fees_structure === '3_installments' ? 3 : 1;
+
+      const { error } = await supabase
+        .from('installment_payments')
+        .insert({
+          user_id: studentId,
+          installment_number: installmentNumber,
+          total_installments: totalInstallments,
+          amount: 0, // You can set actual amount based on your business logic
+          status: 'paid'
+        });
+
+      if (error) throw error;
+
+      // If this is the last installment, update the user's fees status
+      if (installmentNumber === totalInstallments) {
+        await supabase
+          .from('users')
+          .update({ 
+            fees_overdue: false,
+            lms_suspended: false,
+            fees_due_date: null
+          })
+          .eq('id', studentId);
+      }
+
+      toast({
+        title: 'Success',
+        description: `Installment ${installmentNumber} marked as paid`
+      });
+
+      fetchInstallmentPayments();
+      fetchStudents();
+    } catch (error) {
+      console.error('Error marking installment as paid:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to mark installment as paid',
+        variant: 'destructive'
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -798,24 +917,30 @@ export function StudentsManagement() {
                       <TableCell>{student.full_name}</TableCell>
                       <TableCell>{student.email}</TableCell>
                       <TableCell>{student.phone || 'N/A'}</TableCell>
-                      <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
-                      <TableCell>
-                        <Badge className={getStatusColor(student.status)}>
-                          {student.status}
-                        </Badge>
-                        {student.lms_suspended && (
-                          <Badge className="ml-2 bg-red-100 text-red-800">
-                            <Ban className="w-3 h-3 mr-1" />
-                            Suspended
-                          </Badge>
-                        )}
-                        {student.fees_overdue && (
-                          <Badge className="ml-2 bg-orange-100 text-orange-800">
-                            <Clock className="w-3 h-3 mr-1" />
-                            Overdue
-                          </Badge>
-                        )}
-                      </TableCell>
+                       <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
+                       <TableCell>
+                         <div className="flex flex-wrap gap-2">
+                           <Badge className={getStatusColor(student.status)}>
+                             {student.status}
+                           </Badge>
+                           {student.lms_suspended && (
+                             <Badge className="bg-red-100 text-red-800">
+                               <Ban className="w-3 h-3 mr-1" />
+                               Suspended
+                             </Badge>
+                           )}
+                           {student.fees_overdue && (
+                             <Badge className="bg-orange-100 text-orange-800">
+                               <Clock className="w-3 h-3 mr-1" />
+                               Overdue
+                             </Badge>
+                           )}
+                           <Badge className={getInstallmentStatus(student).color}>
+                             <DollarSign className="w-3 h-3 mr-1" />
+                             {getInstallmentStatus(student).status}
+                           </Badge>
+                         </div>
+                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button
@@ -897,6 +1022,34 @@ export function StudentsManagement() {
                                 </div>
                               </div>
                             </div>
+                            
+                            {/* Installment Payment Buttons */}
+                            {(student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && (
+                              <div className="pt-3 border-t border-blue-200">
+                                <Label className="text-sm font-medium text-gray-700 mb-2 block">Installment Payments</Label>
+                                <div className="flex flex-wrap gap-2">
+                                  {Array.from({ length: student.fees_structure === '2_installments' ? 2 : 3 }, (_, index) => {
+                                    const installmentNumber = index + 1;
+                                    const payments = installmentPayments.get(student.id) || [];
+                                    const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
+                                    
+                                    return (
+                                      <Button
+                                        key={installmentNumber}
+                                        variant={isPaid ? "default" : "outline"}
+                                        size="sm"
+                                        disabled={isPaid}
+                                        onClick={() => handleMarkInstallmentPaid(student.id, installmentNumber)}
+                                        className={`hover-scale ${isPaid ? "bg-green-500 hover:bg-green-600" : "hover:border-green-300 hover:text-green-600"}`}
+                                      >
+                                        {isPaid ? <CheckCircle className="w-4 h-4 mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
+                                        {isPaid ? `${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid` : `Mark ${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid`}
+                                      </Button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
                             
                             <div className="flex flex-wrap gap-2 pt-4 border-t border-blue-200">
                               <Button

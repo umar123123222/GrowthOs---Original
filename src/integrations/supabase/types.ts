@@ -412,6 +412,53 @@ export type Database = {
           },
         ]
       }
+      installment_payments: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          id: string
+          installment_number: number
+          invoice_id: string | null
+          payment_date: string | null
+          status: string | null
+          total_installments: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          id?: string
+          installment_number: number
+          invoice_id?: string | null
+          payment_date?: string | null
+          status?: string | null
+          total_installments: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          id?: string
+          installment_number?: number
+          invoice_id?: string | null
+          payment_date?: string | null
+          status?: string | null
+          total_installments?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installment_payments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leaderboard: {
         Row: {
           id: string
