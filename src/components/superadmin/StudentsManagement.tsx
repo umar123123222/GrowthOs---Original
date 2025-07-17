@@ -321,34 +321,6 @@ export function StudentsManagement() {
     }
   };
 
-  const handleFeesReceived = async (studentId: string) => {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ 
-          fees_overdue: false,
-          lms_suspended: false,
-          fees_due_date: null
-        })
-        .eq('id', studentId);
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success',
-        description: 'Fees marked as received'
-      });
-
-      fetchStudents();
-    } catch (error) {
-      console.error('Error updating fees status:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update fees status',
-        variant: 'destructive'
-      });
-    }
-  };
 
   const handleSuspendAccount = async (studentId: string) => {
     try {
@@ -1200,15 +1172,6 @@ export function StudentsManagement() {
                                   Download Invoice
                                 </Button>
                               )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleFeesReceived(student.id)}
-                                className="hover-scale text-green-600 hover:text-green-700 hover:border-green-300"
-                              >
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Mark Fees Received
-                              </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
