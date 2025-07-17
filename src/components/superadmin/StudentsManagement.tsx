@@ -97,6 +97,29 @@ export function StudentsManagement() {
     filterStudents();
   }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, statusFilter]);
 
+  const fetchInstallmentPayments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('installment_payments')
+        .select('*')
+        .order('installment_number', { ascending: true });
+
+      if (error) throw error;
+
+      // Group payments by user_id
+      const paymentsMap = new Map<string, InstallmentPayment[]>();
+      data?.forEach((payment) => {
+        const userPayments = paymentsMap.get(payment.user_id) || [];
+        userPayments.push(payment);
+        paymentsMap.set(payment.user_id, userPayments);
+      });
+
+      setInstallmentPayments(paymentsMap);
+    } catch (error) {
+      console.error('Error fetching installment payments:', error);
+    }
+  };
+
   const fetchStudents = async () => {
     try {
       const { data, error } = await supabase
@@ -138,28 +161,6 @@ export function StudentsManagement() {
     }
   };
 
-  const fetchInstallmentPayments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('installment_payments')
-        .select('*')
-        .order('installment_number', { ascending: true });
-
-      if (error) throw error;
-
-      // Group payments by user_id
-      const paymentsMap = new Map<string, InstallmentPayment[]>();
-      data?.forEach((payment) => {
-        const userPayments = paymentsMap.get(payment.user_id) || [];
-        userPayments.push(payment);
-        paymentsMap.set(payment.user_id, userPayments);
-      });
-
-      setInstallmentPayments(paymentsMap);
-    } catch (error) {
-      console.error('Error fetching installment payments:', error);
-    }
-  };
 
   const filterStudents = () => {
     let filtered = students;
