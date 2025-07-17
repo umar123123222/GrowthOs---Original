@@ -111,49 +111,45 @@ const Profile = ({ user }: ProfileProps = {}) => {
     }
 
     try {
-      // First, verify the current password by attempting to sign in with it
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      
-      if (!currentUser?.email) {
-        throw new Error("No user found");
-      }
-
-      // Try to sign in with current password to verify it
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: currentUser.email,
-        password: passwordData.currentPassword,
-      });
-
-      if (signInError) {
-        toast({
-          title: "Error",
-          description: "Current password is incorrect",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // If current password is correct, update to new password
-      const { error: updateError } = await supabase.auth.updateUser({
+      // Update password directly - Supabase will handle current password verification
+      const { data, error } = await supabase.auth.updateUser({
         password: passwordData.newPassword
       });
 
-      if (updateError) throw updateError;
+      if (error) {
+        // Handle specific error cases
+        if (error.message.includes('session_not_found') || error.message.includes('unauthorized')) {
+          toast({
+            title: "Error",
+            description: "Your session has expired. Please log in again.",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        throw error;
+      }
 
-      // Clear form
-      setPasswordData({
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      });
+      // Check if the update was successful
+      if (data.user) {
+        // Clear form on success
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
 
-      // Delay toast to ensure it shows after auth state changes settle
-      setTimeout(() => {
         toast({
           title: "Success!",
           description: "Password updated successfully",
         });
-      }, 500);
+      } else {
+        toast({
+          title: "Error", 
+          description: "Password update failed. Please try again.",
+          variant: "destructive",
+        });
+      }
     } catch (error: any) {
       console.error('Error updating password:', error);
       
@@ -161,6 +157,8 @@ const Profile = ({ user }: ProfileProps = {}) => {
       
       if (error?.code === 'weak_password') {
         errorMessage = "Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character.";
+      } else if (error?.message) {
+        errorMessage = error.message;
       }
       
       toast({
