@@ -1037,22 +1037,29 @@ export function StudentsManagement() {
                       <TableCell>{student.phone || 'N/A'}</TableCell>
                        <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
                        <TableCell>
-                         <div className="flex flex-wrap gap-2">
-                           <Badge className={getStatusColor(student.status)}>
-                             {student.status}
-                           </Badge>
-                           {student.lms_suspended && (
-                             <Badge className="bg-red-100 text-red-800">
-                               <Ban className="w-3 h-3 mr-1" />
-                               Suspended
-                             </Badge>
-                           )}
-                           {student.fees_overdue && (
-                             <Badge className="bg-orange-100 text-orange-800">
-                               <Clock className="w-3 h-3 mr-1" />
-                               Overdue
-                             </Badge>
-                           )}
+                          <div className="flex flex-wrap gap-2">
+                            <Badge className={getStatusColor(student.status)}>
+                              {student.status}
+                            </Badge>
+                            <Badge className={student.lms_suspended ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
+                              {student.lms_suspended ? (
+                                <>
+                                  <Ban className="w-3 h-3 mr-1" />
+                                  LMS Suspended
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  LMS Active
+                                </>
+                              )}
+                            </Badge>
+                            {student.fees_overdue && (
+                              <Badge className="bg-orange-100 text-orange-800">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Overdue
+                              </Badge>
+                            )}
                            <Badge className={getInstallmentStatus(student).color}>
                              <DollarSign className="w-3 h-3 mr-1" />
                              {getInstallmentStatus(student).status}
