@@ -359,7 +359,7 @@ export function StudentsManagement() {
         .update({ 
           last_invoice_date: new Date().toISOString(),
           last_invoice_sent: true,
-          fees_due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+          fees_due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
         })
         .eq('id', studentId);
 
