@@ -60,6 +60,7 @@ export function RecordingsManagement() {
 
   const fetchRecordings = async () => {
     try {
+      console.log('Fetching recordings...');
       const { data, error } = await supabase
         .from('available_lessons')
         .select(`
@@ -68,9 +69,15 @@ export function RecordingsManagement() {
         `)
         .order('sequence_order');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching recordings:', error);
+        throw error;
+      }
+      
+      console.log('Recordings fetched:', data);
       setRecordings(data || []);
     } catch (error) {
+      console.error('Failed to fetch recordings:', error);
       toast({
         title: "Error",
         description: "Failed to fetch recordings",
@@ -112,41 +119,47 @@ export function RecordingsManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Form submission started with data:', formData);
+    
     try {
+      const recordingData = {
+        recording_title: formData.recording_title,
+        recording_url: formData.recording_url,
+        duration_min: formData.duration_min || null,
+        sequence_order: formData.sequence_order || null,
+        notes: formData.notes || null,
+        module: formData.module_id || null,
+        assignment_id: formData.assignment_id || null
+      };
+
+      console.log('Prepared recording data:', recordingData);
+
       if (editingRecording) {
+        console.log('Updating recording with ID:', editingRecording.id);
         const { error } = await supabase
           .from('available_lessons')
-          .update({
-            recording_title: formData.recording_title,
-            recording_url: formData.recording_url,
-            duration_min: formData.duration_min,
-            sequence_order: formData.sequence_order,
-            notes: formData.notes,
-            module: formData.module_id,
-            assignment_id: formData.assignment_id
-          })
+          .update(recordingData)
           .eq('id', editingRecording.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Update error:', error);
+          throw error;
+        }
 
         toast({
           title: "Success",
           description: "Recording updated successfully"
         });
       } else {
+        console.log('Creating new recording...');
         const { error } = await supabase
           .from('available_lessons')
-          .insert({
-            recording_title: formData.recording_title,
-            recording_url: formData.recording_url,
-            duration_min: formData.duration_min,
-            sequence_order: formData.sequence_order,
-            notes: formData.notes,
-            module: formData.module_id,
-            assignment_id: formData.assignment_id
-          });
+          .insert(recordingData);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error:', error);
+          throw error;
+        }
 
         toast({
           title: "Success",
@@ -165,8 +178,11 @@ export function RecordingsManagement() {
         module_id: '',
         assignment_id: ''
       });
-      fetchRecordings();
+      
+      // Refresh recordings
+      await fetchRecordings();
     } catch (error) {
+      console.error('Error saving recording:', error);
       toast({
         title: "Error",
         description: "Failed to save recording",
@@ -193,19 +209,25 @@ export function RecordingsManagement() {
     if (!confirm('Are you sure you want to delete this recording?')) return;
 
     try {
+      console.log('Deleting recording with ID:', recordingId);
       const { error } = await supabase
         .from('available_lessons')
         .delete()
         .eq('id', recordingId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
 
       toast({
         title: "Success",
         description: "Recording deleted successfully"
       });
-      fetchRecordings();
+      
+      await fetchRecordings();
     } catch (error) {
+      console.error('Error deleting recording:', error);
       toast({
         title: "Error",
         description: "Failed to delete recording",
@@ -291,10 +313,9 @@ export function RecordingsManagement() {
                   <Input
                     type="number"
                     value={formData.duration_min}
-                    onChange={(e) => setFormData({ ...formData, duration_min: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, duration_min: parseInt(e.target.value) || 0 })}
                     placeholder="Duration"
                     className="transition-all duration-200 focus:scale-[1.02]"
-                    required
                   />
                 </div>
                 
@@ -303,10 +324,9 @@ export function RecordingsManagement() {
                   <Input
                     type="number"
                     value={formData.sequence_order}
-                    onChange={(e) => setFormData({ ...formData, sequence_order: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, sequence_order: parseInt(e.target.value) || 0 })}
                     placeholder="Order"
                     className="transition-all duration-200 focus:scale-[1.02]"
-                    required
                   />
                 </div>
               </div>
