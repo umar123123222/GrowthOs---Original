@@ -31,6 +31,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Plus, Activity, Eye, Edit } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import AdminTeams from '@/components/admin/AdminTeams';
+import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
 
 interface TeamMember {
   id: string;
@@ -56,9 +57,6 @@ const Teams = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isActivityDialogOpen, setIsActivityDialogOpen] = useState(false);
-  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
-  const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [newMember, setNewMember] = useState({
     full_name: '',
     email: '',
@@ -89,25 +87,6 @@ const Teams = () => {
     }
   };
 
-  const fetchActivityLogs = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('user_activity_logs')
-        .select('*')
-        .eq('user_id', userId)
-        .order('occurred_at', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      setActivityLogs(data || []);
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to load activity logs",
-        variant: "destructive"
-      });
-    }
-  };
 
   const handleAddMember = async () => {
     if (!newMember.full_name || !newMember.email || !newMember.role) {
@@ -156,11 +135,6 @@ const Teams = () => {
     }
   };
 
-  const handleViewActivity = (member: TeamMember) => {
-    setSelectedMember(member);
-    setIsActivityDialogOpen(true);
-    fetchActivityLogs(member.id);
-  };
 
   useEffect(() => {
     fetchTeamMembers();
@@ -313,14 +287,12 @@ const Teams = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewActivity(member)}
-                      >
-                        <Activity className="w-4 h-4 mr-1" />
-                        Activity
-                      </Button>
+                      <ActivityLogsDialog>
+                        <Button variant="outline" size="sm">
+                          <Activity className="w-4 h-4 mr-1" />
+                          Activity
+                        </Button>
+                      </ActivityLogsDialog>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -330,40 +302,6 @@ const Teams = () => {
         </CardContent>
       </Card>
 
-      {/* Activity Logs Dialog */}
-      <Dialog open={isActivityDialogOpen} onOpenChange={setIsActivityDialogOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Activity Logs - {selectedMember?.full_name}</DialogTitle>
-          </DialogHeader>
-          <div className="max-h-96 overflow-y-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Activity Type</TableHead>
-                  <TableHead>Details</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activityLogs.map((log) => (
-                  <TableRow key={log.id}>
-                    <TableCell>
-                      {new Date(log.occurred_at).toLocaleString()}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{log.activity_type}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      {log.metadata ? JSON.stringify(log.metadata) : 'N/A'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
