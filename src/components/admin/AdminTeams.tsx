@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,9 +29,8 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Activity, Eye, Edit } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import AdminTeams from '@/components/admin/AdminTeams';
+import { Plus, Activity, Eye, Edit } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -44,15 +44,7 @@ interface TeamMember {
   status: string;
 }
 
-const Teams = () => {
-  const { user } = useAuth();
-
-  // Show restricted admin version for admin users
-  if (user?.role === 'admin') {
-    return <AdminTeams />;
-  }
-
-  // Show full Teams component for superadmin and other roles
+const AdminTeams = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -67,13 +59,15 @@ const Teams = () => {
     lms_password: ''
   });
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const fetchTeamMembers = async () => {
     try {
+      // Admins can only see mentors, not other admins or superadmins
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .in('role', ['admin', 'mentor'])
+        .eq('role', 'mentor')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -114,6 +108,16 @@ const Teams = () => {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Prevent admins from adding other admins
+    if (newMember.role === 'admin' || newMember.role === 'superadmin') {
+      toast({
+        title: "Error",
+        description: "You don't have permission to add admin users",
         variant: "destructive"
       });
       return;
@@ -166,7 +170,6 @@ const Teams = () => {
     fetchTeamMembers();
   }, []);
 
-  const adminCount = teamMembers.filter(m => m.role === 'admin').length;
   const mentorCount = teamMembers.filter(m => m.role === 'mentor').length;
 
   if (loading) {
@@ -222,7 +225,6 @@ const Teams = () => {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="mentor">Mentor</SelectItem>
                   </SelectContent>
                 </Select>
@@ -256,14 +258,6 @@ const Teams = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Total Admins</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{adminCount}</div>
-          </CardContent>
-        </Card>
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Total Mentors</CardTitle>
@@ -368,4 +362,4 @@ const Teams = () => {
   );
 };
 
-export default Teams;
+export default AdminTeams;

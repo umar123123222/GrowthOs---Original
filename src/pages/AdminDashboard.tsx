@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +11,12 @@ import { StudentManagement } from '@/components/admin/StudentManagement';
 import { MentorManagement } from '@/components/admin/MentorManagement';
 import { ActivityLogs } from '@/components/admin/ActivityLogs';
 import { StudentPerformance } from '@/components/admin/StudentPerformance';
+import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
+import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
+import { AssignmentsManagement } from '@/components/superadmin/AssignmentsManagement';
+import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
+import { SubmissionsManagement } from '@/components/superadmin/SubmissionsManagement';
+import { SupportManagement } from '@/components/superadmin/SupportManagement';
 
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
@@ -17,12 +24,24 @@ export default function AdminDashboard() {
 
   const renderContent = () => {
     switch (activeTab) {
+      case 'modules':
+        return <ModulesManagement />;
+      case 'recordings':
+        return <RecordingsManagement />;
+      case 'assignments':
+        return <AssignmentsManagement />;
+      case 'success-sessions':
+        return <SuccessSessionsManagement />;
+      case 'students':
+        return <StudentManagement />;
+      case 'submissions':
+        return <SubmissionsManagement />;
+      case 'support':
+        return <SupportManagement />;
       case 'content':
         return <ContentManagement />;
       case 'financial':
         return <FinancialManagement />;
-      case 'students':
-        return <StudentManagement />;
       case 'mentors':
         return <MentorManagement />;
       case 'activity':
