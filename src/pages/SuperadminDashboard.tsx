@@ -13,27 +13,24 @@ import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessio
 import { SubmissionsManagement } from '@/components/superadmin/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface DashboardStats {
+  totalAdmins: number;
+  totalSuperadmins: number;
+  totalMentors: number;
+  totalStudents: number;
+  activeStudents: number;
+  studentsUsingLMS: number;
+  courseCompletionRate: number;
+  recoveryRate: number;
+}
 
 export default function SuperadminDashboard() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const activeTab = searchParams.get('tab') || 'dashboard';
-
-  const handleSecurityClick = () => {
-    toast({
-      title: "Security Panel",
-      description: "Security management features are being implemented.",
-    });
-  };
-
-  const handleCriticalActionsClick = () => {
-    toast({
-      title: "Critical Actions",
-      description: "Critical system actions panel is being prepared.",
-      variant: "destructive"
-    });
-  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -66,6 +63,110 @@ export default function SuperadminDashboard() {
 }
 
 function DashboardContent() {
+  const [stats, setStats] = useState<DashboardStats>({
+    totalAdmins: 0,
+    totalSuperadmins: 0,
+    totalMentors: 0,
+    totalStudents: 0,
+    activeStudents: 0,
+    studentsUsingLMS: 0,
+    courseCompletionRate: 0,
+    recoveryRate: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch user counts by role
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role, lms_status, status');
+
+      if (userError) {
+        console.error('Error fetching user data:', userError);
+        return;
+      }
+
+      // Count users by role
+      const totalAdmins = userData?.filter(user => user.role === 'admin').length || 0;
+      const totalSuperadmins = userData?.filter(user => user.role === 'superadmin').length || 0;
+      const totalMentors = userData?.filter(user => user.role === 'mentor').length || 0;
+      const totalStudents = userData?.filter(user => user.role === 'student').length || 0;
+      
+      // Count active students (status = 'Active')
+      const activeStudents = userData?.filter(user => 
+        user.role === 'student' && user.status === 'Active'
+      ).length || 0;
+      
+      // Count students using LMS (lms_status = 'active')
+      const studentsUsingLMS = userData?.filter(user => 
+        user.role === 'student' && user.lms_status === 'active'
+      ).length || 0;
+
+      // Fetch course completion data
+      const { data: progressData, error: progressError } = await supabase
+        .from('user_module_progress')
+        .select('user_id, is_completed');
+
+      if (progressError) {
+        console.error('Error fetching progress data:', progressError);
+      }
+
+      // Calculate completion rate
+      let courseCompletionRate = 0;
+      if (progressData && progressData.length > 0) {
+        const completedModules = progressData.filter(p => p.is_completed).length;
+        courseCompletionRate = Math.round((completedModules / progressData.length) * 100);
+      }
+
+      // Fetch recovery data
+      const { data: recoveryData, error: recoveryError } = await supabase
+        .from('performance_record')
+        .select('times_recovered');
+
+      if (recoveryError) {
+        console.error('Error fetching recovery data:', recoveryError);
+      }
+
+      // Calculate recovery rate (simplified - you may want to adjust this logic)
+      let recoveryRate = 0;
+      if (recoveryData && recoveryData.length > 0) {
+        const totalRecoveries = recoveryData.reduce((sum, record) => sum + (record.times_recovered || 0), 0);
+        recoveryRate = Math.round((totalRecoveries / recoveryData.length) * 100);
+      }
+
+      setStats({
+        totalAdmins,
+        totalSuperadmins,
+        totalMentors,
+        totalStudents,
+        activeStudents,
+        studentsUsingLMS,
+        courseCompletionRate,
+        recoveryRate
+      });
+
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading dashboard...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -84,7 +185,7 @@ function DashboardContent() {
             <Shield className="h-5 w-5 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-900">12</div>
+            <div className="text-3xl font-bold text-red-900">{stats.totalAdmins}</div>
             <p className="text-xs text-muted-foreground">Platform administrators</p>
           </CardContent>
         </Card>
@@ -95,7 +196,7 @@ function DashboardContent() {
             <Users className="h-5 w-5 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-purple-900">2</div>
+            <div className="text-3xl font-bold text-purple-900">{stats.totalSuperadmins}</div>
             <p className="text-xs text-muted-foreground">System superadmins</p>
           </CardContent>
         </Card>
@@ -106,7 +207,7 @@ function DashboardContent() {
             <Users className="h-5 w-5 text-orange-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-orange-900">45</div>
+            <div className="text-3xl font-bold text-orange-900">{stats.totalMentors}</div>
             <p className="text-xs text-muted-foreground">Active mentors</p>
           </CardContent>
         </Card>
@@ -117,7 +218,7 @@ function DashboardContent() {
             <Users className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-900">2,480</div>
+            <div className="text-3xl font-bold text-blue-900">{stats.totalStudents}</div>
             <p className="text-xs text-muted-foreground">All registered students</p>
           </CardContent>
         </Card>
@@ -130,7 +231,7 @@ function DashboardContent() {
             <Activity className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-900">2,156</div>
+            <div className="text-3xl font-bold text-green-900">{stats.activeStudents}</div>
             <p className="text-xs text-muted-foreground">Currently active students</p>
           </CardContent>
         </Card>
@@ -141,7 +242,7 @@ function DashboardContent() {
             <GraduationCap className="h-5 w-5 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-indigo-900">1,892</div>
+            <div className="text-3xl font-bold text-indigo-900">{stats.studentsUsingLMS}</div>
             <p className="text-xs text-muted-foreground">Students actively using LMS</p>
           </CardContent>
         </Card>
@@ -152,7 +253,7 @@ function DashboardContent() {
             <Activity className="h-5 w-5 text-cyan-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-cyan-900">73.2%</div>
+            <div className="text-3xl font-bold text-cyan-900">{stats.courseCompletionRate}%</div>
             <p className="text-xs text-muted-foreground">Students completing courses</p>
           </CardContent>
         </Card>
@@ -163,7 +264,7 @@ function DashboardContent() {
             <Activity className="h-5 w-5 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-900">68.5%</div>
+            <div className="text-3xl font-bold text-yellow-900">{stats.recoveryRate}%</div>
             <p className="text-xs text-muted-foreground">Student recovery rate</p>
           </CardContent>
         </Card>
