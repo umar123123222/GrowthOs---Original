@@ -59,16 +59,19 @@ export const useAuth = () => {
         .from('users')
         .select('id, email, role, full_name, created_at')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
+        console.error('Error fetching user profile:', error);
         setUser(null);
       } else if (data) {
         setUser(data as User);
       } else {
+        // No user profile found, but this isn't an error
         setUser(null);
       }
     } catch (error) {
+      console.error('Exception in fetchUserProfile:', error);
       setUser(null);
     } finally {
       setLoading(false);
