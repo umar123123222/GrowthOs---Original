@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -88,182 +89,122 @@ export default function MentorDashboard() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid grid-cols-5 w-full bg-purple-50">
-            <TabsTrigger value="overview" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">Mentoring Hub</TabsTrigger>
-            <TabsTrigger value="students" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">My Students</TabsTrigger>
-            <TabsTrigger value="feedback" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">Review & Feedback</TabsTrigger>
-            <TabsTrigger value="progress" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">Progress Tracking</TabsTrigger>
-            <TabsTrigger value="sessions" className="data-[state=active]:bg-purple-600 data-[state=active]:text-white">Sessions</TabsTrigger>
-          </TabsList>
+        {/* Overview Content */}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="border-l-4 border-l-purple-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Students Mentoring</CardTitle>
+                <Users className="h-4 w-4 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-900">{stats.totalStudents}</div>
+                <p className="text-xs text-muted-foreground">Under your guidance</p>
+              </CardContent>
+            </Card>
 
-          <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="border-l-4 border-l-purple-500">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Students Mentoring</CardTitle>
-                  <Users className="h-4 w-4 text-purple-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-purple-900">{stats.totalStudents}</div>
-                  <p className="text-xs text-muted-foreground">Under your guidance</p>
-                </CardContent>
-              </Card>
+            <Card className="border-l-4 border-l-orange-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Pending Reviews</CardTitle>
+                <Clock className="h-4 w-4 text-orange-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-900">{stats.pendingFeedback}</div>
+                <p className="text-xs text-muted-foreground">Awaiting your feedback</p>
+              </CardContent>
+            </Card>
 
-              <Card className="border-l-4 border-l-orange-500">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Pending Reviews</CardTitle>
-                  <Clock className="h-4 w-4 text-orange-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-orange-900">{stats.pendingFeedback}</div>
-                  <p className="text-xs text-muted-foreground">Awaiting your feedback</p>
-                </CardContent>
-              </Card>
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Feedback Given</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-900">47</div>
+                <p className="text-xs text-muted-foreground">This week</p>
+              </CardContent>
+            </Card>
 
-              <Card className="border-l-4 border-l-green-500">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Feedback Given</CardTitle>
-                  <CheckCircle className="h-4 w-4 text-green-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-900">47</div>
-                  <p className="text-xs text-muted-foreground">This week</p>
-                </CardContent>
-              </Card>
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Sessions Held</CardTitle>
+                <MessageSquare className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-900">12</div>
+                <p className="text-xs text-muted-foreground">This month</p>
+              </CardContent>
+            </Card>
+          </div>
 
-              <Card className="border-l-4 border-l-blue-500">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Sessions Held</CardTitle>
-                  <MessageSquare className="h-4 w-4 text-blue-600" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-blue-900">12</div>
-                  <p className="text-xs text-muted-foreground">This month</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <AlertCircle className="w-5 h-5 mr-2 text-red-500" />
-                    Students Needing Attention
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-3 bg-red-50 rounded-lg">
-                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                        <span className="text-red-600 font-semibold text-sm">JS</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">John Smith</p>
-                        <p className="text-xs text-muted-foreground">No submission for 5 days</p>
-                      </div>
-                      <Badge variant="destructive" className="text-xs">Urgent</Badge>
-                    </div>
-                    <div className="flex items-center gap-4 p-3 bg-yellow-50 rounded-lg">
-                      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                        <span className="text-yellow-600 font-semibold text-sm">EM</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Emma Miller</p>
-                        <p className="text-xs text-muted-foreground">Low quiz scores</p>
-                      </div>
-                      <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">Monitor</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
-                    Top Performers
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4 p-3 bg-green-50 rounded-lg">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <span className="text-green-600 font-semibold text-sm">AK</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">Alice Kim</p>
-                        <p className="text-xs text-muted-foreground">Completed all modules</p>
-                      </div>
-                      <span className="text-xs text-green-600 font-medium">95%</span>
-                    </div>
-                    <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-blue-600 font-semibold text-sm">DR</span>
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">David Rodriguez</p>
-                        <p className="text-xs text-muted-foreground">Excellent progress</p>
-                      </div>
-                      <span className="text-xs text-blue-600 font-medium">89%</span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="students">
-            <MyStudents students={assignedStudents} />
-          </TabsContent>
-
-          <TabsContent value="feedback">
-            <AssignmentFeedback />
-          </TabsContent>
-
-          <TabsContent value="progress">
-            <StudentProgress students={assignedStudents} />
-          </TabsContent>
-
-          <TabsContent value="sessions">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
-                  <Calendar className="w-5 h-5 mr-2 text-purple-600" />
-                  Mentoring Sessions
+                  <AlertCircle className="w-5 h-5 mr-2 text-red-500" />
+                  Students Needing Attention
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center justify-between p-4 bg-purple-50 rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">1-on-1 with Sarah Johnson</p>
-                        <p className="text-sm text-muted-foreground">Today at 2:00 PM</p>
-                      </div>
+                  <div className="flex items-center gap-4 p-3 bg-red-50 rounded-lg">
+                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                      <span className="text-red-600 font-semibold text-sm">JS</span>
                     </div>
-                    <Button size="sm" variant="outline">Join Session</Button>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">John Smith</p>
+                      <p className="text-xs text-muted-foreground">No submission for 5 days</p>
+                    </div>
+                    <Badge variant="destructive" className="text-xs">Urgent</Badge>
                   </div>
-                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                        <Calendar className="w-5 h-5 text-gray-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium">Group Q&A Session</p>
-                        <p className="text-sm text-muted-foreground">Tomorrow at 10:00 AM</p>
-                      </div>
+                  <div className="flex items-center gap-4 p-3 bg-yellow-50 rounded-lg">
+                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                      <span className="text-yellow-600 font-semibold text-sm">EM</span>
                     </div>
-                    <Button size="sm" variant="outline">Schedule</Button>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Emma Miller</p>
+                      <p className="text-xs text-muted-foreground">Low quiz scores</p>
+                    </div>
+                    <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">Monitor</Badge>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          </TabsContent>
-        </Tabs>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
+                  Top Performers
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-4 p-3 bg-green-50 rounded-lg">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <span className="text-green-600 font-semibold text-sm">AK</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">Alice Kim</p>
+                      <p className="text-xs text-muted-foreground">Completed all modules</p>
+                    </div>
+                    <span className="text-xs text-green-600 font-medium">95%</span>
+                  </div>
+                  <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-blue-600 font-semibold text-sm">DR</span>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">David Rodriguez</p>
+                      <p className="text-xs text-muted-foreground">Excellent progress</p>
+                    </div>
+                    <span className="text-xs text-blue-600 font-medium">89%</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
     </RoleGuard>
   );

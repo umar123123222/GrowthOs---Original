@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
@@ -35,9 +36,10 @@ const Layout = ({ user }: LayoutProps) => {
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  // Check if user is superadmin, admin, or regular user
+  // Check if user is superadmin, admin, mentor, or regular user
   const isUserSuperadmin = user?.role === 'superadmin';
   const isUserAdmin = user?.role === 'admin';
+  const isUserMentor = user?.role === 'mentor';
   const isUserAdminOrSuperadmin = isUserSuperadmin || isUserAdmin;
 
   // Check if any course submenu is active to keep it expanded
@@ -88,6 +90,13 @@ const Layout = ({ user }: LayoutProps) => {
         { name: "Teams", href: "/teams", icon: UserCheck },
         { name: "Profile", href: "/profile", icon: User }
       ];
+    } else if (isUserMentor) {
+      return [
+        { name: "Dashboard", href: "/mentor", icon: Monitor },
+        { name: "Success Sessions", href: "/live-sessions", icon: Calendar },
+        { name: "Submissions", href: "/assignments", icon: FileText },
+        { name: "Profile", href: "/profile", icon: User }
+      ];
     }
     
     // Default navigation for other users
@@ -96,7 +105,7 @@ const Layout = ({ user }: LayoutProps) => {
       { name: "Videos", href: "/videos", icon: BookOpen },
       { name: "Assignments", href: "/assignments", icon: FileText },
     ];
-  }, [isUserSuperadmin, isUserAdmin]);
+  }, [isUserSuperadmin, isUserAdmin, isUserMentor]);
 
   // Auto-expand course menu if any course tab is active
   useEffect(() => {
