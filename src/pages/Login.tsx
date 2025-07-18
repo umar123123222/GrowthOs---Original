@@ -56,10 +56,16 @@ const Login = () => {
         
         if (email === 'umaridmpakistan@gmail.com') {
           userRole = 'superadmin';
-          fullName = 'Umar ID';
+          fullName = 'Umar (Super Admin)';
         } else if (email === 'umarservices0@gmail.com') {
           userRole = 'admin';
           fullName = 'Umar Services (Admin)';
+        } else if (email === 'test@gmail.com') {
+          userRole = 'mentor';
+          fullName = 'Test Mentor';
+        } else if (email === 'test0@gmail.com') {
+          userRole = 'student';
+          fullName = 'Test Student';
         }
 
         // Create user if they don't exist
