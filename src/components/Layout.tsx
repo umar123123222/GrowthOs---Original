@@ -19,11 +19,14 @@ import {
   User,
   Calendar,
   Menu,
-  X
+  X,
+  Activity
 } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { FloatingActivityButton } from "./FloatingActivityButton";
+import { ActivityLogsDialog } from "./ActivityLogsDialog";
 
 interface LayoutProps {
   user: any;
@@ -183,6 +186,21 @@ const Layout = ({ user }: LayoutProps) => {
             <div className="flex items-center space-x-4">
               <NotificationDropdown />
               
+              {/* Activity Logs Button for authorized users */}
+              {(isUserSuperadmin || isUserAdmin || isUserMentor) && (
+                <ActivityLogsDialog>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-gray-700 hover:text-blue-600 hover:border-blue-200"
+                    title="View Activity Logs"
+                  >
+                    <Activity className="w-4 h-4 mr-2" />
+                    Activity Logs
+                  </Button>
+                </ActivityLogsDialog>
+              )}
+              
               <Button
                 onClick={handleLogout}
                 variant="outline"
@@ -280,6 +298,9 @@ const Layout = ({ user }: LayoutProps) => {
           <Outlet />
         </main>
       </div>
+      
+      {/* Floating Activity Button */}
+      <FloatingActivityButton />
     </div>
   );
 };
