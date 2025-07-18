@@ -313,18 +313,22 @@ export function SuccessSessionsManagement() {
                 <div>
                   <label className="block text-sm font-medium mb-1">Start Time</label>
                   <Input
-                    type="datetime-local"
+                    type="time"
                     value={formData.start_time}
                     onChange={(e) => setFormData({...formData, start_time: e.target.value})}
                     required
+                    step="900"
+                    placeholder="HH:MM"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">End Time</label>
                   <Input
-                    type="datetime-local"
+                    type="time"
                     value={formData.end_time}
                     onChange={(e) => setFormData({...formData, end_time: e.target.value})}
+                    step="900"
+                    placeholder="HH:MM"
                   />
                 </div>
               </div>
