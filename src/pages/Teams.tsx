@@ -59,11 +59,6 @@ const Teams = () => {
   });
   const { toast } = useToast();
 
-  // Show restricted admin version for admin users
-  if (user?.role === 'admin') {
-    return <AdminTeams />;
-  }
-
   const fetchTeamMembers = async () => {
     try {
       const { data, error } = await supabase
@@ -84,7 +79,6 @@ const Teams = () => {
       setLoading(false);
     }
   };
-
 
   const handleAddMember = async () => {
     if (!newMember.full_name || !newMember.email || !newMember.role) {
@@ -133,10 +127,14 @@ const Teams = () => {
     }
   };
 
-
   useEffect(() => {
     fetchTeamMembers();
   }, []);
+
+  // Show restricted admin version for admin users
+  if (user?.role === 'admin') {
+    return <AdminTeams />;
+  }
 
   const adminCount = teamMembers.filter(m => m.role === 'admin').length;
   const mentorCount = teamMembers.filter(m => m.role === 'mentor').length;
