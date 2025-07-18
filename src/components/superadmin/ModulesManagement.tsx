@@ -64,6 +64,7 @@ export function ModulesManagement() {
 
       setModules(modulesWithCount);
     } catch (error) {
+      console.error('Error fetching modules:', error);
       toast({
         title: "Error",
         description: "Failed to fetch modules",
@@ -91,25 +92,37 @@ export function ModulesManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!formData.title.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Module title is required",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       if (editingModule) {
-        const { error } = await supabase
+        // Update existing module
+        const { error: updateError } = await supabase
           .from('modules')
           .update({
-            title: formData.title,
-            description: formData.description,
+            title: formData.title.trim(),
+            description: formData.description.trim(),
             order: formData.order
           })
           .eq('id', editingModule.id);
 
-        if (error) throw error;
+        if (updateError) throw updateError;
 
-        // Update recordings module assignment
+        // Update recordings assignment
         if (formData.selectedRecordings.length > 0) {
-          await supabase
+          const { error: recordingError } = await supabase
             .from('available_lessons')
             .update({ module: editingModule.id })
             .in('id', formData.selectedRecordings);
+
+          if (recordingError) throw recordingError;
         }
 
         toast({
@@ -117,24 +130,27 @@ export function ModulesManagement() {
           description: "Module updated successfully"
         });
       } else {
-        const { data: newModule, error } = await supabase
+        // Create new module
+        const { data: newModule, error: insertError } = await supabase
           .from('modules')
           .insert({
-            title: formData.title,
-            description: formData.description,
+            title: formData.title.trim(),
+            description: formData.description.trim(),
             order: formData.order
           })
           .select()
           .single();
 
-        if (error) throw error;
+        if (insertError) throw insertError;
 
         // Assign selected recordings to new module
         if (formData.selectedRecordings.length > 0 && newModule) {
-          await supabase
+          const { error: recordingError } = await supabase
             .from('available_lessons')
             .update({ module: newModule.id })
             .in('id', formData.selectedRecordings);
+
+          if (recordingError) throw recordingError;
         }
 
         toast({
@@ -143,58 +159,115 @@ export function ModulesManagement() {
         });
       }
 
+      // Reset form and close dialog
       setDialogOpen(false);
       setEditingModule(null);
       setFormData({ title: '', description: '', order: 0, selectedRecordings: [] });
-      fetchModules();
-      fetchRecordings();
+      
+      // Refresh data
+      await fetchModules();
+      await fetchRecordings();
     } catch (error) {
+      console.error('Error saving module:', error);
       toast({
         title: "Error",
-        description: "Failed to save module",
+        description: "Failed to save module. Please try again.",
         variant: "destructive"
       });
     }
   };
 
-  const handleEdit = (module: Module) => {
+  const handleEdit = async (module: Module) => {
     setEditingModule(module);
-    setFormData({
-      title: module.title,
-      description: module.description,
-      order: module.order,
-      selectedRecordings: []
-    });
+    
+    // Get currently assigned recordings for this module
+    try {
+      const { data: assignedRecordings, error } = await supabase
+        .from('available_lessons')
+        .select('id')
+        .eq('module', module.id);
+
+      if (error) throw error;
+
+      setFormData({
+        title: module.title,
+        description: module.description || '',
+        order: module.order || 0,
+        selectedRecordings: assignedRecordings?.map(r => r.id) || []
+      });
+    } catch (error) {
+      console.error('Error fetching assigned recordings:', error);
+      setFormData({
+        title: module.title,
+        description: module.description || '',
+        order: module.order || 0,
+        selectedRecordings: []
+      });
+    }
+    
     setDialogOpen(true);
   };
 
   const handleDelete = async (moduleId: string) => {
-    if (!confirm('Are you sure you want to delete this module?')) return;
+    if (!confirm('Are you sure you want to delete this module? This action cannot be undone and will unassign all recordings from this module.')) {
+      return;
+    }
 
     try {
-      const { error } = await supabase
+      // First, unassign all recordings from this module
+      const { error: unassignError } = await supabase
+        .from('available_lessons')
+        .update({ module: null })
+        .eq('module', moduleId);
+
+      if (unassignError) throw unassignError;
+
+      // Then delete the module
+      const { error: deleteError } = await supabase
         .from('modules')
         .delete()
         .eq('id', moduleId);
 
-      if (error) throw error;
+      if (deleteError) throw deleteError;
 
       toast({
         title: "Success",
         description: "Module deleted successfully"
       });
-      fetchModules();
+      
+      // Refresh data
+      await fetchModules();
+      await fetchRecordings();
     } catch (error) {
+      console.error('Error deleting module:', error);
       toast({
         title: "Error",
-        description: "Failed to delete module",
+        description: "Failed to delete module. Please try again.",
         variant: "destructive"
       });
     }
   };
 
-  // Show all recordings in the dropdown
-  const availableRecordings = recordings;
+  const handleRecordingSelect = (recordingId: string) => {
+    if (!formData.selectedRecordings.includes(recordingId)) {
+      setFormData({
+        ...formData,
+        selectedRecordings: [...formData.selectedRecordings, recordingId]
+      });
+    }
+  };
+
+  const handleRecordingRemove = (recordingId: string) => {
+    setFormData({
+      ...formData,
+      selectedRecordings: formData.selectedRecordings.filter(id => id !== recordingId)
+    });
+  };
+
+  const resetForm = () => {
+    setEditingModule(null);
+    setFormData({ title: '', description: '', order: 0, selectedRecordings: [] });
+  };
 
   if (loading) {
     return (
@@ -220,10 +293,7 @@ export function ModulesManagement() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button 
-              onClick={() => {
-                setEditingModule(null);
-                setFormData({ title: '', description: '', order: 0, selectedRecordings: [] });
-              }}
+              onClick={resetForm}
               className="hover-scale bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -238,7 +308,7 @@ export function ModulesManagement() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Title</label>
+                <label className="text-sm font-medium text-foreground">Title *</label>
                 <Input
                   value={formData.title}
                   onChange={(e) => setFormData({ ...formData, title: e.target.value })}
@@ -259,42 +329,47 @@ export function ModulesManagement() {
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Order</label>
+                <label className="text-sm font-medium text-foreground">Order *</label>
                 <Input
                   type="number"
                   value={formData.order}
-                  onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
                   placeholder="Enter display order"
                   className="transition-all duration-200 focus:scale-[1.02]"
+                  min="0"
                   required
                 />
               </div>
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Assign Recordings</label>
-                <Select
-                  onValueChange={(value) => {
-                    if (!formData.selectedRecordings.includes(value)) {
-                      setFormData({
-                        ...formData,
-                        selectedRecordings: [...formData.selectedRecordings, value]
-                      });
-                    }
-                  }}
-                >
+                <Select onValueChange={handleRecordingSelect}>
                   <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
                     <SelectValue placeholder="Select recordings to assign" />
                   </SelectTrigger>
                   <SelectContent className="bg-white z-50">
-                    {availableRecordings.map((recording) => {
+                    {recordings.map((recording) => {
                       const isCurrentlyAssigned = recording.module && recording.module !== editingModule?.id;
+                      const isSelected = formData.selectedRecordings.includes(recording.id);
+                      
                       return (
-                        <SelectItem key={recording.id} value={recording.id}>
+                        <SelectItem 
+                          key={recording.id} 
+                          value={recording.id}
+                          disabled={isSelected}
+                        >
                           <div className="flex items-center justify-between w-full">
-                            <span>{recording.recording_title}</span>
+                            <span className={isSelected ? 'opacity-50' : ''}>
+                              {recording.recording_title}
+                            </span>
                             {isCurrentlyAssigned && (
                               <Badge variant="secondary" className="ml-2 text-xs">
                                 Assigned
+                              </Badge>
+                            )}
+                            {isSelected && (
+                              <Badge variant="outline" className="ml-2 text-xs">
+                                Selected
                               </Badge>
                             )}
                           </div>
@@ -312,10 +387,7 @@ export function ModulesManagement() {
                         {recording?.recording_title}
                         <button
                           type="button"
-                          onClick={() => setFormData({
-                            ...formData,
-                            selectedRecordings: formData.selectedRecordings.filter(id => id !== recordingId)
-                          })}
+                          onClick={() => handleRecordingRemove(recordingId)}
                           className="ml-2 text-xs hover:text-red-500 transition-colors"
                         >
                           ×
@@ -382,7 +454,7 @@ export function ModulesManagement() {
                     <TableCell className="font-medium">{module.title}</TableCell>
                     <TableCell className="max-w-xs">
                       <div className="truncate" title={module.description}>
-                        {module.description}
+                        {module.description || 'No description'}
                       </div>
                     </TableCell>
                     <TableCell>

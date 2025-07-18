@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -16,10 +17,45 @@ export const useVideosData = (user?: any) => {
 
   useEffect(() => {
     fetchModulesAndRecordings();
+    
+    // Set up real-time subscription for modules changes
+    const modulesChannel = supabase
+      .channel('modules-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'modules'
+        },
+        () => {
+          console.log('Modules changed, refreshing data...');
+          fetchModulesAndRecordings();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'available_lessons'
+        },
+        () => {
+          console.log('Available lessons changed, refreshing data...');
+          fetchModulesAndRecordings();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(modulesChannel);
+    };
   }, [user?.id]);
 
   const fetchModulesAndRecordings = async () => {
     try {
+      setLoading(true);
+      
       // Fetch modules
       const { data: modulesData, error: modulesError } = await supabase
         .from('modules')
@@ -115,18 +151,22 @@ export const useVideosData = (user?: any) => {
         };
       }) || [];
 
-      // Filter out modules with no lessons
-      const modulesWithLessons = processedModules.filter(module => module.lessons.length > 0);
+      // Filter out modules with no lessons and sort by order
+      const modulesWithLessons = processedModules
+        .filter(module => module.lessons.length > 0)
+        .sort((a, b) => (a.id as any).order - (b.id as any).order);
 
-      // Create default module if NO modules exist at all
-      if (modulesWithLessons.length === 0 && recordingsData?.length > 0) {
+      // Create default module for unassigned recordings if needed
+      const unassignedRecordings = recordingsData?.filter(r => !r.module) || [];
+      
+      if (unassignedRecordings.length > 0) {
         const defaultModule = {
-          id: 'default',
+          id: 'unassigned',
           title: 'Uncategorized Recordings',
-          totalLessons: recordingsData.length,
+          totalLessons: unassignedRecordings.length,
           completedLessons: 0,
           locked: false,
-          lessons: recordingsData.map(recording => {
+          lessons: unassignedRecordings.map(recording => {
             const associatedAssignment = assignmentsData?.find(a => a.sequence_order === recording.sequence_order);
             const submission = submissions?.find(s => s.assignment_id === associatedAssignment?.assignment_id);
             const recordingView = recordingViews?.find(rv => rv.recording_id === recording.id);
