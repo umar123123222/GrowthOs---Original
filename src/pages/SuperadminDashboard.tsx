@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Video, FileText } from 'lucide-react';
+import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Video, FileText, GraduationCap } from 'lucide-react';
 import { RoleGuard } from '@/components/RoleGuard';
 import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
@@ -65,23 +66,6 @@ export default function SuperadminDashboard() {
 }
 
 function DashboardContent() {
-  const { toast } = useToast();
-
-  const handleSecurityClick = () => {
-    toast({
-      title: "Security Panel",
-      description: "Opening security management dashboard...",
-    });
-  };
-
-  const handleCriticalActionsClick = () => {
-    toast({
-      title: "Critical Actions",
-      description: "This will open the critical system actions panel. Use with caution.",
-      variant: "destructive"
-    });
-  };
-
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -90,26 +74,6 @@ function DashboardContent() {
             🔧 System Command Center
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">Ultimate platform control and global oversight</p>
-        </div>
-        <div className="flex items-center gap-3 animate-scale-in">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="hover-scale story-link"
-            onClick={handleSecurityClick}
-          >
-            <Shield className="w-4 h-4 mr-2" />
-            Security
-          </Button>
-          <Button 
-            variant="default" 
-            size="sm" 
-            className="hover-scale bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-            onClick={handleCriticalActionsClick}
-          >
-            <AlertTriangle className="w-4 h-4 mr-2" />
-            Critical Actions
-          </Button>
         </div>
       </div>
 
@@ -159,7 +123,7 @@ function DashboardContent() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card className="border-l-4 border-l-green-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-green-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-800">Active Students</CardTitle>
@@ -168,6 +132,17 @@ function DashboardContent() {
           <CardContent>
             <div className="text-3xl font-bold text-green-900">2,156</div>
             <p className="text-xs text-muted-foreground">Currently active students</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-indigo-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-indigo-50 to-white animate-fade-in">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-indigo-800">Students Currently using LMS</CardTitle>
+            <GraduationCap className="h-5 w-5 text-indigo-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-indigo-900">1,892</div>
+            <p className="text-xs text-muted-foreground">Students actively using LMS</p>
           </CardContent>
         </Card>
 
