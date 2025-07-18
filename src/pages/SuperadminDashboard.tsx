@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Video, FileText } from 'lucide-react';
@@ -11,10 +11,28 @@ import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
 import { SubmissionsManagement } from '@/components/superadmin/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
+import { useToast } from '@/hooks/use-toast';
 
 export default function SuperadminDashboard() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { toast } = useToast();
   const activeTab = searchParams.get('tab') || 'dashboard';
+
+  const handleSecurityClick = () => {
+    toast({
+      title: "Security Panel",
+      description: "Security management features are being implemented.",
+    });
+  };
+
+  const handleCriticalActionsClick = () => {
+    toast({
+      title: "Critical Actions",
+      description: "Critical system actions panel is being prepared.",
+      variant: "destructive"
+    });
+  };
 
   const renderContent = () => {
     switch (activeTab) {
@@ -47,6 +65,22 @@ export default function SuperadminDashboard() {
 }
 
 function DashboardContent() {
+  const { toast } = useToast();
+
+  const handleSecurityClick = () => {
+    toast({
+      title: "Security Panel",
+      description: "Opening security management dashboard...",
+    });
+  };
+
+  const handleCriticalActionsClick = () => {
+    toast({
+      title: "Critical Actions",
+      description: "This will open the critical system actions panel. Use with caution.",
+      variant: "destructive"
+    });
+  };
 
   return (
     <div className="space-y-8">
@@ -58,11 +92,21 @@ function DashboardContent() {
           <p className="text-muted-foreground mt-2 text-lg">Ultimate platform control and global oversight</p>
         </div>
         <div className="flex items-center gap-3 animate-scale-in">
-          <Button variant="outline" size="sm" className="hover-scale story-link">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="hover-scale story-link"
+            onClick={handleSecurityClick}
+          >
             <Shield className="w-4 h-4 mr-2" />
             Security
           </Button>
-          <Button variant="default" size="sm" className="hover-scale bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+          <Button 
+            variant="default" 
+            size="sm" 
+            className="hover-scale bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+            onClick={handleCriticalActionsClick}
+          >
             <AlertTriangle className="w-4 h-4 mr-2" />
             Critical Actions
           </Button>
