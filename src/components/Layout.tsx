@@ -131,7 +131,7 @@ const Layout = ({ user }: LayoutProps) => {
           }
         }).catch(error => {
           // Silently handle activity logging errors
-          console.warn('Page visit logging failed:', error);
+          
         });
       }, 100); // Small delay to prevent excessive logging
 

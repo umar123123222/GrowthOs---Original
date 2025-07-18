@@ -20,7 +20,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
-      console.log('Login attempt for:', email);
+      
       
       // First authenticate with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -29,7 +29,6 @@ const Login = () => {
       });
 
       if (authError) {
-        console.error('Auth error:', authError);
         toast({
           title: "Invalid Credentials",
           description: "Incorrect email or password.",
@@ -38,7 +37,6 @@ const Login = () => {
         return;
       }
 
-      console.log('Auth successful, checking user data...');
 
       // Check if user exists in our users table
       const { data: userData, error: userError } = await supabase
@@ -48,7 +46,7 @@ const Login = () => {
         .single();
 
       if (userError || !userData) {
-        console.log('User not found in users table, creating...', { userError });
+        
         
         // Determine role based on email
         let userRole = 'student';
@@ -76,7 +74,6 @@ const Login = () => {
           .single();
 
         if (createError) {
-          console.error('Error creating user:', createError);
           toast({
             title: "Setup Error",
             description: "Failed to set up user account. Please contact support.",
@@ -90,7 +87,6 @@ const Login = () => {
           description: `Hello ${newUser.full_name || newUser.email}, you've successfully logged in.`,
         });
       } else {
-        console.log('User found:', userData);
         toast({
           title: "Welcome!",
           description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`,
@@ -100,7 +96,6 @@ const Login = () => {
       // Refresh the user data in our auth hook
       await refreshUser();
     } catch (error) {
-      console.error('Login error:', error);
       toast({
         title: "Login Failed",
         description: "An error occurred during login. Please try again.",
