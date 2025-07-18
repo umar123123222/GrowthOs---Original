@@ -55,6 +55,14 @@ export const useAuth = () => {
 
   const fetchUserProfile = async (userId: string) => {
     try {
+      // First get the auth user to get email
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('users')
         .select('id, email, role, full_name, created_at')
@@ -67,8 +75,24 @@ export const useAuth = () => {
       } else if (data) {
         setUser(data as User);
       } else {
-        // No user profile found, but this isn't an error
-        setUser(null);
+        // No user profile found, create one with default role
+        const newUser = {
+          id: authUser.id,
+          email: authUser.email!,
+          full_name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
+          role: 'student' as const
+        };
+        
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert(newUser);
+        
+        if (insertError) {
+          console.error('Error creating user profile:', insertError);
+          setUser(null);
+        } else {
+          setUser(newUser);
+        }
       }
     } catch (error) {
       console.error('Exception in fetchUserProfile:', error);
