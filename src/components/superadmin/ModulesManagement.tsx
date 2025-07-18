@@ -252,8 +252,9 @@ export function ModulesManagement() {
         description: "Module deleted successfully"
       });
       
-      // Refresh data immediately
+      // Refresh data immediately and force UI update
       console.log('Refreshing data after deletion...');
+      setModules(prevModules => prevModules.filter(module => module.id !== moduleId));
       await Promise.all([fetchModules(), fetchRecordings()]);
       
     } catch (error) {
