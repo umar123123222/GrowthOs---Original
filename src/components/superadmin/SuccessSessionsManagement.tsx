@@ -157,13 +157,19 @@ export function SuccessSessionsManagement() {
     e.preventDefault();
     
     try {
+      // Combine date with time to create proper timestamps
+      const combineDateTime = (date: string, time: string) => {
+        if (!date || !time) return null;
+        return `${date}T${time}:00`;
+      };
+
       const sessionData = {
         title: formData.title,
         description: formData.description,
         mentor_name: formData.mentor_name,
         schedule_date: formData.schedule_date,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
+        start_time: combineDateTime(formData.schedule_date, formData.start_time),
+        end_time: formData.end_time ? combineDateTime(formData.schedule_date, formData.end_time) : null,
         link: formData.link,
         status: formData.status
       };
