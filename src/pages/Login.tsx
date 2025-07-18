@@ -20,6 +20,8 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      console.log('Login attempt for:', email);
+      
       // First authenticate with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -27,6 +29,7 @@ const Login = () => {
       });
 
       if (authError) {
+        console.error('Auth error:', authError);
         toast({
           title: "Invalid Credentials",
           description: "Incorrect email or password.",
@@ -34,6 +37,8 @@ const Login = () => {
         });
         return;
       }
+
+      console.log('Auth successful, checking user data...');
 
       // Check if user exists in our users table
       const { data: userData, error: userError } = await supabase
@@ -43,14 +48,28 @@ const Login = () => {
         .single();
 
       if (userError || !userData) {
+        console.log('User not found in users table, creating...', { userError });
+        
+        // Determine role based on email
+        let userRole = 'student';
+        let fullName = authData.user.user_metadata?.full_name || null;
+        
+        if (email === 'umaridmpakistan@gmail.com') {
+          userRole = 'superadmin';
+          fullName = 'Umar ID';
+        } else if (email === 'umarservices0@gmail.com') {
+          userRole = 'admin';
+          fullName = 'Umar Services (Admin)';
+        }
+
         // Create user if they don't exist
         const { data: newUser, error: createError } = await supabase
           .from('users')
           .insert({
             id: authData.user.id,
-             email: authData.user.email || email,
-             role: email === 'umaridmpakistan@gmail.com' ? 'Admin' : 'student',
-             full_name: email === 'umaridmpakistan@gmail.com' ? 'Umar ID' : authData.user.user_metadata?.full_name || null,
+            email: authData.user.email || email,
+            role: userRole,
+            full_name: fullName,
             created_at: new Date().toISOString()
           })
           .select()
@@ -71,6 +90,7 @@ const Login = () => {
           description: `Hello ${newUser.full_name || newUser.email}, you've successfully logged in.`,
         });
       } else {
+        console.log('User found:', userData);
         toast({
           title: "Welcome!",
           description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`,
