@@ -5,7 +5,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth";
-import ErrorBoundary from "./components/ErrorBoundary";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -29,6 +28,7 @@ const queryClient = new QueryClient();
 const App = () => {
   const { user, loading } = useAuth();
 
+  console.log('App: Render state', { user: !!user, loading });
 
   if (loading) {
     return (
@@ -42,11 +42,10 @@ const App = () => {
   }
 
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
         <BrowserRouter>
           <Routes>
             {!user ? (
@@ -86,7 +85,6 @@ const App = () => {
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
-    </ErrorBoundary>
   );
 };
 

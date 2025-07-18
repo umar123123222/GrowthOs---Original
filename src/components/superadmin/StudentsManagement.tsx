@@ -78,7 +78,7 @@ export function StudentsManagement() {
   const { toast } = useToast();
   
   // Debug: Ensure statusFilter is completely removed
-  
+  console.log('StudentsManagement component loaded - statusFilter removed');
 
   const [formData, setFormData] = useState({
     full_name: '',
