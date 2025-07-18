@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,6 +46,7 @@ export function ModulesManagement() {
 
   const fetchModules = async () => {
     try {
+      console.log('Fetching modules...');
       const { data, error } = await supabase
         .from('modules')
         .select(`
@@ -55,7 +55,12 @@ export function ModulesManagement() {
         `)
         .order('order');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching modules:', error);
+        throw error;
+      }
+
+      console.log('Modules fetched:', data);
 
       const modulesWithCount = data?.map(module => ({
         ...module,
@@ -214,30 +219,43 @@ export function ModulesManagement() {
     }
 
     try {
+      console.log('Starting module deletion for ID:', moduleId);
+      
       // First, unassign all recordings from this module
+      console.log('Unassigning recordings from module...');
       const { error: unassignError } = await supabase
         .from('available_lessons')
         .update({ module: null })
         .eq('module', moduleId);
 
-      if (unassignError) throw unassignError;
+      if (unassignError) {
+        console.error('Error unassigning recordings:', unassignError);
+        throw unassignError;
+      }
+      console.log('Successfully unassigned recordings');
 
       // Then delete the module
+      console.log('Deleting module...');
       const { error: deleteError } = await supabase
         .from('modules')
         .delete()
         .eq('id', moduleId);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Error deleting module:', deleteError);
+        throw deleteError;
+      }
+      console.log('Successfully deleted module');
 
       toast({
         title: "Success",
         description: "Module deleted successfully"
       });
       
-      // Refresh data
-      await fetchModules();
-      await fetchRecordings();
+      // Refresh data immediately
+      console.log('Refreshing data after deletion...');
+      await Promise.all([fetchModules(), fetchRecordings()]);
+      
     } catch (error) {
       console.error('Error deleting module:', error);
       toast({
