@@ -47,13 +47,6 @@ interface TeamMember {
 
 const Teams = () => {
   const { user } = useAuth();
-
-  // Show restricted admin version for admin users
-  if (user?.role === 'admin') {
-    return <AdminTeams />;
-  }
-
-  // Show full Teams component for superadmin and other roles
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -65,6 +58,11 @@ const Teams = () => {
     lms_password: ''
   });
   const { toast } = useToast();
+
+  // Show restricted admin version for admin users
+  if (user?.role === 'admin') {
+    return <AdminTeams />;
+  }
 
   const fetchTeamMembers = async () => {
     try {
