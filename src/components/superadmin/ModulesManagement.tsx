@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -192,7 +193,8 @@ export function ModulesManagement() {
     }
   };
 
-  const availableRecordings = recordings.filter(r => !r.module || r.module === editingModule?.id);
+  // Show all recordings in the dropdown
+  const availableRecordings = recordings;
 
   if (loading) {
     return (
@@ -284,11 +286,21 @@ export function ModulesManagement() {
                     <SelectValue placeholder="Select recordings to assign" />
                   </SelectTrigger>
                   <SelectContent className="bg-white z-50">
-                    {availableRecordings.map((recording) => (
-                      <SelectItem key={recording.id} value={recording.id}>
-                        {recording.recording_title}
-                      </SelectItem>
-                    ))}
+                    {availableRecordings.map((recording) => {
+                      const isCurrentlyAssigned = recording.module && recording.module !== editingModule?.id;
+                      return (
+                        <SelectItem key={recording.id} value={recording.id}>
+                          <div className="flex items-center justify-between w-full">
+                            <span>{recording.recording_title}</span>
+                            {isCurrentlyAssigned && (
+                              <Badge variant="secondary" className="ml-2 text-xs">
+                                Assigned
+                              </Badge>
+                            )}
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 
