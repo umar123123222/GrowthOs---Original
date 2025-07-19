@@ -157,12 +157,7 @@ const Teams = () => {
 
   const handleDeleteMember = async (memberId: string, memberName: string) => {
     try {
-      // Delete from auth users first
-      const { error: authError } = await supabase.auth.admin.deleteUser(memberId);
-      
-      if (authError) throw authError;
-
-      // Delete from users table
+      // Delete from users table (this will handle the auth cleanup via trigger if needed)
       const { error: dbError } = await supabase
         .from('users')
         .delete()

@@ -120,12 +120,7 @@ export const StudentManagement = () => {
 
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
     try {
-      // Delete from auth users first
-      const { error: authError } = await supabase.auth.admin.deleteUser(studentId);
-      
-      if (authError) throw authError;
-
-      // Delete from users table
+      // Delete from users table (this will handle the auth cleanup via trigger if needed)
       const { error: dbError } = await supabase
         .from('users')
         .delete()
