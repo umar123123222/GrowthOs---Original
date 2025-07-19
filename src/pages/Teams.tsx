@@ -91,22 +91,39 @@ const Teams = () => {
     }
 
     try {
-      const { error } = await supabase
+      // Generate a temporary password for the user
+      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+      
+      // Create auth user first
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: newMember.email,
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: newMember.full_name
+        }
+      });
+
+      if (authError) throw authError;
+
+      // Update user with additional information
+      const { error: updateError } = await supabase
         .from('users')
-        .insert([{
+        .update({
           full_name: newMember.full_name,
           email: newMember.email,
           role: newMember.role,
           lms_user_id: newMember.lms_user_id,
           lms_password: newMember.lms_password,
           status: 'Active'
-        }]);
+        })
+        .eq('id', authData.user.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
 
       toast({
         title: "Success",
-        description: "Team member added successfully"
+        description: `Team member added successfully. Temporary password: ${tempPassword}`
       });
 
       setNewMember({
@@ -121,7 +138,7 @@ const Teams = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to add team member",
+        description: "Failed to add team member: " + error.message,
         variant: "destructive"
       });
     }
