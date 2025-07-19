@@ -3,6 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -107,6 +118,36 @@ export const StudentManagement = () => {
     }
   };
 
+  const handleDeleteStudent = async (studentId: string, studentName: string) => {
+    try {
+      // Delete from auth users first
+      const { error: authError } = await supabase.auth.admin.deleteUser(studentId);
+      
+      if (authError) throw authError;
+
+      // Delete from users table
+      const { error: dbError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', studentId);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: `${studentName} has been deleted successfully`
+      });
+
+      fetchStudents();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete student: " + error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const filteredStudents = students.filter(student =>
     student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -188,6 +229,30 @@ export const StudentManagement = () => {
                     <Button variant="ghost" size="sm">
                       <Eye className="w-4 h-4" />
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete {student.full_name || student.email} and remove all their data. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDeleteStudent(student.id, student.full_name || student.email)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </TableCell>
               </TableRow>
