@@ -244,15 +244,32 @@ export function StudentsManagement() {
           description: 'Student updated successfully'
         });
       } else {
-        const { error } = await supabase
-          .from('users')
-          .insert([studentData]);
+        // Generate a temporary password for the new student
+        const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+        
+        // Create auth user first
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: formData.email,
+          password: tempPassword,
+          email_confirm: true,
+          user_metadata: {
+            full_name: formData.full_name
+          }
+        });
 
-        if (error) throw error;
+        if (authError) throw authError;
+
+        // Update user with additional information
+        const { error: updateError } = await supabase
+          .from('users')
+          .update(studentData)
+          .eq('id', authData.user.id);
+
+        if (updateError) throw updateError;
         
         toast({
           title: 'Success',
-          description: 'Student added successfully'
+          description: `Student added successfully. Temporary password: ${tempPassword}`
         });
       }
 
@@ -271,7 +288,7 @@ export function StudentsManagement() {
       console.error('Error saving student:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save student',
+        description: 'Failed to save student: ' + (error as any).message,
         variant: 'destructive'
       });
     }
