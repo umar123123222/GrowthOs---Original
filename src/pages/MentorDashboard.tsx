@@ -40,34 +40,59 @@ export default function MentorDashboard() {
   const fetchAssignedStudents = async () => {
     if (!user) return;
 
-    // Mock data until types are regenerated
-    const mockStudents: AssignedStudent[] = [
-      {
-        id: '1',
-        full_name: 'John Doe',
-        email: 'john@example.com',
-        created_at: '2024-01-15'
-      },
-      {
-        id: '2',
-        full_name: 'Jane Smith',
-        email: 'jane@example.com',
-        created_at: '2024-01-10'
+    try {
+      // Fetch students assigned to this mentor
+      const { data: students, error } = await supabase
+        .from('users')
+        .select('id, full_name, email, created_at')
+        .eq('mentor_id', user.id)
+        .eq('role', 'student');
+
+      if (error) {
+        console.error('Error fetching assigned students:', error);
+        return;
       }
-    ];
-    setAssignedStudents(mockStudents);
+
+      setAssignedStudents(students || []);
+    } catch (error) {
+      console.error('Error fetching assigned students:', error);
+    }
   };
 
   const fetchStats = async () => {
     if (!user) return;
 
-    // This would be replaced with actual queries
-    setStats({
-      totalStudents: assignedStudents.length,
-      pendingFeedback: 5,
-      completedModules: 24,
-      avgProgress: 65
-    });
+    try {
+      // Fetch students assigned to this mentor
+      const { data: students } = await supabase
+        .from('users')
+        .select('id')
+        .eq('mentor_id', user.id)
+        .eq('role', 'student');
+
+      // Fetch pending submissions for review
+      const { data: pendingSubmissions } = await supabase
+        .from('assignment_submissions')
+        .select('id')
+        .eq('status', 'submitted')
+        .in('user_id', students?.map(s => s.id) || []);
+
+      // Fetch completed modules by assigned students
+      const { data: completedModules } = await supabase
+        .from('user_module_progress')
+        .select('id')
+        .eq('is_completed', true)
+        .in('user_id', students?.map(s => s.id) || []);
+
+      setStats({
+        totalStudents: students?.length || 0,
+        pendingFeedback: pendingSubmissions?.length || 0,
+        completedModules: completedModules?.length || 0,
+        avgProgress: 65 // Would need more complex calculation
+      });
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
   };
 
   return (

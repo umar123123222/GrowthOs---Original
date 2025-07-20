@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Video, FileText } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { RoleGuard } from '@/components/RoleGuard';
 import { ContentManagement } from '@/components/admin/ContentManagement';
 import { FinancialManagement } from '@/components/admin/FinancialManagement';
@@ -63,6 +64,89 @@ export default function AdminDashboard() {
 }
 
 function DashboardContent() {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalModules: 0,
+    monthlyRevenue: 0,
+    activeStudents: 0,
+    courseCompletion: 0,
+    openTickets: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch total users
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, role, status');
+
+      // Fetch total modules
+      const { data: modules } = await supabase
+        .from('modules')
+        .select('id');
+
+      // Fetch active students
+      const activeStudents = users?.filter(user => 
+        user.role === 'student' && user.status === 'Active'
+      ).length || 0;
+
+      // Fetch course completion data
+      const { data: progressData } = await supabase
+        .from('user_module_progress')
+        .select('is_completed');
+
+      const courseCompletion = progressData?.length 
+        ? Math.round((progressData.filter(p => p.is_completed).length / progressData.length) * 100)
+        : 0;
+
+      // Fetch open support tickets
+      const { data: tickets } = await supabase
+        .from('support_tickets')
+        .select('id')
+        .eq('status', 'open');
+
+      // Fetch monthly revenue (sum of payments this month)
+      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
+      const { data: payments } = await supabase
+        .from('installment_payments')
+        .select('amount')
+        .gte('payment_date', `${currentMonth}-01`)
+        .lt('payment_date', `${currentMonth}-32`);
+
+      const monthlyRevenue = payments?.reduce((sum, payment) => 
+        sum + (Number(payment.amount) || 0), 0) || 0;
+
+      setStats({
+        totalUsers: users?.length || 0,
+        totalModules: modules?.length || 0,
+        monthlyRevenue,
+        activeStudents,
+        courseCompletion,
+        openTickets: tickets?.length || 0
+      });
+
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Loading dashboard...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -91,7 +175,7 @@ function DashboardContent() {
             <Users className="h-5 w-5 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-blue-900">1,234</div>
+            <div className="text-3xl font-bold text-blue-900">{stats.totalUsers}</div>
             <p className="text-xs text-muted-foreground">Platform users</p>
           </CardContent>
         </Card>
@@ -102,7 +186,7 @@ function DashboardContent() {
             <BookOpen className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-900">45</div>
+            <div className="text-3xl font-bold text-green-900">{stats.totalModules}</div>
             <p className="text-xs text-muted-foreground">Available modules</p>
           </CardContent>
         </Card>
@@ -113,7 +197,7 @@ function DashboardContent() {
             <DollarSign className="h-5 w-5 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-900">$45,231</div>
+            <div className="text-3xl font-bold text-yellow-900">${stats.monthlyRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
@@ -137,7 +221,7 @@ function DashboardContent() {
             <Activity className="h-5 w-5 text-cyan-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-cyan-900">892</div>
+            <div className="text-3xl font-bold text-cyan-900">{stats.activeStudents}</div>
             <p className="text-xs text-muted-foreground">Currently active students</p>
           </CardContent>
         </Card>
@@ -148,7 +232,7 @@ function DashboardContent() {
             <Activity className="h-5 w-5 text-indigo-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-indigo-900">85%</div>
+            <div className="text-3xl font-bold text-indigo-900">{stats.courseCompletion}%</div>
             <p className="text-xs text-muted-foreground">Completion rate</p>
           </CardContent>
         </Card>
@@ -159,7 +243,7 @@ function DashboardContent() {
             <Activity className="h-5 w-5 text-pink-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-pink-900">12</div>
+            <div className="text-3xl font-bold text-pink-900">{stats.openTickets}</div>
             <p className="text-xs text-muted-foreground">Open tickets</p>
           </CardContent>
         </Card>

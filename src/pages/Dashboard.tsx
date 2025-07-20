@@ -72,32 +72,172 @@ const Dashboard = ({ user }: { user?: any }) => {
     }
   };
   
-  // Memoize static data to prevent unnecessary re-renders
-  const progressData = useMemo(() => ({
-    videosWatched: 12,
-    totalVideos: 16,
-    assignmentsCompleted: 8,
-    totalAssignments: 12,
-    overallProgress: 75
-  }), []);
+  const [progressData, setProgressData] = useState({
+    videosWatched: 0,
+    totalVideos: 0,
+    assignmentsCompleted: 0,
+    totalAssignments: 0,
+    overallProgress: 0
+  });
 
-  const leaderboardData = useMemo(() => [
-    { name: "Ahmed Khan", score: 95, rank: 1 },
-    { name: "Fatima Ali", score: 89, rank: 2 },
-    { name: "You", score: 85, rank: 3 },
-    { name: "Hassan Sheikh", score: 82, rank: 4 },
-    { name: "Ayesha Malik", score: 78, rank: 5 }
-  ], []);
-
-  const milestones = useMemo(() => [
-    { title: "First Login", completed: true, icon: "🎯" },
-    { title: "Profile Complete", completed: true, icon: "✅" },
-    { title: "First Video Watched", completed: true, icon: "📹" },
-    { title: "First Assignment", completed: true, icon: "📝" },
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState([
+    { title: "First Login", completed: false, icon: "🎯" },
+    { title: "Profile Complete", completed: false, icon: "✅" },
+    { title: "First Video Watched", completed: false, icon: "📹" },
+    { title: "First Assignment", completed: false, icon: "📝" },
     { title: "Quiz Master", completed: false, icon: "🧠" },
     { title: "Store Live", completed: false, icon: "🛒" },
     { title: "First Sale", completed: false, icon: "💰" }
-  ], []);
+  ]);
+  const [nextAssignment, setNextAssignment] = useState<any>(null);
+
+  // Fetch real data when user is available
+  useEffect(() => {
+    if (user?.id) {
+      fetchProgressData();
+      fetchLeaderboardData();
+      fetchMilestones();
+      fetchNextAssignment();
+    }
+  }, [user?.id]);
+
+  const fetchProgressData = async () => {
+    if (!user?.id) return;
+
+    try {
+      // Fetch total recordings
+      const { data: recordings } = await supabase
+        .from('available_lessons')
+        .select('id');
+
+      // Fetch watched recordings
+      const { data: watchedRecordings } = await supabase
+        .from('recording_views')
+        .select('recording_id')
+        .eq('user_id', user.id)
+        .eq('watched', true);
+
+      // Fetch total assignments
+      const { data: assignments } = await supabase
+        .from('assignment')
+        .select('assignment_id');
+
+      // Fetch completed assignments
+      const { data: completedAssignments } = await supabase
+        .from('assignment_submissions')
+        .select('assignment_id')
+        .eq('user_id', user.id)
+        .eq('status', 'accepted');
+
+      const totalVideos = recordings?.length || 0;
+      const videosWatched = watchedRecordings?.length || 0;
+      const totalAssignments = assignments?.length || 0;
+      const assignmentsCompleted = completedAssignments?.length || 0;
+      
+      const overallProgress = totalVideos > 0 
+        ? Math.round(((videosWatched + assignmentsCompleted) / (totalVideos + totalAssignments)) * 100)
+        : 0;
+
+      setProgressData({
+        videosWatched,
+        totalVideos,
+        assignmentsCompleted,
+        totalAssignments,
+        overallProgress
+      });
+    } catch (error) {
+      console.error('Error fetching progress data:', error);
+    }
+  };
+
+  const fetchLeaderboardData = async () => {
+    try {
+      const { data: leaderboard } = await supabase
+        .from('leaderboard')
+        .select(`
+          rank,
+          points,
+          user_id,
+          users (full_name)
+        `)
+        .order('rank', { ascending: true })
+        .limit(5);
+
+      if (leaderboard) {
+        const formattedData = leaderboard.map(entry => ({
+          name: entry.users?.full_name || 'Unknown',
+          score: entry.points,
+          rank: entry.rank
+        }));
+        setLeaderboardData(formattedData);
+      }
+    } catch (error) {
+      console.error('Error fetching leaderboard data:', error);
+    }
+  };
+
+  const fetchMilestones = async () => {
+    if (!user?.id) return;
+
+    try {
+      // Check profile completion
+      const { data: profile } = await supabase
+        .from('users')
+        .select('onboarding_done, shopify_credentials, meta_ads_credentials')
+        .eq('id', user.id)
+        .single();
+
+      // Check if watched any video
+      const { data: watchedVideos } = await supabase
+        .from('recording_views')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('watched', true)
+        .limit(1);
+
+      // Check if submitted any assignment
+      const { data: submissions } = await supabase
+        .from('assignment_submissions')
+        .select('id')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      setMilestones([
+        { title: "First Login", completed: true, icon: "🎯" }, // User is logged in
+        { title: "Profile Complete", completed: profile?.onboarding_done || false, icon: "✅" },
+        { title: "First Video Watched", completed: (watchedVideos?.length || 0) > 0, icon: "📹" },
+        { title: "First Assignment", completed: (submissions?.length || 0) > 0, icon: "📝" },
+        { title: "Quiz Master", completed: false, icon: "🧠" }, // Would need quiz data
+        { title: "Store Live", completed: !!(profile?.shopify_credentials), icon: "🛒" },
+        { title: "First Sale", completed: false, icon: "💰" } // Would need sales data
+      ]);
+    } catch (error) {
+      console.error('Error fetching milestones:', error);
+    }
+  };
+
+  const fetchNextAssignment = async () => {
+    if (!user?.id) return;
+
+    try {
+      // Get assignments not yet submitted
+      const { data: pendingAssignments } = await supabase
+        .from('assignment')
+        .select('*')
+        .not('assignment_id', 'in', 
+          `(SELECT assignment_id FROM assignment_submissions WHERE user_id = '${user.id}')`
+        )
+        .order('sequence_order', { ascending: true })
+        .limit(1);
+
+      if (pendingAssignments && pendingAssignments.length > 0) {
+        setNextAssignment(pendingAssignments[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching next assignment:', error);
+    }
+  };
 
   const handleConnectAccounts = useCallback(() => {
     setConnectDialogOpen(true);
@@ -181,11 +321,19 @@ const Dashboard = ({ user }: { user?: any }) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <h4 className="font-medium">Product Research Assignment</h4>
-              <div className="flex items-center space-x-2">
-                <Badge variant="destructive">Due in 2 days</Badge>
-                <Badge variant="outline">Module 4</Badge>
-              </div>
+              <h4 className="font-medium">
+                {nextAssignment?.assignment_title || "No pending assignments"}
+              </h4>
+              {nextAssignment && (
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline">
+                    {nextAssignment.due_date 
+                      ? `Due ${new Date(nextAssignment.due_date).toLocaleDateString()}`
+                      : "No due date"
+                    }
+                  </Badge>
+                </div>
+              )}
               <Button 
                 className="w-full" 
                 size="sm"
