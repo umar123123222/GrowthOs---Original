@@ -54,9 +54,7 @@ const AdminTeams = () => {
   const [newMember, setNewMember] = useState({
     full_name: '',
     email: '',
-    role: '',
-    lms_user_id: '',
-    lms_password: ''
+    role: ''
   });
   const { toast } = useToast();
   const { user } = useAuth();
@@ -130,8 +128,6 @@ const AdminTeams = () => {
           full_name: newMember.full_name,
           email: newMember.email,
           role: newMember.role,
-          lms_user_id: newMember.lms_user_id,
-          lms_password: newMember.lms_password,
           status: 'Active'
         }]);
 
@@ -145,9 +141,7 @@ const AdminTeams = () => {
       setNewMember({
         full_name: '',
         email: '',
-        role: '',
-        lms_user_id: '',
-        lms_password: ''
+        role: ''
       });
       setIsAddDialogOpen(false);
       fetchTeamMembers();
@@ -229,25 +223,6 @@ const AdminTeams = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="lms_user">LMS User ID</Label>
-                <Input
-                  id="lms_user"
-                  value={newMember.lms_user_id}
-                  onChange={(e) => setNewMember({...newMember, lms_user_id: e.target.value})}
-                  placeholder="Enter LMS user ID"
-                />
-              </div>
-              <div>
-                <Label htmlFor="lms_password">LMS Password</Label>
-                <Input
-                  id="lms_password"
-                  type="password"
-                  value={newMember.lms_password}
-                  onChange={(e) => setNewMember({...newMember, lms_password: e.target.value})}
-                  placeholder="Enter LMS password"
-                />
-              </div>
               <Button onClick={handleAddMember} className="w-full">
                 Add Team Member
               </Button>
@@ -280,7 +255,6 @@ const AdminTeams = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>LMS User ID</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Active</TableHead>
                 <TableHead>Actions</TableHead>
@@ -296,7 +270,6 @@ const AdminTeams = () => {
                       {member.role}
                     </Badge>
                   </TableCell>
-                  <TableCell>{member.lms_user_id || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant={member.status === 'Active' ? 'default' : 'destructive'}>
                       {member.status}
