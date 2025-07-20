@@ -1172,24 +1172,6 @@ export const StudentManagement = () => {
                                   )}
                                 </div>
                               </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">LMS Password</Label>
-                                <div className="flex items-center space-x-2">
-                                  <p className="text-sm text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">
-                                    {student.lms_password || 'Not set'}
-                                  </p>
-                                  {student.lms_password && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => navigator.clipboard.writeText(student.lms_password)}
-                                      title="Copy to clipboard"
-                                    >
-                                      <Lock className="w-3 h-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
                             </div>
                             
                             {/* Installment Payment Buttons */}
