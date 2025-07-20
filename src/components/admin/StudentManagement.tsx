@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ interface Student {
   role: string;
   full_name?: string;
   created_at: string;
+  lms_status?: string;
 }
 
 export const StudentManagement = () => {
@@ -76,13 +78,15 @@ export const StudentManagement = () => {
         }
       });
 
+      console.log('Edge function response:', data, error);
+
       if (error) {
         console.error('Edge function error:', error);
         throw error;
       }
 
-      if (!data.success) {
-        throw new Error(data.error || 'Failed to create student');
+      if (!data || !data.success) {
+        throw new Error(data?.error || 'Failed to create student');
       }
 
       toast({
@@ -147,11 +151,21 @@ export const StudentManagement = () => {
   };
 
   const filteredStudents = students.filter(student =>
-    student.email.toLowerCase().includes(searchTerm.toLowerCase())
+    student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (student.full_name && student.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const getStatusBadge = (status: string) => {
-    return 'bg-blue-500'; // Default blue badge
+    switch(status) {
+      case 'active':
+        return 'bg-green-500';
+      case 'inactive':
+        return 'bg-red-500';
+      case 'suspended':
+        return 'bg-yellow-500';
+      default:
+        return 'bg-blue-500';
+    }
   };
 
   if (loading) {
@@ -196,6 +210,7 @@ export const StudentManagement = () => {
               <TableHead>Email</TableHead>
               <TableHead>Full Name</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>LMS Status</TableHead>
               <TableHead>Created Date</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -207,6 +222,11 @@ export const StudentManagement = () => {
                 <TableCell>{student.full_name || 'N/A'}</TableCell>
                 <TableCell>
                   <Badge variant="outline">Student</Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge className={getStatusBadge(student.lms_status || 'inactive')}>
+                    {student.lms_status || 'inactive'}
+                  </Badge>
                 </TableCell>
                 <TableCell>{new Date(student.created_at).toLocaleDateString()}</TableCell>
                 <TableCell>

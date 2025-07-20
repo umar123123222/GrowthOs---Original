@@ -21,10 +21,56 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Create admin client for user creation
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
+
+    // Create regular client for authorization check
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: {
+            Authorization: req.headers.get('Authorization') ?? '',
+          },
+        },
+      }
+    );
+
+    // Check if the current user is admin or superadmin
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized', success: false }),
+        { 
+          status: 401, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
+
+    // Check user role
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData || !['admin', 'superadmin'].includes(userData.role)) {
+      console.error('User role check failed:', userError);
+      return new Response(
+        JSON.stringify({ error: 'User not allowed', success: false }),
+        { 
+          status: 403, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
 
     const { fullName, email, phone, feesStructure }: CreateStudentRequest = await req.json();
 
@@ -33,8 +79,8 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log('Creating student with email:', email);
 
-    // Create auth user first
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    // Create auth user first using admin client
+    const { data: authData, error: authCreateError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: tempPassword,
       email_confirm: true,
@@ -43,14 +89,14 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
-    if (authError) {
-      console.error('Auth error:', authError);
-      throw authError;
+    if (authCreateError) {
+      console.error('Auth creation error:', authCreateError);
+      throw authCreateError;
     }
 
     console.log('User created successfully, updating profile...');
 
-    // Update user with additional information
+    // Update user with additional information using admin client
     const { error: updateError } = await supabaseAdmin
       .from('users')
       .update({ 
