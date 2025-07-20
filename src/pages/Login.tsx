@@ -30,6 +30,25 @@ const Login = () => {
 
       if (authError) {
         console.error('Auth error:', authError);
+        
+        // Check if this is a student account that was created by admin
+        if (authError.message.includes('Invalid login credentials')) {
+          const { data: studentData } = await supabase
+            .from('users')
+            .select('temp_password, role, full_name')
+            .eq('email', email)
+            .single();
+            
+          if (studentData && studentData.role === 'student' && studentData.temp_password) {
+            toast({
+              title: "Student Account Detected",
+              description: `Please use the temporary password provided by your admin. Contact your mentor if you need the password.`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+        
         toast({
           title: "Invalid Credentials",
           description: "Incorrect email or password.",
