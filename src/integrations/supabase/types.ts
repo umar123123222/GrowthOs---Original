@@ -1310,6 +1310,7 @@ export type Database = {
           status_after_3_months: string | null
           student_id: string | null
           success_meaning: string | null
+          temp_password: string | null
           tenant_id: string | null
           tried_ecommerce_before: string | null
           weekly_time_commitment: string | null
@@ -1352,6 +1353,7 @@ export type Database = {
           status_after_3_months?: string | null
           student_id?: string | null
           success_meaning?: string | null
+          temp_password?: string | null
           tenant_id?: string | null
           tried_ecommerce_before?: string | null
           weekly_time_commitment?: string | null
@@ -1394,6 +1396,7 @@ export type Database = {
           status_after_3_months?: string | null
           student_id?: string | null
           success_meaning?: string | null
+          temp_password?: string | null
           tenant_id?: string | null
           tried_ecommerce_before?: string | null
           weekly_time_commitment?: string | null
