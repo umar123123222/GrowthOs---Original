@@ -980,7 +980,6 @@ export const StudentManagement = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
-                  <TableHead>LMS Password</TableHead>
                   <TableHead>Fees Structure</TableHead>
                   <TableHead>LMS Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -1000,21 +999,6 @@ export const StudentManagement = () => {
                       <TableCell>{student.full_name}</TableCell>
                       <TableCell>{student.email}</TableCell>
                       <TableCell>{student.phone || 'N/A'}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                            {student.lms_password || 'N/A'}
-                          </span>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleEditPassword(student, 'lms')}
-                            title="Edit LMS Password"
-                          >
-                            <Edit className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </TableCell>
                        <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
                         <TableCell>
                            <div className="flex flex-wrap gap-2">
@@ -1093,7 +1077,7 @@ export const StudentManagement = () => {
                     
                     {expandedRows.has(student.id) && (
                       <TableRow className="animate-accordion-down">
-                        <TableCell colSpan={9} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
+                        <TableCell colSpan={8} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>
