@@ -84,8 +84,6 @@ export function StudentsManagement() {
     full_name: '',
     email: '',
     phone: '',
-    lms_user_id: '',
-    lms_password: '',
     fees_structure: '1_installment'
   });
 
@@ -204,29 +202,17 @@ export function StudentsManagement() {
     setFilteredStudents(filtered);
   };
 
-  const generateUniqueCredentials = () => {
-    const timestamp = Date.now().toString();
-    const randomSuffix = Math.random().toString(36).substring(2, 6);
-    
-    return {
-      lms_user_id: `user_${timestamp}_${randomSuffix}`,
-      lms_password: `pass_${timestamp}_${randomSuffix}`
-    };
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      const credentials = formData.lms_user_id && formData.lms_password 
-        ? { lms_user_id: formData.lms_user_id, lms_password: formData.lms_password }
-        : generateUniqueCredentials();
-
       const studentData = {
         full_name: formData.full_name,
         email: formData.email,
         phone: formData.phone,
-        ...credentials,
+        lms_user_id: formData.email, // Set LMS user ID to email
+        lms_status: 'inactive', // Set status to inactive until first payment
         fees_structure: formData.fees_structure,
         role: 'student'
       };
@@ -269,7 +255,7 @@ export function StudentsManagement() {
         
         toast({
           title: 'Success',
-          description: `Student added successfully. Temporary password: ${tempPassword}`
+          description: `Student added successfully. Temporary password: ${tempPassword}. LMS status is inactive until first payment.`
         });
       }
 
@@ -279,8 +265,6 @@ export function StudentsManagement() {
         full_name: '',
         email: '',
         phone: '',
-        lms_user_id: '',
-        lms_password: '',
         fees_structure: '1_installment'
       });
       fetchStudents();
@@ -300,8 +284,6 @@ export function StudentsManagement() {
       full_name: student.full_name,
       email: student.email,
       phone: student.phone || '',
-      lms_user_id: student.lms_user_id || '',
-      lms_password: student.lms_password || '',
       fees_structure: student.fees_structure || '1_installment'
     });
     setIsDialogOpen(true);
@@ -854,25 +836,6 @@ export function StudentsManagement() {
                     <SelectItem value="3_installments">3 Installments</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
-                <Label htmlFor="lms_user_id">LMS User ID (Optional)</Label>
-                <Input
-                  id="lms_user_id"
-                  value={formData.lms_user_id}
-                  onChange={(e) => setFormData({ ...formData, lms_user_id: e.target.value })}
-                  placeholder="Will be generated if left empty"
-                />
-              </div>
-              <div>
-                <Label htmlFor="lms_password">LMS Password (Optional)</Label>
-                <Input
-                  id="lms_password"
-                  type="password"
-                  value={formData.lms_password}
-                  onChange={(e) => setFormData({ ...formData, lms_password: e.target.value })}
-                  placeholder="Will be generated if left empty"
-                />
               </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>

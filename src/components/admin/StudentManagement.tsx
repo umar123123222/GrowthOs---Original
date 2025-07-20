@@ -63,7 +63,7 @@ export const StudentManagement = () => {
     }
   };
 
-  const createStudent = async (email: string, password: string) => {
+  const createStudent = async (fullName: string, email: string, phone: string, feesStructure: string, password: string) => {
     try {
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -74,17 +74,24 @@ export const StudentManagement = () => {
 
       if (authError) throw authError;
 
-      // Update user role
+      // Update user with student details and set LMS user ID to email, status to inactive
       const { error: updateError } = await supabase
         .from('users')
-        .update({ role: 'student' })
+        .update({ 
+          role: 'student',
+          full_name: fullName,
+          phone: phone,
+          fees_structure: feesStructure,
+          lms_user_id: email, // Set LMS user ID to email
+          lms_status: 'inactive' // Set status to inactive until first payment
+        })
         .eq('id', authData.user.id);
 
       if (updateError) throw updateError;
 
       toast({
         title: 'Success',
-        description: 'Student created successfully'
+        description: 'Student created successfully. LMS status is inactive until first payment.'
       });
 
       fetchStudents();
@@ -259,19 +266,34 @@ export const StudentManagement = () => {
   );
 };
 
-const CreateStudentForm = ({ onSubmit }: { onSubmit: (email: string, password: string) => void }) => {
+const CreateStudentForm = ({ onSubmit }: { onSubmit: (fullName: string, email: string, phone: string, feesStructure: string, password: string) => void }) => {
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
+  const [feesStructure, setFeesStructure] = useState('1_installment');
   const [password, setPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(email, password);
+    onSubmit(fullName, email, phone, feesStructure, password);
+    setFullName('');
     setEmail('');
+    setPhone('');
+    setFeesStructure('1_installment');
     setPassword('');
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="text-sm font-medium">Full Name</label>
+        <Input
+          type="text"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          required
+        />
+      </div>
       <div>
         <label className="text-sm font-medium">Email</label>
         <Input
@@ -280,6 +302,27 @@ const CreateStudentForm = ({ onSubmit }: { onSubmit: (email: string, password: s
           onChange={(e) => setEmail(e.target.value)}
           required
         />
+      </div>
+      <div>
+        <label className="text-sm font-medium">Phone</label>
+        <Input
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium">Fees Structure</label>
+        <Select value={feesStructure} onValueChange={setFeesStructure}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1_installment">1 Installment</SelectItem>
+            <SelectItem value="2_installments">2 Installments</SelectItem>
+            <SelectItem value="3_installments">3 Installments</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <div>
         <label className="text-sm font-medium">Password</label>

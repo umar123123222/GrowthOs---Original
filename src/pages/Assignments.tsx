@@ -46,6 +46,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
   const [submission, setSubmission] = useState("");
   const [loading, setLoading] = useState(true);
   const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
+  const [userLMSStatus, setUserLMSStatus] = useState('active');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -63,6 +64,16 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
         console.log('No user ID, returning');
         return;
       }
+
+      // Fetch user's LMS status
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('lms_status')
+        .eq('id', user.id)
+        .single();
+      
+      if (userError) throw userError;
+      setUserLMSStatus(userData?.lms_status || 'active');
 
       // Fetch all assignments
       const { data: assignmentsData, error: assignmentsError } = await supabase
@@ -90,7 +101,8 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
         });
 
         // First assignment is always unlocked, others need previous ones completed
-        const isUnlocked = assignment.sequence_order === 1 || allPreviousCompleted;
+        // Also check LMS status - if inactive, lock all assignments
+        const isUnlocked = (assignment.sequence_order === 1 || allPreviousCompleted) && userLMSStatus === 'active';
 
         return {
           ...assignment,
@@ -380,7 +392,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                       <Button 
                         className="bg-blue-600 hover:bg-blue-700"
                         onClick={submitAssignment}
-                        disabled={!submission.trim()}
+                        disabled={!submission.trim() || userLMSStatus !== 'active'}
                       >
                         <FileText className="w-4 h-4 mr-2" />
                         Submit Text
@@ -389,7 +401,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                       <Button 
                         variant="outline"
                         onClick={() => setSubmissionDialogOpen(true)}
-                        disabled={!selectedAssignmentData?.isUnlocked}
+                        disabled={!selectedAssignmentData?.isUnlocked || userLMSStatus !== 'active'}
                       >
                         <Upload className="w-4 h-4 mr-2" />
                         Submit with Options

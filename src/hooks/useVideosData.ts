@@ -82,8 +82,18 @@ export const useVideosData = (user?: any) => {
       let submissions = [];
       let recordingViews = [];
       let unlockStatus = [];
+      let userLMSStatus = 'active'; // Default to active
       
       if (user?.id) {
+        // Fetch user's LMS status
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('lms_status')
+          .eq('id', user.id)
+          .single();
+        
+        if (userError) throw userError;
+        userLMSStatus = userData?.lms_status || 'active';
         const { data: submissionsData, error: submissionsError } = await supabase
           .from('assignment_submissions')
           .select('*')
@@ -113,18 +123,18 @@ export const useVideosData = (user?: any) => {
       const processedModules = modulesData?.map(module => {
         const moduleRecordings = recordingsData?.filter(r => r.module === module.id) || [];
         
-        // Check if this module is unlocked
+        // Check if this module is unlocked (also check LMS status)
         const moduleUnlockStatus = unlockStatus.find(u => u.module_id === module.id && u.recording_id === null);
-        const isModuleUnlocked = user?.id ? (moduleUnlockStatus?.is_module_unlocked ?? false) : true;
+        const isModuleUnlocked = user?.id ? (moduleUnlockStatus?.is_module_unlocked ?? false) && userLMSStatus === 'active' : true;
         
         const lessons = moduleRecordings.map(recording => {
           const associatedAssignment = assignmentsData?.find(a => a.sequence_order === recording.sequence_order);
           const submission = submissions?.find(s => s.assignment_id === associatedAssignment?.assignment_id);
           const recordingView = recordingViews?.find(rv => rv.recording_id === recording.id);
           
-          // Check if this recording is unlocked
+          // Check if this recording is unlocked (also check LMS status)
           const recordingUnlockStatus = unlockStatus.find(u => u.recording_id === recording.id);
-          const isRecordingUnlocked = user?.id ? (recordingUnlockStatus?.is_recording_unlocked ?? false) : true;
+          const isRecordingUnlocked = user?.id ? (recordingUnlockStatus?.is_recording_unlocked ?? false) && userLMSStatus === 'active' : true;
           
           return {
             id: recording.id,
@@ -177,7 +187,7 @@ export const useVideosData = (user?: any) => {
               duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
               completed: submission?.status === 'accepted',
               watched: recordingView?.watched ?? false,
-              locked: false,
+              locked: userLMSStatus !== 'active', // Lock if LMS status is not active
               assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
               assignmentSubmitted: !!submission,
               assignmentId: associatedAssignment?.assignment_id,

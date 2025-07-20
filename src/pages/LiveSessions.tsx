@@ -44,6 +44,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   const [recordedSessions, setRecordedSessions] = useState<LiveSession[]>([]);
   const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userLMSStatus, setUserLMSStatus] = useState('active');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -110,6 +111,16 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         setLoading(false);
         return;
       }
+
+      // Fetch user's LMS status
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('lms_status')
+        .eq('id', user.id)
+        .single();
+      
+      if (userError) throw userError;
+      setUserLMSStatus(userData?.lms_status || 'active');
 
       const { data, error } = await supabase
         .from('session_attendance')
@@ -264,11 +275,13 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
             
             <Button
               onClick={() => joinSession(session.id, session.link)}
-              disabled={sessionStatus.status === 'completed' && !attended}
+              disabled={(sessionStatus.status === 'completed' && !attended) || userLMSStatus !== 'active'}
               variant={sessionStatus.status === 'live' ? 'destructive' : 'default'}
               className={sessionStatus.status === 'live' ? "animate-pulse" : ""}
             >
-              {sessionStatus.status === 'live' ? (
+              {userLMSStatus !== 'active' ? (
+                'Locked - Payment Required'
+              ) : sessionStatus.status === 'live' ? (
                 <>
                   <Play className="w-4 h-4 mr-2" />
                   Join Live
