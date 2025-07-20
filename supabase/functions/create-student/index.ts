@@ -96,22 +96,23 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('User created successfully, updating profile...');
 
-    // Update user with additional information using admin client
-    const { error: updateError } = await supabaseAdmin
+    // Insert user into public.users table using admin client
+    const { error: insertError } = await supabaseAdmin
       .from('users')
-      .update({ 
+      .insert({ 
+        id: authData.user.id,
+        email: email,
         role: 'student',
         full_name: fullName,
         phone: phone,
         fees_structure: feesStructure,
         lms_user_id: email, // Set LMS user ID to email
         lms_status: 'inactive' // Set status to inactive until first payment
-      })
-      .eq('id', authData.user.id);
+      });
 
-    if (updateError) {
-      console.error('Update error:', updateError);
-      throw updateError;
+    if (insertError) {
+      console.error('Insert error:', insertError);
+      throw insertError;
     }
 
     console.log('Student created successfully');
