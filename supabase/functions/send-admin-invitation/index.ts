@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "npm:resend@2.0.0";
-
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,10 +34,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Sending invitation to ${email} for role ${role}`);
 
-    const emailResponse = await resend.emails.send({
-      from: "Admin Team <admin@resend.dev>",
-      to: [email],
+    // Configure SMTP client
+    const client = new SMTPClient({
+      connection: {
+        hostname: "smtp.hostinger.com",
+        port: 465,
+        tls: true,
+        auth: {
+          username: "notifications@core47.ai",
+          password: "@IDMisnai8n@@12",
+        },
+      },
+    });
+
+    // Send email
+    await client.send({
+      from: "notifications@core47.ai",
+      to: email,
       subject: `Welcome to the team - Your ${role} account is ready`,
+      content: "auto",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h1 style="color: #333; border-bottom: 2px solid #007bff; padding-bottom: 10px;">
@@ -82,12 +95,13 @@ const handler = async (req: Request): Promise<Response> => {
       `,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    await client.close();
+
+    console.log("Email sent successfully via SMTP");
 
     return new Response(JSON.stringify({ 
       success: true, 
-      message: "Invitation sent successfully",
-      email_id: emailResponse.data?.id 
+      message: "Invitation sent successfully"
     }), {
       status: 200,
       headers: {
