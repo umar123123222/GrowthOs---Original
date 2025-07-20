@@ -45,6 +45,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Creating ${role} user: ${email}`);
 
+    // Check if user already exists
+    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
+    const userExists = existingUser.users.find(user => user.email === email);
+    
+    if (userExists) {
+      console.log('User already exists with email:', email);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: `A user with email ${email} already exists. Please use a different email address.`
+      }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
+    }
+
     // Create auth user with admin client
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -57,7 +75,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (authError) {
       console.error('Auth creation error:', authError);
-      throw authError;
+      
+      // Handle specific auth errors with user-friendly messages
+      let errorMessage = 'Failed to create user account';
+      if (authError.message.includes('already been registered')) {
+        errorMessage = `A user with email ${email} already exists. Please use a different email address.`;
+      } else if (authError.message.includes('password')) {
+        errorMessage = 'Password does not meet requirements';
+      }
+      
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: errorMessage
+      }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
     }
 
     console.log('Auth user created successfully:', authData.user.id);
