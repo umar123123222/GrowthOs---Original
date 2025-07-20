@@ -98,21 +98,21 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Auth user created successfully:', authData.user.id);
 
-    // Update user profile in the users table
-    const { error: updateError } = await supabaseAdmin
+    // Insert user profile in the users table
+    const { error: insertError } = await supabaseAdmin
       .from('users')
-      .update({
+      .insert({
+        id: authData.user.id,
         full_name,
         email,
         role,
         status: 'Active',
         temp_password // Store for credential viewing
-      })
-      .eq('id', authData.user.id);
+      });
 
-    if (updateError) {
-      console.error('User profile update error:', updateError);
-      throw updateError;
+    if (insertError) {
+      console.error('User profile insert error:', insertError);
+      throw insertError;
     }
 
     console.log('User profile updated successfully');
