@@ -114,9 +114,9 @@ const handler = async (req: Request): Promise<Response> => {
     const lmsPassword = generateSecurePassword(); // Separate LMS password
 
     // Check if user already exists first
-    const { data: existingUser } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+    const { data: existingUser, error: existingUserError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
     
-    if (existingUser.user) {
+    if (existingUser?.user) {
       console.log('User already exists with this email');
       return new Response(
         JSON.stringify({ 

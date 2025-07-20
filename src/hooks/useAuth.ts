@@ -49,21 +49,15 @@ export const useAuth = () => {
   const fetchUserProfile = async (userId: string) => {
     console.log('fetchUserProfile: Starting for user ID:', userId);
     
-    // Add a timeout to prevent infinite loading
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Database query timeout')), 10000);
-    });
-    
     try {
       console.log('fetchUserProfile: About to make database query');
       
-      const queryPromise = supabase
+      // Remove timeout and race condition - let Supabase handle its own timeouts
+      const { data, error } = await supabase
         .from('users')
         .select('id, email, role, full_name, created_at')
         .eq('id', userId)
         .single();
-      
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
       
       console.log('fetchUserProfile: Database query completed', { 
         data: data ? { ...data, id: data.id } : null, 
