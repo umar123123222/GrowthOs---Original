@@ -43,6 +43,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Check if the current user is admin or superadmin
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
+    console.log('Auth check result:', { user: user?.id, error: authError });
+    
     if (authError || !user) {
       console.error('Auth error:', authError);
       return new Response(
@@ -55,22 +57,32 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Check user role using admin client to bypass RLS
+    console.log('Checking role for user:', user.id);
+    
     const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('role')
       .eq('id', user.id)
       .single();
 
+    console.log('Role check result:', { userData, error: userError });
+
     if (userError || !userData || !['admin', 'superadmin'].includes(userData.role)) {
       console.error('User role check failed:', userError, 'userData:', userData);
       return new Response(
-        JSON.stringify({ error: 'User not allowed', success: false }),
+        JSON.stringify({ 
+          error: 'User not allowed', 
+          success: false,
+          debug: { userId: user.id, userData, userError }
+        }),
         { 
           status: 403, 
           headers: { 'Content-Type': 'application/json', ...corsHeaders } 
         }
       );
     }
+
+    console.log('User authorized with role:', userData.role);
 
     const { fullName, email, phone, feesStructure }: CreateStudentRequest = await req.json();
 
