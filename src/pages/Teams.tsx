@@ -39,10 +39,12 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Activity, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, Activity, Eye, Edit, Trash2, Key } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import AdminTeams from '@/components/admin/AdminTeams';
 import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
+import { CredentialDisplay } from '@/components/ui/credential-display';
+import { generateSecurePassword } from '@/utils/passwordGenerator';
 
 interface TeamMember {
   id: string;
@@ -54,6 +56,7 @@ interface TeamMember {
   created_at: string;
   last_active_at: string;
   status: string;
+  temp_password?: string;
 }
 
 const Teams = () => {
@@ -61,6 +64,8 @@ const Teams = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [credentialDialogOpen, setCredentialDialogOpen] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [newMember, setNewMember] = useState({
     full_name: '',
     email: '',
@@ -91,6 +96,32 @@ const Teams = () => {
     }
   };
 
+  const sendInvitationEmail = async (email: string, fullName: string, role: string, tempPassword: string) => {
+    try {
+      const loginUrl = `${window.location.origin}/login`;
+      
+      const response = await supabase.functions.invoke('send-admin-invitation', {
+        body: {
+          email,
+          full_name: fullName,
+          role,
+          temp_password: tempPassword,
+          login_url: loginUrl
+        }
+      });
+
+      if (response.error) {
+        console.error('Error sending invitation:', response.error);
+        throw response.error;
+      }
+
+      return response.data;
+    } catch (error) {
+      console.error('Failed to send invitation email:', error);
+      throw error;
+    }
+  };
+
   const handleAddMember = async () => {
     if (!newMember.full_name || !newMember.email || !newMember.role) {
       toast({
@@ -102,8 +133,8 @@ const Teams = () => {
     }
 
     try {
-      // Generate a temporary password for the user
-      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+      // Generate a secure temporary password
+      const tempPassword = generateSecurePassword();
       
       // Create auth user first
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -117,7 +148,7 @@ const Teams = () => {
 
       if (authError) throw authError;
 
-      // Update user with additional information
+      // Update user with additional information including temp_password for credential viewing
       const { error: updateError } = await supabase
         .from('users')
         .update({
@@ -126,16 +157,29 @@ const Teams = () => {
           role: newMember.role,
           lms_user_id: newMember.lms_user_id,
           lms_password: newMember.lms_password,
-          status: 'Active'
+          status: 'Active',
+          temp_password: tempPassword // Store for credential viewing
         })
         .eq('id', authData.user.id);
 
       if (updateError) throw updateError;
 
-      toast({
-        title: "Success",
-        description: `Team member added successfully. Temporary password: ${tempPassword}`
-      });
+      // Send invitation email
+      try {
+        await sendInvitationEmail(newMember.email, newMember.full_name, newMember.role, tempPassword);
+        
+        toast({
+          title: "Success",
+          description: `${newMember.role} account created and invitation email sent to ${newMember.email}`
+        });
+      } catch (emailError) {
+        // User was created but email failed
+        toast({
+          title: "Partial Success",
+          description: `Account created but failed to send invitation email. Manual credentials: ${tempPassword}`,
+          variant: "destructive"
+        });
+      }
 
       setNewMember({
         full_name: '',
@@ -336,12 +380,41 @@ const Teams = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
+                      <Dialog open={credentialDialogOpen && selectedMember?.id === member.id} 
+                             onOpenChange={(open) => {
+                               setCredentialDialogOpen(open);
+                               if (!open) setSelectedMember(null);
+                             }}>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setSelectedMember(member)}
+                          >
+                            <Key className="w-4 h-4 mr-1" />
+                            Credentials
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg">
+                          <DialogHeader>
+                            <DialogTitle>Login Credentials - {member.full_name}</DialogTitle>
+                          </DialogHeader>
+                          <CredentialDisplay
+                            email={member.email}
+                            password={member.temp_password}
+                            lmsUserId={member.lms_user_id}
+                            lmsPassword={member.lms_password}
+                          />
+                        </DialogContent>
+                      </Dialog>
+                      
                       <ActivityLogsDialog>
                         <Button variant="outline" size="sm">
                           <Activity className="w-4 h-4 mr-1" />
                           Activity
                         </Button>
                       </ActivityLogsDialog>
+                      
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="outline" size="sm">
