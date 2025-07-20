@@ -65,39 +65,29 @@ export const StudentManagement = () => {
 
   const createStudent = async (fullName: string, email: string, phone: string, feesStructure: string) => {
     try {
-      // Generate a temporary password for the new student
-      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+      console.log('Creating student via edge function...');
       
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: fullName
+      const { data, error } = await supabase.functions.invoke('create-student', {
+        body: {
+          fullName,
+          email,
+          phone,
+          feesStructure
         }
       });
 
-      if (authError) throw authError;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
 
-      // Update user with additional information
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({ 
-          role: 'student',
-          full_name: fullName,
-          phone: phone,
-          fees_structure: feesStructure,
-          lms_user_id: email, // Set LMS user ID to email
-          lms_status: 'inactive' // Set status to inactive until first payment
-        })
-        .eq('id', authData.user.id);
-
-      if (updateError) throw updateError;
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to create student');
+      }
 
       toast({
         title: 'Success',
-        description: `Student created successfully. Temporary password: ${tempPassword}. LMS status is inactive until first payment.`
+        description: `Student created successfully. Temporary password: ${data.tempPassword}. LMS status is inactive until first payment.`
       });
 
       fetchStudents();
