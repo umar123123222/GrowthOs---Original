@@ -1,9 +1,20 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -389,6 +400,31 @@ export function StudentsManagement() {
     doc.text(`Due Date: ${student.fees_due_date ? formatDate(student.fees_due_date) : 'N/A'}`, 20, 90);
     
     doc.save(`invoice_${student.student_id}.pdf`);
+  };
+
+  const handleDeleteStudent = async (studentId: string, studentName: string) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', studentId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `${studentName} has been deleted successfully`
+      });
+
+      fetchStudents();
+    } catch (error: any) {
+      console.error('Error deleting student:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete student: ' + error.message,
+        variant: 'destructive'
+      });
+    }
   };
 
   const getLMSStatusColor = (lmsStatus: string) => {
@@ -1040,7 +1076,7 @@ export function StudentsManagement() {
               </TableHeader>
               <TableBody>
                 {displayStudents.map((student) => (
-                  <>
+                  <React.Fragment key={`student-${student.id}`}>
                     <TableRow key={student.id}>
                       <TableCell>
                         <Checkbox
@@ -1253,14 +1289,44 @@ export function StudentsManagement() {
                                     <Ban className="w-4 h-4 mr-2" />
                                     Suspend LMS
                                   </>
-                                )}
-                              </Button>
-                            </div>
+                                 )}
+                               </Button>
+                               
+                               <AlertDialog>
+                                 <AlertDialogTrigger asChild>
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     className="hover-scale text-red-600 hover:text-red-700 hover:border-red-300"
+                                   >
+                                     <Trash2 className="w-4 h-4 mr-2" />
+                                     Delete Student
+                                   </Button>
+                                 </AlertDialogTrigger>
+                                 <AlertDialogContent>
+                                   <AlertDialogHeader>
+                                     <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                     <AlertDialogDescription>
+                                       This will permanently delete {student.full_name} and remove all their data. This action cannot be undone.
+                                     </AlertDialogDescription>
+                                   </AlertDialogHeader>
+                                   <AlertDialogFooter>
+                                     <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                     <AlertDialogAction
+                                       onClick={() => handleDeleteStudent(student.id, student.full_name)}
+                                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                     >
+                                       Delete
+                                     </AlertDialogAction>
+                                   </AlertDialogFooter>
+                                 </AlertDialogContent>
+                               </AlertDialog>
+                             </div>
                           </div>
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>
