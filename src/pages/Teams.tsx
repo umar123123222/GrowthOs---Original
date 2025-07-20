@@ -69,9 +69,7 @@ const Teams = () => {
   const [newMember, setNewMember] = useState({
     full_name: '',
     email: '',
-    role: '',
-    lms_user_id: '',
-    lms_password: ''
+    role: ''
   });
   const { toast } = useToast();
 
@@ -136,33 +134,24 @@ const Teams = () => {
       // Generate a secure temporary password
       const tempPassword = generateSecurePassword();
       
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: newMember.email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: newMember.full_name
+      // Create user via edge function with admin privileges
+      const response = await supabase.functions.invoke('create-team-member', {
+        body: {
+          email: newMember.email,
+          full_name: newMember.full_name,
+          role: newMember.role,
+          temp_password: tempPassword
         }
       });
 
-      if (authError) throw authError;
+      if (response.error) {
+        console.error('Error creating team member:', response.error);
+        throw new Error(response.error.message || 'Failed to create team member');
+      }
 
-      // Update user with additional information including temp_password for credential viewing
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          full_name: newMember.full_name,
-          email: newMember.email,
-          role: newMember.role,
-          lms_user_id: newMember.lms_user_id,
-          lms_password: newMember.lms_password,
-          status: 'Active',
-          temp_password: tempPassword // Store for credential viewing
-        })
-        .eq('id', authData.user.id);
-
-      if (updateError) throw updateError;
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || 'Failed to create team member');
+      }
 
       // Send invitation email
       try {
@@ -184,9 +173,7 @@ const Teams = () => {
       setNewMember({
         full_name: '',
         email: '',
-        role: '',
-        lms_user_id: '',
-        lms_password: ''
+        role: ''
       });
       setIsAddDialogOpen(false);
       fetchTeamMembers();
@@ -294,25 +281,6 @@ const Teams = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <div>
-                <Label htmlFor="lms_user">LMS User ID</Label>
-                <Input
-                  id="lms_user"
-                  value={newMember.lms_user_id}
-                  onChange={(e) => setNewMember({...newMember, lms_user_id: e.target.value})}
-                  placeholder="Enter LMS user ID"
-                />
-              </div>
-              <div>
-                <Label htmlFor="lms_password">LMS Password</Label>
-                <Input
-                  id="lms_password"
-                  type="password"
-                  value={newMember.lms_password}
-                  onChange={(e) => setNewMember({...newMember, lms_password: e.target.value})}
-                  placeholder="Enter LMS password"
-                />
-              </div>
               <Button onClick={handleAddMember} className="w-full">
                 Add Team Member
               </Button>
@@ -353,7 +321,6 @@ const Teams = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>LMS User ID</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Active</TableHead>
                 <TableHead>Actions</TableHead>
@@ -369,7 +336,6 @@ const Teams = () => {
                       {member.role}
                     </Badge>
                   </TableCell>
-                  <TableCell>{member.lms_user_id || 'N/A'}</TableCell>
                   <TableCell>
                     <Badge variant={member.status === 'Active' ? 'default' : 'destructive'}>
                       {member.status}
@@ -402,8 +368,6 @@ const Teams = () => {
                           <CredentialDisplay
                             email={member.email}
                             password={member.temp_password}
-                            lmsUserId={member.lms_user_id}
-                            lmsPassword={member.lms_password}
                           />
                         </DialogContent>
                       </Dialog>

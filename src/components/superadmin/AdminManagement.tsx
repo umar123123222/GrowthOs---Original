@@ -58,9 +58,7 @@ export const AdminManagement = () => {
   const [selectedAdmin, setSelectedAdmin] = useState<Admin | null>(null);
   const [newAdmin, setNewAdmin] = useState({
     full_name: '',
-    email: '',
-    lms_user_id: '',
-    lms_password: ''
+    email: ''
   });
   const { toast } = useToast();
 
@@ -125,33 +123,24 @@ export const AdminManagement = () => {
       // Generate a secure temporary password
       const tempPassword = generateSecurePassword();
       
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: newAdmin.email,
-        password: tempPassword,
-        email_confirm: true,
-        user_metadata: {
-          full_name: newAdmin.full_name
+      // Create user via edge function with admin privileges
+      const response = await supabase.functions.invoke('create-team-member', {
+        body: {
+          email: newAdmin.email,
+          full_name: newAdmin.full_name,
+          role: 'admin',
+          temp_password: tempPassword
         }
       });
 
-      if (authError) throw authError;
+      if (response.error) {
+        console.error('Error creating admin:', response.error);
+        throw new Error(response.error.message || 'Failed to create admin');
+      }
 
-      // Update user with additional information including temp_password for credential viewing
-      const { error: updateError } = await supabase
-        .from('users')
-        .update({
-          full_name: newAdmin.full_name,
-          email: newAdmin.email,
-          role: 'admin',
-          lms_user_id: newAdmin.lms_user_id,
-          lms_password: newAdmin.lms_password,
-          status: 'Active',
-          temp_password: tempPassword // Store for credential viewing
-        })
-        .eq('id', authData.user.id);
-
-      if (updateError) throw updateError;
+      if (!response.data?.success) {
+        throw new Error(response.data?.error || 'Failed to create admin');
+      }
 
       // Send invitation email
       try {
@@ -172,9 +161,7 @@ export const AdminManagement = () => {
 
       setNewAdmin({
         full_name: '',
-        email: '',
-        lms_user_id: '',
-        lms_password: ''
+        email: ''
       });
       setIsAddDialogOpen(false);
       fetchAdmins();
@@ -268,25 +255,6 @@ export const AdminManagement = () => {
                   placeholder="Enter email address"
                 />
               </div>
-              <div>
-                <Label htmlFor="admin_lms_user">LMS User ID</Label>
-                <Input
-                  id="admin_lms_user"
-                  value={newAdmin.lms_user_id}
-                  onChange={(e) => setNewAdmin({...newAdmin, lms_user_id: e.target.value})}
-                  placeholder="Enter LMS user ID (optional)"
-                />
-              </div>
-              <div>
-                <Label htmlFor="admin_lms_password">LMS Password</Label>
-                <Input
-                  id="admin_lms_password"
-                  type="password"
-                  value={newAdmin.lms_password}
-                  onChange={(e) => setNewAdmin({...newAdmin, lms_password: e.target.value})}
-                  placeholder="Enter LMS password (optional)"
-                />
-              </div>
               <Button onClick={handleAddAdmin} className="w-full">
                 Create Admin Account
               </Button>
@@ -329,7 +297,6 @@ export const AdminManagement = () => {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>LMS User ID</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Last Active</TableHead>
                   <TableHead>Actions</TableHead>
@@ -340,7 +307,6 @@ export const AdminManagement = () => {
                   <TableRow key={admin.id}>
                     <TableCell className="font-medium">{admin.full_name}</TableCell>
                     <TableCell>{admin.email}</TableCell>
-                    <TableCell>{admin.lms_user_id || 'N/A'}</TableCell>
                     <TableCell>
                       <Badge variant={admin.status === 'Active' ? 'default' : 'destructive'}>
                         {admin.status}
@@ -373,8 +339,6 @@ export const AdminManagement = () => {
                             <CredentialDisplay
                               email={admin.email}
                               password={admin.temp_password}
-                              lmsUserId={admin.lms_user_id}
-                              lmsPassword={admin.lms_password}
                             />
                           </DialogContent>
                         </Dialog>
