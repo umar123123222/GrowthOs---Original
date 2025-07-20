@@ -54,15 +54,15 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check user role
-    const { data: userData, error: userError } = await supabase
+    // Check user role using admin client to bypass RLS
+    const { data: userData, error: userError } = await supabaseAdmin
       .from('users')
       .select('role')
       .eq('id', user.id)
       .single();
 
     if (userError || !userData || !['admin', 'superadmin'].includes(userData.role)) {
-      console.error('User role check failed:', userError);
+      console.error('User role check failed:', userError, 'userData:', userData);
       return new Response(
         JSON.stringify({ error: 'User not allowed', success: false }),
         { 
