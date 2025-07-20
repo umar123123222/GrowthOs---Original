@@ -87,6 +87,27 @@ export function StudentsManagement() {
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [bulkActionDialog, setBulkActionDialog] = useState(false);
   const { toast } = useToast();
+
+  // Temporary cleanup function for auth users
+  const cleanupAuthUsers = async () => {
+    try {
+      console.log('Running auth cleanup...');
+      const { data, error } = await supabase.functions.invoke('cleanup-auth');
+      if (error) {
+        console.error('Cleanup error:', error);
+      } else {
+        console.log('Cleanup results:', data);
+        if (data?.results) {
+          data.results.forEach((result: any) => {
+            console.log(`${result.email}: ${result.status} - ${result.message}`);
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error('Cleanup failed:', error);
+    }
+  };
+
   
   // Debug: Ensure statusFilter is completely removed
   console.log('StudentsManagement component loaded - statusFilter removed');
@@ -107,6 +128,12 @@ export function StudentsManagement() {
       fetchInstallmentPayments();
     }
   }, [students]);
+
+  useEffect(() => {
+    fetchStudents();
+    // Run auth cleanup once
+    cleanupAuthUsers();
+  }, []);
 
   useEffect(() => {
     filterStudents();
