@@ -45,11 +45,15 @@ export const StudentManagement = () => {
 
   const fetchStudents = async () => {
     try {
+      console.log('Fetching students...');
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('role', 'student')
         .order('created_at', { ascending: false });
+
+      console.log('Students data:', data);
+      console.log('Students error:', error);
 
       if (error) throw error;
       setStudents(data || []);
@@ -94,7 +98,11 @@ export const StudentManagement = () => {
         description: `Student created successfully. Temporary password: ${data.tempPassword}. LMS status is inactive until first payment.`
       });
 
-      fetchStudents();
+      // Wait a moment before fetching to ensure the data is properly saved
+      setTimeout(() => {
+        fetchStudents();
+      }, 1000);
+      
       setIsCreateDialogOpen(false);
     } catch (error) {
       console.error('Error creating student:', error);
@@ -108,10 +116,16 @@ export const StudentManagement = () => {
 
   const updateStudentStatus = async (studentId: string, status: string) => {
     try {
-      // For demo purposes, we'll just show a success message
+      const { error } = await supabase
+        .from('users')
+        .update({ lms_status: status })
+        .eq('id', studentId);
+
+      if (error) throw error;
+
       toast({
         title: 'Success',
-        description: 'Student status updated (demo mode)'
+        description: 'Student status updated successfully'
       });
 
       fetchStudents();
@@ -176,7 +190,7 @@ export const StudentManagement = () => {
     <Card>
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Student Management</CardTitle>
+          <CardTitle>Student Management ({students.length} students)</CardTitle>
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -202,81 +216,94 @@ export const StudentManagement = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="max-w-sm"
           />
+          <Button 
+            onClick={fetchStudents} 
+            variant="outline" 
+            size="sm"
+          >
+            Refresh
+          </Button>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Email</TableHead>
-              <TableHead>Full Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>LMS Status</TableHead>
-              <TableHead>Created Date</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredStudents.map((student) => (
-              <TableRow key={student.id}>
-                <TableCell>{student.email}</TableCell>
-                <TableCell>{student.full_name || 'N/A'}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">Student</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge className={getStatusBadge(student.lms_status || 'inactive')}>
-                    {student.lms_status || 'inactive'}
-                  </Badge>
-                </TableCell>
-                <TableCell>{new Date(student.created_at).toLocaleDateString()}</TableCell>
-                <TableCell>
-                  <div className="flex items-center space-x-2">
-                    <Select
-                      defaultValue="active"
-                      onValueChange={(value) => updateStudentStatus(student.id, value)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="suspended">Suspended</SelectItem>
-                        <SelectItem value="blocked">Blocked</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button variant="ghost" size="sm">
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete {student.full_name || student.email} and remove all their data. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDeleteStudent(student.id, student.full_name || student.email)}
-                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                          >
-                            Delete
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-                </TableCell>
+        {filteredStudents.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            {students.length === 0 ? 'No students found. Create your first student!' : 'No students match your search.'}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Email</TableHead>
+                <TableHead>Full Name</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>LMS Status</TableHead>
+                <TableHead>Created Date</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredStudents.map((student) => (
+                <TableRow key={student.id}>
+                  <TableCell>{student.email}</TableCell>
+                  <TableCell>{student.full_name || 'N/A'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">Student</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getStatusBadge(student.lms_status || 'inactive')}>
+                      {student.lms_status || 'inactive'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{new Date(student.created_at).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <Select
+                        defaultValue={student.lms_status || 'inactive'}
+                        onValueChange={(value) => updateStudentStatus(student.id, value)}
+                      >
+                        <SelectTrigger className="w-32">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="suspended">Suspended</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button variant="ghost" size="sm">
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete {student.full_name || student.email} and remove all their data. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteStudent(student.id, student.full_name || student.email)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
