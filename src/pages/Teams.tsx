@@ -197,21 +197,37 @@ const Teams = () => {
 
   const handleDeleteMember = async (memberId: string, memberName: string) => {
     try {
-      // Delete from users table (this will handle the auth cleanup via trigger if needed)
-      const { error: dbError } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', memberId);
+      // Get member role for the delete request
+      const member = teamMembers.find(m => m.id === memberId);
+      if (!member) {
+        throw new Error('Member not found');
+      }
 
-      if (dbError) throw dbError;
+      // Use edge function for complete user deletion (auth + database)
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: {
+          userId: memberId,
+          userRole: member.role
+        }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to delete user');
+      }
 
       toast({
         title: "Success",
-        description: `${memberName} has been deleted successfully`
+        description: `${memberName} has been completely deleted from the system`
       });
 
       fetchTeamMembers();
     } catch (error: any) {
+      console.error('Error deleting team member:', error);
       toast({
         title: "Error",
         description: "Failed to delete team member: " + error.message,

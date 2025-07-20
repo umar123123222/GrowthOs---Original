@@ -462,16 +462,26 @@ export const StudentManagement = () => {
 
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
     try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', studentId);
+      // Use edge function for complete user deletion (auth + database)
+      const { data, error } = await supabase.functions.invoke('delete-user', {
+        body: {
+          userId: studentId,
+          userRole: 'student'
+        }
+      });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
+      }
+
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to delete student');
+      }
 
       toast({
         title: 'Success',
-        description: `${studentName} has been deleted successfully`
+        description: `${studentName} has been completely deleted from the system`
       });
 
       fetchStudents();
