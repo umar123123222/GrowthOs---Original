@@ -65,7 +65,12 @@ const Teams = () => {
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [credentialDialogOpen, setCredentialDialogOpen] = useState(false);
+  const [isEditPasswordDialogOpen, setIsEditPasswordDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
+  const [editData, setEditData] = useState({
+    email: '',
+    password: ''
+  });
   const [newMember, setNewMember] = useState({
     full_name: '',
     email: '',
@@ -190,6 +195,46 @@ const Teams = () => {
       toast({
         title: "Error",
         description: "Failed to add team member: " + error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditMember = async () => {
+    if (!selectedMember || (!editData.email && !editData.password)) {
+      toast({
+        title: "Error",
+        description: "Please fill in at least one field to update",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const updateData: any = {};
+      if (editData.email) updateData.email = editData.email;
+      if (editData.password) updateData.temp_password = editData.password;
+
+      const { error } = await supabase
+        .from('users')
+        .update(updateData)
+        .eq('id', selectedMember.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Student details updated successfully"
+      });
+
+      setIsEditPasswordDialogOpen(false);
+      setEditData({ email: '', password: '' });
+      setSelectedMember(null);
+      fetchTeamMembers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update student: " + error.message,
         variant: "destructive"
       });
     }
@@ -342,6 +387,7 @@ const Teams = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>LMS Password</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Active</TableHead>
                 <TableHead>Actions</TableHead>
@@ -356,6 +402,23 @@ const Teams = () => {
                     <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
                       {member.role}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                        {member.temp_password || member.lms_password || 'N/A'}
+                      </span>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setSelectedMember(member);
+                          setIsEditPasswordDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={member.status === 'Active' ? 'default' : 'destructive'}>
@@ -433,6 +496,52 @@ const Teams = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Student Dialog */}
+      <Dialog open={isEditPasswordDialogOpen} onOpenChange={setIsEditPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Student Details - {selectedMember?.full_name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editData.email}
+                onChange={(e) => setEditData({...editData, email: e.target.value})}
+                placeholder={selectedMember?.email}
+              />
+            </div>
+            <div>
+              <Label htmlFor="edit-password">Password</Label>
+              <Input
+                id="edit-password"
+                type="text"
+                value={editData.password}
+                onChange={(e) => setEditData({...editData, password: e.target.value})}
+                placeholder="Enter new password"
+              />
+            </div>
+            <div className="flex space-x-2">
+              <Button onClick={handleEditMember} className="flex-1">
+                Update Details
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditPasswordDialogOpen(false);
+                  setEditData({ email: '', password: '' });
+                  setSelectedMember(null);
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
     </div>
   );
