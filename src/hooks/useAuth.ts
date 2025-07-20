@@ -17,30 +17,41 @@ export const useAuth = () => {
     console.log('useAuth: Starting authentication check');
     setLoading(true);
     
-    // Get initial session
+    // Listen for auth changes first to catch all events
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('useAuth: Auth state changed', { event, session: !!session });
+      
+      // Only process specific events to prevent unnecessary calls
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (session?.user) {
+          await fetchUserProfile(session.user.id);
+        }
+      } else if (event === 'SIGNED_OUT') {
+        console.log('useAuth: User signed out, clearing state');
+        setUser(null);
+        setLoading(false);
+      } else if (event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          await fetchUserProfile(session.user.id);
+        } else {
+          console.log('useAuth: No initial session found');
+          setLoading(false);
+        }
+      }
+    });
+
+    // Get initial session after setting up listener
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       console.log('useAuth: Initial session check', { session: !!session, error });
-      if (session?.user) {
+      if (session?.user && !user) {
         fetchUserProfile(session.user.id);
-      } else {
+      } else if (!session) {
         console.log('useAuth: No session found, setting loading to false');
         setLoading(false);
       }
     }).catch(err => {
       console.error('useAuth: Error getting initial session:', err);
       setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('useAuth: Auth state changed', { event, session: !!session });
-      if (session?.user) {
-        await fetchUserProfile(session.user.id);
-      } else {
-        console.log('useAuth: No session in state change, clearing user');
-        setUser(null);
-        setLoading(false);
-      }
     });
 
     return () => subscription.unsubscribe();
@@ -52,12 +63,11 @@ export const useAuth = () => {
     try {
       console.log('fetchUserProfile: About to make database query');
       
-      // Remove timeout and race condition - let Supabase handle its own timeouts
       const { data, error } = await supabase
         .from('users')
         .select('id, email, role, full_name, created_at')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid errors when no data is found
       
       console.log('fetchUserProfile: Database query completed', { 
         data: data ? { ...data, id: data.id } : null, 
@@ -66,8 +76,12 @@ export const useAuth = () => {
 
       if (error) {
         console.error('fetchUserProfile: Database error:', error);
-        // If user doesn't exist, we'll set user to null and let login handle user creation
-        setUser(null);
+        // Don't immediately clear user on database errors - might be temporary
+        if (error.code === 'PGRST116') {
+          // User doesn't exist in users table
+          console.log('fetchUserProfile: User not found in users table');
+          setUser(null);
+        }
       } else if (data) {
         console.log('fetchUserProfile: Setting user data:', { role: data.role, email: data.email });
         setUser(data as User);
@@ -77,7 +91,7 @@ export const useAuth = () => {
       }
     } catch (error) {
       console.error('fetchUserProfile: Catch block error:', error);
-      setUser(null);
+      // Don't immediately clear user on network errors
     } finally {
       console.log('fetchUserProfile: Setting loading to false');
       setLoading(false);
