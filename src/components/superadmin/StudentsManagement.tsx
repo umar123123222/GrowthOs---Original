@@ -1236,53 +1236,65 @@ export function StudentsManagement() {
                                   )}
                                 </div>
                               </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Current Password</Label>
-                                <div className="flex items-center space-x-2">
-                                  <p className="text-sm text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">
-                                    {student.lms_password && student.lms_password !== student.temp_password
-                                      ? student.lms_password
-                                      : student.temp_password || 'Not set'}
-                                  </p>
-                                  {(student.lms_password || student.temp_password) && (
+                              {student.lms_password && student.lms_password !== student.temp_password ? (
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-700">Current Password</Label>
+                                  <div className="flex items-center space-x-2">
+                                    <p className="text-sm text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">
+                                      {student.lms_password}
+                                    </p>
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => navigator.clipboard.writeText(
-                                        student.lms_password && student.lms_password !== student.temp_password
-                                          ? student.lms_password
-                                          : student.temp_password || ''
-                                      )}
+                                      onClick={() => navigator.clipboard.writeText(student.lms_password)}
                                       title="Copy to clipboard"
                                     >
                                       <Key className="w-3 h-3" />
                                     </Button>
-                                  )}
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  {student.lms_password && student.lms_password !== student.temp_password
-                                    ? 'New password (changed from temp)'
-                                    : 'Temporary password (unchanged)'}
-                                </p>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Temporary Password</Label>
-                                <div className="flex items-center space-x-2">
-                                  <p className="text-sm text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">
-                                    {student.temp_password || 'Not set'}
-                                  </p>
-                                  {student.temp_password && (
-                                    <Button
-                                      variant="ghost"
+                                    <Button 
+                                      variant="ghost" 
                                       size="sm"
-                                      onClick={() => navigator.clipboard.writeText(student.temp_password)}
-                                      title="Copy to clipboard"
+                                      onClick={() => handleEditPassword(student, 'lms')}
+                                      title="Edit Current Password"
                                     >
-                                      <Key className="w-3 h-3" />
+                                      <Edit className="w-3 h-3" />
                                     </Button>
-                                  )}
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    New password (changed from temp)
+                                  </p>
                                 </div>
-                              </div>
+                              ) : (
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-700">Temporary Password</Label>
+                                  <div className="flex items-center space-x-2">
+                                    <p className="text-sm text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">
+                                      {student.temp_password || 'Not set'}
+                                    </p>
+                                    {student.temp_password && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => navigator.clipboard.writeText(student.temp_password)}
+                                        title="Copy to clipboard"
+                                      >
+                                        <Key className="w-3 h-3" />
+                                      </Button>
+                                    )}
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => handleEditPassword(student, 'temp')}
+                                      title="Edit Temporary Password"
+                                    >
+                                      <Edit className="w-3 h-3" />
+                                    </Button>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Temporary password (unchanged)
+                                  </p>
+                                </div>
+                              )}
                             </div>
                             
                             {/* Installment Payment Buttons */}
