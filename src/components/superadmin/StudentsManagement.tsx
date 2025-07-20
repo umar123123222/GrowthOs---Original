@@ -33,6 +33,7 @@ interface Student {
   phone: string;
   lms_user_id: string;
   lms_password: string;
+  temp_password: string;
   created_at: string;
   last_active_at: string;
   fees_structure: string;
@@ -86,6 +87,10 @@ export function StudentsManagement() {
   const [installmentPayments, setInstallmentPayments] = useState<Map<string, InstallmentPayment[]>>(new Map());
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [bulkActionDialog, setBulkActionDialog] = useState(false);
+  const [passwordEditDialog, setPasswordEditDialog] = useState(false);
+  const [selectedStudentForPassword, setSelectedStudentForPassword] = useState<Student | null>(null);
+  const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
+  const [newPassword, setNewPassword] = useState('');
   const { toast } = useToast();
   
   // Debug: Ensure statusFilter is completely removed
@@ -802,6 +807,50 @@ export function StudentsManagement() {
     }
   };
 
+  const handleEditPassword = (student: Student, type: 'temp' | 'lms') => {
+    setSelectedStudentForPassword(student);
+    setPasswordType(type);
+    setNewPassword(type === 'temp' ? student.temp_password || '' : student.lms_password || '');
+    setPasswordEditDialog(true);
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!selectedStudentForPassword || !newPassword.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a password",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      const updateField = passwordType === 'temp' ? 'temp_password' : 'lms_password';
+      const { error } = await supabase
+        .from('users')
+        .update({ [updateField]: newPassword })
+        .eq('id', selectedStudentForPassword.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `${passwordType === 'temp' ? 'Temporary' : 'LMS'} password updated successfully`
+      });
+
+      setPasswordEditDialog(false);
+      setNewPassword('');
+      setSelectedStudentForPassword(null);
+      fetchStudents();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update password: " + error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -1072,6 +1121,8 @@ export function StudentsManagement() {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
+                  <TableHead>Temp Password</TableHead>
+                  <TableHead>LMS Password</TableHead>
                   <TableHead>Fees Structure</TableHead>
                   <TableHead>LMS Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -1091,6 +1142,36 @@ export function StudentsManagement() {
                       <TableCell>{student.full_name}</TableCell>
                       <TableCell>{student.email}</TableCell>
                       <TableCell>{student.phone || 'N/A'}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                            {student.temp_password || 'N/A'}
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEditPassword(student, 'temp')}
+                            title="Edit Temp Password"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                            {student.lms_password || 'N/A'}
+                          </span>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleEditPassword(student, 'lms')}
+                            title="Edit LMS Password"
+                          >
+                            <Edit className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
                        <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
                         <TableCell>
                            <div className="flex flex-wrap gap-2">
@@ -1109,7 +1190,7 @@ export function StudentsManagement() {
                              {getInstallmentStatus(student).status}
                            </Badge>
                          </div>
-                       </TableCell>
+                        </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
                           <Button
@@ -1139,7 +1220,7 @@ export function StudentsManagement() {
                     
                     {expandedRows.has(student.id) && (
                       <TableRow className="animate-accordion-down">
-                        <TableCell colSpan={8} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
+                        <TableCell colSpan={10} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>
@@ -1408,6 +1489,46 @@ export function StudentsManagement() {
               </Button>
               <Button onClick={saveStatusUpdate}>
                 Update LMS Status
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Edit Dialog */}
+      <Dialog open={passwordEditDialog} onOpenChange={setPasswordEditDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              Edit {passwordType === 'temp' ? 'Temporary' : 'LMS'} Password - {selectedStudentForPassword?.full_name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="password">
+                {passwordType === 'temp' ? 'Temporary Password' : 'LMS Password'}
+              </Label>
+              <Input
+                id="password"
+                type="text"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Enter new password"
+              />
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setPasswordEditDialog(false);
+                  setNewPassword('');
+                  setSelectedStudentForPassword(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleUpdatePassword}>
+                Update Password
               </Button>
             </div>
           </div>
