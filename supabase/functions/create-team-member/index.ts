@@ -43,6 +43,33 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { email, full_name, role, temp_password }: CreateMemberRequest = await req.json();
 
+    // Generate LMS password for students
+    const generateSecurePassword = (): string => {
+      const length = Math.floor(Math.random() * 5) + 8; // 8-12 characters
+      const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+      const numbers = '0123456789';
+      const special = '!@#$%^&*';
+      
+      // Ensure at least one character from each type
+      let password = '';
+      password += uppercase[Math.floor(Math.random() * uppercase.length)];
+      password += lowercase[Math.floor(Math.random() * lowercase.length)];
+      password += numbers[Math.floor(Math.random() * numbers.length)];
+      password += special[Math.floor(Math.random() * special.length)];
+      
+      // Fill the rest randomly
+      const allChars = uppercase + lowercase + numbers + special;
+      for (let i = password.length; i < length; i++) {
+        password += allChars[Math.floor(Math.random() * allChars.length)];
+      }
+      
+      // Shuffle the password
+      return password.split('').sort(() => Math.random() - 0.5).join('');
+    };
+
+    const lmsPassword = role === 'student' ? generateSecurePassword() : null;
+
     console.log(`Creating ${role} user: ${email}`);
 
     // Check if user already exists
@@ -99,16 +126,25 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Auth user created successfully:', authData.user.id);
 
     // Insert user profile in the users table
+    const userInsertData: any = {
+      id: authData.user.id,
+      full_name,
+      email,
+      role,
+      status: 'Active',
+      temp_password // Store for credential viewing
+    };
+
+    // Add LMS credentials for students
+    if (role === 'student' && lmsPassword) {
+      userInsertData.lms_user_id = email;
+      userInsertData.lms_password = lmsPassword;
+      userInsertData.lms_status = 'inactive'; // Inactive until first payment
+    }
+
     const { error: insertError } = await supabaseAdmin
       .from('users')
-      .insert({
-        id: authData.user.id,
-        full_name,
-        email,
-        role,
-        status: 'Active',
-        temp_password // Store for credential viewing
-      });
+      .insert(userInsertData);
 
     if (insertError) {
       console.error('User profile insert error:', insertError);
@@ -117,11 +153,18 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('User profile updated successfully');
 
-    return new Response(JSON.stringify({ 
+    const responseData: any = { 
       success: true, 
       message: "Team member created successfully",
       user_id: authData.user.id 
-    }), {
+    };
+
+    // Include LMS password in response for students
+    if (role === 'student' && lmsPassword) {
+      responseData.lmsPassword = lmsPassword;
+    }
+
+    return new Response(JSON.stringify(responseData), {
       status: 200,
       headers: {
         "Content-Type": "application/json",

@@ -157,15 +157,24 @@ const Teams = () => {
       try {
         await sendInvitationEmail(newMember.email, newMember.full_name, newMember.role, tempPassword);
         
+        
+        const successMessage = newMember.role === 'student' && response.data?.lmsPassword
+          ? `${newMember.role} account created and invitation email sent to ${newMember.email}. LMS Password: ${response.data.lmsPassword}`
+          : `${newMember.role} account created and invitation email sent to ${newMember.email}`;
+          
         toast({
           title: "Success",
-          description: `${newMember.role} account created and invitation email sent to ${newMember.email}`
+          description: successMessage
         });
       } catch (emailError) {
         // User was created but email failed
+        const failureMessage = newMember.role === 'student' && response.data?.lmsPassword
+          ? `Account created but failed to send invitation email. Login Password: ${tempPassword} | LMS Password: ${response.data.lmsPassword}`
+          : `Account created but failed to send invitation email. Manual credentials: ${tempPassword}`;
+          
         toast({
           title: "Partial Success",
-          description: `Account created but failed to send invitation email. Manual credentials: ${tempPassword}`,
+          description: failureMessage,
           variant: "destructive"
         });
       }

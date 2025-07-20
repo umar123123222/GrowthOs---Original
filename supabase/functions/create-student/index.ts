@@ -74,10 +74,33 @@ const handler = async (req: Request): Promise<Response> => {
 
     const { fullName, email, phone, feesStructure }: CreateStudentRequest = await req.json();
 
-    // Generate a temporary password for the new student
-    const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
-    
-    console.log('Creating student with email:', email);
+    // Generate a secure temporary password for the new student
+    const generateSecurePassword = (): string => {
+      const length = Math.floor(Math.random() * 5) + 8; // 8-12 characters
+      const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+      const numbers = '0123456789';
+      const special = '!@#$%^&*';
+      
+      // Ensure at least one character from each type
+      let password = '';
+      password += uppercase[Math.floor(Math.random() * uppercase.length)];
+      password += lowercase[Math.floor(Math.random() * lowercase.length)];
+      password += numbers[Math.floor(Math.random() * numbers.length)];
+      password += special[Math.floor(Math.random() * special.length)];
+      
+      // Fill the rest randomly
+      const allChars = uppercase + lowercase + numbers + special;
+      for (let i = password.length; i < length; i++) {
+        password += allChars[Math.floor(Math.random() * allChars.length)];
+      }
+      
+      // Shuffle the password
+      return password.split('').sort(() => Math.random() - 0.5).join('');
+    };
+
+    const tempPassword = generateSecurePassword();
+    const lmsPassword = generateSecurePassword(); // Separate LMS password
 
     // Create auth user first using admin client
     const { data: authData, error: authCreateError } = await supabaseAdmin.auth.admin.createUser({
@@ -94,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw authCreateError;
     }
 
-    console.log('User created successfully, updating profile...');
+    console.log('Creating student with email:', email);
 
     // Insert user into public.users table using admin client
     const { error: insertError } = await supabaseAdmin
@@ -107,6 +130,8 @@ const handler = async (req: Request): Promise<Response> => {
         phone: phone,
         fees_structure: feesStructure,
         lms_user_id: email, // Set LMS user ID to email
+        lms_password: lmsPassword, // Store the LMS password
+        temp_password: tempPassword, // Store the temp password for login
         lms_status: 'inactive' // Set status to inactive until first payment
       });
 
@@ -121,6 +146,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ 
         success: true, 
         tempPassword,
+        lmsPassword,
         message: 'Student created successfully'
       }),
       {

@@ -235,7 +235,7 @@ export const StudentManagement = () => {
 
       toast({
         title: 'Success',
-        description: `Student created successfully. Temporary password: ${data.tempPassword}. LMS status is inactive until first payment.`
+        description: `Student created successfully. Login Password: ${data.tempPassword}${data.lmsPassword ? ` | LMS Password: ${data.lmsPassword}` : ''}. LMS status is inactive until first payment.`
       });
 
       setTimeout(() => {
