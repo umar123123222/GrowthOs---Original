@@ -78,7 +78,7 @@ const Teams = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .in('role', ['admin', 'mentor'])
+        .in('role', user?.role === 'superadmin' ? ['admin', 'mentor', 'superadmin'] : ['admin', 'mentor'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
