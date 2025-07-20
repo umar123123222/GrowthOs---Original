@@ -5,6 +5,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -444,6 +455,31 @@ export const StudentManagement = () => {
       toast({
         title: 'Error',
         description: 'Failed to mark installment as paid',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleDeleteStudent = async (studentId: string, studentName: string) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', studentId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `${studentName} has been deleted successfully`
+      });
+
+      fetchStudents();
+    } catch (error: any) {
+      console.error('Error deleting student:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete student: ' + error.message,
         variant: 'destructive'
       });
     }
@@ -933,31 +969,61 @@ export const StudentManagement = () => {
                            </Badge>
                          </div>
                        </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(student)}
-                            title="Edit Student Details"
-                            className="hover-scale hover:border-blue-300 hover:text-blue-600"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleRowExpansion(student.id)}
-                            title={expandedRows.has(student.id) ? "Collapse" : "Expand"}
-                            className="hover-scale hover:border-green-300 hover:text-green-600"
-                          >
-                            {expandedRows.has(student.id) ? 
-                              <ChevronUp className="w-4 h-4" /> : 
-                              <ChevronDown className="w-4 h-4" />
-                            }
-                          </Button>
-                        </div>
-                      </TableCell>
+                       <TableCell>
+                         <div className="flex space-x-2">
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => handleEdit(student)}
+                             title="Edit Student Details"
+                             className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                           >
+                             <Edit className="w-4 h-4" />
+                           </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => toggleRowExpansion(student.id)}
+                             title={expandedRows.has(student.id) ? "Collapse" : "Expand"}
+                             className="hover-scale hover:border-green-300 hover:text-green-600"
+                           >
+                             {expandedRows.has(student.id) ? 
+                               <ChevronUp className="w-4 h-4" /> : 
+                               <ChevronDown className="w-4 h-4" />
+                             }
+                           </Button>
+                           
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 title="Delete Student"
+                                 className="hover-scale hover:border-red-300 hover:text-red-600"
+                               >
+                                 <Trash2 className="w-4 h-4" />
+                               </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                   This will permanently delete {student.full_name} and remove all their data. This action cannot be undone.
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                 <AlertDialogAction
+                                   onClick={() => handleDeleteStudent(student.id, student.full_name)}
+                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                 >
+                                   Delete
+                                 </AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+                         </div>
+                       </TableCell>
                     </TableRow>
                     
                     {expandedRows.has(student.id) && (

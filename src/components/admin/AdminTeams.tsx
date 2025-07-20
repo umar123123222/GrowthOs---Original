@@ -18,6 +18,17 @@ import {
   DialogTitle, 
   DialogTrigger 
 } from '@/components/ui/dialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { 
@@ -30,7 +41,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { Plus, Activity, Eye, Edit } from 'lucide-react';
+import { Plus, Activity, Trash2 } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -149,6 +160,30 @@ const AdminTeams = () => {
       toast({
         title: "Error",
         description: "Failed to add team member",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteMember = async (memberId: string, memberName: string) => {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', memberId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: `${memberName} has been deleted successfully`
+      });
+
+      fetchTeamMembers();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to delete team member: " + error.message,
         variant: "destructive"
       });
     }
@@ -288,6 +323,32 @@ const AdminTeams = () => {
                         <Activity className="w-4 h-4 mr-1" />
                         Activity
                       </Button>
+                      
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete {member.full_name} and remove all their data. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteMember(member.id, member.full_name)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Delete
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </TableCell>
                 </TableRow>
