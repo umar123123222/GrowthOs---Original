@@ -837,6 +837,11 @@ export function StudentsManagement() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="text-sm text-muted-foreground space-y-1">
+                <p>• LMS User ID will be set to the student's email</p>
+                <p>• Temporary password will be auto-generated</p>
+                <p>• LMS status will be inactive until first payment</p>
+              </div>
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Cancel

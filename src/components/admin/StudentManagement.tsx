@@ -63,18 +63,24 @@ export const StudentManagement = () => {
     }
   };
 
-  const createStudent = async (fullName: string, email: string, phone: string, feesStructure: string, password: string) => {
+  const createStudent = async (fullName: string, email: string, phone: string, feesStructure: string) => {
     try {
-      // Create auth user
+      // Generate a temporary password for the new student
+      const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+      
+      // Create auth user first
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email,
-        password,
-        email_confirm: true
+        password: tempPassword,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName
+        }
       });
 
       if (authError) throw authError;
 
-      // Update user with student details and set LMS user ID to email, status to inactive
+      // Update user with additional information
       const { error: updateError } = await supabase
         .from('users')
         .update({ 
@@ -91,7 +97,7 @@ export const StudentManagement = () => {
 
       toast({
         title: 'Success',
-        description: 'Student created successfully. LMS status is inactive until first payment.'
+        description: `Student created successfully. Temporary password: ${tempPassword}. LMS status is inactive until first payment.`
       });
 
       fetchStudents();
@@ -100,7 +106,7 @@ export const StudentManagement = () => {
       console.error('Error creating student:', error);
       toast({
         title: 'Error',
-        description: 'Failed to create student',
+        description: 'Failed to create student: ' + (error as any).message,
         variant: 'destructive'
       });
     }
@@ -266,21 +272,19 @@ export const StudentManagement = () => {
   );
 };
 
-const CreateStudentForm = ({ onSubmit }: { onSubmit: (fullName: string, email: string, phone: string, feesStructure: string, password: string) => void }) => {
+const CreateStudentForm = ({ onSubmit }: { onSubmit: (fullName: string, email: string, phone: string, feesStructure: string) => void }) => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [feesStructure, setFeesStructure] = useState('1_installment');
-  const [password, setPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(fullName, email, phone, feesStructure, password);
+    onSubmit(fullName, email, phone, feesStructure);
     setFullName('');
     setEmail('');
     setPhone('');
     setFeesStructure('1_installment');
-    setPassword('');
   };
 
   return (
@@ -324,14 +328,10 @@ const CreateStudentForm = ({ onSubmit }: { onSubmit: (fullName: string, email: s
           </SelectContent>
         </Select>
       </div>
-      <div>
-        <label className="text-sm font-medium">Password</label>
-        <Input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
+      <div className="text-sm text-muted-foreground">
+        <p>• LMS User ID will be set to the student's email</p>
+        <p>• Temporary password will be auto-generated</p>
+        <p>• LMS status will be inactive until first payment</p>
       </div>
       <Button type="submit" className="w-full">Create Student</Button>
     </form>
