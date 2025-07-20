@@ -78,7 +78,7 @@ const Teams = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .in('role', user?.role === 'superadmin' ? ['admin', 'mentor', 'superadmin'] : ['admin', 'mentor'])
+        .in('role', user?.role === 'superadmin' ? ['admin', 'mentor', 'superadmin', 'student'] : ['admin', 'mentor'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -231,6 +231,7 @@ const Teams = () => {
 
   const adminCount = teamMembers.filter(m => m.role === 'admin').length;
   const mentorCount = teamMembers.filter(m => m.role === 'mentor').length;
+  const studentCount = teamMembers.filter(m => m.role === 'student').length;
 
   if (loading) {
     return (
@@ -284,9 +285,10 @@ const Teams = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
-                  <SelectContent>
+                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="mentor">Mentor</SelectItem>
+                    {user?.role === 'superadmin' && <SelectItem value="student">Student</SelectItem>}
                   </SelectContent>
                 </Select>
               </div>
@@ -299,7 +301,7 @@ const Teams = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Total Admins</CardTitle>
@@ -316,6 +318,16 @@ const Teams = () => {
             <div className="text-3xl font-bold text-green-600">{mentorCount}</div>
           </CardContent>
         </Card>
+        {user?.role === 'superadmin' && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Total Students</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-600">{studentCount}</div>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Team Members Table */}
