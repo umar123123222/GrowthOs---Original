@@ -218,17 +218,15 @@ export function StudentsManagement() {
     e.preventDefault();
     
     try {
-      const studentData = {
-        full_name: formData.full_name,
-        email: formData.email,
-        phone: formData.phone,
-        lms_user_id: formData.email, // Set LMS user ID to email
-        lms_status: 'inactive', // Set status to inactive until first payment
-        fees_structure: formData.fees_structure,
-        role: 'student'
-      };
-
       if (editingStudent) {
+        // Update existing student
+        const studentData = {
+          full_name: formData.full_name,
+          email: formData.email,
+          phone: formData.phone,
+          fees_structure: formData.fees_structure
+        };
+
         const { error } = await supabase
           .from('users')
           .update(studentData)
@@ -241,32 +239,32 @@ export function StudentsManagement() {
           description: 'Student updated successfully'
         });
       } else {
-        // Generate a temporary password for the new student
-        const tempPassword = Math.random().toString(36).slice(-8) + 'A1!';
+        // Create new student using edge function
+        console.log('Creating student via edge function...');
         
-        // Create auth user first
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-          email: formData.email,
-          password: tempPassword,
-          email_confirm: true,
-          user_metadata: {
-            full_name: formData.full_name
+        const { data, error } = await supabase.functions.invoke('create-student', {
+          body: {
+            fullName: formData.full_name,
+            email: formData.email,
+            phone: formData.phone,
+            feesStructure: formData.fees_structure
           }
         });
 
-        if (authError) throw authError;
+        console.log('Edge function response:', data, error);
 
-        // Update user with additional information
-        const { error: updateError } = await supabase
-          .from('users')
-          .update(studentData)
-          .eq('id', authData.user.id);
+        if (error) {
+          console.error('Edge function error:', error);
+          throw error;
+        }
 
-        if (updateError) throw updateError;
-        
+        if (!data || !data.success) {
+          throw new Error(data?.error || 'Failed to create student');
+        }
+
         toast({
           title: 'Success',
-          description: `Student added successfully. Temporary password: ${tempPassword}. LMS status is inactive until first payment.`
+          description: `Student created successfully. Login Password: ${data.tempPassword}${data.lmsPassword ? ` | LMS Password: ${data.lmsPassword}` : ''}. LMS status is inactive until first payment.`
         });
       }
 
@@ -278,7 +276,12 @@ export function StudentsManagement() {
         phone: '',
         fees_structure: '1_installment'
       });
-      fetchStudents();
+      
+      // Wait a moment before refreshing to ensure the database is updated
+      setTimeout(() => {
+        fetchStudents();
+      }, 1000);
+      
     } catch (error) {
       console.error('Error saving student:', error);
       toast({
