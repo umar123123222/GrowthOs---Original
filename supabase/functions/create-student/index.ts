@@ -40,7 +40,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Check authentication and user role
+    // Check if the current user is admin or superadmin
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     console.log('Auth check result:', { user: user?.id, error: authError });
@@ -71,8 +71,9 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('User role check failed:', userError, 'userData:', userData);
       return new Response(
         JSON.stringify({ 
-          error: 'Access denied. Only admins and superadmins can create student accounts.',
-          success: false
+          error: 'User not allowed', 
+          success: false,
+          debug: { userId: user.id, userData, userError }
         }),
         { 
           status: 403, 
@@ -112,23 +113,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     const tempPassword = generateSecurePassword();
     const lmsPassword = generateSecurePassword(); // Separate LMS password
-
-    // Check if user already exists first
-    const { data: existingUser, error: existingUserError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
-    
-    if (existingUser?.user) {
-      console.log('User already exists with this email');
-      return new Response(
-        JSON.stringify({ 
-          error: 'A user with this email address already exists. Please use a different email.',
-          success: false
-        }),
-        { 
-          status: 400, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-        }
-      );
-    }
 
     // Create auth user first using admin client
     const { data: authData, error: authCreateError } = await supabaseAdmin.auth.admin.createUser({

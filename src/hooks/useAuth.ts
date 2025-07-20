@@ -15,62 +15,55 @@ export const useAuth = () => {
 
   useEffect(() => {
     console.log('useAuth: Starting authentication check');
-    let mounted = true;
+    setLoading(true);
     
-    const initializeAuth = async () => {
-      try {
-        // Get current session
-        const { data: { session }, error } = await supabase.auth.getSession();
-        console.log('useAuth: Initial session check', { session: !!session, error });
-        
-        if (!mounted) return;
-        
-        if (session?.user) {
-          await fetchUserProfile(session.user.id);
-        } else {
-          console.log('useAuth: No session found, setting loading to false');
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error('useAuth: Error getting initial session:', err);
-        if (mounted) {
-          setLoading(false);
-        }
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      console.log('useAuth: Initial session check', { session: !!session, error });
+      if (session?.user) {
+        fetchUserProfile(session.user.id);
+      } else {
+        console.log('useAuth: No session found, setting loading to false');
+        setLoading(false);
       }
-    };
+    }).catch(err => {
+      console.error('useAuth: Error getting initial session:', err);
+      setLoading(false);
+    });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('useAuth: Auth state changed', { event, session: !!session });
-      
-      if (!mounted) return;
-      
-      if (event === 'SIGNED_IN' && session?.user) {
+      if (session?.user) {
         await fetchUserProfile(session.user.id);
-      } else if (event === 'SIGNED_OUT') {
-        console.log('useAuth: User signed out, clearing state');
+      } else {
+        console.log('useAuth: No session in state change, clearing user');
         setUser(null);
         setLoading(false);
       }
     });
 
-    initializeAuth();
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   const fetchUserProfile = async (userId: string) => {
     console.log('fetchUserProfile: Starting for user ID:', userId);
     
+    // Add a timeout to prevent infinite loading
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Database query timeout')), 10000);
+    });
+    
     try {
-      const { data, error } = await supabase
+      console.log('fetchUserProfile: About to make database query');
+      
+      const queryPromise = supabase
         .from('users')
         .select('id, email, role, full_name, created_at')
         .eq('id', userId)
-        .maybeSingle();
+        .single();
+      
+      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
       
       console.log('fetchUserProfile: Database query completed', { 
         data: data ? { ...data, id: data.id } : null, 
@@ -79,18 +72,20 @@ export const useAuth = () => {
 
       if (error) {
         console.error('fetchUserProfile: Database error:', error);
+        // If user doesn't exist, we'll set user to null and let login handle user creation
         setUser(null);
       } else if (data) {
         console.log('fetchUserProfile: Setting user data:', { role: data.role, email: data.email });
         setUser(data as User);
       } else {
-        console.log('fetchUserProfile: No user data found');
+        console.log('fetchUserProfile: No data returned');
         setUser(null);
       }
     } catch (error) {
       console.error('fetchUserProfile: Catch block error:', error);
       setUser(null);
     } finally {
+      console.log('fetchUserProfile: Setting loading to false');
       setLoading(false);
     }
   };
