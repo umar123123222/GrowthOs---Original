@@ -186,50 +186,51 @@ const Profile = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6 p-6">
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">
+    <div className="max-w-4xl mx-auto space-y-6 p-6">
+      <div className="text-center">
+        <h1 className="text-3xl font-bold text-blue-600 mb-2">
           Profile Settings
         </h1>
-        <p className="text-muted-foreground mt-1">Manage your account information</p>
+        <p className="text-gray-600">Manage your account information</p>
       </div>
 
       <div className="space-y-6">
         {/* Personal Information */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center text-lg">
-              <User className="w-5 h-5 mr-2 text-primary" />
+        <Card className="bg-white shadow-lg">
+          <CardHeader className="bg-blue-50 border-b">
+            <CardTitle className="flex items-center text-lg text-gray-800">
+              <User className="w-5 h-5 mr-2 text-blue-600" />
               Personal Information
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-6 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
+              <Label htmlFor="name" className="text-sm font-medium text-gray-700">Full Name</Label>
               <Input
                 id="name"
                 value={profileData.full_name}
                 onChange={(e) => setProfileData({...profileData, full_name: e.target.value})}
                 placeholder="Enter your full name"
+                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium">User ID (Email)</Label>
+              <Label htmlFor="email" className="text-sm font-medium text-gray-700">User ID (Email)</Label>
               <Input
                 id="email"
                 type="email"
                 value={profileData.email}
                 disabled
-                className="bg-muted cursor-not-allowed"
+                className="bg-gray-100 border-gray-300 cursor-not-allowed"
               />
-              <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+              <p className="text-xs text-blue-600">Email cannot be changed</p>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-4">
               <Button 
                 onClick={updateProfile}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
               >
                 Save Changes
               </Button>
@@ -238,16 +239,16 @@ const Profile = () => {
         </Card>
 
         {/* Password Change */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center text-lg">
-              <Lock className="w-5 h-5 mr-2 text-primary" />
+        <Card className="bg-white shadow-lg">
+          <CardHeader className="bg-orange-50 border-b">
+            <CardTitle className="flex items-center text-lg text-gray-800">
+              <Lock className="w-5 h-5 mr-2 text-orange-600" />
               Change Password
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="p-6 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="currentPassword" className="text-sm font-medium">Current Password</Label>
+              <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">Current Password</Label>
               <div className="relative">
                 <Input
                   id="currentPassword"
@@ -255,7 +256,7 @@ const Profile = () => {
                   value={passwordData.currentPassword}
                   onChange={(e) => setPasswordData({...passwordData, currentPassword: e.target.value})}
                   placeholder="Enter current password"
-                  className="pr-10"
+                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-10"
                 />
                 <Button
                   type="button"
@@ -265,16 +266,16 @@ const Profile = () => {
                   onClick={() => togglePasswordVisibility('current')}
                 >
                   {showPasswords.current ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    <EyeOff className="h-4 w-4 text-gray-500" />
                   ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <Eye className="h-4 w-4 text-gray-500" />
                   )}
                 </Button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="newPassword" className="text-sm font-medium">New Password</Label>
+              <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">New Password</Label>
               <div className="relative">
                 <Input
                   id="newPassword"
@@ -282,7 +283,7 @@ const Profile = () => {
                   value={passwordData.newPassword}
                   onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
                   placeholder="Enter new password"
-                  className="pr-10"
+                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-10"
                 />
                 <Button
                   type="button"
@@ -292,16 +293,16 @@ const Profile = () => {
                   onClick={() => togglePasswordVisibility('new')}
                 >
                   {showPasswords.new ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    <EyeOff className="h-4 w-4 text-gray-500" />
                   ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <Eye className="h-4 w-4 text-gray-500" />
                   )}
                 </Button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">Confirm New Password</Label>
               <div className="relative">
                 <Input
                   id="confirmPassword"
@@ -309,7 +310,7 @@ const Profile = () => {
                   value={passwordData.confirmPassword}
                   onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
                   placeholder="Confirm new password"
-                  className="pr-10"
+                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500 pr-10"
                 />
                 <Button
                   type="button"
@@ -319,18 +320,18 @@ const Profile = () => {
                   onClick={() => togglePasswordVisibility('confirm')}
                 >
                   {showPasswords.confirm ? (
-                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    <EyeOff className="h-4 w-4 text-gray-500" />
                   ) : (
-                    <Eye className="h-4 w-4 text-muted-foreground" />
+                    <Eye className="h-4 w-4 text-gray-500" />
                   )}
                 </Button>
               </div>
             </div>
 
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-4">
               <Button 
                 onClick={updatePassword}
-                className="bg-primary hover:bg-primary/90"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
               >
                 Update Password
               </Button>
