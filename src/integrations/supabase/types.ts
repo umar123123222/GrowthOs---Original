@@ -57,6 +57,7 @@ export type Database = {
       }
       assignment: {
         Row: {
+          assigned_by: string | null
           assignment_description: string | null
           assignment_id: string
           assignment_title: string | null
@@ -67,6 +68,7 @@ export type Database = {
           Status: string | null
         }
         Insert: {
+          assigned_by?: string | null
           assignment_description?: string | null
           assignment_id?: string
           assignment_title?: string | null
@@ -77,6 +79,7 @@ export type Database = {
           Status?: string | null
         }
         Update: {
+          assigned_by?: string | null
           assignment_description?: string | null
           assignment_id?: string
           assignment_title?: string | null
@@ -86,7 +89,15 @@ export type Database = {
           sequence_order?: number
           Status?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_assignment_assigned_by"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       assignment_submissions: {
         Row: {

@@ -10,7 +10,7 @@ import { RecordingsManagement } from '@/components/superadmin/RecordingsManageme
 import { AssignmentsManagement } from '@/components/superadmin/AssignmentsManagement';
 import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
-import { SubmissionsManagement } from '@/components/superadmin/SubmissionsManagement';
+import { AssignmentFeedback } from '@/components/mentor/AssignmentFeedback';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -45,7 +45,7 @@ export default function SuperadminDashboard() {
       case 'students':
         return <StudentsManagement />;
       case 'submissions':
-        return <SubmissionsManagement />;
+        return <AssignmentFeedback />;
       case 'support':
         return <SupportManagement />;
       default:

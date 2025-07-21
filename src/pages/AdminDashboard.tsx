@@ -16,7 +16,7 @@ import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
 import { AssignmentsManagement } from '@/components/superadmin/AssignmentsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
-import { SubmissionsManagement } from '@/components/superadmin/SubmissionsManagement';
+import { AssignmentFeedback } from '@/components/mentor/AssignmentFeedback';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 
 export default function AdminDashboard() {
@@ -36,7 +36,7 @@ export default function AdminDashboard() {
       case 'students':
         return <StudentManagement />;
       case 'submissions':
-        return <SubmissionsManagement />;
+        return <AssignmentFeedback />;
       case 'support':
         return <SupportManagement />;
       case 'content':
