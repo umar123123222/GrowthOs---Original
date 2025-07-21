@@ -325,22 +325,11 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
             
             <Button
               onClick={() => joinSession(session.id, session.link)}
-              disabled={(sessionStatus.status === 'completed' && !attended) || userLMSStatus !== 'active'}
-              variant={sessionStatus.status === 'live' ? 'destructive' : 'default'}
-              className={sessionStatus.status === 'live' ? "animate-pulse" : ""}
+              disabled={userLMSStatus !== 'active'}
+              variant="default"
             >
               {userLMSStatus !== 'active' ? (
                 'Locked - Payment Required'
-              ) : sessionStatus.status === 'live' ? (
-                <>
-                  <Play className="w-4 h-4 mr-2" />
-                  Join Live
-                </>
-              ) : sessionStatus.status === 'upcoming' ? (
-                <>
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Join Session
-                </>
               ) : (
                 <>
                   <Video className="w-4 h-4 mr-2" />
