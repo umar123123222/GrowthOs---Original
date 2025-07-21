@@ -12,6 +12,7 @@ export interface User {
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState<any>(null);
 
   useEffect(() => {
     console.log('useAuth: Starting authentication check');
@@ -20,6 +21,7 @@ export const useAuth = () => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       console.log('useAuth: Initial session check', { session: !!session, error });
+      setSession(session);
       if (session?.user) {
         fetchUserProfile(session.user.id);
       } else {
@@ -34,9 +36,20 @@ export const useAuth = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('useAuth: Auth state changed', { event, session: !!session });
+      setSession(session);
+      
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      
       if (session?.user) {
-        await fetchUserProfile(session.user.id);
-      } else {
+        // Defer the profile fetch to avoid blocking the auth state change
+        setTimeout(() => {
+          fetchUserProfile(session.user.id);
+        }, 0);
+      } else if (event === 'SIGNED_IN') {
         console.log('useAuth: No session in state change, clearing user');
         setUser(null);
         setLoading(false);
@@ -49,21 +62,14 @@ export const useAuth = () => {
   const fetchUserProfile = async (userId: string) => {
     console.log('fetchUserProfile: Starting for user ID:', userId);
     
-    // Add a timeout to prevent infinite loading
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Database query timeout')), 10000);
-    });
-    
     try {
       console.log('fetchUserProfile: About to make database query');
       
-      const queryPromise = supabase
+      const { data, error } = await supabase
         .from('users')
         .select('id, email, role, full_name, created_at')
         .eq('id', userId)
-        .single();
-      
-      const { data, error } = await Promise.race([queryPromise, timeoutPromise]) as any;
+        .maybeSingle();
       
       console.log('fetchUserProfile: Database query completed', { 
         data: data ? { ...data, id: data.id } : null, 
@@ -72,18 +78,43 @@ export const useAuth = () => {
 
       if (error) {
         console.error('fetchUserProfile: Database error:', error);
-        // If user doesn't exist, we'll set user to null and let login handle user creation
-        setUser(null);
+        // Don't sign out on database errors - keep the session active
+        if (session?.user) {
+          console.log('fetchUserProfile: Keeping session active despite database error');
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            role: 'student', // default role
+            full_name: session.user.user_metadata?.full_name || session.user.email
+          });
+        }
       } else if (data) {
         console.log('fetchUserProfile: Setting user data:', { role: data.role, email: data.email });
         setUser(data as User);
       } else {
-        console.log('fetchUserProfile: No data returned');
-        setUser(null);
+        console.log('fetchUserProfile: No data returned but session exists');
+        // User record doesn't exist but session is valid - use session data
+        if (session?.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+            role: 'student', // default role
+            full_name: session.user.user_metadata?.full_name || session.user.email
+          });
+        }
       }
     } catch (error) {
       console.error('fetchUserProfile: Catch block error:', error);
-      setUser(null);
+      // Don't sign out on errors - preserve the session
+      if (session?.user) {
+        console.log('fetchUserProfile: Preserving session despite error');
+        setUser({
+          id: session.user.id,
+          email: session.user.email || '',
+          role: 'student', // default role
+          full_name: session.user.user_metadata?.full_name || session.user.email
+        });
+      }
     } finally {
       console.log('fetchUserProfile: Setting loading to false');
       setLoading(false);
@@ -113,6 +144,7 @@ export const useAuth = () => {
     signOut,
     hasRole,
     canAccessLMS,
-    refreshUser: () => user && fetchUserProfile(user.id)
+    refreshUser: () => user && fetchUserProfile(user.id),
+    session
   };
 };
