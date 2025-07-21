@@ -244,32 +244,71 @@ export function StudentsManagement() {
           description: 'Student updated successfully'
         });
       } else {
-        // Create new student using edge function
-        console.log('Creating student via edge function...');
+        // Create new student directly
+        console.log('Creating student directly...');
         
-        const { data, error } = await supabase.functions.invoke('create-student', {
-          body: {
-            fullName: formData.full_name,
-            email: formData.email,
-            phone: formData.phone,
-            feesStructure: formData.fees_structure
+        // Generate secure passwords
+        const generatePassword = (): string => {
+          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+          let result = '';
+          for (let i = 0; i < 12; i++) {
+            result += chars.charAt(Math.floor(Math.random() * chars.length));
+          }
+          return result;
+        };
+
+        const tempPassword = generatePassword();
+        const lmsPassword = generatePassword();
+
+        // First create the auth user
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: tempPassword,
+          options: {
+            emailRedirectTo: `${window.location.origin}/login`,
+            data: {
+              full_name: formData.full_name
+            }
           }
         });
 
-        console.log('Edge function response:', data, error);
-
-        if (error) {
-          console.error('Edge function error:', error);
-          throw error;
+        if (authError) {
+          console.error('Auth signup error:', authError);
+          throw new Error(`Failed to create user account: ${authError.message}`);
         }
 
-        if (!data || !data.success) {
-          throw new Error(data?.error || 'Failed to create student');
+        if (!authData.user) {
+          throw new Error('Failed to create user account');
         }
+
+        console.log('Auth user created, creating student record...');
+
+        // Create the student record in the users table
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            email: formData.email,
+            role: 'student',
+            full_name: formData.full_name,
+            phone: formData.phone || null,
+            fees_structure: formData.fees_structure,
+            lms_user_id: formData.email,
+            lms_password: lmsPassword,
+            temp_password: tempPassword,
+            lms_status: 'inactive'
+          });
+
+        if (insertError) {
+          console.error('Insert error:', insertError);
+          throw new Error(`Failed to create student record: ${insertError.message}`);
+        }
+
+        console.log('Student created successfully');
 
         toast({
           title: 'Success',
-          description: `Student created successfully. Login Password: ${data.tempPassword}${data.lmsPassword ? ` | LMS Password: ${data.lmsPassword}` : ''}. LMS status is inactive until first payment.`
+          description: `Student created successfully. Login Password: ${tempPassword}${lmsPassword ? ` | LMS Password: ${lmsPassword}` : ''}. LMS status is inactive until first payment.`
         });
       }
 
