@@ -387,7 +387,6 @@ const Teams = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>LMS Password</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Last Active</TableHead>
                 <TableHead>Actions</TableHead>
@@ -402,23 +401,6 @@ const Teams = () => {
                     <Badge variant={member.role === 'admin' ? 'default' : 'secondary'}>
                       {member.role}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                        {member.temp_password || member.lms_password || 'N/A'}
-                      </span>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => {
-                          setSelectedMember(member);
-                          setIsEditPasswordDialogOpen(true);
-                        }}
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={member.status === 'Active' ? 'default' : 'destructive'}>
