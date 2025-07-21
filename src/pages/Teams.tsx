@@ -363,16 +363,6 @@ const Teams = () => {
             <div className="text-3xl font-bold text-green-600">{mentorCount}</div>
           </CardContent>
         </Card>
-        {user?.role === 'superadmin' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Total Students</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold text-purple-600">{studentCount}</div>
-            </CardContent>
-          </Card>
-        )}
       </div>
 
       {/* Team Members Table */}
