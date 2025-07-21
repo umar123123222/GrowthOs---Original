@@ -330,6 +330,11 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
             >
               {userLMSStatus !== 'active' ? (
                 'Locked - Payment Required'
+              ) : sessionStatus.status === 'upcoming' ? (
+                <>
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Join Now
+                </>
               ) : (
                 <>
                   <Video className="w-4 h-4 mr-2" />
