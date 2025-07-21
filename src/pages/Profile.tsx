@@ -15,9 +15,8 @@ interface UserProfile {
 }
 
 const Profile = () => {
-  const { user } = useAuth();
-  const [profileData, setProfileData] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, loading: authLoading } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -28,34 +27,33 @@ const Profile = () => {
     new: false,
     confirm: false
   });
+  const [profileData, setProfileData] = useState({
+    full_name: '',
+    email: ''
+  });
   const { toast } = useToast();
 
+  // Update profile data when user changes
   useEffect(() => {
-    fetchUserData();
-  }, []);
-
-  const fetchUserData = async () => {
-    try {
-      if (!user?.id) return;
-
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name, email')
-        .eq('id', user.id)
-        .single();
-
-      if (error) throw error;
-      setProfileData(data as UserProfile);
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    } finally {
-      setLoading(false);
+    if (user) {
+      setProfileData({
+        full_name: user.full_name || '',
+        email: user.email || ''
+      });
     }
-  };
+  }, [user]);
 
   const updateProfile = async () => {
-    if (!profileData || !user?.id) return;
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "User not found. Please try logging in again.",
+        variant: "destructive",
+      });
+      return;
+    }
 
+    setLoading(true);
     try {
       const { error } = await supabase
         .from('users')
@@ -77,6 +75,8 @@ const Profile = () => {
         description: "Failed to update profile",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -174,12 +174,27 @@ const Profile = () => {
     }));
   };
 
-  if (loading || !profileData) {
+  // Show loading while auth is initializing
+  if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center animate-fade-in">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading profile...</p>
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error if no user found
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-gray-600 mb-4">Unable to load profile. Please try logging in again.</p>
+          <Button onClick={() => window.location.href = '/login'}>
+            Go to Login
+          </Button>
         </div>
       </div>
     );
@@ -212,6 +227,7 @@ const Profile = () => {
                 onChange={(e) => setProfileData({...profileData, full_name: e.target.value})}
                 placeholder="Enter your full name"
                 className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                disabled={loading}
               />
             </div>
             
@@ -231,8 +247,9 @@ const Profile = () => {
               <Button 
                 onClick={updateProfile}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                disabled={loading}
               >
-                Save Changes
+                {loading ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </CardContent>
@@ -332,8 +349,9 @@ const Profile = () => {
               <Button 
                 onClick={updatePassword}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                disabled={loading}
               >
-                Update Password
+                {loading ? "Updating..." : "Update Password"}
               </Button>
             </div>
           </CardContent>
