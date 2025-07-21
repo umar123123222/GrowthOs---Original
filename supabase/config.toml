@@ -24,6 +24,9 @@ verify_jwt = false
 [functions.create-team-member]
 verify_jwt = true
 
+[functions.create-student]
+verify_jwt = true
+
 [auth]
 enabled = true
 external_anonymous_users_enabled = true
