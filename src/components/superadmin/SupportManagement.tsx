@@ -62,7 +62,7 @@ export function SupportManagement() {
         .from('support_tickets')
         .select(`
           *,
-          users!support_tickets_user_id_fkey (
+          users (
             full_name,
             email,
             student_id
@@ -90,7 +90,7 @@ export function SupportManagement() {
         .from('ticket_replies')
         .select(`
           *,
-          users!ticket_replies_user_id_fkey (
+          users (
             full_name,
             role
           )
