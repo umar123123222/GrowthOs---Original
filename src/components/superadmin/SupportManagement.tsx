@@ -62,7 +62,7 @@ export function SupportManagement() {
         .from('support_tickets')
         .select(`
           *,
-          users (
+          users!support_tickets_user_id_fkey (
             full_name,
             email,
             student_id
@@ -90,7 +90,7 @@ export function SupportManagement() {
         .from('ticket_replies')
         .select(`
           *,
-          users (
+          users!ticket_replies_user_id_fkey (
             full_name,
             role
           )
@@ -276,6 +276,7 @@ export function SupportManagement() {
                   <TableCell>
                     <div>
                       <div className="font-medium">{ticket.users.full_name}</div>
+                      <div className="text-sm text-blue-600 font-medium">{ticket.users.email}</div>
                       <div className="text-sm text-muted-foreground">{ticket.users.student_id}</div>
                     </div>
                   </TableCell>
@@ -400,7 +401,15 @@ export function SupportManagement() {
 
                             <div className="space-y-4">
                               <h3 className="font-semibold">Update Status</h3>
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 flex-wrap">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => updateTicketStatus(selectedTicket.id, 'open')}
+                                  disabled={selectedTicket.status === 'open'}
+                                >
+                                  Mark Open
+                                </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -414,6 +423,7 @@ export function SupportManagement() {
                                   size="sm"
                                   onClick={() => updateTicketStatus(selectedTicket.id, 'resolved')}
                                   disabled={selectedTicket.status === 'resolved'}
+                                  className="bg-green-50 text-green-700 hover:bg-green-100"
                                 >
                                   Mark Resolved
                                 </Button>
