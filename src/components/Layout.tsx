@@ -102,11 +102,12 @@ const Layout = ({ user }: LayoutProps) => {
       ];
     }
     
-    // Default navigation for other users
+    // Default navigation for other users (students)
     return [
       { name: "Dashboard", href: "/", icon: Monitor },
       { name: "Videos", href: "/videos", icon: BookOpen },
       { name: "Assignments", href: "/assignments", icon: FileText },
+      { name: "Profile", href: "/profile", icon: User },
     ];
   }, [isUserSuperadmin, isUserAdmin, isUserMentor]);
 
