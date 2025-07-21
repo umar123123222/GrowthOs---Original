@@ -107,6 +107,8 @@ const Layout = ({ user }: LayoutProps) => {
       { name: "Dashboard", href: "/", icon: Monitor },
       { name: "Videos", href: "/videos", icon: BookOpen },
       { name: "Assignments", href: "/assignments", icon: FileText },
+      { name: "Success Sessions", href: "/live-sessions", icon: Calendar },
+      { name: "Support", href: "/support", icon: MessageSquare },
       { name: "Profile", href: "/profile", icon: User },
     ];
   }, [isUserSuperadmin, isUserAdmin, isUserMentor]);
