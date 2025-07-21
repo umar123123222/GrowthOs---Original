@@ -14,104 +14,59 @@ interface CreateStudentRequest {
 }
 
 const handler = async (req: Request): Promise<Response> => {
-  console.log('create-student function called with method:', req.method);
+  console.log('🚀 create-student function called:', req.method, req.url);
   
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('✅ Handling CORS preflight');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Get environment variables
+    // Environment check
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     
-    console.log('Environment check:', {
+    console.log('🔧 Environment variables:', {
       hasUrl: !!supabaseUrl,
       hasServiceKey: !!supabaseServiceKey,
-      hasAnonKey: !!supabaseAnonKey
+      hasAnonKey: !!supabaseAnonKey,
+      url: supabaseUrl
     });
 
     if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
-      throw new Error('Missing required environment variables');
-    }
-
-    // Create admin client for user creation
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Create regular client for authorization check
-    const authHeader = req.headers.get('Authorization');
-    console.log('Auth header present:', !!authHeader);
-    
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: {
-        headers: {
-          Authorization: authHeader ?? '',
-        },
-      },
-    });
-
-    // Check if the current user is authenticated
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    console.log('Auth check result:', { 
-      userId: user?.id, 
-      email: user?.email,
-      hasError: !!authError,
-      errorMessage: authError?.message 
-    });
-    
-    if (authError || !user) {
-      console.error('Auth error:', authError);
+      console.error('❌ Missing environment variables');
       return new Response(
-        JSON.stringify({ error: 'Unauthorized - please log in', success: false }),
+        JSON.stringify({ error: 'Server configuration error', success: false }),
         { 
-          status: 401, 
+          status: 500, 
           headers: { 'Content-Type': 'application/json', ...corsHeaders } 
         }
       );
     }
-
-    // Check user role using admin client to bypass RLS
-    console.log('Checking role for user:', user.id);
-    
-    const { data: userData, error: userError } = await supabaseAdmin
-      .from('users')
-      .select('role, email, full_name')
-      .eq('id', user.id)
-      .single();
-
-    console.log('Role check result:', { 
-      userData: userData ? { role: userData.role, email: userData.email } : null, 
-      hasError: !!userError,
-      errorMessage: userError?.message 
-    });
-
-    if (userError || !userData || !['admin', 'superadmin'].includes(userData.role)) {
-      console.error('User role check failed:', userError, 'userData:', userData);
-      return new Response(
-        JSON.stringify({ 
-          error: `Access denied - ${userData?.role || 'unknown'} role cannot create students`, 
-          success: false
-        }),
-        { 
-          status: 403, 
-          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
-        }
-      );
-    }
-
-    console.log('User authorized with role:', userData.role);
 
     // Parse request body
-    const requestBody = await req.json();
-    console.log('Request body:', requestBody);
-    
+    let requestBody;
+    try {
+      requestBody = await req.json();
+      console.log('📝 Request body:', requestBody);
+    } catch (e) {
+      console.error('❌ Failed to parse request body:', e);
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body', success: false }),
+        { 
+          status: 400, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
+
     const { fullName, email, phone, feesStructure }: CreateStudentRequest = requestBody;
 
     // Validate required fields
     if (!fullName || !email || !feesStructure) {
+      console.error('❌ Missing required fields');
       return new Response(
         JSON.stringify({ 
           error: 'Missing required fields: fullName, email, feesStructure', 
@@ -124,37 +79,85 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Generate a secure temporary password for the new student
-    const generateSecurePassword = (): string => {
-      const length = Math.floor(Math.random() * 5) + 8; // 8-12 characters
-      const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      const lowercase = 'abcdefghijklmnopqrstuvwxyz';
-      const numbers = '0123456789';
-      const special = '!@#$%^&*';
-      
-      // Ensure at least one character from each type
-      let password = '';
-      password += uppercase[Math.floor(Math.random() * uppercase.length)];
-      password += lowercase[Math.floor(Math.random() * lowercase.length)];
-      password += numbers[Math.floor(Math.random() * numbers.length)];
-      password += special[Math.floor(Math.random() * special.length)];
-      
-      // Fill the rest randomly
-      const allChars = uppercase + lowercase + numbers + special;
-      for (let i = password.length; i < length; i++) {
-        password += allChars[Math.floor(Math.random() * allChars.length)];
+    // Create clients
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    const authHeader = req.headers.get('Authorization');
+    console.log('🔐 Auth header present:', !!authHeader);
+    
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader ?? '',
+        },
+      },
+    });
+
+    // Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    console.log('👤 Auth check:', { 
+      userId: user?.id, 
+      email: user?.email,
+      hasError: !!authError 
+    });
+    
+    if (authError || !user) {
+      console.error('❌ Auth failed:', authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - please log in', success: false }),
+        { 
+          status: 401, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
+
+    // Check user role
+    console.log('🔍 Checking role for user:', user.id);
+    
+    const { data: userData, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('role, email, full_name')
+      .eq('id', user.id)
+      .single();
+
+    console.log('👥 Role check:', { 
+      role: userData?.role, 
+      hasError: !!userError 
+    });
+
+    if (userError || !userData || !['admin', 'superadmin'].includes(userData.role)) {
+      console.error('❌ Role check failed:', userError?.message, 'Role:', userData?.role);
+      return new Response(
+        JSON.stringify({ 
+          error: `Access denied - ${userData?.role || 'unknown'} role cannot create students`, 
+          success: false
+        }),
+        { 
+          status: 403, 
+          headers: { 'Content-Type': 'application/json', ...corsHeaders } 
+        }
+      );
+    }
+
+    console.log('✅ User authorized with role:', userData.role);
+
+    // Generate passwords
+    const generatePassword = (): string => {
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+      let result = '';
+      for (let i = 0; i < 12; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
       }
-      
-      // Shuffle the password
-      return password.split('').sort(() => Math.random() - 0.5).join('');
+      return result;
     };
 
-    const tempPassword = generateSecurePassword();
-    const lmsPassword = generateSecurePassword(); // Separate LMS password
+    const tempPassword = generatePassword();
+    const lmsPassword = generatePassword();
 
-    console.log('Creating auth user for email:', email);
+    console.log('👤 Creating auth user for:', email);
 
-    // Create auth user first using admin client
+    // Create auth user
     const { data: authData, error: authCreateError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password: tempPassword,
@@ -165,7 +168,7 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (authCreateError) {
-      console.error('Auth creation error:', authCreateError);
+      console.error('❌ Auth user creation failed:', authCreateError.message);
       return new Response(
         JSON.stringify({ 
           error: `Failed to create user account: ${authCreateError.message}`, 
@@ -178,9 +181,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log('Auth user created, inserting into users table...');
+    console.log('✅ Auth user created, ID:', authData.user.id);
 
-    // Insert user into public.users table using admin client
+    // Insert into users table
     const { error: insertError } = await supabaseAdmin
       .from('users')
       .insert({ 
@@ -190,21 +193,21 @@ const handler = async (req: Request): Promise<Response> => {
         full_name: fullName,
         phone: phone || null,
         fees_structure: feesStructure,
-        lms_user_id: email, // Set LMS user ID to email
-        lms_password: lmsPassword, // Store the LMS password
-        temp_password: tempPassword, // Store the temp password for login
-        lms_status: 'inactive' // Set status to inactive until first payment
+        lms_user_id: email,
+        lms_password: lmsPassword,
+        temp_password: tempPassword,
+        lms_status: 'inactive'
       });
 
     if (insertError) {
-      console.error('Insert error:', insertError);
+      console.error('❌ Database insert failed:', insertError.message);
       
-      // Clean up auth user if database insert fails
+      // Cleanup auth user
       try {
         await supabaseAdmin.auth.admin.deleteUser(authData.user.id);
-        console.log('Cleaned up auth user after database insert failure');
+        console.log('🧹 Cleaned up auth user');
       } catch (cleanupError) {
-        console.error('Failed to cleanup auth user:', cleanupError);
+        console.error('❌ Cleanup failed:', cleanupError);
       }
       
       return new Response(
@@ -219,7 +222,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log('Student created successfully with ID:', authData.user.id);
+    console.log('🎉 Student created successfully!');
 
     return new Response(
       JSON.stringify({ 
@@ -237,8 +240,9 @@ const handler = async (req: Request): Promise<Response> => {
         },
       }
     );
+
   } catch (error: any) {
-    console.error('Error in create-student function:', error);
+    console.error('💥 Unexpected error:', error.message, error.stack);
     return new Response(
       JSON.stringify({ 
         error: `Server error: ${error.message}`,
@@ -255,4 +259,5 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
+console.log('🚀 Starting create-student edge function...');
 serve(handler);
