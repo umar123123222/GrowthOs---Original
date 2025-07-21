@@ -112,10 +112,10 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         return;
       }
 
-      // Fetch user's LMS status
+      // Fetch user's LMS status and join date
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('lms_status')
+        .select('lms_status, created_at')
         .eq('id', user.id)
         .single();
       
@@ -130,12 +130,62 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       if (error) throw error;
       setAttendance(data || []);
       
-      // Always fetch sessions to show upcoming sessions, regardless of attendance
-      await fetchSessions();
+      // Fetch sessions and filter based on user join date
+      await fetchSessionsForStudent(userData?.created_at);
     } catch (error) {
       console.error('Error fetching attendance:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSessionsForStudent = async (userJoinDate: string) => {
+    console.log('fetchSessionsForStudent called, userJoinDate:', userJoinDate);
+    try {
+      const { data, error } = await supabase
+        .from('success_sessions')
+        .select('*')
+        .order('start_time', { ascending: true });
+
+      console.log('All sessions found:', data);
+      console.log('Query error:', error);
+      
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      // Split sessions into upcoming and past
+      const now = new Date();
+      const userJoinDateTime = new Date(userJoinDate);
+      
+      const upcoming = (data || []).filter(session => {
+        const sessionStart = new Date(session.start_time);
+        return sessionStart >= now;
+      });
+
+      // Filter past sessions to only include those that happened after user joined
+      const pastSessionsAfterJoin = (data || []).filter(session => {
+        const sessionEnd = new Date(session.end_time);
+        const sessionStart = new Date(session.start_time);
+        return sessionEnd < now && sessionStart >= userJoinDateTime;
+      });
+      
+      console.log('Upcoming sessions after filtering:', upcoming);
+      console.log('Past sessions after user join date:', pastSessionsAfterJoin);
+      
+      // Set only the most upcoming session (first one)
+      setNextUpcomingSession(upcoming.length > 0 ? upcoming[0] : null);
+      
+      // Set filtered past sessions as recorded sessions
+      setRecordedSessions(pastSessionsAfterJoin);
+    } catch (error) {
+      console.error('Error fetching sessions:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load success sessions",
+        variant: "destructive",
+      });
     }
   };
 
@@ -340,27 +390,24 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         </div>
       )}
 
-      {/* Recorded Sessions - Only show sessions the user attended */}
-      {(() => {
-        const attendedSessions = recordedSessions.filter(session => hasAttended(session.id));
-        return attendedSessions.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-1 h-6 bg-secondary rounded-full"></div>
-              <h2 className="text-xl font-semibold">My Session Recordings</h2>
-              <Badge variant="secondary" className="ml-auto">
-                {attendedSessions.length} attended recording{attendedSessions.length !== 1 ? 's' : ''}
-              </Badge>
-            </div>
-            
-            <div className="grid gap-6">
-              {attendedSessions.map((session) => (
-                <SessionCard key={session.id} session={session} isUpcoming={false} />
-              ))}
-            </div>
+      {/* Recorded Sessions - Show all sessions after user joined */}
+      {recordedSessions.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="w-1 h-6 bg-secondary rounded-full"></div>
+            <h2 className="text-xl font-semibold">Recorded Sessions</h2>
+            <Badge variant="secondary" className="ml-auto">
+              {recordedSessions.length} recording{recordedSessions.length !== 1 ? 's' : ''} available
+            </Badge>
           </div>
-        );
-      })()}
+          
+          <div className="grid gap-6">
+            {recordedSessions.map((session) => (
+              <SessionCard key={session.id} session={session} isUpcoming={false} />
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
