@@ -22,6 +22,7 @@ import Mentorship from "./pages/Mentorship";
 import Messages from "./pages/Messages";
 import Teams from "./pages/Teams";
 import Layout from "./components/Layout";
+import Support from "./pages/Support";
 
 const queryClient = new QueryClient();
 
@@ -69,6 +70,7 @@ const App = () => {
                 <Route path="live-sessions" element={<LiveSessions user={user} />} />
                 <Route path="mentorship" element={<Mentorship />} />
                 <Route path="messages" element={<Messages />} />
+                <Route path="support" element={<Support />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="teams" element={<Teams />} />
