@@ -258,7 +258,7 @@ export function StudentsManagement() {
         };
 
         const tempPassword = generatePassword();
-        const lmsPassword = generatePassword();
+        // LMS password should be null until student changes from temp password
 
         // First create the auth user
         const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -294,7 +294,7 @@ export function StudentsManagement() {
             phone: formData.phone || null,
             fees_structure: formData.fees_structure,
             lms_user_id: formData.email,
-            lms_password: lmsPassword,
+            lms_password: null, // Will be set when student changes from temp password
             temp_password: tempPassword,
             lms_status: 'inactive'
           });
@@ -308,7 +308,7 @@ export function StudentsManagement() {
 
         toast({
           title: 'Success',
-          description: `Student created successfully. Login Password: ${tempPassword}${lmsPassword ? ` | LMS Password: ${lmsPassword}` : ''}. LMS status is inactive until first payment.`
+          description: `Student created successfully. Temporary Login Password: ${tempPassword}. LMS access will be activated when student sets permanent password.`
         });
       }
 
