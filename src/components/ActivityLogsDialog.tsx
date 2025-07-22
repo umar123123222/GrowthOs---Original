@@ -164,7 +164,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[85vh] flex flex-col">
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <div className="flex justify-between items-center">
             <DialogTitle className="flex items-center">
@@ -242,7 +242,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         </div>
 
         {/* Activity Logs Table */}
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 h-full max-h-[60vh]">
           {loading ? (
             <div className="flex items-center justify-center p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
