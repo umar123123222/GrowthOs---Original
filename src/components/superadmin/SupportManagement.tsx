@@ -154,12 +154,19 @@ export function SupportManagement() {
 
   const updateTicketStatus = async (ticketId: string, status: string) => {
     try {
-      const { error } = await supabase
+      console.log('Updating ticket status:', { ticketId, status });
+      
+      const { data, error } = await supabase
         .from('support_tickets')
-        .update({ status })
+        .update({ status, updated_at: new Date().toISOString() })
         .eq('id', ticketId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Update result:', data);
 
       toast({
         title: 'Success',
@@ -167,10 +174,11 @@ export function SupportManagement() {
       });
       
       fetchTickets();
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Update ticket status error:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update ticket status',
+        description: `Failed to update ticket status: ${error.message}`,
         variant: 'destructive'
       });
     }
