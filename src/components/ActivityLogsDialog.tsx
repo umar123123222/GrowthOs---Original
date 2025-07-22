@@ -55,8 +55,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
           *,
           users (email, role, full_name)
         `)
-        .order('occurred_at', { ascending: false })
-        .limit(200);
+        .order('occurred_at', { ascending: false });
 
       // Filter by specific user if userId is provided
       if (userId) {
