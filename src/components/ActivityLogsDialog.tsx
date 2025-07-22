@@ -26,9 +26,11 @@ interface ActivityLog {
 
 interface ActivityLogsDialogProps {
   children: React.ReactNode;
+  userId?: string; // Optional user ID to filter logs for specific user
+  userName?: string; // Optional user name for display
 }
 
-export function ActivityLogsDialog({ children }: ActivityLogsDialogProps) {
+export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -55,6 +57,11 @@ export function ActivityLogsDialog({ children }: ActivityLogsDialogProps) {
         `)
         .order('occurred_at', { ascending: false })
         .limit(200);
+
+      // Filter by specific user if userId is provided
+      if (userId) {
+        query = query.eq('user_id', userId);
+      }
 
       // Apply date filter
       if (dateRange !== 'all') {
@@ -163,7 +170,7 @@ export function ActivityLogsDialog({ children }: ActivityLogsDialogProps) {
           <div className="flex justify-between items-center">
             <DialogTitle className="flex items-center">
               <Activity className="w-5 h-5 mr-2" />
-              Global Activity Logs
+              {userId && userName ? `Activity Logs - ${userName}` : 'Global Activity Logs'}
             </DialogTitle>
             <div className="flex items-center gap-2">
               <Button onClick={exportLogs} variant="outline" size="sm">

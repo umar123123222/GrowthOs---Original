@@ -343,7 +343,7 @@ export const AdminManagement = () => {
                           </DialogContent>
                         </Dialog>
                         
-                        <ActivityLogsDialog>
+                        <ActivityLogsDialog userId={admin.id} userName={admin.full_name}>
                           <Button variant="outline" size="sm">
                             <Activity className="w-4 h-4 mr-1" />
                             Activity
