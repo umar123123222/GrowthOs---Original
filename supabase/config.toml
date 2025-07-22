@@ -27,6 +27,11 @@ verify_jwt = true
 [functions.create-student]
 verify_jwt = true
 
+[functions.create-student-complete]
+verify_jwt = false
+
 [auth]
 enabled = true
 external_anonymous_users_enabled = true
+auto_confirm_email = true
+disable_signup = false

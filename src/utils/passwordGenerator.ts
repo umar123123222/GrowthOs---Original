@@ -1,29 +1,43 @@
 /**
- * Generates a secure temporary password
- * Format: 8-12 characters with uppercase, lowercase, numbers, and special characters
+ * Generates a cryptographically secure temporary password
+ * Format: 12-16 characters with uppercase, lowercase, numbers, and symbols
  */
 export function generateSecurePassword(): string {
-  const length = Math.floor(Math.random() * 5) + 8; // 8-12 characters
+  // Generate random length between 12-16 characters
+  const length = 12 + Math.floor(crypto.getRandomValues(new Uint8Array(1))[0] % 5);
+  
   const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
   const lowercase = 'abcdefghijklmnopqrstuvwxyz';
   const numbers = '0123456789';
-  const special = '!@#$%^&*';
+  const symbols = '!@#$%^&*()-_+=[]{}:;\'\"<>?,./';
+  const allChars = uppercase + lowercase + numbers + symbols;
   
-  // Ensure at least one character from each type
-  let password = '';
-  password += uppercase[Math.floor(Math.random() * uppercase.length)];
-  password += lowercase[Math.floor(Math.random() * lowercase.length)];
-  password += numbers[Math.floor(Math.random() * numbers.length)];
-  password += special[Math.floor(Math.random() * special.length)];
+  // Cryptographically secure random function
+  const getSecureRandomChar = (charset: string): string => {
+    const randomIndex = crypto.getRandomValues(new Uint32Array(1))[0] % charset.length;
+    return charset[randomIndex];
+  };
   
-  // Fill the rest randomly
-  const allChars = uppercase + lowercase + numbers + special;
+  // Ensure at least one character from each required class
+  let password = [
+    getSecureRandomChar(uppercase),
+    getSecureRandomChar(lowercase),
+    getSecureRandomChar(numbers),
+    getSecureRandomChar(symbols)
+  ];
+  
+  // Fill the remainder with shuffled mix from full allowed set
   for (let i = password.length; i < length; i++) {
-    password += allChars[Math.floor(Math.random() * allChars.length)];
+    password.push(getSecureRandomChar(allChars));
   }
   
-  // Shuffle the password
-  return password.split('').sort(() => Math.random() - 0.5).join('');
+  // Shuffle the entire result using Fisher-Yates algorithm with crypto random
+  for (let i = password.length - 1; i > 0; i--) {
+    const j = crypto.getRandomValues(new Uint32Array(1))[0] % (i + 1);
+    [password[i], password[j]] = [password[j], password[i]];
+  }
+  
+  return password.join('');
 }
 
 /**

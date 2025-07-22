@@ -247,68 +247,32 @@ export function StudentsManagement() {
         // Create new student directly
         console.log('Creating student directly...');
         
-        // Generate secure passwords
-        const generatePassword = (): string => {
-          const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-          let result = '';
-          for (let i = 0; i < 12; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-          }
-          return result;
-        };
+        console.log('Creating student with complete flow...');
 
-        const tempPassword = generatePassword();
-        // LMS password should be null until student changes from temp password
-
-        // First create the auth user
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: tempPassword,
-          options: {
-            emailRedirectTo: `${window.location.origin}/login`,
-            data: {
-              full_name: formData.full_name
-            }
+        // Call the complete student creation function
+        const { data, error } = await supabase.functions.invoke('create-student-complete', {
+          body: {
+            fullName: formData.full_name,
+            email: formData.email,
+            phone: formData.phone || null,
+            feesStructure: formData.fees_structure
           }
         });
 
-        if (authError) {
-          console.error('Auth signup error:', authError);
-          throw new Error(`Failed to create user account: ${authError.message}`);
+        if (error) {
+          console.error('Function invocation error:', error);
+          throw new Error(`Failed to create student: ${error.message}`);
         }
 
-        if (!authData.user) {
-          throw new Error('Failed to create user account');
+        if (!data?.success) {
+          throw new Error(data?.error || 'Failed to create student');
         }
 
-        console.log('Auth user created, creating student record...');
-
-        // Create the student record in the users table
-        const { error: insertError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: formData.email,
-            role: 'student',
-            full_name: formData.full_name,
-            phone: formData.phone || null,
-            fees_structure: formData.fees_structure,
-            lms_user_id: formData.email,
-            lms_password: null, // Will be set when student changes from temp password
-            temp_password: tempPassword,
-            lms_status: 'inactive'
-          });
-
-        if (insertError) {
-          console.error('Insert error:', insertError);
-          throw new Error(`Failed to create student record: ${insertError.message}`);
-        }
-
-        console.log('Student created successfully');
+        console.log('Student created successfully:', data);
 
         toast({
           title: 'Success',
-          description: `Student created successfully. Temporary Login Password: ${tempPassword}. LMS access will be activated when student sets permanent password.`
+          description: `Student created successfully! LMS account created with temporary password. Invoice sent via email. ${data.emailSent ? 'Welcome email sent successfully.' : 'Note: Email sending failed - please contact student manually.'}`
         });
       }
 
