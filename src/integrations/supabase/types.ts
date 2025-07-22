@@ -1470,6 +1470,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_notification: {
+        Args: {
+          p_user_id: string
+          p_type: string
+          p_title: string
+          p_message: string
+          p_metadata?: Json
+        }
+        Returns: string
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1494,6 +1504,25 @@ export type Database = {
       is_recording_watched: {
         Args: { _user_id: string; _recording_id: string }
         Returns: boolean
+      }
+      notify_all_students: {
+        Args: {
+          p_type: string
+          p_title: string
+          p_message: string
+          p_metadata?: Json
+        }
+        Returns: number
+      }
+      notify_mentor_students: {
+        Args: {
+          p_mentor_id: string
+          p_type: string
+          p_title: string
+          p_message: string
+          p_metadata?: Json
+        }
+        Returns: number
       }
     }
     Enums: {
