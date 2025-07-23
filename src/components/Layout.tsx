@@ -189,8 +189,8 @@ const Layout = ({ user }: LayoutProps) => {
             <div className="flex items-center space-x-4">
               <NotificationDropdown />
               
-              {/* Activity Logs Button for authorized users */}
-              {(isUserSuperadmin || isUserAdmin || isUserMentor) && (
+              {/* Activity Logs Button for authorized users - Only admins and superadmins */}
+              {(isUserSuperadmin || isUserAdmin) && (
                 <ActivityLogsDialog>
                   <Button
                     variant="outline"

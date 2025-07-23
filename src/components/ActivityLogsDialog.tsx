@@ -9,6 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { Activity, Download, Search, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { RoleGuard } from '@/components/RoleGuard';
 
 interface ActivityLog {
   id: string;
@@ -39,6 +41,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   const [activityFilter, setActivityFilter] = useState('all');
   const [dateRange, setDateRange] = useState('7days');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (isOpen) {
@@ -47,6 +50,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   }, [isOpen, dateRange, roleFilter, activityFilter]);
 
   const fetchLogs = async () => {
+    if (!user) return;
+    
     setLoading(true);
     try {
       let query = supabase
@@ -56,6 +61,25 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
           users (email, role, full_name)
         `)
         .order('occurred_at', { ascending: false });
+
+      // Role-based filtering
+      if (user.role === 'admin') {
+        // Admins can see all activities except superadmin activities
+        const { data: users } = await supabase
+          .from('users')
+          .select('id')
+          .neq('role', 'superadmin');
+        
+        if (users) {
+          const allowedUserIds = users.map(u => u.id);
+          query = query.in('user_id', allowedUserIds);
+        }
+      } else if (user.role !== 'superadmin') {
+        // Only superadmins and admins can access activity logs
+        setLogs([]);
+        setLoading(false);
+        return;
+      }
 
       // Filter by specific user if userId is provided
       if (userId) {
@@ -160,10 +184,11 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   });
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+    <RoleGuard allowedRoles={['admin', 'superadmin']}>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          {children}
+        </DialogTrigger>
       <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <div className="flex justify-between items-center">
@@ -214,7 +239,9 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                 <SelectItem value="student">Students</SelectItem>
                 <SelectItem value="mentor">Mentors</SelectItem>
                 <SelectItem value="admin">Admins</SelectItem>
-                <SelectItem value="superadmin">Superadmins</SelectItem>
+                {user?.role === 'superadmin' && (
+                  <SelectItem value="superadmin">Superadmins</SelectItem>
+                )}
               </SelectContent>
             </Select>
 
@@ -420,7 +447,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
+    </RoleGuard>
   );
 }

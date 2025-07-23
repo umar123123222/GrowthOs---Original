@@ -6,8 +6,8 @@ import { useAuth } from '@/hooks/useAuth';
 export function FloatingActivityButton() {
   const { user } = useAuth();
   
-  // Only show for admin, superadmin, and mentor roles
-  if (!user || !['admin', 'superadmin', 'mentor'].includes(user.role || '')) {
+  // Only show for admin and superadmin roles
+  if (!user || !['admin', 'superadmin'].includes(user.role || '')) {
     return null;
   }
 
