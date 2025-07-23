@@ -1433,37 +1433,37 @@ export function StudentsManagement() {
 
       {/* Activity Logs Dialog */}
       <Dialog open={activityLogsDialog} onOpenChange={setActivityLogsDialog}>
-        <DialogContent className="max-w-6xl max-h-[90vh]">
-          <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <DialogTitle className="text-xl font-semibold">
+        <DialogContent className="max-w-7xl max-h-[95vh] overflow-hidden">
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4 border-b">
+            <DialogTitle className="text-xl font-semibold text-primary">
               Activity Logs - {selectedStudentForLogs?.full_name}
             </DialogTitle>
             <Button
               variant="outline"
               size="sm"
-              className="ml-auto"
+              className="ml-auto hover:bg-primary/10"
             >
               <Download className="w-4 h-4 mr-2" />
               Export CSV
             </Button>
           </DialogHeader>
           
-          <div className="space-y-4">
+          <div className="space-y-4 overflow-hidden flex flex-col">
             {/* Search and Filters */}
-            <div className="flex gap-4 items-center">
+            <div className="flex gap-4 items-center flex-wrap bg-muted/30 p-4 rounded-lg">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search by user or activity..."
-                  className="pl-10"
+                  className="pl-10 bg-background"
                 />
               </div>
               
               <Select defaultValue="last_7_days">
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-32 bg-background">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50">
                   <SelectItem value="last_7_days">Last 7 days</SelectItem>
                   <SelectItem value="last_30_days">Last 30 days</SelectItem>
                   <SelectItem value="all_time">All time</SelectItem>
@@ -1471,10 +1471,10 @@ export function StudentsManagement() {
               </Select>
 
               <Select defaultValue="all_roles">
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-32 bg-background">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50">
                   <SelectItem value="all_roles">All Roles</SelectItem>
                   <SelectItem value="student">Student</SelectItem>
                   <SelectItem value="mentor">Mentor</SelectItem>
@@ -1483,10 +1483,10 @@ export function StudentsManagement() {
               </Select>
 
               <Select defaultValue="all_activities">
-                <SelectTrigger className="w-36">
+                <SelectTrigger className="w-36 bg-background">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background border z-50 max-h-60">
                   <SelectItem value="all_activities">All Activities</SelectItem>
                   <SelectItem value="login">Login</SelectItem>
                   <SelectItem value="logout">Logout</SelectItem>
@@ -1508,61 +1508,115 @@ export function StudentsManagement() {
             </div>
 
             {/* Results Count */}
-            <p className="text-sm text-muted-foreground">
-              Showing {activityLogs.length} of {activityLogs.length} activities
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                Showing {activityLogs.length} of {activityLogs.length} activities
+              </p>
+            </div>
 
             {/* Activity Logs Table */}
-            <ScrollArea className="h-96 border rounded-md">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-40">Timestamp</TableHead>
-                    <TableHead className="w-64">User</TableHead>
-                    <TableHead className="w-48">Name</TableHead>
-                    <TableHead className="w-24">Role</TableHead>
-                    <TableHead className="w-32">Activity</TableHead>
-                    <TableHead>Details</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activityLogs.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        No activity logs found for this student.
-                      </TableCell>
+            <div className="flex-1 overflow-hidden">
+              <ScrollArea className="h-[50vh] border rounded-lg bg-background">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-muted/50 z-10">
+                    <TableRow className="border-b">
+                      <TableHead className="w-36 font-semibold">Timestamp</TableHead>
+                      <TableHead className="w-64 font-semibold">User</TableHead>
+                      <TableHead className="w-48 font-semibold">Name</TableHead>
+                      <TableHead className="w-20 font-semibold">Role</TableHead>
+                      <TableHead className="w-32 font-semibold">Activity</TableHead>
+                      <TableHead className="font-semibold">Details</TableHead>
                     </TableRow>
-                  ) : (
-                    activityLogs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="text-sm">
-                          {formatDateTime(log.occurred_at)}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {selectedStudentForLogs?.email}
-                        </TableCell>
-                        <TableCell className="text-sm font-medium">
-                          {selectedStudentForLogs?.full_name}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            student
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="text-xs">
-                            {log.activity_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {log.metadata?.details || formatActivityType(log.activity_type)}
+                  </TableHeader>
+                  <TableBody>
+                    {activityLogs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
+                          <div className="flex flex-col items-center space-y-2">
+                            <Activity className="w-8 h-8 text-muted-foreground/50" />
+                            <p>No activity logs found for this student.</p>
+                          </div>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </ScrollArea>
+                    ) : (
+                      activityLogs.map((log, index) => (
+                        <TableRow key={log.id} className={index % 2 === 0 ? "bg-muted/20" : "bg-background"}>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {formatDateTime(log.occurred_at)}
+                          </TableCell>
+                          <TableCell className="text-sm font-mono text-primary/80">
+                            {selectedStudentForLogs?.email}
+                          </TableCell>
+                          <TableCell className="text-sm font-medium">
+                            {selectedStudentForLogs?.full_name}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                              student
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant="outline" 
+                              className={`text-xs ${
+                                log.activity_type === 'login' ? 'bg-green-100 text-green-800 border-green-200' :
+                                log.activity_type === 'logout' ? 'bg-red-100 text-red-800 border-red-200' :
+                                log.activity_type === 'page_visit' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                log.activity_type === 'video_watched' ? 'bg-purple-100 text-purple-800 border-purple-200' :
+                                log.activity_type === 'assignment_submitted' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                                log.activity_type === 'module_completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                                'bg-gray-100 text-gray-800 border-gray-200'
+                              }`}
+                            >
+                              {log.activity_type.replace(/_/g, ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm max-w-md">
+                            <div className="truncate">
+                              {(() => {
+                                const metadata = log.metadata || {};
+                                switch (log.activity_type) {
+                                  case 'page_visit':
+                                    return `Visited page: ${metadata.page || metadata.url || 'Unknown page'}`;
+                                  case 'video_watched':
+                                    return `Watched video: "${metadata.video_title || metadata.title || 'Unknown video'}" ${metadata.duration ? `(${metadata.duration})` : ''}`;
+                                  case 'assignment_submitted':
+                                    return `Submitted assignment: "${metadata.assignment_title || metadata.title || 'Unknown assignment'}" ${metadata.score ? `(Score: ${metadata.score})` : ''}`;
+                                  case 'module_completed':
+                                    return `Completed module: "${metadata.module_title || metadata.title || 'Unknown module'}" ${metadata.completion_percentage ? `(${metadata.completion_percentage}%)` : ''}`;
+                                  case 'quiz_attempted':
+                                    return `Attempted quiz: "${metadata.quiz_title || metadata.title || 'Unknown quiz'}" ${metadata.score ? `(Score: ${metadata.score}/${metadata.total_questions || 'N/A'})` : ''}`;
+                                  case 'certificate_generated':
+                                    return `Generated certificate for: "${metadata.course_title || metadata.title || 'Unknown course'}"`;
+                                  case 'fees_recorded':
+                                    return `Fees recorded: ${metadata.amount ? `$${metadata.amount}` : 'Amount not specified'} ${metadata.type ? `(${metadata.type})` : ''}`;
+                                  case 'invoice_generated':
+                                    return `Invoice generated: ${metadata.invoice_id || 'ID not specified'} ${metadata.amount ? `for $${metadata.amount}` : ''}`;
+                                  case 'file_download':
+                                    return `Downloaded file: "${metadata.filename || metadata.file_name || 'Unknown file'}" ${metadata.file_size ? `(${metadata.file_size})` : ''}`;
+                                  case 'session_joined':
+                                    return `Joined session: "${metadata.session_title || metadata.title || 'Unknown session'}" ${metadata.duration ? `(Duration: ${metadata.duration})` : ''}`;
+                                  case 'login':
+                                    return `Logged in ${metadata.ip_address ? `from ${metadata.ip_address}` : ''} ${metadata.device ? `on ${metadata.device}` : ''}`;
+                                  case 'logout':
+                                    return `Logged out ${metadata.session_duration ? `(Session: ${metadata.session_duration})` : ''}`;
+                                  case 'profile_updated':
+                                    return `Updated profile ${metadata.fields_changed ? `(Changed: ${metadata.fields_changed.join(', ')})` : ''}`;
+                                  case 'dashboard_access':
+                                    return `Accessed dashboard ${metadata.section ? `(Section: ${metadata.section})` : ''}`;
+                                  default:
+                                    return formatActivityType(log.activity_type);
+                                }
+                              })()}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
