@@ -35,6 +35,8 @@ interface SessionFormData {
   start_time: string;
   end_time: string;
   link: string;
+  zoom_email: string;
+  zoom_password: string;
   status: string;
 }
 
@@ -60,6 +62,8 @@ export function SuccessSessionsManagement() {
     start_time: '',
     end_time: '',
     link: '',
+    zoom_email: '',
+    zoom_password: '',
     status: 'upcoming'
   });
   const { toast } = useToast();
@@ -156,6 +160,8 @@ export function SuccessSessionsManagement() {
       start_time: '',
       end_time: '',
       link: '',
+      zoom_email: '',
+      zoom_password: '',
       status: 'upcoming'
     });
     setEditingSession(null);
@@ -173,6 +179,8 @@ export function SuccessSessionsManagement() {
         start_time: session.start_time || '',
         end_time: session.end_time || '',
         link: session.link || '',
+        zoom_email: (session as any).zoom_email || '',
+        zoom_password: (session as any).zoom_password || '',
         status: session.status || 'upcoming'
       });
     } else {
@@ -207,6 +215,8 @@ export function SuccessSessionsManagement() {
         start_time: combineDateTime(formData.schedule_date, formData.start_time),
         end_time: formData.end_time ? combineDateTime(formData.schedule_date, formData.end_time) : null,
         link: formData.link,
+        zoom_email: formData.zoom_email,
+        zoom_password: formData.zoom_password,
         status: formData.status
       };
 
@@ -303,7 +313,7 @@ export function SuccessSessionsManagement() {
               Schedule Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingSession ? 'Edit Success Session' : 'Schedule New Success Session'}
@@ -312,7 +322,7 @@ export function SuccessSessionsManagement() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Session Title</label>
+                  <label className="block text-sm font-medium mb-1">Session Title *</label>
                   <Input
                     type="text"
                     value={formData.title}
@@ -322,10 +332,11 @@ export function SuccessSessionsManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Host/Mentor</label>
+                  <label className="block text-sm font-medium mb-1">Host/Mentor *</label>
                   <Select 
                     value={formData.mentor_id} 
                     onValueChange={(value) => setFormData({...formData, mentor_id: value})}
+                    required
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select a mentor, admin, or superadmin" />
@@ -354,9 +365,32 @@ export function SuccessSessionsManagement() {
                 />
               </div>
               
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Zoom Email *</label>
+                  <Input
+                    type="email"
+                    value={formData.zoom_email}
+                    onChange={(e) => setFormData({...formData, zoom_email: e.target.value})}
+                    required
+                    placeholder="Enter Zoom email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Zoom Password *</label>
+                  <Input
+                    type="password"
+                    value={formData.zoom_password}
+                    onChange={(e) => setFormData({...formData, zoom_password: e.target.value})}
+                    required
+                    placeholder="Enter Zoom password"
+                  />
+                </div>
+              </div>
+              
               <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Schedule Date</label>
+                  <label className="block text-sm font-medium mb-1">Schedule Date *</label>
                   <Input
                     type="date"
                     value={formData.schedule_date}
@@ -365,7 +399,7 @@ export function SuccessSessionsManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Start Time</label>
+                  <label className="block text-sm font-medium mb-1">Start Time *</label>
                   <Input
                     type="time"
                     value={formData.start_time}
@@ -389,7 +423,7 @@ export function SuccessSessionsManagement() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Session Link</label>
+                  <label className="block text-sm font-medium mb-1">Session Link *</label>
                   <Input
                     type="url"
                     value={formData.link}
@@ -399,8 +433,8 @@ export function SuccessSessionsManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Status</label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})}>
+                  <label className="block text-sm font-medium mb-1">Status *</label>
+                  <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})} required>
                     <SelectTrigger>
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
