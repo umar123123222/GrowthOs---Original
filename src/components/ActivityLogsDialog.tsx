@@ -284,12 +284,22 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     </TableCell>
                     <TableCell className="max-w-[300px]">
                       {log.metadata ? (
-                        <div className="text-sm text-muted-foreground truncate">
-                          {typeof log.metadata === 'object' 
-                            ? Object.entries(log.metadata).map(([key, value]) => 
-                                `${key}: ${value}`
-                              ).join(', ')
-                            : String(log.metadata)
+                        <div className="text-sm text-muted-foreground">
+                          {log.activity_type === 'page_visit' && log.metadata.page 
+                            ? `Visited: ${log.metadata.page}`
+                            : log.activity_type === 'login'
+                            ? 'User logged in'
+                            : log.activity_type === 'logout'
+                            ? 'User logged out'
+                            : log.activity_type === 'video_watched' && log.metadata.video_title
+                            ? `Watched: ${log.metadata.video_title}`
+                            : log.activity_type === 'assignment_submitted' && log.metadata.assignment_title
+                            ? `Submitted: ${log.metadata.assignment_title}`
+                            : log.activity_type === 'profile_updated'
+                            ? 'Profile updated'
+                            : log.activity_type === 'module_completed' && log.metadata.module_title
+                            ? `Completed: ${log.metadata.module_title}`
+                            : 'Activity completed'
                           }
                         </div>
                       ) : (
