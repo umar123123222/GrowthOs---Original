@@ -30,6 +30,7 @@ interface SessionFormData {
   title: string;
   description: string;
   mentor_name: string;
+  mentor_id: string;
   schedule_date: string;
   start_time: string;
   end_time: string;
@@ -37,8 +38,16 @@ interface SessionFormData {
   status: string;
 }
 
+interface User {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+}
+
 export function SuccessSessionsManagement() {
   const [sessions, setSessions] = useState<SuccessSession[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<SuccessSession | null>(null);
@@ -46,6 +55,7 @@ export function SuccessSessionsManagement() {
     title: '',
     description: '',
     mentor_name: '',
+    mentor_id: '',
     schedule_date: '',
     start_time: '',
     end_time: '',
@@ -56,6 +66,7 @@ export function SuccessSessionsManagement() {
 
   useEffect(() => {
     fetchSessions();
+    fetchUsers();
   }, []);
 
   const fetchSessions = async () => {
@@ -75,6 +86,26 @@ export function SuccessSessionsManagement() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, email, role')
+        .in('role', ['admin', 'superadmin', 'mentor'])
+        .order('full_name', { ascending: true });
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch users",
+        variant: "destructive"
+      });
     }
   };
 
@@ -120,6 +151,7 @@ export function SuccessSessionsManagement() {
       title: '',
       description: '',
       mentor_name: '',
+      mentor_id: '',
       schedule_date: '',
       start_time: '',
       end_time: '',
@@ -136,6 +168,7 @@ export function SuccessSessionsManagement() {
         title: session.title,
         description: session.description || '',
         mentor_name: session.mentor_name || '',
+        mentor_id: '', // We'll need to find the user ID based on mentor_name
         schedule_date: session.schedule_date || '',
         start_time: session.start_time || '',
         end_time: session.end_time || '',
@@ -157,6 +190,9 @@ export function SuccessSessionsManagement() {
     e.preventDefault();
     
     try {
+      // Find the selected user to get their name
+      const selectedUser = users.find(user => user.id === formData.mentor_id);
+      
       // Combine date with time to create proper timestamps
       const combineDateTime = (date: string, time: string) => {
         if (!date || !time) return null;
@@ -166,7 +202,7 @@ export function SuccessSessionsManagement() {
       const sessionData = {
         title: formData.title,
         description: formData.description,
-        mentor_name: formData.mentor_name,
+        mentor_name: selectedUser ? selectedUser.full_name : formData.mentor_name,
         schedule_date: formData.schedule_date,
         start_time: combineDateTime(formData.schedule_date, formData.start_time),
         end_time: formData.end_time ? combineDateTime(formData.schedule_date, formData.end_time) : null,
@@ -286,13 +322,25 @@ export function SuccessSessionsManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Host/Mentor Name</label>
-                  <Input
-                    type="text"
-                    value={formData.mentor_name}
-                    onChange={(e) => setFormData({...formData, mentor_name: e.target.value})}
-                    placeholder="Enter mentor name"
-                  />
+                  <label className="block text-sm font-medium mb-1">Host/Mentor</label>
+                  <Select 
+                    value={formData.mentor_id} 
+                    onValueChange={(value) => setFormData({...formData, mentor_id: value})}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a mentor, admin, or superadmin" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border z-50 max-h-60">
+                      {users.map((user) => (
+                        <SelectItem key={user.id} value={user.id}>
+                          <div className="flex flex-col">
+                            <span className="font-medium">{user.full_name}</span>
+                            <span className="text-xs text-muted-foreground">{user.email} • {user.role}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               
