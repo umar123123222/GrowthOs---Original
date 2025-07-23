@@ -242,7 +242,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         </div>
 
         {/* Activity Logs Table */}
-        <ScrollArea className="flex-1 h-full max-h-[60vh]">
+        <ScrollArea className="flex-1 h-full max-h-[75vh]">
           {loading ? (
             <div className="flex items-center justify-center p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
