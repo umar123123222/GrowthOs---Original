@@ -320,92 +320,92 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                           {(() => {
                             switch (log.activity_type) {
                               case 'page_visit':
-                                return `Visited: ${log.metadata.page || 'Unknown page'}`;
+                                return `Visited page: ${log.metadata.page || 'Unknown page'}`;
                               case 'login':
-                                return 'User logged in';
+                                return `User logged in from ${log.metadata.ip_address || 'unknown IP'}`;
                               case 'logout':
-                                return 'User logged out';
+                                return `User logged out after ${log.metadata.session_duration || 'unknown'} minutes`;
                               case 'video_watched':
-                                return `Watched: ${log.metadata.video_title || 'Video'}`;
+                                return `Watched video: "${log.metadata.video_title || 'Unknown video'}"${log.metadata.duration ? ` for ${log.metadata.duration} minutes` : ''}`;
                               case 'assignment_submitted':
-                                return `Submitted: ${log.metadata.assignment_title || 'Assignment'}`;
+                                return `Submitted assignment: "${log.metadata.assignment_title || 'Unknown assignment'}"${log.metadata.submission_type ? ` (${log.metadata.submission_type})` : ''}`;
                               case 'profile_updated':
-                                return 'Profile updated';
+                                return `Updated profile fields: ${log.metadata.updated_fields ? log.metadata.updated_fields.join(', ') : 'profile information'}`;
                               case 'module_completed':
-                                return `Completed: ${log.metadata.module_title || 'Module'}`;
+                                return `Completed module: "${log.metadata.module_title || 'Unknown module'}"${log.metadata.score ? ` with score ${log.metadata.score}%` : ''}`;
                               case 'admin_created':
-                                return `Created admin: ${log.metadata.admin_name || 'Admin'}`;
+                                return `Created admin account for: ${log.metadata.admin_email || log.metadata.admin_name || 'Unknown admin'}${log.metadata.admin_role ? ` with role ${log.metadata.admin_role}` : ''}`;
                               case 'admin_deleted':
-                                return `Deleted admin: ${log.metadata.admin_name || 'Admin'}`;
+                                return `Deleted admin account: ${log.metadata.admin_email || log.metadata.admin_name || 'Unknown admin'}${log.metadata.reason ? ` (Reason: ${log.metadata.reason})` : ''}`;
                               case 'admin_edited':
-                                return `Edited admin: ${log.metadata.admin_name || 'Admin'}`;
+                                return `Updated admin account: ${log.metadata.admin_email || log.metadata.admin_name || 'Unknown admin'}${log.metadata.changes ? ` - Changed: ${log.metadata.changes}` : ''}`;
                               case 'assignment_created':
-                                return `Created assignment: ${log.metadata.assignment_title || 'Assignment'}`;
+                                return `Created assignment: "${log.metadata.assignment_title || 'Unknown assignment'}"${log.metadata.module_name ? ` for module "${log.metadata.module_name}"` : ''}${log.metadata.due_date ? ` (Due: ${log.metadata.due_date})` : ''}`;
                               case 'assignment_deleted':
-                                return `Deleted assignment: ${log.metadata.assignment_title || 'Assignment'}`;
+                                return `Deleted assignment: "${log.metadata.assignment_title || 'Unknown assignment'}"${log.metadata.module_name ? ` from module "${log.metadata.module_name}"` : ''}`;
                               case 'assignment_updated':
-                                return `Updated assignment: ${log.metadata.assignment_title || 'Assignment'}`;
+                                return `Updated assignment: "${log.metadata.assignment_title || 'Unknown assignment'}"${log.metadata.changes ? ` - Changes: ${log.metadata.changes}` : ''}`;
                               case 'certificate_generated':
-                                return `Generated certificate for: ${log.metadata.student_name || 'Student'}`;
+                                return `Generated certificate for student: ${log.metadata.student_email || log.metadata.student_name || 'Unknown student'}${log.metadata.certificate_type ? ` (${log.metadata.certificate_type})` : ''}`;
                               case 'dashboard_access':
-                                return 'Accessed dashboard';
+                                return `Accessed ${log.metadata.dashboard_type || 'main'} dashboard${log.metadata.source ? ` from ${log.metadata.source}` : ''}`;
                               case 'fees_recorded':
-                                return `Recorded fees: ${log.metadata.amount || 'Amount not specified'}`;
+                                return `Recorded fees for student: ${log.metadata.student_email || log.metadata.student_name || 'Unknown student'} - Amount: ${log.metadata.amount || 'Not specified'}${log.metadata.payment_method ? ` via ${log.metadata.payment_method}` : ''}`;
                               case 'file_download':
-                                return `Downloaded: ${log.metadata.file_name || 'File'}`;
+                                return `Downloaded file: "${log.metadata.file_name || 'Unknown file'}"${log.metadata.file_type ? ` (${log.metadata.file_type})` : ''}${log.metadata.file_size ? ` - Size: ${log.metadata.file_size}` : ''}`;
                               case 'invoice_downloaded':
-                                return `Downloaded invoice: ${log.metadata.invoice_id || 'Invoice'}`;
+                                return `Downloaded invoice: ${log.metadata.invoice_id || 'Unknown invoice'}${log.metadata.student_email ? ` for ${log.metadata.student_email}` : ''}`;
                               case 'invoice_generated':
-                                return `Generated invoice: ${log.metadata.invoice_id || 'Invoice'}`;
+                                return `Generated invoice: ${log.metadata.invoice_id || 'Unknown invoice'} for student: ${log.metadata.student_email || log.metadata.student_name || 'Unknown student'}${log.metadata.amount ? ` - Amount: ${log.metadata.amount}` : ''}`;
                               case 'mentor_created':
-                                return `Created mentor: ${log.metadata.mentor_name || 'Mentor'}`;
+                                return `Created mentor account for: ${log.metadata.mentor_email || log.metadata.mentor_name || 'Unknown mentor'}${log.metadata.specialization ? ` - Specialization: ${log.metadata.specialization}` : ''}`;
                               case 'mentor_deleted':
-                                return `Deleted mentor: ${log.metadata.mentor_name || 'Mentor'}`;
+                                return `Deleted mentor account: ${log.metadata.mentor_email || log.metadata.mentor_name || 'Unknown mentor'}${log.metadata.students_count ? ` (Had ${log.metadata.students_count} students)` : ''}`;
                               case 'mentor_edited':
-                                return `Edited mentor: ${log.metadata.mentor_name || 'Mentor'}`;
+                                return `Updated mentor account: ${log.metadata.mentor_email || log.metadata.mentor_name || 'Unknown mentor'}${log.metadata.changes ? ` - Changes: ${log.metadata.changes}` : ''}`;
                               case 'mentor_updated':
-                                return `Updated mentor: ${log.metadata.mentor_name || 'Mentor'}`;
+                                return `Updated mentor profile: ${log.metadata.mentor_email || log.metadata.mentor_name || 'Unknown mentor'}${log.metadata.updated_fields ? ` - Fields: ${log.metadata.updated_fields.join(', ')}` : ''}`;
                               case 'module_created':
-                                return `Created module: ${log.metadata.module_title || 'Module'}`;
+                                return `Created module: "${log.metadata.module_title || 'Unknown module'}"${log.metadata.module_order ? ` at position ${log.metadata.module_order}` : ''}${log.metadata.lessons_count ? ` with ${log.metadata.lessons_count} lessons` : ''}`;
                               case 'module_deleted':
-                                return `Deleted module: ${log.metadata.module_title || 'Module'}`;
+                                return `Deleted module: "${log.metadata.module_title || 'Unknown module'}"${log.metadata.lessons_count ? ` (Had ${log.metadata.lessons_count} lessons)` : ''}`;
                               case 'module_updated':
-                                return `Updated module: ${log.metadata.module_title || 'Module'}`;
+                                return `Updated module: "${log.metadata.module_title || 'Unknown module'}"${log.metadata.changes ? ` - Changes: ${log.metadata.changes}` : ''}`;
                               case 'quiz_attempted':
-                                return `Attempted quiz: ${log.metadata.quiz_title || 'Quiz'}`;
+                                return `Attempted quiz: "${log.metadata.quiz_title || 'Unknown quiz'}"${log.metadata.score ? ` - Score: ${log.metadata.score}%` : ''}${log.metadata.attempt_number ? ` (Attempt ${log.metadata.attempt_number})` : ''}`;
                               case 'session_joined':
-                                return `Joined session: ${log.metadata.session_title || 'Session'}`;
+                                return `Joined session: "${log.metadata.session_title || 'Unknown session'}"${log.metadata.session_type ? ` (${log.metadata.session_type})` : ''}${log.metadata.duration ? ` for ${log.metadata.duration} minutes` : ''}`;
                               case 'student_created':
-                                return `Created student: ${log.metadata.student_name || 'Student'}`;
+                                return `Created student account for: ${log.metadata.student_email || log.metadata.student_name || 'Unknown student'}${log.metadata.student_id ? ` (ID: ${log.metadata.student_id})` : ''}${log.metadata.mentor_assigned ? ` - Assigned to mentor: ${log.metadata.mentor_assigned}` : ''}`;
                               case 'student_deleted':
-                                return `Deleted student: ${log.metadata.student_name || 'Student'}`;
+                                return `Deleted student account: ${log.metadata.student_email || log.metadata.student_name || 'Unknown student'}${log.metadata.reason ? ` (Reason: ${log.metadata.reason})` : ''}`;
                               case 'student_updated':
-                                return `Updated student: ${log.metadata.student_name || 'Student'}`;
+                                return `Updated student: ${log.metadata.student_email || log.metadata.student_name || 'Unknown student'}${log.metadata.changes ? ` - Changes: ${log.metadata.changes}` : ''}${log.metadata.fees_updated ? ` - Fees updated to: ${log.metadata.fees_updated}` : ''}`;
                               case 'success_session_created':
-                                return `Created success session: ${log.metadata.session_title || 'Session'}`;
+                                return `Created success session: "${log.metadata.session_title || 'Unknown session'}"${log.metadata.scheduled_date ? ` scheduled for ${log.metadata.scheduled_date}` : ''}${log.metadata.mentor_name ? ` with mentor ${log.metadata.mentor_name}` : ''}`;
                               case 'success_session_deleted':
-                                return `Deleted success session: ${log.metadata.session_title || 'Session'}`;
+                                return `Deleted success session: "${log.metadata.session_title || 'Unknown session'}"${log.metadata.participants_count ? ` (Had ${log.metadata.participants_count} registered participants)` : ''}`;
                               case 'success_session_updated':
-                                return `Updated success session: ${log.metadata.session_title || 'Session'}`;
+                                return `Updated success session: "${log.metadata.session_title || 'Unknown session'}"${log.metadata.changes ? ` - Changes: ${log.metadata.changes}` : ''}`;
                               case 'support_ticket_created':
-                                return `Created support ticket: ${log.metadata.ticket_title || 'Ticket'}`;
+                                return `Created support ticket: "${log.metadata.ticket_title || 'Unknown ticket'}"${log.metadata.ticket_type ? ` (Type: ${log.metadata.ticket_type})` : ''}${log.metadata.priority ? ` - Priority: ${log.metadata.priority}` : ''}`;
                               case 'support_ticket_replied':
-                                return `Replied to ticket: ${log.metadata.ticket_title || 'Ticket'}`;
+                                return `Replied to ticket: "${log.metadata.ticket_title || 'Unknown ticket'}"${log.metadata.reply_type ? ` (${log.metadata.reply_type})` : ''}${log.metadata.user_email ? ` for user: ${log.metadata.user_email}` : ''}`;
                               case 'support_ticket_resolved':
-                                return `Resolved ticket: ${log.metadata.ticket_title || 'Ticket'}`;
+                                return `Resolved ticket: "${log.metadata.ticket_title || 'Unknown ticket'}"${log.metadata.resolution_type ? ` (${log.metadata.resolution_type})` : ''}${log.metadata.resolution_time ? ` in ${log.metadata.resolution_time}` : ''}`;
                               case 'video_created':
-                                return `Created video: ${log.metadata.video_title || 'Video'}`;
+                                return `Created video: "${log.metadata.video_title || 'Unknown video'}"${log.metadata.module_name ? ` for module "${log.metadata.module_name}"` : ''}${log.metadata.duration ? ` (Duration: ${log.metadata.duration} minutes)` : ''}`;
                               case 'video_deleted':
-                                return `Deleted video: ${log.metadata.video_title || 'Video'}`;
+                                return `Deleted video: "${log.metadata.video_title || 'Unknown video'}"${log.metadata.module_name ? ` from module "${log.metadata.module_name}"` : ''}`;
                               case 'video_updated':
-                                return `Updated video: ${log.metadata.video_title || 'Video'}`;
+                                return `Updated video: "${log.metadata.video_title || 'Unknown video'}"${log.metadata.changes ? ` - Changes: ${log.metadata.changes}` : ''}`;
                               default:
-                                return 'Activity completed';
+                                return `Activity completed${log.metadata.description ? `: ${log.metadata.description}` : ''}`;
                             }
                           })()}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">No details</span>
+                        <span className="text-muted-foreground">No details available</span>
                       )}
                     </TableCell>
                   </TableRow>
