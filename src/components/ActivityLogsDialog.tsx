@@ -224,14 +224,46 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Activities</SelectItem>
+                <SelectItem value="admin_created">Admin Created</SelectItem>
+                <SelectItem value="admin_deleted">Admin Deleted</SelectItem>
+                <SelectItem value="admin_edited">Admin Edited</SelectItem>
+                <SelectItem value="assignment_created">Assignment Created</SelectItem>
+                <SelectItem value="assignment_deleted">Assignment Deleted</SelectItem>
+                <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
+                <SelectItem value="assignment_updated">Assignment Updated</SelectItem>
+                <SelectItem value="certificate_generated">Certificate Generated</SelectItem>
+                <SelectItem value="dashboard_access">Dashboard Access</SelectItem>
+                <SelectItem value="fees_recorded">Fees Recorded</SelectItem>
+                <SelectItem value="file_download">File Download</SelectItem>
+                <SelectItem value="invoice_downloaded">Invoice Downloaded</SelectItem>
+                <SelectItem value="invoice_generated">Invoice Generated</SelectItem>
                 <SelectItem value="login">Login</SelectItem>
                 <SelectItem value="logout">Logout</SelectItem>
-                <SelectItem value="video_watched">Video Watched</SelectItem>
-                <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
-                <SelectItem value="profile_updated">Profile Updated</SelectItem>
+                <SelectItem value="mentor_created">Mentor Created</SelectItem>
+                <SelectItem value="mentor_deleted">Mentor Deleted</SelectItem>
+                <SelectItem value="mentor_edited">Mentor Edited</SelectItem>
+                <SelectItem value="mentor_updated">Mentor Updated</SelectItem>
                 <SelectItem value="module_completed">Module Completed</SelectItem>
-                <SelectItem value="quiz_attempted">Quiz Attempted</SelectItem>
+                <SelectItem value="module_created">Module Created</SelectItem>
+                <SelectItem value="module_deleted">Module Deleted</SelectItem>
+                <SelectItem value="module_updated">Module Updated</SelectItem>
                 <SelectItem value="page_visit">Page Visit</SelectItem>
+                <SelectItem value="profile_updated">Profile Updated</SelectItem>
+                <SelectItem value="quiz_attempted">Quiz Attempted</SelectItem>
+                <SelectItem value="session_joined">Session Joined</SelectItem>
+                <SelectItem value="student_created">Student Created</SelectItem>
+                <SelectItem value="student_deleted">Student Deleted</SelectItem>
+                <SelectItem value="student_updated">Student Updated</SelectItem>
+                <SelectItem value="success_session_created">Success Session Created</SelectItem>
+                <SelectItem value="success_session_deleted">Success Session Deleted</SelectItem>
+                <SelectItem value="success_session_updated">Success Session Updated</SelectItem>
+                <SelectItem value="support_ticket_created">Support Ticket Created</SelectItem>
+                <SelectItem value="support_ticket_replied">Support Ticket Replied</SelectItem>
+                <SelectItem value="support_ticket_resolved">Support Ticket Resolved</SelectItem>
+                <SelectItem value="video_created">Video Created</SelectItem>
+                <SelectItem value="video_deleted">Video Deleted</SelectItem>
+                <SelectItem value="video_updated">Video Updated</SelectItem>
+                <SelectItem value="video_watched">Video Watched</SelectItem>
               </SelectContent>
             </Select>
           </div>
