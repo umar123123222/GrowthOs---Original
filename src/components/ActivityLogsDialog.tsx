@@ -189,32 +189,27 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         <DialogTrigger asChild>
           {children}
         </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
-        <DialogHeader className="flex-shrink-0">
-          <div className="flex justify-between items-center">
-            <DialogTitle className="flex items-center">
-              <Activity className="w-5 h-5 mr-2" />
-              {userId && userName ? `Activity Logs - ${userName}` : 'Global Activity Logs'}
-            </DialogTitle>
-            <div className="flex items-center gap-2">
-              <Button onClick={exportLogs} variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
-            </div>
-          </div>
-        </DialogHeader>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden">
+        <div className="flex justify-between items-center p-6 pb-4">
+          <DialogTitle className="text-lg font-semibold">
+            {userId && userName ? `Activity Logs - ${userName}` : 'Activity Logs'}
+          </DialogTitle>
+          <Button onClick={exportLogs} variant="outline" size="sm">
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
         
-        <div className="flex-shrink-0 space-y-4">
+        <div className="px-6 space-y-4">
           {/* Filters */}
           <div className="flex flex-wrap items-center gap-4">
-            <div className="flex items-center space-x-2">
-              <Search className="w-4 h-4 text-muted-foreground" />
+            <div className="relative">
+              <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
               <Input
-                placeholder="Search by user or activity..."
+                placeholder="Search by user or activity"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="max-w-sm"
+                className="pl-10 w-64"
               />
             </div>
 
@@ -223,8 +218,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="1days">Last 24 hours</SelectItem>
                 <SelectItem value="7days">Last 7 days</SelectItem>
+                <SelectItem value="1days">Last 24 hours</SelectItem>
                 <SelectItem value="30days">Last 30 days</SelectItem>
                 <SelectItem value="all">All time</SelectItem>
               </SelectContent>
@@ -251,12 +246,19 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Activities</SelectItem>
+                <SelectItem value="login">Login</SelectItem>
+                <SelectItem value="logout">Logout</SelectItem>
+                <SelectItem value="page_visit">Page Visit</SelectItem>
+                <SelectItem value="video_watched">Video Watched</SelectItem>
+                <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
+                <SelectItem value="profile_updated">Profile Updated</SelectItem>
+                <SelectItem value="module_completed">Module Completed</SelectItem>
+                <SelectItem value="quiz_attempted">Quiz Attempted</SelectItem>
                 <SelectItem value="admin_created">Admin Created</SelectItem>
                 <SelectItem value="admin_deleted">Admin Deleted</SelectItem>
                 <SelectItem value="admin_edited">Admin Edited</SelectItem>
                 <SelectItem value="assignment_created">Assignment Created</SelectItem>
                 <SelectItem value="assignment_deleted">Assignment Deleted</SelectItem>
-                <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
                 <SelectItem value="assignment_updated">Assignment Updated</SelectItem>
                 <SelectItem value="certificate_generated">Certificate Generated</SelectItem>
                 <SelectItem value="dashboard_access">Dashboard Access</SelectItem>
@@ -264,19 +266,13 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                 <SelectItem value="file_download">File Download</SelectItem>
                 <SelectItem value="invoice_downloaded">Invoice Downloaded</SelectItem>
                 <SelectItem value="invoice_generated">Invoice Generated</SelectItem>
-                <SelectItem value="login">Login</SelectItem>
-                <SelectItem value="logout">Logout</SelectItem>
                 <SelectItem value="mentor_created">Mentor Created</SelectItem>
                 <SelectItem value="mentor_deleted">Mentor Deleted</SelectItem>
                 <SelectItem value="mentor_edited">Mentor Edited</SelectItem>
                 <SelectItem value="mentor_updated">Mentor Updated</SelectItem>
-                <SelectItem value="module_completed">Module Completed</SelectItem>
                 <SelectItem value="module_created">Module Created</SelectItem>
                 <SelectItem value="module_deleted">Module Deleted</SelectItem>
                 <SelectItem value="module_updated">Module Updated</SelectItem>
-                <SelectItem value="page_visit">Page Visit</SelectItem>
-                <SelectItem value="profile_updated">Profile Updated</SelectItem>
-                <SelectItem value="quiz_attempted">Quiz Attempted</SelectItem>
                 <SelectItem value="session_joined">Session Joined</SelectItem>
                 <SelectItem value="student_created">Student Created</SelectItem>
                 <SelectItem value="student_deleted">Student Deleted</SelectItem>
@@ -290,7 +286,6 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                 <SelectItem value="video_created">Video Created</SelectItem>
                 <SelectItem value="video_deleted">Video Deleted</SelectItem>
                 <SelectItem value="video_updated">Video Updated</SelectItem>
-                <SelectItem value="video_watched">Video Watched</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -301,7 +296,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         </div>
 
         {/* Activity Logs Table */}
-        <div className="flex-1 overflow-auto max-h-[70vh] border rounded-md">
+        <div className="px-6 pb-6">
+          <div className="border rounded-md overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -439,13 +435,14 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                 ))}
               </TableBody>
             </Table>
-          )}
+           )}
 
-          {filteredLogs.length === 0 && !loading && (
-            <div className="text-center py-8 text-muted-foreground">
-              No activity logs found matching your criteria.
-            </div>
-          )}
+           {filteredLogs.length === 0 && !loading && (
+             <div className="text-center py-8 text-muted-foreground">
+               No activity logs found matching your criteria.
+             </div>
+           )}
+          </div>
         </div>
         </DialogContent>
       </Dialog>
