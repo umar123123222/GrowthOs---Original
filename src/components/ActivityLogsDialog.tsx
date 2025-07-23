@@ -285,22 +285,92 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     <TableCell className="max-w-[300px]">
                       {log.metadata ? (
                         <div className="text-sm text-muted-foreground">
-                          {log.activity_type === 'page_visit' && log.metadata.page 
-                            ? `Visited: ${log.metadata.page}`
-                            : log.activity_type === 'login'
-                            ? 'User logged in'
-                            : log.activity_type === 'logout'
-                            ? 'User logged out'
-                            : log.activity_type === 'video_watched' && log.metadata.video_title
-                            ? `Watched: ${log.metadata.video_title}`
-                            : log.activity_type === 'assignment_submitted' && log.metadata.assignment_title
-                            ? `Submitted: ${log.metadata.assignment_title}`
-                            : log.activity_type === 'profile_updated'
-                            ? 'Profile updated'
-                            : log.activity_type === 'module_completed' && log.metadata.module_title
-                            ? `Completed: ${log.metadata.module_title}`
-                            : 'Activity completed'
-                          }
+                          {(() => {
+                            switch (log.activity_type) {
+                              case 'page_visit':
+                                return `Visited: ${log.metadata.page || 'Unknown page'}`;
+                              case 'login':
+                                return 'User logged in';
+                              case 'logout':
+                                return 'User logged out';
+                              case 'video_watched':
+                                return `Watched: ${log.metadata.video_title || 'Video'}`;
+                              case 'assignment_submitted':
+                                return `Submitted: ${log.metadata.assignment_title || 'Assignment'}`;
+                              case 'profile_updated':
+                                return 'Profile updated';
+                              case 'module_completed':
+                                return `Completed: ${log.metadata.module_title || 'Module'}`;
+                              case 'admin_created':
+                                return `Created admin: ${log.metadata.admin_name || 'Admin'}`;
+                              case 'admin_deleted':
+                                return `Deleted admin: ${log.metadata.admin_name || 'Admin'}`;
+                              case 'admin_edited':
+                                return `Edited admin: ${log.metadata.admin_name || 'Admin'}`;
+                              case 'assignment_created':
+                                return `Created assignment: ${log.metadata.assignment_title || 'Assignment'}`;
+                              case 'assignment_deleted':
+                                return `Deleted assignment: ${log.metadata.assignment_title || 'Assignment'}`;
+                              case 'assignment_updated':
+                                return `Updated assignment: ${log.metadata.assignment_title || 'Assignment'}`;
+                              case 'certificate_generated':
+                                return `Generated certificate for: ${log.metadata.student_name || 'Student'}`;
+                              case 'dashboard_access':
+                                return 'Accessed dashboard';
+                              case 'fees_recorded':
+                                return `Recorded fees: ${log.metadata.amount || 'Amount not specified'}`;
+                              case 'file_download':
+                                return `Downloaded: ${log.metadata.file_name || 'File'}`;
+                              case 'invoice_downloaded':
+                                return `Downloaded invoice: ${log.metadata.invoice_id || 'Invoice'}`;
+                              case 'invoice_generated':
+                                return `Generated invoice: ${log.metadata.invoice_id || 'Invoice'}`;
+                              case 'mentor_created':
+                                return `Created mentor: ${log.metadata.mentor_name || 'Mentor'}`;
+                              case 'mentor_deleted':
+                                return `Deleted mentor: ${log.metadata.mentor_name || 'Mentor'}`;
+                              case 'mentor_edited':
+                                return `Edited mentor: ${log.metadata.mentor_name || 'Mentor'}`;
+                              case 'mentor_updated':
+                                return `Updated mentor: ${log.metadata.mentor_name || 'Mentor'}`;
+                              case 'module_created':
+                                return `Created module: ${log.metadata.module_title || 'Module'}`;
+                              case 'module_deleted':
+                                return `Deleted module: ${log.metadata.module_title || 'Module'}`;
+                              case 'module_updated':
+                                return `Updated module: ${log.metadata.module_title || 'Module'}`;
+                              case 'quiz_attempted':
+                                return `Attempted quiz: ${log.metadata.quiz_title || 'Quiz'}`;
+                              case 'session_joined':
+                                return `Joined session: ${log.metadata.session_title || 'Session'}`;
+                              case 'student_created':
+                                return `Created student: ${log.metadata.student_name || 'Student'}`;
+                              case 'student_deleted':
+                                return `Deleted student: ${log.metadata.student_name || 'Student'}`;
+                              case 'student_updated':
+                                return `Updated student: ${log.metadata.student_name || 'Student'}`;
+                              case 'success_session_created':
+                                return `Created success session: ${log.metadata.session_title || 'Session'}`;
+                              case 'success_session_deleted':
+                                return `Deleted success session: ${log.metadata.session_title || 'Session'}`;
+                              case 'success_session_updated':
+                                return `Updated success session: ${log.metadata.session_title || 'Session'}`;
+                              case 'support_ticket_created':
+                                return `Created support ticket: ${log.metadata.ticket_title || 'Ticket'}`;
+                              case 'support_ticket_replied':
+                                return `Replied to ticket: ${log.metadata.ticket_title || 'Ticket'}`;
+                              case 'support_ticket_resolved':
+                                return `Resolved ticket: ${log.metadata.ticket_title || 'Ticket'}`;
+                              case 'video_created':
+                                return `Created video: ${log.metadata.video_title || 'Video'}`;
+                              case 'video_deleted':
+                                return `Deleted video: ${log.metadata.video_title || 'Video'}`;
+                              case 'video_updated':
+                                return `Updated video: ${log.metadata.video_title || 'Video'}`;
+                              default:
+                                return 'Activity completed';
+                            }
+                          })()}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">No details</span>
