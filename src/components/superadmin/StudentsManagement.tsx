@@ -1433,42 +1433,137 @@ export function StudentsManagement() {
 
       {/* Activity Logs Dialog */}
       <Dialog open={activityLogsDialog} onOpenChange={setActivityLogsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="max-w-6xl max-h-[90vh]">
+          <DialogHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+            <DialogTitle className="text-xl font-semibold">
               Activity Logs - {selectedStudentForLogs?.full_name}
             </DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              className="ml-auto"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
           </DialogHeader>
-          <ScrollArea className="h-96">
-            <div className="space-y-4">
-              {activityLogs.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No activity logs found for this student.
-                </p>
-              ) : (
-                activityLogs.map((log) => (
-                  <Card key={log.id} className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h4 className="font-medium">{formatActivityType(log.activity_type)}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {formatDateTime(log.occurred_at)}
-                        </p>
-                      </div>
-                      <Badge variant="outline">{log.activity_type}</Badge>
-                    </div>
-                    {log.metadata && (
-                      <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
-                        <pre className="whitespace-pre-wrap">
-                          {JSON.stringify(log.metadata, null, 2)}
-                        </pre>
-                      </div>
-                    )}
-                  </Card>
-                ))
-              )}
+          
+          <div className="space-y-4">
+            {/* Search and Filters */}
+            <div className="flex gap-4 items-center">
+              <div className="relative flex-1 max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by user or activity..."
+                  className="pl-10"
+                />
+              </div>
+              
+              <Select defaultValue="last_7_days">
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="last_7_days">Last 7 days</SelectItem>
+                  <SelectItem value="last_30_days">Last 30 days</SelectItem>
+                  <SelectItem value="all_time">All time</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select defaultValue="all_roles">
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all_roles">All Roles</SelectItem>
+                  <SelectItem value="student">Student</SelectItem>
+                  <SelectItem value="mentor">Mentor</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select defaultValue="all_activities">
+                <SelectTrigger className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all_activities">All Activities</SelectItem>
+                  <SelectItem value="login">Login</SelectItem>
+                  <SelectItem value="logout">Logout</SelectItem>
+                  <SelectItem value="page_visit">Page Visit</SelectItem>
+                  <SelectItem value="profile_updated">Profile Updated</SelectItem>
+                  <SelectItem value="module_completed">Module Completed</SelectItem>
+                  <SelectItem value="video_watched">Video Watched</SelectItem>
+                  <SelectItem value="quiz_attempted">Quiz Attempted</SelectItem>
+                  <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
+                  <SelectItem value="certificate_generated">Certificate Generated</SelectItem>
+                  <SelectItem value="fees_recorded">Fees Recorded</SelectItem>
+                  <SelectItem value="invoice_generated">Invoice Generated</SelectItem>
+                  <SelectItem value="invoice_downloaded">Invoice Downloaded</SelectItem>
+                  <SelectItem value="file_download">File Download</SelectItem>
+                  <SelectItem value="dashboard_access">Dashboard Access</SelectItem>
+                  <SelectItem value="session_joined">Session Joined</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </ScrollArea>
+
+            {/* Results Count */}
+            <p className="text-sm text-muted-foreground">
+              Showing {activityLogs.length} of {activityLogs.length} activities
+            </p>
+
+            {/* Activity Logs Table */}
+            <ScrollArea className="h-96 border rounded-md">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-40">Timestamp</TableHead>
+                    <TableHead className="w-64">User</TableHead>
+                    <TableHead className="w-48">Name</TableHead>
+                    <TableHead className="w-24">Role</TableHead>
+                    <TableHead className="w-32">Activity</TableHead>
+                    <TableHead>Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activityLogs.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                        No activity logs found for this student.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    activityLogs.map((log) => (
+                      <TableRow key={log.id}>
+                        <TableCell className="text-sm">
+                          {formatDateTime(log.occurred_at)}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {selectedStudentForLogs?.email}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">
+                          {selectedStudentForLogs?.full_name}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            student
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {log.activity_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {log.metadata?.details || formatActivityType(log.activity_type)}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
 
