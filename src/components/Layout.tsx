@@ -136,7 +136,7 @@ const Layout = ({ user }: LayoutProps) => {
       { name: "Support", href: "/support", icon: MessageSquare },
     ];
 
-    // Add dynamic integrations before Profile
+    // Add dynamic integrations after Support
     const dynamicItems = [];
     if (connectionStatus.shopify) {
       dynamicItems.push({ name: "Shopify Dashboard", href: "/shopify-dashboard", icon: ShoppingBag });
@@ -145,10 +145,13 @@ const Layout = ({ user }: LayoutProps) => {
       dynamicItems.push({ name: "Meta Ads Dashboard", href: "/meta-ads-dashboard", icon: Target });
     }
 
+    // Add Profile at the end
+    const profileItem = { name: "Profile", href: "/profile", icon: User };
+
     return [
       ...baseNavigation,
       ...dynamicItems,
-      { name: "Profile", href: "/profile", icon: User },
+      profileItem,
     ];
   }, [isUserSuperadmin, isUserAdmin, isUserMentor, connectionStatus]);
 
