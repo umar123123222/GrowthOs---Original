@@ -59,7 +59,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
         .from('assignment_submissions')
         .select(`
           *,
-          users (
+          users!assignment_submissions_user_id_fkey (
             full_name,
             email,
             student_id
