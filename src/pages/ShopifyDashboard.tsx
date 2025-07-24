@@ -15,7 +15,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const ShopifyDashboard = () => {
   const { toast } = useToast();
@@ -270,20 +271,28 @@ const ShopifyDashboard = () => {
               <CardDescription>Daily sales performance</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
+              <ChartContainer
+                config={{
+                  sales: {
+                    label: "Sales ($)",
+                    color: "hsl(var(--primary))",
+                  },
+                }}
+                className="h-[200px]"
+              >
                 <LineChart data={shopifyData.salesTrend}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <RechartsTooltip />
+                  <ChartTooltip content={<ChartTooltipContent />} />
                   <Line 
                     type="monotone" 
                     dataKey="sales" 
-                    stroke="hsl(var(--primary))" 
+                    stroke="var(--color-sales)" 
                     strokeWidth={2}
                   />
                 </LineChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             </CardContent>
           </Card>
 
@@ -293,19 +302,27 @@ const ShopifyDashboard = () => {
               <CardDescription>Daily visitor count</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
+              <ChartContainer
+                config={{
+                  visitors: {
+                    label: "Visitors",
+                    color: "hsl(var(--primary))",
+                  },
+                }}
+                className="h-[200px]"
+              >
                 <BarChart data={shopifyData.visitorTrend}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
-                  <RechartsTooltip />
+                  <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar 
                     dataKey="visitors" 
-                    fill="hsl(var(--primary))" 
+                    fill="var(--color-visitors)" 
                     radius={[4, 4, 0, 0]}
                   />
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             </CardContent>
           </Card>
         </div>
