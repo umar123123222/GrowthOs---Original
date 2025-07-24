@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Building2, Phone, Mail, DollarSign, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -16,12 +17,26 @@ interface CompanySettingsData {
   secondary_phone?: string;
   address: string;
   contact_email: string;
+  currency: string;
   original_fee_amount: number;
   maximum_installment_count: number;
 }
 
 export function CompanySettings() {
   const { toast } = useToast();
+
+  const getCurrencySymbol = (currency: string): string => {
+    const symbols: { [key: string]: string } = {
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      PKR: '₨',
+      INR: '₹',
+      CAD: 'C$',
+      AUD: 'A$'
+    };
+    return symbols[currency] || currency;
+  };
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<CompanySettingsData>({
@@ -30,6 +45,7 @@ export function CompanySettings() {
     secondary_phone: '',
     address: '',
     contact_email: '',
+    currency: 'USD',
     original_fee_amount: 3000,
     maximum_installment_count: 3
   });
@@ -209,20 +225,47 @@ export function CompanySettings() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="original_fee_amount">Original Fee Amount ($)</Label>
-                <Input
-                  id="original_fee_amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={settings.original_fee_amount}
-                  onChange={(e) => handleInputChange('original_fee_amount', parseFloat(e.target.value))}
-                  placeholder="3000.00"
-                />
+                <Label htmlFor="currency">Currency</Label>
+                <Select value={settings.currency} onValueChange={(value) => handleInputChange('currency', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select currency" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    <SelectItem value="USD">USD ($) - US Dollar</SelectItem>
+                    <SelectItem value="EUR">EUR (€) - Euro</SelectItem>
+                    <SelectItem value="GBP">GBP (£) - British Pound</SelectItem>
+                    <SelectItem value="PKR">PKR (₨) - Pakistani Rupee</SelectItem>
+                    <SelectItem value="INR">INR (₹) - Indian Rupee</SelectItem>
+                    <SelectItem value="CAD">CAD (C$) - Canadian Dollar</SelectItem>
+                    <SelectItem value="AUD">AUD (A$) - Australian Dollar</SelectItem>
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
-                  The total course fee amount in dollars
+                  Select your preferred currency
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="original_fee_amount">Original Fee Amount</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
+                    {getCurrencySymbol(settings.currency)}
+                  </span>
+                  <Input
+                    id="original_fee_amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={settings.original_fee_amount}
+                    onChange={(e) => handleInputChange('original_fee_amount', parseFloat(e.target.value))}
+                    placeholder="3000.00"
+                    className="pl-8"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  The total course fee amount
                 </p>
               </div>
 
@@ -248,7 +291,7 @@ export function CompanySettings() {
             <div className="bg-muted p-4 rounded-lg">
               <h4 className="font-medium mb-2">Calculated Installment Amount</h4>
               <p className="text-2xl font-bold text-primary">
-                ${(settings.original_fee_amount / settings.maximum_installment_count).toFixed(2)}
+                {getCurrencySymbol(settings.currency)}{(settings.original_fee_amount / settings.maximum_installment_count).toFixed(2)}
               </p>
               <p className="text-sm text-muted-foreground">
                 Per installment based on current settings
