@@ -56,13 +56,27 @@ export function CompanySettings() {
 
   const fetchCompanySettings = async () => {
     try {
+      // First try to fetch existing settings
       const { data, error } = await supabase
         .from('company_settings' as any)
         .select('*')
         .single();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
+      if (error) {
+        // If table doesn't exist, show error message and suggest contacting admin
+        if (error.code === '42P01') {
+          toast({
+            title: 'Database Setup Required',
+            description: 'Company settings table needs to be created. Please contact your system administrator.',
+            variant: 'destructive'
+          });
+          return;
+        }
+        
+        // If no records found, that's okay - we'll create one on save
+        if (error.code !== 'PGRST116') {
+          throw error;
+        }
       }
 
       if (data) {
