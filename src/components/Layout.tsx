@@ -20,7 +20,8 @@ import {
   Calendar,
   Menu,
   X,
-  Activity
+  Activity,
+  Building2
 } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -71,6 +72,7 @@ const Layout = ({ user }: LayoutProps) => {
         { name: "Submissions", href: "/superadmin?tab=submissions", icon: FileText },
         { name: "Support", href: "/superadmin?tab=support", icon: MessageSquare },
         { name: "Teams", href: "/teams", icon: UserCheck },
+        { name: "Company", href: "/superadmin?tab=company-settings", icon: Building2 },
         { name: "Profile", href: "/profile", icon: User }
       ];
     } else if (isUserAdmin) {
