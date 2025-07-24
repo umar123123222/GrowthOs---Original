@@ -12,6 +12,7 @@ import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
 import { AssignmentFeedback } from '@/components/mentor/AssignmentFeedback';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
+import { CompanySettings } from '@/components/superadmin/CompanySettings';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -48,6 +49,8 @@ export default function SuperadminDashboard() {
         return <AssignmentFeedback />;
       case 'support':
         return <SupportManagement />;
+      case 'company-settings':
+        return <CompanySettings />;
       default:
         return <DashboardContent />;
     }

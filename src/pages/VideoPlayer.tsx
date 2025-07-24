@@ -12,14 +12,20 @@ import {
   MessageCircle
 } from "lucide-react";
 import ShoaibGPT from "@/components/ShoaibGPT";
+import { LectureRating } from "@/components/LectureRating";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const VideoPlayer = () => {
   const { moduleId, lessonId } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showShoaibGPT, setShowShoaibGPT] = useState(false);
   const [checkedItems, setCheckedItems] = useState<{ [key: number]: boolean }>({});
   const [currentVideo, setCurrentVideo] = useState<any>(null);
+  const [showRating, setShowRating] = useState(false);
+  const [videoWatched, setVideoWatched] = useState(false);
 
   // Initialize video data from URL params or route params
   useEffect(() => {
@@ -97,6 +103,59 @@ const VideoPlayer = () => {
     navigate(`/videos/${moduleId}/${lessonId}`);
   };
 
+  const checkVideoCompletion = async () => {
+    if (!user?.id || !currentVideo?.id) return;
+
+    try {
+      // Check if recording has been watched and no rating exists yet
+      const { data: watchedData } = await supabase
+        .from('recording_views')
+        .select('watched')
+        .eq('user_id', user.id)
+        .eq('recording_id', currentVideo.id)
+        .eq('watched', true)
+        .single();
+
+      const { data: ratingData } = await supabase
+        .from('lesson_ratings' as any)
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('recording_id', currentVideo.id)
+        .single();
+
+      if (watchedData && !ratingData) {
+        setShowRating(true);
+      }
+    } catch (error) {
+      console.error('Error checking video completion:', error);
+    }
+  };
+
+  const handleMarkComplete = async () => {
+    if (!user?.id || !currentVideo?.id) return;
+
+    try {
+      // Mark recording as watched
+      await supabase
+        .from('recording_views')
+        .upsert({
+          user_id: user.id,
+          recording_id: currentVideo.id,
+          watched: true,
+          watched_at: new Date().toISOString()
+        });
+
+      setVideoWatched(true);
+      
+      // Check if should show rating
+      setTimeout(() => {
+        checkVideoCompletion();
+      }, 1000);
+    } catch (error) {
+      console.error('Error marking video complete:', error);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
       {/* Video Player Section */}
@@ -133,9 +192,14 @@ const VideoPlayer = () => {
               <div className="flex items-center space-x-4 mb-6">
                 <Badge className="bg-blue-100 text-blue-800">{currentVideo?.module}</Badge>
                 <Badge variant="outline">{currentVideo?.duration} duration</Badge>
-                <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                <Button 
+                  size="sm" 
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={handleMarkComplete}
+                  disabled={videoWatched}
+                >
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Mark Complete
+                  {videoWatched ? 'Completed' : 'Mark Complete'}
                 </Button>
               </div>
 
@@ -162,6 +226,14 @@ const VideoPlayer = () => {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Lecture Rating - Shows after video is marked complete */}
+              {showRating && currentVideo && (
+                <LectureRating
+                  recordingId={currentVideo.id}
+                  lessonTitle={currentVideo.title}
+                />
+              )}
             </div>
           </CardContent>
         </Card>
