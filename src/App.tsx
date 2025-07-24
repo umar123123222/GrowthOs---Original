@@ -23,6 +23,8 @@ import Messages from "./pages/Messages";
 import Teams from "./pages/Teams";
 import Layout from "./components/Layout";
 import Support from "./pages/Support";
+import ShopifyDashboard from "./pages/ShopifyDashboard";
+import MetaAdsDashboard from "./pages/MetaAdsDashboard";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +76,8 @@ const App = () => {
                 <Route path="profile" element={<Profile />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="teams" element={<Teams />} />
+                <Route path="shopify-dashboard" element={<ShopifyDashboard />} />
+                <Route path="meta-ads-dashboard" element={<MetaAdsDashboard />} />
                 
                 {/* Role-specific routes */}
                 <Route path="admin" element={<AdminDashboard />} />

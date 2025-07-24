@@ -21,7 +21,9 @@ import {
   Menu,
   X,
   Activity,
-  Building2
+  Building2,
+  ShoppingBag,
+  Target
 } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -39,12 +41,33 @@ const Layout = ({ user }: LayoutProps) => {
   const { toast } = useToast();
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState({
+    shopify: false,
+    meta: false
+  });
 
   // Check if user is superadmin, admin, mentor, or regular user
   const isUserSuperadmin = user?.role === 'superadmin';
   const isUserAdmin = user?.role === 'admin';
   const isUserMentor = user?.role === 'mentor';
   const isUserAdminOrSuperadmin = isUserSuperadmin || isUserAdmin;
+
+  // Check connection status on mount
+  useEffect(() => {
+    const checkConnections = () => {
+      // Check Shopify connection
+      const shopifyStore = user?.shopify_store_url || localStorage.getItem('shopify_store_url');
+      // Check Meta connection  
+      const metaToken = user?.meta_api_token || localStorage.getItem('meta_api_token');
+      
+      setConnectionStatus({
+        shopify: !!shopifyStore,
+        meta: !!metaToken
+      });
+    };
+
+    checkConnections();
+  }, [user]);
 
   // Check if any course submenu is active to keep it expanded
   const isCourseMenuActive = location.search.includes('tab=modules') || 
@@ -105,15 +128,29 @@ const Layout = ({ user }: LayoutProps) => {
     }
     
     // Default navigation for other users (students)
-    return [
+    const baseNavigation = [
       { name: "Dashboard", href: "/", icon: Monitor },
       { name: "Videos", href: "/videos", icon: BookOpen },
       { name: "Assignments", href: "/assignments", icon: FileText },
       { name: "Success Sessions", href: "/live-sessions", icon: Calendar },
       { name: "Support", href: "/support", icon: MessageSquare },
+    ];
+
+    // Add dynamic integrations before Profile
+    const dynamicItems = [];
+    if (connectionStatus.shopify) {
+      dynamicItems.push({ name: "Shopify Dashboard", href: "/shopify-dashboard", icon: ShoppingBag });
+    }
+    if (connectionStatus.meta) {
+      dynamicItems.push({ name: "Meta Ads Dashboard", href: "/meta-ads-dashboard", icon: Target });
+    }
+
+    return [
+      ...baseNavigation,
+      ...dynamicItems,
       { name: "Profile", href: "/profile", icon: User },
     ];
-  }, [isUserSuperadmin, isUserAdmin, isUserMentor]);
+  }, [isUserSuperadmin, isUserAdmin, isUserMentor, connectionStatus]);
 
   // Auto-expand course menu if any course tab is active
   useEffect(() => {
