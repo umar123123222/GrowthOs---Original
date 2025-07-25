@@ -103,9 +103,38 @@ export function StudentsManagement() {
     fees_structure: '1_installment'
   });
 
+  const [companySettings, setCompanySettings] = useState<{
+    maximum_installment_count: number;
+  } | null>(null);
+
   useEffect(() => {
     fetchStudents();
+    fetchCompanySettings();
   }, []);
+
+  const fetchCompanySettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_settings' as any)
+        .select('maximum_installment_count')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching company settings:', error);
+        setCompanySettings({ maximum_installment_count: 3 });
+        return;
+      }
+
+      if (data) {
+        setCompanySettings(data as { maximum_installment_count: number });
+      } else {
+        setCompanySettings({ maximum_installment_count: 3 });
+      }
+    } catch (error) {
+      console.error('Error fetching company settings:', error);
+      setCompanySettings({ maximum_installment_count: 3 });
+    }
+  };
 
   useEffect(() => {
     if (students.length > 0) {
