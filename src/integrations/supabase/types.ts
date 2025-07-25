@@ -363,11 +363,15 @@ export type Database = {
       company_settings: {
         Row: {
           address: string
+          company_logo: string | null
           company_name: string
           contact_email: string
           created_at: string | null
           currency: string
           id: number
+          invoice_notes: string | null
+          invoice_overdue_days: number
+          invoice_send_gap_days: number
           maximum_installment_count: number
           original_fee_amount: number
           primary_phone: string
@@ -376,11 +380,15 @@ export type Database = {
         }
         Insert: {
           address?: string
+          company_logo?: string | null
           company_name?: string
           contact_email?: string
           created_at?: string | null
           currency?: string
           id?: number
+          invoice_notes?: string | null
+          invoice_overdue_days?: number
+          invoice_send_gap_days?: number
           maximum_installment_count?: number
           original_fee_amount?: number
           primary_phone?: string
@@ -389,11 +397,15 @@ export type Database = {
         }
         Update: {
           address?: string
+          company_logo?: string | null
           company_name?: string
           contact_email?: string
           created_at?: string | null
           currency?: string
           id?: number
+          invoice_notes?: string | null
+          invoice_overdue_days?: number
+          invoice_send_gap_days?: number
           maximum_installment_count?: number
           original_fee_amount?: number
           primary_phone?: string
