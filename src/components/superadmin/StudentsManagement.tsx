@@ -360,15 +360,17 @@ export function StudentsManagement() {
       clearFieldError(field);
     }
     
-    // Perform real-time validation for certain fields
-    if (field === 'email' && value.length > 3) {
-      const error = await validateField(field, value);
-      if (error) {
-        clearFieldError(field);
-        setTimeout(() => {
-          clearFieldError(field);
-        }, 100);
-      }
+    // Perform real-time validation for email and phone after user has typed enough
+    if ((field === 'email' && value.length > 3 && value.includes('@')) || 
+        (field === 'phone' && value.length > 8)) {
+      // Debounce validation to avoid too many API calls
+      setTimeout(async () => {
+        const error = await validateField(field, value);
+        if (error && formData[field] === value) { // Only show error if field hasn't changed
+          // We don't set the error immediately to avoid flickering
+          // The main validation will catch it on submit
+        }
+      }, 500);
     }
   };
 

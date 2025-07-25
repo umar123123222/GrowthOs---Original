@@ -72,6 +72,7 @@ export const useStudentFormValidation = () => {
 
         if (error && error.code !== 'PGRST116') {
           // PGRST116 is "not found" which is what we want
+          console.error('Email uniqueness check error:', error);
           throw error;
         }
 
@@ -80,11 +81,32 @@ export const useStudentFormValidation = () => {
         }
       }
 
+      if (field === 'phone') {
+        // Check phone uniqueness
+        const { data: existingStudent, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('phone', value.trim())
+          .eq('role', 'student')
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          // PGRST116 is "not found" which is what we want
+          console.error('Phone uniqueness check error:', error);
+          throw error;
+        }
+
+        if (existingStudent) {
+          return 'A student with this phone number already exists';
+        }
+      }
+
       // Validate the field using Zod
       const fieldSchema = schema.shape[field];
       fieldSchema.parse(value);
       return undefined;
     } catch (error) {
+      console.error(`Field validation error for ${field}:`, error);
       if (error instanceof z.ZodError) {
         return error.issues[0]?.message;
       }
@@ -96,11 +118,14 @@ export const useStudentFormValidation = () => {
     const schema = createStudentSchema(maxCount);
     const newErrors: ValidationErrors = {};
 
+    console.log('Validating form data:', data);
+
     try {
       // First validate the structure with Zod
       const result = schema.safeParse(data);
       
       if (!result.success) {
+        console.log('Zod validation errors:', result.error.issues);
         result.error.issues.forEach((issue) => {
           const field = issue.path[0] as keyof StudentFormData;
           if (field) {
@@ -111,6 +136,7 @@ export const useStudentFormValidation = () => {
 
       // Check email uniqueness if email is valid
       if (!newErrors.email && data.email) {
+        console.log('Checking email uniqueness for:', data.email);
         const { data: existingStudent, error } = await supabase
           .from('users')
           .select('id')
@@ -119,14 +145,36 @@ export const useStudentFormValidation = () => {
           .single();
 
         if (error && error.code !== 'PGRST116') {
+          console.error('Email uniqueness check error:', error);
           newErrors.general = 'Failed to validate email uniqueness';
         } else if (existingStudent) {
+          console.log('Email already exists:', existingStudent);
           newErrors.email = 'A student with this email already exists';
+        }
+      }
+
+      // Check phone uniqueness if phone is valid
+      if (!newErrors.phone && data.phone) {
+        console.log('Checking phone uniqueness for:', data.phone);
+        const { data: existingStudent, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('phone', data.phone.trim())
+          .eq('role', 'student')
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Phone uniqueness check error:', error);
+          newErrors.general = 'Failed to validate phone uniqueness';
+        } else if (existingStudent) {
+          console.log('Phone already exists:', existingStudent);
+          newErrors.phone = 'A student with this phone number already exists';
         }
       }
 
       // Validate installment count against current settings
       if (!newErrors.fees_structure && !validateInstallmentValue(data.fees_structure)) {
+        console.log('Invalid installment value:', data.fees_structure, 'Max allowed:', maxCount);
         newErrors.fees_structure = 'The selected installment option is no longer available';
       }
 
@@ -135,6 +183,7 @@ export const useStudentFormValidation = () => {
       newErrors.general = 'Validation failed. Please try again.';
     }
 
+    console.log('Validation completed. Errors:', newErrors);
     return newErrors;
   }, [maxCount, validateInstallmentValue]);
 
