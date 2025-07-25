@@ -7,12 +7,13 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Phone, Mail, DollarSign, Settings } from 'lucide-react';
+import { Building2, Phone, Mail, DollarSign, Settings, Upload, FileText, Calendar } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface CompanySettingsData {
   id?: string;
   company_name: string;
+  company_logo?: string;
   primary_phone: string;
   secondary_phone?: string;
   address: string;
@@ -20,6 +21,9 @@ interface CompanySettingsData {
   currency: string;
   original_fee_amount: number;
   maximum_installment_count: number;
+  invoice_notes?: string;
+  invoice_overdue_days: number;
+  invoice_send_gap_days: number;
 }
 
 export function CompanySettings() {
@@ -41,13 +45,17 @@ export function CompanySettings() {
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<CompanySettingsData>({
     company_name: '',
+    company_logo: '',
     primary_phone: '',
     secondary_phone: '',
     address: '',
     contact_email: '',
     currency: 'USD',
     original_fee_amount: 3000,
-    maximum_installment_count: 3
+    maximum_installment_count: 3,
+    invoice_notes: '',
+    invoice_overdue_days: 30,
+    invoice_send_gap_days: 7
   });
 
   useEffect(() => {
@@ -176,6 +184,57 @@ export function CompanySettings() {
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="company_logo">Company Logo</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="company_logo"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onload = (event) => {
+                        handleInputChange('company_logo', event.target?.result as string);
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById('company_logo')?.click()}
+                  className="flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Upload Logo
+                </Button>
+                {settings.company_logo && (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={settings.company_logo}
+                      alt="Company logo preview"
+                      className="h-10 w-10 object-contain border rounded"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleInputChange('company_logo', '')}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Upload your company logo (PNG, JPG, GIF)
+              </p>
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="address">Company Address</Label>
               <Textarea
                 id="address"
@@ -297,6 +356,74 @@ export function CompanySettings() {
                 <p className="text-xs text-muted-foreground">
                   Maximum number of installments allowed (1-12)
                 </p>
+              </div>
+            </div>
+
+            <Separator className="my-6" />
+
+            {/* Invoice Configuration */}
+            <div className="space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Invoice Configuration
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="invoice_send_gap_days">Invoice Send Gap (Days)</Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="invoice_send_gap_days"
+                      type="number"
+                      min="1"
+                      max="90"
+                      value={settings.invoice_send_gap_days}
+                      onChange={(e) => handleInputChange('invoice_send_gap_days', parseInt(e.target.value))}
+                      placeholder="7"
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Days to wait before sending invoice
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="invoice_overdue_days">Invoice Overdue (Days)</Label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="invoice_overdue_days"
+                      type="number"
+                      min="1"
+                      max="365"
+                      value={settings.invoice_overdue_days}
+                      onChange={(e) => handleInputChange('invoice_overdue_days', parseInt(e.target.value))}
+                      placeholder="30"
+                      className="pl-10"
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Days after creation to mark overdue
+                  </p>
+                </div>
+
+                <div className="md:col-span-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="invoice_notes">Notes For Invoice</Label>
+                    <Textarea
+                      id="invoice_notes"
+                      value={settings.invoice_notes || ''}
+                      onChange={(e) => handleInputChange('invoice_notes', e.target.value)}
+                      placeholder="Additional notes to include in invoices..."
+                      rows={3}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Default notes to include in all invoices
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
 
