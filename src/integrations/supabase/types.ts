@@ -360,6 +360,48 @@ export type Database = {
           },
         ]
       }
+      company_settings: {
+        Row: {
+          address: string
+          company_name: string
+          contact_email: string
+          created_at: string | null
+          currency: string
+          id: number
+          maximum_installment_count: number
+          original_fee_amount: number
+          primary_phone: string
+          secondary_phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string
+          company_name?: string
+          contact_email?: string
+          created_at?: string | null
+          currency?: string
+          id?: number
+          maximum_installment_count?: number
+          original_fee_amount?: number
+          primary_phone?: string
+          secondary_phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string
+          company_name?: string
+          contact_email?: string
+          created_at?: string | null
+          currency?: string
+          id?: number
+          maximum_installment_count?: number
+          original_fee_amount?: number
+          primary_phone?: string
+          secondary_phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       course_tracks: {
         Row: {
           created_at: string | null
