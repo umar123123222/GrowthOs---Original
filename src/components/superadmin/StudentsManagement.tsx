@@ -23,6 +23,7 @@ import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Downloa
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
 import jsPDF from 'jspdf';
 
 interface Student {
@@ -63,6 +64,8 @@ interface ActivityLog {
 }
 
 export function StudentsManagement() {
+  const { toast } = useToast();
+  const { options: installmentOptions, validateInstallmentValue, defaultValue: defaultInstallmentValue } = useInstallmentOptions();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -91,7 +94,6 @@ export function StudentsManagement() {
   const [selectedStudentForPassword, setSelectedStudentForPassword] = useState<Student | null>(null);
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
-  const { toast } = useToast();
   
   // Debug: Ensure statusFilter is completely removed
   console.log('StudentsManagement component loaded - statusFilter removed');
@@ -100,41 +102,21 @@ export function StudentsManagement() {
     full_name: '',
     email: '',
     phone: '',
-    fees_structure: '1_installment'
+    fees_structure: defaultInstallmentValue
   });
-
-  const [companySettings, setCompanySettings] = useState<{
-    maximum_installment_count: number;
-  } | null>(null);
 
   useEffect(() => {
     fetchStudents();
-    fetchCompanySettings();
   }, []);
 
-  const fetchCompanySettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('company_settings')
-        .select('maximum_installment_count')
-        .maybeSingle();
+  // Update form data when default installment value changes
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      fees_structure: defaultInstallmentValue
+    }));
+  }, [defaultInstallmentValue]);
 
-      if (error) {
-        console.error('Error fetching company settings:', error);
-        setCompanySettings({ maximum_installment_count: 3 });
-        return;
-      }
-
-      if (data) {
-        setCompanySettings({ maximum_installment_count: data.maximum_installment_count });
-      } else {
-        setCompanySettings({ maximum_installment_count: 3 });
-      }
-    } catch (error) {
-      console.error('Error fetching company settings:', error);
-      setCompanySettings({ maximum_installment_count: 3 });
-    }
-  };
 
   useEffect(() => {
     if (students.length > 0) {
@@ -250,6 +232,16 @@ export function StudentsManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validate installment value against current settings
+    if (!validateInstallmentValue(formData.fees_structure)) {
+      toast({
+        title: "Invalid installment selection",
+        description: "The selected installment option is no longer available. Please select a valid option.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       if (editingStudent) {
@@ -951,9 +943,11 @@ export function StudentsManagement() {
                     <SelectValue placeholder="Select fees structure" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1_installment">1 Installment</SelectItem>
-                    <SelectItem value="2_installments">2 Installments</SelectItem>
-                    <SelectItem value="3_installments">3 Installments</SelectItem>
+                    {installmentOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1068,9 +1062,11 @@ export function StudentsManagement() {
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
             <SelectItem value="all">All</SelectItem>
-            <SelectItem value="1_installment">1 Installment</SelectItem>
-            <SelectItem value="2_installments">2 Installments</SelectItem>
-            <SelectItem value="3_installments">3 Installments</SelectItem>
+            {installmentOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
