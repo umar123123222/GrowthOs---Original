@@ -24,6 +24,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
+import { useStudentFormValidation, StudentFormData } from '@/hooks/useStudentFormValidation';
+import { submitStudentForm } from '@/utils/studentSubmission';
 import jsPDF from 'jspdf';
 
 interface Student {
@@ -66,6 +68,14 @@ interface ActivityLog {
 export function StudentsManagement() {
   const { toast } = useToast();
   const { options: installmentOptions, validateInstallmentValue, defaultValue: defaultInstallmentValue } = useInstallmentOptions();
+  const { 
+    errors, 
+    isValidating, 
+    validateAndSetErrors, 
+    clearErrors, 
+    clearFieldError,
+    validateField 
+  } = useStudentFormValidation();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -98,12 +108,13 @@ export function StudentsManagement() {
   // Debug: Ensure statusFilter is completely removed
   console.log('StudentsManagement component loaded - statusFilter removed');
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<StudentFormData>({
     full_name: '',
     email: '',
     phone: '',
-    fees_structure: defaultInstallmentValue
+    fees_structure: '1_installment'
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     fetchStudents();
@@ -233,23 +244,23 @@ export function StudentsManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate installment value against current settings
-    if (!validateInstallmentValue(formData.fees_structure)) {
-      toast({
-        title: "Invalid installment selection",
-        description: "The selected installment option is no longer available. Please select a valid option.",
-        variant: "destructive",
-      });
+    if (isSubmitting) return;
+    
+    // Validate form data
+    const isValid = await validateAndSetErrors(formData);
+    if (!isValid) {
       return;
     }
     
+    setIsSubmitting(true);
+    
     try {
       if (editingStudent) {
-        // Update existing student
+        // Update existing student (keep existing logic for updates)
         const studentData = {
-          full_name: formData.full_name,
-          email: formData.email,
-          phone: formData.phone,
+          full_name: formData.full_name.trim(),
+          email: formData.email.toLowerCase().trim(),
+          phone: formData.phone.trim(),
           fees_structure: formData.fees_structure
         };
 
@@ -264,61 +275,69 @@ export function StudentsManagement() {
           title: 'Success',
           description: 'Student updated successfully'
         });
-      } else {
-        // Create new student directly
-        console.log('Creating student directly...');
         
-        console.log('Creating student with complete flow...');
-
-        // Call the complete student creation function
-        const { data, error } = await supabase.functions.invoke('create-student-complete', {
-          body: {
-            fullName: formData.full_name,
-            email: formData.email,
-            phone: formData.phone || null,
-            feesStructure: formData.fees_structure
-          }
-        });
-
-        if (error) {
-          console.error('Function invocation error:', error);
-          throw new Error(`Failed to create student: ${error.message}`);
-        }
-
-        if (!data?.success) {
-          throw new Error(data?.error || 'Failed to create student');
-        }
-
-        console.log('Student created successfully:', data);
-
-        toast({
-          title: 'Success',
-          description: `Student created successfully! LMS account created with temporary password. Invoice sent via email. ${data.emailSent ? 'Welcome email sent successfully.' : 'Note: Email sending failed - please contact student manually.'}`
-        });
-      }
-
-      setIsDialogOpen(false);
-      setEditingStudent(null);
-      setFormData({
-        full_name: '',
-        email: '',
-        phone: '',
-        fees_structure: '1_installment'
-      });
-      
-      // Wait a moment before refreshing to ensure the database is updated
-      setTimeout(() => {
+        // Close modal and refresh
+        setIsDialogOpen(false);
+        setEditingStudent(null);
+        clearErrors();
+        resetForm();
         fetchStudents();
-      }, 1000);
+        
+      } else {
+        // Create new student using improved submission logic
+        const result = await submitStudentForm(formData);
+        
+        if (result.success) {
+          toast({
+            title: 'Success',
+            description: 'Student added successfully'
+          });
+          
+          // Just refresh the list instead of optimistic update to avoid type issues
+          // The list will be refreshed with complete data
+          
+          // Emit refresh event for other tabs
+          window.dispatchEvent(new CustomEvent('students:refresh'));
+          
+          // Close modal and reset form
+          setIsDialogOpen(false);
+          clearErrors();
+          resetForm();
+          
+          // Refresh students list to get complete data
+          setTimeout(() => {
+            fetchStudents();
+          }, 1000);
+          
+        } else {
+          // Handle submission error
+          toast({
+            title: 'Error',
+            description: result.error || 'Failed to create student',
+            variant: 'destructive'
+          });
+        }
+      }
       
     } catch (error) {
       console.error('Error saving student:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save student: ' + (error as any).message,
+        description: 'An unexpected error occurred. Please try again.',
         variant: 'destructive'
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      full_name: '',
+      email: '',
+      phone: '',
+      fees_structure: defaultInstallmentValue || '1_installment'
+    });
   };
 
   const handleEdit = (student: Student) => {
@@ -327,9 +346,30 @@ export function StudentsManagement() {
       full_name: student.full_name,
       email: student.email,
       phone: student.phone || '',
-      fees_structure: student.fees_structure || '1_installment'
+      fees_structure: student.fees_structure || defaultInstallmentValue || '1_installment'
     });
+    clearErrors();
     setIsDialogOpen(true);
+  };
+
+  const handleFieldChange = async (field: keyof StudentFormData, value: string) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+    
+    // Clear field error when user starts typing
+    if (errors[field]) {
+      clearFieldError(field);
+    }
+    
+    // Perform real-time validation for certain fields
+    if (field === 'email' && value.length > 3) {
+      const error = await validateField(field, value);
+      if (error) {
+        clearFieldError(field);
+        setTimeout(() => {
+          clearFieldError(field);
+        }, 100);
+      }
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -910,36 +950,67 @@ export function StudentsManagement() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="full_name">Full Name</Label>
+                <Label htmlFor="full_name" className={errors.full_name ? 'text-destructive' : ''}>
+                  Full Name *
+                </Label>
                 <Input
                   id="full_name"
                   value={formData.full_name}
-                  onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                  required
+                  onChange={(e) => handleFieldChange('full_name', e.target.value)}
+                  className={errors.full_name ? 'border-destructive' : ''}
+                  placeholder="Enter full name (minimum 3 characters)"
+                  disabled={isSubmitting}
                 />
+                {errors.full_name && (
+                  <p className="text-sm text-destructive mt-1">{errors.full_name}</p>
+                )}
               </div>
+              
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className={errors.email ? 'text-destructive' : ''}>
+                  Email *
+                </Label>
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
+                  onChange={(e) => handleFieldChange('email', e.target.value)}
+                  className={errors.email ? 'border-destructive' : ''}
+                  placeholder="Enter valid email address"
+                  disabled={isSubmitting}
                 />
+                {errors.email && (
+                  <p className="text-sm text-destructive mt-1">{errors.email}</p>
+                )}
               </div>
+              
               <div>
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone" className={errors.phone ? 'text-destructive' : ''}>
+                  Phone *
+                </Label>
                 <Input
                   id="phone"
                   value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  onChange={(e) => handleFieldChange('phone', e.target.value)}
+                  className={errors.phone ? 'border-destructive' : ''}
+                  placeholder="Phone must start with a country code, e.g. '+92…'"
+                  disabled={isSubmitting}
                 />
+                {errors.phone && (
+                  <p className="text-sm text-destructive mt-1">{errors.phone}</p>
+                )}
               </div>
+              
               <div>
-                <Label htmlFor="fees_structure">Fees Structure</Label>
-                <Select value={formData.fees_structure} onValueChange={(value) => setFormData({ ...formData, fees_structure: value })}>
-                  <SelectTrigger>
+                <Label htmlFor="fees_structure" className={errors.fees_structure ? 'text-destructive' : ''}>
+                  Fees Structure *
+                </Label>
+                <Select 
+                  value={formData.fees_structure} 
+                  onValueChange={(value) => handleFieldChange('fees_structure', value)}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger className={errors.fees_structure ? 'border-destructive' : ''}>
                     <SelectValue placeholder="Select fees structure" />
                   </SelectTrigger>
                   <SelectContent>
@@ -950,18 +1021,46 @@ export function StudentsManagement() {
                     ))}
                   </SelectContent>
                 </Select>
+                {errors.fees_structure && (
+                  <p className="text-sm text-destructive mt-1">{errors.fees_structure}</p>
+                )}
               </div>
+              
+              {errors.general && (
+                <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
+                  {errors.general}
+                </div>
+              )}
               <div className="text-sm text-muted-foreground space-y-1">
                 <p>• LMS User ID will be set to the student's email</p>
                 <p>• Temporary password will be auto-generated</p>
                 <p>• LMS status will be inactive until first payment</p>
               </div>
               <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsDialogOpen(false);
+                    clearErrors();
+                    resetForm();
+                  }}
+                  disabled={isSubmitting}
+                >
                   Cancel
                 </Button>
-                <Button type="submit">
-                  {editingStudent ? 'Update' : 'Add'} Student
+                <Button 
+                  type="submit" 
+                  disabled={isSubmitting || isValidating}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span className="animate-spin mr-2">⏳</span>
+                      {editingStudent ? 'Updating...' : 'Adding...'}
+                    </>
+                  ) : (
+                    `${editingStudent ? 'Update' : 'Add'} Student`
+                  )}
                 </Button>
               </div>
             </form>
