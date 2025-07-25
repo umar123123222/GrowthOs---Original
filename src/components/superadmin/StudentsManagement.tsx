@@ -115,7 +115,7 @@ export function StudentsManagement() {
   const fetchCompanySettings = async () => {
     try {
       const { data, error } = await supabase
-        .from('company_settings' as any)
+        .from('company_settings')
         .select('maximum_installment_count')
         .maybeSingle();
 
@@ -126,7 +126,7 @@ export function StudentsManagement() {
       }
 
       if (data) {
-        setCompanySettings(data as { maximum_installment_count: number });
+        setCompanySettings({ maximum_installment_count: data.maximum_installment_count });
       } else {
         setCompanySettings({ maximum_installment_count: 3 });
       }
