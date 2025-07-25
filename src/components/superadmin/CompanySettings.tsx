@@ -68,7 +68,7 @@ export function CompanySettings() {
       const { data, error } = await supabase
         .from('company_settings' as any)
         .select('*')
-        .single();
+        .maybeSingle();
 
       if (error) {
         // If table doesn't exist, show error message and suggest contacting admin
