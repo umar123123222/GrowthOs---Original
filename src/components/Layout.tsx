@@ -46,10 +46,11 @@ const Layout = ({ user }: LayoutProps) => {
     meta: false
   });
 
-  // Check if user is superadmin, admin, mentor, or regular user
+  // Check if user is superadmin, admin, mentor, enrollment_manager, or regular user
   const isUserSuperadmin = user?.role === 'superadmin';
   const isUserAdmin = user?.role === 'admin';
   const isUserMentor = user?.role === 'mentor';
+  const isUserEnrollmentManager = user?.role === 'enrollment_manager';
   const isUserAdminOrSuperadmin = isUserSuperadmin || isUserAdmin;
 
   // Check connection status on mount
@@ -125,6 +126,11 @@ const Layout = ({ user }: LayoutProps) => {
         { name: "Submissions", href: "/assignments", icon: FileText },
         { name: "Profile", href: "/profile", icon: User }
       ];
+    } else if (isUserEnrollmentManager) {
+      return [
+        { name: "Dashboard", href: "/enrollment-manager", icon: Monitor },
+        { name: "Profile", href: "/profile", icon: User }
+      ];
     }
     
     // Default navigation for other users (students)
@@ -153,7 +159,7 @@ const Layout = ({ user }: LayoutProps) => {
       ...dynamicItems,
       profileItem,
     ];
-  }, [isUserSuperadmin, isUserAdmin, isUserMentor, connectionStatus]);
+  }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager, connectionStatus]);
 
   // Auto-expand course menu if any course tab is active
   useEffect(() => {

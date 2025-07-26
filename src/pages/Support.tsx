@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { RoleGuard } from "@/components/RoleGuard";
 import { 
   MessageSquare, 
   Plus, 
@@ -226,7 +227,8 @@ const Support = () => {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <RoleGuard allowedRoles={['student', 'admin', 'mentor', 'superadmin']}>
+      <div className="space-y-8 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">Support Center</h1>
@@ -426,7 +428,8 @@ const Support = () => {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </RoleGuard>
   );
 };
 

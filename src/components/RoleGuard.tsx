@@ -5,7 +5,7 @@ import { ShieldX } from 'lucide-react';
 
 interface RoleGuardProps {
   children: ReactNode;
-  allowedRoles: string | string[];
+  allowedRoles: 'student' | 'admin' | 'mentor' | 'superadmin' | 'enrollment_manager' | string[];
   fallback?: ReactNode;
   requireLMSAccess?: boolean;
 }

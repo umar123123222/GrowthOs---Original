@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import MentorDashboard from "./pages/MentorDashboard";
 import SuperadminDashboard from "./pages/SuperadminDashboard";
+import EnrollmentManagerDashboard from "./pages/EnrollmentManagerDashboard";
 import Videos from "./pages/Videos";
 import VideoPlayer from "./pages/VideoPlayer";
 import Assignments from "./pages/Assignments";
@@ -60,6 +61,7 @@ const App = () => {
                   user.role === 'admin' ? <AdminDashboard /> :
                   user.role === 'mentor' ? <MentorDashboard /> :
                   user.role === 'superadmin' ? <SuperadminDashboard /> :
+                  user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
                   <Dashboard user={user} />
                 } />
                 
@@ -83,6 +85,7 @@ const App = () => {
                 <Route path="admin" element={<AdminDashboard />} />
                 <Route path="mentor" element={<MentorDashboard />} />
                 <Route path="superadmin" element={<SuperadminDashboard />} />
+                <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
                 
                 <Route path="*" element={<Navigate to="/" />} />
               </Route>

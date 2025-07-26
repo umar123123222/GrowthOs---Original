@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { RoleGuard } from "@/components/RoleGuard";
 import { 
   Video, 
   Calendar, 
@@ -349,13 +350,14 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   };
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">Success Sessions</h1>
-        <p className="text-muted-foreground text-lg">
-          Connect with mentors and fellow students in our success sessions
-        </p>
-      </div>
+    <RoleGuard allowedRoles={['student', 'admin', 'mentor', 'superadmin']}>
+      <div className="space-y-8 animate-fade-in">
+        <div className="space-y-2">
+          <h1 className="text-3xl font-bold tracking-tight">Success Sessions</h1>
+          <p className="text-muted-foreground text-lg">
+            Connect with mentors and fellow students in our success sessions
+          </p>
+        </div>
 
       {/* Next Upcoming Session */}
       {nextUpcomingSession ? (
@@ -402,7 +404,8 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </RoleGuard>
   );
 };
 

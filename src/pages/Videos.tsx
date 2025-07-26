@@ -5,6 +5,7 @@ import { AssignmentSubmissionDialog } from "@/components/AssignmentSubmissionDia
 import { ModuleCard } from "@/components/ModuleCard";
 import { useVideosData } from "@/hooks/useVideosData";
 import { useProgressTracker } from "@/hooks/useProgressTracker";
+import { RoleGuard } from "@/components/RoleGuard";
 import { Play } from "lucide-react";
 
 interface VideosProps {
@@ -63,58 +64,60 @@ const Videos = ({ user }: VideosProps = {}) => {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Available Lessons</h1>
-        <p className="text-muted-foreground">
-          Watch lessons and complete assignments to track your progress
-        </p>
-      </div>
-
-      {modules.length === 0 ? (
-        <Card className="shadow-lg">
-          <CardContent className="p-8 text-center">
-            <div className="text-gray-500">
-              <Play className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No Video Lessons Available</h3>
-              <p>Check back later for new lessons or contact your instructor.</p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {modules.map((module, index) => (
-            <ModuleCard
-              key={module.id}
-              module={module}
-              index={index}
-              isExpanded={expandedModules[module.id]}
-              onToggle={toggleModule}
-              onWatchNow={handleWatchNow}
-              onAssignmentClick={handleAssignmentClick}
-            />
-          ))}
+    <RoleGuard allowedRoles={['student', 'admin', 'mentor', 'superadmin']}>
+      <div className="space-y-6 animate-fade-in">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold mb-2">Available Lessons</h1>
+          <p className="text-muted-foreground">
+            Watch lessons and complete assignments to track your progress
+          </p>
         </div>
-      )}
 
-      {selectedAssignment && (
-        <AssignmentSubmissionDialog
-          open={assignmentDialogOpen}
-          onOpenChange={(open) => {
-            setAssignmentDialogOpen(open);
-            if (!open) {
-              // Refresh data when dialog closes to update unlock status
-              setTimeout(refreshData, 500);
-            }
-          }}
-          assignmentTitle={selectedAssignment.title}
-          lessonTitle={selectedAssignment.lessonTitle}
-          assignmentId={selectedAssignment.id}
-          userId={user?.id || ""}
-          isSubmitted={selectedAssignment.submitted}
-        />
-      )}
-    </div>
+        {modules.length === 0 ? (
+          <Card className="shadow-lg">
+            <CardContent className="p-8 text-center">
+              <div className="text-gray-500">
+                <Play className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">No Video Lessons Available</h3>
+                <p>Check back later for new lessons or contact your instructor.</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {modules.map((module, index) => (
+              <ModuleCard
+                key={module.id}
+                module={module}
+                index={index}
+                isExpanded={expandedModules[module.id]}
+                onToggle={toggleModule}
+                onWatchNow={handleWatchNow}
+                onAssignmentClick={handleAssignmentClick}
+              />
+            ))}
+          </div>
+        )}
+
+        {selectedAssignment && (
+          <AssignmentSubmissionDialog
+            open={assignmentDialogOpen}
+            onOpenChange={(open) => {
+              setAssignmentDialogOpen(open);
+              if (!open) {
+                // Refresh data when dialog closes to update unlock status
+                setTimeout(refreshData, 500);
+              }
+            }}
+            assignmentTitle={selectedAssignment.title}
+            lessonTitle={selectedAssignment.lessonTitle}
+            assignmentId={selectedAssignment.id}
+            userId={user?.id || ""}
+            isSubmitted={selectedAssignment.submitted}
+          />
+        )}
+      </div>
+    </RoleGuard>
   );
 };
 
