@@ -64,7 +64,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
             email,
             student_id
           ),
-          assignment (
+          assignment!assignment_submissions_assignment_id_fkey (
             assignment_title,
             assignment_description
           )
