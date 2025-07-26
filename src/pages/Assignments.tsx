@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { AssignmentSubmissionDialog } from "@/components/AssignmentSubmissionDialog";
+import { SubmissionsManagement } from "@/components/shared/SubmissionsManagement";
 import { 
   FileText, 
   Clock, 
@@ -40,6 +41,11 @@ interface AssignmentsProps {
 }
 
 const Assignments = ({ user }: AssignmentsProps = {}) => {
+  // If user is a mentor, admin, or superadmin, show submissions management instead
+  if (user?.role === 'mentor' || user?.role === 'admin' || user?.role === 'superadmin') {
+    return <SubmissionsManagement userRole={user.role} />;
+  }
+
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
