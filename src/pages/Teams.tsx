@@ -330,10 +330,10 @@ const Teams = () => {
                   <SelectTrigger>
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
-                   <SelectContent>
+                 <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="mentor">Mentor</SelectItem>
-                    {user?.role === 'superadmin' && <SelectItem value="student">Student</SelectItem>}
+                    <SelectItem value="enrollment_manager">Enrollment Manager</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
