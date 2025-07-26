@@ -95,19 +95,30 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
   };
 
   const handleReviewSubmission = async (submissionId: string, status: 'accepted' | 'rejected') => {
+    console.log('handleReviewSubmission called with:', { submissionId, status, feedback, score, userId: user?.id });
+    
     try {
+      const updateData = {
+        status,
+        feedback,
+        score: score ? parseInt(score) : null,
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: user?.id
+      };
+      
+      console.log('Updating submission with data:', updateData);
+      
       const { error } = await supabase
         .from('assignment_submissions')
-        .update({
-          status,
-          feedback,
-          score: score ? parseInt(score) : null,
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: user?.id
-        })
+        .update(updateData)
         .eq('id', submissionId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Successfully updated submission');
 
       toast({
         title: 'Success',
@@ -119,9 +130,10 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
       setScore('');
       fetchSubmissions();
     } catch (error) {
+      console.error('Error in handleReviewSubmission:', error);
       toast({
         title: 'Error',
-        description: 'Failed to review submission',
+        description: `Failed to review submission: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: 'destructive'
       });
     }
