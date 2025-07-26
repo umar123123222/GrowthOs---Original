@@ -144,21 +144,11 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
   );
 
   const getTitle = () => {
-    switch (userRole) {
-      case 'mentor': return 'My Students\' Submissions';
-      case 'admin': return 'All Assignment Submissions';
-      case 'superadmin': return 'All Assignment Submissions';
-      default: return 'Assignment Submissions';
-    }
+    return 'Assignment Submissions';
   };
 
   const getDescription = () => {
-    switch (userRole) {
-      case 'mentor': return 'Review and grade submissions from your assigned students';
-      case 'admin': return 'Review and grade all student submissions';
-      case 'superadmin': return 'Review and grade all student submissions';
-      default: return 'Review and grade student submissions';
-    }
+    return 'Review and grade student submissions';
   };
 
   if (loading) {
@@ -210,9 +200,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
               <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">No submissions found</h3>
               <p className="text-muted-foreground">
-                {userRole === 'mentor' 
-                  ? "No submissions from your assigned students yet."
-                  : "No submissions available to review."}
+                No submissions available to review.
               </p>
             </div>
           ) : (
