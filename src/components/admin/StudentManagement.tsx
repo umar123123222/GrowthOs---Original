@@ -24,6 +24,7 @@ import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Downloa
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
 import jsPDF from 'jspdf';
 
 interface Student {
@@ -92,8 +93,8 @@ export const StudentManagement = () => {
   const [selectedStudentForPassword, setSelectedStudentForPassword] = useState<Student | null>(null);
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
-  const [maxInstallments, setMaxInstallments] = useState(3);
   const { toast } = useToast();
+  const { options: installmentOptions } = useInstallmentOptions();
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -104,7 +105,6 @@ export const StudentManagement = () => {
 
   useEffect(() => {
     fetchStudents();
-    fetchCompanySettings();
   }, []);
 
   useEffect(() => {
@@ -140,45 +140,6 @@ export const StudentManagement = () => {
     }
   };
 
-  const fetchCompanySettings = async () => {
-    try {
-      console.log('Fetching company settings for max installments...');
-      const { data, error } = await supabase
-        .from('company_settings')
-        .select('maximum_installment_count')
-        .limit(1)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Error fetching company settings:', error);
-        toast({
-          title: "Warning",
-          description: "Could not fetch company settings. Using default installment options.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('Company settings data:', data);
-      if (data?.maximum_installment_count) {
-        console.log('Setting max installments to:', data.maximum_installment_count);
-        setMaxInstallments(data.maximum_installment_count);
-      } else {
-        console.log('No company settings found, using default of 3 installments');
-        toast({
-          title: "Info",
-          description: "No company settings configured. Please ask a superadmin to set up company settings.",
-        });
-      }
-    } catch (error) {
-      console.error('Error fetching company settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to fetch company settings.",
-        variant: "destructive",
-      });
-    }
-  };
 
   const fetchStudents = async () => {
     try {
@@ -821,9 +782,9 @@ export const StudentManagement = () => {
                     <SelectValue placeholder="Select fees structure" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: maxInstallments }, (_, i) => i + 1).map((num) => (
-                      <SelectItem key={num} value={num === 1 ? "1_installment" : `${num}_installments`}>
-                        {num} {num === 1 ? "Installment" : "Installments"}
+                    {installmentOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -939,9 +900,11 @@ export const StudentManagement = () => {
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
             <SelectItem value="all">All</SelectItem>
-            <SelectItem value="1_installment">1 Installment</SelectItem>
-            <SelectItem value="2_installments">2 Installments</SelectItem>
-            <SelectItem value="3_installments">3 Installments</SelectItem>
+            {installmentOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
