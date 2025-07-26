@@ -92,6 +92,7 @@ export const StudentManagement = () => {
   const [selectedStudentForPassword, setSelectedStudentForPassword] = useState<Student | null>(null);
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
+  const [maxInstallments, setMaxInstallments] = useState(3);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -103,6 +104,7 @@ export const StudentManagement = () => {
 
   useEffect(() => {
     fetchStudents();
+    fetchCompanySettings();
   }, []);
 
   useEffect(() => {
@@ -135,6 +137,27 @@ export const StudentManagement = () => {
       setInstallmentPayments(paymentsMap);
     } catch (error) {
       console.error('Error fetching installment payments:', error);
+    }
+  };
+
+  const fetchCompanySettings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('maximum_installment_count')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching company settings:', error);
+        return;
+      }
+
+      if (data?.maximum_installment_count) {
+        setMaxInstallments(data.maximum_installment_count);
+      }
+    } catch (error) {
+      console.error('Error fetching company settings:', error);
     }
   };
 
@@ -779,9 +802,11 @@ export const StudentManagement = () => {
                     <SelectValue placeholder="Select fees structure" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="1_installment">1 Installment</SelectItem>
-                    <SelectItem value="2_installments">2 Installments</SelectItem>
-                    <SelectItem value="3_installments">3 Installments</SelectItem>
+                    {Array.from({ length: maxInstallments }, (_, i) => i + 1).map((num) => (
+                      <SelectItem key={num} value={num === 1 ? "1_installment" : `${num}_installments`}>
+                        {num} {num === 1 ? "Installment" : "Installments"}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
