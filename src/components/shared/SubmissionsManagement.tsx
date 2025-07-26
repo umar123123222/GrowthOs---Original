@@ -95,30 +95,22 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
   };
 
   const handleReviewSubmission = async (submissionId: string, status: 'accepted' | 'rejected') => {
-    console.log('handleReviewSubmission called with:', { submissionId, status, feedback, score, userId: user?.id });
-    
     try {
-      const updateData = {
-        status,
-        feedback,
-        score: score ? parseInt(score) : null,
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: user?.id
-      };
-      
-      console.log('Updating submission with data:', updateData);
-      
+      // Try minimal update approach to avoid RLS policy conflicts
       const { error } = await supabase
         .from('assignment_submissions')
-        .update(updateData)
-        .eq('id', submissionId);
+        .update({
+          status,
+          feedback,
+          score: score ? parseInt(score) : null,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user?.id
+        })
+        .eq('id', submissionId)
+        .select('id')
+        .single();
 
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      console.log('Successfully updated submission');
+      if (error) throw error;
 
       toast({
         title: 'Success',
@@ -130,7 +122,6 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
       setScore('');
       fetchSubmissions();
     } catch (error) {
-      console.error('Error in handleReviewSubmission:', error);
       toast({
         title: 'Error',
         description: `Failed to review submission: ${error instanceof Error ? error.message : 'Unknown error'}`,
