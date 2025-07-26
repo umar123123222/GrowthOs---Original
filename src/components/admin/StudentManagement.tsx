@@ -142,6 +142,7 @@ export const StudentManagement = () => {
 
   const fetchCompanySettings = async () => {
     try {
+      console.log('Fetching company settings for max installments...');
       const { data, error } = await supabase
         .from('company_settings')
         .select('maximum_installment_count')
@@ -150,14 +151,32 @@ export const StudentManagement = () => {
 
       if (error) {
         console.error('Error fetching company settings:', error);
+        toast({
+          title: "Warning",
+          description: "Could not fetch company settings. Using default installment options.",
+          variant: "destructive",
+        });
         return;
       }
 
+      console.log('Company settings data:', data);
       if (data?.maximum_installment_count) {
+        console.log('Setting max installments to:', data.maximum_installment_count);
         setMaxInstallments(data.maximum_installment_count);
+      } else {
+        console.log('No company settings found, using default of 3 installments');
+        toast({
+          title: "Info",
+          description: "No company settings configured. Please ask a superadmin to set up company settings.",
+        });
       }
     } catch (error) {
       console.error('Error fetching company settings:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch company settings.",
+        variant: "destructive",
+      });
     }
   };
 
