@@ -81,7 +81,8 @@ serve(async (req) => {
         email: target_email,
         full_name: target_full_name || target_email,
         role: target_role,
-        metadata: target_metadata || {}
+        metadata: target_metadata || {},
+        created_by: user.id  // Automatically set the creator
       })
       .select()
       .single()

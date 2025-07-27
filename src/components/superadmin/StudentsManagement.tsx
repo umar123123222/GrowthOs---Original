@@ -46,6 +46,11 @@ interface Student {
   last_invoice_sent: boolean;
   fees_due_date: string;
   last_suspended_date: string;
+  created_by?: string | null;
+  creator?: {
+    full_name: string;
+    email: string;
+  } | null;
 }
 
 interface InstallmentPayment {
@@ -172,7 +177,27 @@ export function StudentsManagement() {
 
       if (error) throw error;
 
-      setStudents(data || []);
+      // Fetch creator information for each student
+      const studentsWithCreators: Student[] = [];
+      for (const student of data || []) {
+        let creator = null;
+        // Check if created_by field exists and fetch creator info
+        if ((student as any).created_by) {
+          const { data: creatorData } = await supabase
+            .from('users')
+            .select('full_name, email')
+            .eq('id', (student as any).created_by)
+            .single();
+          creator = creatorData;
+        }
+        studentsWithCreators.push({
+          ...student,
+          created_by: (student as any).created_by || null,
+          creator
+        });
+      }
+
+      setStudents(studentsWithCreators);
       setTotalStudents(data?.length || 0);
       
       // Calculate active students (those who have been active in the last 30 days)
@@ -1252,6 +1277,7 @@ export function StudentsManagement() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Fees Structure</TableHead>
                   <TableHead>LMS Status</TableHead>
+                  <TableHead>Created By</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1286,9 +1312,21 @@ export function StudentsManagement() {
                              <DollarSign className="w-3 h-3 mr-1" />
                              {getInstallmentStatus(student).status}
                            </Badge>
+                          </div>
+                         </TableCell>
+                       <TableCell>
+                         <div className="text-sm">
+                           {student.creator ? (
+                             <div>
+                               <div className="font-medium">{student.creator.full_name}</div>
+                               <div className="text-muted-foreground text-xs">{student.creator.email}</div>
+                             </div>
+                           ) : (
+                             <span className="text-muted-foreground">—</span>
+                           )}
                          </div>
-                        </TableCell>
-                      <TableCell>
+                       </TableCell>
+                       <TableCell>
                         <div className="flex space-x-2">
                           <Button
                             variant="outline"
@@ -1317,7 +1355,7 @@ export function StudentsManagement() {
                     
                     {expandedRows.has(student.id) && (
                       <TableRow className="animate-accordion-down">
-                        <TableCell colSpan={8} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
+                        <TableCell colSpan={9} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>

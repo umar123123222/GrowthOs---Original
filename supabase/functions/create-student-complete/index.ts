@@ -147,6 +147,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Auth user created:', authData.user.id);
 
+    // Get the current user for created_by field
+    const authHeader = req.headers.get('Authorization');
+    let createdBy = null;
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabase.auth.getUser(token);
+      createdBy = user?.id;
+    }
+
     // Create student record
     const { error: insertError } = await supabase
       .from('users')
@@ -160,7 +169,8 @@ const handler = async (req: Request): Promise<Response> => {
         lms_user_id: email,
         lms_password: tempPassword, // Store LMS password initially
         temp_password: tempPassword,
-        lms_status: 'inactive'
+        lms_status: 'inactive',
+        created_by: createdBy  // Set who created this student
       });
 
     if (insertError) {

@@ -125,6 +125,15 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Auth user created successfully:', authData.user.id);
 
+    // Get current user for created_by field
+    const authHeader = req.headers.get('Authorization');
+    let createdBy = null;
+    if (authHeader) {
+      const token = authHeader.replace('Bearer ', '');
+      const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+      createdBy = user?.id;
+    }
+
     // Insert user profile in the users table
     const userInsertData: any = {
       id: authData.user.id,
@@ -132,7 +141,8 @@ const handler = async (req: Request): Promise<Response> => {
       email,
       role,
       status: 'Active',
-      temp_password // Store for credential viewing
+      temp_password, // Store for credential viewing
+      created_by: createdBy // Set who created this user
     };
 
     // Add LMS credentials for students
