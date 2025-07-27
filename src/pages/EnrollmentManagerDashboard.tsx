@@ -2,18 +2,15 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { RoleGuard } from "@/components/RoleGuard";
+import { CreateStudentDialog } from "@/components/CreateStudentDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Users, 
   UserCheck, 
-  UserPlus, 
   TrendingUp,
   Calendar,
   Filter
@@ -48,12 +45,6 @@ const EnrollmentManagerDashboard = () => {
   const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('30'); // days
-  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
-  const [newStudent, setNewStudent] = useState({
-    email: '',
-    full_name: '',
-    temp_password: ''
-  });
 
   // Mock data for now - replace with real Supabase calls later
   useEffect(() => {
@@ -114,50 +105,63 @@ const EnrollmentManagerDashboard = () => {
     fetchData();
   }, [selectedPeriod, user?.id]);
 
-  const handleAddStudent = async () => {
-    if (!newStudent.email || !newStudent.full_name) {
-      toast({
-        title: "Error",
-        description: "Please fill in all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    try {
-      // Mock student creation - replace with real API call later
+  const handleStudentCreated = () => {
+    // Refresh the data when a student is created
+    const fetchData = async () => {
+      setLoading(true);
+      
+      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const newEnrollment: EnrollmentRecord = {
-        id: Date.now().toString(),
-        student_name: newStudent.full_name,
-        student_email: newStudent.email,
-        enrollment_date: format(new Date(), 'yyyy-MM-dd'),
-        lms_status: 'Active' as const,
-        created_by: user?.id || ''
+      // Mock stats based on selected period
+      const periodDays = parseInt(selectedPeriod);
+      const mockStats = {
+        totalEnrollments: 156,
+        activeEnrollments: 142,
+        pendingEnrollments: 14,
+        monthlyGrowth: 12.5
       };
       
-      setEnrollments(prev => [newEnrollment, ...prev]);
-      setStats(prev => ({
-        ...prev,
-        totalEnrollments: prev.totalEnrollments + 1,
-        activeEnrollments: prev.activeEnrollments + 1
-      }));
+      // Filter mock enrollments by period
+      const endDate = new Date();
+      const startDate = subDays(endDate, periodDays);
       
-      toast({
-        title: "Success",
-        description: "Student enrolled successfully"
+      const mockEnrollments: EnrollmentRecord[] = [
+        {
+          id: '1',
+          student_name: 'John Doe',
+          student_email: 'john@example.com',
+          enrollment_date: '2024-01-15',
+          lms_status: 'Active' as const,
+          created_by: user?.id || ''
+        },
+        {
+          id: '2',
+          student_name: 'Jane Smith',
+          student_email: 'jane@example.com',
+          enrollment_date: '2024-01-14',
+          lms_status: 'Active' as const,
+          created_by: user?.id || ''
+        },
+        {
+          id: '3',
+          student_name: 'Mike Johnson',
+          student_email: 'mike@example.com',
+          enrollment_date: '2024-01-13',
+          lms_status: 'Pending' as const,
+          created_by: user?.id || ''
+        }
+      ].filter(enrollment => {
+        const enrollmentDate = new Date(enrollment.enrollment_date);
+        return enrollmentDate >= startDate && enrollmentDate <= endDate;
       });
       
-      setShowAddStudentModal(false);
-      setNewStudent({ email: '', full_name: '', temp_password: '' });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to enroll student",
-        variant: "destructive"
-      });
-    }
+      setStats(mockStats);
+      setEnrollments(mockEnrollments);
+      setLoading(false);
+    };
+
+    fetchData();
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -190,68 +194,14 @@ const EnrollmentManagerDashboard = () => {
             <p className="text-gray-600 mt-1">Manage student enrollments and track performance</p>
           </div>
           
-          <Dialog open={showAddStudentModal} onOpenChange={setShowAddStudentModal}>
-            <DialogTrigger asChild>
-              <Button className="bg-blue-600 hover:bg-blue-700">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Add New Student
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px]">
-              <DialogHeader>
-                <DialogTitle>Add New Student</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div className="space-y-2">
-                  <Label htmlFor="student-email">Email Address</Label>
-                  <Input
-                    id="student-email"
-                    type="email"
-                    value={newStudent.email}
-                    onChange={(e) => setNewStudent(prev => ({ ...prev, email: e.target.value }))}
-                    placeholder="student@example.com"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="student-name">Full Name</Label>
-                  <Input
-                    id="student-name"
-                    value={newStudent.full_name}
-                    onChange={(e) => setNewStudent(prev => ({ ...prev, full_name: e.target.value }))}
-                    placeholder="John Doe"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="temp-password">Temporary Password (optional)</Label>
-                  <Input
-                    id="temp-password"
-                    type="password"
-                    value={newStudent.temp_password}
-                    onChange={(e) => setNewStudent(prev => ({ ...prev, temp_password: e.target.value }))}
-                    placeholder="Leave empty for auto-generated"
-                  />
-                </div>
-                
-                <div className="flex gap-2 pt-4">
-                  <Button onClick={handleAddStudent} className="flex-1">
-                    Add Student
-                  </Button>
-                  <Button variant="outline" onClick={() => setShowAddStudentModal(false)} className="flex-1">
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
+          <CreateStudentDialog onStudentCreated={handleStudentCreated} />
         </div>
 
         {/* Period Filter */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-gray-500" />
-            <Label htmlFor="period-select">Period:</Label>
+            <span className="text-sm font-medium">Period:</span>
           </div>
           <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
             <SelectTrigger className="w-[180px]" id="period-select">
