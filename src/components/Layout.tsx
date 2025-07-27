@@ -131,7 +131,6 @@ const Layout = ({ user }: LayoutProps) => {
     } else if (isUserEnrollmentManager) {
       return [
         { name: "Dashboard", href: "/enrollment-manager", icon: Monitor },
-        { name: "Students", href: "/students", icon: Users },
         { name: "Profile", href: "/profile", icon: User }
       ];
     }
