@@ -442,12 +442,12 @@ export function RecordingsManagement() {
             <Table data-testid="recordings-table">
               <TableHeader>
                 <TableRow className="bg-gray-50">
-                  <TableHead className="font-semibold w-12"></TableHead>
-                  <TableHead className="font-semibold">Title</TableHead>
-                  <TableHead className="font-semibold">Module</TableHead>
-                  <TableHead className="font-semibold">Duration</TableHead>
-                  <TableHead className="font-semibold">Order</TableHead>
-                  <TableHead className="font-semibold">Actions</TableHead>
+                  <TableHead className="font-semibold w-12 text-center"></TableHead>
+                  <TableHead className="font-semibold min-w-[200px]">Title</TableHead>
+                  <TableHead className="font-semibold w-[150px] text-center">Module</TableHead>
+                  <TableHead className="font-semibold w-[100px] text-center">Duration</TableHead>
+                  <TableHead className="font-semibold w-[80px] text-center">Order</TableHead>
+                  <TableHead className="font-semibold w-[100px] text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -461,7 +461,7 @@ export function RecordingsManagement() {
                       className="hover:bg-gray-50 transition-colors animate-fade-in"
                       style={{ animationDelay: `${index * 100}ms` }}
                     >
-                      <TableCell>
+                      <TableCell className="w-12 text-center">
                         <CollapsibleTrigger asChild>
                           <Button
                             variant="ghost"
@@ -477,20 +477,20 @@ export function RecordingsManagement() {
                           </Button>
                         </CollapsibleTrigger>
                       </TableCell>
-                      <TableCell className="font-medium">{recording.recording_title}</TableCell>
-                      <TableCell>
+                      <TableCell className="font-medium min-w-[200px]">{recording.recording_title}</TableCell>
+                      <TableCell className="w-[150px] text-center">
                         <Badge variant="outline" className="bg-purple-100 text-purple-800">
                           {recording.module?.title || 'No Module'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-[100px] text-center">
                         <Badge variant="secondary">{recording.duration_min} min</Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-[80px] text-center">
                         <Badge variant="outline">{recording.sequence_order}</Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
+                      <TableCell className="w-[100px] text-center">
+                        <div className="flex justify-center">
                           <Button
                             variant="outline"
                             size="sm"
