@@ -96,6 +96,7 @@ const Layout = ({ user }: LayoutProps) => {
         { name: "Submissions", href: "/superadmin?tab=submissions", icon: FileText },
         { name: "Support", href: "/superadmin?tab=support", icon: MessageSquare },
         { name: "Teams", href: "/teams", icon: UserCheck },
+        { name: "Students", href: "/students", icon: Users },
         { name: "Company", href: "/superadmin?tab=company-settings", icon: Building2 },
         { name: "Profile", href: "/profile", icon: User }
       ];
@@ -117,6 +118,7 @@ const Layout = ({ user }: LayoutProps) => {
         { name: "Submissions", href: "/admin?tab=submissions", icon: FileText },
         { name: "Support", href: "/admin?tab=support", icon: MessageSquare },
         { name: "Teams", href: "/teams", icon: UserCheck },
+        { name: "Students", href: "/students", icon: Users },
         { name: "Profile", href: "/profile", icon: User }
       ];
     } else if (isUserMentor) {
@@ -129,6 +131,7 @@ const Layout = ({ user }: LayoutProps) => {
     } else if (isUserEnrollmentManager) {
       return [
         { name: "Dashboard", href: "/enrollment-manager", icon: Monitor },
+        { name: "Students", href: "/students", icon: Users },
         { name: "Profile", href: "/profile", icon: User }
       ];
     }

@@ -7,6 +7,7 @@ export interface User {
   role: 'student' | 'admin' | 'mentor' | 'superadmin' | 'enrollment_manager';
   full_name?: string;
   created_at?: string;
+  metadata?: any;
 }
 
 export const useAuth = () => {

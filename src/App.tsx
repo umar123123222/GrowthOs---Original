@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -22,6 +21,7 @@ import LiveSessions from "./pages/LiveSessions";
 import Mentorship from "./pages/Mentorship";
 import Messages from "./pages/Messages";
 import Teams from "./pages/Teams";
+import StudentsManagement from "./pages/StudentsManagement";
 import Layout from "./components/Layout";
 import Support from "./pages/Support";
 import ShopifyDashboard from "./pages/ShopifyDashboard";
@@ -78,6 +78,7 @@ const App = () => {
                 <Route path="profile" element={<Profile />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="teams" element={<Teams />} />
+                <Route path="students" element={<StudentsManagement />} />
                 <Route path="shopify-dashboard" element={<ShopifyDashboard />} />
                 <Route path="meta-ads-dashboard" element={<MetaAdsDashboard />} />
                 

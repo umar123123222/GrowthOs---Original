@@ -331,9 +331,19 @@ const Teams = () => {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                  <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="mentor">Mentor</SelectItem>
-                    <SelectItem value="enrollment_manager">Enrollment Manager</SelectItem>
+                    {user?.role === 'superadmin' && (
+                      <>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="mentor">Mentor</SelectItem>
+                        <SelectItem value="enrollment_manager">Enrollment Manager</SelectItem>
+                      </>
+                    )}
+                     {user?.role === 'admin' && (
+                       <>
+                         <SelectItem value="mentor">Mentor</SelectItem>
+                         <SelectItem value="enrollment_manager">Enrollment Manager</SelectItem>
+                       </>
+                     )}
                   </SelectContent>
                 </Select>
               </div>
