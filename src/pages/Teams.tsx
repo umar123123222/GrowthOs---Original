@@ -40,7 +40,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Activity, Eye, Edit, Trash2, Key } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, User } from '@/hooks/useAuth';
 import AdminTeams from '@/components/admin/AdminTeams';
 import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
 import { CredentialDisplay } from '@/components/ui/credential-display';
@@ -60,7 +60,7 @@ interface TeamMember {
 }
 
 const Teams = () => {
-  const { user } = useAuth();
+  const { user }: { user: User | null } = useAuth();
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -331,15 +331,9 @@ const Teams = () => {
                     <SelectValue placeholder="Select role" />
                   </SelectTrigger>
                  <SelectContent>
-                    {user?.role === 'superadmin' && (
-                      <>
-                        <SelectItem value="admin">Admin</SelectItem>
-                        <SelectItem value="mentor">Mentor</SelectItem>
-                        <SelectItem value="enrollment_manager">Enrollment Manager</SelectItem>
-                      </>
-                    )}
-                     {user?.role === 'admin' && (
+                     {user?.role === 'superadmin' && (
                        <>
+                         <SelectItem value="admin">Admin</SelectItem>
                          <SelectItem value="mentor">Mentor</SelectItem>
                          <SelectItem value="enrollment_manager">Enrollment Manager</SelectItem>
                        </>
