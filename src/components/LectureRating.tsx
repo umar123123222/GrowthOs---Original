@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -10,9 +11,18 @@ import { useAuth } from '@/hooks/useAuth';
 interface LectureRatingProps {
   recordingId: string;
   lessonTitle: string;
+  isModalOpen?: boolean;
+  onClose?: () => void;
+  mandatory?: boolean;
 }
 
-export function LectureRating({ recordingId, lessonTitle }: LectureRatingProps) {
+export function LectureRating({ 
+  recordingId, 
+  lessonTitle, 
+  isModalOpen = false, 
+  onClose,
+  mandatory = false 
+}: LectureRatingProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [rating, setRating] = useState(0);
@@ -68,6 +78,8 @@ export function LectureRating({ recordingId, lessonTitle }: LectureRatingProps) 
         title: 'Rating Submitted',
         description: 'Thank you for your feedback!'
       });
+
+      if (onClose) onClose();
     } catch (error) {
       console.error('Error submitting rating:', error);
       toast({
@@ -79,6 +91,113 @@ export function LectureRating({ recordingId, lessonTitle }: LectureRatingProps) 
       setLoading(false);
     }
   };
+
+  const handleKeyPress = (event: React.KeyboardEvent) => {
+    const key = parseInt(event.key);
+    if (key >= 1 && key <= 5) {
+      setRating(key);
+    }
+  };
+
+  const renderStars = (size = 'w-8 h-8') => (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          className="p-1 hover:scale-110 transition-transform focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+          onMouseEnter={() => !hasRated && setHoverRating(star)}
+          onMouseLeave={() => !hasRated && setHoverRating(0)}
+          onClick={() => !hasRated && setRating(star)}
+          disabled={hasRated}
+          aria-label={`Rate ${star} stars`}
+        >
+          <Star
+            className={`${size} ${
+              star <= (hoverRating || rating)
+                ? 'fill-yellow-400 text-yellow-400'
+                : 'text-gray-300 hover:text-yellow-200'
+            } ${hasRated ? 'cursor-default' : 'cursor-pointer'}`}
+          />
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderContent = () => (
+    <div className="space-y-4">
+      <div className="text-center">
+        <p className="text-sm text-muted-foreground mb-3">
+          {hasRated 
+            ? `You rated "${lessonTitle}"` 
+            : mandatory 
+            ? `Please rate "${lessonTitle}" to continue`
+            : "Please rate your experience to help us improve"
+          }
+        </p>
+        
+        {renderStars()}
+
+        {!hasRated && !mandatory && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Use keys 1-5 or click to rate
+          </p>
+        )}
+      </div>
+
+      {!mandatory && !hasRated && (
+        <div className="space-y-2">
+          <label className="text-sm font-medium">
+            Additional feedback (optional)
+          </label>
+          <Textarea
+            placeholder="Share what you liked or suggestions for improvement..."
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            rows={3}
+          />
+        </div>
+      )}
+
+      {hasRated && feedback && (
+        <div>
+          <span className="text-sm font-medium">Your feedback:</span>
+          <p className="text-sm text-muted-foreground mt-1">{feedback}</p>
+        </div>
+      )}
+
+      <Button
+        onClick={hasRated ? onClose : submitRating}
+        disabled={!hasRated && (rating === 0 || loading)}
+        className="w-full"
+      >
+        {loading ? 'Submitting...' : hasRated ? 'Close' : 'Submit Rating'}
+      </Button>
+    </div>
+  );
+
+  // Modal mode for mandatory ratings
+  if (isModalOpen) {
+    return (
+      <Dialog open={isModalOpen} onOpenChange={() => {}}>
+        <DialogContent 
+          className="sm:max-w-md"
+          onKeyDown={handleKeyPress}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="text-center text-xl font-semibold">
+              {hasRated ? 'Your Rating' : 'Rate this Recording'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            {renderContent()}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   if (hasRated) {
     return (
