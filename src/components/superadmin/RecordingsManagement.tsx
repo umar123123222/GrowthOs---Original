@@ -7,9 +7,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Video } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Plus, Edit, Trash2, Video, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { RecordingRatingDetails } from './RecordingRatingDetails';
 
 interface Recording {
   id: string;
@@ -41,6 +43,7 @@ export function RecordingsManagement() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecording, setEditingRecording] = useState<Recording | null>(null);
+  const [expandedRecordings, setExpandedRecordings] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     recording_title: '',
     recording_url: '',
@@ -203,6 +206,27 @@ export function RecordingsManagement() {
       assignment_id: ''
     });
     setDialogOpen(true);
+  };
+
+  const toggleRecordingExpansion = (recordingId: string) => {
+    setExpandedRecordings(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(recordingId)) {
+        newSet.delete(recordingId);
+      } else {
+        newSet.add(recordingId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleRecordingDeleted = (recordingId: string) => {
+    setRecordings(prev => prev.filter(r => r.id !== recordingId));
+    setExpandedRecordings(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(recordingId);
+      return newSet;
+    });
   };
 
   const handleDelete = async (recordingId: string) => {
@@ -415,9 +439,10 @@ export function RecordingsManagement() {
               <p className="text-muted-foreground">Upload your first recording to get started</p>
             </div>
           ) : (
-            <Table>
+            <Table data-testid="recordings-table">
               <TableHeader>
                 <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold w-12"></TableHead>
                   <TableHead className="font-semibold">Title</TableHead>
                   <TableHead className="font-semibold">Module</TableHead>
                   <TableHead className="font-semibold">Duration</TableHead>
@@ -427,44 +452,76 @@ export function RecordingsManagement() {
               </TableHeader>
               <TableBody>
                 {recordings.map((recording, index) => (
-                  <TableRow 
-                    key={recording.id} 
-                    className="hover:bg-gray-50 transition-colors animate-fade-in"
-                    style={{ animationDelay: `${index * 100}ms` }}
+                  <Collapsible
+                    key={recording.id}
+                    open={expandedRecordings.has(recording.id)}
+                    onOpenChange={() => toggleRecordingExpansion(recording.id)}
                   >
-                    <TableCell className="font-medium">{recording.recording_title}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-purple-100 text-purple-800">
-                        {recording.module?.title || 'No Module'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{recording.duration_min} min</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{recording.sequence_order}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(recording)}
-                          className="hover-scale hover:bg-blue-50 hover:border-blue-300"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(recording.id)}
-                          className="hover-scale hover:bg-red-50 hover:border-red-300 hover:text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                    <TableRow 
+                      className="hover:bg-gray-50 transition-colors animate-fade-in"
+                      style={{ animationDelay: `${index * 100}ms` }}
+                    >
+                      <TableCell>
+                        <CollapsibleTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="w-8 h-8 p-0"
+                            aria-label={`${expandedRecordings.has(recording.id) ? 'Collapse' : 'Expand'} details for ${recording.recording_title}`}
+                          >
+                            <ChevronDown 
+                              className={`w-4 h-4 transition-transform duration-200 ${
+                                expandedRecordings.has(recording.id) ? 'rotate-180' : ''
+                              }`} 
+                            />
+                          </Button>
+                        </CollapsibleTrigger>
+                      </TableCell>
+                      <TableCell className="font-medium">{recording.recording_title}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-purple-100 text-purple-800">
+                          {recording.module?.title || 'No Module'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{recording.duration_min} min</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{recording.sequence_order}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex space-x-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(recording)}
+                            className="hover-scale hover:bg-blue-50 hover:border-blue-300"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(recording.id)}
+                            className="hover-scale hover:bg-red-50 hover:border-red-300 hover:text-red-600"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                    <CollapsibleContent asChild>
+                      <tr>
+                        <td colSpan={6} className="p-0">
+                          <RecordingRatingDetails
+                            recordingId={recording.id}
+                            recordingTitle={recording.recording_title}
+                            onDelete={() => handleRecordingDeleted(recording.id)}
+                          />
+                        </td>
+                      </tr>
+                    </CollapsibleContent>
+                  </Collapsible>
                 ))}
               </TableBody>
             </Table>
