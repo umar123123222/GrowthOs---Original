@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { Activity, Download, Search, Filter } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -149,8 +150,8 @@ export const ActivityLogs = () => {
   }
 
   return (
-    <Card>
-      <CardHeader>
+    <Card className="h-[80vh] flex flex-col">
+      <CardHeader className="flex-shrink-0 border-b">
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center">
             <Activity className="w-5 h-5 mr-2" />
@@ -162,98 +163,125 @@ export const ActivityLogs = () => {
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-wrap items-center gap-4 mb-6">
-          <div className="flex items-center space-x-2">
-            <Search className="w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search logs..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
-            />
+      <CardContent className="flex-1 flex flex-col p-6 space-y-4 min-h-0">
+        {/* Fixed Filters */}
+        <div className="flex-shrink-0 space-y-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center space-x-2">
+              <Search className="w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Search logs..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-sm"
+              />
+            </div>
+
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="1days">Last 24 hours</SelectItem>
+                <SelectItem value="7days">Last 7 days</SelectItem>
+                <SelectItem value="30days">Last 30 days</SelectItem>
+                <SelectItem value="all">All time</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="student">Students</SelectItem>
+                <SelectItem value="mentor">Mentors</SelectItem>
+                <SelectItem value="admin">Admins</SelectItem>
+                <SelectItem value="superadmin">Superadmins</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={activityFilter} onValueChange={setActivityFilter}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Activities</SelectItem>
+                <SelectItem value="login">Login</SelectItem>
+                <SelectItem value="logout">Logout</SelectItem>
+                <SelectItem value="video_watched">Video Watched</SelectItem>
+                <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
+                <SelectItem value="profile_updated">Profile Updated</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1days">Last 24 hours</SelectItem>
-              <SelectItem value="7days">Last 7 days</SelectItem>
-              <SelectItem value="30days">Last 30 days</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              <SelectItem value="student">Students</SelectItem>
-              <SelectItem value="mentor">Mentors</SelectItem>
-              <SelectItem value="admin">Admins</SelectItem>
-              <SelectItem value="superadmin">Superadmins</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={activityFilter} onValueChange={setActivityFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Activities</SelectItem>
-              <SelectItem value="login">Login</SelectItem>
-              <SelectItem value="logout">Logout</SelectItem>
-              <SelectItem value="video_watched">Video Watched</SelectItem>
-              <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
-              <SelectItem value="profile_updated">Profile Updated</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="text-sm text-muted-foreground">
+            Showing {filteredLogs.length} of {logs.length} activities
+          </div>
         </div>
 
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Timestamp</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Activity</TableHead>
-              <TableHead>Details</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredLogs.map((log) => (
-              <TableRow key={log.id}>
-                <TableCell>
-                  {new Date(log.occurred_at).toLocaleString()}
-                </TableCell>
-                <TableCell>{log.users?.email || 'Unknown'}</TableCell>
-                <TableCell>
-                  <Badge className={getRoleBadge(log.users?.role || '')}>
-                    {log.users?.role || 'Unknown'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge className={getActivityBadge(log.activity_type)}>
-                    {log.activity_type.replace('_', ' ')}
-                  </Badge>
-                </TableCell>
-                <TableCell className="max-w-xs truncate">
-                  {log.metadata ? JSON.stringify(log.metadata) : 'No details'}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-
-        {filteredLogs.length === 0 && (
-          <div className="text-center py-8 text-muted-foreground">
-            No activity logs found matching your criteria.
+        {/* Scrollable Activity Logs Table */}
+        <div className="flex-1 flex flex-col border rounded-md overflow-hidden min-h-0">
+          {/* Fixed Table Header */}
+          <div className="flex-shrink-0 border-b bg-muted/50">
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent border-0">
+                  <TableHead className="font-medium h-12">Timestamp</TableHead>
+                  <TableHead className="font-medium h-12">User</TableHead>
+                  <TableHead className="font-medium h-12">Role</TableHead>
+                  <TableHead className="font-medium h-12">Activity</TableHead>
+                  <TableHead className="font-medium h-12">Details</TableHead>
+                </TableRow>
+              </TableHeader>
+            </Table>
           </div>
-        )}
+
+          {/* Scrollable Table Body */}
+          <ScrollArea className="flex-1">
+            <Table>
+              <TableBody>
+                {filteredLogs.map((log) => (
+                  <TableRow key={log.id} className="hover:bg-muted/30">
+                    <TableCell className="whitespace-nowrap font-mono text-sm">
+                      {new Date(log.occurred_at).toLocaleString()}
+                    </TableCell>
+                    <TableCell className="max-w-[200px] truncate">
+                      {log.users?.email || 'Unknown'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getRoleBadge(log.users?.role || '')}>
+                        {log.users?.role || 'Unknown'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getActivityBadge(log.activity_type)}>
+                        {log.activity_type.replace('_', ' ')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="max-w-[300px]">
+                      {log.metadata ? (
+                        <div className="text-sm text-muted-foreground truncate">
+                          {JSON.stringify(log.metadata)}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">No details</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            {filteredLogs.length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                No activity logs found matching your criteria.
+              </div>
+            )}
+          </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );
