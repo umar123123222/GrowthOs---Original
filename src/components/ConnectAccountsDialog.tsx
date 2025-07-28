@@ -148,23 +148,19 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
     }
 
     try {
-      // Validate Shopify connection by calling the shop API
-      const shopifyApiUrl = `https://${shopifyDomain}/admin/api/2024-07/shop.json`;
-      const response = await fetch(shopifyApiUrl, {
-        headers: {
-          'X-Shopify-Access-Token': shopifyKey,
-          'Content-Type': 'application/json',
-        },
+      // Validate Shopify connection using Edge Function
+      const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-shopify', {
+        body: {
+          shopifyDomain: shopifyDomain,
+          apiKey: shopifyKey
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`Shopify API returned status ${response.status}`);
+      if (validationError || !validationResult?.valid) {
+        throw new Error(validationError?.message || validationResult?.error || 'Failed to validate Shopify connection');
       }
 
-      const shopData = await response.json();
-      
       // Update user record with validated credentials
-      // Note: shopify_domain field would need to be added to DB schema
       const { error } = await supabase
         .from('users')
         .update({ 
@@ -186,7 +182,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
       
       toast({
         title: "Shopify Connected ✅",
-        description: `Your Shopify store "${shopData.shop?.name || shopifyDomain}" has been successfully connected.`,
+        description: `Your Shopify store "${validationResult.shopName}" has been successfully connected.`,
       });
     } catch (error) {
       console.error('Error connecting to Shopify:', error);
