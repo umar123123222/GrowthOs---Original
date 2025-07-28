@@ -156,16 +156,6 @@ function DashboardContent() {
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">Manage platform operations and user oversight</p>
         </div>
-        <div className="flex items-center gap-3 animate-scale-in">
-          <Button variant="outline" size="sm" className="hover-scale story-link">
-            <Shield className="w-4 h-4 mr-2" />
-            Security
-          </Button>
-          <Button variant="default" size="sm" className="hover-scale bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600">
-            <AlertTriangle className="w-4 h-4 mr-2" />
-            Admin Actions
-          </Button>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
