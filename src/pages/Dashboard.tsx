@@ -112,7 +112,7 @@ const Dashboard = ({ user }: { user?: any }) => {
         .from('available_lessons')
         .select('id');
 
-      // Fetch watched recordings
+      // Fetch unique watched recordings (distinct by recording_id)
       const { data: watchedRecordings } = await supabase
         .from('recording_views')
         .select('recording_id')
@@ -132,7 +132,11 @@ const Dashboard = ({ user }: { user?: any }) => {
         .eq('status', 'accepted');
 
       const totalVideos = recordings?.length || 0;
-      const videosWatched = watchedRecordings?.length || 0;
+      // Count unique videos watched by creating a Set of recording_ids
+      const uniqueWatchedVideos = watchedRecordings 
+        ? [...new Set(watchedRecordings.map(r => r.recording_id))] 
+        : [];
+      const videosWatched = uniqueWatchedVideos.length;
       const totalAssignments = assignments?.length || 0;
       const assignmentsCompleted = completedAssignments?.length || 0;
       
@@ -189,13 +193,14 @@ const Dashboard = ({ user }: { user?: any }) => {
         .eq('id', user.id)
         .single();
 
-      // Check if watched any video
+      // Check if watched any video (unique videos only)
       const { data: watchedVideos } = await supabase
         .from('recording_views')
-        .select('id')
+        .select('recording_id')
         .eq('user_id', user.id)
-        .eq('watched', true)
-        .limit(1);
+        .eq('watched', true);
+
+      const hasWatchedAnyVideo = watchedVideos && [...new Set(watchedVideos.map(v => v.recording_id))].length > 0;
 
       // Check if submitted any assignment
       const { data: submissions } = await supabase
@@ -207,7 +212,7 @@ const Dashboard = ({ user }: { user?: any }) => {
       setMilestones([
         { title: "First Login", completed: true, icon: "🎯" }, // User is logged in
         { title: "Profile Complete", completed: profile?.onboarding_done || false, icon: "✅" },
-        { title: "First Video Watched", completed: (watchedVideos?.length || 0) > 0, icon: "📹" },
+        { title: "First Video Watched", completed: hasWatchedAnyVideo, icon: "📹" },
         { title: "First Assignment", completed: (submissions?.length || 0) > 0, icon: "📝" },
         { title: "Quiz Master", completed: false, icon: "🧠" }, // Would need quiz data
         { title: "Store Live", completed: !!(profile?.shopify_credentials), icon: "🛒" },
