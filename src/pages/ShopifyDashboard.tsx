@@ -19,6 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { getShopifyMetrics } from '@/lib/shopify-service';
 
 const ShopifyDashboard = () => {
   const { toast } = useToast();
@@ -46,42 +47,33 @@ const ShopifyDashboard = () => {
   const fetchShopifyData = async () => {
     setLoading(true);
     try {
-      // Check if user has Shopify credentials
-      if (!user?.shopify_credentials) {
+      if (!user?.id) {
         setConnectionStatus('disconnected');
         setLoading(false);
         return;
       }
 
-      // Mock API call to Shopify Storefront API (2025-07 version)
-      // In production, this would go through your backend to make authenticated calls
-      // const shopifyApiUrl = `https://${shopifyStoreUrl}/api/2025-07/graphql.json`;
+      // Use the new Shopify service to get metrics
+      const result = await getShopifyMetrics(user.id);
       
-      // Simulate API response with mock data
-      const mockShopifyData = {
-        storeUrl: 'your-store.myshopify.com',
-        totalSales: 45678.90,
-        visitors: 2847,
-        averageOrderValue: 89.45,
-        conversionRate: 3.2,
-        orderCount: 127,
-        topProducts: [
-          { id: 1, name: 'Premium Course Bundle', sales: 89, revenue: 5340 },
-          { id: 2, name: 'Digital Marketing Guide', sales: 67, revenue: 2010 },
-          { id: 3, name: 'Success Workbook', sales: 45, revenue: 1350 },
-          { id: 4, name: 'Video Masterclass', sales: 34, revenue: 2040 },
-          { id: 5, name: 'Growth Templates', sales: 23, revenue: 690 }
-        ],
-        salesTrend: [
-          { date: '2025-07-17', sales: 1250 },
-          { date: '2025-07-18', sales: 1680 },
-          { date: '2025-07-19', sales: 2100 },
-          { date: '2025-07-20', sales: 1890 },
-          { date: '2025-07-21', sales: 2340 },
-          { date: '2025-07-22', sales: 2890 },
-          { date: '2025-07-23', sales: 3200 },
-          { date: '2025-07-24', sales: 2750 }
-        ],
+      if (!result.connected) {
+        setConnectionStatus('disconnected');
+        setLoading(false);
+        return;
+      }
+
+      const metrics = result.metrics!;
+      
+      // Map the metrics to the expected format
+      const shopifyData = {
+        storeUrl: 'your-store.myshopify.com', // Would use user.shopify_domain when available
+        totalSales: metrics.gmv,
+        visitors: 2847, // Mock visitor data - would need analytics API
+        averageOrderValue: metrics.aov,
+        conversionRate: metrics.conversionRate,
+        orderCount: metrics.orders,
+        topProducts: metrics.topProducts,
+        salesTrend: metrics.salesTrend,
         visitorTrend: [
           { date: '2025-07-17', visitors: 245 },
           { date: '2025-07-18', visitors: 312 },
@@ -95,7 +87,7 @@ const ShopifyDashboard = () => {
         lastUpdated: new Date().toISOString()
       };
 
-      setShopifyData(mockShopifyData);
+      setShopifyData(shopifyData);
       setConnectionStatus('connected');
       
     } catch (error) {

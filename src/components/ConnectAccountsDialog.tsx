@@ -29,6 +29,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   const [editingShopify, setEditingShopify] = useState(false);
   const [metaKey, setMetaKey] = useState("");
   const [shopifyKey, setShopifyKey] = useState("");
+  const [shopifyDomain, setShopifyDomain] = useState("");
 
   // Load existing credentials when dialog opens and reset editing states
   useEffect(() => {
@@ -128,6 +129,15 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
       return;
     }
 
+    if (!shopifyDomain.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter your Shopify store domain (e.g., your-store.myshopify.com).",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!userId) {
       toast({
         title: "Error",
@@ -138,9 +148,28 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
     }
 
     try {
+      // Validate Shopify connection by calling the shop API
+      const shopifyApiUrl = `https://${shopifyDomain}/admin/api/2024-07/shop.json`;
+      const response = await fetch(shopifyApiUrl, {
+        headers: {
+          'X-Shopify-Access-Token': shopifyKey,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Shopify API returned status ${response.status}`);
+      }
+
+      const shopData = await response.json();
+      
+      // Update user record with validated credentials
+      // Note: shopify_domain field would need to be added to DB schema
       const { error } = await supabase
         .from('users')
-        .update({ shopify_credentials: shopifyKey })
+        .update({ 
+          shopify_credentials: shopifyKey
+        })
         .eq('id', userId);
 
       if (error) throw error;
@@ -148,6 +177,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
       setShopifyConnected(true);
       setEditingShopify(false);
       setShopifyKey(""); // Clear the input for security
+      setShopifyDomain("");
       
       // Trigger navigation update
       if (onConnectionUpdate) {
@@ -155,14 +185,14 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
       }
       
       toast({
-        title: "Shopify Connected",
-        description: "Your Shopify store has been successfully connected.",
+        title: "Shopify Connected ✅",
+        description: `Your Shopify store "${shopData.shop?.name || shopifyDomain}" has been successfully connected.`,
       });
     } catch (error) {
-      console.error('Error saving Shopify credentials:', error);
+      console.error('Error connecting to Shopify:', error);
       toast({
-        title: "Error",
-        description: "Failed to save Shopify credentials. Please try again.",
+        title: "Connection Failed",
+        description: "Failed to connect to Shopify. Please check your API key and store domain.",
         variant: "destructive",
       });
     }
@@ -248,13 +278,24 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
               {(!shopifyConnected || editingShopify) && (
                 <>
                   <div>
+                    <Label htmlFor="shopify-domain" className="text-xs">
+                      Shopify Store Domain
+                    </Label>
+                    <Input
+                      id="shopify-domain"
+                      placeholder="your-store.myshopify.com"
+                      value={shopifyDomain}
+                      onChange={(e) => setShopifyDomain(e.target.value)}
+                    />
+                  </div>
+                  <div>
                     <Label htmlFor="shopify-key" className="text-xs">
-                      Shopify API Key
+                      Shopify API Access Token
                     </Label>
                     <Input
                       id="shopify-key"
                       type="password"
-                      placeholder="Enter your Shopify API key"
+                      placeholder="Enter your Shopify API access token"
                       value={shopifyKey}
                       onChange={(e) => setShopifyKey(e.target.value)}
                     />
@@ -263,7 +304,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
                     onClick={handleShopifyConnect} 
                     size="sm" 
                     className="w-full"
-                    disabled={!shopifyKey.trim()}
+                    disabled={!shopifyKey.trim() || !shopifyDomain.trim()}
                   >
                     {editingShopify ? "Update Connection" : "Connect Shopify"}
                   </Button>

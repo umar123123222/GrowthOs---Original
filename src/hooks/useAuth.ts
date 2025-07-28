@@ -9,6 +9,7 @@ export interface User {
   created_at?: string;
   metadata?: any;
   shopify_credentials?: string;
+  shopify_domain?: string;
   meta_ads_credentials?: string;
 }
 
