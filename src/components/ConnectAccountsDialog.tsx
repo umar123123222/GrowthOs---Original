@@ -30,6 +30,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   const [metaKey, setMetaKey] = useState("");
   const [shopifyKey, setShopifyKey] = useState("");
   const [shopifyDomain, setShopifyDomain] = useState("");
+  const [myshopifyDomain, setMyshopifyDomain] = useState("");
 
   // Load existing credentials when dialog opens and reset editing states
   useEffect(() => {
@@ -295,11 +296,12 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
                       <Input
                         id="myshopify-domain"
                         placeholder="your-store.myshopify.com"
-                        value=""
+                        value={myshopifyDomain}
                         onChange={(e) => {
-                          const myshopifyDomain = e.target.value.trim();
-                          if (myshopifyDomain.includes('myshopify.com')) {
-                            setShopifyDomain(myshopifyDomain);
+                          const value = e.target.value.trim();
+                          setMyshopifyDomain(value);
+                          if (value.includes('myshopify.com')) {
+                            setShopifyDomain(value);
                           }
                         }}
                       />
