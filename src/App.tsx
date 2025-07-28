@@ -51,22 +51,17 @@ const App = () => {
   const checkPaymentStatus = async () => {
     if (!user?.id) return;
 
-    // Check if user has inactive status and needs to show paywall
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('status, first_login_complete')
-      .eq('id', user.id)
-      .single();
-
-    // For now, use placeholder invoice data since invoices table doesn't exist yet
+    // Set placeholder invoice data
     setPendingInvoice({
       amount: 50000,
       invoice_number: 'INV-PENDING'
     });
 
-    // Show paywall if user is inactive and has completed first login
-    if (userProfile?.status === 'inactive' && userProfile?.first_login_complete) {
-      setShowPaywall(true);
+    // For students, check if they have overdue fees or no payment recorded
+    if (user.role === 'student' && user.onboarding_done) {
+      if (user.fees_overdue || !user.fees_due_date) {
+        setShowPaywall(true);
+      }
     }
   };
 
@@ -96,7 +91,7 @@ const App = () => {
               <Route path="*" element={
                 <Onboarding 
                   user={user} 
-                  onComplete={async () => {
+                  onComplete={() => {
                     // Onboarding completion will be handled by the hook
                     window.location.reload();
                   }} 

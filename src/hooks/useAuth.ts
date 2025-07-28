@@ -11,6 +11,9 @@ export interface User {
   shopify_credentials?: string;
   shopify_domain?: string;
   meta_ads_credentials?: string;
+  onboarding_done?: boolean;
+  fees_overdue?: boolean;
+  fees_due_date?: string;
 }
 
 export const useAuth = () => {
@@ -71,7 +74,7 @@ export const useAuth = () => {
       
       const { data, error } = await supabase
         .from('users')
-        .select('id, email, role, full_name, created_at, shopify_credentials, meta_ads_credentials')
+        .select('id, email, role, full_name, created_at, shopify_credentials, meta_ads_credentials, onboarding_done, fees_overdue, fees_due_date')
         .eq('id', userId)
         .maybeSingle();
       

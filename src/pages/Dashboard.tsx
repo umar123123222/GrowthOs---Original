@@ -110,12 +110,12 @@ const Dashboard = ({ user }: { user?: any }) => {
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('status, onboarding_done')
+      .select('fees_overdue, fees_due_date, onboarding_done')
       .eq('id', user.id)
       .single();
 
-    // Blur dashboard if user is inactive and has completed onboarding
-    if (userProfile?.status === 'inactive' && userProfile?.onboarding_done) {
+    // Blur dashboard if user has overdue fees or no payment recorded
+    if (userProfile?.fees_overdue || !userProfile?.fees_due_date) {
       setIsBlurred(true);
     }
   };
