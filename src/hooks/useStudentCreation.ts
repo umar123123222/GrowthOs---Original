@@ -28,7 +28,7 @@ export const useStudentCreation = () => {
     try {
       console.log('Creating student with data:', studentData);
       
-      const { data, error } = await supabase.functions.invoke('create-student-complete', {
+      const { data, error } = await supabase.functions.invoke('create-student-lms', {
         body: studentData
       });
 
