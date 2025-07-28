@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectAccountsDialog } from "@/components/ConnectAccountsDialog";
+import { NextAssignment } from "@/components/NextAssignment";
 import { supabase } from "@/integrations/supabase/client";
 import { 
   BookOpen, 
@@ -311,40 +312,8 @@ const Dashboard = ({ user }: { user?: any }) => {
           </CardContent>
         </Card>
 
-        {/* Next Assignment Due */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Clock className="w-5 h-5 mr-2 text-orange-600" />
-              Next Assignment
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <h4 className="font-medium">
-                {nextAssignment?.assignment_title || "No pending assignments"}
-              </h4>
-              {nextAssignment && (
-                <div className="flex items-center space-x-2">
-                  <Badge variant="outline">
-                    {nextAssignment.due_date 
-                      ? `Due ${new Date(nextAssignment.due_date).toLocaleDateString()}`
-                      : "No due date"
-                    }
-                  </Badge>
-                </div>
-              )}
-              <Button 
-                className="w-full" 
-                size="sm"
-                onClick={() => navigate('/assignments')}
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Start Assignment
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Next Assignment */}
+        <NextAssignment userId={user?.id} />
 
         {/* Meta/Shopify Status */}
         <Card>
