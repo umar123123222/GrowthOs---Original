@@ -259,7 +259,7 @@ const Login = () => {
                     href="https://enrollment.growthOS.com" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="bg-gradient-to-br from-blue-900 via-blue-700 to-emerald-600 text-white px-6 py-2 rounded-lg hover:opacity-90 transition-all duration-200 font-medium"
+                    className="text-blue-600 hover:text-blue-700 transition-colors duration-200 font-medium underline"
                   >
                     Enroll Now
                   </a>
