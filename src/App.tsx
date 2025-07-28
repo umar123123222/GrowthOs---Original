@@ -26,6 +26,7 @@ import Layout from "./components/Layout";
 import Support from "./pages/Support";
 import ShopifyDashboard from "./pages/ShopifyDashboard";
 import MetaAdsDashboard from "./pages/MetaAdsDashboard";
+import MentorSessionsPage from "./pages/MentorSessionsPage";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +86,7 @@ const App = () => {
                 {/* Role-specific routes */}
                 <Route path="admin" element={<AdminDashboard />} />
                 <Route path="mentor" element={<MentorDashboard />} />
+                <Route path="mentor/sessions" element={<MentorSessionsPage />} />
                 <Route path="superadmin" element={<SuperadminDashboard />} />
                 <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
                 
