@@ -157,27 +157,33 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Create student record with inactive status
+    console.log('Attempting to insert student record...');
+    
+    const studentData = {
+      id: authData.user.id,
+      email,
+      role: 'student',
+      full_name: fullName,
+      phone: phone || null,
+      fees_structure: feesStructure,
+      lms_user_id: email,
+      lms_password: tempPassword,
+      temp_password: tempPassword,
+      lms_status: 'inactive',
+      onboarding_done: false,
+      fees_overdue: true,
+      created_by: createdBy
+    };
+    
+    console.log('Student data to insert:', JSON.stringify(studentData, null, 2));
+    
     const { error: insertError } = await supabase
       .from('users')
-      .insert({
-        id: authData.user.id,
-        email,
-        role: 'student',
-        full_name: fullName,
-        phone: phone || null,
-        fees_structure: feesStructure,
-        lms_user_id: email,
-        lms_password: tempPassword,
-        temp_password: tempPassword,
-        lms_status: 'inactive',
-        onboarding_done: false,
-        fees_overdue: true, // Start with fees overdue until first payment
-        created_by: createdBy
-      });
+      .insert(studentData);
 
     if (insertError) {
-      console.error('Insert error:', insertError);
-      throw new Error(`Failed to create student record: ${insertError.message}`);
+      console.error('Insert error details:', JSON.stringify(insertError, null, 2));
+      throw new Error(`Failed to create student record: ${insertError.message} - Code: ${insertError.code} - Details: ${insertError.details}`);
     }
 
     console.log('Student record created');

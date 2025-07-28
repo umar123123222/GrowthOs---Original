@@ -1282,8 +1282,9 @@ export function StudentsManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayStudents.map((student) => (
-                  <React.Fragment key={student.id}>
+                {displayStudents.map((student) => {
+                  return (
+                    <React.Fragment key={student.id}>
                     <TableRow key={student.id}>
                       <TableCell>
                         <Checkbox
@@ -1586,9 +1587,10 @@ export function StudentsManagement() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    )}
-                  </React.Fragment>
-                ))}
+                     )}
+                   </React.Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
