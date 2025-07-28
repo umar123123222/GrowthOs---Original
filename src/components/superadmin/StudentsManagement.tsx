@@ -1285,7 +1285,7 @@ export function StudentsManagement() {
                 {displayStudents.map((student) => {
                   return (
                     <React.Fragment key={student.id}>
-                    <TableRow key={student.id}>
+                      <TableRow>
                       <TableCell>
                         <Checkbox
                           checked={selectedStudents.has(student.id)}
