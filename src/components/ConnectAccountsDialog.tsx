@@ -29,8 +29,6 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   const [editingShopify, setEditingShopify] = useState(false);
   const [metaKey, setMetaKey] = useState("");
   const [shopifyKey, setShopifyKey] = useState("");
-  const [shopifyDomain, setShopifyDomain] = useState("");
-  const [myshopifyDomain, setMyshopifyDomain] = useState("");
 
   // Load existing credentials when dialog opens and reset editing states
   useEffect(() => {
@@ -121,79 +119,35 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   };
 
   const handleShopifyConnect = async () => {
-    if (!shopifyKey.trim() || !shopifyDomain.trim()) {
+    if (!shopifyKey.trim()) {
       toast({
         title: "Error",
-        description: "Please fill in all Shopify credentials",
+        description: "Please enter a valid Shopify API access token.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "User not authenticated. Please log in again.",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      /* 1 ▸ normalise the domain */
-      let dom = shopifyDomain.trim();
-      if (!dom.includes('.')) dom += '.myshopify.com';
-
-      /* 2 ▸ basic checks */
-      const tok = shopifyKey.trim();
-      if (!tok.startsWith('shpat_')) {
-        toast({
-          title: "Invalid Token",
-          description: "Paste the *Admin access‑token* (starts with shpat_…).",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (!/^[a-z0-9-]+\.myshopify\.com$/.test(dom)) {
-        toast({
-          title: "Invalid Domain",
-          description: "Domain must be like yourstore.myshopify.com",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      /* 3 ▸ live test against /shop.json */
-      const res = await fetch(`https://${dom}/admin/api/2024-07/shop.json`, {
-        headers: { 'X-Shopify-Access-Token': tok }
-      });
-
-      if (!res.ok) {
-        toast({
-          title: "Connection Failed",
-          description: res.status === 401 ? 'Token invalid or expired (401).' :
-            res.status === 403 ? 'Token lacks required scopes (403).' :
-            res.status === 404 ? 'Store domain not found (404).' :
-            `Shopify error ${res.status}.`,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      /* 4 ▸ persist & flip the flag */
-      const { error: updateError } = await supabase
+      const { error } = await supabase
         .from('users')
-        .update({ 
-          shopify_credentials: tok + '|' + dom 
-        })
+        .update({ shopify_credentials: shopifyKey })
         .eq('id', userId);
 
-      if (updateError) {
-        console.error('Error saving Shopify credentials:', updateError);
-        toast({
-          title: "Error",
-          description: "Failed to save credentials",
-          variant: "destructive",
-        });
-        return;
-      }
+      if (error) throw error;
 
       setShopifyConnected(true);
       setEditingShopify(false);
       setShopifyKey("");
-      setShopifyDomain("");
-      setMyshopifyDomain("");
       
       // Call the connection update callback if provided
       if (onConnectionUpdate) {
@@ -294,42 +248,6 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
               {(!shopifyConnected || editingShopify) && (
                 <>
                   <div>
-                    <Label htmlFor="shopify-domain" className="text-xs">
-                      Shopify Store Domain
-                    </Label>
-                    <Input
-                      id="shopify-domain"
-                      placeholder="elyscents.pk or your-store.myshopify.com"
-                      value={shopifyDomain}
-                      onChange={(e) => setShopifyDomain(e.target.value.trim())}
-                    />
-                    <p className="text-xs text-muted-foreground mt-1">
-                      For custom domains like elyscents.pk, please also provide your myshopify.com domain below
-                    </p>
-                  </div>
-                  {shopifyDomain && !shopifyDomain.includes('myshopify.com') && (
-                    <div>
-                      <Label htmlFor="myshopify-domain" className="text-xs">
-                        Your myshopify.com Domain (Required for API)
-                      </Label>
-                      <Input
-                        id="myshopify-domain"
-                        placeholder="your-store.myshopify.com"
-                        value={myshopifyDomain}
-                        onChange={(e) => {
-                          const value = e.target.value.trim();
-                          setMyshopifyDomain(value);
-                          if (value.includes('myshopify.com')) {
-                            setShopifyDomain(value);
-                          }
-                        }}
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        Even with custom domains, Shopify's API requires your myshopify.com domain
-                      </p>
-                    </div>
-                  )}
-                  <div>
                     <Label htmlFor="shopify-key" className="text-xs">
                       Shopify API Access Token
                     </Label>
@@ -345,7 +263,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
                     onClick={handleShopifyConnect} 
                     size="sm" 
                     className="w-full"
-                    disabled={!shopifyKey.trim() || !shopifyDomain.trim()}
+                    disabled={!shopifyKey.trim()}
                   >
                     {editingShopify ? "Update Connection" : "Connect Shopify"}
                   </Button>
