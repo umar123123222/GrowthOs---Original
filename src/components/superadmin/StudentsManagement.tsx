@@ -1283,7 +1283,7 @@ export function StudentsManagement() {
               </TableHeader>
               <TableBody>
                 {displayStudents.map((student) => (
-                  <React.Fragment key={`student-${student.id}`}>
+                  <React.Fragment key={student.id}>
                     <TableRow key={student.id}>
                       <TableCell>
                         <Checkbox

@@ -170,9 +170,8 @@ const handler = async (req: Request): Promise<Response> => {
         lms_password: tempPassword,
         temp_password: tempPassword,
         lms_status: 'inactive',
-        status: 'inactive', // Key: Start as inactive until payment
-        first_login_complete: false,
         onboarding_done: false,
+        fees_overdue: true, // Start with fees overdue until first payment
         created_by: createdBy
       });
 
