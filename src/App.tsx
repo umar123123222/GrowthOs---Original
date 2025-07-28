@@ -65,7 +65,7 @@ const App = () => {
     }
   };
 
-  console.log('App: Render state', { user: !!user, loading });
+  console.log('App: Render state', { user: !!user, loading, userRole: user?.role, userEmail: user?.email });
 
   if (loading) {
     return (
