@@ -148,72 +148,8 @@ export default function MentorDashboard() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <AlertCircle className="w-5 h-5 mr-2 text-red-500" />
-                  Students Needing Attention
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-3 bg-red-50 rounded-lg">
-                    <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                      <span className="text-red-600 font-semibold text-sm">JS</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">John Smith</p>
-                      <p className="text-xs text-muted-foreground">No submission for 5 days</p>
-                    </div>
-                    <Badge variant="destructive" className="text-xs">Urgent</Badge>
-                  </div>
-                  <div className="flex items-center gap-4 p-3 bg-yellow-50 rounded-lg">
-                    <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                      <span className="text-yellow-600 font-semibold text-sm">EM</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Emma Miller</p>
-                      <p className="text-xs text-muted-foreground">Low quiz scores</p>
-                    </div>
-                    <Badge variant="outline" className="text-xs border-yellow-500 text-yellow-600">Monitor</Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <CheckCircle className="w-5 h-5 mr-2 text-green-500" />
-                  Top Performers
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-3 bg-green-50 rounded-lg">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-green-600 font-semibold text-sm">AK</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Alice Kim</p>
-                      <p className="text-xs text-muted-foreground">Completed all modules</p>
-                    </div>
-                    <span className="text-xs text-green-600 font-medium">95%</span>
-                  </div>
-                  <div className="flex items-center gap-4 p-3 bg-blue-50 rounded-lg">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <span className="text-blue-600 font-semibold text-sm">DR</span>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">David Rodriguez</p>
-                      <p className="text-xs text-muted-foreground">Excellent progress</p>
-                    </div>
-                    <span className="text-xs text-blue-600 font-medium">89%</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="mt-6">
+            <AssignmentFeedback />
           </div>
         </div>
       </div>
