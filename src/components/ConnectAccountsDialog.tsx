@@ -121,75 +121,94 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   };
 
   const handleShopifyConnect = async () => {
-    if (!shopifyKey.trim()) {
+    if (!shopifyKey.trim() || !shopifyDomain.trim()) {
       toast({
         title: "Error",
-        description: "Please enter a valid Shopify API key.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!shopifyDomain.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter your Shopify store domain (e.g., your-store.myshopify.com).",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!userId) {
-      toast({
-        title: "Error",
-        description: "User not authenticated. Please log in again.",
+        description: "Please fill in all Shopify credentials",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      // Validate Shopify connection using Edge Function
-      const { data: validationResult, error: validationError } = await supabase.functions.invoke('validate-shopify', {
-        body: {
-          shopifyDomain: shopifyDomain,
-          apiKey: shopifyKey
-        }
-      });
+      /* 1 ▸ normalise the domain */
+      let dom = shopifyDomain.trim();
+      if (!dom.includes('.')) dom += '.myshopify.com';
 
-      if (validationError || !validationResult?.valid) {
-        throw new Error(validationError?.message || validationResult?.error || 'Failed to validate Shopify connection');
+      /* 2 ▸ basic checks */
+      const tok = shopifyKey.trim();
+      if (!tok.startsWith('shpat_')) {
+        toast({
+          title: "Invalid Token",
+          description: "Paste the *Admin access‑token* (starts with shpat_…).",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!/^[a-z0-9-]+\.myshopify\.com$/.test(dom)) {
+        toast({
+          title: "Invalid Domain",
+          description: "Domain must be like yourstore.myshopify.com",
+          variant: "destructive",
+        });
+        return;
       }
 
-      // Update user record with validated credentials
-      const { error } = await supabase
+      /* 3 ▸ live test against /shop.json */
+      const res = await fetch(`https://${dom}/admin/api/2024-07/shop.json`, {
+        headers: { 'X-Shopify-Access-Token': tok }
+      });
+
+      if (!res.ok) {
+        toast({
+          title: "Connection Failed",
+          description: res.status === 401 ? 'Token invalid or expired (401).' :
+            res.status === 403 ? 'Token lacks required scopes (403).' :
+            res.status === 404 ? 'Store domain not found (404).' :
+            `Shopify error ${res.status}.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      /* 4 ▸ persist & flip the flag */
+      const { error: updateError } = await supabase
         .from('users')
         .update({ 
-          shopify_credentials: shopifyKey
+          shopify_credentials: tok + '|' + dom 
         })
         .eq('id', userId);
 
-      if (error) throw error;
+      if (updateError) {
+        console.error('Error saving Shopify credentials:', updateError);
+        toast({
+          title: "Error",
+          description: "Failed to save credentials",
+          variant: "destructive",
+        });
+        return;
+      }
 
       setShopifyConnected(true);
       setEditingShopify(false);
-      setShopifyKey(""); // Clear the input for security
+      setShopifyKey("");
       setShopifyDomain("");
+      setMyshopifyDomain("");
       
-      // Trigger navigation update
+      // Call the connection update callback if provided
       if (onConnectionUpdate) {
         onConnectionUpdate();
       }
       
       toast({
-        title: "Shopify Connected ✅",
-        description: `Your Shopify store "${validationResult.shopName}" has been successfully connected.`,
+        title: "Shopify connected 🎉",
+        description: "Your Shopify store has been successfully connected.",
       });
     } catch (error) {
-      console.error('Error connecting to Shopify:', error);
+      console.error('Error connecting Shopify:', error);
       toast({
         title: "Connection Failed",
-        description: "Failed to connect to Shopify. Please check your API key and store domain.",
+        description: "Failed to connect Shopify account",
         variant: "destructive",
       });
     }
