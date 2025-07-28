@@ -122,7 +122,7 @@ const Layout = ({ user }: LayoutProps) => {
     } else if (isUserMentor) {
       return [
         { name: "Dashboard", href: "/mentor", icon: Monitor },
-        { name: "Success Sessions", href: "/live-sessions", icon: Calendar },
+        { name: "Success Sessions", href: "/mentor/sessions", icon: Calendar },
         
         { name: "Profile", href: "/profile", icon: User }
       ];
