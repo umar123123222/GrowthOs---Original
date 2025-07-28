@@ -114,17 +114,7 @@ export default function MentorDashboard() {
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="students">My Students</TabsTrigger>
-            <TabsTrigger value="submissions">Submissions</TabsTrigger>
-            <TabsTrigger value="progress">Progress</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="space-y-6">
-            {/* Overview Content */}
-            <div className="space-y-6">
+        <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card className="border-l-4 border-l-purple-500">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -238,21 +228,7 @@ export default function MentorDashboard() {
               </CardContent>
             </Card>
           </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="students">
-            <MyStudents students={assignedStudents} />
-          </TabsContent>
-
-          <TabsContent value="submissions">
-            <AssignmentFeedback />
-          </TabsContent>
-
-          <TabsContent value="progress">
-            <StudentProgress students={assignedStudents} />
-          </TabsContent>
-        </Tabs>
+        </div>
       </div>
     </RoleGuard>
   );
