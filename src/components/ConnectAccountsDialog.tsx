@@ -281,8 +281,18 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
                       id="shopify-domain"
                       placeholder="your-store.myshopify.com"
                       value={shopifyDomain}
-                      onChange={(e) => setShopifyDomain(e.target.value)}
+                      onChange={(e) => {
+                        let value = e.target.value.trim();
+                        // Auto-format if user just enters store name
+                        if (value && !value.includes('.') && !value.includes('://')) {
+                          value = `${value}.myshopify.com`;
+                        }
+                        setShopifyDomain(value);
+                      }}
                     />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Enter your full Shopify domain (e.g., your-store.myshopify.com)
+                    </p>
                   </div>
                   <div>
                     <Label htmlFor="shopify-key" className="text-xs">
