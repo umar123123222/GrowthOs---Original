@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,73 +7,70 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react";
-
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const { refreshUser } = useAuth();
-
+  const {
+    toast
+  } = useToast();
+  const {
+    refreshUser
+  } = useAuth();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       console.log('Login attempt for:', email);
-      
-      // First authenticate with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
 
+      // First authenticate with Supabase Auth
+      const {
+        data: authData,
+        error: authError
+      } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
       if (authError) {
         console.error('Auth error:', authError);
-        
+
         // Check if this is a student account that was created by admin
         if (authError.message.includes('Invalid login credentials')) {
-          const { data: studentData } = await supabase
-            .from('users')
-            .select('temp_password, role, full_name')
-            .eq('email', email)
-            .single();
-            
+          const {
+            data: studentData
+          } = await supabase.from('users').select('temp_password, role, full_name').eq('email', email).single();
           if (studentData && studentData.role === 'student' && studentData.temp_password) {
             toast({
               title: "Student Account Detected",
               description: `Please use the temporary password provided by your admin. Contact your mentor if you need the password.`,
-              variant: "destructive",
+              variant: "destructive"
             });
             return;
           }
         }
-        
         toast({
           title: "Invalid Credentials",
           description: "Incorrect email or password.",
-          variant: "destructive",
+          variant: "destructive"
         });
         return;
       }
-
       console.log('Auth successful, checking user data...');
 
       // Check if user exists in our users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single();
-
+      const {
+        data: userData,
+        error: userError
+      } = await supabase.from('users').select('*').eq('id', authData.user.id).single();
       if (userError || !userData) {
-        console.log('User not found in users table, creating...', { userError });
-        
+        console.log('User not found in users table, creating...', {
+          userError
+        });
+
         // Determine role based on email
         let userRole = 'student';
         let fullName = authData.user.user_metadata?.full_name || null;
-        
         if (email === 'umaridmpakistan@gmail.com') {
           userRole = 'superadmin';
           fullName = 'Umar (Super Admin)';
@@ -90,37 +86,34 @@ const Login = () => {
         }
 
         // Create user if they don't exist
-        const { data: newUser, error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: authData.user.email || email,
-            role: userRole,
-            full_name: fullName,
-            created_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-
+        const {
+          data: newUser,
+          error: createError
+        } = await supabase.from('users').insert({
+          id: authData.user.id,
+          email: authData.user.email || email,
+          role: userRole,
+          full_name: fullName,
+          created_at: new Date().toISOString()
+        }).select().single();
         if (createError) {
           console.error('Error creating user:', createError);
           toast({
             title: "Setup Error",
             description: "Failed to set up user account. Please contact support.",
-            variant: "destructive",
+            variant: "destructive"
           });
           return;
         }
-
         toast({
           title: "Welcome!",
-          description: `Hello ${newUser.full_name || newUser.email}, you've successfully logged in.`,
+          description: `Hello ${newUser.full_name || newUser.email}, you've successfully logged in.`
         });
       } else {
         console.log('User found:', userData);
         toast({
           title: "Welcome!",
-          description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`,
+          description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`
         });
       }
 
@@ -131,15 +124,13 @@ const Login = () => {
       toast({
         title: "Login Failed",
         description: "An error occurred during login. Please try again.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-700 to-emerald-600 flex items-center justify-center p-4 relative overflow-hidden">
+  return <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-700 to-emerald-600 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated background elements */}
       <div className="absolute inset-0">
         <div className="absolute top-20 left-20 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
@@ -159,11 +150,7 @@ const Login = () => {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
               <div className="relative bg-white p-3 rounded-2xl shadow-lg">
-                <img 
-                  src="/lovable-uploads/27419a93-c883-4326-ad0d-da831b3cc534.png" 
-                  alt="Growth OS Logo" 
-                  className="h-12 w-auto"
-                />
+                <img src="/lovable-uploads/27419a93-c883-4326-ad0d-da831b3cc534.png" alt="Growth OS Logo" className="h-12 w-auto" />
               </div>
             </div>
           </div>
@@ -186,15 +173,7 @@ const Login = () => {
                 Email Address
               </Label>
               <div className="relative">
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-12 pl-4 pr-4 border-2 border-gray-200 focus:border-blue-500 transition-all duration-200 rounded-lg"
-                  placeholder="your@email.com"
-                  required
-                />
+                <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="h-12 pl-4 pr-4 border-2 border-gray-200 focus:border-blue-500 transition-all duration-200 rounded-lg" placeholder="your@email.com" required />
               </div>
             </div>
             
@@ -203,48 +182,22 @@ const Login = () => {
                 Password
               </Label>
               <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="h-12 pl-4 pr-12 border-2 border-gray-200 focus:border-blue-500 transition-all duration-200 rounded-lg"
-                  placeholder="••••••••"
-                  required
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4 text-gray-500" />
-                  ) : (
-                    <Eye className="h-4 w-4 text-gray-500" />
-                  )}
+                <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="h-12 pl-4 pr-12 border-2 border-gray-200 focus:border-blue-500 transition-all duration-200 rounded-lg" placeholder="••••••••" required />
+                <Button type="button" variant="ghost" size="sm" className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100" onClick={() => setShowPassword(!showPassword)}>
+                  {showPassword ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-gray-500" />}
                 </Button>
               </div>
             </div>
             
-            <Button 
-              type="submit" 
-              className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
+            <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group" disabled={isLoading}>
+              {isLoading ? <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Signing In...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
+                </div> : <div className="flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
                   <Shield className="w-4 h-4" />
                   <span>Sign In to Growth OS</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                </div>
-              )}
+                </div>}
             </Button>
           </form>
           
@@ -254,13 +207,8 @@ const Login = () => {
                 <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">
-                  <a 
-                    href="https://enrollment.growthOS.com" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-700 transition-colors duration-200 font-medium underline"
-                  >
+                <span className="">
+                  <a href="https://enrollment.growthOS.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 transition-colors duration-200 font-medium underline">
                     Enroll Now
                   </a>
                 </span>
@@ -269,8 +217,6 @@ const Login = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default Login;
