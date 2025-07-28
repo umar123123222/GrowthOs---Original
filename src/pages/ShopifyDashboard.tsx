@@ -15,11 +15,15 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 
 const ShopifyDashboard = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [shopifyData, setShopifyData] = useState({
     storeUrl: '',
@@ -42,11 +46,8 @@ const ShopifyDashboard = () => {
   const fetchShopifyData = async () => {
     setLoading(true);
     try {
-      // Get store URL from user settings
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const storeUrl = user.shopify_store_url;
-      
-      if (!storeUrl) {
+      // Check if user has Shopify credentials
+      if (!user?.shopify_credentials) {
         setConnectionStatus('disconnected');
         setLoading(false);
         return;
@@ -54,11 +55,11 @@ const ShopifyDashboard = () => {
 
       // Mock API call to Shopify Storefront API (2025-07 version)
       // In production, this would go through your backend to make authenticated calls
-      const shopifyApiUrl = `https://${storeUrl}/api/2025-07/graphql.json`;
+      // const shopifyApiUrl = `https://${shopifyStoreUrl}/api/2025-07/graphql.json`;
       
       // Simulate API response with mock data
       const mockShopifyData = {
-        storeUrl,
+        storeUrl: 'your-store.myshopify.com',
         totalSales: 45678.90,
         visitors: 2847,
         averageOrderValue: 89.45,
@@ -148,7 +149,7 @@ const ShopifyDashboard = () => {
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Connect your Shopify store to view real-time analytics, sales data, and performance metrics.
           </p>
-          <Button onClick={() => window.open('/profile', '_blank')}>
+          <Button onClick={() => navigate('/connect')}>
             <ExternalLink className="h-4 w-4 mr-2" />
             Connect Shopify Store
           </Button>

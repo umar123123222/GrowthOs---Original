@@ -19,9 +19,13 @@ import {
   Minus
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const MetaAdsDashboard = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [metaData, setMetaData] = useState({
     campaigns: [],
@@ -44,11 +48,8 @@ const MetaAdsDashboard = () => {
   const fetchMetaAdsData = async () => {
     setLoading(true);
     try {
-      // Get Meta API token from user settings
-      const user = JSON.parse(localStorage.getItem('user') || '{}');
-      const metaToken = user.meta_api_token;
-      
-      if (!metaToken) {
+      // Check if user has Meta Ads credentials
+      if (!user?.meta_ads_credentials) {
         setConnectionStatus('disconnected');
         setLoading(false);
         return;
@@ -246,7 +247,7 @@ const MetaAdsDashboard = () => {
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Connect your Meta Ads account to view campaign performance, ad metrics, and optimization insights.
           </p>
-          <Button onClick={() => window.open('/profile', '_blank')}>
+          <Button onClick={() => navigate('/connect')}>
             <ExternalLink className="h-4 w-4 mr-2" />
             Connect Meta Ads
           </Button>

@@ -18,9 +18,10 @@ interface ConnectAccountsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userId?: string;
+  onConnectionUpdate?: () => void;
 }
 
-export const ConnectAccountsDialog = ({ open, onOpenChange, userId }: ConnectAccountsDialogProps) => {
+export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnectionUpdate }: ConnectAccountsDialogProps) => {
   const { toast } = useToast();
   const [metaConnected, setMetaConnected] = useState(false);
   const [shopifyConnected, setShopifyConnected] = useState(false);
@@ -97,6 +98,12 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId }: ConnectAcc
       setMetaConnected(true);
       setEditingMeta(false);
       setMetaKey(""); // Clear the input for security
+      
+      // Trigger navigation update
+      if (onConnectionUpdate) {
+        onConnectionUpdate();
+      }
+      
       toast({
         title: "Meta API Connected",
         description: "Your Meta Ads account has been successfully connected.",
@@ -141,6 +148,12 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId }: ConnectAcc
       setShopifyConnected(true);
       setEditingShopify(false);
       setShopifyKey(""); // Clear the input for security
+      
+      // Trigger navigation update
+      if (onConnectionUpdate) {
+        onConnectionUpdate();
+      }
+      
       toast({
         title: "Shopify Connected",
         description: "Your Shopify store has been successfully connected.",

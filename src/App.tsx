@@ -24,6 +24,7 @@ import Teams from "./pages/Teams";
 import StudentsManagement from "./pages/StudentsManagement";
 import Layout from "./components/Layout";
 import Support from "./pages/Support";
+import Connect from "./pages/Connect";
 import ShopifyDashboard from "./pages/ShopifyDashboard";
 import MetaAdsDashboard from "./pages/MetaAdsDashboard";
 import MentorSessionsPage from "./pages/MentorSessionsPage";
@@ -76,6 +77,7 @@ const App = () => {
                 <Route path="mentorship" element={<Mentorship />} />
                 <Route path="messages" element={<Messages />} />
                 <Route path="support" element={<Support />} />
+                <Route path="connect" element={<Connect />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="notifications" element={<Notifications />} />
                 <Route path="teams" element={<Teams />} />

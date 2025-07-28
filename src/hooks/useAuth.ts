@@ -8,6 +8,8 @@ export interface User {
   full_name?: string;
   created_at?: string;
   metadata?: any;
+  shopify_credentials?: string;
+  meta_ads_credentials?: string;
 }
 
 export const useAuth = () => {
@@ -68,7 +70,7 @@ export const useAuth = () => {
       
       const { data, error } = await supabase
         .from('users')
-        .select('id, email, role, full_name, created_at')
+        .select('id, email, role, full_name, created_at, shopify_credentials, meta_ads_credentials')
         .eq('id', userId)
         .maybeSingle();
       

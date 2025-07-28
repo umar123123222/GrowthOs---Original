@@ -53,21 +53,23 @@ const Layout = ({ user }: LayoutProps) => {
   const isUserEnrollmentManager = user?.role === 'enrollment_manager';
   const isUserAdminOrSuperadmin = isUserSuperadmin || isUserAdmin;
 
-  // Check connection status on mount
+  // Check connection status on mount and when user changes
   useEffect(() => {
     const checkConnections = () => {
-      // Check Shopify connection
-      const shopifyStore = user?.shopify_store_url || localStorage.getItem('shopify_store_url');
-      // Check Meta connection  
-      const metaToken = user?.meta_api_token || localStorage.getItem('meta_api_token');
+      // Check Shopify connection from user credentials
+      const shopifyCredentials = user?.shopify_credentials;
+      // Check Meta connection from user credentials
+      const metaCredentials = user?.meta_ads_credentials;
       
       setConnectionStatus({
-        shopify: !!shopifyStore,
-        meta: !!metaToken
+        shopify: !!shopifyCredentials,
+        meta: !!metaCredentials
       });
     };
 
-    checkConnections();
+    if (user) {
+      checkConnections();
+    }
   }, [user]);
 
   // Check if any course submenu is active to keep it expanded
@@ -139,6 +141,7 @@ const Layout = ({ user }: LayoutProps) => {
       { name: "Videos", href: "/videos", icon: BookOpen },
       { name: "Assignments", href: "/assignments", icon: FileText },
       { name: "Success Sessions", href: "/live-sessions", icon: Calendar },
+      { name: "Connect Accounts", href: "/connect", icon: Activity },
       { name: "Support", href: "/support", icon: MessageSquare },
     ];
 
