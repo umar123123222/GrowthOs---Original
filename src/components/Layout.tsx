@@ -305,11 +305,11 @@ const Layout = ({ user }: LayoutProps) => {
                                 to={subItem.href}
                                 className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 story-link ${
                                   isActive
-                                    ? "bg-gray-900 text-white border-l-4 border-primary shadow-lg scale-105"
+                                    ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105"
                                     : "text-gray-600 hover:bg-gray-100 hover-scale"
                                 }`}
                               >
-                                <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isActive ? "text-white" : "text-gray-400"}`} />
+                                <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
                                 {subItem.name}
                               </Link>
                             );
@@ -330,12 +330,12 @@ const Layout = ({ user }: LayoutProps) => {
                     to={item.href}
                     className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 story-link ${
                       isActive
-                        ? "bg-gray-900 text-white border-l-4 border-primary shadow-lg scale-105"
+                        ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105"
                         : "text-gray-600 hover:bg-gray-100 hover-scale"
                     }`}
                     title={sidebarCollapsed ? item.name : undefined}
                   >
-                    <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 transition-colors ${isActive ? "text-white" : "text-gray-400"}`} />
+                    <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
                     {!sidebarCollapsed && item.name}
                   </Link>
                 );
