@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Upload, Link, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { notifyMentorOfAssignmentSubmission } from "@/lib/notification-service";
 
 interface AssignmentSubmissionDialogProps {
   open: boolean;
@@ -103,7 +104,7 @@ export const AssignmentSubmissionDialog = ({
       }
 
       // Save submission to database
-      const { error } = await supabase
+      const { data: submission, error } = await supabase
         .from('assignment_submissions')
         .insert({
           user_id: userId,
@@ -113,9 +114,33 @@ export const AssignmentSubmissionDialog = ({
           external_link: submissionType === "link" ? externalLink : null,
           file_url: fileUrl,
           status: 'submitted'
-        });
+        })
+        .select()
+        .single();
 
       if (error) throw error;
+
+      // Get user details for notification
+      const { data: userData } = await supabase
+        .from('users')
+        .select('full_name, mentor_id')
+        .eq('id', userId)
+        .single();
+
+      // Notify mentor if user has a mentor assigned
+      if (userData?.mentor_id && userData?.full_name) {
+        try {
+          await notifyMentorOfAssignmentSubmission(
+            userData.mentor_id,
+            userData.full_name,
+            assignmentTitle,
+            submission.id
+          );
+        } catch (notificationError) {
+          console.error('Failed to notify mentor:', notificationError);
+          // Don't fail the submission if notification fails
+        }
+      }
 
       toast({
         title: "Assignment Submitted",

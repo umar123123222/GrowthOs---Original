@@ -99,6 +99,12 @@ const NotificationDropdown = () => {
     if (status === 'error') return <AlertCircle className="h-4 w-4 text-red-500" />;
     
     switch (type) {
+      case 'assignment_submission':
+        return <Clock className="h-4 w-4 text-blue-500" />;
+      case 'success_session':
+        return <Clock className="h-4 w-4 text-purple-500" />;
+      case 'student_progress':
+        return <Check className="h-4 w-4 text-green-500" />;
       case 'assignment':
         return <Clock className="h-4 w-4 text-blue-500" />;
       case 'achievement':

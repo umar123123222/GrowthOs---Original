@@ -11,6 +11,7 @@ import { Calendar, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2 } fr
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { notifyMentorOfSuccessSessionScheduled } from '@/lib/notification-service';
 
 interface SuccessSession {
   id: string;
@@ -249,11 +250,28 @@ export function SuccessSessionsManagement() {
           description: "Session updated successfully",
         });
       } else {
-        const { error } = await supabase
+        const { data: newSession, error } = await supabase
           .from('success_sessions')
-          .insert([sessionData]);
+          .insert([sessionData])
+          .select()
+          .single();
 
         if (error) throw error;
+
+        // Notify the assigned mentor about the new session
+        if (formData.mentor_id && newSession) {
+          try {
+            await notifyMentorOfSuccessSessionScheduled(
+              formData.mentor_id,
+              formData.title,
+              sessionData.start_time || formData.schedule_date,
+              newSession.id
+            );
+          } catch (notificationError) {
+            console.error('Failed to notify mentor:', notificationError);
+            // Don't fail the session creation if notification fails
+          }
+        }
 
         toast({
           title: "Success",
