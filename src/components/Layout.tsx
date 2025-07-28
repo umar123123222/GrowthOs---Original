@@ -41,6 +41,7 @@ const Layout = ({ user }: LayoutProps) => {
   const { toast } = useToast();
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isBlurred, setIsBlurred] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState({
     shopify: false,
     meta: false
@@ -67,8 +68,22 @@ const Layout = ({ user }: LayoutProps) => {
       });
     };
 
+    const checkPaymentStatus = () => {
+      // Check if student needs to pay first installment
+      if (user?.role === 'student' && user?.onboarding_done) {
+        if (user?.fees_overdue || !user?.fees_due_date) {
+          setIsBlurred(true);
+        } else {
+          setIsBlurred(false);
+        }
+      } else {
+        setIsBlurred(false);
+      }
+    };
+
     if (user) {
       checkConnections();
+      checkPaymentStatus();
     }
   }, [user]);
 
@@ -214,7 +229,7 @@ const Layout = ({ user }: LayoutProps) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className={`min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 ${isBlurred ? 'filter blur-sm pointer-events-none' : ''}`}>
       {/* Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="w-full px-4 sm:px-6 lg:px-8">
@@ -348,7 +363,7 @@ const Layout = ({ user }: LayoutProps) => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8 animate-fade-in">
+        <main className={`flex-1 p-8 animate-fade-in ${isBlurred ? 'filter blur-sm pointer-events-none' : ''}`}>
           <Outlet />
         </main>
       </div>
