@@ -93,7 +93,7 @@ const Layout = ({ user }: LayoutProps) => {
           ]
         },
         { name: "Students", href: "/superadmin?tab=students", icon: Users },
-        { name: "Submissions", href: "/superadmin?tab=submissions", icon: FileText },
+        
         { name: "Support", href: "/superadmin?tab=support", icon: MessageSquare },
         { name: "Teams", href: "/teams", icon: UserCheck },
         { name: "Company", href: "/superadmin?tab=company-settings", icon: Building2 },
@@ -114,7 +114,7 @@ const Layout = ({ user }: LayoutProps) => {
           ]
         },
         { name: "Students", href: "/admin?tab=students", icon: Users },
-        { name: "Submissions", href: "/admin?tab=submissions", icon: FileText },
+        
         { name: "Support", href: "/admin?tab=support", icon: MessageSquare },
         { name: "Teams", href: "/teams", icon: UserCheck },
         { name: "Profile", href: "/profile", icon: User }
@@ -123,7 +123,7 @@ const Layout = ({ user }: LayoutProps) => {
       return [
         { name: "Dashboard", href: "/mentor", icon: Monitor },
         { name: "Success Sessions", href: "/live-sessions", icon: Calendar },
-        { name: "Submissions", href: "/assignments", icon: FileText },
+        
         { name: "Profile", href: "/profile", icon: User }
       ];
     } else if (isUserEnrollmentManager) {
