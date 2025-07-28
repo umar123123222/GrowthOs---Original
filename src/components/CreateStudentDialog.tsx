@@ -5,18 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus } from "lucide-react";
-import { useUserManagement } from "@/hooks/useUserManagement";
+import { useStudentCreation } from "@/hooks/useStudentCreation";
 import { useToast } from "@/hooks/use-toast";
 import { useStudentFormValidation, type StudentFormData } from "@/hooks/useStudentFormValidation";
 import { useInstallmentOptions } from "@/hooks/useInstallmentOptions";
-import { generateSecurePassword } from "@/utils/passwordGenerator";
 
 interface CreateStudentDialogProps {
   onStudentCreated?: () => void;
 }
 
 export const CreateStudentDialog = ({ onStudentCreated }: CreateStudentDialogProps) => {
-  const { createUser, loading } = useUserManagement();
+  const { createStudent, loading } = useStudentCreation();
   const { toast } = useToast();
   const { errors, clearFieldError, validateAndSetErrors } = useStudentFormValidation();
   const { options, defaultValue } = useInstallmentOptions();
@@ -52,14 +51,11 @@ export const CreateStudentDialog = ({ onStudentCreated }: CreateStudentDialogPro
       return;
     }
 
-    // Generate secure temporary password
-    const tempPassword = generateSecurePassword();
-
-    const success = await createUser({
-      target_email: formData.email,
-      target_password: tempPassword,
-      target_role: 'student',
-      target_full_name: formData.full_name || formData.email
+    const success = await createStudent({
+      fullName: formData.full_name,
+      email: formData.email,
+      phone: formData.phone,
+      feesStructure: formData.fees_structure
     });
 
     if (success) {

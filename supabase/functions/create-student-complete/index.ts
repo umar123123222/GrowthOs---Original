@@ -156,6 +156,22 @@ const handler = async (req: Request): Promise<Response> => {
       createdBy = user?.id;
     }
 
+    // Generate auto-incrementing student ID
+    const { data: existingStudents, error: countError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('role', 'student');
+    
+    if (countError) {
+      console.error('Error counting students:', countError);
+      throw new Error(`Failed to generate student ID: ${countError.message}`);
+    }
+    
+    const studentCount = (existingStudents?.length || 0) + 1;
+    const studentId = `STU${studentCount.toString().padStart(6, '0')}`;
+    
+    console.log('Generated student ID:', studentId);
+
     // Create student record with inactive status
     console.log('Attempting to insert student record...');
     
@@ -172,7 +188,8 @@ const handler = async (req: Request): Promise<Response> => {
       lms_status: 'inactive',
       onboarding_done: false,
       fees_overdue: true,
-      created_by: createdBy
+      created_by: createdBy,
+      student_id: studentId
     };
     
     console.log('Student data to insert:', JSON.stringify(studentData, null, 2));
@@ -187,6 +204,33 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('Student record created');
+
+    // Create initial invoice record
+    const invoiceData = {
+      student_id: authData.user.id,
+      student_email: email,
+      student_name: fullName,
+      fees_structure: feesStructure,
+      amount: feesStructure === '1_installment' ? 50000 : 
+              feesStructure === '2_installments' ? 25000 : 17000,
+      currency: 'PKR',
+      status: 'pending',
+      due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days from now
+      invoice_number: `INV-${studentId}-${Date.now()}`
+    };
+
+    const { data: invoiceResult, error: invoiceError } = await supabase
+      .from('invoices')
+      .insert(invoiceData)
+      .select()
+      .single();
+
+    if (invoiceError) {
+      console.error('Error creating invoice:', invoiceError);
+      // Don't fail the entire process for invoice creation
+    }
+
+    console.log('Invoice created:', invoiceResult?.id);
 
     let emailSent = false;
     
@@ -252,7 +296,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(JSON.stringify({ 
       success: true,
-      studentId: authData.user.id,
+      studentId: studentId,
+      lmsUserId: authData.user.id,
+      invoiceId: invoiceResult?.id,
       tempPassword,
       emailSent
     }), {
