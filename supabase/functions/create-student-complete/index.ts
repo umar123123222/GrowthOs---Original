@@ -156,7 +156,7 @@ const handler = async (req: Request): Promise<Response> => {
       createdBy = user?.id;
     }
 
-    // Create student record
+    // Create student record with inactive status
     const { error: insertError } = await supabase
       .from('users')
       .insert({
@@ -167,10 +167,13 @@ const handler = async (req: Request): Promise<Response> => {
         phone: phone || null,
         fees_structure: feesStructure,
         lms_user_id: email,
-        lms_password: tempPassword, // Store LMS password initially
+        lms_password: tempPassword,
         temp_password: tempPassword,
         lms_status: 'inactive',
-        created_by: createdBy  // Set who created this student
+        status: 'inactive', // Key: Start as inactive until payment
+        first_login_complete: false,
+        onboarding_done: false,
+        created_by: createdBy
       });
 
     if (insertError) {

@@ -92,6 +92,7 @@ const Dashboard = ({ user }: { user?: any }) => {
     { title: "First Sale", completed: false, icon: "💰" }
   ]);
   const [nextAssignment, setNextAssignment] = useState<any>(null);
+  const [isBlurred, setIsBlurred] = useState(false);
 
   // Fetch real data when user is available
   useEffect(() => {
@@ -100,8 +101,24 @@ const Dashboard = ({ user }: { user?: any }) => {
       fetchLeaderboardData();
       fetchMilestones();
       fetchNextAssignment();
+      checkAccessStatus();
     }
   }, [user?.id]);
+
+  const checkAccessStatus = async () => {
+    if (!user?.id) return;
+
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('status, onboarding_done')
+      .eq('id', user.id)
+      .single();
+
+    // Blur dashboard if user is inactive and has completed onboarding
+    if (userProfile?.status === 'inactive' && userProfile?.onboarding_done) {
+      setIsBlurred(true);
+    }
+  };
 
   const fetchProgressData = async () => {
     if (!user?.id) return;
@@ -250,7 +267,7 @@ const Dashboard = ({ user }: { user?: any }) => {
   }, []);
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className={`space-y-8 animate-fade-in ${isBlurred ? 'filter blur-sm pointer-events-none' : ''}`}>
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Welcome back! 👋</h1>

@@ -3,9 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { initializeGlobalIntegrations } from "./lib/global-integrations";
+import { PaywallModal } from "./components/PaywallModal";
+import { supabase } from "@/integrations/supabase/client";
 import Login from "./pages/Login";
 import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
@@ -35,13 +37,38 @@ const queryClient = new QueryClient();
 
 const App = () => {
   const { user, loading } = useAuth();
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [pendingInvoice, setPendingInvoice] = useState<any>(null);
 
   // Initialize global integrations when user is loaded
-  React.useEffect(() => {
+  useEffect(() => {
     if (user?.id) {
       initializeGlobalIntegrations(user.id);
+      checkPaymentStatus();
     }
   }, [user?.id]);
+
+  const checkPaymentStatus = async () => {
+    if (!user?.id) return;
+
+    // Check if user has inactive status and needs to show paywall
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('status, first_login_complete')
+      .eq('id', user.id)
+      .single();
+
+    // For now, use placeholder invoice data since invoices table doesn't exist yet
+    setPendingInvoice({
+      amount: 50000,
+      invoice_number: 'INV-PENDING'
+    });
+
+    // Show paywall if user is inactive and has completed first login
+    if (userProfile?.status === 'inactive' && userProfile?.first_login_complete) {
+      setShowPaywall(true);
+    }
+  };
 
   console.log('App: Render state', { user: !!user, loading });
 
@@ -65,6 +92,16 @@ const App = () => {
           <Routes>
             {!user ? (
               <Route path="*" element={<Login />} />
+            ) : user?.role === 'student' && !user?.onboarding_done ? (
+              <Route path="*" element={
+                <Onboarding 
+                  user={user} 
+                  onComplete={async () => {
+                    // Onboarding completion will be handled by the hook
+                    window.location.reload();
+                  }} 
+                />
+              } />
             ) : (
               <Route path="/" element={<Layout user={user} />}>
                 {/* Role-based dashboard routing */}
@@ -106,6 +143,14 @@ const App = () => {
             )}
           </Routes>
         </BrowserRouter>
+        
+        {/* Paywall Modal */}
+        <PaywallModal
+          isOpen={showPaywall}
+          onOpenChange={setShowPaywall}
+          invoiceAmount={pendingInvoice?.amount}
+          invoiceNumber={pendingInvoice?.invoice_number}
+        />
       </TooltipProvider>
     </QueryClientProvider>
   );
