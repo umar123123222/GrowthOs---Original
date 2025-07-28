@@ -17,11 +17,16 @@ interface SuccessSession {
   title: string;
   description: string;
   mentor_name: string;
+  mentor_id?: string;
   schedule_date: string;
   start_time: string;
   end_time: string;
   link: string;
   status: string;
+  zoom_meeting_id?: string;
+  zoom_passcode?: string;
+  host_login_email?: string;
+  host_login_pwd?: string;
   created_at: string;
   created_by: string;
 }
@@ -35,8 +40,10 @@ interface SessionFormData {
   start_time: string;
   end_time: string;
   link: string;
-  zoom_email: string;
-  zoom_password: string;
+  zoom_meeting_id: string;
+  zoom_passcode: string;
+  host_login_email: string;
+  host_login_pwd: string;
   status: string;
 }
 
@@ -62,8 +69,10 @@ export function SuccessSessionsManagement() {
     start_time: '',
     end_time: '',
     link: '',
-    zoom_email: '',
-    zoom_password: '',
+    zoom_meeting_id: '',
+    zoom_passcode: '',
+    host_login_email: '',
+    host_login_pwd: '',
     status: 'upcoming'
   });
   const { toast } = useToast();
@@ -160,8 +169,10 @@ export function SuccessSessionsManagement() {
       start_time: '',
       end_time: '',
       link: '',
-      zoom_email: '',
-      zoom_password: '',
+      zoom_meeting_id: '',
+      zoom_passcode: '',
+      host_login_email: '',
+      host_login_pwd: '',
       status: 'upcoming'
     });
     setEditingSession(null);
@@ -179,8 +190,10 @@ export function SuccessSessionsManagement() {
         start_time: session.start_time || '',
         end_time: session.end_time || '',
         link: session.link || '',
-        zoom_email: (session as any).zoom_email || '',
-        zoom_password: (session as any).zoom_password || '',
+        zoom_meeting_id: session.zoom_meeting_id || '',
+        zoom_passcode: session.zoom_passcode || '',
+        host_login_email: session.host_login_email || '',
+        host_login_pwd: session.host_login_pwd || '',
         status: session.status || 'upcoming'
       });
     } else {
@@ -211,12 +224,15 @@ export function SuccessSessionsManagement() {
         title: formData.title,
         description: formData.description,
         mentor_name: selectedUser ? selectedUser.full_name : formData.mentor_name,
+        mentor_id: formData.mentor_id,
         schedule_date: formData.schedule_date,
         start_time: combineDateTime(formData.schedule_date, formData.start_time),
         end_time: formData.end_time ? combineDateTime(formData.schedule_date, formData.end_time) : null,
         link: formData.link,
-        zoom_email: formData.zoom_email,
-        zoom_password: formData.zoom_password,
+        zoom_meeting_id: formData.zoom_meeting_id,
+        zoom_passcode: formData.zoom_passcode,
+        host_login_email: formData.host_login_email,
+        host_login_pwd: formData.host_login_pwd,
         status: formData.status
       };
 
@@ -367,23 +383,46 @@ export function SuccessSessionsManagement() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Zoom Email *</label>
+                  <label className="block text-sm font-medium mb-1">Zoom Meeting ID *</label>
                   <Input
-                    type="email"
-                    value={formData.zoom_email}
-                    onChange={(e) => setFormData({...formData, zoom_email: e.target.value})}
+                    type="text"
+                    value={formData.zoom_meeting_id}
+                    onChange={(e) => setFormData({...formData, zoom_meeting_id: e.target.value})}
                     required
-                    placeholder="Enter Zoom email"
+                    placeholder="Enter Zoom Meeting ID"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Zoom Password *</label>
+                  <label className="block text-sm font-medium mb-1">Zoom Passcode *</label>
+                  <Input
+                    type="text"
+                    value={formData.zoom_passcode}
+                    onChange={(e) => setFormData({...formData, zoom_passcode: e.target.value})}
+                    required
+                    placeholder="Enter Zoom Passcode"
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Host Login Email *</label>
+                  <Input
+                    type="email"
+                    value={formData.host_login_email}
+                    onChange={(e) => setFormData({...formData, host_login_email: e.target.value})}
+                    required
+                    placeholder="Enter host login email"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1">Host Login Password *</label>
                   <Input
                     type="password"
-                    value={formData.zoom_password}
-                    onChange={(e) => setFormData({...formData, zoom_password: e.target.value})}
+                    value={formData.host_login_pwd}
+                    onChange={(e) => setFormData({...formData, host_login_pwd: e.target.value})}
                     required
-                    placeholder="Enter Zoom password"
+                    placeholder="Enter host login password"
                   />
                 </div>
               </div>
