@@ -137,22 +137,22 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-700 to-green-600 flex items-center justify-center p-4">
+    <div className="min-h-screen gradient-hero flex items-center justify-center p-4 relative overflow-hidden">
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJtIDEwIDAgbCAwIDEwIG0gMCAwIGwgMTAgMCBtIDAgMTAgbCAxMCAwIG0gMTAgMCBsIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-20"></div>
       
-      <Card className="w-full max-w-md relative z-10 shadow-2xl border-0 bg-white/95 backdrop-blur">
+      <Card className="w-full max-w-md relative z-10 shadow-elevated border-0 bg-card/95 backdrop-blur-md">
         <CardHeader className="text-center pb-8">
           <div className="flex justify-center mb-4">
             <img 
               src="/lovable-uploads/27419a93-c883-4326-ad0d-da831b3cc534.png" 
-              alt="Growth OS" 
+              alt="Growth OS Logo" 
               className="h-12 w-auto"
             />
           </div>
-          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
+          <CardTitle className="text-2xl font-bold gradient-primary bg-clip-text text-transparent">
             Welcome to Growth OS
           </CardTitle>
-          <p className="text-gray-600 mt-2">AI-powered learning for your success</p>
+          <p className="text-muted-foreground mt-2">AI-powered learning for your success</p>
         </CardHeader>
         
         <CardContent>
@@ -185,7 +185,7 @@ const Login = () => {
             
             <Button 
               type="submit" 
-              className="w-full h-11 bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white font-medium"
+              className="w-full h-11 gradient-primary text-primary-foreground hover:opacity-90 font-medium transition-all duration-200 hover-lift focus-visible:outline-offset-2"
               disabled={isLoading}
             >
               {isLoading ? "Signing In..." : "Sign In to Growth OS"}
@@ -193,9 +193,9 @@ const Login = () => {
           </form>
           
           <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-muted-foreground">
               New to Growth OS?{" "}
-              <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
+              <a href="#" className="text-primary hover:text-primary/80 font-medium transition-colors">
                 Contact your mentor
               </a>
             </p>

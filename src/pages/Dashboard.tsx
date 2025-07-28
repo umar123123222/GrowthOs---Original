@@ -270,33 +270,34 @@ const Dashboard = ({ user }: { user?: any }) => {
     <div className={`space-y-8 animate-fade-in ${isBlurred ? 'filter blur-sm pointer-events-none' : ''}`}>
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Welcome back! 👋</h1>
-        <p className="text-gray-600 mt-2">Ready to continue your journey to success?</p>
+        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Welcome back! 👋</h1>
+        <p className="text-muted-foreground mt-2 text-sm sm:text-base">Ready to continue your journey to success?</p>
       </div>
 
       {/* Visualization Card */}
-      <Card className="bg-gradient-to-r from-blue-500 via-purple-500 to-green-500 text-white">
-        <CardContent className="p-6">
+      <Card className="gradient-hero text-white border-0 shadow-elevated overflow-hidden relative">
+        <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+        <CardContent className="p-6 relative z-10">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl font-semibold mb-2">Your Dream Goal 🌟</h3>
-              <p className="text-blue-100 mb-4">
+              <p className="text-white/90 mb-4 text-base">
                 "Go for Umrah with family and buy a BMW within 2 years"
               </p>
               <div className="flex items-center space-x-4">
-                <div className="flex items-center space-x-2">
-                  <span className="text-2xl">🕌</span>
-                  <span className="text-sm">Umrah Goal</span>
+                <div className="flex items-center space-x-2 bg-white/20 rounded-full px-3 py-1">
+                  <span className="text-xl" role="img" aria-label="Umrah goal">🕌</span>
+                  <span className="text-sm font-medium">Umrah Goal</span>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <span className="text-2xl">🚗</span>
-                  <span className="text-sm">BMW Goal</span>
+                <div className="flex items-center space-x-2 bg-white/20 rounded-full px-3 py-1">
+                  <span className="text-xl" role="img" aria-label="BMW goal">🚗</span>
+                  <span className="text-sm font-medium">BMW Goal</span>
                 </div>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold">{progressData.overallProgress}%</div>
-              <div className="text-blue-100">Progress</div>
+              <div className="text-3xl font-bold mb-1">{progressData.overallProgress}%</div>
+              <div className="text-white/80 text-sm">Progress</div>
             </div>
           </div>
         </CardContent>
@@ -416,19 +417,19 @@ const Dashboard = ({ user }: { user?: any }) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {leaderboardData.map((student, index) => (
-                <div key={index} className={`flex items-center justify-between p-2 rounded-lg ${
-                  student.name === "You" ? "bg-blue-50 border border-blue-200" : ""
+                {leaderboardData.map((student, index) => (
+                <div key={index} className={`flex items-center justify-between p-3 rounded-lg transition-colors ${
+                  student.name === "You" ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50"
                 }`}>
                   <div className="flex items-center space-x-3">
-                    <span className="font-bold text-lg">
+                    <span className="font-bold text-lg" role="img" aria-label={`Rank ${student.rank}`}>
                       {student.rank === 1 ? "🥇" : student.rank === 2 ? "🥈" : student.rank === 3 ? "🥉" : `#${student.rank}`}
                     </span>
-                    <span className={`font-medium ${student.name === "You" ? "text-blue-700" : ""}`}>
+                    <span className={`font-medium ${student.name === "You" ? "text-primary" : "text-foreground"}`}>
                       {student.name}
                     </span>
                   </div>
-                  <span className="font-semibold text-gray-600">{student.score}%</span>
+                  <span className="font-semibold text-muted-foreground">{student.score}%</span>
                 </div>
               ))}
             </div>

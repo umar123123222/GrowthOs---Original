@@ -140,12 +140,12 @@ const NotificationDropdown = () => {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0" align="end">
-        <div className="p-4 border-b">
+      <PopoverContent className="w-80 p-0 shadow-elevated border-border/50 bg-popover/95 backdrop-blur-sm" align="end">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
-            <h4 className="font-medium">Notifications</h4>
+            <h4 className="font-medium text-foreground">Notifications</h4>
             <Link to="/notifications">
-              <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">
+              <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 transition-colors">
                 View all
               </Button>
             </Link>
@@ -163,27 +163,27 @@ const NotificationDropdown = () => {
               ))}
             </div>
           ) : notifications.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
-              <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+            <div className="p-4 text-center text-muted-foreground">
+              <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
               <p className="text-sm">No unread notifications</p>
             </div>
           ) : (
             <div className="p-2">
               {notifications.map((notification, index) => (
                 <div key={notification.id}>
-                  <div className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-lg group">
+                  <div className="flex items-start gap-3 p-3 hover:bg-accent rounded-lg group transition-colors">
                     <div className="flex-shrink-0 mt-0.5">
                       {getNotificationIcon(notification.type, notification.status)}
                     </div>
                     
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">
+                      <p className="text-sm font-medium text-foreground truncate">
                         {notification.payload?.title || `${notification.type} notification`}
                       </p>
-                      <p className="text-xs text-gray-500 truncate mt-1">
+                      <p className="text-xs text-muted-foreground truncate mt-1">
                         {notification.payload?.message || notification.payload?.description || 'No message content'}
                       </p>
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-muted-foreground/70 mt-1">
                         {formatDate(notification.sent_at)}
                       </p>
                     </div>

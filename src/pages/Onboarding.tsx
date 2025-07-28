@@ -104,16 +104,16 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
   const canProceed = validateStep();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl shadow-lg">
+    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+      <Card className="w-full max-w-2xl shadow-elevated border-0">
         <CardHeader>
-          <div className="flex items-center justify-between mb-4">
-            <CardTitle className="text-2xl font-bold text-gray-800">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+            <CardTitle className="text-xl sm:text-2xl font-bold text-foreground">
               Welcome to IDM Pakistan! Let's get to know you better.
             </CardTitle>
-            <span className="text-sm text-gray-500">Step {step} of {totalSteps}</span>
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Step {step} of {totalSteps}</span>
           </div>
-          <Progress value={progress} className="h-2" />
+          <Progress value={progress} className="h-3" />
         </CardHeader>
         
         <CardContent className="space-y-6">

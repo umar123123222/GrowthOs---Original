@@ -67,18 +67,18 @@ const Videos = ({ user }: VideosProps = {}) => {
     <RoleGuard allowedRoles={['student', 'admin', 'mentor', 'superadmin']}>
       <div className="space-y-6 animate-fade-in">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold mb-2">Available Lessons</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground">Available Lessons</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Watch lessons and complete assignments to track your progress
           </p>
         </div>
 
         {modules.length === 0 ? (
-          <Card className="shadow-lg">
+          <Card className="shadow-medium border-border/50">
             <CardContent className="p-8 text-center">
-              <div className="text-gray-500">
+              <div className="text-muted-foreground">
                 <Play className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <h3 className="text-lg font-medium mb-2">No Video Lessons Available</h3>
+                <h3 className="text-lg font-medium mb-2 text-foreground">No Video Lessons Available</h3>
                 <p>Check back later for new lessons or contact your instructor.</p>
               </div>
             </CardContent>
