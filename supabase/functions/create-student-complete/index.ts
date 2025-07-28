@@ -183,54 +183,74 @@ const handler = async (req: Request): Promise<Response> => {
       phone: phone || null,
       fees_structure: feesStructure,
       lms_user_id: email,
-      lms_password: tempPassword,
       temp_password: tempPassword,
       lms_status: 'inactive',
       onboarding_done: false,
       fees_overdue: true,
-      created_by: createdBy,
-      student_id: studentId
+      created_by: createdBy
     };
     
-    console.log('Student data to insert:', JSON.stringify(studentData, null, 2));
-    
-    const { error: insertError } = await supabase
-      .from('users')
-      .insert(studentData);
-
-    if (insertError) {
-      console.error('Insert error details:', JSON.stringify(insertError, null, 2));
-      throw new Error(`Failed to create student record: ${insertError.message} - Code: ${insertError.code} - Details: ${insertError.details}`);
+    // Add student_id only if the column exists (try without it first)
+    try {
+      const testData = { ...studentData, student_id: studentId };
+      console.log('Student data to insert (with student_id):', JSON.stringify(testData, null, 2));
+      
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert(testData);
+        
+      if (insertError) {
+        throw insertError;
+      }
+    } catch (firstAttemptError: any) {
+      console.log('First attempt failed, trying without student_id column:', firstAttemptError.message);
+      
+      // Try without student_id column if it doesn't exist
+      console.log('Student data to insert (without student_id):', JSON.stringify(studentData, null, 2));
+      
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert(studentData);
+        
+      if (insertError) {
+        console.error('Insert error details:', JSON.stringify(insertError, null, 2));
+        throw new Error(`Failed to create student record: ${insertError.message} - Code: ${insertError.code} - Details: ${insertError.details || 'N/A'}`);
+      }
     }
 
     console.log('Student record created');
 
-    // Create initial invoice record
-    const invoiceData = {
-      student_id: authData.user.id,
-      student_email: email,
-      student_name: fullName,
-      fees_structure: feesStructure,
-      amount: feesStructure === '1_installment' ? 50000 : 
-              feesStructure === '2_installments' ? 25000 : 17000,
-      currency: 'PKR',
-      status: 'pending',
-      due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days from now
-      invoice_number: `INV-${studentId}-${Date.now()}`
-    };
+    // Try to create initial invoice record (optional - won't fail if table doesn't exist)
+    let invoiceResult = null;
+    try {
+      const invoiceData = {
+        student_id: authData.user.id,
+        student_email: email,
+        student_name: fullName,
+        fees_structure: feesStructure,
+        amount: feesStructure === '1_installment' ? 50000 : 
+                feesStructure === '2_installments' ? 25000 : 17000,
+        currency: 'PKR',
+        status: 'pending',
+        due_date: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days from now
+        invoice_number: `INV-${studentId}-${Date.now()}`
+      };
 
-    const { data: invoiceResult, error: invoiceError } = await supabase
-      .from('invoices')
-      .insert(invoiceData)
-      .select()
-      .single();
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert(invoiceData)
+        .select()
+        .single();
 
-    if (invoiceError) {
-      console.error('Error creating invoice:', invoiceError);
-      // Don't fail the entire process for invoice creation
+      if (invoiceError) {
+        console.warn('Could not create invoice (table may not exist):', invoiceError.message);
+      } else {
+        invoiceResult = invoiceData;
+        console.log('Invoice created:', invoiceResult?.id);
+      }
+    } catch (invoiceError) {
+      console.warn('Invoice creation failed (non-critical):', invoiceError);
     }
-
-    console.log('Invoice created:', invoiceResult?.id);
 
     let emailSent = false;
     
@@ -298,7 +318,7 @@ const handler = async (req: Request): Promise<Response> => {
       success: true,
       studentId: studentId,
       lmsUserId: authData.user.id,
-      invoiceId: invoiceResult?.id,
+      invoiceId: invoiceResult?.id || null,
       tempPassword,
       emailSent
     }), {

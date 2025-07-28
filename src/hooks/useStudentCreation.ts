@@ -32,14 +32,15 @@ export const useStudentCreation = () => {
         body: studentData
       });
 
-      console.log('Response from create-student-complete:', data, error);
+      console.log('Raw response from edge function:', { data, error });
 
       if (error) {
-        console.error('Function invocation error:', error);
+        console.error('Function invocation error details:', error);
+        const errorMessage = error.message || JSON.stringify(error) || "Failed to create student";
         toast({
           variant: "destructive",
           title: "Error",
-          description: error.message || "Failed to create student"
+          description: `Edge Function Error: ${errorMessage}`
         });
         return false;
       }
