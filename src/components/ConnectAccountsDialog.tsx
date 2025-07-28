@@ -10,9 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Edit, Settings } from "lucide-react";
+import { Check, Edit, Settings, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { AskShopDomainDialog } from "./AskShopDomainDialog";
+import { StudentIntegrations, encryptToken } from "@/lib/student-integrations";
 
 interface ConnectAccountsDialogProps {
   open: boolean;
@@ -28,45 +29,178 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   const [editingMeta, setEditingMeta] = useState(false);
   const [editingShopify, setEditingShopify] = useState(false);
   const [metaKey, setMetaKey] = useState("");
-  const [shopifyKey, setShopifyKey] = useState("");
+  const [shopTokenInput, setShopTokenInput] = useState("");
+  const [askDomainOpen, setAskDomainOpen] = useState(false);
+  const [currentToken, setCurrentToken] = useState("");
+  const [integration, setIntegration] = useState<any>(null);
 
-  // Load existing credentials when dialog opens and reset editing states
+  // Load existing integration settings
   useEffect(() => {
-    const loadExistingCredentials = async () => {
+    const loadIntegrations = async () => {
       if (userId && open) {
         // Reset editing states and clear input fields when dialog opens
         setEditingMeta(false);
         setEditingShopify(false);
         setMetaKey("");
-        setShopifyKey("");
+        setShopTokenInput("");
         
         try {
-          const { data, error } = await supabase
-            .from('users')
-            .select('meta_ads_credentials, shopify_credentials')
-            .eq('id', userId)
-            .single();
-
-          if (error) throw error;
-
-          if (data?.meta_ads_credentials) {
-            setMetaConnected(true);
-          } else {
-            setMetaConnected(false);
-          }
-          if (data?.shopify_credentials) {
-            setShopifyConnected(true);
+          const integrationData = await StudentIntegrations.get(userId);
+          setIntegration(integrationData);
+          
+          if (integrationData) {
+            setShopifyConnected(integrationData.is_shopify_connected);
+            setMetaConnected(integrationData.is_meta_connected);
           } else {
             setShopifyConnected(false);
+            setMetaConnected(false);
           }
         } catch (error) {
-          console.error('Error loading existing credentials:', error);
+          console.error('Error loading integrations:', error);
         }
       }
     };
 
-    loadExistingCredentials();
+    loadIntegrations();
   }, [userId, open]);
+
+  const handleShopifyToken = async () => {
+    const token = shopTokenInput.trim();
+    
+    if (!token.startsWith('shpat_')) {
+      toast({
+        title: "Invalid Token",
+        description: "Please enter a valid Shopify API access token (starts with shpat_).",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!userId) {
+      toast({
+        title: "Error",
+        description: "User not authenticated. Please log in again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if user already has a shop domain
+    if (integration?.shop_domain) {
+      await completeShopifyConnection(token, integration.shop_domain);
+    } else {
+      // Need to ask for domain
+      setCurrentToken(token);
+      setAskDomainOpen(true);
+    }
+  };
+
+  const handleShopDomainSave = async (domain: string) => {
+    await completeShopifyConnection(currentToken, domain);
+    setCurrentToken("");
+  };
+
+  const completeShopifyConnection = async (token: string, domain: string) => {
+    try {
+      // Test the token by calling Shopify API
+      const response = await fetch(`https://${domain}/admin/api/2024-07/access_scopes.json`, {
+        headers: {
+          'X-Shopify-Access-Token': token
+        }
+      });
+
+      if (response.status === 401) {
+        toast({
+          title: "Invalid Token",
+          description: "The Shopify API token is invalid or expired.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (response.status === 403) {
+        toast({
+          title: "Missing Scopes",
+          description: "The token doesn't have required permissions.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!response.ok) {
+        toast({
+          title: "Connection Failed",
+          description: `Failed to connect to Shopify (${response.status}).`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Encrypt token and save
+      const encryptedToken = await encryptToken(token);
+      
+      await StudentIntegrations.upsert({
+        userId,
+        shopify_api_token: encryptedToken,
+        shop_domain: domain,
+        is_shopify_connected: true
+      });
+
+      setShopifyConnected(true);
+      setEditingShopify(false);
+      setShopTokenInput("");
+      
+      // Update navigation
+      if (onConnectionUpdate) {
+        onConnectionUpdate();
+      }
+      
+      // Call global checkIntegrations
+      if (window.checkIntegrations) {
+        window.checkIntegrations();
+      }
+      
+      toast({
+        title: "Shopify connected 🎉",
+        description: "Your Shopify store has been successfully connected.",
+      });
+      
+    } catch (error) {
+      console.error('Error connecting Shopify:', error);
+      toast({
+        title: "Connection Failed",
+        description: "Failed to connect Shopify account. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleShopifyDisconnect = async () => {
+    try {
+      await StudentIntegrations.disconnect(userId!, 'shopify');
+      setShopifyConnected(false);
+      
+      if (onConnectionUpdate) {
+        onConnectionUpdate();
+      }
+      
+      if (window.checkIntegrations) {
+        window.checkIntegrations();
+      }
+      
+      toast({
+        title: "Shopify Disconnected",
+        description: "Your Shopify store has been disconnected.",
+      });
+    } catch (error) {
+      console.error('Error disconnecting Shopify:', error);
+      toast({
+        title: "Error",
+        description: "Failed to disconnect Shopify. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleMetaConnect = async () => {
     if (!metaKey.trim()) {
@@ -88,20 +222,24 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
     }
 
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ meta_ads_credentials: metaKey })
-        .eq('id', userId);
-
-      if (error) throw error;
+      const encryptedToken = await encryptToken(metaKey);
+      
+      await StudentIntegrations.upsert({
+        userId,
+        meta_api_token: encryptedToken,
+        is_meta_connected: true
+      });
 
       setMetaConnected(true);
       setEditingMeta(false);
-      setMetaKey(""); // Clear the input for security
+      setMetaKey("");
       
-      // Trigger navigation update
       if (onConnectionUpdate) {
         onConnectionUpdate();
+      }
+      
+      if (window.checkIntegrations) {
+        window.checkIntegrations();
       }
       
       toast({
@@ -118,55 +256,6 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
     }
   };
 
-  const handleShopifyConnect = async () => {
-    if (!shopifyKey.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a valid Shopify API access token.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!userId) {
-      toast({
-        title: "Error",
-        description: "User not authenticated. Please log in again.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('users')
-        .update({ shopify_credentials: shopifyKey })
-        .eq('id', userId);
-
-      if (error) throw error;
-
-      setShopifyConnected(true);
-      setEditingShopify(false);
-      setShopifyKey("");
-      
-      // Call the connection update callback if provided
-      if (onConnectionUpdate) {
-        onConnectionUpdate();
-      }
-      
-      toast({
-        title: "Shopify connected 🎉",
-        description: "Your Shopify store has been successfully connected.",
-      });
-    } catch (error) {
-      console.error('Error connecting Shopify:', error);
-      toast({
-        title: "Connection Failed",
-        description: "Failed to connect Shopify account",
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -248,41 +337,59 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
               {(!shopifyConnected || editingShopify) && (
                 <>
                   <div>
-                    <Label htmlFor="shopify-key" className="text-xs">
+                    <Label htmlFor="shopify-token" className="text-xs">
                       Shopify API Access Token
                     </Label>
                     <Input
-                      id="shopify-key"
+                      id="shopify-token"
                       type="password"
-                      placeholder="Enter your Shopify API access token"
-                      value={shopifyKey}
-                      onChange={(e) => setShopifyKey(e.target.value)}
+                      placeholder="shpat_"
+                      value={shopTokenInput}
+                      onChange={(e) => setShopTokenInput(e.target.value)}
                     />
                   </div>
                   <Button 
-                    onClick={handleShopifyConnect} 
+                    onClick={handleShopifyToken} 
                     size="sm" 
                     className="w-full"
-                    disabled={!shopifyKey.trim()}
+                    disabled={!shopTokenInput.trim()}
                   >
                     {editingShopify ? "Update Connection" : "Connect Shopify"}
                   </Button>
                 </>
               )}
               {shopifyConnected && !editingShopify && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setEditingShopify(true)}
-                  className="w-full"
-                >
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit Connection
-                </Button>
+                <div className="space-y-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => setEditingShopify(true)}
+                    className="w-full"
+                  >
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit Connection
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleShopifyDisconnect}
+                    className="w-full text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Disconnect
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
         </div>
+
+        {/* Ask Shop Domain Dialog */}
+        <AskShopDomainDialog
+          open={askDomainOpen}
+          onOpenChange={setAskDomainOpen}
+          onDomainSave={handleShopDomainSave}
+        />
       </DialogContent>
     </Dialog>
   );

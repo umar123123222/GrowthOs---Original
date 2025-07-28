@@ -19,7 +19,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { getShopifyMetrics } from '@/lib/shopify-service';
+import { fetchShopifyMetrics } from '@/lib/student-integrations';
 
 const ShopifyDashboard = () => {
   const { toast } = useToast();
@@ -53,8 +53,8 @@ const ShopifyDashboard = () => {
         return;
       }
 
-      // Use the new Shopify service to get metrics
-      const result = await getShopifyMetrics(user.id);
+      // Use the new server function to get metrics
+      const result = await fetchShopifyMetrics(user.id);
       
       if (!result.connected) {
         setConnectionStatus('disconnected');
