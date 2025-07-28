@@ -230,13 +230,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "session_recordings_batch_id_fkey"
-            columns: ["batch_id"]
-            isOneToOne: false
-            referencedRelation: "batches"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "session_recordings_Last Assignment Completed?_fkey"
             columns: ["last_assignment_completed"]
             isOneToOne: false
@@ -280,41 +273,6 @@ export type Database = {
         }
         Relationships: []
       }
-      batches: {
-        Row: {
-          created_at: string | null
-          end_date: string | null
-          id: string
-          name: number
-          start_date: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          end_date?: string | null
-          id?: string
-          name: number
-          start_date?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          end_date?: string | null
-          id?: string
-          name?: number
-          start_date?: string | null
-          tenant_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "batches_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       certificates: {
         Row: {
           certificate_url: string
@@ -344,13 +302,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "certificates_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "certificates_user_id_fkey"
             columns: ["user_id"]
@@ -658,15 +609,7 @@ export type Database = {
           tenant_id?: string | null
           title?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "modules_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -807,13 +750,6 @@ export type Database = {
             columns: ["mentor_id"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "pods_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -1040,44 +976,66 @@ export type Database = {
           created_by: string | null
           description: string | null
           end_time: string | null
+          host_login_email: string | null
+          host_login_pwd: string | null
           id: string
           link: string
+          mentor_id: string | null
           mentor_name: string | null
           schedule_date: string | null
           start_time: string
           status: string | null
           title: string
+          zoom_meeting_id: string | null
+          zoom_passcode: string | null
         }
         Insert: {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           end_time?: string | null
+          host_login_email?: string | null
+          host_login_pwd?: string | null
           id?: string
           link: string
+          mentor_id?: string | null
           mentor_name?: string | null
           schedule_date?: string | null
           start_time: string
           status?: string | null
           title: string
+          zoom_meeting_id?: string | null
+          zoom_passcode?: string | null
         }
         Update: {
           created_at?: string | null
           created_by?: string | null
           description?: string | null
           end_time?: string | null
+          host_login_email?: string | null
+          host_login_pwd?: string | null
           id?: string
           link?: string
+          mentor_id?: string | null
           mentor_name?: string | null
           schedule_date?: string | null
           start_time?: string
           status?: string | null
           title?: string
+          zoom_meeting_id?: string | null
+          zoom_passcode?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "live_sessions_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "success_sessions_mentor_id_fkey"
+            columns: ["mentor_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -1130,24 +1088,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      tenants: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: []
       }
       ticket_replies: {
         Row: {
@@ -1483,13 +1423,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "users_batch_id_fkey"
-            columns: ["batch_id"]
-            isOneToOne: false
-            referencedRelation: "batches"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "users_course_track_id_fkey"
             columns: ["course_track_id"]
             isOneToOne: false
@@ -1510,13 +1443,6 @@ export type Database = {
             referencedRelation: "pods"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "users_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
         ]
       }
     }
@@ -1533,6 +1459,21 @@ export type Database = {
           p_metadata?: Json
         }
         Returns: string
+      }
+      create_student_atomic: {
+        Args: {
+          p_full_name: string
+          p_email: string
+          p_phone: string
+          p_installments: number
+          p_company_id?: string
+          p_course_id?: string
+        }
+        Returns: Json
+      }
+      delete_student_atomic: {
+        Args: { p_user_id: string }
+        Returns: Json
       }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
