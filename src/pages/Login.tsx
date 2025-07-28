@@ -150,7 +150,7 @@ const Login = () => {
       {/* Grid pattern overlay */}
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJtIDEwIDAgbCAwIDEwIG0gMCAwIGwgMTAgMCBtIDAgMTAgbCAxMCAwIG0gMTAgMCBsIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
       
-      <Card className="w-full max-w-md relative z-10 shadow-2xl border-0 bg-white/95 backdrop-blur-xl overflow-hidden animate-fade-in">
+      <Card className="w-full max-w-lg relative z-10 shadow-2xl border-0 bg-white/95 backdrop-blur-xl overflow-hidden animate-fade-in">
         {/* Decorative header gradient */}
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500"></div>
         
@@ -254,26 +254,17 @@ const Login = () => {
                 <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">New to Growth OS?</span>
+                <span className="px-4 bg-white text-gray-500">
+                  <a 
+                    href="https://enrollment.growthOS.com" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="bg-gradient-to-br from-blue-900 via-blue-700 to-emerald-600 text-white px-6 py-2 rounded-lg hover:opacity-90 transition-all duration-200 font-medium"
+                  >
+                    Enroll Now
+                  </a>
+                </span>
               </div>
-            </div>
-            
-            <div className="mt-4">
-              <Button
-                variant="outline"
-                className="w-full h-10 border-2 border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200 rounded-lg group"
-                onClick={() => {
-                  toast({
-                    title: "Contact Your Mentor",
-                    description: "Please reach out to your assigned mentor for account setup assistance.",
-                  });
-                }}
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-600 group-hover:text-blue-600 transition-colors">Contact your mentor</span>
-                  <ArrowRight className="w-3 h-3 text-gray-400 group-hover:text-blue-500 group-hover:translate-x-1 transition-all duration-200" />
-                </div>
-              </Button>
             </div>
           </div>
         </CardContent>
