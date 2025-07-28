@@ -103,15 +103,6 @@ export default function MentorDashboard() {
             <h1 className="text-3xl font-bold text-purple-900">🧑‍🏫 Mentor Hub</h1>
             <p className="text-muted-foreground">Guide, support, and nurture your students' growth</p>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm">
-              <Calendar className="w-4 h-4 mr-2" />
-              Schedule Session
-            </Button>
-            <Badge variant="secondary" className="text-sm bg-purple-100 text-purple-800">
-              {assignedStudents.length} Students Under Guidance
-            </Badge>
-          </div>
         </div>
 
         <div className="space-y-6">
