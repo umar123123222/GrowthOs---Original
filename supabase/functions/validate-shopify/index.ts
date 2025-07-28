@@ -24,15 +24,23 @@ serve(async (req) => {
       )
     }
 
-    // Validate Shopify connection by calling shop.json endpoint
-    const shopifyApiUrl = `https://${shopifyDomain}/admin/api/2024-07/shop.json`
+    // Handle custom domains - Admin API always uses myshopify.com format
+    let adminDomain = shopifyDomain;
+    if (!shopifyDomain.includes('myshopify.com')) {
+      // For custom domains, we need to try the API endpoint directly
+      // If it fails, we'll ask the user for their myshopify.com domain
+      adminDomain = shopifyDomain;
+    }
+
+    // Try to validate using the provided domain first
+    let shopifyApiUrl = `https://${adminDomain}/admin/api/2024-07/shop.json`;
     
     const response = await fetch(shopifyApiUrl, {
       headers: {
         'X-Shopify-Access-Token': apiKey,
         'Content-Type': 'application/json',
       },
-    })
+    });
 
     if (!response.ok) {
       return new Response(

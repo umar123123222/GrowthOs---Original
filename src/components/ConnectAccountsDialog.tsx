@@ -284,9 +284,30 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
                       onChange={(e) => setShopifyDomain(e.target.value.trim())}
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Enter your Shopify domain (custom domain like elyscents.pk or your-store.myshopify.com)
+                      For custom domains like elyscents.pk, please also provide your myshopify.com domain below
                     </p>
                   </div>
+                  {shopifyDomain && !shopifyDomain.includes('myshopify.com') && (
+                    <div>
+                      <Label htmlFor="myshopify-domain" className="text-xs">
+                        Your myshopify.com Domain (Required for API)
+                      </Label>
+                      <Input
+                        id="myshopify-domain"
+                        placeholder="your-store.myshopify.com"
+                        value=""
+                        onChange={(e) => {
+                          const myshopifyDomain = e.target.value.trim();
+                          if (myshopifyDomain.includes('myshopify.com')) {
+                            setShopifyDomain(myshopifyDomain);
+                          }
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Even with custom domains, Shopify's API requires your myshopify.com domain
+                      </p>
+                    </div>
+                  )}
                   <div>
                     <Label htmlFor="shopify-key" className="text-xs">
                       Shopify API Access Token
