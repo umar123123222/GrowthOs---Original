@@ -1,1 +1,26 @@
 project_id = "majqoqagohicjigmsilu"
+
+[auth]
+enabled = true
+site_url = "https://majqoqagohicjigmsilu.lovable.app"
+additional_redirect_urls = ["https://lovable.dev"]
+jwt_expiry = 3600
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = false
+
+[auth.sms]
+enable_signup = false
+
+[edge_functions]
+enabled = true
+
+[[edge_functions.clustered]]
+
+[functions.invoice-scheduler]
+verify_jwt = false
+
+[analytics]
+enabled = false
