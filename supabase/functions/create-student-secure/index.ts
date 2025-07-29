@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -219,11 +220,25 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Starting email sending process...');
     
     try {
-      const resendApiKey = Deno.env.get('RESEND_API_KEY');
-      console.log('RESEND_API_KEY configured:', !!resendApiKey);
+      // Check SMTP configuration
+      const smtpHost = Deno.env.get('SMTP_HOST');
+      const smtpPort = Deno.env.get('SMTP_PORT');
+      const smtpUser = Deno.env.get('SMTP_USER');
+      const smtpPassword = Deno.env.get('SMTP_PASSWORD');
+      const smtpFromEmail = Deno.env.get('SMTP_LMS_FROM_EMAIL') || Deno.env.get('SMTP_FROM_EMAIL');
+      const smtpFromName = Deno.env.get('SMTP_LMS_FROM_NAME') || Deno.env.get('SMTP_FROM_NAME');
       
-      if (resendApiKey) {
-        console.log('Attempting to send welcome email to:', email);
+      console.log('SMTP configuration check:', {
+        host: !!smtpHost,
+        port: !!smtpPort,
+        user: !!smtpUser,
+        password: !!smtpPassword,
+        fromEmail: !!smtpFromEmail,
+        fromName: !!smtpFromName
+      });
+      
+      if (smtpHost && smtpPort && smtpUser && smtpPassword && smtpFromEmail) {
+        console.log('Attempting to send welcome email via SMTP to:', email);
         
         const emailHtml = `
           <!DOCTYPE html>
@@ -267,29 +282,34 @@ const handler = async (req: Request): Promise<Response> => {
           </html>
         `;
         
-        const emailResponse = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${resendApiKey}`,
+        // Initialize SMTP client
+        const client = new SMTPClient({
+          connection: {
+            hostname: smtpHost,
+            port: parseInt(smtpPort),
+            tls: parseInt(smtpPort) === 465, // Use TLS for port 465, STARTTLS for others
+            auth: {
+              username: smtpUser,
+              password: smtpPassword,
+            },
           },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: [email],
-            subject: `Welcome to ${companyName} - Your Login Credentials`,
-            html: emailHtml,
-          }),
         });
         
-        emailSent = emailResponse.ok;
-        if (emailSent) {
-          console.log('Email sent successfully to:', email);
-        } else {
-          const errorText = await emailResponse.text();
-          console.error('Email sending failed with status:', emailResponse.status, 'Response:', errorText);
-        }
+        // Send email
+        await client.send({
+          from: smtpFromName ? `${smtpFromName} <${smtpFromEmail}>` : smtpFromEmail,
+          to: email,
+          subject: `Welcome to ${companyName} - Your Login Credentials`,
+          content: emailHtml,
+          html: emailHtml,
+        });
+        
+        await client.close();
+        
+        emailSent = true;
+        console.log('Email sent successfully via SMTP to:', email);
       } else {
-        console.log('RESEND_API_KEY not configured, email sending skipped');
+        console.log('SMTP configuration incomplete, email sending skipped');
       }
     } catch (emailError) {
       console.error('Email sending error (non-blocking):', emailError);
@@ -328,8 +348,8 @@ const handler = async (req: Request): Promise<Response> => {
       } else {
         console.log('Installment records created successfully');
         
-        // Try to send first invoice email if RESEND is configured
-        if (resendApiKey) {
+        // Try to send first invoice email if SMTP is configured
+        if (smtpHost && smtpPort && smtpUser && smtpPassword && smtpFromEmail) {
           try {
             console.log('Sending first invoice email...');
             
