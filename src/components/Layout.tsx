@@ -255,12 +255,12 @@ const Layout = memo(({ user }: LayoutProps) => {
                 {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
               </Button>
               <img 
-                src="/lovable-uploads/27419a93-c883-4326-ad0d-da831b3cc534.png" 
-                alt="Growth OS" 
+                src="/lovable-uploads/3a76ecf9-6551-4196-bc8c-6d43477753df.png" 
+                alt="CORE47.AI" 
                 className="h-8 w-auto"
                 loading="lazy"
               />
-              <h1 className="text-xl font-bold text-gray-900">Growth OS</h1>
+              <h1 className="text-xl font-bold text-gray-900">CORE47.AI</h1>
             </div>
             
             <div className="flex items-center space-x-4">

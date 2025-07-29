@@ -150,7 +150,7 @@ const Login = () => {
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
               <div className="relative bg-white p-3 rounded-2xl shadow-lg">
-                <img src="/lovable-uploads/27419a93-c883-4326-ad0d-da831b3cc534.png" alt="Growth OS Logo" className="h-12 w-auto" />
+                <img src="/lovable-uploads/3a76ecf9-6551-4196-bc8c-6d43477753df.png" alt="CORE47.AI Logo" className="h-12 w-auto" />
               </div>
             </div>
           </div>
