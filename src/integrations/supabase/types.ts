@@ -314,12 +314,14 @@ export type Database = {
       company_settings: {
         Row: {
           address: string
+          company_email: string | null
           company_logo: string | null
           company_name: string
           contact_email: string
           created_at: string | null
           currency: string
           id: number
+          installment_plans: string[] | null
           invoice_notes: string | null
           invoice_overdue_days: number
           invoice_send_gap_days: number
@@ -331,12 +333,14 @@ export type Database = {
         }
         Insert: {
           address?: string
+          company_email?: string | null
           company_logo?: string | null
           company_name?: string
           contact_email?: string
           created_at?: string | null
           currency?: string
           id?: number
+          installment_plans?: string[] | null
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
@@ -348,12 +352,14 @@ export type Database = {
         }
         Update: {
           address?: string
+          company_email?: string | null
           company_logo?: string | null
           company_name?: string
           contact_email?: string
           created_at?: string | null
           currency?: string
           id?: number
+          installment_plans?: string[] | null
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
@@ -1298,6 +1304,7 @@ export type Database = {
           biggest_blocker: string | null
           course_track_id: string | null
           created_at: string | null
+          created_by: string | null
           email: string
           fees_due_date: string | null
           fees_overdue: boolean | null
@@ -1341,6 +1348,7 @@ export type Database = {
           biggest_blocker?: string | null
           course_track_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           email: string
           fees_due_date?: string | null
           fees_overdue?: boolean | null
@@ -1384,6 +1392,7 @@ export type Database = {
           biggest_blocker?: string | null
           course_track_id?: string | null
           created_at?: string | null
+          created_by?: string | null
           email?: string
           fees_due_date?: string | null
           fees_overdue?: boolean | null
