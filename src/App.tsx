@@ -9,6 +9,7 @@ import { initializeGlobalIntegrations } from "./lib/global-integrations";
 import { initPerformanceMonitoring } from "./lib/performance";
 import { PaywallModal } from "./components/PaywallModal";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { DynamicFavicon } from "./components/DynamicFavicon";
 import { supabase } from "@/integrations/supabase/client";
 
 // Lazy load components for better performance
@@ -122,6 +123,7 @@ const App = () => {
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <DynamicFavicon />
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
               <Routes>

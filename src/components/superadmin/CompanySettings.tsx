@@ -10,6 +10,8 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Building2, Phone, Mail, DollarSign, Settings, Upload, FileText, Calendar, Server, Shield, HelpCircle, Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { LogoUploadSection } from '@/components/LogoUploadSection';
+import { getLogoUrl } from '@/utils/logoUtils';
 
 interface QuestionItem {
   id: string;
@@ -46,6 +48,14 @@ interface CompanySettingsData {
   // Student Sign-in & Questionnaire
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
+  // Branding
+  branding?: {
+    logo?: {
+      original?: string;
+      favicon?: string;
+      header?: string;
+    };
+  };
 }
 
 export function CompanySettings() {
@@ -184,6 +194,11 @@ export function CompanySettings() {
     }
   };
 
+  // Logo update handler
+  const handleLogoUpdate = (branding: any) => {
+    setSettings(prev => ({ ...prev, branding }));
+  };
+
   // Questionnaire management functions
   const generateQuestionId = () => `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -291,6 +306,14 @@ export function CompanySettings() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Logo Upload Section */}
+        <div className="lg:col-span-2">
+          <LogoUploadSection 
+            currentLogo={getLogoUrl(settings.branding, 'header')}
+            onLogoUpdate={handleLogoUpdate}
+          />
+        </div>
+
         {/* Company Information */}
         <Card>
           <CardHeader>
@@ -308,57 +331,6 @@ export function CompanySettings() {
                 onChange={(e) => handleInputChange('company_name', e.target.value)}
                 placeholder="Enter company name"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="company_logo">Company Logo</Label>
-              <div className="flex items-center gap-3">
-                <Input
-                  id="company_logo"
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        handleInputChange('company_logo', event.target?.result as string);
-                      };
-                      reader.readAsDataURL(file);
-                    }
-                  }}
-                  className="hidden"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('company_logo')?.click()}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload Logo
-                </Button>
-                {settings.company_logo && (
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={settings.company_logo}
-                      alt="Company logo preview"
-                      className="h-10 w-10 object-contain border rounded"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleInputChange('company_logo', '')}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Upload your company logo (PNG, JPG, GIF)
-              </p>
             </div>
 
             <div className="space-y-2">
