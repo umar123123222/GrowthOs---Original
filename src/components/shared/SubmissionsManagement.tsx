@@ -83,10 +83,6 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
             assignment_title,
             assignment_description
           ),
-          mentor:users!assignment_submissions_reviewed_by_fkey (
-            full_name,
-            email
-          ),
           reviewer:users!assignment_submissions_reviewed_by_fkey (
             full_name,
             email
