@@ -17,6 +17,7 @@ interface Assignment {
   assignment_description: string;
   due_date: string;
   due_days_after_unlock: number;
+  mentor_id?: string;
 }
 
 interface User {
@@ -51,7 +52,7 @@ export function AssignmentsManagement() {
     try {
       const { data, error } = await supabase
         .from('assignment')
-        .select('*')
+        .select('assignment_id, assignment_title, assignment_description, due_date, due_days_after_unlock, mentor_id, created_at')
         .order('created_at');
 
       if (error) throw error;
@@ -96,7 +97,8 @@ export function AssignmentsManagement() {
           .update({
             assignment_title: formData.assignment_title,
             assignment_description: formData.assignment_description,
-            due_days_after_unlock: formData.due_days_after_unlock
+            due_days_after_unlock: formData.due_days_after_unlock,
+            mentor_id: formData.assigned_to || null
           })
           .eq('assignment_id', editingAssignment.assignment_id);
 
@@ -113,6 +115,7 @@ export function AssignmentsManagement() {
             assignment_title: formData.assignment_title,
             assignment_description: formData.assignment_description,
             due_days_after_unlock: formData.due_days_after_unlock,
+            mentor_id: formData.assigned_to || null,
             sequence_order: 1,
             created_at: new Date().toISOString()
           });
@@ -149,7 +152,7 @@ export function AssignmentsManagement() {
     setFormData({
       assignment_title: assignment.assignment_title,
       assignment_description: assignment.assignment_description,
-      assigned_to: '',
+      assigned_to: assignment.mentor_id || '',
       submission_type: 'file',
       due_days_after_unlock: assignment.due_days_after_unlock || 2
     });
