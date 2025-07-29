@@ -11,13 +11,11 @@ import { Switch } from '@/components/ui/switch';
 import { Building2, Phone, Mail, DollarSign, Settings, Upload, FileText, Calendar, Server, Shield, HelpCircle, Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
+import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
 import { getLogoUrl } from '@/utils/logoUtils';
 
-interface QuestionItem {
-  id: string;
-  text: string;
-  order: number;
-}
+// Import types from the new questionnaire module
+import { QuestionItem, validateQuestionnaireStructure } from '@/types/questionnaire';
 
 interface CompanySettingsData {
   id?: string;
@@ -105,11 +103,9 @@ export function CompanySettings() {
     questionnaire: []
   });
 
-  // Questionnaire management state
-  const [newQuestion, setNewQuestion] = useState('');
+  // State for editing questions
   const [isAddingQuestion, setIsAddingQuestion] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null);
-  const [editQuestionText, setEditQuestionText] = useState('');
 
   useEffect(() => {
     fetchCompanySettings();
@@ -200,57 +196,31 @@ export function CompanySettings() {
   };
 
   // Questionnaire management functions
-  const generateQuestionId = () => `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-  const addQuestion = () => {
-    if (!newQuestion.trim() || newQuestion.length > 200) {
+  const handleQuestionSave = (question: QuestionItem) => {
+    const existingIndex = settings.questionnaire.findIndex(q => q.id === question.id);
+    
+    if (existingIndex >= 0) {
+      // Update existing question
+      const updatedQuestionnaire = [...settings.questionnaire];
+      updatedQuestionnaire[existingIndex] = question;
+      setSettings(prev => ({ ...prev, questionnaire: updatedQuestionnaire }));
+      setEditingQuestion(null);
+      
       toast({
-        title: 'Invalid Question',
-        description: 'Question text is required and must be 200 characters or less.',
-        variant: 'destructive'
+        title: 'Question Updated',
+        description: 'Question has been updated successfully.'
       });
-      return;
-    }
-
-    const newQuestionItem: QuestionItem = {
-      id: generateQuestionId(),
-      text: newQuestion.trim(),
-      order: settings.questionnaire.length + 1
-    };
-
-    const updatedQuestionnaire = [...settings.questionnaire, newQuestionItem];
-    setSettings(prev => ({ ...prev, questionnaire: updatedQuestionnaire }));
-    setNewQuestion('');
-    setIsAddingQuestion(false);
-    
-    toast({
-      title: 'Question Added',
-      description: 'New question has been added to the questionnaire.'
-    });
-  };
-
-  const updateQuestion = (questionId: string) => {
-    if (!editQuestionText.trim() || editQuestionText.length > 200) {
+    } else {
+      // Add new question
+      const updatedQuestionnaire = [...settings.questionnaire, question];
+      setSettings(prev => ({ ...prev, questionnaire: updatedQuestionnaire }));
+      setIsAddingQuestion(false);
+      
       toast({
-        title: 'Invalid Question',
-        description: 'Question text is required and must be 200 characters or less.',
-        variant: 'destructive'
+        title: 'Question Added',
+        description: 'New question has been added to the questionnaire.'
       });
-      return;
     }
-
-    const updatedQuestionnaire = settings.questionnaire.map(q => 
-      q.id === questionId ? { ...q, text: editQuestionText.trim() } : q
-    );
-    
-    setSettings(prev => ({ ...prev, questionnaire: updatedQuestionnaire }));
-    setEditingQuestion(null);
-    setEditQuestionText('');
-    
-    toast({
-      title: 'Question Updated',
-      description: 'Question has been updated successfully.'
-    });
   };
 
   const deleteQuestion = (questionId: string) => {
@@ -259,6 +229,7 @@ export function CompanySettings() {
       .map((q, index) => ({ ...q, order: index + 1 })); // Reorder after deletion
     
     setSettings(prev => ({ ...prev, questionnaire: updatedQuestionnaire }));
+    setEditingQuestion(null);
     
     toast({
       title: 'Question Deleted',
@@ -620,157 +591,108 @@ export function CompanySettings() {
                   {/* Question List */}
                   <div className="space-y-3">
                     {settings.questionnaire.length === 0 ? (
-                      <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-muted rounded-lg">
-                        <HelpCircle className="mx-auto h-8 w-8 mb-2" />
-                        <p>No questions added yet</p>
-                        <p className="text-sm">Add your first question below</p>
-                      </div>
+                      <p className="text-sm text-muted-foreground py-4 text-center">
+                        No questions added yet. Click "Add Question" to get started.
+                      </p>
                     ) : (
                       settings.questionnaire
                         .sort((a, b) => a.order - b.order)
                         .map((question, index) => (
-                          <div
-                            key={question.id}
-                            className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50"
-                          >
-                            {/* Drag handle */}
-                            <div className="flex flex-col gap-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                disabled={index === 0}
-                                onClick={() => moveQuestion(question.id, 'up')}
-                                className="h-4 w-4 p-0 hover:bg-muted"
-                              >
-                                <GripVertical className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                disabled={index === settings.questionnaire.length - 1}
-                                onClick={() => moveQuestion(question.id, 'down')}
-                                className="h-4 w-4 p-0 hover:bg-muted"
-                              >
-                                <GripVertical className="h-3 w-3" />
-                              </Button>
-                            </div>
-
-                            {/* Question content */}
-                            <div className="flex-1 min-w-0">
-                              {editingQuestion === question.id ? (
-                                <div className="flex gap-2">
-                                  <Input
-                                    value={editQuestionText}
-                                    onChange={(e) => setEditQuestionText(e.target.value)}
-                                    placeholder="Enter question text..."
-                                    maxLength={200}
-                                    className="flex-1"
-                                  />
+                          <div key={question.id} className="space-y-2">
+                            {editingQuestion === question.id ? (
+                              <QuestionEditor
+                                question={question}
+                                onSave={handleQuestionSave}
+                                onCancel={() => setEditingQuestion(null)}
+                                nextOrder={settings.questionnaire.length + 1}
+                              />
+                            ) : (
+                              <div className="flex items-start gap-3 p-4 border border-border rounded-lg bg-card">
+                                {/* Reorder buttons */}
+                                <div className="flex flex-col gap-1">
                                   <Button
                                     type="button"
+                                    variant="ghost"
                                     size="sm"
-                                    onClick={() => updateQuestion(question.id)}
+                                    disabled={index === 0}
+                                    onClick={() => moveQuestion(question.id, 'up')}
+                                    className="h-4 w-4 p-0 hover:bg-muted"
                                   >
-                                    Save
+                                    <GripVertical className="h-3 w-3" />
                                   </Button>
                                   <Button
                                     type="button"
-                                    variant="outline"
+                                    variant="ghost"
                                     size="sm"
-                                    onClick={() => {
-                                      setEditingQuestion(null);
-                                      setEditQuestionText('');
-                                    }}
+                                    disabled={index === settings.questionnaire.length - 1}
+                                    onClick={() => moveQuestion(question.id, 'down')}
+                                    className="h-4 w-4 p-0 hover:bg-muted"
                                   >
-                                    Cancel
+                                    <GripVertical className="h-3 w-3" />
                                   </Button>
                                 </div>
-                              ) : (
-                                <div>
+
+                                {/* Question content */}
+                                <div className="flex-1 min-w-0 space-y-1">
                                   <p className="text-sm font-medium">
                                     {index + 1}. {question.text}
+                                    {question.required && <span className="text-destructive ml-1">*</span>}
                                   </p>
                                   <p className="text-xs text-muted-foreground">
-                                    {question.text.length}/200 characters
+                                    Type: {question.answerType}
+                                    {question.options && question.options.length > 0 && 
+                                      ` • ${question.options.length} option${question.options.length !== 1 ? 's' : ''}`
+                                    }
                                   </p>
                                 </div>
-                              )}
-                            </div>
 
-                            {/* Action buttons */}
-                            {editingQuestion !== question.id && (
-                              <div className="flex gap-1">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    setEditingQuestion(question.id);
-                                    setEditQuestionText(question.text);
-                                  }}
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <Edit3 className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteQuestion(question.id)}
-                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                {/* Action buttons */}
+                                <div className="flex gap-1">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setEditingQuestion(question.id)}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <Edit3 className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteQuestion(question.id)}
+                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </div>
                             )}
                           </div>
                         ))
                     )}
-                  </div>
 
-                  {/* Add New Question */}
-                  <div className="space-y-3">
-                    {isAddingQuestion ? (
-                      <div className="flex gap-2">
-                        <Input
-                          value={newQuestion}
-                          onChange={(e) => setNewQuestion(e.target.value)}
-                          placeholder="Enter new question text..."
-                          maxLength={200}
-                          className="flex-1"
-                        />
-                        <Button type="button" onClick={addQuestion}>
-                          Save
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => {
-                            setIsAddingQuestion(false);
-                            setNewQuestion('');
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    ) : (
+                    {/* Add New Question */}
+                    {isAddingQuestion && (
+                      <QuestionEditor
+                        onSave={handleQuestionSave}
+                        onCancel={() => setIsAddingQuestion(false)}
+                        nextOrder={settings.questionnaire.length + 1}
+                      />
+                    )}
+
+                    {/* Add Question Button */}
+                    {!isAddingQuestion && (
                       <Button
                         type="button"
                         variant="outline"
                         onClick={() => setIsAddingQuestion(true)}
-                        className="flex items-center gap-2"
+                        className="w-full border-dashed"
                       >
-                        <Plus className="h-4 w-4" />
+                        <Plus className="mr-2 h-4 w-4" />
                         Add Question
                       </Button>
-                    )}
-                    
-                    {isAddingQuestion && (
-                      <p className="text-xs text-muted-foreground">
-                        {newQuestion.length}/200 characters
-                      </p>
                     )}
                   </div>
                 </div>
