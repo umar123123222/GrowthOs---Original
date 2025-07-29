@@ -3,49 +3,86 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense, lazy } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { initializeGlobalIntegrations } from "./lib/global-integrations";
+import { initPerformanceMonitoring } from "./lib/performance";
 import { PaywallModal } from "./components/PaywallModal";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 import { supabase } from "@/integrations/supabase/client";
-import Login from "./pages/Login";
-import Onboarding from "./pages/Onboarding";
-import Dashboard from "./pages/Dashboard";
-import AdminDashboard from "./pages/AdminDashboard";
-import MentorDashboard from "./pages/MentorDashboard";
-import SuperadminDashboard from "./pages/SuperadminDashboard";
-import EnrollmentManagerDashboard from "./pages/EnrollmentManagerDashboard";
-import Videos from "./pages/Videos";
-import VideoPlayer from "./pages/VideoPlayer";
-import Assignments from "./pages/Assignments";
-import Leaderboard from "./pages/Leaderboard";
-import Profile from "./pages/Profile";
-import Notifications from "./pages/Notifications";
-import LiveSessions from "./pages/LiveSessions";
-import Mentorship from "./pages/Mentorship";
-import Messages from "./pages/Messages";
-import Teams from "./pages/Teams";
-import StudentsManagement from "./pages/StudentsManagement";
-import Layout from "./components/Layout";
-import Support from "./pages/Support";
-import Connect from "./pages/Connect";
-import ShopifyDashboard from "./pages/ShopifyDashboard";
-import MetaAdsDashboard from "./pages/MetaAdsDashboard";
-import MentorSessionsPage from "./pages/MentorSessionsPage";
 
-const queryClient = new QueryClient();
+// Lazy load components for better performance
+const Login = lazy(() => import("./pages/Login"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const MentorDashboard = lazy(() => import("./pages/MentorDashboard"));
+const SuperadminDashboard = lazy(() => import("./pages/SuperadminDashboard"));
+const EnrollmentManagerDashboard = lazy(() => import("./pages/EnrollmentManagerDashboard"));
+const Videos = lazy(() => import("./pages/Videos"));
+const VideoPlayer = lazy(() => import("./pages/VideoPlayer"));
+const Assignments = lazy(() => import("./pages/Assignments"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+const Profile = lazy(() => import("./pages/Profile"));
+const Notifications = lazy(() => import("./pages/Notifications"));
+const LiveSessions = lazy(() => import("./pages/LiveSessions"));
+const Mentorship = lazy(() => import("./pages/Mentorship"));
+const Messages = lazy(() => import("./pages/Messages"));
+const Teams = lazy(() => import("./pages/Teams"));
+const StudentsManagement = lazy(() => import("./pages/StudentsManagement"));
+const Layout = lazy(() => import("./components/Layout"));
+const Support = lazy(() => import("./pages/Support"));
+const Connect = lazy(() => import("./pages/Connect"));
+const ShopifyDashboard = lazy(() => import("./pages/ShopifyDashboard"));
+const MetaAdsDashboard = lazy(() => import("./pages/MetaAdsDashboard"));
+const MentorSessionsPage = lazy(() => import("./pages/MentorSessionsPage"));
+
+// Loading component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="text-center">
+      <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-gray-600">Loading...</p>
+    </div>
+  </div>
+);
+
+// Optimized React Query configuration
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (formerly cacheTime)
+      retry: (failureCount, error: any) => {
+        // Don't retry on 4xx errors
+        if (error?.status >= 400 && error?.status < 500) {
+          return false;
+        }
+        return failureCount < 3;
+      },
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: true,
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
 const App = () => {
   const { user, loading } = useAuth();
   const [showPaywall, setShowPaywall] = useState(false);
   const [pendingInvoice, setPendingInvoice] = useState<any>(null);
 
-  // Initialize global integrations when user is loaded
+  // Initialize global integrations and performance monitoring when user is loaded
   useEffect(() => {
     if (user?.id) {
       initializeGlobalIntegrations(user.id);
       checkPaymentStatus();
     }
+    
+    // Initialize performance monitoring once
+    initPerformanceMonitoring();
   }, [user?.id]);
 
   const checkPaymentStatus = async () => {
@@ -79,75 +116,79 @@ const App = () => {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {!user ? (
-              <Route path="*" element={<Login />} />
-            ) : user?.role === 'student' && !user?.onboarding_done ? (
-              <Route path="*" element={
-                <Onboarding 
-                  user={user} 
-                  onComplete={() => {
-                    // Onboarding completion will be handled by the hook
-                    window.location.reload();
-                  }} 
-                />
-              } />
-            ) : (
-              <Route path="/" element={<Layout user={user} />}>
-                {/* Role-based dashboard routing */}
-                <Route index element={
-                  user.role === 'admin' ? <AdminDashboard /> :
-                  user.role === 'mentor' ? <MentorDashboard /> :
-                  user.role === 'superadmin' ? <SuperadminDashboard /> :
-                  user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
-                  <Dashboard user={user} />
-                } />
-                
-                {/* Shared routes */}
-                <Route path="videos" element={<Videos user={user} />} />
-                <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
-                <Route path="video-player" element={<VideoPlayer />} />
-                <Route path="assignments" element={<Assignments user={user} />} />
-                <Route path="leaderboard" element={<Leaderboard />} />
-                <Route path="live-sessions" element={<LiveSessions user={user} />} />
-                <Route path="mentorship" element={<Mentorship />} />
-                <Route path="messages" element={<Messages />} />
-                <Route path="support" element={<Support />} />
-                <Route path="connect" element={<Connect />} />
-                <Route path="profile" element={<Profile />} />
-                <Route path="notifications" element={<Notifications />} />
-                <Route path="teams" element={<Teams />} />
-                <Route path="students" element={<StudentsManagement />} />
-                <Route path="shopify-dashboard" element={<ShopifyDashboard />} />
-                <Route path="meta-ads-dashboard" element={<MetaAdsDashboard />} />
-                
-                {/* Role-specific routes */}
-                <Route path="admin" element={<AdminDashboard />} />
-                <Route path="mentor" element={<MentorDashboard />} />
-                <Route path="mentor/sessions" element={<MentorSessionsPage />} />
-                <Route path="superadmin" element={<SuperadminDashboard />} />
-                <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
-                
-                <Route path="*" element={<Navigate to="/" />} />
-              </Route>
-            )}
-          </Routes>
-        </BrowserRouter>
-        
-        {/* Paywall Modal */}
-        <PaywallModal
-          isOpen={showPaywall}
-          onOpenChange={setShowPaywall}
-          invoiceAmount={pendingInvoice?.amount}
-          invoiceNumber={pendingInvoice?.invoice_number}
-        />
-      </TooltipProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                {!user ? (
+                  <Route path="*" element={<Login />} />
+                ) : user?.role === 'student' && !user?.onboarding_done ? (
+                  <Route path="*" element={
+                    <Onboarding 
+                      user={user} 
+                      onComplete={() => {
+                        // Onboarding completion will be handled by the hook
+                        window.location.reload();
+                      }} 
+                    />
+                  } />
+                ) : (
+                  <Route path="/" element={<Layout user={user} />}>
+                    {/* Role-based dashboard routing */}
+                    <Route index element={
+                      user.role === 'admin' ? <AdminDashboard /> :
+                      user.role === 'mentor' ? <MentorDashboard /> :
+                      user.role === 'superadmin' ? <SuperadminDashboard /> :
+                      user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
+                      <Dashboard user={user} />
+                    } />
+                    
+                    {/* Shared routes */}
+                    <Route path="videos" element={<Videos user={user} />} />
+                    <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
+                    <Route path="video-player" element={<VideoPlayer />} />
+                    <Route path="assignments" element={<Assignments user={user} />} />
+                    <Route path="leaderboard" element={<Leaderboard />} />
+                    <Route path="live-sessions" element={<LiveSessions user={user} />} />
+                    <Route path="mentorship" element={<Mentorship />} />
+                    <Route path="messages" element={<Messages />} />
+                    <Route path="support" element={<Support />} />
+                    <Route path="connect" element={<Connect />} />
+                    <Route path="profile" element={<Profile />} />
+                    <Route path="notifications" element={<Notifications />} />
+                    <Route path="teams" element={<Teams />} />
+                    <Route path="students" element={<StudentsManagement />} />
+                    <Route path="shopify-dashboard" element={<ShopifyDashboard />} />
+                    <Route path="meta-ads-dashboard" element={<MetaAdsDashboard />} />
+                    
+                    {/* Role-specific routes */}
+                    <Route path="admin" element={<AdminDashboard />} />
+                    <Route path="mentor" element={<MentorDashboard />} />
+                    <Route path="mentor/sessions" element={<MentorSessionsPage />} />
+                    <Route path="superadmin" element={<SuperadminDashboard />} />
+                    <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
+                    
+                    <Route path="*" element={<Navigate to="/" />} />
+                  </Route>
+                )}
+              </Routes>
+            </Suspense>
+          </BrowserRouter>
+          
+          {/* Paywall Modal */}
+          <PaywallModal
+            isOpen={showPaywall}
+            onOpenChange={setShowPaywall}
+            invoiceAmount={pendingInvoice?.amount}
+            invoiceNumber={pendingInvoice?.invoice_number}
+          />
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

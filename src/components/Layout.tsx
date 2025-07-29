@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,7 @@ interface LayoutProps {
   user: any;
 }
 
-const Layout = ({ user }: LayoutProps) => {
+const Layout = memo(({ user }: LayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -186,11 +186,18 @@ const Layout = ({ user }: LayoutProps) => {
     }
   }, [isCourseMenuActive]);
 
-  // Optimized logging with error handling
+  // Optimized logging with error handling and debouncing
+  const logActivityRef = useRef<NodeJS.Timeout>();
+  
   useEffect(() => {
     if (user?.id) {
-      const timeoutId = setTimeout(() => {
-        // Don't await the activity log to prevent blocking the UI
+      // Clear any existing timeout
+      if (logActivityRef.current) {
+        clearTimeout(logActivityRef.current);
+      }
+      
+      // Debounce activity logging to prevent spam
+      logActivityRef.current = setTimeout(() => {
         logUserActivity({
           user_id: user.id,
           activity_type: ACTIVITY_TYPES.PAGE_VISIT,
@@ -202,9 +209,13 @@ const Layout = ({ user }: LayoutProps) => {
           // Silently handle activity logging errors
           console.warn('Page visit logging failed:', error);
         });
-      }, 100); // Small delay to prevent excessive logging
+      }, 500); // Increased delay for better debouncing
 
-      return () => clearTimeout(timeoutId);
+      return () => {
+        if (logActivityRef.current) {
+          clearTimeout(logActivityRef.current);
+        }
+      };
     }
   }, [location.pathname, user?.id]);
 
@@ -372,6 +383,8 @@ const Layout = ({ user }: LayoutProps) => {
       <FloatingActivityButton />
     </div>
   );
-};
+});
+
+Layout.displayName = 'Layout';
 
 export default Layout;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface User {
@@ -66,7 +66,17 @@ export const useAuth = () => {
     return () => subscription.unsubscribe();
   }, []);
 
+  // Add debouncing to prevent multiple calls
+  const fetchUserProfileRef = useRef<string | null>(null);
+  
   const fetchUserProfile = async (userId: string) => {
+    // Prevent duplicate calls for the same user
+    if (fetchUserProfileRef.current === userId) {
+      console.log('fetchUserProfile: Skipping duplicate call for user:', userId);
+      return;
+    }
+    
+    fetchUserProfileRef.current = userId;
     console.log('fetchUserProfile: Starting for user ID:', userId);
     
     try {
@@ -125,6 +135,7 @@ export const useAuth = () => {
     } finally {
       console.log('fetchUserProfile: Setting loading to false');
       setLoading(false);
+      fetchUserProfileRef.current = null; // Reset to allow future calls
     }
   };
 

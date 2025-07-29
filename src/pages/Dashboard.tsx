@@ -94,14 +94,24 @@ const Dashboard = ({ user }: { user?: any }) => {
   const [nextAssignment, setNextAssignment] = useState<any>(null);
   const [isBlurred, setIsBlurred] = useState(false);
 
-  // Fetch real data when user is available
+  // Fetch real data when user is available - optimize by batching requests
   useEffect(() => {
     if (user?.id) {
-      fetchProgressData();
-      fetchLeaderboardData();
-      fetchMilestones();
-      fetchNextAssignment();
-      checkAccessStatus();
+      // Use a single effect to fetch all data concurrently
+      Promise.allSettled([
+        fetchProgressData(),
+        fetchLeaderboardData(),
+        fetchMilestones(),
+        fetchNextAssignment(),
+        checkAccessStatus()
+      ]).then(results => {
+        // Log any errors but don't fail the entire operation
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.warn(`Dashboard data fetch ${index} failed:`, result.reason);
+          }
+        });
+      });
     }
   }, [user?.id]);
 

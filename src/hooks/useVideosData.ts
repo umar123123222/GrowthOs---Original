@@ -18,7 +18,20 @@ export const useVideosData = (user?: any) => {
   useEffect(() => {
     fetchModulesAndRecordings();
     
-    // Set up real-time subscription for modules changes
+    // Throttled refresh function to prevent spam
+    let lastRefresh = Date.now();
+    const THROTTLE_DELAY = 2000; // 2 seconds minimum between refreshes
+    
+    const throttledRefresh = () => {
+      const now = Date.now();
+      if (now - lastRefresh >= THROTTLE_DELAY) {
+        lastRefresh = now;
+        console.log('Data changed, refreshing...');
+        fetchModulesAndRecordings();
+      }
+    };
+    
+    // Set up real-time subscription for modules changes with throttling
     const modulesChannel = supabase
       .channel('modules-changes')
       .on(
@@ -28,10 +41,7 @@ export const useVideosData = (user?: any) => {
           schema: 'public',
           table: 'modules'
         },
-        () => {
-          console.log('Modules changed, refreshing data...');
-          fetchModulesAndRecordings();
-        }
+        throttledRefresh
       )
       .on(
         'postgres_changes',
@@ -40,10 +50,7 @@ export const useVideosData = (user?: any) => {
           schema: 'public',
           table: 'available_lessons'
         },
-        () => {
-          console.log('Available lessons changed, refreshing data...');
-          fetchModulesAndRecordings();
-        }
+        throttledRefresh
       )
       .subscribe();
 
