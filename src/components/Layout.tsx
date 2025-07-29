@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { FloatingActivityButton } from "./FloatingActivityButton";
 import { ActivityLogsDialog } from "./ActivityLogsDialog";
+import { MotivationalNotifications } from "./MotivationalNotifications";
 interface LayoutProps {
   user: any;
 }
@@ -366,6 +367,9 @@ const Layout = memo(({
       
       {/* Floating Activity Button */}
       <FloatingActivityButton />
+      
+      {/* Motivational Notifications for Students */}
+      {user?.role === 'student' && <MotivationalNotifications />}
     </div>;
 });
 Layout.displayName = 'Layout';
