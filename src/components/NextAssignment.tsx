@@ -135,7 +135,14 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
             <div className="flex-grow space-y-2">
               <h3 className="font-medium text-sm leading-tight">{nextAssignment.assignment_title}</h3>
               <p className="text-xs text-muted-foreground">
-                Due: {new Date(nextAssignment.due_date).toLocaleDateString()}
+                Due: {nextAssignment.due_date 
+                  ? new Date(nextAssignment.due_date).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })
+                  : 'No due date set'
+                }
               </p>
             </div>
             <div className="mt-auto pt-4">
