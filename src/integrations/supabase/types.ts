@@ -333,6 +333,7 @@ export type Database = {
           contact_email: string
           created_at: string | null
           currency: string
+          enable_student_signin: boolean | null
           id: number
           installment_plans: string[] | null
           invoice_from_email: string | null
@@ -345,6 +346,7 @@ export type Database = {
           maximum_installment_count: number
           original_fee_amount: number
           primary_phone: string
+          questionnaire: Json | null
           secondary_phone: string | null
           smtp_enabled: boolean | null
           smtp_encryption: string | null
@@ -362,6 +364,7 @@ export type Database = {
           contact_email?: string
           created_at?: string | null
           currency?: string
+          enable_student_signin?: boolean | null
           id?: number
           installment_plans?: string[] | null
           invoice_from_email?: string | null
@@ -374,6 +377,7 @@ export type Database = {
           maximum_installment_count?: number
           original_fee_amount?: number
           primary_phone?: string
+          questionnaire?: Json | null
           secondary_phone?: string | null
           smtp_enabled?: boolean | null
           smtp_encryption?: string | null
@@ -391,6 +395,7 @@ export type Database = {
           contact_email?: string
           created_at?: string | null
           currency?: string
+          enable_student_signin?: boolean | null
           id?: number
           installment_plans?: string[] | null
           invoice_from_email?: string | null
@@ -403,6 +408,7 @@ export type Database = {
           maximum_installment_count?: number
           original_fee_amount?: number
           primary_phone?: string
+          questionnaire?: Json | null
           secondary_phone?: string | null
           smtp_enabled?: boolean | null
           smtp_encryption?: string | null

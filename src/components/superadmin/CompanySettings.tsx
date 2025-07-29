@@ -8,8 +8,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Building2, Phone, Mail, DollarSign, Settings, Upload, FileText, Calendar, Server, Shield } from 'lucide-react';
+import { Building2, Phone, Mail, DollarSign, Settings, Upload, FileText, Calendar, Server, Shield, HelpCircle, Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+
+interface QuestionItem {
+  id: string;
+  text: string;
+  order: number;
+}
 
 interface CompanySettingsData {
   id?: string;
@@ -37,6 +43,9 @@ interface CompanySettingsData {
   invoice_from_name?: string;
   lms_from_email?: string;
   lms_from_name?: string;
+  // Student Sign-in & Questionnaire
+  enable_student_signin: boolean;
+  questionnaire: QuestionItem[];
 }
 
 export function CompanySettings() {
@@ -80,8 +89,17 @@ export function CompanySettings() {
     invoice_from_email: '',
     invoice_from_name: '',
     lms_from_email: '',
-    lms_from_name: ''
+    lms_from_name: '',
+    // Student Sign-in & Questionnaire
+    enable_student_signin: false,
+    questionnaire: []
   });
+
+  // Questionnaire management state
+  const [newQuestion, setNewQuestion] = useState('');
+  const [isAddingQuestion, setIsAddingQuestion] = useState(false);
+  const [editingQuestion, setEditingQuestion] = useState<string | null>(null);
+  const [editQuestionText, setEditQuestionText] = useState('');
 
   useEffect(() => {
     fetchCompanySettings();
@@ -164,6 +182,90 @@ export function CompanySettings() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Questionnaire management functions
+  const generateQuestionId = () => `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+  const addQuestion = () => {
+    if (!newQuestion.trim() || newQuestion.length > 200) {
+      toast({
+        title: 'Invalid Question',
+        description: 'Question text is required and must be 200 characters or less.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const newQuestionItem: QuestionItem = {
+      id: generateQuestionId(),
+      text: newQuestion.trim(),
+      order: settings.questionnaire.length + 1
+    };
+
+    const updatedQuestionnaire = [...settings.questionnaire, newQuestionItem];
+    setSettings(prev => ({ ...prev, questionnaire: updatedQuestionnaire }));
+    setNewQuestion('');
+    setIsAddingQuestion(false);
+    
+    toast({
+      title: 'Question Added',
+      description: 'New question has been added to the questionnaire.'
+    });
+  };
+
+  const updateQuestion = (questionId: string) => {
+    if (!editQuestionText.trim() || editQuestionText.length > 200) {
+      toast({
+        title: 'Invalid Question',
+        description: 'Question text is required and must be 200 characters or less.',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const updatedQuestionnaire = settings.questionnaire.map(q => 
+      q.id === questionId ? { ...q, text: editQuestionText.trim() } : q
+    );
+    
+    setSettings(prev => ({ ...prev, questionnaire: updatedQuestionnaire }));
+    setEditingQuestion(null);
+    setEditQuestionText('');
+    
+    toast({
+      title: 'Question Updated',
+      description: 'Question has been updated successfully.'
+    });
+  };
+
+  const deleteQuestion = (questionId: string) => {
+    const updatedQuestionnaire = settings.questionnaire
+      .filter(q => q.id !== questionId)
+      .map((q, index) => ({ ...q, order: index + 1 })); // Reorder after deletion
+    
+    setSettings(prev => ({ ...prev, questionnaire: updatedQuestionnaire }));
+    
+    toast({
+      title: 'Question Deleted',
+      description: 'Question has been removed from the questionnaire.'
+    });
+  };
+
+  const moveQuestion = (questionId: string, direction: 'up' | 'down') => {
+    const currentIndex = settings.questionnaire.findIndex(q => q.id === questionId);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= settings.questionnaire.length) return;
+
+    const updatedQuestionnaire = [...settings.questionnaire];
+    const [movedItem] = updatedQuestionnaire.splice(currentIndex, 1);
+    updatedQuestionnaire.splice(newIndex, 0, movedItem);
+
+    // Update order numbers
+    const reorderedQuestionnaire = updatedQuestionnaire.map((q, index) => ({ ...q, order: index + 1 }));
+    
+    setSettings(prev => ({ ...prev, questionnaire: reorderedQuestionnaire }));
   };
 
   if (loading) {
@@ -501,6 +603,203 @@ export function CompanySettings() {
                         </p>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Student Sign-in & Questionnaire */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5" />
+              Student Sign-in Configuration
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Enable Student Sign-in Toggle */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="enable_student_signin"
+                checked={settings.enable_student_signin}
+                onCheckedChange={(checked) => handleInputChange('enable_student_signin', checked)}
+              />
+              <Label htmlFor="enable_student_signin" className="font-medium">
+                Enable Student First Sign-In Questionnaire
+              </Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Show a questionnaire to students during their first sign-in to collect additional information
+            </p>
+
+            {/* Questionnaire Management - only show when enabled */}
+            {settings.enable_student_signin && (
+              <>
+                <Separator className="my-4" />
+                
+                <div className="space-y-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <HelpCircle className="h-4 w-4" />
+                    First Sign-In Questions
+                  </h4>
+
+                  {/* Question List */}
+                  <div className="space-y-3">
+                    {settings.questionnaire.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground border-2 border-dashed border-muted rounded-lg">
+                        <HelpCircle className="mx-auto h-8 w-8 mb-2" />
+                        <p>No questions added yet</p>
+                        <p className="text-sm">Add your first question below</p>
+                      </div>
+                    ) : (
+                      settings.questionnaire
+                        .sort((a, b) => a.order - b.order)
+                        .map((question, index) => (
+                          <div
+                            key={question.id}
+                            className="flex items-center gap-3 p-3 border rounded-lg bg-muted/50"
+                          >
+                            {/* Drag handle */}
+                            <div className="flex flex-col gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={index === 0}
+                                onClick={() => moveQuestion(question.id, 'up')}
+                                className="h-4 w-4 p-0 hover:bg-muted"
+                              >
+                                <GripVertical className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                disabled={index === settings.questionnaire.length - 1}
+                                onClick={() => moveQuestion(question.id, 'down')}
+                                className="h-4 w-4 p-0 hover:bg-muted"
+                              >
+                                <GripVertical className="h-3 w-3" />
+                              </Button>
+                            </div>
+
+                            {/* Question content */}
+                            <div className="flex-1 min-w-0">
+                              {editingQuestion === question.id ? (
+                                <div className="flex gap-2">
+                                  <Input
+                                    value={editQuestionText}
+                                    onChange={(e) => setEditQuestionText(e.target.value)}
+                                    placeholder="Enter question text..."
+                                    maxLength={200}
+                                    className="flex-1"
+                                  />
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => updateQuestion(question.id)}
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setEditingQuestion(null);
+                                      setEditQuestionText('');
+                                    }}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {index + 1}. {question.text}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {question.text.length}/200 characters
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Action buttons */}
+                            {editingQuestion !== question.id && (
+                              <div className="flex gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setEditingQuestion(question.id);
+                                    setEditQuestionText(question.text);
+                                  }}
+                                  className="h-8 w-8 p-0"
+                                >
+                                  <Edit3 className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteQuestion(question.id)}
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                    )}
+                  </div>
+
+                  {/* Add New Question */}
+                  <div className="space-y-3">
+                    {isAddingQuestion ? (
+                      <div className="flex gap-2">
+                        <Input
+                          value={newQuestion}
+                          onChange={(e) => setNewQuestion(e.target.value)}
+                          placeholder="Enter new question text..."
+                          maxLength={200}
+                          className="flex-1"
+                        />
+                        <Button type="button" onClick={addQuestion}>
+                          Save
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setIsAddingQuestion(false);
+                            setNewQuestion('');
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setIsAddingQuestion(true)}
+                        className="flex items-center gap-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Question
+                      </Button>
+                    )}
+                    
+                    {isAddingQuestion && (
+                      <p className="text-xs text-muted-foreground">
+                        {newQuestion.length}/200 characters
+                      </p>
+                    )}
                   </div>
                 </div>
               </>
