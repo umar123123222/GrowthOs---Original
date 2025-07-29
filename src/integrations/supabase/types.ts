@@ -120,6 +120,7 @@ export type Database = {
           result: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          reviewed_note: string | null
           score: number | null
           status: string
           submission_type: string
@@ -138,6 +139,7 @@ export type Database = {
           result?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewed_note?: string | null
           score?: number | null
           status?: string
           submission_type: string
@@ -156,6 +158,7 @@ export type Database = {
           result?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          reviewed_note?: string | null
           score?: number | null
           status?: string
           submission_type?: string
@@ -1492,6 +1495,10 @@ export type Database = {
       }
       delete_student_atomic: {
         Args: { p_user_id: string }
+        Returns: Json
+      }
+      fn_approve_submission: {
+        Args: { p_submission_id: string; p_decision: string; p_note?: string }
         Returns: Json
       }
       get_current_user_role: {

@@ -23,18 +23,24 @@ interface AssignmentSubmission {
   submitted_at: string;
   reviewed_at?: string;
   reviewed_by?: string;
+  reviewed_note?: string;
   score?: number;
   feedback?: string;
   users: {
     full_name: string;
     email: string;
     student_id?: string;
+    mentor_id?: string;
   };
   assignment: {
     assignment_title: string;
     assignment_description: string;
   };
   mentor?: {
+    full_name: string;
+    email: string;
+  } | null;
+  reviewer?: {
     full_name: string;
     email: string;
   } | null;
@@ -50,6 +56,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<AssignmentSubmission | null>(null);
   const [feedback, setFeedback] = useState('');
+  const [reviewNote, setReviewNote] = useState('');
   const [score, setScore] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const { toast } = useToast();
@@ -69,13 +76,18 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
           users!assignment_submissions_user_id_fkey (
             full_name,
             email,
-            student_id
+            student_id,
+            mentor_id
           ),
           assignment!assignment_submissions_assignment_id_fkey (
             assignment_title,
             assignment_description
           ),
           mentor:users!assignment_submissions_reviewed_by_fkey (
+            full_name,
+            email
+          ),
+          reviewer:users!assignment_submissions_reviewed_by_fkey (
             full_name,
             email
           )
@@ -112,21 +124,21 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
 
   const handleReviewSubmission = async (submissionId: string, status: 'accepted' | 'rejected') => {
     try {
-      // Try minimal update approach to avoid RLS policy conflicts
-      const { error } = await supabase
-        .from('assignment_submissions')
-        .update({
-          status,
-          feedback,
-          score: score ? parseInt(score) : null,
-          reviewed_at: new Date().toISOString(),
-          reviewed_by: user?.id
-        })
-        .eq('id', submissionId)
-        .select('id')
-        .single();
+      // Use the new database function for secure approval
+      const { data, error } = await supabase
+        .rpc('fn_approve_submission', {
+          p_submission_id: submissionId,
+          p_decision: status,
+          p_note: reviewNote || feedback || null
+        });
 
       if (error) throw error;
+
+      // Type assertion for the response
+      const result = data as { success: boolean; error?: string };
+      if (result && !result.success) {
+        throw new Error(result.error || 'Failed to update submission');
+      }
 
       toast({
         title: 'Success',
@@ -135,6 +147,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
 
       setSelectedSubmission(null);
       setFeedback('');
+      setReviewNote('');
       setScore('');
       fetchSubmissions();
     } catch (error) {
@@ -144,6 +157,21 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
         variant: 'destructive'
       });
     }
+  };
+
+  // Check if current user can review this submission
+  const canReviewSubmission = (submission: AssignmentSubmission) => {
+    if (!user) return false;
+    
+    if (user.role === 'admin' || user.role === 'superadmin') {
+      return true;
+    }
+    
+    if (user.role === 'mentor') {
+      return submission.users.mentor_id === user.id;
+    }
+    
+    return false;
   };
 
   const getStatusColor = (status: string) => {
@@ -238,6 +266,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                   <TableHead>Mentor</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Reviewed by</TableHead>
                   <TableHead>Score</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -268,6 +297,20 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                       </Badge>
                     </TableCell>
                     <TableCell>
+                      <div className="text-sm">
+                        {submission.reviewer?.full_name ? (
+                          <div>
+                            <div className="font-medium">{submission.reviewer.full_name}</div>
+                            {submission.reviewed_at && (
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(submission.reviewed_at).toLocaleDateString()}
+                              </div>
+                            )}
+                          </div>
+                        ) : '—'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
                       {submission.score ? `${submission.score}/100` : '-'}
                     </TableCell>
                     <TableCell>
@@ -276,10 +319,15 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setSelectedSubmission(submission)}
+                            onClick={() => {
+                              setSelectedSubmission(submission);
+                              setFeedback(submission.feedback || '');
+                              setReviewNote(submission.reviewed_note || '');
+                              setScore(submission.score?.toString() || '');
+                            }}
                           >
                             <Eye className="w-4 h-4 mr-2" />
-                            Review
+                            {canReviewSubmission(submission) ? 'Review' : 'View'}
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
@@ -341,7 +389,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                                 )}
                               </div>
 
-                              {selectedSubmission.status === 'submitted' && (
+                              {selectedSubmission.status === 'submitted' && canReviewSubmission(selectedSubmission) && (
                                 <div className="space-y-4">
                                   <div>
                                     <label className="block text-sm font-medium mb-2">Score (out of 100)</label>
@@ -355,12 +403,21 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                                     />
                                   </div>
                                   <div>
-                                    <label className="block text-sm font-medium mb-2">Feedback</label>
+                                    <label className="block text-sm font-medium mb-2">Feedback for Student</label>
                                     <Textarea
                                       value={feedback}
                                       onChange={(e) => setFeedback(e.target.value)}
                                       placeholder="Provide feedback for the student..."
-                                      rows={4}
+                                      rows={3}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-sm font-medium mb-2">Review Note (Internal)</label>
+                                    <Textarea
+                                      value={reviewNote}
+                                      onChange={(e) => setReviewNote(e.target.value)}
+                                      placeholder="Add internal review notes (optional)..."
+                                      rows={2}
                                     />
                                   </div>
                                   <div className="flex gap-2">
@@ -369,23 +426,41 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                                       className="bg-green-600 hover:bg-green-700"
                                     >
                                       <CheckCircle className="w-4 h-4 mr-2" />
-                                      Accept
+                                      Approve
                                     </Button>
                                     <Button
                                       onClick={() => handleReviewSubmission(selectedSubmission.id, 'rejected')}
                                       variant="destructive"
                                     >
                                       <XCircle className="w-4 h-4 mr-2" />
-                                      Reject
+                                      Decline
                                     </Button>
                                   </div>
                                 </div>
                               )}
 
-                              {selectedSubmission.feedback && (
-                                <div className="p-4 bg-blue-50 rounded-lg">
-                                  <h4 className="font-medium mb-2">Previous Feedback:</h4>
-                                  <p>{selectedSubmission.feedback}</p>
+                              {(selectedSubmission.feedback || selectedSubmission.reviewed_note) && (
+                                <div className="space-y-3">
+                                  {selectedSubmission.feedback && (
+                                    <div className="p-4 bg-blue-50 rounded-lg">
+                                      <h4 className="font-medium mb-2">Feedback for Student:</h4>
+                                      <p>{selectedSubmission.feedback}</p>
+                                    </div>
+                                  )}
+                                  {selectedSubmission.reviewed_note && (
+                                    <div className="p-4 bg-gray-50 rounded-lg">
+                                      <h4 className="font-medium mb-2">Review Notes (Internal):</h4>
+                                      <p>{selectedSubmission.reviewed_note}</p>
+                                    </div>
+                                  )}
+                                  {selectedSubmission.reviewer && (
+                                    <div className="text-sm text-muted-foreground">
+                                      Reviewed by: <span className="font-medium">{selectedSubmission.reviewer.full_name}</span>
+                                      {selectedSubmission.reviewed_at && (
+                                        <span> on {new Date(selectedSubmission.reviewed_at).toLocaleString()}</span>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
