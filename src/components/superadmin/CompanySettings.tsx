@@ -38,7 +38,9 @@ interface CompanySettingsData {
   smtp_username?: string;
   smtp_password?: string;
   smtp_encryption: string;
-  // Email Addresses
+  smtp_sender_email?: string;
+  smtp_sender_name?: string;
+  // Legacy fields (for migration compatibility)
   invoice_from_email?: string;
   invoice_from_name?: string;
   lms_from_email?: string;
@@ -73,6 +75,7 @@ export function CompanySettings() {
   };
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [settings, setSettings] = useState<CompanySettingsData>({
     company_name: '',
     company_logo: '',
@@ -93,7 +96,9 @@ export function CompanySettings() {
     smtp_username: '',
     smtp_password: '',
     smtp_encryption: 'STARTTLS',
-    // Email Addresses
+    smtp_sender_email: '',
+    smtp_sender_name: '',
+    // Legacy fields
     invoice_from_email: '',
     invoice_from_name: '',
     lms_from_email: '',
@@ -137,7 +142,15 @@ export function CompanySettings() {
       }
 
       if (data) {
-        setSettings(data as unknown as CompanySettingsData);
+        const settingsData = data as unknown as CompanySettingsData;
+        // Migrate legacy email settings to unified sender if not already set
+        if (!settingsData.smtp_sender_email && (settingsData.invoice_from_email || settingsData.lms_from_email)) {
+          settingsData.smtp_sender_email = settingsData.invoice_from_email || settingsData.lms_from_email;
+        }
+        if (!settingsData.smtp_sender_name && (settingsData.invoice_from_name || settingsData.lms_from_name)) {
+          settingsData.smtp_sender_name = settingsData.invoice_from_name || settingsData.lms_from_name;
+        }
+        setSettings(settingsData);
       }
     } catch (error) {
       console.error('Error fetching company settings:', error);
@@ -252,6 +265,37 @@ export function CompanySettings() {
     const reorderedQuestionnaire = updatedQuestionnaire.map((q, index) => ({ ...q, order: index + 1 }));
     
     setSettings(prev => ({ ...prev, questionnaire: reorderedQuestionnaire }));
+  };
+
+  const handleSyncToSupabase = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-smtp-config', {
+        body: {}
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.success) {
+        toast({
+          title: 'Success',
+          description: 'SMTP configuration synced with Supabase successfully'
+        });
+      } else {
+        throw new Error(data?.error || 'Failed to sync SMTP configuration');
+      }
+    } catch (error) {
+      console.error('Error syncing SMTP config:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to sync SMTP configuration with Supabase',
+        variant: 'destructive'
+      });
+    } finally {
+      setSyncing(false);
+    }
   };
 
   if (loading) {
@@ -467,84 +511,65 @@ export function CompanySettings() {
                   </div>
                 </div>
 
-                {/* Email Addresses Section */}
+                {/* Unified Sender Configuration */}
                 <Separator className="my-6" />
                 
                 <div className="space-y-4">
                   <h4 className="font-medium flex items-center gap-2">
                     <Mail className="h-4 w-4" />
-                    Default Email Addresses
+                    Global Sender Configuration
                   </h4>
+                  <p className="text-sm text-muted-foreground">
+                    This email address will be used for all transactional emails including invoices, LMS notifications, and authentication emails.
+                  </p>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Invoice Email Settings */}
-                    <div className="space-y-4 p-4 border rounded-lg">
-                      <h5 className="font-medium flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Invoice Emails
-                      </h5>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="invoice_from_email">Invoice From Address</Label>
-                        <Input
-                          id="invoice_from_email"
-                          type="email"
-                          value={settings.invoice_from_email || ''}
-                          onChange={(e) => handleInputChange('invoice_from_email', e.target.value)}
-                          placeholder="billing@company.com"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          The email address used to send all invoices
-                        </p>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="invoice_from_name">Invoice From Name (Optional)</Label>
-                        <Input
-                          id="invoice_from_name"
-                          value={settings.invoice_from_name || ''}
-                          onChange={(e) => handleInputChange('invoice_from_name', e.target.value)}
-                          placeholder="Company Billing"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Display name for invoice emails
-                        </p>
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_sender_email">Global From Address *</Label>
+                      <Input
+                        id="smtp_sender_email"
+                        type="email"
+                        value={settings.smtp_sender_email || ''}
+                        onChange={(e) => handleInputChange('smtp_sender_email', e.target.value)}
+                        placeholder="noreply@company.com"
+                        required={settings.smtp_enabled}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Used for all transactional and auth emails
+                      </p>
                     </div>
 
-                    {/* LMS Email Settings */}
-                    <div className="space-y-4 p-4 border rounded-lg">
-                      <h5 className="font-medium flex items-center gap-2">
-                        <Shield className="h-4 w-4" />
-                        LMS Notifications
-                      </h5>
-                      
-                      <div className="space-y-2">
-                        <Label htmlFor="lms_from_email">LMS Details From Address</Label>
-                        <Input
-                          id="lms_from_email"
-                          type="email"
-                          value={settings.lms_from_email || ''}
-                          onChange={(e) => handleInputChange('lms_from_email', e.target.value)}
-                          placeholder="lms@company.com"
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          The email address used for sending LMS enrollment and course notifications
-                        </p>
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_sender_name">Global From Name</Label>
+                      <Input
+                        id="smtp_sender_name"
+                        value={settings.smtp_sender_name || ''}
+                        onChange={(e) => handleInputChange('smtp_sender_name', e.target.value)}
+                        placeholder="Your Company"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Display name for all outgoing emails
+                      </p>
+                    </div>
+                  </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="lms_from_name">LMS From Name (Optional)</Label>
-                        <Input
-                          id="lms_from_name"
-                          value={settings.lms_from_name || ''}
-                          onChange={(e) => handleInputChange('lms_from_name', e.target.value)}
-                          placeholder="Company LMS"
-                        />
+                  {/* Supabase Sync Section */}
+                  <div className="mt-6 p-4 bg-muted rounded-lg">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <h5 className="font-medium">Supabase Integration</h5>
                         <p className="text-xs text-muted-foreground">
-                          Display name for LMS notification emails
+                          Sync SMTP settings with Supabase to enable auth emails and system notifications
                         </p>
                       </div>
+                      <Button 
+                        variant="outline" 
+                        onClick={handleSyncToSupabase}
+                        disabled={syncing || !settings.smtp_enabled || !settings.smtp_sender_email}
+                        className="min-w-32"
+                      >
+                        {syncing ? 'Syncing...' : 'Sync to Supabase'}
+                      </Button>
                     </div>
                   </div>
                 </div>

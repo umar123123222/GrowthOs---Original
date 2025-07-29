@@ -220,13 +220,26 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Starting email sending process...');
     
     try {
-      // Check SMTP configuration
-      const smtpHost = Deno.env.get('SMTP_HOST');
-      const smtpPort = Deno.env.get('SMTP_PORT');
-      const smtpUser = Deno.env.get('SMTP_USER');
-      const smtpPassword = Deno.env.get('SMTP_PASSWORD');
-      const smtpFromEmail = Deno.env.get('SMTP_LMS_FROM_EMAIL') || Deno.env.get('SMTP_FROM_EMAIL');
-      const smtpFromName = Deno.env.get('SMTP_LMS_FROM_NAME') || Deno.env.get('SMTP_FROM_NAME');
+      // Get unified SMTP configuration from company settings
+      const { data: smtpConfig, error: smtpError } = await supabase
+        .from('company_settings')
+        .select('smtp_enabled, smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption, smtp_sender_email, smtp_sender_name')
+        .eq('id', 1)
+        .single();
+
+      if (smtpError) {
+        console.error('Failed to get SMTP configuration:', smtpError);
+        emailSent = false;
+      } else if (!smtpConfig?.smtp_enabled) {
+        console.log('SMTP is disabled in company settings');
+        emailSent = false;
+      } else {
+        const smtpHost = smtpConfig.smtp_host;
+        const smtpPort = smtpConfig.smtp_port;
+        const smtpUser = smtpConfig.smtp_username;
+        const smtpPassword = smtpConfig.smtp_password;
+        const smtpFromEmail = smtpConfig.smtp_sender_email;
+        const smtpFromName = smtpConfig.smtp_sender_name;
       
       console.log('SMTP configuration check:', {
         host: !!smtpHost,
@@ -311,6 +324,7 @@ const handler = async (req: Request): Promise<Response> => {
       } else {
         console.log('SMTP configuration incomplete, email sending skipped');
       }
+      }
     } catch (emailError) {
       console.error('Email sending error (non-blocking):', emailError);
       // Email failure should not prevent student creation
@@ -349,7 +363,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.log('Installment records created successfully');
         
         // Try to send first invoice email if SMTP is configured
-        if (smtpHost && smtpPort && smtpUser && smtpPassword && smtpFromEmail) {
+        if (smtpConfig?.smtp_enabled && smtpHost && smtpPort && smtpUser && smtpPassword && smtpFromEmail) {
           try {
             console.log('Sending first invoice email...');
             

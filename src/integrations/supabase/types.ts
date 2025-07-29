@@ -354,6 +354,8 @@ export type Database = {
           smtp_host: string | null
           smtp_password: string | null
           smtp_port: number | null
+          smtp_sender_email: string | null
+          smtp_sender_name: string | null
           smtp_username: string | null
           updated_at: string | null
         }
@@ -386,6 +388,8 @@ export type Database = {
           smtp_host?: string | null
           smtp_password?: string | null
           smtp_port?: number | null
+          smtp_sender_email?: string | null
+          smtp_sender_name?: string | null
           smtp_username?: string | null
           updated_at?: string | null
         }
@@ -418,6 +422,8 @@ export type Database = {
           smtp_host?: string | null
           smtp_password?: string | null
           smtp_port?: number | null
+          smtp_sender_email?: string | null
+          smtp_sender_name?: string | null
           smtp_username?: string | null
           updated_at?: string | null
         }
@@ -1586,6 +1592,14 @@ export type Database = {
           p_metadata?: Json
         }
         Returns: number
+      }
+      sync_supabase_smtp_config: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      validate_questionnaire_structure: {
+        Args: { questionnaire_data: Json }
+        Returns: boolean
       }
     }
     Enums: {

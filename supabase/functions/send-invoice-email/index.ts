@@ -15,15 +15,7 @@ interface SendInvoiceRequest {
   invoice_number?: string;
 }
 
-// SMTP Configuration
-const smtpConfig = {
-  hostname: Deno.env.get("SMTP_HOST") || "",
-  port: parseInt(Deno.env.get("SMTP_PORT") || "587"),
-  username: Deno.env.get("SMTP_USER") || "",
-  password: Deno.env.get("SMTP_PASSWORD") || "",
-  from: Deno.env.get("SMTP_FROM_EMAIL") || "",
-  fromName: Deno.env.get("SMTP_FROM_NAME") || ""
-};
+// SMTP Configuration will be loaded from company_settings
 
 // Generate invoice HTML template
 function generateInvoiceHTML(
@@ -204,7 +196,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw new Error(`Student not found: ${studentError?.message}`);
     }
 
-    // Get company settings
+    // Get company settings including unified SMTP config
     const { data: company, error: companyError } = await supabase
       .from("company_settings")
       .select("*")
@@ -213,6 +205,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (companyError || !company) {
       throw new Error(`Company settings not found: ${companyError?.message}`);
+    }
+
+    // Check if SMTP is enabled
+    if (!company.smtp_enabled) {
+      throw new Error("SMTP is disabled in company settings");
+    }
+
+    // Validate SMTP configuration
+    if (!company.smtp_host || !company.smtp_username || !company.smtp_password || !company.smtp_sender_email) {
+      throw new Error("SMTP configuration is incomplete");
     }
 
     // Create invoice record in installment_payments if not exists
@@ -259,22 +261,22 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Create SMTP client and send email
+    // Create SMTP client using unified configuration
     const client = new SMTPClient({
       connection: {
-        hostname: smtpConfig.hostname,
-        port: smtpConfig.port,
-        tls: smtpConfig.port === 465,
+        hostname: company.smtp_host,
+        port: company.smtp_port,
+        tls: company.smtp_port === 465,
         auth: {
-          username: smtpConfig.username,
-          password: smtpConfig.password,
+          username: company.smtp_username,
+          password: company.smtp_password,
         },
       },
     });
 
-    const fromAddress = smtpConfig.fromName 
-      ? `${smtpConfig.fromName} <${smtpConfig.from}>` 
-      : smtpConfig.from;
+    const fromAddress = company.smtp_sender_name 
+      ? `${company.smtp_sender_name} <${company.smtp_sender_email}>` 
+      : company.smtp_sender_email;
 
     await client.send({
       from: fromAddress,
