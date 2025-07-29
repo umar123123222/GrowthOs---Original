@@ -189,13 +189,6 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "fk_assignment_submissions_assignment_id"
-            columns: ["assignment_id"]
-            isOneToOne: false
-            referencedRelation: "assignment"
-            referencedColumns: ["assignment_id"]
-          },
         ]
       }
       available_lessons: {
@@ -349,14 +342,6 @@ export type Database = {
           primary_phone: string
           questionnaire: Json | null
           secondary_phone: string | null
-          smtp_enabled: boolean | null
-          smtp_encryption: string | null
-          smtp_host: string | null
-          smtp_password: string | null
-          smtp_port: number | null
-          smtp_sender_email: string | null
-          smtp_sender_name: string | null
-          smtp_username: string | null
           updated_at: string | null
         }
         Insert: {
@@ -383,14 +368,6 @@ export type Database = {
           primary_phone?: string
           questionnaire?: Json | null
           secondary_phone?: string | null
-          smtp_enabled?: boolean | null
-          smtp_encryption?: string | null
-          smtp_host?: string | null
-          smtp_password?: string | null
-          smtp_port?: number | null
-          smtp_sender_email?: string | null
-          smtp_sender_name?: string | null
-          smtp_username?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -417,14 +394,6 @@ export type Database = {
           primary_phone?: string
           questionnaire?: Json | null
           secondary_phone?: string | null
-          smtp_enabled?: boolean | null
-          smtp_encryption?: string | null
-          smtp_host?: string | null
-          smtp_password?: string | null
-          smtp_port?: number | null
-          smtp_sender_email?: string | null
-          smtp_sender_name?: string | null
-          smtp_username?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1592,10 +1561,6 @@ export type Database = {
           p_metadata?: Json
         }
         Returns: number
-      }
-      sync_supabase_smtp_config: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
       }
       validate_questionnaire_structure: {
         Args: { questionnaire_data: Json }

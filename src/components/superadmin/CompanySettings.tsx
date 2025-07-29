@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Building2, Phone, Mail, DollarSign, Settings, Upload, FileText, Calendar, Server, Shield, HelpCircle, Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
+import { Building2, Phone, Mail, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
@@ -31,20 +31,6 @@ interface CompanySettingsData {
   invoice_notes?: string;
   invoice_overdue_days: number;
   invoice_send_gap_days: number;
-  // SMTP Configuration
-  smtp_enabled: boolean;
-  smtp_host?: string;
-  smtp_port: number;
-  smtp_username?: string;
-  smtp_password?: string;
-  smtp_encryption: string;
-  smtp_sender_email?: string;
-  smtp_sender_name?: string;
-  // Legacy fields (for migration compatibility)
-  invoice_from_email?: string;
-  invoice_from_name?: string;
-  lms_from_email?: string;
-  lms_from_name?: string;
   // Student Sign-in & Questionnaire
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
@@ -73,9 +59,9 @@ export function CompanySettings() {
     };
     return symbols[currency] || currency;
   };
+  
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [syncing, setSyncing] = useState(false);
   const [settings, setSettings] = useState<CompanySettingsData>({
     company_name: '',
     company_logo: '',
@@ -89,20 +75,6 @@ export function CompanySettings() {
     invoice_notes: '',
     invoice_overdue_days: 30,
     invoice_send_gap_days: 7,
-    // SMTP Configuration
-    smtp_enabled: false,
-    smtp_host: '',
-    smtp_port: 587,
-    smtp_username: '',
-    smtp_password: '',
-    smtp_encryption: 'STARTTLS',
-    smtp_sender_email: '',
-    smtp_sender_name: '',
-    // Legacy fields
-    invoice_from_email: '',
-    invoice_from_name: '',
-    lms_from_email: '',
-    lms_from_name: '',
     // Student Sign-in & Questionnaire
     enable_student_signin: false,
     questionnaire: []
@@ -143,13 +115,6 @@ export function CompanySettings() {
 
       if (data) {
         const settingsData = data as unknown as CompanySettingsData;
-        // Migrate legacy email settings to unified sender if not already set
-        if (!settingsData.smtp_sender_email && (settingsData.invoice_from_email || settingsData.lms_from_email)) {
-          settingsData.smtp_sender_email = settingsData.invoice_from_email || settingsData.lms_from_email;
-        }
-        if (!settingsData.smtp_sender_name && (settingsData.invoice_from_name || settingsData.lms_from_name)) {
-          settingsData.smtp_sender_name = settingsData.invoice_from_name || settingsData.lms_from_name;
-        }
         setSettings(settingsData);
       }
     } catch (error) {
@@ -267,37 +232,6 @@ export function CompanySettings() {
     setSettings(prev => ({ ...prev, questionnaire: reorderedQuestionnaire }));
   };
 
-  const handleSyncToSupabase = async () => {
-    setSyncing(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('sync-smtp-config', {
-        body: {}
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      if (data?.success) {
-        toast({
-          title: 'Success',
-          description: 'SMTP configuration synced with Supabase successfully'
-        });
-      } else {
-        throw new Error(data?.error || 'Failed to sync SMTP configuration');
-      }
-    } catch (error) {
-      console.error('Error syncing SMTP config:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to sync SMTP configuration with Supabase',
-        variant: 'destructive'
-      });
-    } finally {
-      setSyncing(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -403,178 +337,22 @@ export function CompanySettings() {
           </CardContent>
         </Card>
 
-        {/* SMTP Configuration */}
+        {/* Email Configuration */}
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Server className="h-5 w-5" />
-              SMTP Configuration
+              <Mail className="h-5 w-5" />
+              Email Configuration
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Enable SMTP Toggle */}
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="smtp_enabled"
-                checked={settings.smtp_enabled}
-                onCheckedChange={(checked) => handleInputChange('smtp_enabled', checked)}
-              />
-              <Label htmlFor="smtp_enabled" className="font-medium">
-                Enable SMTP Email Delivery
-              </Label>
-            </div>
+          <CardContent>
             <p className="text-sm text-muted-foreground">
-              Configure SMTP settings to send automated emails for invoices and LMS notifications
+              Email sending is managed via Supabase console—no SMTP settings are required in the app.
+              All transactional emails (invoices, LMS notifications, authentication emails) are sent using Supabase's default email configuration.
             </p>
-
-            {/* SMTP Fields - only show when enabled */}
-            {settings.smtp_enabled && (
-              <>
-                <Separator className="my-4" />
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp_host">SMTP Host *</Label>
-                    <Input
-                      id="smtp_host"
-                      value={settings.smtp_host || ''}
-                      onChange={(e) => handleInputChange('smtp_host', e.target.value)}
-                      placeholder="smtp.gmail.com"
-                      required={settings.smtp_enabled}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Your SMTP server hostname
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp_port">SMTP Port</Label>
-                    <Input
-                      id="smtp_port"
-                      type="number"
-                      min="1"
-                      max="65535"
-                      value={settings.smtp_port}
-                      onChange={(e) => handleInputChange('smtp_port', parseInt(e.target.value))}
-                      placeholder="587"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Port number (587 for TLS, 465 for SSL)
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp_encryption">Encryption Type</Label>
-                    <Select 
-                      value={settings.smtp_encryption} 
-                      onValueChange={(value) => handleInputChange('smtp_encryption', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select encryption" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white z-50">
-                        <SelectItem value="None">None</SelectItem>
-                        <SelectItem value="SSL/TLS">SSL/TLS</SelectItem>
-                        <SelectItem value="STARTTLS">STARTTLS</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Encryption method for secure connection
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp_username">SMTP Username</Label>
-                    <Input
-                      id="smtp_username"
-                      value={settings.smtp_username || ''}
-                      onChange={(e) => handleInputChange('smtp_username', e.target.value)}
-                      placeholder="your-email@domain.com"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Username for SMTP authentication
-                    </p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="smtp_password">SMTP Password</Label>
-                    <Input
-                      id="smtp_password"
-                      type="password"
-                      value={settings.smtp_password || ''}
-                      onChange={(e) => handleInputChange('smtp_password', e.target.value)}
-                      placeholder="••••••••••••"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Password or app-specific password
-                    </p>
-                  </div>
-                </div>
-
-                {/* Unified Sender Configuration */}
-                <Separator className="my-6" />
-                
-                <div className="space-y-4">
-                  <h4 className="font-medium flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Global Sender Configuration
-                  </h4>
-                  <p className="text-sm text-muted-foreground">
-                    This email address will be used for all transactional emails including invoices, LMS notifications, and authentication emails.
-                  </p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="smtp_sender_email">Global From Address *</Label>
-                      <Input
-                        id="smtp_sender_email"
-                        type="email"
-                        value={settings.smtp_sender_email || ''}
-                        onChange={(e) => handleInputChange('smtp_sender_email', e.target.value)}
-                        placeholder="noreply@company.com"
-                        required={settings.smtp_enabled}
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Used for all transactional and auth emails
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="smtp_sender_name">Global From Name</Label>
-                      <Input
-                        id="smtp_sender_name"
-                        value={settings.smtp_sender_name || ''}
-                        onChange={(e) => handleInputChange('smtp_sender_name', e.target.value)}
-                        placeholder="Your Company"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Display name for all outgoing emails
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Supabase Sync Section */}
-                  <div className="mt-6 p-4 bg-muted rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-1">
-                        <h5 className="font-medium">Supabase Integration</h5>
-                        <p className="text-xs text-muted-foreground">
-                          Sync SMTP settings with Supabase to enable auth emails and system notifications
-                        </p>
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        onClick={handleSyncToSupabase}
-                        disabled={syncing || !settings.smtp_enabled || !settings.smtp_sender_email}
-                        className="min-w-32"
-                      >
-                        {syncing ? 'Syncing...' : 'Sync to Supabase'}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+            <p className="text-sm text-muted-foreground mt-2">
+              To modify email settings, please use the Supabase dashboard.
+            </p>
           </CardContent>
         </Card>
 

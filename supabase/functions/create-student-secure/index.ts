@@ -220,27 +220,14 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Starting email sending process...');
     
     try {
-      // Get unified SMTP configuration from company settings
-      const { data: smtpConfig, error: smtpError } = await supabase
-        .from('company_settings')
-        .select('smtp_enabled, smtp_host, smtp_port, smtp_username, smtp_password, smtp_encryption, smtp_sender_email, smtp_sender_name')
-        .eq('id', 1)
-        .single();
+      // Use Supabase environment variables for SMTP configuration
+      const smtpHost = Deno.env.get('SMTP_HOST');
+      const smtpPort = parseInt(Deno.env.get('SMTP_PORT') || '587');
+      const smtpUser = Deno.env.get('SMTP_USER');
+      const smtpPassword = Deno.env.get('SMTP_PASSWORD');
+      const smtpFromEmail = Deno.env.get('SMTP_FROM_EMAIL') || Deno.env.get('SMTP_LMS_FROM_EMAIL');
+      const smtpFromName = Deno.env.get('SMTP_FROM_NAME') || Deno.env.get('SMTP_LMS_FROM_NAME') || 'System';
 
-      if (smtpError) {
-        console.error('Failed to get SMTP configuration:', smtpError);
-        emailSent = false;
-      } else if (!smtpConfig?.smtp_enabled) {
-        console.log('SMTP is disabled in company settings');
-        emailSent = false;
-      } else {
-        const smtpHost = smtpConfig.smtp_host;
-        const smtpPort = smtpConfig.smtp_port;
-        const smtpUser = smtpConfig.smtp_username;
-        const smtpPassword = smtpConfig.smtp_password;
-        const smtpFromEmail = smtpConfig.smtp_sender_email;
-        const smtpFromName = smtpConfig.smtp_sender_name;
-      
       console.log('SMTP configuration check:', {
         host: !!smtpHost,
         port: !!smtpPort,
@@ -249,149 +236,118 @@ const handler = async (req: Request): Promise<Response> => {
         fromEmail: !!smtpFromEmail,
         fromName: !!smtpFromName
       });
-      
-      if (smtpHost && smtpPort && smtpUser && smtpPassword && smtpFromEmail) {
+
+      if (smtpHost && smtpUser && smtpPassword && smtpFromEmail) {
         console.log('Attempting to send welcome email via SMTP to:', email);
         
-        const emailHtml = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-              .credentials { background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0; }
-              .warning { background: #fff3cd; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107; }
-              .footer { margin-top: 30px; font-size: 14px; color: #666; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>Welcome to ${companyName}!</h1>
-                <p>Hello ${full_name},</p>
-                <p>Your student account has been successfully created.</p>
-              </div>
-              
-              <div class="credentials">
-                <h3>🔐 Your Login Details</h3>
-                <p><strong>Student ID:</strong> ${studentId}</p>
-                <p><strong>Email:</strong> ${email}</p>
-                <p><strong>Temporary Password:</strong> ${tempPassword}</p>
-              </div>
-              
-              <div class="warning">
-                <h4>⚠️ Important Notice</h4>
-                <p>Your LMS access is currently <strong>disabled</strong> until your fees are cleared.</p>
-              </div>
-              
-              <div class="footer">
-                <p>Best regards,<br>${companyName} Team</p>
-              </div>
-            </div>
-          </body>
-          </html>
-        `;
-        
-        // Initialize SMTP client
         const client = new SMTPClient({
           connection: {
             hostname: smtpHost,
-            port: parseInt(smtpPort),
-            tls: parseInt(smtpPort) === 465, // Use TLS for port 465, STARTTLS for others
+            port: smtpPort,
+            tls: smtpPort === 465, // Use TLS for port 465 (SSL)
             auth: {
               username: smtpUser,
               password: smtpPassword,
             },
           },
         });
-        
-        // Send email
+
         await client.send({
-          from: smtpFromName ? `${smtpFromName} <${smtpFromEmail}>` : smtpFromEmail,
+          from: smtpFromEmail,
+          fromName: smtpFromName,
           to: email,
           subject: `Welcome to ${companyName} - Your Login Credentials`,
-          content: emailHtml,
-          html: emailHtml,
+          content: `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="utf-8">
+              <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+                .credentials { background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0; }
+                .warning { background: #fff3cd; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107; }
+                .footer { margin-top: 30px; font-size: 14px; color: #666; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="header">
+                  <h1>Welcome to ${companyName}!</h1>
+                  <p>Hello ${full_name},</p>
+                  <p>Your student account has been successfully created.</p>
+                </div>
+                
+                <div class="credentials">
+                  <h3>🔐 Your Login Details</h3>
+                  <p><strong>Student ID:</strong> ${studentId}</p>
+                  <p><strong>Email:</strong> ${email}</p>
+                  <p><strong>Temporary Password:</strong> ${tempPassword}</p>
+                </div>
+                
+                <div class="warning">
+                  <h4>⚠️ Important Notice</h4>
+                  <p>Your LMS access is currently <strong>disabled</strong> until your fees are cleared.</p>
+                </div>
+                
+                <div class="footer">
+                  <p>Best regards,<br>${companyName} Team</p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `,
+          html: true,
         });
-        
+
         await client.close();
-        
         emailSent = true;
         console.log('Email sent successfully via SMTP to:', email);
       } else {
-        console.log('SMTP configuration incomplete, email sending skipped');
-      }
+        console.log('SMTP configuration incomplete, skipping email');
+        emailSent = false;
       }
     } catch (emailError) {
-      console.error('Email sending error (non-blocking):', emailError);
-      // Email failure should not prevent student creation
+      console.error('Error sending email via SMTP:', emailError);
+      emailSent = false;
     }
-    
+
     console.log('Email process completed. Email sent:', emailSent);
 
     // Create initial installment payment records
-    let invoiceCreated = false;
-    try {
-      const totalInstallments = parseInt(fees_structure.split('_')[0]);
-      const installmentAmount = fees_structure === '1_installment' ? 50000 : 
-                               fees_structure === '2_installments' ? 25000 : 17000;
-      
-      console.log(`Creating ${totalInstallments} installment records for student ${studentId}`);
-      
-      // Create all installment payment records
-      const installmentRecords = [];
-      for (let i = 1; i <= totalInstallments; i++) {
-        installmentRecords.push({
-          user_id: authUser.user.id,
-          installment_number: i,
-          total_installments: totalInstallments,
-          amount: installmentAmount,
-          status: 'pending'
-        });
-      }
+    const totalInstallments = parseInt(fees_structure.split('_')[0]);
+    console.log(`Creating ${totalInstallments} installment records for student ${studentId}`);
 
-      const { error: installmentError } = await supabase
-        .from('installment_payments')
-        .insert(installmentRecords);
+    // Get company settings for fee calculation
+    const { data: companyData } = await supabase
+      .from('company_settings')
+      .select('original_fee_amount')
+      .single();
 
-      if (installmentError) {
-        console.error('Error creating installment records:', installmentError);
-      } else {
-        console.log('Installment records created successfully');
-        
-        // Try to send first invoice email if SMTP is configured
-        if (smtpConfig?.smtp_enabled && smtpHost && smtpPort && smtpUser && smtpPassword && smtpFromEmail) {
-          try {
-            console.log('Sending first invoice email...');
-            
-            const dueDate = new Date();
-            dueDate.setDate(dueDate.getDate() + 14); // 14 days from now
-            
-            const invoiceResponse = await supabase.functions.invoke('send-invoice-email', {
-              body: {
-                student_id: authUser.user.id,
-                installment_number: 1,
-                amount: installmentAmount,
-                due_date: dueDate.toISOString(),
-              }
-            });
-            
-            if (invoiceResponse.error) {
-              console.error('Error sending invoice email:', invoiceResponse.error);
-            } else {
-              console.log('First invoice email sent successfully');
-              invoiceCreated = true;
-            }
-          } catch (invoiceError) {
-            console.error('Error in invoice sending process:', invoiceError);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error in installment/invoice creation process:', error);
+    const totalFee = companyData?.original_fee_amount || 50000;
+    const installmentAmount = Math.round(totalFee / totalInstallments);
+
+    // Create all installment payment records
+    const installmentRecords = [];
+    for (let i = 1; i <= totalInstallments; i++) {
+      installmentRecords.push({
+        user_id: authUser.user.id,
+        installment_number: i,
+        total_installments: totalInstallments,
+        amount: installmentAmount,
+        status: 'pending'
+      });
+    }
+
+    const { error: installmentError } = await supabase
+      .from('installment_payments')
+      .insert(installmentRecords);
+
+    if (installmentError) {
+      console.error('Error creating installment records:', installmentError);
+    } else {
+      console.log('Installment records created successfully');
     }
 
     // Log admin action
@@ -410,7 +366,6 @@ const handler = async (req: Request): Promise<Response> => {
           phone,
           fees_structure,
           email_sent: emailSent,
-          invoice_created: invoiceCreated,
         },
       });
 
@@ -420,7 +375,6 @@ const handler = async (req: Request): Promise<Response> => {
         studentId,
         tempPassword,
         emailSent,
-        invoiceCreated,
       }),
       {
         status: 200,
