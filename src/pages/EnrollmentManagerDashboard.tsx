@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RoleGuard } from "@/components/RoleGuard";
-import { CreateStudentDialog } from "@/components/CreateStudentDialog";
+
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { 
@@ -105,64 +105,6 @@ const EnrollmentManagerDashboard = () => {
     fetchData();
   }, [selectedPeriod, user?.id]);
 
-  const handleStudentCreated = () => {
-    // Refresh the data when a student is created
-    const fetchData = async () => {
-      setLoading(true);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock stats based on selected period
-      const periodDays = parseInt(selectedPeriod);
-      const mockStats = {
-        totalEnrollments: 156,
-        activeEnrollments: 142,
-        pendingEnrollments: 14,
-        monthlyGrowth: 12.5
-      };
-      
-      // Filter mock enrollments by period
-      const endDate = new Date();
-      const startDate = subDays(endDate, periodDays);
-      
-      const mockEnrollments: EnrollmentRecord[] = [
-        {
-          id: '1',
-          student_name: 'John Doe',
-          student_email: 'john@example.com',
-          enrollment_date: '2024-01-15',
-          lms_status: 'Active' as const,
-          created_by: user?.id || ''
-        },
-        {
-          id: '2',
-          student_name: 'Jane Smith',
-          student_email: 'jane@example.com',
-          enrollment_date: '2024-01-14',
-          lms_status: 'Active' as const,
-          created_by: user?.id || ''
-        },
-        {
-          id: '3',
-          student_name: 'Mike Johnson',
-          student_email: 'mike@example.com',
-          enrollment_date: '2024-01-13',
-          lms_status: 'Pending' as const,
-          created_by: user?.id || ''
-        }
-      ].filter(enrollment => {
-        const enrollmentDate = new Date(enrollment.enrollment_date);
-        return enrollmentDate >= startDate && enrollmentDate <= endDate;
-      });
-      
-      setStats(mockStats);
-      setEnrollments(mockEnrollments);
-      setLoading(false);
-    };
-
-    fetchData();
-  };
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -194,7 +136,7 @@ const EnrollmentManagerDashboard = () => {
             <p className="text-gray-600 mt-1">Manage student enrollments and track performance</p>
           </div>
           
-          <CreateStudentDialog onStudentCreated={handleStudentCreated} />
+          
         </div>
 
         {/* Period Filter */}

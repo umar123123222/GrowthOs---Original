@@ -37,6 +37,7 @@ import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
 import { CredentialDisplay } from '@/components/ui/credential-display';
 import { generateSecurePassword } from '@/utils/passwordGenerator';
 
+
 interface Admin {
   id: string;
   full_name: string;

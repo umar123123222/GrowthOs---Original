@@ -25,7 +25,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
 import { useStudentFormValidation, StudentFormData } from '@/hooks/useStudentFormValidation';
-import { submitStudentForm } from '@/utils/studentSubmission';
+
 import jsPDF from 'jspdf';
 
 interface Student {
@@ -309,39 +309,16 @@ export function StudentsManagement() {
         fetchStudents();
         
       } else {
-        // Create new student using improved submission logic
-        const result = await submitStudentForm(formData);
+        // Student creation functionality has been disabled
+        toast({
+          title: 'Feature Disabled',
+          description: 'Student creation functionality is not available',
+          variant: 'destructive'
+        });
         
-        if (result.success) {
-          toast({
-            title: 'Success',
-            description: 'Student added successfully'
-          });
-          
-          // Just refresh the list instead of optimistic update to avoid type issues
-          // The list will be refreshed with complete data
-          
-          // Emit refresh event for other tabs
-          window.dispatchEvent(new CustomEvent('students:refresh'));
-          
-          // Close modal and reset form
-          setIsDialogOpen(false);
-          clearErrors();
-          resetForm();
-          
-          // Refresh students list to get complete data
-          setTimeout(() => {
-            fetchStudents();
-          }, 1000);
-          
-        } else {
-          // Handle submission error
-          toast({
-            title: 'Error',
-            description: result.error || 'Failed to create student',
-            variant: 'destructive'
-          });
-        }
+        setIsDialogOpen(false);
+        clearErrors();
+        resetForm();
       }
       
     } catch (error) {
