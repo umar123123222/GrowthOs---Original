@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Loader2 } from 'lucide-react';
 import { useSecureStudentCreation, CreateStudentData } from '@/hooks/useSecureStudentCreation';
-import { useInstallmentPlans } from '@/hooks/useInstallmentPlans';
+import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
 import { useAuth } from '@/hooks/useAuth';
 
 interface SecureStudentCreationDialogProps {
@@ -23,7 +23,8 @@ export const SecureStudentCreationDialog = ({
 }: SecureStudentCreationDialogProps) => {
   const { user, hasRole } = useAuth();
   const { createStudent, isCreating } = useSecureStudentCreation();
-  const { plans, isLoading: plansLoading, error: plansError } = useInstallmentPlans();
+  const { options: plans, isLoading: plansLoading } = useInstallmentOptions();
+  const plansError = null; // useInstallmentOptions doesn't have error state
 
   const [formData, setFormData] = useState<CreateStudentData>({
     full_name: '',
