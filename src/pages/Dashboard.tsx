@@ -92,7 +92,7 @@ const Dashboard = ({ user }: { user?: any }) => {
     { title: "First Sale", completed: false, icon: "💰" }
   ]);
   const [nextAssignment, setNextAssignment] = useState<any>(null);
-  const [isBlurred, setIsBlurred] = useState(false);
+  
 
   // Fetch real data when user is available - optimize by batching requests
   useEffect(() => {
@@ -102,8 +102,7 @@ const Dashboard = ({ user }: { user?: any }) => {
         fetchProgressData(),
         fetchLeaderboardData(),
         fetchMilestones(),
-        fetchNextAssignment(),
-        checkAccessStatus()
+        fetchNextAssignment()
       ]).then(results => {
         // Log any errors but don't fail the entire operation
         results.forEach((result, index) => {
@@ -115,20 +114,6 @@ const Dashboard = ({ user }: { user?: any }) => {
     }
   }, [user?.id]);
 
-  const checkAccessStatus = async () => {
-    if (!user?.id) return;
-
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('fees_overdue, fees_due_date, onboarding_done')
-      .eq('id', user.id)
-      .single();
-
-    // Blur dashboard if user has overdue fees or no payment recorded
-    if (userProfile?.fees_overdue || !userProfile?.fees_due_date) {
-      setIsBlurred(true);
-    }
-  };
 
   const fetchProgressData = async () => {
     if (!user?.id) return;
@@ -277,7 +262,7 @@ const Dashboard = ({ user }: { user?: any }) => {
   }, []);
 
   return (
-    <div className={`space-y-8 animate-fade-in ${isBlurred ? 'filter blur-sm pointer-events-none' : ''}`}>
+    <div className="space-y-8 animate-fade-in">
       {/* Header */}
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Welcome back! 👋</h1>
