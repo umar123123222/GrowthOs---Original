@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { SecureStudentCreationDialog } from '@/components/SecureStudentCreationDialog';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -23,8 +24,6 @@ import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Downloa
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
-import { useStudentFormValidation, StudentFormData } from '@/hooks/useStudentFormValidation';
 
 import jsPDF from 'jspdf';
 
@@ -72,15 +71,6 @@ interface ActivityLog {
 
 export function StudentsManagement() {
   const { toast } = useToast();
-  const { options: installmentOptions, validateInstallmentValue, defaultValue: defaultInstallmentValue } = useInstallmentOptions();
-  const { 
-    errors, 
-    isValidating, 
-    validateAndSetErrors, 
-    clearErrors, 
-    clearFieldError,
-    validateField 
-  } = useStudentFormValidation();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -113,25 +103,10 @@ export function StudentsManagement() {
   // Debug: Ensure statusFilter is completely removed
   console.log('StudentsManagement component loaded - statusFilter removed');
 
-  const [formData, setFormData] = useState<StudentFormData>({
-    full_name: '',
-    email: '',
-    phone: '',
-    fees_structure: '1_installment'
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   useEffect(() => {
     fetchStudents();
   }, []);
 
-  // Update form data when default installment value changes
-  useEffect(() => {
-    setFormData(prev => ({
-      ...prev,
-      fees_structure: defaultInstallmentValue
-    }));
-  }, [defaultInstallmentValue]);
 
 
   useEffect(() => {
@@ -266,115 +241,8 @@ export function StudentsManagement() {
   };
 
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (isSubmitting) return;
-    
-    // Validate form data
-    const isValid = await validateAndSetErrors(formData);
-    if (!isValid) {
-      return;
-    }
-    
-    setIsSubmitting(true);
-    
-    try {
-      if (editingStudent) {
-        // Update existing student (keep existing logic for updates)
-        const studentData = {
-          full_name: formData.full_name.trim(),
-          email: formData.email.toLowerCase().trim(),
-          phone: formData.phone.trim(),
-          fees_structure: formData.fees_structure
-        };
 
-        const { error } = await supabase
-          .from('users')
-          .update(studentData)
-          .eq('id', editingStudent.id);
 
-        if (error) throw error;
-        
-        toast({
-          title: 'Success',
-          description: 'Student updated successfully'
-        });
-        
-        // Close modal and refresh
-        setIsDialogOpen(false);
-        setEditingStudent(null);
-        clearErrors();
-        resetForm();
-        fetchStudents();
-        
-      } else {
-        // Student creation functionality has been disabled
-        toast({
-          title: 'Feature Disabled',
-          description: 'Student creation functionality is not available',
-          variant: 'destructive'
-        });
-        
-        setIsDialogOpen(false);
-        clearErrors();
-        resetForm();
-      }
-      
-    } catch (error) {
-      console.error('Error saving student:', error);
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred. Please try again.',
-        variant: 'destructive'
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      full_name: '',
-      email: '',
-      phone: '',
-      fees_structure: defaultInstallmentValue || '1_installment'
-    });
-  };
-
-  const handleEdit = (student: Student) => {
-    setEditingStudent(student);
-    setFormData({
-      full_name: student.full_name,
-      email: student.email,
-      phone: student.phone || '',
-      fees_structure: student.fees_structure || defaultInstallmentValue || '1_installment'
-    });
-    clearErrors();
-    setIsDialogOpen(true);
-  };
-
-  const handleFieldChange = async (field: keyof StudentFormData, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    
-    // Clear field error when user starts typing
-    if (errors[field]) {
-      clearFieldError(field);
-    }
-    
-    // Perform real-time validation for email and phone after user has typed enough
-    if ((field === 'email' && value.length > 3 && value.includes('@')) || 
-        (field === 'phone' && value.length > 8)) {
-      // Debounce validation to avoid too many API calls
-      setTimeout(async () => {
-        const error = await validateField(field, value);
-        if (error && formData[field] === value) { // Only show error if field hasn't changed
-          // We don't set the error immediately to avoid flickering
-          // The main validation will catch it on submit
-        }
-      }, 500);
-    }
-  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this student?')) return;
@@ -939,137 +807,19 @@ export function StudentsManagement() {
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">Manage student records and track their progress</p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setEditingStudent(null)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Student
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>
-                {editingStudent ? 'Edit Student' : 'Add New Student'}
-              </DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="full_name" className={errors.full_name ? 'text-destructive' : ''}>
-                  Full Name *
-                </Label>
-                <Input
-                  id="full_name"
-                  value={formData.full_name}
-                  onChange={(e) => handleFieldChange('full_name', e.target.value)}
-                  className={errors.full_name ? 'border-destructive' : ''}
-                  placeholder="Enter full name (minimum 3 characters)"
-                  disabled={isSubmitting}
-                />
-                {errors.full_name && (
-                  <p className="text-sm text-destructive mt-1">{errors.full_name}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="email" className={errors.email ? 'text-destructive' : ''}>
-                  Email *
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleFieldChange('email', e.target.value)}
-                  className={errors.email ? 'border-destructive' : ''}
-                  placeholder="Enter valid email address"
-                  disabled={isSubmitting}
-                />
-                {errors.email && (
-                  <p className="text-sm text-destructive mt-1">{errors.email}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="phone" className={errors.phone ? 'text-destructive' : ''}>
-                  Phone *
-                </Label>
-                <Input
-                  id="phone"
-                  value={formData.phone}
-                  onChange={(e) => handleFieldChange('phone', e.target.value)}
-                  className={errors.phone ? 'border-destructive' : ''}
-                  placeholder="Phone must start with a country code, e.g. '+92…'"
-                  disabled={isSubmitting}
-                />
-                {errors.phone && (
-                  <p className="text-sm text-destructive mt-1">{errors.phone}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="fees_structure" className={errors.fees_structure ? 'text-destructive' : ''}>
-                  Fees Structure *
-                </Label>
-                <Select 
-                  value={formData.fees_structure} 
-                  onValueChange={(value) => handleFieldChange('fees_structure', value)}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger className={errors.fees_structure ? 'border-destructive' : ''}>
-                    <SelectValue placeholder="Select fees structure" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {installmentOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.fees_structure && (
-                  <p className="text-sm text-destructive mt-1">{errors.fees_structure}</p>
-                )}
-              </div>
-              
-              {errors.general && (
-                <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md">
-                  {errors.general}
-                </div>
-              )}
-              <div className="text-sm text-muted-foreground space-y-1">
-                <p>• LMS User ID will be set to the student's email</p>
-                <p>• Temporary password will be auto-generated</p>
-                <p>• LMS status will be inactive until first payment</p>
-              </div>
-              <div className="flex justify-end space-x-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => {
-                    setIsDialogOpen(false);
-                    clearErrors();
-                    resetForm();
-                  }}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={isSubmitting || isValidating}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <span className="animate-spin mr-2">⏳</span>
-                      {editingStudent ? 'Updating...' : 'Adding...'}
-                    </>
-                  ) : (
-                    `${editingStudent ? 'Update' : 'Add'} Student`
-                  )}
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button 
+          onClick={() => setIsDialogOpen(true)} 
+          className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in"
+        >
+          <Plus className="w-4 h-4 mr-2" />
+          Add Student
+        </Button>
+        
+        <SecureStudentCreationDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onStudentCreated={fetchStudents}
+        />
       </div>
 
       {/* Stats Cards */}
@@ -1165,11 +915,10 @@ export function StudentsManagement() {
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
             <SelectItem value="all">All</SelectItem>
-            {installmentOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
+            <SelectItem value="1_installment">1 Installment</SelectItem>
+            <SelectItem value="3_installments">3 Installments</SelectItem>
+            <SelectItem value="6_installments">6 Installments</SelectItem>
+            <SelectItem value="12_installments">12 Installments</SelectItem>
           </SelectContent>
         </Select>
 
@@ -1306,15 +1055,22 @@ export function StudentsManagement() {
                        </TableCell>
                        <TableCell>
                         <div className="flex space-x-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(student)}
-                            title="Edit Student Details"
-                            className="hover-scale hover:border-blue-300 hover:text-blue-600"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
+                           <Button
+                             variant="outline"
+                             size="sm"
+                             onClick={() => {
+                               // Edit functionality disabled - using SecureStudentCreationDialog for new students only
+                               toast({
+                                 title: "Edit Disabled",
+                                 description: "Student editing has been disabled. Please contact system administrator.",
+                                 variant: "destructive"
+                               });
+                             }}
+                             title="Edit Student Details"
+                             className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                           >
+                             <Edit className="w-4 h-4" />
+                           </Button>
                           <Button
                             variant="outline"
                             size="sm"
