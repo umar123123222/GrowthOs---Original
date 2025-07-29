@@ -122,17 +122,17 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
   }
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full h-full">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <Clock className="w-5 h-5 text-orange-500" />
           Next Assignment
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="flex flex-col h-full space-y-4">
         {nextAssignment ? (
           <>
-            <div>
+            <div className="flex-grow">
               <h3 className="font-medium text-sm mb-1">{nextAssignment.assignment_title}</h3>
               <p className="text-xs text-muted-foreground">
                 Due: {new Date(nextAssignment.due_date).toLocaleDateString()}
@@ -140,7 +140,7 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
             </div>
             <Button 
               onClick={handleStartAssignment}
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-blue-600 hover:bg-blue-700 mt-auto"
             >
               <FileText className="w-4 h-4 mr-2" />
               Start Assignment
@@ -148,12 +148,14 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
           </>
         ) : (
           <>
-            <p className="text-sm text-muted-foreground">
-              No pending assignments
-            </p>
+            <div className="flex-grow">
+              <p className="text-sm text-muted-foreground">
+                No pending assignments
+              </p>
+            </div>
             <Button 
               onClick={handleStartAssignment}
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-blue-600 hover:bg-blue-700 mt-auto"
               disabled
             >
               <FileText className="w-4 h-4 mr-2" />

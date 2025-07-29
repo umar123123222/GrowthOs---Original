@@ -300,7 +300,7 @@ const Dashboard = ({ user }: { user?: any }) => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Progress Tracker */}
-        <Card>
+        <Card className="h-full">
           <CardHeader>
             <CardTitle className="flex items-center">
               <TrendingUp className="w-5 h-5 mr-2 text-blue-600" />
@@ -331,18 +331,20 @@ const Dashboard = ({ user }: { user?: any }) => {
         </Card>
 
         {/* Next Assignment */}
-        <NextAssignment userId={user?.id} />
+        <div className="h-full">
+          <NextAssignment userId={user?.id} />
+        </div>
 
-        {/* Meta/Shopify Status */}
-        <Card>
+        {/* Store Status */}
+        <Card className="h-full">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Zap className="w-5 h-5 mr-2 text-green-600" />
               Store Status
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
+          <CardContent className="flex flex-col h-full">
+            <div className="space-y-3 flex-grow">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Shopify Store</span>
                 <Badge 
@@ -361,15 +363,15 @@ const Dashboard = ({ user }: { user?: any }) => {
                   {metaConnected ? "Connected" : "Not Connected"}
                 </Badge>
               </div>
-              <Button 
-                variant="outline" 
-                className="w-full" 
-                size="sm"
-                onClick={() => setConnectDialogOpen(true)}
-              >
-                Connect Accounts
-              </Button>
             </div>
+            <Button 
+              variant="outline" 
+              className="w-full mt-4" 
+              size="sm"
+              onClick={() => setConnectDialogOpen(true)}
+            >
+              Connect Accounts
+            </Button>
           </CardContent>
         </Card>
       </div>
