@@ -1354,6 +1354,7 @@ export type Database = {
           course_track_id: string | null
           created_at: string | null
           created_by: string | null
+          dream_goal_summary: string | null
           email: string
           fees_due_date: string | null
           fees_overdue: boolean | null
@@ -1398,6 +1399,7 @@ export type Database = {
           course_track_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          dream_goal_summary?: string | null
           email: string
           fees_due_date?: string | null
           fees_overdue?: boolean | null
@@ -1442,6 +1444,7 @@ export type Database = {
           course_track_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          dream_goal_summary?: string | null
           email?: string
           fees_due_date?: string | null
           fees_overdue?: boolean | null

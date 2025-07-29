@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ConnectAccountsDialog } from "@/components/ConnectAccountsDialog";
 import { NextAssignment } from "@/components/NextAssignment";
+import { DreamGoalCard } from "@/components/DreamGoalCard";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { generateDreamGoalSummary } from "@/utils/dreamGoalUtils";
 import { 
   BookOpen, 
   FileText, 
@@ -23,7 +26,10 @@ const Dashboard = ({ user }: { user?: any }) => {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [shopifyConnected, setShopifyConnected] = useState(false);
   const [metaConnected, setMetaConnected] = useState(false);
+  const [dreamGoalSummary, setDreamGoalSummary] = useState<string | null>(null);
+  const [questionnaireOpen, setQuestionnaireOpen] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Fetch connection status when component mounts or user changes
   useEffect(() => {
@@ -32,7 +38,7 @@ const Dashboard = ({ user }: { user?: any }) => {
         try {
           const { data, error } = await supabase
             .from('users')
-            .select('shopify_credentials, meta_ads_credentials')
+            .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
             .eq('id', user.id)
             .single();
 
@@ -40,6 +46,7 @@ const Dashboard = ({ user }: { user?: any }) => {
 
           setShopifyConnected(!!data?.shopify_credentials);
           setMetaConnected(!!data?.meta_ads_credentials);
+          setDreamGoalSummary(data?.dream_goal_summary || null);
         } catch (error) {
           console.error('Error fetching connection status:', error);
         }
@@ -58,7 +65,7 @@ const Dashboard = ({ user }: { user?: any }) => {
         try {
           const { data, error } = await supabase
             .from('users')
-            .select('shopify_credentials, meta_ads_credentials')
+            .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
             .eq('id', user.id)
             .single();
 
@@ -66,6 +73,7 @@ const Dashboard = ({ user }: { user?: any }) => {
 
           setShopifyConnected(!!data?.shopify_credentials);
           setMetaConnected(!!data?.meta_ads_credentials);
+          setDreamGoalSummary(data?.dream_goal_summary || null);
         } catch (error) {
           console.error('Error refetching connection status:', error);
         }
@@ -261,6 +269,15 @@ const Dashboard = ({ user }: { user?: any }) => {
     setConnectDialogOpen(true);
   }, []);
 
+  const handleEditGoal = useCallback(() => {
+    // For now, just show a placeholder message
+    // In a full implementation, this would open a questionnaire modal
+    toast({
+      title: "Coming Soon",
+      description: "Dream goal editing questionnaire will be available soon!",
+    });
+  }, [toast]);
+
   return (
     <div className="space-y-8 animate-fade-in">
       {/* Header */}
@@ -269,30 +286,36 @@ const Dashboard = ({ user }: { user?: any }) => {
         <p className="text-muted-foreground mt-2 text-sm sm:text-base">Ready to continue your journey to success?</p>
       </div>
 
-      {/* Visualization Card */}
+      {/* Dream Goal Card */}
+      <DreamGoalCard 
+        dreamGoalSummary={dreamGoalSummary}
+        onEditGoal={handleEditGoal}
+      />
+
+      {/* Overall Progress Card */}
       <Card className="gradient-hero text-white border-0 shadow-elevated overflow-hidden relative">
         <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
         <CardContent className="p-6 relative z-10">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-xl font-semibold mb-2">Your Dream Goal 🌟</h3>
+              <h3 className="text-xl font-semibold mb-2">Your Progress 🚀</h3>
               <p className="text-white/90 mb-4 text-base">
-                "Go for Umrah with family and buy a BMW within 2 years"
+                Keep pushing forward to reach your goals!
               </p>
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2 bg-white/20 rounded-full px-3 py-1">
-                  <span className="text-xl" role="img" aria-label="Umrah goal">🕌</span>
-                  <span className="text-sm font-medium">Umrah Goal</span>
+                  <BookOpen className="w-4 h-4" />
+                  <span className="text-sm font-medium">{progressData.videosWatched} Videos</span>
                 </div>
                 <div className="flex items-center space-x-2 bg-white/20 rounded-full px-3 py-1">
-                  <span className="text-xl" role="img" aria-label="BMW goal">🚗</span>
-                  <span className="text-sm font-medium">BMW Goal</span>
+                  <FileText className="w-4 h-4" />
+                  <span className="text-sm font-medium">{progressData.assignmentsCompleted} Assignments</span>
                 </div>
               </div>
             </div>
             <div className="text-right">
               <div className="text-3xl font-bold mb-1">{progressData.overallProgress}%</div>
-              <div className="text-white/80 text-sm">Progress</div>
+              <div className="text-white/80 text-sm">Complete</div>
             </div>
           </div>
         </CardContent>
