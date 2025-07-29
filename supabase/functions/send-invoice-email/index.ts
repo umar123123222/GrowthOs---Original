@@ -8,7 +8,12 @@ const corsHeaders = {
 };
 
 interface InvoiceEmailRequest {
-  student_id: string;
+  student_data?: {
+    full_name: string;
+    email: string;
+    student_id: string;
+  };
+  student_id?: string;
   installment_number: number;
   amount: number;
   due_date: string;
@@ -24,17 +29,27 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { student_id, installment_number, amount, due_date }: InvoiceEmailRequest = await req.json();
+    const { student_data, student_id, installment_number, amount, due_date }: InvoiceEmailRequest = await req.json();
 
-    // Get student data
-    const { data: studentData, error: studentError } = await supabase
-      .from('users')
-      .select('full_name, email, student_id')
-      .eq('id', student_id)
-      .single();
+    let studentData;
 
-    if (studentError || !studentData) {
-      throw new Error('Student not found');
+    // If student_data is provided directly (for testing), use it
+    if (student_data) {
+      studentData = student_data;
+    } else if (student_id) {
+      // Otherwise fetch from database
+      const { data, error: studentError } = await supabase
+        .from('users')
+        .select('full_name, email, student_id')
+        .eq('id', student_id)
+        .single();
+
+      if (studentError || !data) {
+        throw new Error('Student not found');
+      }
+      studentData = data;
+    } else {
+      throw new Error('Either student_data or student_id must be provided');
     }
 
     // Use Supabase environment variables for SMTP configuration
