@@ -122,29 +122,32 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
   }
 
   return (
-    <Card className="w-full h-full">
+    <Card className="h-full flex flex-col">
       <CardHeader className="pb-3">
         <CardTitle className="text-lg flex items-center gap-2">
           <Clock className="w-5 h-5 text-orange-500" />
           Next Assignment
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col h-full space-y-4">
+      <CardContent className="flex flex-col flex-grow p-4">
         {nextAssignment ? (
           <>
-            <div className="flex-grow">
-              <h3 className="font-medium text-sm mb-1">{nextAssignment.assignment_title}</h3>
+            <div className="flex-grow space-y-2">
+              <h3 className="font-medium text-sm leading-tight">{nextAssignment.assignment_title}</h3>
               <p className="text-xs text-muted-foreground">
                 Due: {new Date(nextAssignment.due_date).toLocaleDateString()}
               </p>
             </div>
-            <Button 
-              onClick={handleStartAssignment}
-              className="w-full bg-blue-600 hover:bg-blue-700 mt-auto"
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Start Assignment
-            </Button>
+            <div className="mt-auto pt-4">
+              <Button 
+                onClick={handleStartAssignment}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                size="sm"
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Start Assignment
+              </Button>
+            </div>
           </>
         ) : (
           <>
@@ -153,14 +156,17 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
                 No pending assignments
               </p>
             </div>
-            <Button 
-              onClick={handleStartAssignment}
-              className="w-full bg-blue-600 hover:bg-blue-700 mt-auto"
-              disabled
-            >
-              <FileText className="w-4 h-4 mr-2" />
-              Start Assignment
-            </Button>
+            <div className="mt-auto pt-4">
+              <Button 
+                onClick={handleStartAssignment}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+                size="sm"
+                disabled
+              >
+                <FileText className="w-4 h-4 mr-2" />
+                Start Assignment
+              </Button>
+            </div>
           </>
         )}
       </CardContent>

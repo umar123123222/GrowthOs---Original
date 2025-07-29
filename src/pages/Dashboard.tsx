@@ -336,14 +336,14 @@ const Dashboard = ({ user }: { user?: any }) => {
         </div>
 
         {/* Store Status */}
-        <Card className="h-full">
+        <Card className="h-full flex flex-col">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Zap className="w-5 h-5 mr-2 text-green-600" />
               Store Status
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col h-full">
+          <CardContent className="flex flex-col flex-grow">
             <div className="space-y-3 flex-grow">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Shopify Store</span>
@@ -364,14 +364,16 @@ const Dashboard = ({ user }: { user?: any }) => {
                 </Badge>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              className="w-full mt-4" 
-              size="sm"
-              onClick={() => setConnectDialogOpen(true)}
-            >
-              Connect Accounts
-            </Button>
+            <div className="mt-auto pt-4">
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                size="sm"
+                onClick={() => setConnectDialogOpen(true)}
+              >
+                Connect Accounts
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
