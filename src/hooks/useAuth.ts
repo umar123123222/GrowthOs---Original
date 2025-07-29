@@ -21,6 +21,50 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<any>(null);
 
+  // Update user activity timestamp
+  const updateLastActive = async (userId: string) => {
+    try {
+      await supabase
+        .from('users')
+        .update({ last_active_at: new Date().toISOString() })
+        .eq('id', userId);
+    } catch (error) {
+      console.error('Error updating last active:', error);
+    }
+  };
+
+  // Set up activity tracking
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Update activity immediately
+    updateLastActive(user.id);
+
+    // Update activity every 2 minutes while user is active
+    const activityInterval = setInterval(() => {
+      updateLastActive(user.id);
+    }, 2 * 60 * 1000); // 2 minutes
+
+    // Update activity on user interactions
+    const handleUserActivity = () => {
+      updateLastActive(user.id);
+    };
+
+    // Listen for user activity
+    document.addEventListener('mousedown', handleUserActivity);
+    document.addEventListener('keydown', handleUserActivity);
+    document.addEventListener('scroll', handleUserActivity);
+    document.addEventListener('touchstart', handleUserActivity);
+
+    return () => {
+      clearInterval(activityInterval);
+      document.removeEventListener('mousedown', handleUserActivity);
+      document.removeEventListener('keydown', handleUserActivity);
+      document.removeEventListener('scroll', handleUserActivity);
+      document.removeEventListener('touchstart', handleUserActivity);
+    };
+  }, [user?.id]);
+
   useEffect(() => {
     console.log('useAuth: Starting authentication check');
     setLoading(true);
