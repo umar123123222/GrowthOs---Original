@@ -1489,6 +1489,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_assignment_submission: {
+        Args: {
+          p_submission_id: string
+          p_new_status: string
+          p_mentor_id: string
+        }
+        Returns: {
+          id: string
+          user_id: string
+          assignment_id: string
+          status: string
+          reviewed_by: string
+          reviewed_at: string
+          feedback: string
+          score: number
+          submission_type: string
+          text_response: string
+          external_link: string
+          file_url: string
+          submitted_at: string
+          updated_at: string
+        }[]
+      }
       create_notification: {
         Args: {
           p_user_id: string

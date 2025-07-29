@@ -120,21 +120,26 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
 
   const handleReviewSubmission = async (submissionId: string, status: 'accepted' | 'rejected') => {
     try {
-      // Use the new database function for secure approval
+      if (!user?.id) {
+        throw new Error('User not authenticated');
+      }
+
+      // Use the new function that runs your exact SQL
       const { data, error } = await supabase
-        .rpc('fn_approve_submission', {
+        .rpc('approve_assignment_submission', {
           p_submission_id: submissionId,
-          p_decision: status,
-          p_note: reviewNote || feedback || null
+          p_new_status: status,
+          p_mentor_id: user.id
         });
 
       if (error) throw error;
 
-      // Type assertion for the response
-      const result = data as { success: boolean; error?: string };
-      if (result && !result.success) {
-        throw new Error(result.error || 'Failed to update submission');
+      if (!data || data.length === 0) {
+        throw new Error('No data returned from update');
       }
+
+      // Log the updated row data
+      console.log('Updated submission:', data[0]);
 
       toast({
         title: 'Success',
