@@ -3,9 +3,69 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Trophy, Star, TrendingUp, Award } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 const Leaderboard = () => {
-  const studentData = [
+  const { user } = useAuth();
+  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLeaderboardData = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('leaderboard')
+          .select(`
+            user_id,
+            points,
+            rank,
+            users!inner(full_name)
+          `)
+          .order('rank', { ascending: true })
+          .limit(12);
+
+        if (error) {
+          console.error('Error fetching leaderboard:', error);
+          return;
+        }
+
+        // Transform the data to match our UI format
+        const transformedData = data?.map((item, index) => ({
+          id: index + 1,
+          name: item.users?.full_name || `Student ${index + 1}`,
+          score: Math.floor(item.points / 25), // Convert points to percentage
+          rank: item.rank,
+          avatar: item.users?.full_name?.split(' ').map(n => n[0]).join('') || 'ST',
+          progress: Math.min(100, Math.floor(item.points / 25)),
+          badges: getBadgesForScore(item.points),
+          streak: Math.floor(item.points / 100) + Math.floor(Math.random() * 10),
+          isCurrentUser: item.user_id === user?.id
+        })) || [];
+
+        setLeaderboardData(transformedData);
+      } catch (error) {
+        console.error('Error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLeaderboardData();
+  }, [user?.id]);
+
+  const getBadgesForScore = (points) => {
+    const badges = [];
+    if (points >= 2000) badges.push("First Sale", "Quiz Master", "Store Live", "Speed Learner");
+    else if (points >= 1500) badges.push("Store Live", "Quiz Master", "First Sale");
+    else if (points >= 1000) badges.push("Quiz Master", "Store Live");
+    else if (points >= 500) badges.push("Quiz Master");
+    return badges;
+  };
+
+  // Fallback data if database is empty or loading
+  const fallbackData = [
     {
       id: 1,
       name: "Sarah Johnson",
@@ -185,7 +245,7 @@ const Leaderboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {studentData.map((student) => (
+                {(leaderboardData.length > 0 ? leaderboardData : fallbackData).map((student) => (
                   <div
                     key={student.id}
                     className={`p-4 rounded-lg border transition-all ${
