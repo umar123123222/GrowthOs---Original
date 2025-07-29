@@ -64,6 +64,7 @@ export type Database = {
           created_at: string
           due_date: string | null
           due_days_after_unlock: number | null
+          mentor_id: string | null
           sequence_order: number
           Status: string | null
         }
@@ -75,6 +76,7 @@ export type Database = {
           created_at: string
           due_date?: string | null
           due_days_after_unlock?: number | null
+          mentor_id?: string | null
           sequence_order: number
           Status?: string | null
         }
@@ -86,10 +88,18 @@ export type Database = {
           created_at?: string
           due_date?: string | null
           due_days_after_unlock?: number | null
+          mentor_id?: string | null
           sequence_order?: number
           Status?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "assignment_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fk_assignment_assigned_by"
             columns: ["assigned_by"]
