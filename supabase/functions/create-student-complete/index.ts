@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { Resend } from "npm:resend@4.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -108,12 +108,21 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    
+    // SMTP Configuration for LMS emails
+    const smtpConfig = {
+      hostname: Deno.env.get("SMTP_HOST") || "",
+      port: parseInt(Deno.env.get("SMTP_PORT") || "587"),
+      username: Deno.env.get("SMTP_USER") || "",
+      password: Deno.env.get("SMTP_PASSWORD") || "",
+      from: Deno.env.get("SMTP_LMS_FROM_EMAIL") || "",
+      fromName: Deno.env.get("SMTP_LMS_FROM_NAME") || "IDMPakistan LMS"
+    };
     
     console.log('Environment check:', {
       hasSupabaseUrl: !!supabaseUrl,
       hasServiceKey: !!supabaseServiceKey,
-      hasResendKey: !!resendApiKey
+      hasSmtpConfig: !!(smtpConfig.hostname && smtpConfig.username)
     });
 
     if (!supabaseUrl || !supabaseServiceKey) {
@@ -254,62 +263,71 @@ const handler = async (req: Request): Promise<Response> => {
 
     let emailSent = false;
     
-    // Try to send welcome email if Resend is configured
-    if (resendApiKey) {
+    // Try to send welcome email if SMTP is configured
+    if (smtpConfig.hostname && smtpConfig.username) {
       try {
-        const resend = new Resend(resendApiKey);
+        const client = new SMTPClient({
+          connection: {
+            hostname: smtpConfig.hostname,
+            port: smtpConfig.port,
+            tls: smtpConfig.port === 465,
+            auth: {
+              username: smtpConfig.username,
+              password: smtpConfig.password,
+            },
+          },
+        });
+
+        const fromAddress = smtpConfig.fromName 
+          ? `${smtpConfig.fromName} <${smtpConfig.from}>` 
+          : smtpConfig.from;
+
         const invoiceHTML = generateInvoiceHTML(fullName, email, feesStructure);
 
-        const emailResult = await resend.emails.send({
-          from: 'IDMPakistan LMS <noreply@idmpakistan.pk>',
-          to: [email],
-          subject: 'Your IDMPakistan LMS account & first invoice',
+        await client.send({
+          from: fromAddress,
+          to: email,
+          subject: 'Your IDMPakistan LMS account & login credentials',
+          content: "auto",
           html: `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
               <h2>Welcome to IDMPakistan LMS</h2>
               <p>Dear ${fullName},</p>
-              <p>Your LMS account has been created and your first invoice is attached to this email.</p>
+              <p>Your LMS account has been created successfully. Below are your login credentials:</p>
               
               <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
                 <h3>Login Details</h3>
                 <p><strong>LMS URL:</strong> https://lms.idmpakistan.pk</p>
                 <p><strong>Email:</strong> ${email}</p>
-                <p><strong>Password:</strong> ${tempPassword}</p>
+                <p><strong>Temporary Password:</strong> ${tempPassword}</p>
               </div>
               
-              <p><strong>Important:</strong> Please change your password immediately after signing in.</p>
+              <p style="color: #d9534f;"><strong>Important:</strong> Please change your password immediately after your first login for security purposes.</p>
               
               <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                <h3>Payment Instructions</h3>
-                <p>• Pay your invoice within fourteen days</p>
-                <p>• Send proof of payment to <strong>billing@idmpakistan.pk</strong></p>
-                <p>• Note that accounts with unpaid invoices are automatically deleted after two weeks</p>
+                <h3>Next Steps</h3>
+                <p>• Log in to your LMS account using the credentials above</p>
+                <p>• Complete your profile setup</p>
+                <p>• Check your payment instructions for course fees</p>
+                <p>• Contact support if you need any assistance</p>
               </div>
               
-              <p>Thank you for joining IDMPakistan LMS!</p>
+              <p>Thank you for joining IDMPakistan LMS! We're excited to help you on your learning journey.</p>
               <p>Best regards,<br>The IDMPakistan Team</p>
             </div>
           `,
-          attachments: [
-            {
-              filename: `invoice-${fullName.replace(/\s+/g, '-')}.html`,
-              content: invoiceHTML
-            }
-          ]
         });
 
-        console.log('Email result:', emailResult);
-        emailSent = !emailResult.error;
-        
-        if (emailResult.error) {
-          console.error('Email sending failed:', emailResult.error);
-        }
+        await client.close();
+        emailSent = true;
+        console.log('Welcome email sent successfully via SMTP');
+
       } catch (emailError) {
-        console.error('Email error:', emailError);
+        console.error('SMTP email error:', emailError);
         // Don't throw - student was created successfully
       }
     } else {
-      console.log('RESEND_API_KEY not configured, skipping email');
+      console.log('SMTP not configured, skipping welcome email');
     }
 
     console.log('Student creation completed successfully');
