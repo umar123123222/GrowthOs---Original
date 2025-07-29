@@ -335,13 +335,23 @@ export type Database = {
           currency: string
           id: number
           installment_plans: string[] | null
+          invoice_from_email: string | null
+          invoice_from_name: string | null
           invoice_notes: string | null
           invoice_overdue_days: number
           invoice_send_gap_days: number
+          lms_from_email: string | null
+          lms_from_name: string | null
           maximum_installment_count: number
           original_fee_amount: number
           primary_phone: string
           secondary_phone: string | null
+          smtp_enabled: boolean | null
+          smtp_encryption: string | null
+          smtp_host: string | null
+          smtp_password: string | null
+          smtp_port: number | null
+          smtp_username: string | null
           updated_at: string | null
         }
         Insert: {
@@ -354,13 +364,23 @@ export type Database = {
           currency?: string
           id?: number
           installment_plans?: string[] | null
+          invoice_from_email?: string | null
+          invoice_from_name?: string | null
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
+          lms_from_email?: string | null
+          lms_from_name?: string | null
           maximum_installment_count?: number
           original_fee_amount?: number
           primary_phone?: string
           secondary_phone?: string | null
+          smtp_enabled?: boolean | null
+          smtp_encryption?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_username?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -373,13 +393,23 @@ export type Database = {
           currency?: string
           id?: number
           installment_plans?: string[] | null
+          invoice_from_email?: string | null
+          invoice_from_name?: string | null
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
+          lms_from_email?: string | null
+          lms_from_name?: string | null
           maximum_installment_count?: number
           original_fee_amount?: number
           primary_phone?: string
           secondary_phone?: string | null
+          smtp_enabled?: boolean | null
+          smtp_encryption?: string | null
+          smtp_host?: string | null
+          smtp_password?: string | null
+          smtp_port?: number | null
+          smtp_username?: string | null
           updated_at?: string | null
         }
         Relationships: []

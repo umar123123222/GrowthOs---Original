@@ -7,7 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Building2, Phone, Mail, DollarSign, Settings, Upload, FileText, Calendar } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Building2, Phone, Mail, DollarSign, Settings, Upload, FileText, Calendar, Server, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface CompanySettingsData {
@@ -24,6 +25,18 @@ interface CompanySettingsData {
   invoice_notes?: string;
   invoice_overdue_days: number;
   invoice_send_gap_days: number;
+  // SMTP Configuration
+  smtp_enabled: boolean;
+  smtp_host?: string;
+  smtp_port: number;
+  smtp_username?: string;
+  smtp_password?: string;
+  smtp_encryption: string;
+  // Email Addresses
+  invoice_from_email?: string;
+  invoice_from_name?: string;
+  lms_from_email?: string;
+  lms_from_name?: string;
 }
 
 export function CompanySettings() {
@@ -55,7 +68,19 @@ export function CompanySettings() {
     maximum_installment_count: 3,
     invoice_notes: '',
     invoice_overdue_days: 30,
-    invoice_send_gap_days: 7
+    invoice_send_gap_days: 7,
+    // SMTP Configuration
+    smtp_enabled: false,
+    smtp_host: '',
+    smtp_port: 587,
+    smtp_username: '',
+    smtp_password: '',
+    smtp_encryption: 'STARTTLS',
+    // Email Addresses
+    invoice_from_email: '',
+    invoice_from_name: '',
+    lms_from_email: '',
+    lms_from_name: ''
   });
 
   useEffect(() => {
@@ -102,7 +127,7 @@ export function CompanySettings() {
     }
   };
 
-  const handleInputChange = (field: keyof CompanySettingsData, value: string | number) => {
+  const handleInputChange = (field: keyof CompanySettingsData, value: string | number | boolean) => {
     setSettings(prev => ({
       ...prev,
       [field]: value
@@ -286,6 +311,200 @@ export function CompanySettings() {
                 placeholder="contact@company.com"
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* SMTP Configuration */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Server className="h-5 w-5" />
+              SMTP Configuration
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Enable SMTP Toggle */}
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="smtp_enabled"
+                checked={settings.smtp_enabled}
+                onCheckedChange={(checked) => handleInputChange('smtp_enabled', checked)}
+              />
+              <Label htmlFor="smtp_enabled" className="font-medium">
+                Enable SMTP Email Delivery
+              </Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Configure SMTP settings to send automated emails for invoices and LMS notifications
+            </p>
+
+            {/* SMTP Fields - only show when enabled */}
+            {settings.smtp_enabled && (
+              <>
+                <Separator className="my-4" />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_host">SMTP Host *</Label>
+                    <Input
+                      id="smtp_host"
+                      value={settings.smtp_host || ''}
+                      onChange={(e) => handleInputChange('smtp_host', e.target.value)}
+                      placeholder="smtp.gmail.com"
+                      required={settings.smtp_enabled}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Your SMTP server hostname
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_port">SMTP Port</Label>
+                    <Input
+                      id="smtp_port"
+                      type="number"
+                      min="1"
+                      max="65535"
+                      value={settings.smtp_port}
+                      onChange={(e) => handleInputChange('smtp_port', parseInt(e.target.value))}
+                      placeholder="587"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Port number (587 for TLS, 465 for SSL)
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_encryption">Encryption Type</Label>
+                    <Select 
+                      value={settings.smtp_encryption} 
+                      onValueChange={(value) => handleInputChange('smtp_encryption', value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select encryption" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white z-50">
+                        <SelectItem value="None">None</SelectItem>
+                        <SelectItem value="SSL/TLS">SSL/TLS</SelectItem>
+                        <SelectItem value="STARTTLS">STARTTLS</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Encryption method for secure connection
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_username">SMTP Username</Label>
+                    <Input
+                      id="smtp_username"
+                      value={settings.smtp_username || ''}
+                      onChange={(e) => handleInputChange('smtp_username', e.target.value)}
+                      placeholder="your-email@domain.com"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Username for SMTP authentication
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="smtp_password">SMTP Password</Label>
+                    <Input
+                      id="smtp_password"
+                      type="password"
+                      value={settings.smtp_password || ''}
+                      onChange={(e) => handleInputChange('smtp_password', e.target.value)}
+                      placeholder="••••••••••••"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Password or app-specific password
+                    </p>
+                  </div>
+                </div>
+
+                {/* Email Addresses Section */}
+                <Separator className="my-6" />
+                
+                <div className="space-y-4">
+                  <h4 className="font-medium flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Default Email Addresses
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Invoice Email Settings */}
+                    <div className="space-y-4 p-4 border rounded-lg">
+                      <h5 className="font-medium flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Invoice Emails
+                      </h5>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="invoice_from_email">Invoice From Address</Label>
+                        <Input
+                          id="invoice_from_email"
+                          type="email"
+                          value={settings.invoice_from_email || ''}
+                          onChange={(e) => handleInputChange('invoice_from_email', e.target.value)}
+                          placeholder="billing@company.com"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          The email address used to send all invoices
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="invoice_from_name">Invoice From Name (Optional)</Label>
+                        <Input
+                          id="invoice_from_name"
+                          value={settings.invoice_from_name || ''}
+                          onChange={(e) => handleInputChange('invoice_from_name', e.target.value)}
+                          placeholder="Company Billing"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Display name for invoice emails
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* LMS Email Settings */}
+                    <div className="space-y-4 p-4 border rounded-lg">
+                      <h5 className="font-medium flex items-center gap-2">
+                        <Shield className="h-4 w-4" />
+                        LMS Notifications
+                      </h5>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="lms_from_email">LMS Details From Address</Label>
+                        <Input
+                          id="lms_from_email"
+                          type="email"
+                          value={settings.lms_from_email || ''}
+                          onChange={(e) => handleInputChange('lms_from_email', e.target.value)}
+                          placeholder="lms@company.com"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          The email address used for sending LMS enrollment and course notifications
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="lms_from_name">LMS From Name (Optional)</Label>
+                        <Input
+                          id="lms_from_name"
+                          value={settings.lms_from_name || ''}
+                          onChange={(e) => handleInputChange('lms_from_name', e.target.value)}
+                          placeholder="Company LMS"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Display name for LMS notification emails
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
 
