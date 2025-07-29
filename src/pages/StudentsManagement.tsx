@@ -19,6 +19,8 @@ interface Student {
   metadata?: any;
 }
 
+import { QuickTestEmailSender } from '@/components/QuickTestEmailSender';
+
 const StudentsManagement = () => {
   const { user, hasRole } = useAuth();
   const { deleteUser, loading } = useUserManagement();
@@ -87,6 +89,9 @@ const StudentsManagement = () => {
 
   return (
     <div className="space-y-6">
+      {/* Test Email Sender */}
+      <QuickTestEmailSender />
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Students Management</h1>
