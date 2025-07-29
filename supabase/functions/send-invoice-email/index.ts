@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { Resend } from "npm:resend@2.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +15,15 @@ interface SendInvoiceRequest {
   invoice_number?: string;
 }
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+// SMTP Configuration
+const smtpConfig = {
+  hostname: Deno.env.get("SMTP_HOST") || "",
+  port: parseInt(Deno.env.get("SMTP_PORT") || "587"),
+  username: Deno.env.get("SMTP_USER") || "",
+  password: Deno.env.get("SMTP_PASSWORD") || "",
+  from: Deno.env.get("SMTP_FROM_EMAIL") || "",
+  fromName: Deno.env.get("SMTP_FROM_NAME") || ""
+};
 
 // Generate invoice HTML template
 function generateInvoiceHTML(
@@ -251,15 +259,33 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
 
-    // Send email
-    const emailResponse = await resend.emails.send({
-      from: `${company.company_name} <${company.contact_email}>`,
-      to: [student.email],
+    // Create SMTP client and send email
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpConfig.hostname,
+        port: smtpConfig.port,
+        tls: smtpConfig.port === 465,
+        auth: {
+          username: smtpConfig.username,
+          password: smtpConfig.password,
+        },
+      },
+    });
+
+    const fromAddress = smtpConfig.fromName 
+      ? `${smtpConfig.fromName} <${smtpConfig.from}>` 
+      : smtpConfig.from;
+
+    await client.send({
+      from: fromAddress,
+      to: student.email,
       subject: `Invoice ${invoiceNumber} - Installment ${requestData.installment_number} Due`,
+      content: "auto",
       html: invoiceHTML,
     });
 
-    console.log("Email sent successfully:", emailResponse);
+    await client.close();
+    console.log("Email sent successfully via SMTP");
 
     // Update last invoice sent date
     await supabase
@@ -274,7 +300,7 @@ const handler = async (req: Request): Promise<Response> => {
       JSON.stringify({ 
         success: true, 
         invoice_number: invoiceNumber,
-        email_id: emailResponse.data?.id 
+        message: "Invoice email sent successfully via SMTP"
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },
