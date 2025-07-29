@@ -213,67 +213,61 @@ const handler = async (req: Request): Promise<Response> => {
     const fromEmail = companySettings?.company_email || 'admin@company.com';
     const companyName = companySettings?.company_name || 'Your Company';
 
-    // Send login details email via SMTP
+    // Send login details email via SMTP (optional - won't fail if missing)
     let emailSent = false;
+    
+    console.log('Starting email sending process...');
+    
     try {
-      const emailHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-            .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-            .credentials { background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0; }
-            .warning { background: #fff3cd; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107; }
-            .footer { margin-top: 30px; font-size: 14px; color: #666; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Welcome to ${companyName}!</h1>
-              <p>Hello ${full_name},</p>
-              <p>Your student account has been successfully created. Below are your login credentials for our Learning Management System.</p>
-            </div>
-            
-            <div class="credentials">
-              <h3>🔐 Your Login Details</h3>
-              <p><strong>Student ID:</strong> ${studentId}</p>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Temporary Password:</strong> ${tempPassword}</p>
-              <p><strong>LMS URL:</strong> ${supabaseUrl.replace('https://', 'https://app.')}</p>
-            </div>
-            
-            <div class="warning">
-              <h4>⚠️ Important Notice</h4>
-              <p>Your LMS access is currently <strong>disabled</strong> until your fees are cleared. However, you can still log into the system to explore and familiarize yourself with the platform.</p>
-              <p>Please contact our enrollment team for payment details and to activate your full access.</p>
-            </div>
-            
-            <p><strong>Next Steps:</strong></p>
-            <ol>
-              <li>Log in with the credentials above</li>
-              <li>Complete your profile setup</li>
-              <li>Contact us for payment processing</li>
-              <li>Start your learning journey!</li>
-            </ol>
-            
-            <div class="footer">
-              <p>If you have any questions, please don't hesitate to contact our support team.</p>
-              <p>Best regards,<br>${companyName} Team</p>
-            </div>
-          </div>
-        </body>
-        </html>
-      `;
-
-      // Try sending email using Resend API if configured
       const resendApiKey = Deno.env.get('RESEND_API_KEY');
+      console.log('RESEND_API_KEY configured:', !!resendApiKey);
       
       if (resendApiKey) {
-        const emailResult = await fetch('https://api.resend.com/emails', {
+        console.log('Attempting to send welcome email to:', email);
+        
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+              .credentials { background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0; }
+              .warning { background: #fff3cd; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107; }
+              .footer { margin-top: 30px; font-size: 14px; color: #666; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Welcome to ${companyName}!</h1>
+                <p>Hello ${full_name},</p>
+                <p>Your student account has been successfully created.</p>
+              </div>
+              
+              <div class="credentials">
+                <h3>🔐 Your Login Details</h3>
+                <p><strong>Student ID:</strong> ${studentId}</p>
+                <p><strong>Email:</strong> ${email}</p>
+                <p><strong>Temporary Password:</strong> ${tempPassword}</p>
+              </div>
+              
+              <div class="warning">
+                <h4>⚠️ Important Notice</h4>
+                <p>Your LMS access is currently <strong>disabled</strong> until your fees are cleared.</p>
+              </div>
+              
+              <div class="footer">
+                <p>Best regards,<br>${companyName} Team</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+        
+        const emailResponse = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -287,16 +281,22 @@ const handler = async (req: Request): Promise<Response> => {
           }),
         });
         
-        emailSent = emailResult.ok;
-        if (!emailSent) {
-          console.error('Email sending failed:', await emailResult.text());
+        emailSent = emailResponse.ok;
+        if (emailSent) {
+          console.log('Email sent successfully to:', email);
+        } else {
+          const errorText = await emailResponse.text();
+          console.error('Email sending failed with status:', emailResponse.status, 'Response:', errorText);
         }
       } else {
-        console.log('RESEND_API_KEY not configured, skipping email send');
+        console.log('RESEND_API_KEY not configured, email sending skipped');
       }
     } catch (emailError) {
-      console.error('Email sending error:', emailError);
+      console.error('Email sending error (non-blocking):', emailError);
+      // Email failure should not prevent student creation
     }
+    
+    console.log('Email process completed. Email sent:', emailSent);
 
     // Log admin action
     await supabase
