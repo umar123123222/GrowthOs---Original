@@ -8,84 +8,124 @@ const Leaderboard = () => {
   const studentData = [
     {
       id: 1,
-      name: "Ahmed Khan",
-      score: 95,
+      name: "Sarah Johnson",
+      score: 98,
       rank: 1,
-      avatar: "AK",
+      avatar: "SJ",
       progress: 100,
-      badges: ["First Sale", "Quiz Master", "Store Live"],
-      streak: 15
+      badges: ["First Sale", "Quiz Master", "Store Live", "Speed Learner"],
+      streak: 23
     },
     {
       id: 2,
-      name: "Fatima Ali",
-      score: 89,
+      name: "Marcus Chen",
+      score: 94,
       rank: 2,
-      avatar: "FA",
-      progress: 95,
-      badges: ["Store Live", "Quiz Master"],
-      streak: 12
+      avatar: "MC",
+      progress: 98,
+      badges: ["Store Live", "Quiz Master", "First Sale"],
+      streak: 18
     },
     {
       id: 3,
-      name: "You",
-      score: 85,
+      name: "Priya Patel",
+      score: 91,
       rank: 3,
-      avatar: "YU",
-      progress: 75,
-      badges: ["Quiz Master"],
-      streak: 7,
-      isCurrentUser: true
+      avatar: "PP",
+      progress: 95,
+      badges: ["Quiz Master", "Store Live", "Helper"],
+      streak: 15
     },
     {
       id: 4,
-      name: "Hassan Sheikh",
-      score: 82,
+      name: "You",
+      score: 87,
       rank: 4,
-      avatar: "HS",
+      avatar: "YU",
+      progress: 78,
+      badges: ["Quiz Master", "Store Live"],
+      streak: 9,
+      isCurrentUser: true
+    },
+    {
+      id: 5,
+      name: "Alex Rodriguez",
+      score: 84,
+      rank: 5,
+      avatar: "AR",
+      progress: 82,
+      badges: ["Store Live", "First Sale"],
+      streak: 12
+    },
+    {
+      id: 6,
+      name: "Emma Wilson",
+      score: 81,
+      rank: 6,
+      avatar: "EW",
+      progress: 75,
+      badges: ["Quiz Master"],
+      streak: 7
+    },
+    {
+      id: 7,
+      name: "David Kim",
+      score: 78,
+      rank: 7,
+      avatar: "DK",
       progress: 70,
       badges: ["Store Live"],
       streak: 5
     },
     {
-      id: 5,
-      name: "Ayesha Malik",
-      score: 78,
-      rank: 5,
-      avatar: "AM",
+      id: 8,
+      name: "Maya Singh",
+      score: 75,
+      rank: 8,
+      avatar: "MS",
+      progress: 68,
+      badges: ["Helper"],
+      streak: 8
+    },
+    {
+      id: 9,
+      name: "James Miller",
+      score: 72,
+      rank: 9,
+      avatar: "JM",
       progress: 65,
-      badges: [],
-      streak: 3
-    },
-    {
-      id: 6,
-      name: "Ali Raza",
-      score: 74,
-      rank: 6,
-      avatar: "AR",
-      progress: 60,
-      badges: [],
-      streak: 2
-    },
-    {
-      id: 7,
-      name: "Zara Khan",
-      score: 71,
-      rank: 7,
-      avatar: "ZK",
-      progress: 55,
       badges: [],
       streak: 4
     },
     {
-      id: 8,
-      name: "Omar Farooq",
-      score: 68,
-      rank: 8,
-      avatar: "OF",
-      progress: 50,
+      id: 10,
+      name: "Lisa Thompson",
+      score: 69,
+      rank: 10,
+      avatar: "LT",
+      progress: 60,
+      badges: ["Helper"],
+      streak: 6
+    },
+    {
+      id: 11,
+      name: "Ryan Foster",
+      score: 66,
+      rank: 11,
+      avatar: "RF",
+      progress: 55,
       badges: [],
-      streak: 1
+      streak: 3
+    },
+    {
+      id: 12,
+      name: "Sophie Clark",
+      score: 63,
+      rank: 12,
+      avatar: "SC",
+      progress: 52,
+      badges: [],
+      streak: 2
     }
   ];
 
@@ -219,19 +259,19 @@ const Leaderboard = () => {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span>Current Rank</span>
-                  <span className="font-bold">#3</span>
+                  <span className="font-bold">#4</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Score</span>
-                  <span className="font-bold">85%</span>
+                  <span className="font-bold">87%</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Progress</span>
-                  <span className="font-bold">75%</span>
+                  <span className="font-bold">78%</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Streak</span>
-                  <span className="font-bold">🔥 7 days</span>
+                  <span className="font-bold">🔥 9 days</span>
                 </div>
               </div>
             </CardContent>
