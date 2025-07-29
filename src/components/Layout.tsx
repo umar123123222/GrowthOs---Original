@@ -54,7 +54,7 @@ const Layout = memo(({
   }, [user]);
 
   // Check if any course submenu is active to keep it expanded
-  const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=success-sessions');
+  const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=submissions') || location.search.includes('tab=success-sessions');
 
   // Memoize navigation to prevent unnecessary re-renders
   const navigation = useMemo(() => {
@@ -78,6 +78,10 @@ const Layout = memo(({
         }, {
           name: "Assignments",
           href: "/superadmin?tab=assignments",
+          icon: FileText
+        }, {
+          name: "Submissions",
+          href: "/superadmin?tab=submissions",
           icon: FileText
         }, {
           name: "Success Sessions",
@@ -125,6 +129,10 @@ const Layout = memo(({
         }, {
           name: "Assignments",
           href: "/admin?tab=assignments",
+          icon: FileText
+        }, {
+          name: "Submissions",
+          href: "/admin?tab=submissions",
           icon: FileText
         }, {
           name: "Success Sessions",

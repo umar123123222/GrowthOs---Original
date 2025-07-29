@@ -18,8 +18,11 @@ interface AssignmentSubmission {
   text_response?: string;
   file_url?: string;
   external_link?: string;
+  submission_type: string;
   status: string;
   submitted_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
   score?: number;
   feedback?: string;
   users: {
@@ -31,6 +34,10 @@ interface AssignmentSubmission {
     assignment_title: string;
     assignment_description: string;
   };
+  mentor?: {
+    full_name: string;
+    email: string;
+  } | null;
 }
 
 interface SubmissionsManagementProps {
@@ -49,7 +56,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
 
   useEffect(() => {
     fetchSubmissions();
-  }, [user]);
+  }, [user, filterStatus]);
 
   const fetchSubmissions = async () => {
     if (!user) return;
@@ -67,9 +74,18 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
           assignment!assignment_submissions_assignment_id_fkey (
             assignment_title,
             assignment_description
+          ),
+          mentor:users!assignment_submissions_reviewed_by_fkey (
+            full_name,
+            email
           )
         `)
         .order('submitted_at', { ascending: false });
+
+      // Apply status filter if not 'all'
+      if (filterStatus !== 'all') {
+        query = query.eq('status', filterStatus);
+      }
 
       // For mentors, the RLS policies will automatically filter to show only their assigned submissions
       // For admins and superadmins, they can see all submissions
@@ -139,9 +155,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
     }
   };
 
-  const filteredSubmissions = submissions.filter(submission => 
-    filterStatus === 'all' || submission.status === filterStatus
-  );
+  // Submissions are already filtered by the server query
 
   const getTitle = () => {
     switch (userRole) {
@@ -205,7 +219,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
           <CardTitle>Recent Submissions</CardTitle>
         </CardHeader>
         <CardContent>
-          {filteredSubmissions.length === 0 ? (
+          {submissions.length === 0 ? (
             <div className="text-center py-8">
               <MessageSquare className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">No submissions found</h3>
@@ -221,6 +235,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                 <TableRow>
                   <TableHead>Student</TableHead>
                   <TableHead>Assignment</TableHead>
+                  <TableHead>Mentor</TableHead>
                   <TableHead>Submitted</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Score</TableHead>
@@ -228,7 +243,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSubmissions.map((submission) => (
+                {submissions.map((submission) => (
                   <TableRow key={submission.id}>
                     <TableCell>
                       <div>
@@ -238,6 +253,11 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                     </TableCell>
                     <TableCell>
                       <div className="font-medium">{submission.assignment?.assignment_title}</div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {submission.mentor?.full_name || '—'}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {new Date(submission.submitted_at).toLocaleDateString()}

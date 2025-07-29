@@ -36,6 +36,7 @@ const Connect = lazy(() => import("./pages/Connect"));
 const ShopifyDashboard = lazy(() => import("./pages/ShopifyDashboard"));
 const MetaAdsDashboard = lazy(() => import("./pages/MetaAdsDashboard"));
 const MentorSessionsPage = lazy(() => import("./pages/MentorSessionsPage"));
+const AdminSubmissions = lazy(() => import("./pages/AdminSubmissions"));
 
 // Loading component
 const PageLoader = () => (
@@ -171,6 +172,7 @@ const App = () => {
                     <Route path="mentor/sessions" element={<MentorSessionsPage />} />
                     <Route path="superadmin" element={<SuperadminDashboard />} />
                     <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
+                    <Route path="admin/submissions" element={<AdminSubmissions />} />
                     
                     <Route path="*" element={<Navigate to="/" />} />
                   </Route>
