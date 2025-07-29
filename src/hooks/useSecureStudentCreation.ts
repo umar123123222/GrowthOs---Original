@@ -42,10 +42,17 @@ export const useSecureStudentCreation = () => {
 
       if (error) {
         console.error('Edge function error:', error);
-        return { success: false, error: 'Failed to create student' };
+        toast({
+          title: 'Error',
+          description: error.message || 'Failed to create student account',
+          variant: 'destructive',
+        });
+        return { success: false, error: error.message || 'Failed to create student' };
       }
 
       if (!data.success) {
+        const errorDetails = data.details ? ` (${data.details})` : '';
+        
         if (data.error === 'Student Email Exists') {
           toast({
             title: "Email Already Exists",
@@ -61,7 +68,7 @@ export const useSecureStudentCreation = () => {
         } else {
           toast({
             title: "Creation Failed",
-            description: data.error || "Failed to create student account.",
+            description: `${data.error || "Failed to create student account"}${errorDetails}`,
             variant: "destructive",
           });
         }

@@ -148,6 +148,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate student ID and temp password
     const studentId = generateStudentId(students || []);
     const tempPassword = generateSecurePassword();
+    
+    console.log('Creating auth user with:', { email: email.toLowerCase(), tempPassword });
 
     // Create auth user
     const { data: authUser, error: createAuthError } = await supabase.auth.admin.createUser({
@@ -157,8 +159,17 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     if (createAuthError || !authUser.user) {
-      console.error('Auth user creation error:', createAuthError);
-      return new Response(JSON.stringify({ success: false, error: 'Failed to create auth user' }), {
+      console.error('Auth user creation error:', {
+        error: createAuthError,
+        authUser,
+        email: email.toLowerCase(),
+        passwordLength: tempPassword.length
+      });
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Failed to create auth user',
+        details: createAuthError?.message || 'Unknown error'
+      }), {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -258,23 +269,30 @@ const handler = async (req: Request): Promise<Response> => {
         </html>
       `;
 
-      const emailResult = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseServiceKey}`,
-        },
-        body: JSON.stringify({
-          to: email,
-          from: fromEmail,
-          subject: `Welcome to ${companyName} - Your Login Credentials`,
-          html: emailHtml,
-        }),
-      });
-
-      emailSent = emailResult.ok;
-      if (!emailSent) {
-        console.error('Email sending failed:', await emailResult.text());
+      // Try sending email using Resend API if configured
+      const resendApiKey = Deno.env.get('RESEND_API_KEY');
+      
+      if (resendApiKey) {
+        const emailResult = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${resendApiKey}`,
+          },
+          body: JSON.stringify({
+            from: fromEmail,
+            to: [email],
+            subject: `Welcome to ${companyName} - Your Login Credentials`,
+            html: emailHtml,
+          }),
+        });
+        
+        emailSent = emailResult.ok;
+        if (!emailSent) {
+          console.error('Email sending failed:', await emailResult.text());
+        }
+      } else {
+        console.log('RESEND_API_KEY not configured, skipping email send');
       }
     } catch (emailError) {
       console.error('Email sending error:', emailError);
