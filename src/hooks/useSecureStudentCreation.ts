@@ -14,6 +14,7 @@ export interface CreateStudentResponse {
   studentId?: string;
   tempPassword?: string;
   emailSent?: boolean;
+  invoiceCreated?: boolean;
   error?: string;
 }
 
@@ -76,9 +77,12 @@ export const useSecureStudentCreation = () => {
       }
 
       // Success
+      const emailStatus = data.emailSent ? 'login email sent' : 'login email failed';
+      const invoiceStatus = data.invoiceCreated ? 'first invoice sent' : 'invoice creation pending';
+      
       toast({
         title: "Student Created Successfully",
-        description: `Student created and login email sent${data.emailSent ? '' : ' (email delivery may have failed)'}.`,
+        description: `Student created, ${emailStatus}, ${invoiceStatus}.`,
       });
 
       return data;

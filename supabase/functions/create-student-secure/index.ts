@@ -298,6 +298,68 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log('Email process completed. Email sent:', emailSent);
 
+    // Create initial installment payment records
+    let invoiceCreated = false;
+    try {
+      const totalInstallments = parseInt(fees_structure.split('_')[0]);
+      const installmentAmount = fees_structure === '1_installment' ? 50000 : 
+                               fees_structure === '2_installments' ? 25000 : 17000;
+      
+      console.log(`Creating ${totalInstallments} installment records for student ${studentId}`);
+      
+      // Create all installment payment records
+      const installmentRecords = [];
+      for (let i = 1; i <= totalInstallments; i++) {
+        installmentRecords.push({
+          user_id: authUser.user.id,
+          installment_number: i,
+          total_installments: totalInstallments,
+          amount: installmentAmount,
+          status: 'pending'
+        });
+      }
+
+      const { error: installmentError } = await supabase
+        .from('installment_payments')
+        .insert(installmentRecords);
+
+      if (installmentError) {
+        console.error('Error creating installment records:', installmentError);
+      } else {
+        console.log('Installment records created successfully');
+        
+        // Try to send first invoice email if RESEND is configured
+        if (resendApiKey) {
+          try {
+            console.log('Sending first invoice email...');
+            
+            const dueDate = new Date();
+            dueDate.setDate(dueDate.getDate() + 14); // 14 days from now
+            
+            const invoiceResponse = await supabase.functions.invoke('send-invoice-email', {
+              body: {
+                student_id: authUser.user.id,
+                installment_number: 1,
+                amount: installmentAmount,
+                due_date: dueDate.toISOString(),
+              }
+            });
+            
+            if (invoiceResponse.error) {
+              console.error('Error sending invoice email:', invoiceResponse.error);
+            } else {
+              console.log('First invoice email sent successfully');
+              invoiceCreated = true;
+            }
+          } catch (invoiceError) {
+            console.error('Error in invoice sending process:', invoiceError);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error in installment/invoice creation process:', error);
+    }
+
     // Log admin action
     await supabase
       .from('admin_logs')
@@ -314,6 +376,7 @@ const handler = async (req: Request): Promise<Response> => {
           phone,
           fees_structure,
           email_sent: emailSent,
+          invoice_created: invoiceCreated,
         },
       });
 
@@ -323,6 +386,7 @@ const handler = async (req: Request): Promise<Response> => {
         studentId,
         tempPassword,
         emailSent,
+        invoiceCreated,
       }),
       {
         status: 200,
