@@ -1,25 +1,27 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { User } from '@/types/common';
+import { logger } from '@/lib/logger';
 
-export interface User {
-  id: string;
-  email: string;
-  role: 'student' | 'admin' | 'mentor' | 'superadmin' | 'enrollment_manager';
-  full_name?: string;
-  created_at?: string;
-  metadata?: any;
-  shopify_credentials?: string;
-  shopify_domain?: string;
-  meta_ads_credentials?: string;
-  onboarding_done?: boolean;
-  fees_overdue?: boolean;
-  fees_due_date?: string;
+// Re-export User type for backwards compatibility
+export type { User };
+
+interface AuthSession {
+  user: {
+    id: string;
+    email?: string;
+    user_metadata?: {
+      full_name?: string;
+    };
+  };
+  access_token?: string;
+  refresh_token?: string;
 }
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<AuthSession | null>(null);
 
   // Update user activity timestamp
   const updateLastActive = async (userId: string) => {
@@ -29,7 +31,7 @@ export const useAuth = () => {
         .update({ last_active_at: new Date().toISOString() })
         .eq('id', userId);
     } catch (error) {
-      console.error('Error updating last active:', error);
+      logger.error('Error updating last active', error);
     }
   };
 
@@ -66,28 +68,28 @@ export const useAuth = () => {
   }, [user?.id]);
 
   useEffect(() => {
-    console.log('useAuth: Starting authentication check');
+    logger.debug('useAuth: Starting authentication check');
     setLoading(true);
     
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
-      console.log('useAuth: Initial session check', { session: !!session, error });
-      setSession(session);
+      logger.debug('useAuth: Initial session check', { session: !!session, error });
+      setSession(session as AuthSession);
       if (session?.user) {
         fetchUserProfile(session.user.id);
       } else {
-        console.log('useAuth: No session found, setting loading to false');
+        logger.debug('useAuth: No session found, setting loading to false');
         setLoading(false);
       }
     }).catch(err => {
-      console.error('useAuth: Error getting initial session:', err);
+      logger.error('useAuth: Error getting initial session', err);
       setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('useAuth: Auth state changed', { event, session: !!session });
-      setSession(session);
+      logger.debug('useAuth: Auth state changed', { event, session: !!session });
+      setSession(session as AuthSession);
       
       if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -101,7 +103,7 @@ export const useAuth = () => {
           fetchUserProfile(session.user.id);
         }, 0);
       } else if (event === 'SIGNED_IN') {
-        console.log('useAuth: No session in state change, clearing user');
+        logger.debug('useAuth: No session in state change, clearing user');
         setUser(null);
         setLoading(false);
       }
@@ -116,32 +118,31 @@ export const useAuth = () => {
   const fetchUserProfile = async (userId: string) => {
     // Prevent duplicate calls for the same user
     if (fetchUserProfileRef.current === userId) {
-      console.log('fetchUserProfile: Skipping duplicate call for user:', userId);
+      logger.debug('fetchUserProfile: Skipping duplicate call for user', { userId });
       return;
     }
     
     fetchUserProfileRef.current = userId;
-    console.log('fetchUserProfile: Starting for user ID:', userId);
+    logger.debug('fetchUserProfile: Starting for user', { userId });
     
     try {
-      console.log('fetchUserProfile: About to make database query');
-      
       const { data, error } = await supabase
         .from('users')
         .select('id, email, role, full_name, created_at, shopify_credentials, meta_ads_credentials, onboarding_done, fees_overdue, fees_due_date')
         .eq('id', userId)
         .maybeSingle();
       
-      console.log('fetchUserProfile: Database query completed', { 
-        data: data ? { ...data, id: data.id } : null, 
-        error: error ? error.message : null 
+      logger.debug('fetchUserProfile: Database query completed', { 
+        hasData: !!data, 
+        userRole: data?.role,
+        error: error?.message
       });
 
       if (error) {
-        console.error('fetchUserProfile: Database error:', error);
+        logger.error('fetchUserProfile: Database error', error);
         // Don't sign out on database errors - keep the session active
         if (session?.user) {
-          console.log('fetchUserProfile: Keeping session active despite database error');
+          logger.warn('fetchUserProfile: Keeping session active despite database error');
           setUser({
             id: session.user.id,
             email: session.user.email || '',
@@ -150,10 +151,10 @@ export const useAuth = () => {
           });
         }
       } else if (data) {
-        console.log('fetchUserProfile: Setting user data:', { role: data.role, email: data.email });
+        logger.debug('fetchUserProfile: Setting user data', { role: data.role, email: data.email });
         setUser(data as User);
       } else {
-        console.log('fetchUserProfile: No data returned but session exists');
+        logger.warn('fetchUserProfile: No data returned but session exists');
         // User record doesn't exist but session is valid - use session data
         if (session?.user) {
           setUser({
@@ -165,10 +166,10 @@ export const useAuth = () => {
         }
       }
     } catch (error) {
-      console.error('fetchUserProfile: Catch block error:', error);
+      logger.error('fetchUserProfile: Unexpected error', error);
       // Don't sign out on errors - preserve the session
       if (session?.user) {
-        console.log('fetchUserProfile: Preserving session despite error');
+        logger.warn('fetchUserProfile: Preserving session despite error');
         setUser({
           id: session.user.id,
           email: session.user.email || '',
@@ -177,7 +178,7 @@ export const useAuth = () => {
         });
       }
     } finally {
-      console.log('fetchUserProfile: Setting loading to false');
+      logger.debug('fetchUserProfile: Setting loading to false');
       setLoading(false);
       fetchUserProfileRef.current = null; // Reset to allow future calls
     }

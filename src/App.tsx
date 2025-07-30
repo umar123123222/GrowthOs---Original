@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import React, { useState, useEffect, Suspense, lazy } from "react";
 import { useAuth } from "./hooks/useAuth";
 import { initializeGlobalIntegrations } from "./lib/global-integrations";
@@ -11,6 +11,19 @@ import { PaywallModal } from "./components/PaywallModal";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { DynamicFavicon } from "./components/DynamicFavicon";
 import { supabase } from "@/integrations/supabase/client";
+import { PendingInvoice } from "@/types/common";
+import { logger } from "@/lib/logger";
+
+// Wrapper component to handle onboarding completion properly
+const OnboardingWrapper = ({ user }: { user: any }) => {
+  const handleOnboardingComplete = () => {
+    // Use React Router navigation instead of hard reload
+    logger.info('Onboarding completed, refreshing application');
+    window.location.reload();
+  };
+  
+  return <Onboarding user={user} onComplete={handleOnboardingComplete} />;
+};
 
 // Lazy load components for better performance
 const Login = lazy(() => import("./pages/Login"));
@@ -74,7 +87,7 @@ const queryClient = new QueryClient({
 const App = () => {
   const { user, loading } = useAuth();
   const [showPaywall, setShowPaywall] = useState(false);
-  const [pendingInvoice, setPendingInvoice] = useState<any>(null);
+  const [pendingInvoice, setPendingInvoice] = useState<PendingInvoice | null>(null);
 
   // Initialize global integrations and performance monitoring when user is loaded
   useEffect(() => {
@@ -104,7 +117,12 @@ const App = () => {
     }
   };
 
-  console.log('App: Render state', { user: !!user, loading, userRole: user?.role, userEmail: user?.email });
+  logger.debug('App: Render state', { 
+    hasUser: !!user, 
+    loading, 
+    userRole: user?.role, 
+    userEmail: user?.email 
+  });
 
   if (loading) {
     return (
@@ -131,13 +149,7 @@ const App = () => {
                   <Route path="*" element={<Login />} />
                 ) : user?.role === 'student' && !user?.onboarding_done ? (
                   <Route path="*" element={
-                    <Onboarding 
-                      user={user} 
-                      onComplete={() => {
-                        // Onboarding completion will be handled by the hook
-                        window.location.reload();
-                      }} 
-                    />
+                    <OnboardingWrapper user={user} />
                   } />
                 ) : (
                   <Route path="/" element={<Layout user={user} />}>

@@ -1492,8 +1492,8 @@ export type Database = {
       approve_assignment_submission: {
         Args: {
           p_submission_id: string
-          p_new_status: string
           p_mentor_id: string
+          p_new_status: string
         }
         Returns: {
           submission_id: string
