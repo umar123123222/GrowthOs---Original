@@ -266,6 +266,24 @@ export type Database = {
         }
         Relationships: []
       }
+      batches: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       certificates: {
         Row: {
           certificate_url: string
@@ -943,6 +961,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "recording_views_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "session_recordings"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "recording_views_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -974,6 +999,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "session_attendance_live_session_id_fkey"
+            columns: ["live_session_id"]
+            isOneToOne: false
+            referencedRelation: "segmented_weekly_success_sessions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "session_attendance_live_session_id_fkey"
             columns: ["live_session_id"]
@@ -1108,6 +1140,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tenants: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       ticket_replies: {
         Row: {
@@ -1473,7 +1523,113 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      segmented_weekly_success_sessions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_time: string | null
+          id: string | null
+          mentor_id: string | null
+          mentor_name: string | null
+          segment: string | null
+          start_time: string | null
+          status: string | null
+          title: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string | null
+          mentor_id?: string | null
+          mentor_name?: string | null
+          segment?: never
+          start_time?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string | null
+          mentor_id?: string | null
+          mentor_name?: string | null
+          segment?: never
+          start_time?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "success_sessions_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_recordings: {
+        Row: {
+          assignment_id: string | null
+          batch_id: string | null
+          duration_min: number | null
+          id: string | null
+          last_assignment_completed: string | null
+          module: string | null
+          notes: string | null
+          recording_title: string | null
+          recording_url: string | null
+          sequence_order: number | null
+          uploaded_at: string | null
+          uploaded_by: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          batch_id?: string | null
+          duration_min?: number | null
+          id?: string | null
+          last_assignment_completed?: string | null
+          module?: string | null
+          notes?: string | null
+          recording_title?: string | null
+          recording_url?: string | null
+          sequence_order?: number | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          batch_id?: string | null
+          duration_min?: number | null
+          id?: string | null
+          last_assignment_completed?: string | null
+          module?: string | null
+          notes?: string | null
+          recording_title?: string | null
+          recording_url?: string | null
+          sequence_order?: number | null
+          uploaded_at?: string | null
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_recordings_module_fkey"
+            columns: ["module"]
+            isOneToOne: false
+            referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_recordings_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       approve_assignment_submission: {

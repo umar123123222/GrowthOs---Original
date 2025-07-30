@@ -93,9 +93,7 @@ export function LogoUploadSection({ currentLogo, onLogoUpdate }: LogoUploadSecti
       };
 
       const { error: updateError } = await supabase
-        .from('company_settings')
-        .update({ branding: brandingData })
-        .eq('id', 1);
+        .rpc('update_company_branding', { branding_data: brandingData });
 
       if (updateError) throw updateError;
 
