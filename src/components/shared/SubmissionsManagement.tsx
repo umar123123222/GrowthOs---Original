@@ -58,7 +58,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
   const [feedback, setFeedback] = useState('');
   const [reviewNote, setReviewNote] = useState('');
   const [score, setScore] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'submitted' | 'under_review' | 'accepted' | 'rejected' | 'resubmit'>('all');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -92,7 +92,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
 
       // Apply status filter if not 'all'
       if (filterStatus !== 'all') {
-        query = query.eq('status', filterStatus);
+        query = query.eq('status', filterStatus as 'submitted' | 'under_review' | 'accepted' | 'rejected' | 'resubmit');
       }
 
       // For mentors, the RLS policies will automatically filter to show only their assigned submissions

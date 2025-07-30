@@ -80,7 +80,7 @@ export default function MentorDashboard() {
       const { data: checkedSubmissions } = await supabase
         .from('assignment_submissions')
         .select('id')
-        .eq('status', 'graded')
+        .eq('status', 'accepted')
         .in('user_id', students?.map(s => s.id) || []);
 
       // Use hardcoded values for sessions since table might not exist
