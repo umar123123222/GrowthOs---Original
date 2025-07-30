@@ -583,7 +583,7 @@ export const StudentManagement = () => {
 
   const getInvoiceStatus = (student: Student) => {
     if (student.fees_overdue) return 'Fees Overdue';
-    if (student.last_invoice_sent && !student.fees_overdue) return 'Fees Cleared';
+    if (student.last_invoice_sent && !student.fees_overdue) return 'Fees Due';
     return 'No Invoice';
   };
 
