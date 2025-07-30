@@ -111,60 +111,54 @@ export type Database = {
       }
       assignment_submissions: {
         Row: {
-          assignment_id: string | null
+          assignment_id: string
           external_link: string | null
           feedback: string | null
           file_url: string | null
           id: string
-          mentor: string | null
-          result: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           reviewed_note: string | null
           score: number | null
-          status: string
+          status: Database["public"]["Enums"]["assignment_submission_status"]
           submission_type: string
-          submitted_at: string | null
+          submitted_at: string
           text_response: string | null
-          updated_at: string | null
+          updated_at: string
           user_id: string
         }
         Insert: {
-          assignment_id?: string | null
+          assignment_id: string
           external_link?: string | null
           feedback?: string | null
           file_url?: string | null
           id?: string
-          mentor?: string | null
-          result?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewed_note?: string | null
           score?: number | null
-          status?: string
+          status?: Database["public"]["Enums"]["assignment_submission_status"]
           submission_type: string
-          submitted_at?: string | null
+          submitted_at?: string
           text_response?: string | null
-          updated_at?: string | null
+          updated_at?: string
           user_id: string
         }
         Update: {
-          assignment_id?: string | null
+          assignment_id?: string
           external_link?: string | null
           feedback?: string | null
           file_url?: string | null
           id?: string
-          mentor?: string | null
-          result?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           reviewed_note?: string | null
           score?: number | null
-          status?: string
+          status?: Database["public"]["Enums"]["assignment_submission_status"]
           submission_type?: string
-          submitted_at?: string | null
+          submitted_at?: string
           text_response?: string | null
-          updated_at?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -235,13 +229,6 @@ export type Database = {
           uploaded_by?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "session_recordings_Last Assignment Completed?_fkey"
-            columns: ["last_assignment_completed"]
-            isOneToOne: false
-            referencedRelation: "assignment_submissions"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "session_recordings_module_fkey"
             columns: ["module"]
@@ -1576,13 +1563,28 @@ export type Database = {
         }
         Returns: number
       }
+      review_assignment_submission: {
+        Args: {
+          p_submission_id: string
+          p_decision: string
+          p_score?: number
+          p_feedback?: string
+          p_reviewed_note?: string
+        }
+        Returns: Json
+      }
       validate_questionnaire_structure: {
         Args: { questionnaire_data: Json }
         Returns: boolean
       }
     }
     Enums: {
-      [_ in never]: never
+      assignment_submission_status:
+        | "submitted"
+        | "under_review"
+        | "accepted"
+        | "rejected"
+        | "resubmit"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1709,6 +1711,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      assignment_submission_status: [
+        "submitted",
+        "under_review",
+        "accepted",
+        "rejected",
+        "resubmit",
+      ],
+    },
   },
 } as const
