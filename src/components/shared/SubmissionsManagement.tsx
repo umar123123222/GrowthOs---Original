@@ -124,22 +124,23 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
         throw new Error('User not authenticated');
       }
 
-      // Use the new function that runs your exact SQL
+      // Use the updated review function with feedback and score
       const { data, error } = await supabase
-        .rpc('approve_assignment_submission', {
+        .rpc('review_assignment_submission', {
           p_submission_id: submissionId,
-          p_new_status: status,
-          p_mentor_id: user.id
+          p_decision: status,
+          p_score: score ? parseInt(score) : null,
+          p_feedback: feedback.trim() || null,
+          p_reviewed_note: reviewNote.trim() || null
         });
 
       if (error) throw error;
 
-      if (!data || data.length === 0) {
-        throw new Error('No data returned from update');
+      const response = data as { success?: boolean; error?: string };
+      
+      if (!response || !response.success) {
+        throw new Error(response?.error || 'Failed to review submission');
       }
-
-      // Log the updated row data
-      console.log('Updated submission:', data[0]);
 
       toast({
         title: 'Success',
@@ -152,6 +153,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
       setScore('');
       fetchSubmissions();
     } catch (error) {
+      console.error('Error reviewing submission:', error);
       toast({
         title: 'Error',
         description: `Failed to review submission: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -177,10 +179,11 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'accepted': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'submitted': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'accepted': return 'bg-success/10 text-success';
+      case 'rejected': return 'bg-destructive/10 text-destructive';
+      case 'submitted': return 'bg-warning/10 text-warning';
+      case 'under_review': return 'bg-primary/10 text-primary';
+      default: return 'bg-muted text-muted-foreground';
     }
   };
 
