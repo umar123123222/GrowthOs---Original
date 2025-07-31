@@ -214,106 +214,26 @@ const handler = async (req: Request): Promise<Response> => {
     const fromEmail = companySettings?.company_email || 'admin@company.com';
     const companyName = companySettings?.company_name || 'Your Company';
 
-    // Send login details email via SMTP (optional - won't fail if missing)
-    let emailSent = false;
-    
-    console.log('Starting email sending process...');
-    
-    try {
-      // Use Supabase environment variables for SMTP configuration
-      const smtpHost = Deno.env.get('SMTP_HOST');
-      const smtpPort = parseInt(Deno.env.get('SMTP_PORT') || '587');
-      const smtpUser = Deno.env.get('SMTP_USER');
-      const smtpPassword = Deno.env.get('SMTP_PASSWORD');
-      const smtpFromEmail = Deno.env.get('SMTP_FROM_EMAIL') || Deno.env.get('SMTP_LMS_FROM_EMAIL');
-      const smtpFromName = Deno.env.get('SMTP_FROM_NAME') || Deno.env.get('SMTP_LMS_FROM_NAME') || 'System';
+    // Store temp password for async email sending
+    const { error: updatePasswordError } = await supabase
+      .from('users')
+      .update({ temp_password: tempPassword })
+      .eq('id', authUser.user.id);
 
-      console.log('SMTP configuration check:', {
-        host: !!smtpHost,
-        port: !!smtpPort,
-        user: !!smtpUser,
-        password: !!smtpPassword,
-        fromEmail: !!smtpFromEmail,
-        fromName: !!smtpFromName
-      });
-
-      if (smtpHost && smtpUser && smtpPassword && smtpFromEmail) {
-        console.log('Attempting to send welcome email via SMTP to:', email);
-        
-        const client = new SMTPClient({
-          connection: {
-            hostname: smtpHost,
-            port: smtpPort,
-            tls: smtpPort === 465, // Use TLS for port 465 (SSL)
-            auth: {
-              username: smtpUser,
-              password: smtpPassword,
-            },
-          },
-        });
-
-        await client.send({
-          from: smtpFromEmail,
-          fromName: smtpFromName,
-          to: email,
-          subject: `Welcome to ${companyName} - Your Login Credentials`,
-          content: `
-            <!DOCTYPE html>
-            <html>
-            <head>
-              <meta charset="utf-8">
-              <style>
-                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-                .header { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-                .credentials { background: #e7f3ff; padding: 15px; border-radius: 6px; margin: 20px 0; }
-                .warning { background: #fff3cd; padding: 15px; border-radius: 6px; border-left: 4px solid #ffc107; }
-                .footer { margin-top: 30px; font-size: 14px; color: #666; }
-              </style>
-            </head>
-            <body>
-              <div class="container">
-                <div class="header">
-                  <h1>Welcome to ${companyName}!</h1>
-                  <p>Hello ${full_name},</p>
-                  <p>Your student account has been successfully created.</p>
-                </div>
-                
-                <div class="credentials">
-                  <h3>🔐 Your Login Details</h3>
-                  <p><strong>Student ID:</strong> ${studentId}</p>
-                  <p><strong>Email:</strong> ${email}</p>
-                  <p><strong>Temporary Password:</strong> ${tempPassword}</p>
-                </div>
-                
-                <div class="warning">
-                  <h4>⚠️ Important Notice</h4>
-                  <p>Your LMS access is currently <strong>disabled</strong> until your fees are cleared.</p>
-                </div>
-                
-                <div class="footer">
-                  <p>Best regards,<br>${companyName} Team</p>
-                </div>
-              </div>
-            </body>
-            </html>
-          `,
-          html: true,
-        });
-
-        await client.close();
-        emailSent = true;
-        console.log('Email sent successfully via SMTP to:', email);
-      } else {
-        console.log('SMTP configuration incomplete, skipping email');
-        emailSent = false;
-      }
-    } catch (emailError) {
-      console.error('Error sending email via SMTP:', emailError);
-      emailSent = false;
+    if (updatePasswordError) {
+      console.error('Error storing temp password:', updatePasswordError);
     }
 
-    console.log('Email process completed. Email sent:', emailSent);
+    // Enqueue onboarding jobs for async processing
+    const { error: enqueueError } = await supabase.rpc('enqueue_student_onboarding_jobs', {
+      p_student_id: authUser.user.id
+    });
+
+    if (enqueueError) {
+      console.error('Error enqueuing onboarding jobs:', enqueueError);
+    } else {
+      console.log('Onboarding jobs enqueued successfully for student:', studentId);
+    }
 
     // Create initial installment payment records
     const totalInstallments = parseInt(fees_structure.split('_')[0]);
@@ -365,7 +285,7 @@ const handler = async (req: Request): Promise<Response> => {
           email,
           phone,
           fees_structure,
-          email_sent: emailSent,
+          onboarding_queued: true,
         },
       });
 
@@ -374,7 +294,7 @@ const handler = async (req: Request): Promise<Response> => {
         success: true,
         studentId,
         tempPassword,
-        emailSent,
+        onboardingQueued: true,
       }),
       {
         status: 200,

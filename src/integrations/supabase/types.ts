@@ -1066,6 +1066,50 @@ export type Database = {
           },
         ]
       }
+      student_onboarding_jobs: {
+        Row: {
+          created_at: string
+          id: string
+          last_error: string | null
+          metadata: Json | null
+          retries: number
+          status: Database["public"]["Enums"]["onboarding_status"]
+          step: Database["public"]["Enums"]["onboarding_step"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          metadata?: Json | null
+          retries?: number
+          status?: Database["public"]["Enums"]["onboarding_status"]
+          step: Database["public"]["Enums"]["onboarding_step"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          metadata?: Json | null
+          retries?: number
+          status?: Database["public"]["Enums"]["onboarding_status"]
+          step?: Database["public"]["Enums"]["onboarding_step"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_onboarding_jobs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       success_sessions: {
         Row: {
           created_at: string | null
@@ -1718,6 +1762,10 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: Json
       }
+      enqueue_student_onboarding_jobs: {
+        Args: { p_student_id: string }
+        Returns: undefined
+      }
       fn_approve_submission: {
         Args: { p_submission_id: string; p_decision: string; p_note?: string }
         Returns: Json
@@ -1796,6 +1844,8 @@ export type Database = {
         | "accepted"
         | "rejected"
         | "resubmit"
+      onboarding_status: "PENDING" | "SUCCESS" | "FAILED" | "RETRY"
+      onboarding_step: "EMAIL" | "INVOICE"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1930,6 +1980,8 @@ export const Constants = {
         "rejected",
         "resubmit",
       ],
+      onboarding_status: ["PENDING", "SUCCESS", "FAILED", "RETRY"],
+      onboarding_step: ["EMAIL", "INVOICE"],
     },
   },
 } as const

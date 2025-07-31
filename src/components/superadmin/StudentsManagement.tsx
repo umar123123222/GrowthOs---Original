@@ -25,6 +25,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserManagement } from '@/hooks/useUserManagement';
+import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
+import { StatusBadge } from '@/components/ui/status-badge';
 
 import jsPDF from 'jspdf';
 
@@ -75,6 +77,10 @@ export function StudentsManagement() {
   const { deleteMultipleUsers, loading: userManagementLoading } = useUserManagement();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Get student IDs for onboarding status
+  const studentIds = students.map(s => s.id);
+  const { getJobStatus } = useOnboardingStatus(studentIds, students.length > 0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [totalStudents, setTotalStudents] = useState(0);
@@ -1037,6 +1043,8 @@ export function StudentsManagement() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Fees Structure</TableHead>
                   <TableHead>LMS Status</TableHead>
+                  <TableHead>Login Email</TableHead>
+                  <TableHead>Invoice</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>

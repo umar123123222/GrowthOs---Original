@@ -77,12 +77,9 @@ export const useSecureStudentCreation = () => {
       }
 
       // Success
-      const emailStatus = data.emailSent ? 'login email sent' : 'login email failed';
-      const invoiceStatus = data.invoiceCreated ? 'first invoice sent' : 'invoice creation pending';
-      
       toast({
         title: "Student Created Successfully",
-        description: `Student created, ${emailStatus}, ${invoiceStatus}.`,
+        description: "Onboarding steps (email & invoice) are being processed in the background",
       });
 
       return data;
