@@ -38,11 +38,46 @@ serve(async (req) => {
       )
     }
 
-    // Check permissions and delete related records using our database function
-    const { data: deletionResult, error: deletionError } = await supabaseClient
-      .rpc('delete_user_with_permissions', {
-        target_user_id
+    // First check user role and permissions
+    const { data: userToDelete, error: userFetchError } = await supabaseClient
+      .from('users')
+      .select('role')
+      .eq('id', target_user_id)
+      .single()
+
+    if (userFetchError || !userToDelete) {
+      return new Response(
+        JSON.stringify({ error: 'User not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Use the appropriate deletion function based on user role
+    let deletionResult, deletionError;
+    
+    if (userToDelete.role === 'student') {
+      const result = await supabaseClient.rpc('delete_student_atomic', {
+        p_user_id: target_user_id
       })
+      deletionResult = result.data
+      deletionError = result.error
+    } else {
+      // For non-student users, delete related records manually
+      // Delete notifications first (this was causing the FK constraint error)
+      await supabaseClient
+        .from('notifications')
+        .delete()
+        .eq('user_id', target_user_id)
+      
+      // Delete from users table
+      const result = await supabaseClient
+        .from('users')
+        .delete()
+        .eq('id', target_user_id)
+      
+      deletionResult = result.data
+      deletionError = result.error
+    }
 
     if (deletionError || deletionResult?.error) {
       return new Response(
