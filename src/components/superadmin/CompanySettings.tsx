@@ -42,6 +42,20 @@ interface CompanySettingsData {
       header?: string;
     };
   };
+  
+  // Email SMTP settings
+  smtp_host?: string;
+  smtp_port?: number;
+  smtp_user?: string;
+  smtp_password?: string;
+  smtp_use_tls?: boolean;
+  
+  // Invoice SMTP settings
+  invoice_smtp_host?: string;
+  invoice_smtp_port?: number;
+  invoice_smtp_user?: string;
+  invoice_smtp_password?: string;
+  invoice_smtp_use_tls?: boolean;
 }
 
 export function CompanySettings() {
@@ -345,14 +359,122 @@ export function CompanySettings() {
               Email Configuration
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Email sending is managed via Supabase console—no SMTP settings are required in the app.
-              All transactional emails (invoices, LMS notifications, authentication emails) are sent using Supabase's default email configuration.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              To modify email settings, please use the Supabase dashboard.
-            </p>
+          <CardContent className="space-y-6">
+            {/* General Email SMTP */}
+            <div className="space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                General Email SMTP Settings
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="smtp_host">SMTP Host</Label>
+                  <Input
+                    id="smtp_host"
+                    value={settings.smtp_host || ''}
+                    onChange={(e) => handleInputChange('smtp_host', e.target.value)}
+                    placeholder="smtp.gmail.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtp_port">SMTP Port</Label>
+                  <Input
+                    id="smtp_port"
+                    type="number"
+                    value={settings.smtp_port || 587}
+                    onChange={(e) => handleInputChange('smtp_port', parseInt(e.target.value))}
+                    placeholder="587"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtp_user">SMTP Username</Label>
+                  <Input
+                    id="smtp_user"
+                    value={settings.smtp_user || ''}
+                    onChange={(e) => handleInputChange('smtp_user', e.target.value)}
+                    placeholder="your-email@domain.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="smtp_password">SMTP Password</Label>
+                  <Input
+                    id="smtp_password"
+                    type="password"
+                    value={settings.smtp_password || ''}
+                    onChange={(e) => handleInputChange('smtp_password', e.target.value)}
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center space-x-2">
+                    <Switch
+                      checked={settings.smtp_use_tls ?? true}
+                      onCheckedChange={(checked) => handleInputChange('smtp_use_tls', checked)}
+                    />
+                    <span>Use TLS</span>
+                  </Label>
+                </div>
+              </div>
+            </div>
+
+            <Separator />
+
+            {/* Invoice Email SMTP */}
+            <div className="space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Invoice Email SMTP Settings
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="invoice_smtp_host">SMTP Host</Label>
+                  <Input
+                    id="invoice_smtp_host"
+                    value={settings.invoice_smtp_host || ''}
+                    onChange={(e) => handleInputChange('invoice_smtp_host', e.target.value)}
+                    placeholder="smtp.gmail.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="invoice_smtp_port">SMTP Port</Label>
+                  <Input
+                    id="invoice_smtp_port"
+                    type="number"
+                    value={settings.invoice_smtp_port || 587}
+                    onChange={(e) => handleInputChange('invoice_smtp_port', parseInt(e.target.value))}
+                    placeholder="587"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="invoice_smtp_user">SMTP Username</Label>
+                  <Input
+                    id="invoice_smtp_user"
+                    value={settings.invoice_smtp_user || ''}
+                    onChange={(e) => handleInputChange('invoice_smtp_user', e.target.value)}
+                    placeholder="invoices@domain.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="invoice_smtp_password">SMTP Password</Label>
+                  <Input
+                    id="invoice_smtp_password"
+                    type="password"
+                    value={settings.invoice_smtp_password || ''}
+                    onChange={(e) => handleInputChange('invoice_smtp_password', e.target.value)}
+                    placeholder="••••••••"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="flex items-center space-x-2">
+                    <Switch
+                      checked={settings.invoice_smtp_use_tls ?? true}
+                      onCheckedChange={(checked) => handleInputChange('invoice_smtp_use_tls', checked)}
+                    />
+                    <span>Use TLS</span>
+                  </Label>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
