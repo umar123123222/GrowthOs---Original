@@ -144,129 +144,63 @@ export function LogoUploadSection({ currentLogo, onLogoUpdate }: LogoUploadSecti
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Upload Guidelines */}
-        <Alert>
-          <Eye className="w-4 h-4" />
-          <AlertDescription>
-            <div className="space-y-2">
-              <p className="font-medium">Recommended specifications:</p>
-              <ul className="text-sm space-y-1 ml-4">
-                <li>• Square format (1:1 aspect ratio) at 512×512 pixels</li>
-                <li>• PNG format for best quality with transparency</li>
-                <li>• Minimum size: 256×256 pixels</li>
-                <li>• Maximum file size: 5MB</li>
-              </ul>
-            </div>
-          </AlertDescription>
-        </Alert>
-
         {/* Current Logo Display */}
         {currentLogo && !previewUrl && (
-          <div className="space-y-2">
-            <Label>Current Logo</Label>
-            <div className="flex items-center gap-4 p-4 border rounded-lg">
-              <img 
-                src={currentLogo} 
-                alt="Current company logo" 
-                className="w-16 h-16 object-contain border rounded"
-              />
-              <div className="text-sm text-muted-foreground">
-                Logo is automatically used for favicon, headers, and sign-in page
-              </div>
-            </div>
+          <div className="flex items-center gap-3 p-3 border rounded-lg bg-muted/20">
+            <img 
+              src={currentLogo} 
+              alt="Current logo" 
+              className="w-12 h-12 object-contain border rounded"
+            />
+            <span className="text-sm text-muted-foreground">Current company logo</span>
           </div>
         )}
 
         {/* File Input */}
         <div className="space-y-2">
-          <Label htmlFor="logo-upload">Upload New Logo</Label>
+          <Label htmlFor="logo-upload">Upload Logo (PNG/JPG, max 5MB, square format recommended)</Label>
           <Input
             ref={fileInputRef}
             id="logo-upload"
             type="file"
-            accept="image/png,image/jpeg,image/jpg,image/svg+xml"
+            accept="image/png,image/jpeg,image/jpg"
             onChange={handleFileSelect}
             className="cursor-pointer"
           />
         </div>
 
-        {/* Preview and Validation */}
+        {/* Preview and Actions */}
         {selectedFile && (
-          <div className="space-y-4">
-            {/* Preview */}
-            <div className="space-y-2">
-              <Label>Preview</Label>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 border rounded-lg bg-muted/20">
-                <div className="text-center space-y-2">
-                  <div className="text-sm font-medium">Favicon (32×32)</div>
-                  <div className="w-8 h-8 mx-auto border rounded bg-background">
-                    <img 
-                      src={previewUrl!} 
-                      alt="Favicon preview" 
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                </div>
-                <div className="text-center space-y-2">
-                  <div className="text-sm font-medium">Header Logo</div>
-                  <div className="h-12 flex items-center justify-center border rounded bg-background">
-                    <img 
-                      src={previewUrl!} 
-                      alt="Header preview" 
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  </div>
-                </div>
-                <div className="text-center space-y-2">
-                  <div className="text-sm font-medium">Original</div>
-                  <div className="w-16 h-16 mx-auto border rounded bg-background">
-                    <img 
-                      src={previewUrl!} 
-                      alt="Original preview" 
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
+          <div className="space-y-3">
+            {/* Compact Preview */}
+            <div className="flex items-center gap-4 p-3 border rounded-lg bg-muted/20">
+              <img 
+                src={previewUrl!} 
+                alt="Logo preview" 
+                className="w-12 h-12 object-contain border rounded"
+              />
+              <div className="flex-1">
+                <div className="text-sm font-medium">Preview</div>
+                <div className="text-xs text-muted-foreground">
+                  Will be used for favicon, headers, and branding
                 </div>
               </div>
             </div>
 
-            {/* Validation Results */}
-            {validation && (
-              <div className="space-y-2">
-                {validation.errors.length > 0 && (
-                  <Alert variant="destructive">
-                    <AlertTriangle className="w-4 h-4" />
-                    <AlertDescription>
-                      <ul className="space-y-1">
-                        {validation.errors.map((error, index) => (
-                          <li key={index}>• {error}</li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
+            {/* Simplified Validation */}
+            {validation && validation.errors.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTriangle className="w-4 h-4" />
+                <AlertDescription>
+                  {validation.errors.join('. ')}
+                </AlertDescription>
+              </Alert>
+            )}
 
-                {validation.warnings.length > 0 && (
-                  <Alert>
-                    <AlertTriangle className="w-4 h-4" />
-                    <AlertDescription>
-                      <ul className="space-y-1">
-                        {validation.warnings.map((warning, index) => (
-                          <li key={index}>• {warning}</li>
-                        ))}
-                      </ul>
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {validation.isValid && validation.errors.length === 0 && (
-                  <Alert>
-                    <CheckCircle className="w-4 h-4" />
-                    <AlertDescription>
-                      Logo meets all requirements and is ready to upload.
-                    </AlertDescription>
-                  </Alert>
-                )}
+            {validation && validation.isValid && validation.errors.length === 0 && (
+              <div className="text-sm text-green-600 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4" />
+                Ready to upload
               </div>
             )}
 
@@ -276,6 +210,7 @@ export function LogoUploadSection({ currentLogo, onLogoUpdate }: LogoUploadSecti
                 onClick={handleUpload}
                 disabled={!validation?.isValid || isUploading}
                 className="flex-1"
+                size="sm"
               >
                 {isUploading ? "Uploading..." : "Upload Logo"}
               </Button>
@@ -283,6 +218,7 @@ export function LogoUploadSection({ currentLogo, onLogoUpdate }: LogoUploadSecti
                 variant="outline"
                 onClick={clearSelection}
                 disabled={isUploading}
+                size="sm"
               >
                 <X className="w-4 h-4" />
               </Button>
