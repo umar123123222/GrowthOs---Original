@@ -52,34 +52,9 @@ serve(async (req) => {
       )
     }
 
-    // Delete all related data in the correct order to avoid FK constraint violations
+    // Delete the user record - CASCADE will automatically handle related records
     console.log('Starting deletion process for user:', target_user_id)
     
-    // Delete notifications first
-    await supabaseClient.from('notifications').delete().eq('user_id', target_user_id)
-    console.log('Deleted notifications')
-    
-    // Delete other related records
-    await supabaseClient.from('user_activity_logs').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('recording_views').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('quiz_attempts').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('progress').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('feedback').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('assignment_submissions').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('support_tickets').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('ticket_replies').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('messages').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('installment_payments').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('certificates').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('session_attendance').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('user_badges').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('leaderboard').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('performance_record').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('onboarding_responses').delete().eq('user_id', target_user_id)
-    await supabaseClient.from('mentorship_notes').delete().eq('student_id', target_user_id)
-    console.log('Deleted all related records')
-
-    // Finally delete the user record
     const { error: deletionError } = await supabaseClient
       .from('users')
       .delete()

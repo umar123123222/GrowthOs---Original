@@ -753,6 +753,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "onboarding_responses_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "onboarding_responses_user_id_fkey1"
             columns: ["user_id"]
             isOneToOne: false
@@ -780,6 +787,13 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "Performance Record_user_ID_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "performance_record_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
@@ -1399,6 +1413,7 @@ export type Database = {
           course_track_id: string | null
           created_at: string | null
           created_by: string | null
+          deleted_at: string | null
           dream_goal_summary: string | null
           email: string
           fees_due_date: string | null
@@ -1444,6 +1459,7 @@ export type Database = {
           course_track_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           dream_goal_summary?: string | null
           email: string
           fees_due_date?: string | null
@@ -1489,6 +1505,7 @@ export type Database = {
           course_track_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           dream_goal_summary?: string | null
           email?: string
           fees_due_date?: string | null
