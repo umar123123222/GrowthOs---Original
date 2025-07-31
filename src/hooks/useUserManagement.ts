@@ -91,6 +91,56 @@ export const useUserManagement = () => {
     }
   };
 
+  const deleteMultipleUsers = async (userIds: string[]): Promise<{ success: number; failed: number }> => {
+    setLoading(true);
+    let success = 0;
+    let failed = 0;
+
+    try {
+      for (const userId of userIds) {
+        try {
+          const { data, error } = await supabase.functions.invoke('delete-user-with-role', {
+            body: { target_user_id: userId }
+          });
+
+          if (error || data?.error) {
+            failed++;
+          } else {
+            success++;
+          }
+        } catch {
+          failed++;
+        }
+      }
+
+      if (success > 0) {
+        toast({
+          title: "Bulk Delete Completed",
+          description: `Successfully deleted ${success} student(s)${failed > 0 ? `, ${failed} failed` : ''}`
+        });
+      }
+
+      if (failed > 0 && success === 0) {
+        toast({
+          variant: "destructive",
+          title: "Bulk Delete Failed",
+          description: `Failed to delete ${failed} student(s)`
+        });
+      }
+
+      return { success, failed };
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to delete users"
+      });
+      return { success: 0, failed: userIds.length };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const getCurrentUserInfo = async () => {
     try {
       const { data, error } = await supabase.functions.invoke('whoami');
@@ -110,6 +160,7 @@ export const useUserManagement = () => {
   return {
     createUser,
     deleteUser,
+    deleteMultipleUsers,
     getCurrentUserInfo,
     loading
   };

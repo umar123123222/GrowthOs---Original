@@ -24,6 +24,7 @@ import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Downloa
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useUserManagement } from '@/hooks/useUserManagement';
 
 import jsPDF from 'jspdf';
 
@@ -71,6 +72,7 @@ interface ActivityLog {
 
 export function StudentsManagement() {
   const { toast } = useToast();
+  const { deleteMultipleUsers, loading: userManagementLoading } = useUserManagement();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -743,6 +745,28 @@ export function StudentsManagement() {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedStudents.size === 0) {
+      toast({
+        title: 'Error',
+        description: 'Please select at least one student',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to permanently delete ${selectedStudents.size} student(s)? This action cannot be undone.`;
+    if (!confirm(confirmMessage)) return;
+
+    const userIds = Array.from(selectedStudents);
+    const result = await deleteMultipleUsers(userIds);
+    
+    if (result.success > 0) {
+      setSelectedStudents(new Set());
+      fetchStudents();
+    }
+  };
+
   const handleEditPassword = (student: Student, type: 'temp' | 'lms') => {
     setSelectedStudentForPassword(student);
     setPasswordType(type);
@@ -971,6 +995,16 @@ export function StudentsManagement() {
                 >
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Activate LMS
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleBulkDelete}
+                  disabled={userManagementLoading}
+                  className="hover:bg-red-600"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Students
                 </Button>
               </div>
             </div>
