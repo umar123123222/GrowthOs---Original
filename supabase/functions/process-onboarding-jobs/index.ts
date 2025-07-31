@@ -1,10 +1,9 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
-import { Resend } from "npm:resend@2.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const resendApiKey = Deno.env.get('RESEND_API_KEY');
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
@@ -199,19 +198,31 @@ async function processJob(job: OnboardingJob, settings: CompanySettings) {
 }
 
 async function processEmailJob(job: OnboardingJob, student: StudentData, settings: CompanySettings) {
-  if (!resendApiKey) {
-    throw new Error('RESEND_API_KEY not configured');
+  // Validate SMTP settings
+  if (!settings.smtp_host || !settings.smtp_user || !settings.smtp_password) {
+    throw new Error('SMTP settings not configured in company settings');
   }
 
   if (!student.temp_password) {
     throw new Error('Student has no temporary password');
   }
 
-  const resend = new Resend(resendApiKey);
-  
+  // Initialize SMTP client
+  const client = new SMTPClient({
+    connection: {
+      hostname: settings.smtp_host,
+      port: settings.smtp_port || 587,
+      tls: settings.smtp_use_tls !== false,
+      auth: {
+        username: settings.smtp_user,
+        password: settings.smtp_password,
+      },
+    },
+  });
+
   const emailHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h1 style="color: #333;">Welcome to ${settings.company_name}!</h1>
+      <h1 style="color: #333;">Welcome to ${settings.company_name || 'LMS'}!</h1>
       <p>Dear ${student.full_name},</p>
       <p>Your student account has been created successfully. Here are your login credentials:</p>
       <div style="background: #f5f5f5; padding: 20px; border-radius: 5px; margin: 20px 0;">
@@ -221,22 +232,25 @@ async function processEmailJob(job: OnboardingJob, student: StudentData, setting
       </div>
       <p>Please log in to the LMS and change your password on your first visit.</p>
       <p>If you have any questions, please don't hesitate to contact us.</p>
-      <p>Best regards,<br>The ${settings.company_name} Team</p>
+      <p>Best regards,<br>The ${settings.company_name || 'LMS'} Team</p>
     </div>
   `;
 
-  const { error } = await resend.emails.send({
-    from: `${settings.lms_from_name} <${settings.lms_from_email}>`,
-    to: [student.email],
-    subject: `Welcome to ${settings.company_name} - Your Login Credentials`,
-    html: emailHtml,
-  });
+  try {
+    await client.send({
+      from: settings.lms_from_email || settings.smtp_user,
+      to: student.email,
+      subject: `Welcome to ${settings.company_name || 'LMS'} - Your Login Credentials`,
+      content: emailHtml,
+      html: emailHtml,
+    });
 
-  if (error) {
-    throw new Error(`Email send failed: ${error.message}`);
+    await client.close();
+    console.log(`Welcome email sent to ${student.email} via SMTP`);
+  } catch (error) {
+    await client.close();
+    throw new Error(`SMTP email send failed: ${error.message}`);
   }
-
-  console.log(`Welcome email sent to ${student.email}`);
 }
 
 async function processInvoiceJob(job: OnboardingJob, student: StudentData, settings: CompanySettings) {
