@@ -38,7 +38,13 @@ serve(async (req) => {
       )
     }
 
-    // First check user role and permissions
+    // First delete all notifications for this user to avoid FK constraint issues
+    await supabaseClient
+      .from('notifications')
+      .delete()
+      .eq('user_id', target_user_id)
+
+    // Get user role for proper deletion handling
     const { data: userToDelete, error: userFetchError } = await supabaseClient
       .from('users')
       .select('role')
@@ -62,14 +68,7 @@ serve(async (req) => {
       deletionResult = result.data
       deletionError = result.error
     } else {
-      // For non-student users, delete related records manually
-      // Delete notifications first (this was causing the FK constraint error)
-      await supabaseClient
-        .from('notifications')
-        .delete()
-        .eq('user_id', target_user_id)
-      
-      // Delete from users table
+      // For non-student users, delete from users table
       const result = await supabaseClient
         .from('users')
         .delete()
