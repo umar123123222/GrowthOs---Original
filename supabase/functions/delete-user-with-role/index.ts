@@ -38,16 +38,10 @@ serve(async (req) => {
       )
     }
 
-    // First delete all notifications for this user to avoid FK constraint issues
-    await supabaseClient
-      .from('notifications')
-      .delete()
-      .eq('user_id', target_user_id)
-
-    // Get user role for proper deletion handling
+    // Get user info before deletion
     const { data: userToDelete, error: userFetchError } = await supabaseClient
       .from('users')
-      .select('role')
+      .select('role, student_id, full_name')
       .eq('id', target_user_id)
       .single()
 
@@ -58,29 +52,44 @@ serve(async (req) => {
       )
     }
 
-    // Use the appropriate deletion function based on user role
-    let deletionResult, deletionError;
+    // Delete all related data in the correct order to avoid FK constraint violations
+    console.log('Starting deletion process for user:', target_user_id)
     
-    if (userToDelete.role === 'student') {
-      const result = await supabaseClient.rpc('delete_student_atomic', {
-        p_user_id: target_user_id
-      })
-      deletionResult = result.data
-      deletionError = result.error
-    } else {
-      // For non-student users, delete from users table
-      const result = await supabaseClient
-        .from('users')
-        .delete()
-        .eq('id', target_user_id)
-      
-      deletionResult = result.data
-      deletionError = result.error
-    }
+    // Delete notifications first
+    await supabaseClient.from('notifications').delete().eq('user_id', target_user_id)
+    console.log('Deleted notifications')
+    
+    // Delete other related records
+    await supabaseClient.from('user_activity_logs').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('recording_views').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('quiz_attempts').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('progress').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('feedback').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('assignment_submissions').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('support_tickets').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('ticket_replies').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('messages').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('installment_payments').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('certificates').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('session_attendance').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('user_badges').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('leaderboard').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('performance_record').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('onboarding_responses').delete().eq('user_id', target_user_id)
+    await supabaseClient.from('mentorship_notes').delete().eq('student_id', target_user_id)
+    console.log('Deleted all related records')
 
-    if (deletionError || deletionResult?.error) {
+    // Finally delete the user record
+    const { error: deletionError } = await supabaseClient
+      .from('users')
+      .delete()
+      .eq('id', target_user_id)
+    
+    console.log('Deleted user record, error:', deletionError)
+
+    if (deletionError) {
       return new Response(
-        JSON.stringify({ error: deletionResult?.error || deletionError?.message }),
+        JSON.stringify({ error: deletionError.message }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
