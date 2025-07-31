@@ -92,8 +92,10 @@ export function LogoUploadSection({ currentLogo, onLogoUpdate }: LogoUploadSecti
         }
       };
 
+      // Update company settings directly instead of using RPC
       const { error: updateError } = await supabase
-        .rpc('update_company_branding', { branding_data: brandingData });
+        .from('company_settings')
+        .upsert({ id: 1, branding: brandingData, updated_at: new Date().toISOString() });
 
       if (updateError) throw updateError;
 

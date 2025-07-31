@@ -1679,6 +1679,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_user_lms_status: {
+        Args: { user_id: string }
+        Returns: string
+      }
       get_user_unlock_status: {
         Args: { _user_id: string }
         Returns: {
@@ -1727,6 +1731,10 @@ export type Database = {
           p_feedback?: string
           p_reviewed_note?: string
         }
+        Returns: Json
+      }
+      update_company_branding: {
+        Args: { branding_data: Json }
         Returns: Json
       }
       validate_questionnaire_structure: {
