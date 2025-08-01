@@ -774,6 +774,21 @@ export function CompanySettings() {
         </Card>
 
         {/* Email Configuration section removed - using Supabase built-in email */}
+        
+        {/* SMTP Notice */}
+        <Card className="lg:col-span-2">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <Mail className="h-5 w-5 text-blue-600" />
+              <div>
+                <p className="text-sm font-medium text-blue-900">Email Configuration Note</p>
+                <p className="text-sm text-blue-700">
+                  SMTP settings are configured in the database. Supabase's built-in email functionality will be used for all outgoing emails.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Save Button */}
         <div className="lg:col-span-2 flex justify-end">
