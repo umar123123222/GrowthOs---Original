@@ -8,66 +8,82 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react";
 import { AppLogo } from "@/components/AppLogo";
+import { ErrorMessage, FieldError } from "@/components/ui/error-message";
+import { errorHandler, handleApiError } from "@/lib/error-handler";
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const {
-    toast
-  } = useToast();
-  const {
-    refreshUser
-  } = useAuth();
+  const [loginError, setLoginError] = useState<string>("");
+  const [emailError, setEmailError] = useState<string>("");
+  const [passwordError, setPasswordError] = useState<string>("");
+  const { toast } = useToast();
+  const { refreshUser } = useAuth();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Clear previous errors
+    setLoginError("");
+    setEmailError("");
+    setPasswordError("");
+    
+    // Basic validation
+    if (!email) {
+      setEmailError("Email is required");
+      return;
+    }
+    if (!password) {
+      setPasswordError("Password is required");
+      return;
+    }
+    
     setIsLoading(true);
+    
     try {
       console.log('Login attempt for:', email);
 
       // First authenticate with Supabase Auth
-      const {
-        data: authData,
-        error: authError
-      } = await supabase.auth.signInWithPassword({
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
+      
       if (authError) {
         console.error('Auth error:', authError);
 
         // Check if this is a student account that was created by admin
         if (authError.message.includes('Invalid login credentials')) {
-          const {
-            data: studentData
-          } = await supabase.from('users').select('temp_password, role, full_name').eq('email', email).single();
+          const { data: studentData } = await supabase
+            .from('users')
+            .select('temp_password, role, full_name')
+            .eq('email', email)
+            .maybeSingle();
+            
           if (studentData && studentData.role === 'student' && studentData.temp_password) {
-            toast({
-              title: "Student Account Detected",
-              description: `Please use the temporary password provided by your admin. Contact your mentor if you need the password.`,
-              variant: "destructive"
-            });
+            setLoginError("Please use the temporary password provided by your admin. Contact your mentor if you need the password.");
             return;
           }
         }
-        toast({
-          title: "Invalid Credentials",
-          description: "Incorrect email or password.",
-          variant: "destructive"
-        });
+        
+        // Use centralized error handling for auth errors
+        const userError = handleApiError(authError, 'login');
+        setLoginError(userError.message);
         return;
       }
+      
       console.log('Auth successful, checking user data...');
 
       // Check if user exists in our users table
-      const {
-        data: userData,
-        error: userError
-      } = await supabase.from('users').select('*').eq('id', authData.user.id).single();
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .maybeSingle();
+        
       if (userError || !userData) {
-        console.log('User not found in users table, creating...', {
-          userError
-        });
+        console.log('User not found in users table, creating...', { userError });
 
         // Determine role based on email
         let userRole = 'student';
@@ -87,25 +103,25 @@ const Login = () => {
         }
 
         // Create user if they don't exist
-        const {
-          data: newUser,
-          error: createError
-        } = await supabase.from('users').insert({
-          id: authData.user.id,
-          email: authData.user.email || email,
-          role: userRole,
-          full_name: fullName,
-          created_at: new Date().toISOString()
-        }).select().single();
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            email: authData.user.email || email,
+            role: userRole,
+            full_name: fullName,
+            created_at: new Date().toISOString()
+          })
+          .select()
+          .single();
+          
         if (createError) {
           console.error('Error creating user:', createError);
-          toast({
-            title: "Setup Error",
-            description: "Failed to set up user account. Please contact support.",
-            variant: "destructive"
-          });
+          const userError = handleApiError(createError, 'user_creation');
+          setLoginError(`Failed to set up your account. ${userError.message}`);
           return;
         }
+        
         toast({
           title: "Welcome!",
           description: `Hello ${newUser.full_name || newUser.email}, you've successfully logged in.`
@@ -122,11 +138,8 @@ const Login = () => {
       await refreshUser();
     } catch (error) {
       console.error('Login error:', error);
-      toast({
-        title: "Login Failed",
-        description: "An error occurred during login. Please try again.",
-        variant: "destructive"
-      });
+      const userError = errorHandler.handleError(error, 'login', false);
+      setLoginError(userError.message);
     } finally {
       setIsLoading(false);
     }
@@ -168,14 +181,38 @@ const Login = () => {
         </CardHeader>
         
         <CardContent className="px-8 pb-8">
+          {loginError && (
+            <ErrorMessage 
+              error={loginError} 
+              className="mb-6"
+              onDismiss={() => setLoginError("")}
+            />
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium text-gray-700">
                 Email Address
               </Label>
               <div className="relative">
-                <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="h-12 pl-4 pr-4 border-2 border-gray-200 focus:border-blue-500 transition-all duration-200 rounded-lg" placeholder="your@email.com" required />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError("");
+                  }}
+                  className={`h-12 pl-4 pr-4 border-2 transition-all duration-200 rounded-lg ${
+                    emailError 
+                      ? 'border-destructive focus:border-destructive' 
+                      : 'border-gray-200 focus:border-blue-500'
+                  }`}
+                  placeholder="your@email.com" 
+                  required 
+                />
               </div>
+              <FieldError error={emailError} />
             </div>
             
             <div className="space-y-2">
@@ -183,22 +220,52 @@ const Login = () => {
                 Password
               </Label>
               <div className="relative">
-                <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} className="h-12 pl-4 pr-12 border-2 border-gray-200 focus:border-blue-500 transition-all duration-200 rounded-lg" placeholder="••••••••" required />
-                <Button type="button" variant="ghost" size="sm" className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100" onClick={() => setShowPassword(!showPassword)}>
+                <Input 
+                  id="password" 
+                  type={showPassword ? "text" : "password"} 
+                  value={password} 
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (passwordError) setPasswordError("");
+                  }}
+                  className={`h-12 pl-4 pr-12 border-2 transition-all duration-200 rounded-lg ${
+                    passwordError 
+                      ? 'border-destructive focus:border-destructive' 
+                      : 'border-gray-200 focus:border-blue-500'
+                  }`}
+                  placeholder="••••••••" 
+                  required 
+                />
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100" 
+                  onClick={() => setShowPassword(!showPassword)}
+                >
                   {showPassword ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-gray-500" />}
                 </Button>
               </div>
+              <FieldError error={passwordError} />
             </div>
             
-            <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group" disabled={isLoading}>
-              {isLoading ? <div className="flex items-center gap-2">
+            <Button 
+              type="submit" 
+              className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group" 
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Signing In...</span>
-                </div> : <div className="flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
                   <Shield className="w-4 h-4" />
                   <span>Sign In to Growth OS</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                </div>}
+                </div>
+              )}
             </Button>
           </form>
           

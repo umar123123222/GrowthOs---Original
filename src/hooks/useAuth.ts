@@ -31,6 +31,7 @@ export const useAuth = () => {
         .update({ last_active_at: new Date().toISOString() })
         .eq('id', userId);
     } catch (error) {
+      // Log technical details only - don't show user error for activity updates
       logger.error('Error updating last active', error);
     }
   };

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { errorHandler } from '@/lib/error-handler';
 
 interface QueryOptions {
   enabled?: boolean;
@@ -98,6 +99,9 @@ export function useOptimizedQuery<T>(
     } catch (err) {
       const error = err instanceof Error ? err : new Error('Query failed');
       
+      // Use centralized error handling (suppress toast for background queries)
+      errorHandler.handleError(error, 'data_fetch', false);
+      
       // Retry logic
       const maxRetries = typeof retry === 'number' ? retry : (retry ? 3 : 0);
       if (retryCountRef.current < maxRetries) {
@@ -181,7 +185,10 @@ export function useOptimizedUserData(userId?: string) {
         .eq('id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        errorHandler.handleError(error, 'user_data_fetch', false);
+        throw error;
+      }
       return data;
     },
     {
@@ -203,7 +210,10 @@ export function useOptimizedCompanySettings() {
         .eq('id', 1)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        errorHandler.handleError(error, 'company_settings_fetch', false);
+        throw error;
+      }
       return data;
     },
     {
