@@ -33,10 +33,31 @@ async function fetchSMTPConfig(purpose: 'lms' | 'billing'): Promise<SMTPConfig> 
     return smtpConfigCache.get(purpose)!;
   }
 
-  // Temporary: Always throw error until migration is applied and types regenerated
-  // Once the smtp_configs table exists and types are updated, this will be replaced with:
-  // const { data, error } = await supabase.from('smtp_configs').select('*').eq('purpose', purpose).single();
-  throw new MissingSMTPConfigError(purpose);
+  // Fetch SMTP config from database using direct SQL to avoid type issues until types are regenerated
+  const { data, error } = await (supabase as any).rpc('get_smtp_config', { p_purpose: purpose });
+  
+  if (error) {
+    console.error('Error fetching SMTP config:', error);
+    throw new MissingSMTPConfigError(purpose);
+  }
+
+  if (!data || data.length === 0) {
+    throw new MissingSMTPConfigError(purpose);
+  }
+
+  const config: SMTPConfig = {
+    host: data[0].host,
+    port: data[0].port,
+    username: data[0].username,
+    password: data[0].password,
+    secure: data[0].secure,
+    from_address: data[0].from_address
+  };
+
+  // Cache the config
+  smtpConfigCache.set(purpose, config);
+  
+  return config;
 }
 
 export async function sendWithPurpose(
