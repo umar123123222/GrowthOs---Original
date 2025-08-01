@@ -1,13 +1,11 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
-
 interface InvoiceItem {
   description: string;
   installment_number: number;
   price: number;
   total: number;
 }
-
 interface InvoiceData {
   invoice_number: string;
   date: string;
@@ -22,7 +20,6 @@ interface InvoiceData {
   account_number?: string;
   terms?: string;
 }
-
 interface CompanyDetails {
   company_name: string;
   address: string;
@@ -30,18 +27,15 @@ interface CompanyDetails {
   primary_phone: string;
   company_logo?: string;
 }
-
 interface InvoiceTemplateProps {
   invoiceData: InvoiceData;
   companyDetails: CompanyDetails;
 }
-
 export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
   invoiceData,
   companyDetails
 }) => {
-  return (
-    <div className="max-w-4xl mx-auto bg-white p-8 shadow-lg">
+  return <div className="max-w-4xl mx-auto bg-white p-8 shadow-lg">
       {/* Header with gradient background */}
       <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-purple-400 p-8 mb-8 relative overflow-hidden">
         <div className="absolute left-8 top-1/2 transform -translate-y-1/2">
@@ -64,9 +58,7 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
           <h3 className="text-sm font-semibold text-gray-600 mb-2">INVOICE TO:</h3>
           <div className="text-xl font-bold text-gray-900 mb-1">{invoiceData.student_name}</div>
           <div className="h-1 w-12 bg-gray-900"></div>
-          {invoiceData.student_email && (
-            <div className="text-sm text-gray-600 mt-2">{invoiceData.student_email}</div>
-          )}
+          {invoiceData.student_email && <div className="text-sm text-gray-600 mt-2">{invoiceData.student_email}</div>}
         </div>
 
         {/* Invoice Details */}
@@ -102,17 +94,12 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
 
         {/* Table Body */}
         <div className="border-l border-r border-b border-gray-200">
-          {invoiceData.items.map((item, index) => (
-            <div 
-              key={index} 
-              className={`grid grid-cols-4 p-4 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}
-            >
+          {invoiceData.items.map((item, index) => <div key={index} className={`grid grid-cols-4 p-4 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
               <div className="font-medium">{item.description}</div>
               <div className="text-center">{item.installment_number}</div>
               <div className="text-center">${item.price}</div>
               <div className="text-center font-semibold">${item.total}</div>
-            </div>
-          ))}
+            </div>)}
         </div>
       </div>
 
@@ -121,16 +108,12 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
         {/* Payment Method */}
         <div>
           <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Method</h3>
-          {invoiceData.bank_name && (
-            <div className="text-sm text-gray-600 italic mb-1">
+          {invoiceData.bank_name && <div className="text-sm text-gray-600 italic mb-1">
               Bank Name: {invoiceData.bank_name}
-            </div>
-          )}
-          {invoiceData.account_number && (
-            <div className="text-sm text-gray-600 italic">
+            </div>}
+          {invoiceData.account_number && <div className="text-sm text-gray-600 italic">
               Account No: {invoiceData.account_number}
-            </div>
-          )}
+            </div>}
         </div>
 
         {/* Totals */}
@@ -156,11 +139,9 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
       <div className="grid grid-cols-2 gap-8 mt-12">
         {/* Terms and Conditions */}
         <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Terms and Conditions</h3>
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Notes</h3>
           <p className="text-sm text-gray-600 italic leading-relaxed">
-            {invoiceData.terms || 
-              `Please send payment within 30 days of receiving this invoice. There will be 10% interest charge per month on late invoice.`
-            }
+            {invoiceData.terms || `Please send payment within 30 days of receiving this invoice. There will be 10% interest charge per month on late invoice.`}
           </p>
         </div>
 
@@ -181,6 +162,5 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
         <div>{companyDetails.address}</div>
         <div>{companyDetails.contact_email} | {companyDetails.primary_phone}</div>
       </div>
-    </div>
-  );
+    </div>;
 };
