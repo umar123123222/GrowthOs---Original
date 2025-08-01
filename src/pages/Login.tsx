@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react";
+import { AppLogo } from "@/components/AppLogo";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -149,8 +150,8 @@ const Login = () => {
           <div className="flex justify-center mb-6">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
-              <div className="relative bg-white p-3 rounded-2xl shadow-lg">
-                <img src="/lovable-uploads/3a76ecf9-6551-4196-bc8c-6d43477753df.png" alt="CORE47.AI Logo" className="h-12 w-auto" />
+              <div className="relative bg-white p-3 rounded-2xl shadow-lg flex items-center justify-center">
+                <AppLogo className="h-12 w-auto object-contain" alt="Company Logo" />
               </div>
             </div>
           </div>

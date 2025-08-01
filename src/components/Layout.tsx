@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { FloatingActivityButton } from "./FloatingActivityButton";
 import { ActivityLogsDialog } from "./ActivityLogsDialog";
 import { MotivationalNotifications } from "./MotivationalNotifications";
+import { AppLogo } from "./AppLogo";
 interface LayoutProps {
   user: any;
 }
@@ -301,7 +302,9 @@ const Layout = memo(({
               <Button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
                 {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
               </Button>
-              <img src="/lovable-uploads/3a76ecf9-6551-4196-bc8c-6d43477753df.png" alt="CORE47.AI" className="h-8 w-auto" loading="lazy" />
+              <div className="flex items-center justify-center">
+                <AppLogo className="h-8 w-auto object-contain" alt="Company Logo" />
+              </div>
               <h1 className="text-xl font-bold text-gray-900">GrowthOS
             </h1>
             </div>
