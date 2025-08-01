@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Invoice #{{invoice_number}}</title>
+</head>
+<body>
+    <h1>Invoice #{{invoice_number}}</h1>
+    
+    <p>Dear {{student_name}},</p>
+    
+    <p>Please find your invoice details below:</p>
+    
+    <h2>Invoice Details:</h2>
+    <p><strong>Invoice Number:</strong> {{invoice_number}}</p>
+    <p><strong>Amount:</strong> {{amount}}</p>
+    <p><strong>Due Date:</strong> {{due_date}}</p>
+    <p><strong>Installment:</strong> {{installment_number}} of {{total_installments}}</p>
+    
+    <h2>Payment Information:</h2>
+    <p>{{payment_instructions}}</p>
+    
+    <p><a href="{{payment_url}}">Pay Online</a></p>
+    
+    <p>Student ID: {{student_id}}</p>
+    
+    <p>Best regards,<br>Billing Department</p>
+</body>
+</html>

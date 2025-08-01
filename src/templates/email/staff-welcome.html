@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your LMS Login Details</title>
+</head>
+<body>
+    <h1>Welcome to the LMS Team, {{first_name}}!</h1>
+    
+    <p>Your {{role}} account has been created.</p>
+    
+    <h2>Your Login Details:</h2>
+    <p><strong>Email:</strong> {{email}}</p>
+    <p><strong>Temporary Password:</strong> {{temp_password}}</p>
+    
+    <p><a href="{{login_url}}">Access the LMS</a></p>
+    
+    <p>Please change your password after your first login.</p>
+    
+    <p>Role: {{role}}</p>
+    <p>Department: {{department}}</p>
+    
+    <p>Best regards,<br>LMS Administration</p>
+</body>
+</html>
