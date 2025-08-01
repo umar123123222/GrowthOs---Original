@@ -8,11 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
 import { getLogoUrl } from '@/utils/logoUtils';
+import { InvoiceTemplate } from '@/components/InvoiceTemplate';
 
 // Import types from the new questionnaire module
 import { QuestionItem, validateQuestionnaireStructure } from '@/types/questionnaire';
@@ -83,6 +85,9 @@ export function CompanySettings() {
   // State for editing questions
   const [isAddingQuestion, setIsAddingQuestion] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<string | null>(null);
+  
+  // State for invoice preview
+  const [showInvoicePreview, setShowInvoicePreview] = useState(false);
 
   useEffect(() => {
     fetchCompanySettings();
@@ -230,6 +235,42 @@ export function CompanySettings() {
     const reorderedQuestionnaire = updatedQuestionnaire.map((q, index) => ({ ...q, order: index + 1 }));
     
     setSettings(prev => ({ ...prev, questionnaire: reorderedQuestionnaire }));
+  };
+
+  // Generate sample invoice data for preview
+  const generateSampleInvoiceData = () => {
+    const today = new Date();
+    const dueDate = new Date(today);
+    dueDate.setDate(today.getDate() + settings.invoice_overdue_days);
+
+    return {
+      invoice_number: `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
+      date: today.toLocaleDateString(),
+      student_name: 'John Doe',
+      student_email: 'john.doe@example.com',
+      items: [
+        {
+          description: 'Course Fee - Installment 1',
+          installment_number: 1,
+          price: settings.original_fee_amount / settings.maximum_installment_count,
+          total: settings.original_fee_amount / settings.maximum_installment_count
+        }
+      ],
+      subtotal: settings.original_fee_amount / settings.maximum_installment_count,
+      tax: 0,
+      total: settings.original_fee_amount / settings.maximum_installment_count,
+      terms: settings.invoice_notes || 'Please send payment within 30 days of receiving this invoice.'
+    };
+  };
+
+  const generateSampleCompanyDetails = () => {
+    return {
+      company_name: settings.company_name || 'Your Company',
+      address: settings.address || 'Company Address',
+      contact_email: settings.contact_email || 'contact@company.com',
+      primary_phone: settings.primary_phone || '+1 (555) 123-4567',
+      company_logo: getLogoUrl(settings.branding, 'header')
+    };
   };
 
   if (loading) {
@@ -621,6 +662,29 @@ export function CompanySettings() {
                     </p>
                   </div>
                 </div>
+              </div>
+
+              {/* Invoice Preview Button */}
+              <div className="flex justify-start mt-4">
+                <Dialog open={showInvoicePreview} onOpenChange={setShowInvoicePreview}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Preview Invoice
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Invoice Preview</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4">
+                      <InvoiceTemplate
+                        invoiceData={generateSampleInvoiceData()}
+                        companyDetails={generateSampleCompanyDetails()}
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
 
