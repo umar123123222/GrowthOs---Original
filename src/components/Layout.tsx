@@ -294,7 +294,7 @@ const Layout = memo(({
   };
   return <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-sm">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -368,7 +368,7 @@ const Layout = memo(({
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 p-8 animate-fade-in ${sidebarCollapsed ? 'ml-16' : 'ml-80'} transition-all duration-300`}>
+        <main className={`flex-1 p-8 pt-24 animate-fade-in ${sidebarCollapsed ? 'ml-16' : 'ml-80'} transition-all duration-300`}>
           <Outlet />
         </main>
       </div>
