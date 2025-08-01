@@ -17,6 +17,7 @@ interface InvoiceData {
   tax: number;
   total: number;
   total_program_cost?: number;
+  total_installments?: number;
   currency?: string;
   payment_methods?: PaymentMethod[];
   terms?: string;
@@ -132,7 +133,12 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
         <div className="border-l border-r border-b border-gray-200">
           {invoiceData.items.map((item, index) => <div key={index} className={`grid grid-cols-4 p-4 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
               <div className="font-medium">{item.description}</div>
-              <div className="text-center">{item.installment_number}</div>
+              <div className="text-center">
+                {invoiceData.total_installments 
+                  ? `${item.installment_number}/${invoiceData.total_installments}`
+                  : item.installment_number
+                }
+              </div>
               <div className="text-center">{currencySymbol}{item.price}</div>
               <div className="text-center font-semibold">{currencySymbol}{item.total}</div>
             </div>)}
