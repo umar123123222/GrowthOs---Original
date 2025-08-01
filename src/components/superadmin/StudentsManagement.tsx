@@ -20,7 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -76,43 +76,6 @@ export function StudentsManagement() {
   const { toast } = useToast();
   const { deleteMultipleUsers, loading: userManagementLoading } = useUserManagement();
   
-  // Function to trigger onboarding processor
-  const triggerOnboardingProcessor = async () => {
-    try {
-      console.log('Triggering onboarding processor...');
-      const { data, error } = await supabase.functions.invoke('process-onboarding-jobs', {
-        body: {}
-      });
-      
-      if (error) {
-        console.error('Error triggering onboarding processor:', error);
-        toast({
-          title: "Error",
-          description: "Failed to trigger onboarding processor",
-          variant: "destructive"
-        });
-        return;
-      }
-      
-      console.log('Onboarding processor response:', data);
-      toast({
-        title: "Success",
-        description: "Onboarding processor triggered successfully"
-      });
-      
-      // Refresh onboarding status after processing
-      setTimeout(() => {
-        fetchStudents();
-      }, 2000);
-    } catch (error) {
-      console.error('Failed to trigger onboarding processor:', error);
-      toast({
-        title: "Error",
-        description: "Failed to trigger onboarding processor",
-        variant: "destructive"
-      });
-    }
-  };
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -882,14 +845,6 @@ export function StudentsManagement() {
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Student
-          </Button>
-          <Button 
-            onClick={triggerOnboardingProcessor}
-            variant="outline"
-            className="hover-scale"
-          >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Process Onboarding
           </Button>
         </div>
         
