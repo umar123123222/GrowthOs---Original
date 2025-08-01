@@ -272,6 +272,8 @@ export function CompanySettings() {
       subtotal: settings.original_fee_amount / settings.maximum_installment_count,
       tax: 0,
       total: settings.original_fee_amount / settings.maximum_installment_count,
+      total_program_cost: settings.original_fee_amount,
+      total_installments: settings.maximum_installment_count,
       currency: settings.currency || 'USD',
       payment_methods: settings.payment_methods || [],
       terms: settings.invoice_notes || 'Please send payment within 30 days of receiving this invoice.'
