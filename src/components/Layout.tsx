@@ -11,9 +11,249 @@ import { FloatingActivityButton } from "./FloatingActivityButton";
 import { ActivityLogsDialog } from "./ActivityLogsDialog";
 import { MotivationalNotifications } from "./MotivationalNotifications";
 import { AppLogo } from "./AppLogo";
+import { PageSkeleton } from "./LoadingStates/PageSkeleton";
+import { throttle } from "@/utils/performance";
 interface LayoutProps {
   user: any;
 }
+
+// Memoized navigation items to prevent unnecessary re-computations
+const NavigationItems = memo(({ 
+  isUserSuperadmin, 
+  isUserAdmin, 
+  isUserMentor, 
+  isUserEnrollmentManager,
+  connectionStatus,
+  courseMenuOpen,
+  setCourseMenuOpen,
+  location,
+  sidebarCollapsed 
+}: any) => {
+  const navigationItems = useMemo(() => {
+    const items = [
+      {
+        to: "/",
+        icon: Monitor,
+        label: "Dashboard",
+        roles: ['student', 'admin', 'superadmin', 'mentor', 'enrollment_manager']
+      },
+      {
+        to: "/videos",
+        icon: Video,
+        label: "Modules & Videos",
+        roles: ['student', 'admin', 'superadmin', 'mentor']
+      },
+      {
+        to: "/assignments",
+        icon: FileText,
+        label: "Assignments",
+        roles: ['student', 'admin', 'superadmin', 'mentor']
+      },
+      {
+        to: "/live-sessions",
+        icon: Calendar,
+        label: "Live Sessions",
+        roles: ['student', 'admin', 'superadmin', 'mentor']
+      },
+      {
+        to: "/mentorship",
+        icon: Users,
+        label: "Mentorship",
+        roles: ['student', 'mentor']
+      },
+      {
+        to: "/teams",
+        icon: Users,
+        label: "Teams",
+        roles: ['admin', 'superadmin']
+      },
+      {
+        to: "/support",
+        icon: MessageSquare,
+        label: "Support",
+        roles: ['student', 'admin', 'superadmin', 'mentor']
+      }
+    ];
+
+    // Add conditional items based on user role
+    if (isUserSuperadmin) {
+      items.push(
+        {
+          to: "/superadmin",
+          icon: Building2,
+          label: "Super Admin",
+          roles: ['superadmin']
+        }
+      );
+    }
+
+    if (isUserAdmin || isUserSuperadmin) {
+      items.push(
+        {
+          to: "/admin",
+          icon: UserCheck,
+          label: "Admin Panel",
+          roles: ['admin', 'superadmin']
+        }
+      );
+    }
+
+    if (isUserMentor) {
+      items.push(
+        {
+          to: "/mentor",
+          icon: User,
+          label: "Mentor Dashboard",
+          roles: ['mentor']
+        }
+      );
+    }
+
+    if (isUserEnrollmentManager) {
+      items.push(
+        {
+          to: "/enrollment-manager",
+          icon: UserCheck,
+          label: "Enrollment Manager",
+          roles: ['enrollment_manager']
+        }
+      );
+    }
+
+    return items;
+  }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager]);
+
+  return (
+    <nav className="space-y-2 px-4">
+      {navigationItems.map((item) => (
+        <Link
+          key={item.to}
+          to={item.to}
+          className={`
+            flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
+            ${location.pathname === item.to
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+            }
+            ${sidebarCollapsed ? 'justify-center' : ''}
+          `}
+        >
+          <item.icon className="h-4 w-4 flex-shrink-0" />
+          {!sidebarCollapsed && (
+            <span className="truncate">{item.label}</span>
+          )}
+        </Link>
+      ))}
+      
+      {/* Course navigation */}
+      {!sidebarCollapsed && (
+        <div className="pt-4">
+          <button
+            onClick={() => setCourseMenuOpen(!courseMenuOpen)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors w-full"
+          >
+            <BookOpen className="h-4 w-4" />
+            <span>Course</span>
+            {courseMenuOpen ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronRight className="h-4 w-4 ml-auto" />}
+          </button>
+          
+          {courseMenuOpen && (
+            <div className="ml-6 mt-2 space-y-2">
+              <Link
+                to="/quizzes"
+                className={`
+                  flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
+                  ${location.pathname === '/quizzes'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                Quizzes
+              </Link>
+              <Link
+                to="/certificates"
+                className={`
+                  flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
+                  ${location.pathname === '/certificates'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                Certificates
+              </Link>
+              <Link
+                to="/leaderboard"
+                className={`
+                  flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
+                  ${location.pathname === '/leaderboard'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                Leaderboard
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+      
+      {/* Connection status indicators */}
+      {!sidebarCollapsed && (connectionStatus.shopify || connectionStatus.meta) && (
+        <div className="pt-4 border-t border-gray-200">
+          <div className="px-3 py-2">
+            <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              Integrations
+            </h3>
+            <div className="space-y-2">
+              {connectionStatus.shopify && (
+                <Link
+                  to="/shopify"
+                  className={`
+                    flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
+                    ${location.pathname === '/shopify'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }
+                  `}
+                >
+                  <ShoppingBag className="h-4 w-4" />
+                  <span>Shopify</span>
+                  <Badge variant="outline" className="ml-auto text-xs">
+                    Connected
+                  </Badge>
+                </Link>
+              )}
+              {connectionStatus.meta && (
+                <Link
+                  to="/meta-ads"
+                  className={`
+                    flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
+                    ${location.pathname === '/meta-ads'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }
+                  `}
+                >
+                  <Target className="h-4 w-4" />
+                  <span>Meta Ads</span>
+                  <Badge variant="outline" className="ml-auto text-xs">
+                    Connected
+                  </Badge>
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </nav>
+  );
+});
+
+NavigationItems.displayName = "NavigationItems";
+
 const Layout = memo(({
   user
 }: LayoutProps) => {
@@ -24,6 +264,7 @@ const Layout = memo(({
   } = useToast();
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   
   const [connectionStatus, setConnectionStatus] = useState({
     shopify: false,
