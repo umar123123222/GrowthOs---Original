@@ -262,6 +262,7 @@ export function CompanySettings() {
       subtotal: settings.original_fee_amount / settings.maximum_installment_count,
       tax: 0,
       total: settings.original_fee_amount / settings.maximum_installment_count,
+      currency: settings.currency || 'USD',
       payment_method: settings.payment_method || 'bank_transfer',
       bank_name: settings.payment_method === 'bank_transfer' ? 'Sample Bank' : undefined,
       account_number: settings.payment_method === 'bank_transfer' ? 'ACC123456789' : undefined,

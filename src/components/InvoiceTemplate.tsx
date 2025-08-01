@@ -16,6 +16,7 @@ interface InvoiceData {
   subtotal: number;
   tax: number;
   total: number;
+  currency?: string;
   payment_method?: string;
   bank_name?: string;
   account_number?: string;
@@ -36,6 +37,21 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
   invoiceData,
   companyDetails
 }) => {
+  // Currency symbol helper function
+  const getCurrencySymbol = (currency: string = 'USD') => {
+    const symbols: { [key: string]: string } = {
+      USD: '$',
+      EUR: '€',
+      GBP: '£',
+      INR: '₹',
+      CAD: 'C$',
+      AUD: 'A$'
+    };
+    return symbols[currency] || currency;
+  };
+
+  const currency = invoiceData.currency || 'USD';
+  const currencySymbol = getCurrencySymbol(currency);
   return <div className="max-w-4xl mx-auto bg-white p-8 shadow-lg">
       {/* Header with gradient background */}
       <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-purple-400 p-8 mb-8 relative overflow-hidden">
@@ -81,7 +97,7 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
         {/* Total Due */}
         <div className="text-right">
           <h3 className="text-sm font-semibold text-gray-600 mb-2">TOTAL DUE:</h3>
-          <div className="text-2xl font-bold text-gray-900">USD: ${invoiceData.total.toLocaleString()}</div>
+          <div className="text-2xl font-bold text-gray-900">{currency}: {currencySymbol}{invoiceData.total.toLocaleString()}</div>
         </div>
       </div>
 
@@ -102,8 +118,8 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
           {invoiceData.items.map((item, index) => <div key={index} className={`grid grid-cols-4 p-4 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}`}>
               <div className="font-medium">{item.description}</div>
               <div className="text-center">{item.installment_number}</div>
-              <div className="text-center">${item.price}</div>
-              <div className="text-center font-semibold">${item.total}</div>
+              <div className="text-center">{currencySymbol}{item.price}</div>
+              <div className="text-center font-semibold">{currencySymbol}{item.total}</div>
             </div>)}
         </div>
       </div>
@@ -133,16 +149,16 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
         <div className="space-y-2">
           <div className="flex justify-between text-right">
             <span className="font-medium">Sub-total:</span>
-            <span>${invoiceData.subtotal.toLocaleString()}</span>
+            <span>{currencySymbol}{invoiceData.subtotal.toLocaleString()}</span>
           </div>
           <div className="flex justify-between text-right">
             <span className="font-medium">Tax:</span>
-            <span>${invoiceData.tax}</span>
+            <span>{currencySymbol}{invoiceData.tax}</span>
           </div>
           <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-3 rounded">
             <div className="flex justify-between text-right font-bold">
               <span>Total:</span>
-              <span>${invoiceData.total.toLocaleString()}</span>
+              <span>{currencySymbol}{invoiceData.total.toLocaleString()}</span>
             </div>
           </div>
         </div>
