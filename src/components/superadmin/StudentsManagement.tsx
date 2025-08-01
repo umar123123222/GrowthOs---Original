@@ -25,8 +25,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserManagement } from '@/hooks/useUserManagement';
-import { useOnboardingStatus } from '@/hooks/useOnboardingStatus';
-import { StatusBadge } from '@/components/ui/status-badge';
 
 import jsPDF from 'jspdf';
 
@@ -78,10 +76,6 @@ export function StudentsManagement() {
   
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Get student IDs for onboarding status
-  const studentIds = students.map(s => s.id);
-  const { getJobStatus } = useOnboardingStatus(studentIds, students.length > 0);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [totalStudents, setTotalStudents] = useState(0);
@@ -1046,8 +1040,6 @@ export function StudentsManagement() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Fees Structure</TableHead>
                   <TableHead>LMS Status</TableHead>
-                  <TableHead>Login Email</TableHead>
-                  <TableHead>Invoice</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -1134,7 +1126,7 @@ export function StudentsManagement() {
                     
                     {expandedRows.has(student.id) && (
                       <TableRow className="animate-accordion-down">
-                        <TableCell colSpan={9} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
+                        <TableCell colSpan={7} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>
