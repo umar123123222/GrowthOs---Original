@@ -125,31 +125,22 @@ export function shouldComponentUpdate(
 // Memory cleanup utilities
 export function cleanupResources() {
   // Clear any intervals or timeouts that might be running
-  const highestTimeoutId = setTimeout(() => {}, 0);
-  for (let i = 0; i < highestTimeoutId; i++) {
+  const highestTimeoutId = setTimeout(() => {}, 0) as any;
+  for (let i = 0; i < Number(highestTimeoutId); i++) {
     clearTimeout(i);
   }
   
-  const highestIntervalId = setInterval(() => {}, 999999);
-  for (let i = 0; i < highestIntervalId; i++) {
+  const highestIntervalId = setInterval(() => {}, 999999) as any;
+  for (let i = 0; i < Number(highestIntervalId); i++) {
     clearInterval(i);
   }
 }
 
 // Bundle size optimization - dynamic imports helper
-export function lazyLoad<T extends React.ComponentType<any>>(
-  importFn: () => Promise<{ default: T }>,
-  fallback?: React.ComponentType
-) {
-  const LazyComponent = React.lazy(importFn);
-  
-  return React.forwardRef<any, any>((props, ref) => (
-    <React.Suspense 
-      fallback={fallback ? React.createElement(fallback) : <div>Loading...</div>}
-    >
-      <LazyComponent {...props} ref={ref} />
-    </React.Suspense>
-  ));
+export function createLazyImport<T>(
+  importFn: () => Promise<{ default: T }>
+): () => Promise<{ default: T }> {
+  return importFn;
 }
 
 // Image optimization utilities
