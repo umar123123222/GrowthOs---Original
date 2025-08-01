@@ -16,6 +16,7 @@ interface InvoiceData {
   subtotal: number;
   tax: number;
   total: number;
+  total_program_cost?: number;
   currency?: string;
   payment_methods?: PaymentMethod[];
   terms?: string;
@@ -104,7 +105,14 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
         {/* Total Due */}
         <div className="text-right">
           <h3 className="text-sm font-semibold text-gray-600 mb-2">TOTAL DUE:</h3>
-          <div className="text-2xl font-bold text-gray-900">{currency}: {currencySymbol}{invoiceData.total.toLocaleString()}</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {currencySymbol}{invoiceData.total.toLocaleString()}
+            {invoiceData.total_program_cost && (
+              <span className="text-sm font-normal text-gray-600 ml-2">
+                of {currencySymbol}{invoiceData.total_program_cost.toLocaleString()}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
