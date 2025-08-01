@@ -328,7 +328,7 @@ const Layout = memo(({
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg min-h-screen transition-all duration-300`}>
+        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg min-h-screen transition-all duration-300 fixed top-16 left-0 z-30 overflow-y-auto`}>
           <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
             <div className="space-y-2">
               {navigation.map(item => {
@@ -368,7 +368,7 @@ const Layout = memo(({
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 p-8 animate-fade-in">
+        <main className={`flex-1 p-8 animate-fade-in ${sidebarCollapsed ? 'ml-16' : 'ml-80'} transition-all duration-300`}>
           <Outlet />
         </main>
       </div>
