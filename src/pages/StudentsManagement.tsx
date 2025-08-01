@@ -19,7 +19,7 @@ interface Student {
   metadata?: any;
 }
 
-import { QuickTestEmailSender } from '@/components/QuickTestEmailSender';
+// QuickTestEmailSender removed - using Supabase built-in email
 
 const StudentsManagement = () => {
   const { user, hasRole } = useAuth();
@@ -89,8 +89,7 @@ const StudentsManagement = () => {
 
   return (
     <div className="space-y-6">
-      {/* Test Email Sender */}
-      <QuickTestEmailSender />
+      {/* Test Email Sender removed - using Supabase built-in email */}
       
       <div className="flex justify-between items-center">
         <div>

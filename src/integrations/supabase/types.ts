@@ -335,28 +335,15 @@ export type Database = {
           enable_student_signin: boolean | null
           id: number
           installment_plans: string[] | null
-          invoice_from_email: string | null
-          invoice_from_name: string | null
           invoice_notes: string | null
           invoice_overdue_days: number
           invoice_send_gap_days: number
-          invoice_smtp_host: string | null
-          invoice_smtp_password: string | null
-          invoice_smtp_port: number | null
-          invoice_smtp_use_tls: boolean | null
-          invoice_smtp_user: string | null
-          lms_from_email: string | null
-          lms_from_name: string | null
           maximum_installment_count: number
           original_fee_amount: number
+          payment_methods: Json | null
           primary_phone: string
           questionnaire: Json | null
           secondary_phone: string | null
-          smtp_host: string | null
-          smtp_password: string | null
-          smtp_port: number | null
-          smtp_use_tls: boolean | null
-          smtp_user: string | null
           updated_at: string | null
         }
         Insert: {
@@ -371,28 +358,15 @@ export type Database = {
           enable_student_signin?: boolean | null
           id?: number
           installment_plans?: string[] | null
-          invoice_from_email?: string | null
-          invoice_from_name?: string | null
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
-          invoice_smtp_host?: string | null
-          invoice_smtp_password?: string | null
-          invoice_smtp_port?: number | null
-          invoice_smtp_use_tls?: boolean | null
-          invoice_smtp_user?: string | null
-          lms_from_email?: string | null
-          lms_from_name?: string | null
           maximum_installment_count?: number
           original_fee_amount?: number
+          payment_methods?: Json | null
           primary_phone?: string
           questionnaire?: Json | null
           secondary_phone?: string | null
-          smtp_host?: string | null
-          smtp_password?: string | null
-          smtp_port?: number | null
-          smtp_use_tls?: boolean | null
-          smtp_user?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -407,28 +381,15 @@ export type Database = {
           enable_student_signin?: boolean | null
           id?: number
           installment_plans?: string[] | null
-          invoice_from_email?: string | null
-          invoice_from_name?: string | null
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
-          invoice_smtp_host?: string | null
-          invoice_smtp_password?: string | null
-          invoice_smtp_port?: number | null
-          invoice_smtp_use_tls?: boolean | null
-          invoice_smtp_user?: string | null
-          lms_from_email?: string | null
-          lms_from_name?: string | null
           maximum_installment_count?: number
           original_fee_amount?: number
+          payment_methods?: Json | null
           primary_phone?: string
           questionnaire?: Json | null
           secondary_phone?: string | null
-          smtp_host?: string | null
-          smtp_password?: string | null
-          smtp_port?: number | null
-          smtp_use_tls?: boolean | null
-          smtp_user?: string | null
           updated_at?: string | null
         }
         Relationships: []

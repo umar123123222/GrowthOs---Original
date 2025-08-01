@@ -16,7 +16,7 @@ import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
 import { getLogoUrl } from '@/utils/logoUtils';
 import { InvoiceTemplate } from '@/components/InvoiceTemplate';
 import PaymentMethodEditor from '@/components/PaymentMethodEditor';
-import { sendWithPurpose, clearSMTPConfigCache } from '@/lib/mail';
+// SMTP imports removed - using Supabase built-in email
 
 // Import types from the new questionnaire module
 import { QuestionItem, validateQuestionnaireStructure } from '@/types/questionnaire';
@@ -30,15 +30,7 @@ interface PaymentMethod {
   };
 }
 
-interface SMTPConfig {
-  purpose: 'lms' | 'billing';
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  secure: boolean;
-  from_address: string;
-}
+// SMTP Config interface removed - using Supabase built-in email
 
 interface CompanySettingsData {
   id?: string;
@@ -112,14 +104,10 @@ export function CompanySettings() {
   // State for invoice preview
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   
-  // State for SMTP configurations
-  const [smtpConfigs, setSmtpConfigs] = useState<{[key: string]: SMTPConfig}>({});
-  const [smtpLoading, setSmtpLoading] = useState(false);
-  const [testingEmail, setTestingEmail] = useState<string>('');
+  // SMTP state removed - using Supabase built-in email
 
   useEffect(() => {
     fetchCompanySettings();
-    fetchSMTPConfigs();
   }, []);
 
   const fetchCompanySettings = async () => {
@@ -307,65 +295,7 @@ export function CompanySettings() {
     };
   };
 
-  // SMTP Configuration functions - Temporary placeholders until migration is applied
-  const fetchSMTPConfigs = async () => {
-    console.log('SMTP configs table not yet available - migration pending');
-  };
-
-  const saveSMTPConfig = async (purpose: 'lms' | 'billing', config: Partial<SMTPConfig>) => {
-    setSmtpLoading(true);
-    try {
-      toast({
-        title: 'Migration Required',
-        description: 'SMTP configuration will be available after database migration is applied.',
-        variant: 'destructive'
-      });
-    } finally {
-      setSmtpLoading(false);
-    }
-  };
-
-  const sendTestEmail = async (purpose: 'lms' | 'billing') => {
-    if (!testingEmail) {
-      toast({
-        title: 'Email Required',
-        description: 'Please enter an email address to send the test email to.',
-        variant: 'destructive'
-      });
-      return;
-    }
-
-    try {
-      await sendWithPurpose(purpose, {
-        to: testingEmail,
-        subject: `SMTP Test - ${purpose.toUpperCase()}`,
-        text: `✓ ${purpose.toUpperCase()} SMTP configuration is working correctly!`,
-        html: `<h2>✓ SMTP Test Successful</h2><p>Your ${purpose.toUpperCase()} email configuration is working correctly!</p>`
-      });
-
-      toast({
-        title: 'Test Email Sent',
-        description: `Test email sent successfully to ${testingEmail}`
-      });
-    } catch (error: any) {
-      console.error('Error sending test email:', error);
-      toast({
-        title: 'Test Email Failed',
-        description: error.message || 'Failed to send test email',
-        variant: 'destructive'
-      });
-    }
-  };
-
-  const updateSMTPField = (purpose: 'lms' | 'billing', field: keyof SMTPConfig, value: any) => {
-    setSmtpConfigs(prev => ({
-      ...prev,
-      [purpose]: {
-        ...prev[purpose],
-        [field]: value
-      }
-    }));
-  };
+  // SMTP Configuration functions removed - using Supabase built-in email
 
   if (loading) {
     return (
@@ -843,206 +773,7 @@ export function CompanySettings() {
           </CardContent>
         </Card>
 
-        {/* Email Configuration - SMTP Settings */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Email Configuration
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Configure SMTP settings for different types of emails sent by the system
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Test Email Input */}
-            <div className="space-y-2">
-              <Label htmlFor="test_email">Test Email Address</Label>
-              <Input
-                id="test_email"
-                type="email"
-                value={testingEmail}
-                onChange={(e) => setTestingEmail(e.target.value)}
-                placeholder="your-email@example.com"
-              />
-              <p className="text-xs text-muted-foreground">
-                Enter your email address to test SMTP configurations
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* LMS Notifications SMTP */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">LMS Notifications</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Email settings for course-related notifications
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>From Address</Label>
-                    <Input
-                      value={smtpConfigs.lms?.from_address || ''}
-                      onChange={(e) => updateSMTPField('lms', 'from_address', e.target.value)}
-                      placeholder="noreply@yourdomain.com"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>SMTP Host</Label>
-                    <Input
-                      value={smtpConfigs.lms?.host || ''}
-                      onChange={(e) => updateSMTPField('lms', 'host', e.target.value)}
-                      placeholder="smtp.gmail.com"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Port</Label>
-                    <Input
-                      type="number"
-                      value={smtpConfigs.lms?.port || ''}
-                      onChange={(e) => updateSMTPField('lms', 'port', parseInt(e.target.value))}
-                      placeholder="587"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Username</Label>
-                    <Input
-                      value={smtpConfigs.lms?.username || ''}
-                      onChange={(e) => updateSMTPField('lms', 'username', e.target.value)}
-                      placeholder="your-email@domain.com"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Password</Label>
-                    <Input
-                      type="password"
-                      value={smtpConfigs.lms?.password || ''}
-                      onChange={(e) => updateSMTPField('lms', 'password', e.target.value)}
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={smtpConfigs.lms?.secure || false}
-                      onCheckedChange={(checked) => updateSMTPField('lms', 'secure', checked)}
-                    />
-                    <Label>Use TLS/SSL</Label>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => saveSMTPConfig('lms', smtpConfigs.lms)}
-                      disabled={smtpLoading}
-                      className="flex-1"
-                    >
-                      Save LMS Config
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => sendTestEmail('lms')}
-                      disabled={!testingEmail}
-                      className="flex items-center gap-2"
-                    >
-                      <Send className="h-4 w-4" />
-                      Test
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Billing SMTP */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Billing / Invoices</CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Email settings for billing and invoice notifications
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>From Address</Label>
-                    <Input
-                      value={smtpConfigs.billing?.from_address || ''}
-                      onChange={(e) => updateSMTPField('billing', 'from_address', e.target.value)}
-                      placeholder="billing@yourdomain.com"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>SMTP Host</Label>
-                    <Input
-                      value={smtpConfigs.billing?.host || ''}
-                      onChange={(e) => updateSMTPField('billing', 'host', e.target.value)}
-                      placeholder="smtp.gmail.com"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Port</Label>
-                    <Input
-                      type="number"
-                      value={smtpConfigs.billing?.port || ''}
-                      onChange={(e) => updateSMTPField('billing', 'port', parseInt(e.target.value))}
-                      placeholder="587"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Username</Label>
-                    <Input
-                      value={smtpConfigs.billing?.username || ''}
-                      onChange={(e) => updateSMTPField('billing', 'username', e.target.value)}
-                      placeholder="billing@domain.com"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>Password</Label>
-                    <Input
-                      type="password"
-                      value={smtpConfigs.billing?.password || ''}
-                      onChange={(e) => updateSMTPField('billing', 'password', e.target.value)}
-                      placeholder="••••••••"
-                    />
-                  </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      checked={smtpConfigs.billing?.secure || false}
-                      onCheckedChange={(checked) => updateSMTPField('billing', 'secure', checked)}
-                    />
-                    <Label>Use TLS/SSL</Label>
-                  </div>
-                  
-                  <div className="flex gap-2">
-                    <Button 
-                      onClick={() => saveSMTPConfig('billing', smtpConfigs.billing)}
-                      disabled={smtpLoading}
-                      className="flex-1"
-                    >
-                      Save Billing Config
-                    </Button>
-                    <Button 
-                      variant="outline"
-                      onClick={() => sendTestEmail('billing')}
-                      disabled={!testingEmail}
-                      className="flex items-center gap-2"
-                    >
-                      <Send className="h-4 w-4" />
-                      Test
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Email Configuration section removed - using Supabase built-in email */}
 
         {/* Save Button */}
         <div className="lg:col-span-2 flex justify-end">
