@@ -113,6 +113,14 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
         {/* Payment Method */}
         <div>
           <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Method</h3>
+          <div className="text-sm text-gray-600 mb-2">
+            <span className="font-medium">Method:</span> {
+              invoiceData.payment_method === 'bank_transfer' ? 'Bank Transfer' :
+              invoiceData.payment_method === 'cod' ? 'Cash on Delivery (COD)' :
+              invoiceData.payment_method === 'stripe' ? 'Stripe Payment' :
+              'Bank Transfer'
+            }
+          </div>
           {invoiceData.bank_name && <div className="text-sm text-gray-600 italic mb-1">
               Bank Name: {invoiceData.bank_name}
             </div>}

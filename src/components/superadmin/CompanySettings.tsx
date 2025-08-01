@@ -33,6 +33,7 @@ interface CompanySettingsData {
   invoice_notes?: string;
   invoice_overdue_days: number;
   invoice_send_gap_days: number;
+  payment_method: string;
   // Student Sign-in & Questionnaire
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
@@ -77,6 +78,7 @@ export function CompanySettings() {
     invoice_notes: '',
     invoice_overdue_days: 30,
     invoice_send_gap_days: 7,
+    payment_method: 'bank_transfer',
     // Student Sign-in & Questionnaire
     enable_student_signin: false,
     questionnaire: []
@@ -260,6 +262,9 @@ export function CompanySettings() {
       subtotal: settings.original_fee_amount / settings.maximum_installment_count,
       tax: 0,
       total: settings.original_fee_amount / settings.maximum_installment_count,
+      payment_method: settings.payment_method || 'bank_transfer',
+      bank_name: settings.payment_method === 'bank_transfer' ? 'Sample Bank' : undefined,
+      account_number: settings.payment_method === 'bank_transfer' ? 'ACC123456789' : undefined,
       terms: settings.invoice_notes || 'Please send payment within 30 days of receiving this invoice.'
     };
   };
@@ -648,21 +653,36 @@ export function CompanySettings() {
                   </p>
                 </div>
 
-                <div className="md:col-span-1">
-                  <div className="space-y-2">
-                    <Label htmlFor="invoice_notes">Notes For Invoice</Label>
-                    <Textarea
-                      id="invoice_notes"
-                      value={settings.invoice_notes || ''}
-                      onChange={(e) => handleInputChange('invoice_notes', e.target.value)}
-                      placeholder="Additional notes to include in invoices..."
-                      rows={3}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Default notes to include in all invoices
-                    </p>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="payment_method">Payment Method</Label>
+                  <Select value={settings.payment_method} onValueChange={(value) => handleInputChange('payment_method', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select payment method" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-50">
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="cod">Cash on Delivery (COD)</SelectItem>
+                      <SelectItem value="stripe">Stripe Payment</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Default payment method for invoices
+                  </p>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="invoice_notes">Notes For Invoice</Label>
+                <Textarea
+                  id="invoice_notes"
+                  value={settings.invoice_notes || ''}
+                  onChange={(e) => handleInputChange('invoice_notes', e.target.value)}
+                  placeholder="Additional notes to include in invoices..."
+                  rows={3}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Default notes to include in all invoices
+                </p>
               </div>
 
               {/* Invoice Preview Button */}
