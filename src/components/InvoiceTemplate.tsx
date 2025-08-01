@@ -9,6 +9,7 @@ interface InvoiceItem {
 interface InvoiceData {
   invoice_number: string;
   date: string;
+  due_date: string;
   student_name: string;
   student_email?: string;
   items: InvoiceItem[];
@@ -66,6 +67,10 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
           <div className="mb-2">
             <span className="text-sm text-gray-600">Date: </span>
             <span className="font-medium">{invoiceData.date}</span>
+          </div>
+          <div className="mb-2">
+            <span className="text-sm text-gray-600">Due Date: </span>
+            <span className="font-medium">{invoiceData.due_date}</span>
           </div>
           <div>
             <span className="text-sm text-gray-600">Invoice No: </span>

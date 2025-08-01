@@ -246,6 +246,7 @@ export function CompanySettings() {
     return {
       invoice_number: `INV-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
       date: today.toLocaleDateString(),
+      due_date: dueDate.toLocaleDateString(),
       student_name: 'John Doe',
       student_email: 'john.doe@example.com',
       items: [
