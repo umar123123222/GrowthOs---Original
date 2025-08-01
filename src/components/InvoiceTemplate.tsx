@@ -17,10 +17,17 @@ interface InvoiceData {
   tax: number;
   total: number;
   currency?: string;
-  payment_method?: string;
-  bank_name?: string;
-  account_number?: string;
+  payment_methods?: PaymentMethod[];
   terms?: string;
+}
+
+interface PaymentMethod {
+  type: 'bank_transfer' | 'cod' | 'stripe' | 'custom';
+  name: string;
+  enabled: boolean;
+  details: {
+    [key: string]: string;
+  };
 }
 interface CompanyDetails {
   company_name: string;
@@ -126,23 +133,27 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
 
       {/* Bottom Section */}
       <div className="grid grid-cols-2 gap-8">
-        {/* Payment Method */}
+        {/* Payment Methods */}
         <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Method</h3>
-          <div className="text-sm text-gray-600 mb-2">
-            <span className="font-medium">Method:</span> {
-              invoiceData.payment_method === 'bank_transfer' ? 'Bank Transfer' :
-              invoiceData.payment_method === 'cod' ? 'Cash on Delivery (COD)' :
-              invoiceData.payment_method === 'stripe' ? 'Stripe Payment' :
-              'Bank Transfer'
-            }
-          </div>
-          {invoiceData.bank_name && <div className="text-sm text-gray-600 italic mb-1">
-              Bank Name: {invoiceData.bank_name}
-            </div>}
-          {invoiceData.account_number && <div className="text-sm text-gray-600 italic">
-              Account No: {invoiceData.account_number}
-            </div>}
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Payment Methods</h3>
+          {invoiceData.payment_methods && invoiceData.payment_methods.filter(method => method.enabled).length > 0 ? (
+            <div className="space-y-4">
+              {invoiceData.payment_methods.filter(method => method.enabled).map((method, index) => (
+                <div key={index} className="border-l-2 border-gray-300 pl-3">
+                  <div className="font-medium text-gray-900 mb-1">{method.name}</div>
+                  {Object.entries(method.details).map(([key, value]) => (
+                    <div key={key} className="text-sm text-gray-600 mb-1">
+                      <span className="font-medium">{key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> {value}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-600 italic">
+              No payment methods configured
+            </div>
+          )}
         </div>
 
         {/* Totals */}

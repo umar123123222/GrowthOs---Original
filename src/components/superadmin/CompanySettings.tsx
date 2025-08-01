@@ -15,9 +15,19 @@ import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
 import { getLogoUrl } from '@/utils/logoUtils';
 import { InvoiceTemplate } from '@/components/InvoiceTemplate';
+import PaymentMethodEditor from '@/components/PaymentMethodEditor';
 
 // Import types from the new questionnaire module
 import { QuestionItem, validateQuestionnaireStructure } from '@/types/questionnaire';
+
+interface PaymentMethod {
+  type: 'bank_transfer' | 'cod' | 'stripe' | 'custom';
+  name: string;
+  enabled: boolean;
+  details: {
+    [key: string]: string;
+  };
+}
 
 interface CompanySettingsData {
   id?: string;
@@ -33,7 +43,7 @@ interface CompanySettingsData {
   invoice_notes?: string;
   invoice_overdue_days: number;
   invoice_send_gap_days: number;
-  payment_method: string;
+  payment_methods: PaymentMethod[];
   // Student Sign-in & Questionnaire
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
@@ -78,7 +88,7 @@ export function CompanySettings() {
     invoice_notes: '',
     invoice_overdue_days: 30,
     invoice_send_gap_days: 7,
-    payment_method: 'bank_transfer',
+    payment_methods: [],
     // Student Sign-in & Questionnaire
     enable_student_signin: false,
     questionnaire: []
@@ -263,9 +273,7 @@ export function CompanySettings() {
       tax: 0,
       total: settings.original_fee_amount / settings.maximum_installment_count,
       currency: settings.currency || 'USD',
-      payment_method: settings.payment_method || 'bank_transfer',
-      bank_name: settings.payment_method === 'bank_transfer' ? 'Sample Bank' : undefined,
-      account_number: settings.payment_method === 'bank_transfer' ? 'ACC123456789' : undefined,
+      payment_methods: settings.payment_methods || [],
       terms: settings.invoice_notes || 'Please send payment within 30 days of receiving this invoice.'
     };
   };
@@ -653,22 +661,54 @@ export function CompanySettings() {
                     Days after creation to mark overdue
                   </p>
                 </div>
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="payment_method">Payment Method</Label>
-                  <Select value={settings.payment_method} onValueChange={(value) => handleInputChange('payment_method', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select payment method" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white z-50">
-                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                      <SelectItem value="cod">Cash on Delivery (COD)</SelectItem>
-                      <SelectItem value="stripe">Stripe Payment</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Default payment method for invoices
-                  </p>
+              {/* Multiple Payment Methods Configuration */}
+              <div className="space-y-4">
+                <h5 className="font-medium text-base">Payment Methods</h5>
+                <p className="text-sm text-muted-foreground">
+                  Configure multiple payment methods that will be displayed on invoices
+                </p>
+                
+                {/* Existing Payment Methods */}
+                <div className="space-y-3">
+                  {settings.payment_methods.map((method, index) => (
+                    <PaymentMethodEditor
+                      key={index}
+                      method={method}
+                      onUpdate={(updatedMethod) => {
+                        const updatedMethods = [...settings.payment_methods];
+                        updatedMethods[index] = updatedMethod;
+                        setSettings(prev => ({ ...prev, payment_methods: updatedMethods }));
+                      }}
+                      onDelete={() => {
+                        const updatedMethods = settings.payment_methods.filter((_, i) => i !== index);
+                        setSettings(prev => ({ ...prev, payment_methods: updatedMethods }));
+                      }}
+                    />
+                  ))}
+                  
+                  {/* Add New Payment Method Button */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const newMethod: PaymentMethod = {
+                        type: 'bank_transfer',
+                        name: 'Bank Transfer',
+                        enabled: true,
+                        details: {}
+                      };
+                      setSettings(prev => ({ 
+                        ...prev, 
+                        payment_methods: [...prev.payment_methods, newMethod] 
+                      }));
+                    }}
+                    className="w-full border-dashed"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Payment Method
+                  </Button>
                 </div>
               </div>
 
