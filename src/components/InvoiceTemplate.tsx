@@ -63,7 +63,7 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
         </div>
 
         {/* Invoice Details */}
-        <div className="text-center">
+        <div>
           <div className="mb-2">
             <span className="text-sm text-gray-600">Date: </span>
             <span className="font-medium">{invoiceData.date}</span>
