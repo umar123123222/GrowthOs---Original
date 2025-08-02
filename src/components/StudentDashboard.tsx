@@ -162,8 +162,8 @@ export function StudentDashboard() {
   return (
     <div className="space-y-6">
       {/* Top Full-Width Goal Banner */}
-      <Card className="bg-gradient-to-r from-primary/10 to-primary/5 border-primary/20">
-        <CardContent className="p-6">
+      <Card className="bg-gradient-to-r from-primary/20 to-primary/15 border-primary/30 shadow-soft">
+        <CardContent className="p-8">
           <div className="space-y-4">
             <div>
               <h2 className="text-xl font-semibold text-primary mb-2">Your Personal Goal</h2>
