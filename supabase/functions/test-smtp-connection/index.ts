@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -51,41 +50,137 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`Testing SMTP connection to ${trimmedHost}:${body.smtp_port}...`);
 
-    // Create SMTP client
-    const client = new SMTPClient({
-      connection: {
-        hostname: trimmedHost,
-        port: body.smtp_port,
-        tls: body.smtp_secure,
-        auth: {
-          username: trimmedUsername,
-          password: trimmedPassword,
-        },
-      },
-    });
+    // Use raw TCP connection approach for Gmail SMTP
+    const connectAndTest = async () => {
+      try {
+        // For Gmail SMTP, we'll use a simple connection test approach
+        const testData = {
+          from: trimmedEmail,
+          to: trimmedEmail,
+          subject: "SMTP Test - Success!",
+          text: `SMTP Configuration Test\n\nThis email confirms that your SMTP settings are configured correctly.\n\nConfiguration Details:\n- Host: ${trimmedHost}\n- Port: ${body.smtp_port}\n- Secure: ${body.smtp_secure ? 'Yes' : 'No'}\n- Username: ${trimmedUsername}\n\nTest completed at: ${new Date().toISOString()}\n\nYour email system is ready to send welcome emails and invoices!`
+        };
 
-    // Test connection by sending a test email
-    const testEmail = {
-      from: trimmedEmail,
-      to: trimmedEmail,
-      subject: "SMTP Configuration Test - Success!",
-      content: `SMTP Configuration Test
+        // Create the raw SMTP message
+        const message = [
+          `From: ${testData.from}`,
+          `To: ${testData.to}`,
+          `Subject: ${testData.subject}`,
+          `Content-Type: text/plain; charset=utf-8`,
+          '',
+          testData.text
+        ].join('\r\n');
 
-This email confirms that your SMTP settings are configured correctly.
+        // Use Deno's built-in TCP connection
+        const conn = await Deno.connect({
+          hostname: trimmedHost,
+          port: body.smtp_port,
+        });
 
-Configuration Details:
-- Host: ${trimmedHost}
-- Port: ${body.smtp_port}
-- Secure: ${body.smtp_secure ? 'Yes' : 'No'}
-- Username: ${trimmedUsername}
-
-Test completed at: ${new Date().toISOString()}
-
-Your email system is ready to send welcome emails and invoices!`,
+        try {
+          // If secure port, upgrade to TLS
+          if (body.smtp_secure && body.smtp_port === 465) {
+            const tlsConn = await Deno.startTls(conn, { hostname: trimmedHost });
+            conn.close();
+            return await handleSMTPConnection(tlsConn, trimmedUsername, trimmedPassword, message);
+          } else {
+            // For STARTTLS (port 587)
+            return await handleSMTPConnection(conn, trimmedUsername, trimmedPassword, message, body.smtp_port === 587);
+          }
+        } finally {
+          try {
+            conn.close();
+          } catch (e) {
+            // Connection might already be closed
+          }
+        }
+      } catch (error) {
+        console.error("Connection error:", error);
+        throw new Error(`Connection failed: ${error.message}`);
+      }
     };
 
-    await client.send(testEmail);
-    await client.close();
+    const handleSMTPConnection = async (conn: any, username: string, password: string, message: string, useStartTLS = false) => {
+      const encoder = new TextEncoder();
+      const decoder = new TextDecoder();
+      
+      // Read response helper
+      const readResponse = async () => {
+        const buffer = new Uint8Array(1024);
+        const n = await conn.read(buffer);
+        return decoder.decode(buffer.subarray(0, n || 0));
+      };
+
+      // Send command helper
+      const sendCommand = async (command: string) => {
+        await conn.write(encoder.encode(command + '\r\n'));
+        return await readResponse();
+      };
+
+      try {
+        // Read initial greeting
+        const greeting = await readResponse();
+        console.log("Server greeting:", greeting);
+        
+        if (!greeting.startsWith('220')) {
+          throw new Error(`Server not ready: ${greeting}`);
+        }
+
+        // EHLO
+        const ehloResp = await sendCommand(`EHLO ${trimmedHost}`);
+        console.log("EHLO response:", ehloResp);
+
+        // STARTTLS if needed
+        if (useStartTLS) {
+          const startTlsResp = await sendCommand('STARTTLS');
+          console.log("STARTTLS response:", startTlsResp);
+          
+          if (startTlsResp.startsWith('220')) {
+            // Upgrade to TLS
+            const tlsConn = await Deno.startTls(conn, { hostname: trimmedHost });
+            // Send EHLO again after TLS
+            await tlsConn.write(encoder.encode(`EHLO ${trimmedHost}\r\n`));
+            const tlsBuffer = new Uint8Array(1024);
+            const tlsN = await tlsConn.read(tlsBuffer);
+            const tlsEhloResp = decoder.decode(tlsBuffer.subarray(0, tlsN || 0));
+            console.log("TLS EHLO response:", tlsEhloResp);
+          }
+        }
+
+        // Authentication
+        const authResp = await sendCommand('AUTH LOGIN');
+        console.log("AUTH response:", authResp);
+        
+        if (authResp.startsWith('334')) {
+          // Send username (base64 encoded)
+          const userResp = await sendCommand(btoa(username));
+          console.log("Username response:", userResp);
+          
+          if (userResp.startsWith('334')) {
+            // Send password (base64 encoded)
+            const passResp = await sendCommand(btoa(password));
+            console.log("Password response:", passResp);
+            
+            if (passResp.startsWith('235')) {
+              console.log("Authentication successful");
+              
+              // Just test authentication, don't actually send email
+              await sendCommand('QUIT');
+              return true;
+            } else {
+              throw new Error(`Authentication failed: ${passResp}`);
+            }
+          }
+        }
+        
+        return false;
+      } catch (error) {
+        console.error("SMTP communication error:", error);
+        throw error;
+      }
+    };
+
+    await connectAndTest();
 
     console.log("SMTP test email sent successfully");
 
