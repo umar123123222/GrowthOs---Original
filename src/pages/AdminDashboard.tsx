@@ -14,9 +14,10 @@ import { ActivityLogs } from '@/components/admin/ActivityLogs';
 import { StudentPerformance } from '@/components/admin/StudentPerformance';
 import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
-import { AssignmentsManagement } from '@/components/superadmin/AssignmentsManagement';
+
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
-import { SubmissionsManagement } from '@/components/shared/SubmissionsManagement';
+import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
+import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 
 export default function AdminDashboard() {
@@ -29,14 +30,14 @@ export default function AdminDashboard() {
         return <ModulesManagement />;
       case 'recordings':
         return <RecordingsManagement />;
-      case 'assignments':
-        return <AssignmentsManagement />;
       case 'success-sessions':
         return <SuccessSessionsManagement />;
       case 'students':
         return <StudentManagement />;
-      case 'submissions':
-        return <SubmissionsManagement userRole="admin" />;
+        case 'assignments':
+          return <AssignmentManagement />;
+        case 'submissions':
+          return <SubmissionsManagement userRole="admin" />;
       case 'support':
         return <SupportManagement />;
       case 'content':

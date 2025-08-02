@@ -55,130 +55,35 @@ export type Database = {
           },
         ]
       }
-      assignment: {
+      assignments: {
         Row: {
-          assigned_by: string | null
-          assignment_description: string | null
-          assignment_id: string
-          assignment_title: string | null
-          created_at: string
-          due_date: string | null
-          due_days_after_unlock: number | null
-          mentor_id: string | null
-          sequence_order: number
-          Status: string | null
-        }
-        Insert: {
-          assigned_by?: string | null
-          assignment_description?: string | null
-          assignment_id?: string
-          assignment_title?: string | null
-          created_at: string
-          due_date?: string | null
-          due_days_after_unlock?: number | null
-          mentor_id?: string | null
-          sequence_order: number
-          Status?: string | null
-        }
-        Update: {
-          assigned_by?: string | null
-          assignment_description?: string | null
-          assignment_id?: string
-          assignment_title?: string | null
-          created_at?: string
-          due_date?: string | null
-          due_days_after_unlock?: number | null
-          mentor_id?: string | null
-          sequence_order?: number
-          Status?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "assignment_mentor_id_fkey"
-            columns: ["mentor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fk_assignment_assigned_by"
-            columns: ["assigned_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      assignment_submissions: {
-        Row: {
-          assignment_id: string
-          external_link: string | null
-          feedback: string | null
-          file_url: string | null
+          created_at: string | null
+          description: string | null
           id: string
-          reviewed_at: string | null
-          reviewed_by: string | null
-          reviewed_note: string | null
-          score: number | null
-          status: Database["public"]["Enums"]["assignment_submission_status"]
-          submission_type: string
-          submitted_at: string
-          text_response: string | null
-          updated_at: string
-          user_id: string
+          mentor_id: string | null
+          name: string
+          updated_at: string | null
         }
         Insert: {
-          assignment_id: string
-          external_link?: string | null
-          feedback?: string | null
-          file_url?: string | null
+          created_at?: string | null
+          description?: string | null
           id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          reviewed_note?: string | null
-          score?: number | null
-          status?: Database["public"]["Enums"]["assignment_submission_status"]
-          submission_type: string
-          submitted_at?: string
-          text_response?: string | null
-          updated_at?: string
-          user_id: string
+          mentor_id?: string | null
+          name: string
+          updated_at?: string | null
         }
         Update: {
-          assignment_id?: string
-          external_link?: string | null
-          feedback?: string | null
-          file_url?: string | null
+          created_at?: string | null
+          description?: string | null
           id?: string
-          reviewed_at?: string | null
-          reviewed_by?: string | null
-          reviewed_note?: string | null
-          score?: number | null
-          status?: Database["public"]["Enums"]["assignment_submission_status"]
-          submission_type?: string
-          submitted_at?: string
-          text_response?: string | null
-          updated_at?: string
-          user_id?: string
+          mentor_id?: string | null
+          name?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "assignment_submissions_assignment_id_fkey"
-            columns: ["assignment_id"]
-            isOneToOne: false
-            referencedRelation: "assignment"
-            referencedColumns: ["assignment_id"]
-          },
-          {
-            foreignKeyName: "assignment_submissions_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "assignment_submissions_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "assignments_mentor_id_fkey"
+            columns: ["mentor_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -1071,6 +976,54 @@ export type Database = {
           },
         ]
       }
+      submissions: {
+        Row: {
+          assignment_id: string
+          content: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          status: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          assignment_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          assignment_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       success_sessions: {
         Row: {
           created_at: string | null
@@ -1684,20 +1637,6 @@ export type Database = {
       }
     }
     Functions: {
-      approve_assignment_submission: {
-        Args: {
-          p_submission_id: string
-          p_mentor_id: string
-          p_new_status: string
-        }
-        Returns: {
-          submission_id: string
-          assignment_id: string
-          status: string
-          reviewed_by: string
-          reviewed_at: string
-        }[]
-      }
       create_notification: {
         Args: {
           p_user_id: string
@@ -1727,10 +1666,6 @@ export type Database = {
         Args: { p_student_id: string }
         Returns: undefined
       }
-      fn_approve_submission: {
-        Args: { p_submission_id: string; p_decision: string; p_note?: string }
-        Returns: Json
-      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1747,10 +1682,6 @@ export type Database = {
           is_module_unlocked: boolean
           is_recording_unlocked: boolean
         }[]
-      }
-      is_assignment_passed: {
-        Args: { _user_id: string; _assignment_id: string }
-        Returns: boolean
       }
       is_module_completed: {
         Args: { _user_id: string; _module_id: string }
@@ -1778,16 +1709,6 @@ export type Database = {
           p_metadata?: Json
         }
         Returns: number
-      }
-      review_assignment_submission: {
-        Args: {
-          p_submission_id: string
-          p_decision: string
-          p_score?: number
-          p_feedback?: string
-          p_reviewed_note?: string
-        }
-        Returns: Json
       }
       update_company_branding: {
         Args: { branding_data: Json }

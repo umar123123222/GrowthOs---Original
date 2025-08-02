@@ -6,12 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Clock, FileText } from "lucide-react";
 
 interface Assignment {
-  assignment_id: string;
-  assignment_title: string;
-  assignment_description: string;
-  due_date: string;
-  sequence_order: number;
-  Status: string;
+  id: string;
+  name: string;
+  description?: string;
+  created_at: string;
   isUnlocked?: boolean;
 }
 
@@ -56,47 +54,28 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
       }
 
       // Fetch all assignments
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('assignment')
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('assignments')
         .select('*')
-        .order('sequence_order');
+        .order('created_at');
 
       if (assignmentsError) throw assignmentsError;
 
       // Fetch user's submissions
       const { data: submissions, error: submissionsError } = await supabase
-        .from('assignment_submissions')
+        .from('submissions')
         .select('assignment_id, status')
-        .eq('user_id', userId);
+        .eq('student_id', userId);
 
       if (submissionsError) throw submissionsError;
 
-      // Find the next assignment that's unlocked and not completed
-      const processedAssignments = assignmentsData?.map(assignment => {
-        // Check if all previous assignments are completed
-        const previousAssignments = assignmentsData.filter(a => a.sequence_order < assignment.sequence_order);
-        const allPreviousCompleted = previousAssignments.every(prevAssignment => {
-          const submission = submissions?.find(s => s.assignment_id === prevAssignment.assignment_id);
-          return submission && submission.status === 'accepted';
-        });
-
-        // First assignment is always unlocked, others need previous ones completed
-        const isUnlocked = assignment.sequence_order === 1 || allPreviousCompleted;
-
-        return {
-          ...assignment,
-          isUnlocked
-        };
-      }) || [];
-
-      // Find the first unlocked assignment that's not completed
-      const currentAssignment = processedAssignments.find(assignment => {
-        const submission = submissions?.find(s => s.assignment_id === assignment.assignment_id);
-        const isCompleted = submission && submission.status === 'accepted';
-        return assignment.isUnlocked && !isCompleted;
+      // Find the first assignment that's not completed
+      const nextAssignment = assignments?.find(assignment => {
+        const submission = submissions?.find(s => s.assignment_id === assignment.id);
+        return !submission || submission.status !== 'approved';
       });
 
-      setNextAssignment(currentAssignment || null);
+      setNextAssignment(nextAssignment || null);
     } catch (error) {
       console.error('Error fetching next assignment:', error);
     } finally {
@@ -133,16 +112,9 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
         {nextAssignment ? (
           <>
             <div className="flex-grow space-y-2">
-              <h3 className="font-medium text-sm leading-tight">{nextAssignment.assignment_title}</h3>
+              <h3 className="font-medium text-sm leading-tight">{nextAssignment.name}</h3>
               <p className="text-xs text-muted-foreground">
-                Due: {nextAssignment.due_date 
-                  ? new Date(nextAssignment.due_date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric'
-                    })
-                  : 'No due date set'
-                }
+                {nextAssignment.description || 'Complete this assignment to continue your progress.'}
               </p>
             </div>
             <div className="mt-auto pt-4">

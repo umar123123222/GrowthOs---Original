@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { RoleGuard } from '@/components/RoleGuard';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import { AssignmentFeedback } from '@/components/mentor/AssignmentFeedback';
+import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { StudentProgress } from '@/components/mentor/StudentProgress';
 import { MyStudents } from '@/components/mentor/MyStudents';
 import { Users, MessageSquare, Clock, CheckCircle, AlertCircle, Calendar, FileText } from 'lucide-react';
@@ -149,7 +149,7 @@ export default function MentorDashboard() {
           </div>
 
           <div className="mt-6">
-            <AssignmentFeedback />
+            <SubmissionsManagement userRole="mentor" />
           </div>
         </div>
       </div>
