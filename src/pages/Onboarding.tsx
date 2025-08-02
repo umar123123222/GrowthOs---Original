@@ -1,14 +1,10 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { useOnboardingSubmission } from "@/hooks/useOnboardingSubmission";
+import { StudentQuestionnaireForm } from "@/components/questionnaire/StudentQuestionnaireForm";
+import { supabase } from "@/integrations/supabase/client";
+import { QuestionItem, QuestionnaireResponse } from "@/types/questionnaire";
 
 interface OnboardingProps {
   user: any;
@@ -16,232 +12,186 @@ interface OnboardingProps {
 }
 
 const Onboarding = ({ user, onComplete }: OnboardingProps) => {
-  const { submitOnboardingAnswers, loading } = useOnboardingSubmission();
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    income_goal: "",
-    motivation: "",
-    ecommerce_experience: "",
-    perceived_blockers: [] as string[],
-    thirty_day_aspirations: ""
-  });
+  const { toast } = useToast();
+  const [questions, setQuestions] = useState<QuestionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [isEnabled, setIsEnabled] = useState(false);
 
-  const totalSteps = 5;
-  const progress = (step / totalSteps) * 100;
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const { data: settings, error } = await supabase
+          .from('company_settings')
+          .select('enable_student_signin, questionnaire')
+          .eq('id', 1)
+          .single();
 
-  const incomeOptions = [
-    { value: "20000", label: "Rs. 20,000/month" },
-    { value: "50000", label: "Rs. 50,000/month" },
-    { value: "100000", label: "Rs. 100,000/month" },
-    { value: "200000", label: "Rs. 200,000+/month" }
-  ];
+        if (error) {
+          console.error('Error fetching company settings:', error);
+          // If no settings found, assume questionnaire is disabled
+          setIsEnabled(false);
+          setQuestions([]);
+        } else {
+          setIsEnabled(settings?.enable_student_signin || false);
+          
+          if (settings?.enable_student_signin && settings?.questionnaire) {
+            try {
+              // Parse questionnaire if it's a string, otherwise use as-is
+              const questionnaireData = typeof settings.questionnaire === 'string' 
+                ? JSON.parse(settings.questionnaire) 
+                : settings.questionnaire;
+              
+              if (Array.isArray(questionnaireData)) {
+                // Sort questions by order
+                const sortedQuestions = questionnaireData.sort((a, b) => a.order - b.order);
+                setQuestions(sortedQuestions);
+              } else {
+                setQuestions([]);
+              }
+            } catch (parseError) {
+              console.error('Error parsing questionnaire data:', parseError);
+              setQuestions([]);
+            }
+          } else {
+            setQuestions([]);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching questionnaire:', error);
+        setIsEnabled(false);
+        setQuestions([]);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const ecommerceOptions = [
-    { value: "complete_beginner", label: "No, I'm a complete beginner" },
-    { value: "tried_not_launched", label: "I tried but didn't launch" },
-    { value: "launched_no_sales", label: "I launched but didn't get sales" },
-    { value: "few_sales", label: "I made a few sales" },
-    { value: "running_actively", label: "I'm running a store actively right now" }
-  ];
+    fetchQuestions();
+  }, []);
 
-  const blockerOptions = [
-    { value: "dont_know_start", label: "I don't know how to start" },
-    { value: "product_research", label: "I'm stuck on product research" },
-    { value: "facebook_ads_confusing", label: "Facebook Ads are confusing" },
-    { value: "shopify_confusing", label: "Shopify is confusing" },
-    { value: "no_motivation", label: "No motivation, I start but stop" },
-    { value: "no_time", label: "I don't have time" }
-  ];
+  const handleQuestionnaireComplete = async (responses: QuestionnaireResponse[]) => {
+    setSubmitting(true);
+    try {
+      // Save responses to onboarding_responses table
+      const responsePromises = responses.map(response => {
+        let answerValue = '';
+        let answerData: any = {
+          questionId: response.questionId
+        };
 
-  const validateStep = () => {
-    switch (step) {
-      case 1:
-        return formData.income_goal !== "";
-      case 2:
-        return formData.motivation.trim() !== "";
-      case 3:
-        return formData.ecommerce_experience !== "";
-      case 4:
-        return formData.perceived_blockers.length > 0;
-      case 5:
-        return formData.thirty_day_aspirations.trim() !== "";
-      default:
-        return true;
-    }
-  };
+        // Handle different value types
+        if (response.value instanceof File) {
+          answerValue = response.value.name;
+          answerData.value = response.value.name;
+          answerData.fileType = response.value.type;
+        } else if (Array.isArray(response.value)) {
+          answerValue = response.value.join(', ');
+          answerData.value = response.value;
+        } else {
+          answerValue = String(response.value || '');
+          answerData.value = response.value;
+        }
 
-  const handleNext = async () => {
-    if (!validateStep()) return;
-    
-    if (step < totalSteps) {
-      setStep(step + 1);
-    } else {
-      await handleSubmit();
-    }
-  };
+        return supabase
+          .from('onboarding_responses')
+          .upsert({
+            user_id: user.id,
+            question_type: 'dynamic_questionnaire',
+            question_text: questions.find(q => q.id === response.questionId)?.text || 'Unknown question',
+            answer_value: answerValue,
+            answer_data: answerData
+          }, { onConflict: 'user_id,question_type,question_text' });
+      });
 
-  const handleSubmit = async () => {
-    const success = await submitOnboardingAnswers(user.id, formData);
-    if (success) {
+      const results = await Promise.all(responsePromises);
+      const hasErrors = results.some(result => result.error);
+      
+      if (hasErrors) {
+        throw new Error('Failed to save some responses');
+      }
+
+      // Update user profile with onboarding completion
+      const { error: userError } = await supabase
+        .from('users')
+        .update({ onboarding_done: true })
+        .eq('id', user.id);
+
+      if (userError) {
+        throw new Error(`Failed to update user profile: ${userError.message}`);
+      }
+
+      toast({
+        title: "Onboarding Complete",
+        description: "Your information has been saved successfully."
+      });
+
       onComplete();
+    } catch (error: any) {
+      console.error('Onboarding submission error:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message || "Failed to save onboarding information"
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
-  const handleBlockerChange = (value: string, checked: boolean) => {
-    if (checked) {
-      setFormData(prev => ({
-        ...prev,
-        perceived_blockers: [...prev.perceived_blockers, value]
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        perceived_blockers: prev.perceived_blockers.filter(item => item !== value)
-      }));
-    }
-  };
+  // If loading, show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl shadow-elevated border-0">
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading questionnaire...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
-  const canProceed = validateStep();
+  // If questionnaire is disabled or no questions, skip onboarding
+  if (!isEnabled || questions.length === 0) {
+    // Auto-complete onboarding since there are no questions
+    const completeOnboarding = async () => {
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update({ onboarding_done: true })
+          .eq('id', user.id);
+
+        if (error) {
+          console.error('Error completing onboarding:', error);
+        }
+      } catch (error) {
+        console.error('Error completing onboarding:', error);
+      } finally {
+        onComplete();
+      }
+    };
+
+    // Auto-complete immediately
+    completeOnboarding();
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl shadow-elevated border-0">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
-            <CardTitle className="text-xl sm:text-2xl font-bold text-foreground">
-              Welcome to IDM Pakistan! Let's get to know you better.
-            </CardTitle>
-            <span className="text-sm text-muted-foreground whitespace-nowrap">Step {step} of {totalSteps}</span>
-          </div>
-          <Progress value={progress} className="h-3" />
+          <CardTitle className="text-xl sm:text-2xl font-bold text-foreground">
+            Welcome! Let's get to know you better.
+          </CardTitle>
         </CardHeader>
         
-        <CardContent className="space-y-6">
-          {step === 1 && (
-            <div className="space-y-6">
-              <div>
-                <Label className="text-lg font-medium mb-4 block">
-                  What's your income goal in the next 3 months? 💰
-                </Label>
-                <RadioGroup
-                  value={formData.income_goal}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, income_goal: value }))}
-                  className="space-y-3"
-                >
-                  {incomeOptions.map((option) => (
-                    <div key={option.value} className="flex items-center space-x-2">
-                      <RadioGroupItem value={option.value} id={option.value} />
-                      <Label htmlFor={option.value} className="text-base cursor-pointer">
-                        {option.label}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </div>
-            </div>
-          )}
-
-          {step === 2 && (
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="motivation" className="text-lg font-medium">
-                  Why do you want to make this income? What motivates you? 🎯
-                </Label>
-                <Textarea
-                  id="motivation"
-                  value={formData.motivation}
-                  onChange={(e) => setFormData(prev => ({ ...prev, motivation: e.target.value }))}
-                  placeholder="e.g., For taking my parents to Umrah, to buy a new car, to quit job, to help my family..."
-                  className="mt-2 min-h-32 text-lg"
-                />
-              </div>
-            </div>
-          )}
-
-          {step === 3 && (
-            <div className="space-y-6">
-              <div>
-                <Label className="text-lg font-medium mb-4 block">
-                  Have you ever tried starting an ecommerce store before? 🛒
-                </Label>
-                <RadioGroup
-                  value={formData.ecommerce_experience}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, ecommerce_experience: value }))}
-                  className="space-y-3"
-                >
-                  {ecommerceOptions.map((option) => (
-                    <div key={option.value} className="flex items-center space-x-2">
-                      <RadioGroupItem value={option.value} id={option.value} />
-                      <Label htmlFor={option.value} className="text-base cursor-pointer">
-                        {option.label}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              </div>
-            </div>
-          )}
-
-          {step === 4 && (
-            <div className="space-y-6">
-              <div>
-                <Label className="text-lg font-medium mb-4 block">
-                  What do you feel are your biggest blockers right now? 🚧
-                </Label>
-                <p className="text-sm text-gray-600 mb-4">Select all that apply:</p>
-                <div className="space-y-3">
-                  {blockerOptions.map((option) => (
-                    <div key={option.value} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={option.value}
-                        checked={formData.perceived_blockers.includes(option.value)}
-                        onCheckedChange={(checked) => handleBlockerChange(option.value, checked as boolean)}
-                      />
-                      <Label htmlFor={option.value} className="text-base cursor-pointer">
-                        {option.label}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === 5 && (
-            <div className="space-y-6">
-              <div>
-                <Label htmlFor="aspirations" className="text-lg font-medium">
-                  What do you hope to achieve in the next 30 days? 🌟
-                </Label>
-                <Textarea
-                  id="aspirations"
-                  value={formData.thirty_day_aspirations}
-                  onChange={(e) => setFormData(prev => ({ ...prev, thirty_day_aspirations: e.target.value }))}
-                  placeholder="e.g., Launch my first product, run my first ad, get my first sale, learn Shopify..."
-                  className="mt-2 min-h-32 text-lg"
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-between pt-6">
-            <Button
-              variant="outline"
-              onClick={() => setStep(Math.max(1, step - 1))}
-              disabled={step === 1}
-            >
-              Previous
-            </Button>
-            
-            <Button 
-              onClick={handleNext}
-              className="w-full max-w-xs"
-              size="lg"
-              disabled={!canProceed || loading}
-            >
-              {loading ? 'Saving...' : (step === totalSteps ? 'Complete Onboarding' : 'Next Step')}
-            </Button>
-          </div>
+        <CardContent>
+          <StudentQuestionnaireForm
+            questions={questions}
+            onComplete={handleQuestionnaireComplete}
+            isLoading={submitting}
+          />
         </CardContent>
       </Card>
     </div>

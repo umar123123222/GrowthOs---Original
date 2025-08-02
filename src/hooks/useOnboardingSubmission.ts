@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+// Legacy interface - kept for backward compatibility but no longer used
 export interface OnboardingData {
   income_goal: string;
   motivation: string;
