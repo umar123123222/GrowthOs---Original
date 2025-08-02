@@ -58,7 +58,6 @@ export function AssignmentManagement() {
     description: '',
     mentor_id: '',
     due_days: 7,
-    recording_id: '',
     submission_type: 'text' as 'text' | 'file' | 'link',
     instructions: ''
   });
@@ -134,7 +133,6 @@ export function AssignmentManagement() {
         description: formData.description.trim() || null,
         mentor_id: formData.mentor_id || null,
         due_days: formData.due_days,
-        recording_id: formData.recording_id || null,
         submission_type: formData.submission_type,
         instructions: formData.instructions.trim() || null
       };
@@ -187,7 +185,6 @@ export function AssignmentManagement() {
       description: assignment.description || '',
       mentor_id: assignment.mentor_id || '',
       due_days: assignment.due_days || 7,
-      recording_id: assignment.recording_id || '',
       submission_type: assignment.submission_type || 'text',
       instructions: assignment.instructions || ''
     });
@@ -229,7 +226,6 @@ export function AssignmentManagement() {
       description: '',
       mentor_id: '',
       due_days: 7,
-      recording_id: '',
       submission_type: 'text',
       instructions: ''
     });
@@ -326,23 +322,6 @@ export function AssignmentManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Unlocked After Recording</label>
-                  <Select value={formData.recording_id} onValueChange={(value) => setFormData({ ...formData, recording_id: value })}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select recording..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Available immediately</SelectItem>
-                      {recordings.map((recording) => (
-                        <SelectItem key={recording.id} value={recording.id}>
-                          {recording.recording_title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
                   <label className="block text-sm font-medium mb-2">Assigned Mentor (Optional)</label>
                   <Select value={formData.mentor_id} onValueChange={(value) => setFormData({ ...formData, mentor_id: value })}>
                     <SelectTrigger>
@@ -408,7 +387,6 @@ export function AssignmentManagement() {
               <TableHeader>
                 <TableRow className="bg-gray-50">
                   <TableHead className="font-semibold">Title</TableHead>
-                  <TableHead className="font-semibold">Recording</TableHead>
                   <TableHead className="font-semibold">Due Days</TableHead>
                   <TableHead className="font-semibold">Type</TableHead>
                   <TableHead className="font-semibold">Actions</TableHead>
@@ -418,11 +396,6 @@ export function AssignmentManagement() {
                 {assignments.map((assignment) => (
                   <TableRow key={assignment.id} className="hover:bg-gray-50">
                     <TableCell className="font-medium">{assignment.name}</TableCell>
-                    <TableCell>
-                      <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
-                        {assignment.recording?.recording_title || 'Available immediately'}
-                      </Badge>
-                    </TableCell>
                     <TableCell>{assignment.due_days || 7} days</TableCell>
                     <TableCell>
                       <span className="capitalize">{assignment.submission_type || 'text'}</span>
