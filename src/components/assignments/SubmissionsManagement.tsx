@@ -300,22 +300,22 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                                       rows={3}
                                     />
                                   </div>
-                                  <div className="flex gap-2">
-                                    <Button
-                                      onClick={() => handleReviewSubmission(selectedSubmission.id, 'approved')}
-                                      className="bg-success hover:bg-success/90"
-                                    >
-                                      <CheckCircle className="w-4 h-4 mr-2" />
-                                      Approve
-                                    </Button>
-                                    <Button
-                                      onClick={() => handleReviewSubmission(selectedSubmission.id, 'declined')}
-                                      variant="destructive"
-                                    >
-                                      <XCircle className="w-4 h-4 mr-2" />
-                                      Decline
-                                    </Button>
-                                  </div>
+                                   <div className="flex gap-2">
+                                     <Button
+                                       onClick={() => handleReviewSubmission(selectedSubmission.id, 'approved')}
+                                       className="bg-green-600 text-white hover:bg-green-700"
+                                     >
+                                       <CheckCircle className="w-4 h-4 mr-2" />
+                                       Approve
+                                     </Button>
+                                     <Button
+                                       onClick={() => handleReviewSubmission(selectedSubmission.id, 'declined')}
+                                       variant="destructive"
+                                     >
+                                       <XCircle className="w-4 h-4 mr-2" />
+                                       Decline
+                                     </Button>
+                                   </div>
                                 </div>
                               )}
 
