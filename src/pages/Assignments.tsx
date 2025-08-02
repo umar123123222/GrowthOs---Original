@@ -415,16 +415,18 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
           </div>
         </div>
         
-        <StudentSubmissionDialog
-          open={submissionDialogOpen}
-          onOpenChange={setSubmissionDialogOpen}
-          assignment={selectedAssignmentData}
-          userId={user?.id || ''}
-          onSubmissionComplete={() => {
-            fetchSubmissions();
-            setSubmissionDialogOpen(false);
-          }}
-        />
+        {selectedAssignmentData && (
+          <StudentSubmissionDialog
+            open={submissionDialogOpen}
+            onOpenChange={setSubmissionDialogOpen}
+            assignment={selectedAssignmentData}
+            userId={user?.id || ''}
+            onSubmissionComplete={() => {
+              fetchSubmissions();
+              setSubmissionDialogOpen(false);
+            }}
+          />
+        )}
       </div>
     </div>
   );
