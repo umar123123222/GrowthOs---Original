@@ -16,7 +16,7 @@ import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
 import { getLogoUrl } from '@/utils/logoUtils';
 import { InvoiceTemplate } from '@/components/InvoiceTemplate';
 import PaymentMethodEditor from '@/components/PaymentMethodEditor';
-// SMTP imports removed - using Supabase built-in email
+import { SMTPConfigurationDialog } from '@/components/SMTPConfigurationDialog';
 
 // Import types from the new questionnaire module
 import { QuestionItem, validateQuestionnaireStructure } from '@/types/questionnaire';
@@ -104,7 +104,8 @@ export function CompanySettings() {
   // State for invoice preview
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
   
-  // SMTP state removed - using Supabase built-in email
+  // State for SMTP dialog
+  const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchCompanySettings();
@@ -317,6 +318,13 @@ export function CompanySettings() {
             Configure your organization details and billing parameters
           </p>
         </div>
+        <Button 
+          variant="outline" 
+          onClick={() => setSmtpDialogOpen(true)}
+        >
+          <Mail className="w-4 h-4 mr-2" />
+          SMTP Settings
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -801,6 +809,12 @@ export function CompanySettings() {
           </Button>
         </div>
       </div>
+
+      {/* SMTP Configuration Dialog */}
+      <SMTPConfigurationDialog 
+        open={smtpDialogOpen} 
+        onOpenChange={setSmtpDialogOpen} 
+      />
     </div>
   );
 }
