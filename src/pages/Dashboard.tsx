@@ -141,15 +141,15 @@ const Dashboard = ({ user }: { user?: any }) => {
 
       // Fetch total assignments
       const { data: assignments } = await supabase
-        .from('assignment')
-        .select('assignment_id');
+        .from('assignments')
+        .select('id');
 
       // Fetch completed assignments
       const { data: completedAssignments } = await supabase
-        .from('assignment_submissions')
+        .from('submissions')
         .select('assignment_id')
-        .eq('user_id', user.id)
-        .eq('status', 'accepted');
+        .eq('student_id', user.id)
+        .eq('status', 'approved');
 
       const totalVideos = recordings?.length || 0;
       // Count unique videos watched by creating a Set of recording_ids
@@ -224,9 +224,9 @@ const Dashboard = ({ user }: { user?: any }) => {
 
       // Check if submitted any assignment
       const { data: submissions } = await supabase
-        .from('assignment_submissions')
+        .from('submissions')
         .select('id')
-        .eq('user_id', user.id)
+        .eq('student_id', user.id)
         .limit(1);
 
       setMilestones([
@@ -247,17 +247,21 @@ const Dashboard = ({ user }: { user?: any }) => {
     if (!user?.id) return;
 
     try {
-      // Get assignments not yet submitted
-      const { data: pendingAssignments } = await supabase
-        .from('assignment')
+      // Get assignments not yet submitted - simplified for new schema
+      const { data: allAssignments } = await supabase
+        .from('assignments')
         .select('*')
-        .not('assignment_id', 'in', 
-          `(SELECT assignment_id FROM assignment_submissions WHERE user_id = '${user.id}')`
-        )
-        .order('sequence_order', { ascending: true })
-        .limit(1);
+        .order('name');
 
-      if (pendingAssignments && pendingAssignments.length > 0) {
+      const { data: userSubmissions } = await supabase
+        .from('submissions')
+        .select('assignment_id')
+        .eq('student_id', user.id);
+
+      const submittedAssignmentIds = userSubmissions?.map(s => s.assignment_id) || [];
+      const pendingAssignments = allAssignments?.filter(a => !submittedAssignmentIds.includes(a.id)) || [];
+
+      if (pendingAssignments.length > 0) {
         setNextAssignment(pendingAssignments[0]);
       }
     } catch (error) {

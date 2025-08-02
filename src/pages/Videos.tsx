@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { AssignmentSubmissionDialog } from "@/components/AssignmentSubmissionDialog";
+import { StudentSubmissionDialog } from "@/components/assignments/StudentSubmissionDialog";
 import { ModuleCard } from "@/components/ModuleCard";
 import { useVideosData } from "@/hooks/useVideosData";
 import { useProgressTracker } from "@/hooks/useProgressTracker";
@@ -100,7 +100,7 @@ const Videos = ({ user }: VideosProps = {}) => {
         )}
 
         {selectedAssignment && (
-          <AssignmentSubmissionDialog
+          <StudentSubmissionDialog
             open={assignmentDialogOpen}
             onOpenChange={(open) => {
               setAssignmentDialogOpen(open);
@@ -109,11 +109,15 @@ const Videos = ({ user }: VideosProps = {}) => {
                 setTimeout(refreshData, 500);
               }
             }}
-            assignmentTitle={selectedAssignment.title}
-            lessonTitle={selectedAssignment.lessonTitle}
-            assignmentId={selectedAssignment.id}
+            assignment={{
+              id: selectedAssignment.id,
+              name: selectedAssignment.title
+            }}
             userId={user?.id || ""}
-            isSubmitted={selectedAssignment.submitted}
+            hasSubmitted={selectedAssignment.submitted}
+            onSubmissionComplete={() => {
+              setTimeout(refreshData, 500);
+            }}
           />
         )}
       </div>

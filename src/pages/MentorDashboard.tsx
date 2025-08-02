@@ -71,17 +71,17 @@ export default function MentorDashboard() {
 
       // Fetch pending submissions for review
       const { data: pendingSubmissions } = await supabase
-        .from('assignment_submissions')
+        .from('submissions')
         .select('id')
-        .eq('status', 'submitted')
-        .in('user_id', students?.map(s => s.id) || []);
+        .eq('status', 'pending')
+        .in('student_id', students?.map(s => s.id) || []);
 
       // Fetch checked/graded assignments
       const { data: checkedSubmissions } = await supabase
-        .from('assignment_submissions')
+        .from('submissions')
         .select('id')
-        .eq('status', 'accepted')
-        .in('user_id', students?.map(s => s.id) || []);
+        .eq('status', 'approved')
+        .in('student_id', students?.map(s => s.id) || []);
 
       // Use hardcoded values for sessions since table might not exist
       const sessionsMentored = 12;

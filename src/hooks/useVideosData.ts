@@ -79,7 +79,7 @@ export const useVideosData = (user?: any) => {
 
       // Fetch assignments
       const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('assignment')
+        .from('assignments')
         .select('*');
 
       if (recordingsError) throw recordingsError;
@@ -102,9 +102,9 @@ export const useVideosData = (user?: any) => {
         if (userError) throw userError;
         userLMSStatus = userData?.lms_status || 'active';
         const { data: submissionsData, error: submissionsError } = await supabase
-          .from('assignment_submissions')
+          .from('submissions')
           .select('*')
-          .eq('user_id', user.id);
+          .eq('student_id', user.id);
         
         if (submissionsError) throw submissionsError;
         submissions = submissionsData || [];
@@ -135,8 +135,8 @@ export const useVideosData = (user?: any) => {
         const isModuleUnlocked = user?.id ? (moduleUnlockStatus?.is_module_unlocked ?? false) && userLMSStatus === 'active' : true;
         
         const lessons = moduleRecordings.map(recording => {
-          const associatedAssignment = assignmentsData?.find(a => a.sequence_order === recording.sequence_order);
-          const submission = submissions?.find(s => s.assignment_id === associatedAssignment?.assignment_id);
+          // For now, we'll keep the basic lesson structure without assignment linking
+          // since the new assignment system doesn't use sequence_order
           const recordingView = recordingViews?.find(rv => rv.recording_id === recording.id);
           
           // Check if this recording is unlocked (also check LMS status)
@@ -147,12 +147,12 @@ export const useVideosData = (user?: any) => {
             id: recording.id,
             title: recording.recording_title || 'Untitled Recording',
             duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
-            completed: submission?.status === 'accepted',
+            completed: false, // Will be determined by assignment submissions separately
             watched: recordingView?.watched ?? false,
             locked: !isRecordingUnlocked,
-            assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
-            assignmentSubmitted: !!submission,
-            assignmentId: associatedAssignment?.assignment_id,
+            assignmentTitle: 'Assignment', // Generic title for now
+            assignmentSubmitted: false, // Will be determined separately
+            assignmentId: null, // No direct assignment linking via sequence_order
             recording_url: recording.recording_url,
             sequence_order: recording.sequence_order
           };
@@ -184,20 +184,18 @@ export const useVideosData = (user?: any) => {
           completedLessons: 0,
           locked: false,
           lessons: unassignedRecordings.map(recording => {
-            const associatedAssignment = assignmentsData?.find(a => a.sequence_order === recording.sequence_order);
-            const submission = submissions?.find(s => s.assignment_id === associatedAssignment?.assignment_id);
             const recordingView = recordingViews?.find(rv => rv.recording_id === recording.id);
             
             return {
               id: recording.id,
               title: recording.recording_title || 'Untitled Recording',
               duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
-              completed: submission?.status === 'accepted',
+              completed: false, // Will be determined by assignment submissions separately
               watched: recordingView?.watched ?? false,
               locked: userLMSStatus !== 'active', // Lock if LMS status is not active
-              assignmentTitle: associatedAssignment?.assignment_title || 'No Assignment',
-              assignmentSubmitted: !!submission,
-              assignmentId: associatedAssignment?.assignment_id,
+              assignmentTitle: 'Assignment', // Generic title for now
+              assignmentSubmitted: false, // Will be determined separately
+              assignmentId: null, // No direct assignment linking
               recording_url: recording.recording_url,
               sequence_order: recording.sequence_order
             };

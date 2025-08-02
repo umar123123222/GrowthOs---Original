@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { RoleGuard } from '@/components/RoleGuard';
-import { SubmissionsManagement } from '@/components/shared/SubmissionsManagement';
+import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 
 export default function AdminSubmissions() {
   const { user } = useAuth();

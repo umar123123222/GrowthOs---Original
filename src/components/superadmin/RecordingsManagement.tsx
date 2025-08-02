@@ -32,8 +32,8 @@ interface Module {
 }
 
 interface Assignment {
-  assignment_id: string;
-  assignment_title: string;
+  id: string;
+  name: string;
 }
 
 export function RecordingsManagement() {
@@ -108,9 +108,9 @@ export function RecordingsManagement() {
   const fetchAssignments = async () => {
     try {
       const { data, error } = await supabase
-        .from('assignment')
-        .select('assignment_id, assignment_title')
-        .order('sequence_order');
+        .from('assignments')
+        .select('id, name')
+        .order('name');
 
       if (error) throw error;
       setAssignments(data || []);
@@ -385,8 +385,8 @@ export function RecordingsManagement() {
                   </SelectTrigger>
                   <SelectContent className="bg-white z-50">
                     {assignments.map((assignment) => (
-                      <SelectItem key={assignment.assignment_id} value={assignment.assignment_id}>
-                        {assignment.assignment_title}
+                      <SelectItem key={assignment.id} value={assignment.id}>
+                        {assignment.name}
                       </SelectItem>
                     ))}
                   </SelectContent>

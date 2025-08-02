@@ -7,10 +7,10 @@ import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Vid
 import { RoleGuard } from '@/components/RoleGuard';
 import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
-import { AssignmentsManagement } from '@/components/superadmin/AssignmentsManagement';
+import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
 import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
-import { AssignmentFeedback } from '@/components/mentor/AssignmentFeedback';
+import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { CompanySettings } from '@/components/superadmin/CompanySettings';
 import { useToast } from '@/hooks/use-toast';
@@ -40,13 +40,13 @@ export default function SuperadminDashboard() {
       case 'recordings':
         return <RecordingsManagement />;
       case 'assignments':
-        return <AssignmentsManagement />;
+        return <AssignmentManagement />;
       case 'success-sessions':
         return <SuccessSessionsManagement />;
       case 'students':
         return <StudentsManagement />;
       case 'submissions':
-        return <AssignmentFeedback />;
+        return <SubmissionsManagement userRole="superadmin" />;
       case 'support':
         return <SupportManagement />;
       case 'company-settings':
