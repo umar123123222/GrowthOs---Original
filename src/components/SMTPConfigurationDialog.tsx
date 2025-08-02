@@ -158,7 +158,6 @@ export const SMTPConfigurationDialog = ({ open, onOpenChange }: SMTPConfiguratio
   };
 
   const isConfigured = settings.smtp_host && settings.smtp_username && settings.smtp_password;
-  const hasResendFallback = !!process.env.RESEND_API_KEY;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -192,22 +191,6 @@ export const SMTPConfigurationDialog = ({ open, onOpenChange }: SMTPConfiguratio
                     <>
                       <AlertCircle className="w-3 h-3 mr-1" />
                       Not Configured
-                    </>
-                  )}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Resend Fallback</span>
-                <Badge variant={hasResendFallback ? "default" : "secondary"}>
-                  {hasResendFallback ? (
-                    <>
-                      <CheckCircle className="w-3 h-3 mr-1" />
-                      Available
-                    </>
-                  ) : (
-                    <>
-                      <AlertCircle className="w-3 h-3 mr-1" />
-                      Not Available
                     </>
                   )}
                 </Badge>
