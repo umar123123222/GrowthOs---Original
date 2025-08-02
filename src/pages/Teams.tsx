@@ -159,9 +159,11 @@ const Teams = () => {
         throw new Error(response.data?.error || 'Failed to create team member');
       }
 
-      // Send invitation email
+      // Trigger email processing instead of direct email sending
       try {
-        await sendInvitationEmail(newMember.email, newMember.full_name, newMember.role, tempPassword);
+        console.log('Triggering email queue processing for new team member...');
+        const processResult = await supabase.functions.invoke('process-email-queue');
+        console.log('Email processing result:', processResult);
         
         
         const successMessage = newMember.role === 'student' && response.data?.lmsPassword
