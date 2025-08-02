@@ -143,19 +143,19 @@ export const AdminManagement = () => {
         throw new Error(response.data?.error || 'Failed to create admin');
       }
 
-      // Send invitation email
+      // Trigger email processing
       try {
-        await sendInvitationEmail(newAdmin.email, newAdmin.full_name, tempPassword);
+        await supabase.functions.invoke('process-email-queue');
         
         toast({
           title: "Success",
-          description: `Admin account created and invitation email sent to ${newAdmin.email}`
+          description: `Admin account created and welcome email will be sent to ${newAdmin.email}`
         });
       } catch (emailError) {
         // User was created but email failed
         toast({
           title: "Partial Success",
-          description: `Account created but failed to send invitation email. Manual credentials: ${tempPassword}`,
+          description: `Account created but welcome email could not be sent automatically. Please check email settings.`,
           variant: "destructive"
         });
       }
