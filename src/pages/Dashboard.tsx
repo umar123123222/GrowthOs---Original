@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { ConnectAccountsDialog } from "@/components/ConnectAccountsDialog";
 import { NextAssignment } from "@/components/NextAssignment";
 import { DreamGoalCard } from "@/components/DreamGoalCard";
+import { StudentDashboard } from "@/components/StudentDashboard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { generateDreamGoalSummary } from "@/utils/dreamGoalUtils";
@@ -23,6 +24,10 @@ import {
 } from "lucide-react";
 
 const Dashboard = ({ user }: { user?: any }) => {
+  // For students, show the specialized student dashboard
+  if (user?.role === 'student') {
+    return <StudentDashboard />;
+  }
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [shopifyConnected, setShopifyConnected] = useState(false);
   const [metaConnected, setMetaConnected] = useState(false);

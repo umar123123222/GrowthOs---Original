@@ -3,9 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { BookOpen, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { BookOpen, Clock, CheckCircle, XCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useRecordingUnlocks } from '@/hooks/useRecordingUnlocks';
 import { StudentSubmissionDialog } from './StudentSubmissionDialog';
 
 interface Assignment {
@@ -13,6 +14,11 @@ interface Assignment {
   name: string;
   description?: string;
   created_at: string;
+  recording_id?: string;
+  recording?: {
+    recording_title: string;
+    sequence_order: number;
+  };
 }
 
 interface Submission {
@@ -26,6 +32,7 @@ interface Submission {
 export function StudentAssignmentList() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { isRecordingUnlocked, loading: unlocksLoading } = useRecordingUnlocks();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,10 +49,16 @@ export function StudentAssignmentList() {
     if (!user) return;
 
     try {
-      // Fetch all assignments
+      // Fetch assignments with recording details
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('assignments')
-        .select('*')
+        .select(`
+          *,
+          recording:available_lessons!assignments_recording_id_fkey (
+            recording_title,
+            sequence_order
+          )
+        `)
         .order('created_at', { ascending: false });
 
       if (assignmentsError) throw assignmentsError;
@@ -117,9 +130,18 @@ export function StudentAssignmentList() {
     fetchData();
   };
 
-  if (loading) {
+  if (loading || unlocksLoading) {
     return <div className="flex justify-center items-center h-64">Loading assignments...</div>;
   }
+
+  // Filter assignments to only show those whose recording is unlocked
+  const availableAssignments = assignments.filter(assignment => {
+    // If no recording is linked, assignment is always available
+    if (!assignment.recording_id) return true;
+    
+    // Check if the recording is unlocked
+    return isRecordingUnlocked(assignment.recording_id);
+  });
 
   return (
     <div className="space-y-6">
@@ -128,19 +150,19 @@ export function StudentAssignmentList() {
         <p className="text-muted-foreground">Complete and submit your course assignments</p>
       </div>
 
-      {assignments.length === 0 ? (
+      {availableAssignments.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8">
             <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium">No assignments available</h3>
             <p className="text-muted-foreground">
-              Check back later for new assignments from your instructors.
+              Complete more recordings to unlock assignments, or check back later for new assignments.
             </p>
           </CardContent>
         </Card>
       ) : (
         <div className="grid gap-6">
-          {assignments.map((assignment) => {
+          {availableAssignments.map((assignment) => {
             const submission = getSubmissionStatus(assignment.id);
             const hasSubmitted = !!submission;
             
@@ -156,6 +178,12 @@ export function StudentAssignmentList() {
                       <p className="text-sm text-muted-foreground mt-2">
                         Assigned: {new Date(assignment.created_at).toLocaleDateString()}
                       </p>
+                      {assignment.recording && (
+                        <p className="text-sm text-muted-foreground">
+                          <Lock className="w-3 h-3 inline mr-1" />
+                          Unlocked after: {assignment.recording.recording_title}
+                        </p>
+                      )}
                     </div>
                     {getStatusBadge(submission)}
                   </div>

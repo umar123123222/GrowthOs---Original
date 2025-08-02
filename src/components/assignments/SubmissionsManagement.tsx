@@ -22,6 +22,7 @@ interface Submission {
   assignment: {
     name: string;
     description?: string;
+    mentor_id?: string;
   };
   student: {
     full_name: string;
@@ -57,7 +58,8 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
           *,
           assignment:assignments!submissions_assignment_id_fkey (
             name,
-            description
+            description,
+            mentor_id
           ),
           student:users!submissions_student_id_fkey (
             full_name,
@@ -66,6 +68,12 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
           )
         `)
         .order('created_at', { ascending: false });
+
+      // Apply mentor-specific filtering based on role
+      if (userRole === 'mentor') {
+        // Only show submissions for assignments assigned to this mentor
+        query = query.eq('assignments.mentor_id', user.id);
+      }
 
       // Apply status filter if not 'all'
       if (filterStatus !== 'all') {
