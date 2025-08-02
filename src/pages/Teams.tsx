@@ -39,12 +39,13 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Activity, Eye, Edit, Trash2, Key } from 'lucide-react';
+import { Plus, Activity, Eye, Edit, Trash2, Key, Settings } from 'lucide-react';
 import { useAuth, User } from '@/hooks/useAuth';
 import AdminTeams from '@/components/admin/AdminTeams';
 import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
 import { CredentialDisplay } from '@/components/ui/credential-display';
 import { generateSecurePassword } from '@/utils/passwordGenerator';
+import { SMTPConfigurationDialog } from '@/components/SMTPConfigurationDialog';
 
 
 interface TeamMember {
@@ -67,6 +68,7 @@ const Teams = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [credentialDialogOpen, setCredentialDialogOpen] = useState(false);
   const [isEditPasswordDialogOpen, setIsEditPasswordDialogOpen] = useState(false);
+  const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [editData, setEditData] = useState({
     email: '',
@@ -296,21 +298,33 @@ const Teams = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-gray-900">Teams</h1>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Team Member
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Team Member</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Full Name *</Label>
-                <Input
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setSmtpDialogOpen(true)}
+          >
+            <Settings className="w-4 h-4 mr-2" />
+            SMTP Settings
+          </Button>
+          <SMTPConfigurationDialog 
+            open={smtpDialogOpen} 
+            onOpenChange={setSmtpDialogOpen} 
+          />
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Team Member
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Team Member</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="name">Full Name *</Label>
+                  <Input
                   id="name"
                   value={newMember.full_name}
                   onChange={(e) => setNewMember({...newMember, full_name: e.target.value})}
@@ -349,7 +363,8 @@ const Teams = () => {
               </Button>
             </div>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Stats Cards */}
