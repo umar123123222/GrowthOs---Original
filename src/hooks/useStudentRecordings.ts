@@ -35,7 +35,7 @@ export const useStudentRecordings = () => {
       console.log('StudentRecordings: Fetching recordings for user:', user.id);
       console.log('StudentRecordings: User role:', user.role);
       
-      // Fetch all recordings with their assignments
+      // Fetch all recordings with their modules
       const { data: recordingsData, error: recordingsError } = await supabase
         .from('available_lessons')
         .select(`
@@ -44,7 +44,8 @@ export const useStudentRecordings = () => {
           recording_url,
           sequence_order,
           duration_min,
-          module
+          module,
+          modules!inner(id, title, order)
         `)
         .order('sequence_order');
 
