@@ -214,197 +214,164 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
   const remainingAssignments = assignments.length - incompleteAssignments.length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto p-6">
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-full mr-4">
-              <FileText className="w-8 h-8 text-primary" />
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-700">Assignments Management</h1>
+        <p className="text-gray-500 mt-1">Manage assignment assignments and their assignments</p>
+      </div>
+        
+      {/* All Assignments Section */}
+      <div className="bg-white rounded-lg border">
+        <div className="p-6 border-b">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-purple-600" />
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              My Assignments
-            </h1>
+            <h2 className="text-xl font-semibold">All Assignments</h2>
           </div>
-          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Complete your assignments to unlock new content and progress in your learning journey
-          </p>
         </div>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Assignment List */}
-          <div className="space-y-6">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <FileText className="w-4 h-4 text-primary" />
-              </div>
-              <h2 className="text-2xl font-bold">Assignment List</h2>
-            </div>
-            {assignments.length === 0 ? (
-              <Card className="p-8 text-center border-dashed border-2 bg-muted/20">
-                <div className="text-muted-foreground">
-                  <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-8 h-8" />
+        <div className="p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Assignment List */}
+            <div className="space-y-4">
+              {assignments.length === 0 ? (
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8 text-gray-400" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">No Assignments Available</h3>
-                  <p className="text-sm">Check back later for new assignments or contact your instructor.</p>
+                  <p className="text-gray-500 text-sm">Check back later for new assignments.</p>
                 </div>
-              </Card>
-        ) : (
-          <>
-            {incompleteAssignments.map((assignment) => {
-              const isSubmitted = submissions.some(s => s.assignment_id === assignment.id);
-              const isLocked = !assignment.isUnlocked;
-              
-                return (
-                  <Card 
-                    key={assignment.id}
-                    className={`group cursor-pointer transition-all duration-300 border-2 ${
-                      selectedAssignment === assignment.id 
-                        ? "border-primary shadow-lg bg-primary/5 ring-2 ring-primary/20" 
-                        : "border-border/60 hover:border-primary/30 hover:shadow-md"
-                    } ${isLocked ? "opacity-60" : ""}`}
-                    onClick={() => !isLocked && setSelectedAssignment(assignment.id)}
-                  >
-                    <CardContent className="p-5">
-                      <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          {isLocked ? (
-                            <div className="w-8 h-8 bg-muted/50 rounded-lg flex items-center justify-center">
-                              <Lock className="w-4 h-4 text-muted-foreground" />
-                            </div>
-                          ) : (
-                            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                              <FileText className="w-4 h-4 text-primary" />
-                            </div>
-                          )}
-                          <h3 className={`font-semibold ${isLocked ? "text-muted-foreground" : "text-foreground"}`}>
-                            {assignment.name}
-                          </h3>
+              ) : (
+                <div className="space-y-3">
+                  {incompleteAssignments.map((assignment) => {
+                    const isSubmitted = submissions.some(s => s.assignment_id === assignment.id);
+                    const isLocked = !assignment.isUnlocked;
+                    
+                    return (
+                      <div 
+                        key={assignment.id}
+                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                          selectedAssignment === assignment.id 
+                            ? "border-purple-200 bg-purple-50" 
+                            : "border-gray-200 hover:border-purple-200"
+                        } ${isLocked ? "opacity-60" : ""}`}
+                        onClick={() => !isLocked && setSelectedAssignment(assignment.id)}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            {isLocked ? (
+                              <Lock className="w-4 h-4 text-gray-400" />
+                            ) : (
+                              <FileText className="w-4 h-4 text-purple-600" />
+                            )}
+                            <span className={`font-medium ${isLocked ? "text-gray-400" : "text-gray-900"}`}>
+                              {assignment.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            {getStatusBadge(assignment)}
+                            {isSubmitted && (
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                            )}
+                          </div>
                         </div>
-                        {getStatusBadge(assignment)}
                       </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                          <Clock className="w-3 h-3" />
-                          <span>{new Date(assignment.created_at).toLocaleDateString()}</span>
+                    );
+                  })}
+                  
+                  {/* Completed Assignments Summary */}
+                  {remainingAssignments > 0 && (
+                    <div className="p-4 border-2 border-dashed border-green-200 bg-green-50 rounded-lg text-center">
+                      <div className="flex items-center justify-center space-x-3">
+                        <CheckCircle className="w-6 h-6 text-green-600" />
+                        <div>
+                          <h3 className="font-semibold text-green-800">Completed</h3>
+                          <p className="text-sm text-green-600">{remainingAssignments} assignments completed</p>
                         </div>
-                        
-                        {isSubmitted && (
-                          <CheckCircle className="w-5 h-5 text-green-500" />
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-            })}
-            
-              {/* Completed Assignments Summary */}
-              {remainingAssignments > 0 && (
-                <Card className="border-2 border-dashed border-green-200 bg-green-50/50">
-                  <CardContent className="p-5 text-center">
-                    <div className="flex items-center justify-center space-x-3">
-                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-green-800">Completed Assignments</h3>
-                        <p className="text-sm text-green-600">{remainingAssignments} assignments completed successfully</p>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  )}
+                </div>
               )}
-          </>
-        )}
-      </div>
+            </div>
 
-          {/* Assignment Details */}
-          <div className="lg:col-span-2">
-            {selectedAssignmentData && (
-              <Card className="shadow-lg border-0 bg-card/80 backdrop-blur-sm">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/30 rounded-xl flex items-center justify-center">
-                        <FileText className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-2xl font-bold">{selectedAssignmentData.name}</CardTitle>
-                        <div className="flex items-center space-x-3 mt-2">
-                          <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+            {/* Assignment Details */}
+            <div className="lg:col-span-2">
+              {selectedAssignmentData && (
+                <div className="space-y-6">
+                  <div className="border rounded-lg p-6 bg-white">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                          <FileText className="w-5 h-5 text-purple-600" />
+                        </div>
+                        <div>
+                          <h2 className="text-xl font-semibold">{selectedAssignmentData.name}</h2>
+                          <div className="flex items-center space-x-2 text-sm text-gray-500 mt-1">
                             <Clock className="w-4 h-4" />
                             <span>{new Date(selectedAssignmentData.created_at).toLocaleDateString()}</span>
                           </div>
                         </div>
                       </div>
+                      {getStatusBadge(selectedAssignmentData)}
                     </div>
-                    {getStatusBadge(selectedAssignmentData)}
-                  </div>
-                </CardHeader>
-            
-                <CardContent className="space-y-8">
-                  {/* Description */}
-                  <div className="bg-muted/30 rounded-xl p-6">
-                    <div className="flex items-center space-x-2 mb-4">
-                      <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <FileText className="w-4 h-4 text-primary" />
-                      </div>
-                      <h3 className="font-semibold text-lg">Assignment Description</h3>
+                    
+                    {/* Description */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-semibold mb-2">Assignment Description</h3>
+                      <p className="text-gray-600">{selectedAssignmentData.description || 'No description provided'}</p>
                     </div>
-                    <p className="text-muted-foreground leading-relaxed">{selectedAssignmentData.description || 'No description provided'}</p>
                   </div>
 
                   {/* Submission Area */}
-                  <div>
-                    <div className="flex items-center space-x-2 mb-6">
-                      <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
-                        <Upload className="w-4 h-4 text-primary" />
-                      </div>
-                      <h3 className="font-semibold text-lg">Your Submission</h3>
+                  <div className="border rounded-lg p-6 bg-white">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <Upload className="w-5 h-5 text-purple-600" />
+                      <h3 className="font-semibold">Your Submission</h3>
                     </div>
                     {selectedSubmission ? (
                       <div className="space-y-4">
-                        <div className="p-6 bg-gradient-to-r from-green-50 to-green-50/50 border-2 border-green-200 rounded-xl">
-                          <div className="flex items-center justify-between mb-4">
+                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                          <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center space-x-2">
-                              <CheckCircle className="w-5 h-5 text-green-600" />
-                              <span className="font-semibold text-green-800">
+                              <CheckCircle className="w-4 h-4 text-green-600" />
+                              <span className="font-medium text-green-800">
                                 Status: {selectedSubmission.status.toUpperCase()}
                               </span>
                             </div>
-                            <span className="text-sm text-green-600 bg-green-100 px-3 py-1 rounded-full">
+                            <span className="text-sm text-green-600">
                               {new Date(selectedSubmission.created_at).toLocaleDateString()}
                             </span>
                           </div>
-                          <div className="bg-white/60 p-4 rounded-lg">
-                            <p className="text-gray-700 leading-relaxed">{selectedSubmission.content}</p>
+                          <div className="bg-white p-3 rounded border">
+                            <p className="text-gray-700">{selectedSubmission.content}</p>
                           </div>
                           {selectedSubmission.notes && (
-                            <div className="mt-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
                               <div className="flex items-center space-x-2 mb-2">
                                 <MessageSquare className="w-4 h-4 text-blue-600" />
-                                <h4 className="font-semibold text-blue-800">Instructor Feedback</h4>
+                                <h4 className="font-medium text-blue-800">Feedback</h4>
                               </div>
-                              <p className="text-blue-700 leading-relaxed">{selectedSubmission.notes}</p>
+                              <p className="text-blue-700">{selectedSubmission.notes}</p>
                             </div>
                           )}
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-6">
-                        <div className="bg-muted/30 rounded-xl p-6">
-                          <Textarea
-                            placeholder="Write your assignment submission here..."
-                            value={submission}
-                            onChange={(e) => setSubmission(e.target.value)}
-                            className="min-h-32 border-2 bg-background/50 focus:bg-background transition-colors"
-                          />
-                        </div>
+                      <div className="space-y-4">
+                        <Textarea
+                          placeholder="Write your assignment submission here..."
+                          value={submission}
+                          onChange={(e) => setSubmission(e.target.value)}
+                          className="min-h-32"
+                        />
                         
-                        <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-3">
                           <Button 
-                            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all"
+                            className="bg-purple-600 hover:bg-purple-700 text-white"
                             onClick={submitAssignment}
                             disabled={!submission.trim() || userLMSStatus !== 'active'}
                           >
@@ -416,10 +383,9 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                             variant="outline"
                             onClick={() => setSubmissionDialogOpen(true)}
                             disabled={!selectedAssignmentData?.isUnlocked || userLMSStatus !== 'active'}
-                            className="border-2 hover:bg-muted/50"
                           >
                             <Upload className="w-4 h-4 mr-2" />
-                            Submit with File
+                            Advanced Submission
                           </Button>
                         </div>
                       </div>
@@ -443,28 +409,21 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                       </CardContent>
                     </Card>
                   )}
-                </CardContent>
-              </Card>
-            )}
+                </div>
+              )}
+            </div>
           </div>
         </div>
-
-        {/* Assignment Submission Dialog */}
-        {selectedAssignmentData && (
-          <StudentSubmissionDialog
-            open={submissionDialogOpen}
-            onOpenChange={setSubmissionDialogOpen}
-            assignment={{
-              id: selectedAssignmentData.id,
-              name: selectedAssignmentData.name
-            }}
-            userId={user?.id || ""}
-            onSubmissionComplete={() => {
-              fetchSubmissions();
-              fetchAssignments();
-            }}
-          />
-        )}
+        
+        <StudentSubmissionDialog
+          open={submissionDialogOpen}
+          onClose={() => setSubmissionDialogOpen(false)}
+          assignment={selectedAssignmentData}
+          onSubmissionSuccess={() => {
+            fetchSubmissions();
+            setSubmissionDialogOpen(false);
+          }}
+        />
       </div>
     </div>
   );

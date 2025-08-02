@@ -163,272 +163,250 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto p-6">
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-full mr-4">
-              <MessageSquare className="w-8 h-8 text-primary" />
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-700">Submissions Management</h1>
+          <p className="text-gray-500 mt-1">Manage assignment submissions and their assignments</p>
+        </div>
+        <div className="flex gap-3">
+          <Button
+            variant={filterStatus === 'all' ? 'default' : 'outline'}
+            onClick={() => setFilterStatus('all')}
+            className={filterStatus === 'all' ? 'bg-purple-600 text-white' : ''}
+          >
+            All
+          </Button>
+          <Button
+            variant={filterStatus === 'pending' ? 'default' : 'outline'}
+            onClick={() => setFilterStatus('pending')}
+            className={filterStatus === 'pending' ? 'bg-purple-600 text-white' : ''}
+          >
+            Pending
+          </Button>
+          <Button
+            variant={filterStatus === 'approved' ? 'default' : 'outline'}
+            onClick={() => setFilterStatus('approved')}
+            className={filterStatus === 'approved' ? 'bg-purple-600 text-white' : ''}
+          >
+            Approved
+          </Button>
+          <Button
+            variant={filterStatus === 'declined' ? 'default' : 'outline'}
+            onClick={() => setFilterStatus('declined')}
+            className={filterStatus === 'declined' ? 'bg-purple-600 text-white' : ''}
+          >
+            Declined
+          </Button>
+        </div>
+      </div>
+
+      {/* All Submissions Section */}
+      <div className="bg-white rounded-lg border">
+        <div className="p-6 border-b">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <MessageSquare className="w-4 h-4 text-purple-600" />
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              {getTitle()}
-            </h1>
+            <h2 className="text-xl font-semibold">All Submissions</h2>
           </div>
-          <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-            {getDescription()}
-          </p>
         </div>
         
-        <div className="space-y-8">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Eye className="w-4 h-4 text-primary" />
+        <div className="overflow-x-auto">
+          {submissions.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="w-8 h-8 text-gray-400" />
               </div>
-              <h2 className="text-2xl font-semibold">Filter Submissions</h2>
+              <h3 className="text-lg font-semibold mb-2">No submissions found</h3>
+              <p className="text-gray-500">
+                {userRole === 'mentor' 
+                  ? "No submissions from your assigned students yet."
+                  : "No submissions available to review at the moment."}
+              </p>
             </div>
-            <div className="flex gap-3">
-              <Button
-                variant={filterStatus === 'all' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('all')}
-                className="shadow-sm"
-              >
-                All Submissions
-              </Button>
-              <Button
-                variant={filterStatus === 'pending' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('pending')}
-                className="shadow-sm"
-              >
-                Pending Review
-              </Button>
-              <Button
-                variant={filterStatus === 'approved' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('approved')}
-                className="shadow-sm"
-              >
-                Approved
-              </Button>
-              <Button
-                variant={filterStatus === 'declined' ? 'default' : 'outline'}
-                onClick={() => setFilterStatus('declined')}
-                className="shadow-sm"
-              >
-                Declined
-              </Button>
-            </div>
-          </div>
-
-          <Card className="shadow-lg border-0 bg-card/80 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/30 rounded-xl flex items-center justify-center">
-                  <MessageSquare className="w-5 h-5 text-primary" />
-                </div>
-                <CardTitle className="text-xl">Assignment Submissions</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {submissions.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <MessageSquare className="w-10 h-10 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">No submissions found</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">
-                    {userRole === 'mentor' 
-                      ? "No submissions from your assigned students yet. Students will see their assignments once they're unlocked."
-                      : "No submissions available to review at the moment. Check back later or adjust your filters."}
-                  </p>
-                </div>
-              ) : (
-                <div className="rounded-lg border-2 border-border/60 overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30">
-                        <TableHead className="font-semibold">Student</TableHead>
-                        <TableHead className="font-semibold">Assignment</TableHead>
-                        <TableHead className="font-semibold">Submitted</TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
-                        <TableHead className="font-semibold">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {submissions.map((submission) => (
-                        <TableRow key={submission.id} className="hover:bg-muted/20 transition-colors">
-                          <TableCell>
-                            <div className="flex items-center space-x-3">
-                              <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
-                                <span className="text-xs font-semibold text-primary">
-                                  {submission.student.full_name.charAt(0).toUpperCase()}
-                                </span>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold">Student</TableHead>
+                  <TableHead className="font-semibold">Assignment</TableHead>
+                  <TableHead className="font-semibold">Submitted</TableHead>
+                  <TableHead className="font-semibold">Status</TableHead>
+                  <TableHead className="font-semibold">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {submissions.map((submission) => (
+                  <TableRow key={submission.id} className="hover:bg-gray-50">
+                    <TableCell>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-semibold text-gray-600">
+                            {submission.student.full_name.charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <div className="font-medium">{submission.student.full_name}</div>
+                          <div className="text-sm text-gray-500">
+                            {submission.student.student_id || submission.student.email}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
+                        {submission.assignment.name}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(submission.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Badge className={`${getStatusColor(submission.status)} font-medium`}>
+                        {submission.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedSubmission(submission);
+                              setReviewNotes(submission.notes || '');
+                            }}
+                            className="hover:bg-gray-50"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            Review
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+                          <DialogHeader className="pb-4">
+                            <DialogTitle className="text-2xl font-bold flex items-center space-x-3">
+                              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                                <Eye className="w-4 h-4 text-primary" />
                               </div>
-                              <div>
-                                <div className="font-semibold">{submission.student.full_name}</div>
-                                <div className="text-sm text-muted-foreground">
-                                  {submission.student.student_id || submission.student.email}
+                              <span>Review Submission</span>
+                            </DialogTitle>
+                          </DialogHeader>
+                          {selectedSubmission && (
+                            <div className="space-y-8">
+                              <div className="grid grid-cols-2 gap-6">
+                                <div className="bg-muted/30 rounded-xl p-5">
+                                  <div className="flex items-center space-x-2 mb-4">
+                                    <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
+                                      <span className="text-xs font-semibold text-primary">
+                                        {selectedSubmission.student.full_name.charAt(0).toUpperCase()}
+                                      </span>
+                                    </div>
+                                    <h3 className="font-semibold text-lg">Student Information</h3>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <p className="font-medium">{selectedSubmission.student.full_name}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedSubmission.student.email}</p>
+                                    <p className="text-sm text-muted-foreground">{selectedSubmission.student.student_id}</p>
+                                  </div>
+                                </div>
+                                <div className="bg-muted/30 rounded-xl p-5">
+                                  <div className="flex items-center space-x-2 mb-4">
+                                    <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
+                                      <FileText className="w-4 h-4 text-primary" />
+                                    </div>
+                                    <h3 className="font-semibold text-lg">Assignment Details</h3>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <p className="font-medium">{selectedSubmission.assignment.name}</p>
+                                    <div className="flex items-center space-x-2">
+                                      <Clock className="w-4 h-4 text-muted-foreground" />
+                                      <p className="text-sm text-muted-foreground">
+                                        Submitted: {new Date(selectedSubmission.created_at).toLocaleString()}
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-semibold">{submission.assignment.name}</div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Clock className="w-4 h-4 text-muted-foreground" />
-                              <span>{new Date(submission.created_at).toLocaleDateString()}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={`${getStatusColor(submission.status)} font-medium`}>
-                              {submission.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedSubmission(submission);
-                                    setReviewNotes(submission.notes || '');
-                                  }}
-                                  className="bg-primary/5 hover:bg-primary/10 border-primary/20 hover:border-primary/30 shadow-sm"
-                                >
-                                  <Eye className="w-4 h-4 mr-2" />
-                                  Review
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-                                <DialogHeader className="pb-4">
-                                  <DialogTitle className="text-2xl font-bold flex items-center space-x-3">
-                                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                                      <Eye className="w-4 h-4 text-primary" />
-                                    </div>
-                                    <span>Review Submission</span>
-                                  </DialogTitle>
-                                </DialogHeader>
-                                {selectedSubmission && (
-                                  <div className="space-y-8">
-                                    <div className="grid grid-cols-2 gap-6">
-                                      <div className="bg-muted/30 rounded-xl p-5">
-                                        <div className="flex items-center space-x-2 mb-4">
-                                          <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
-                                            <span className="text-xs font-semibold text-primary">
-                                              {selectedSubmission.student.full_name.charAt(0).toUpperCase()}
-                                            </span>
-                                          </div>
-                                          <h3 className="font-semibold text-lg">Student Information</h3>
-                                        </div>
-                                        <div className="space-y-2">
-                                          <p className="font-medium">{selectedSubmission.student.full_name}</p>
-                                          <p className="text-sm text-muted-foreground">{selectedSubmission.student.email}</p>
-                                          <p className="text-sm text-muted-foreground">{selectedSubmission.student.student_id}</p>
-                                        </div>
-                                      </div>
-                                      <div className="bg-muted/30 rounded-xl p-5">
-                                        <div className="flex items-center space-x-2 mb-4">
-                                          <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
-                                            <FileText className="w-4 h-4 text-primary" />
-                                          </div>
-                                          <h3 className="font-semibold text-lg">Assignment Details</h3>
-                                        </div>
-                                        <div className="space-y-2">
-                                          <p className="font-medium">{selectedSubmission.assignment.name}</p>
-                                          <div className="flex items-center space-x-2">
-                                            <Clock className="w-4 h-4 text-muted-foreground" />
-                                            <p className="text-sm text-muted-foreground">
-                                              Submitted: {new Date(selectedSubmission.created_at).toLocaleString()}
-                                            </p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
 
-                                    <div className="bg-card/50 rounded-xl p-6 border-2 border-border/60">
-                                      <div className="flex items-center space-x-2 mb-4">
-                                        <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
-                                          <MessageSquare className="w-4 h-4 text-primary" />
-                                        </div>
-                                        <h3 className="font-semibold text-lg">Submission Content</h3>
-                                      </div>
-                                      <div className="bg-muted/50 rounded-lg p-5">
-                                        <p className="whitespace-pre-wrap leading-relaxed text-foreground">{selectedSubmission.content}</p>
-                                      </div>
-                                    </div>
-
-                                    {selectedSubmission.status === 'pending' && (
-                                      <div className="space-y-6">
-                                        <div className="bg-muted/30 rounded-xl p-5">
-                                          <label className="block text-sm font-semibold mb-3 flex items-center space-x-2">
-                                            <MessageSquare className="w-4 h-4 text-primary" />
-                                            <span>Review Notes</span>
-                                          </label>
-                                          <Textarea
-                                            value={reviewNotes}
-                                            onChange={(e) => setReviewNotes(e.target.value)}
-                                            placeholder="Add feedback and notes for the student..."
-                                            rows={4}
-                                            className="border-2 bg-background/50 focus:bg-background transition-colors"
-                                          />
-                                        </div>
-                                        <div className="flex gap-4">
-                                          <Button
-                                            onClick={() => handleReviewSubmission(selectedSubmission.id, 'approved')}
-                                            className="flex-1 bg-green-600 text-white hover:bg-green-700 shadow-md hover:shadow-lg transition-all"
-                                          >
-                                            <CheckCircle className="w-4 h-4 mr-2" />
-                                            Approve Submission
-                                          </Button>
-                                          <Button
-                                            onClick={() => handleReviewSubmission(selectedSubmission.id, 'declined')}
-                                            variant="destructive"
-                                            className="flex-1 shadow-md hover:shadow-lg transition-all"
-                                          >
-                                            <XCircle className="w-4 h-4 mr-2" />
-                                            Decline Submission
-                                          </Button>
-                                        </div>
-                                      </div>
-                                    )}
-
-                                    {selectedSubmission.status !== 'pending' && (
-                                      <div className="bg-muted/30 rounded-xl p-6">
-                                        <div className="flex items-center space-x-2 mb-4">
-                                          <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
-                                            <CheckCircle className="w-4 h-4 text-primary" />
-                                          </div>
-                                          <h3 className="font-semibold text-lg">Review Status</h3>
-                                        </div>
-                                        <Badge className={`${getStatusColor(selectedSubmission.status)} font-medium text-base px-4 py-2`}>
-                                          {selectedSubmission.status.toUpperCase()}
-                                        </Badge>
-                                        {selectedSubmission.notes && (
-                                          <div className="mt-4 p-4 bg-background/50 rounded-lg border">
-                                            <p className="font-medium mb-2 flex items-center space-x-2">
-                                              <MessageSquare className="w-4 h-4" />
-                                              <span>Feedback Notes:</span>
-                                            </p>
-                                            <p className="text-muted-foreground leading-relaxed">{selectedSubmission.notes}</p>
-                                          </div>
-                                        )}
-                                      </div>
-                                    )}
+                              <div className="bg-card/50 rounded-xl p-6 border-2 border-border/60">
+                                <div className="flex items-center space-x-2 mb-4">
+                                  <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
+                                    <MessageSquare className="w-4 h-4 text-primary" />
                                   </div>
-                                )}
-                              </DialogContent>
-                            </Dialog>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                                  <h3 className="font-semibold text-lg">Submission Content</h3>
+                                </div>
+                                <div className="bg-muted/50 rounded-lg p-5">
+                                  <p className="whitespace-pre-wrap leading-relaxed text-foreground">{selectedSubmission.content}</p>
+                                </div>
+                              </div>
+
+                              {selectedSubmission.status === 'pending' && (
+                                <div className="space-y-6">
+                                  <div className="bg-muted/30 rounded-xl p-5">
+                                    <label className="block text-sm font-semibold mb-3 flex items-center space-x-2">
+                                      <MessageSquare className="w-4 h-4 text-primary" />
+                                      <span>Review Notes</span>
+                                    </label>
+                                    <Textarea
+                                      value={reviewNotes}
+                                      onChange={(e) => setReviewNotes(e.target.value)}
+                                      placeholder="Add feedback and notes for the student..."
+                                      rows={4}
+                                      className="border-2 bg-background/50 focus:bg-background transition-colors"
+                                    />
+                                  </div>
+                                  <div className="flex gap-4">
+                                    <Button
+                                      onClick={() => handleReviewSubmission(selectedSubmission.id, 'approved')}
+                                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                                    >
+                                      <CheckCircle className="w-4 h-4 mr-2" />
+                                      Approve
+                                    </Button>
+                                    <Button
+                                      onClick={() => handleReviewSubmission(selectedSubmission.id, 'declined')}
+                                      variant="outline"
+                                      className="flex-1 border-red-200 hover:border-red-300 text-red-700 hover:bg-red-50"
+                                    >
+                                      <XCircle className="w-4 h-4 mr-2" />
+                                      Decline
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {selectedSubmission.status !== 'pending' && (
+                                <div className="bg-muted/30 rounded-xl p-6">
+                                  <div className="flex items-center space-x-2 mb-4">
+                                    <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
+                                      <CheckCircle className="w-4 h-4 text-primary" />
+                                    </div>
+                                    <h3 className="font-semibold text-lg">Review Status</h3>
+                                  </div>
+                                  <Badge className={`${getStatusColor(selectedSubmission.status)} font-medium text-base px-4 py-2`}>
+                                    {selectedSubmission.status.toUpperCase()}
+                                  </Badge>
+                                  {selectedSubmission.notes && (
+                                    <div className="mt-4 p-4 bg-background/50 rounded-lg border">
+                                      <p className="font-medium mb-2 flex items-center space-x-2">
+                                        <MessageSquare className="w-4 h-4" />
+                                        <span>Feedback Notes:</span>
+                                      </p>
+                                      <p className="text-muted-foreground leading-relaxed">{selectedSubmission.notes}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </DialogContent>
+                      </Dialog>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
     </div>

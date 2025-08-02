@@ -246,75 +246,59 @@ export function AssignmentManagement() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto p-6">
-        <div className="mb-8 text-center">
-          <div className="flex items-center justify-center mb-4">
-            <div className="p-3 bg-primary/10 rounded-full mr-4">
-              <FileText className="w-8 h-8 text-primary" />
-            </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-              Assignment Management
-            </h1>
-          </div>
-          <p className="text-muted-foreground text-lg max-w-3xl mx-auto">
-            Create and manage course assignments to guide student learning and track progress
-          </p>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-700">Assignments Management</h1>
+          <p className="text-gray-500 mt-1">Manage assignment assignments and their assignments</p>
         </div>
-        
-        <div className="space-y-8">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                <Plus className="w-4 h-4 text-primary" />
-              </div>
-              <h2 className="text-2xl font-semibold">Assignment Controls</h2>
-            </div>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button onClick={openCreateDialog} className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg hover:shadow-xl transition-all">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create New Assignment
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader className="pb-4">
-                  <DialogTitle className="text-2xl font-bold flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
-                      <FileText className="w-4 h-4 text-primary" />
-                    </div>
-                    <span>{editingAssignment ? 'Edit Assignment' : 'Create New Assignment'}</span>
-                  </DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="col-span-2 bg-muted/30 rounded-xl p-5">
-                      <label className="block text-sm font-semibold mb-3 flex items-center space-x-2">
-                        <FileText className="w-4 h-4 text-primary" />
-                        <span>Assignment Name</span>
-                      </label>
-                      <Input
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        placeholder="Enter assignment name..."
-                        required
-                        className="border-2 bg-background/50 focus:bg-background transition-colors"
-                      />
-                    </div>
-                
-                    <div className="col-span-2 bg-muted/30 rounded-xl p-5">
-                      <label className="block text-sm font-semibold mb-3 flex items-center space-x-2">
-                        <MessageSquare className="w-4 h-4 text-primary" />
-                        <span>Description</span>
-                      </label>
-                      <Textarea
-                        value={formData.description}
-                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                        placeholder="Enter assignment description..."
-                        rows={3}
-                        className="border-2 bg-background/50 focus:bg-background transition-colors"
-                      />
-                    </div>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={openCreateDialog} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Assignment
+            </Button>
+          </DialogTrigger>
+          
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="text-2xl font-bold flex items-center space-x-3">
+                <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-primary" />
+                </div>
+                <span>{editingAssignment ? 'Edit Assignment' : 'Create New Assignment'}</span>
+              </DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="col-span-2 bg-muted/30 rounded-xl p-5">
+                  <label className="block text-sm font-semibold mb-3 flex items-center space-x-2">
+                    <FileText className="w-4 h-4 text-primary" />
+                    <span>Assignment Name</span>
+                  </label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Enter assignment name..."
+                    required
+                    className="border-2 bg-background/50 focus:bg-background transition-colors"
+                  />
+                </div>
+            
+                <div className="col-span-2 bg-muted/30 rounded-xl p-5">
+                  <label className="block text-sm font-semibold mb-3 flex items-center space-x-2">
+                    <MessageSquare className="w-4 h-4 text-primary" />
+                    <span>Description</span>
+                  </label>
+                  <Textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Enter assignment description..."
+                    rows={3}
+                    className="border-2 bg-background/50 focus:bg-background transition-colors"
+                  />
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Due After (Days)</label>
@@ -386,111 +370,88 @@ export function AssignmentManagement() {
                 </div>
               </div>
 
-                  <div className="flex gap-4 pt-6">
-                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1 border-2">
-                      Cancel
-                    </Button>
-                    <Button type="submit" className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all">
-                      {editingAssignment ? 'Update' : 'Create'} Assignment
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <Card className="shadow-lg border-0 bg-card/80 backdrop-blur-sm">
-            <CardHeader className="pb-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary/20 to-primary/30 rounded-xl flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-primary" />
-                </div>
-                <CardTitle className="text-xl">All Assignments</CardTitle>
+              <div className="flex gap-4 pt-6">
+                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="flex-1 border-2">
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all">
+                  {editingAssignment ? 'Update' : 'Create'} Assignment
+                </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {assignments.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <FileText className="w-10 h-10 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-xl font-semibold mb-3">No assignments found</h3>
-                  <p className="text-muted-foreground max-w-md mx-auto leading-relaxed">Create your first assignment to get started with student assessments and progress tracking.</p>
-                </div>
-              ) : (
-                <div className="rounded-lg border-2 border-border/60 overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30">
-                        <TableHead className="font-semibold">Name</TableHead>
-                        <TableHead className="font-semibold">Recording</TableHead>
-                        <TableHead className="font-semibold">Due Days</TableHead>
-                        <TableHead className="font-semibold">Type</TableHead>
-                        <TableHead className="font-semibold">Mentor</TableHead>
-                        <TableHead className="font-semibold">Created</TableHead>
-                        <TableHead className="font-semibold">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {assignments.map((assignment) => (
-                        <TableRow key={assignment.id} className="hover:bg-muted/20 transition-colors">
-                          <TableCell className="font-semibold">{assignment.name}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Play className="w-4 h-4 text-muted-foreground" />
-                              <span>{assignment.recording?.recording_title || 'Available immediately'}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Clock className="w-4 h-4 text-muted-foreground" />
-                              <span>{assignment.due_days || 7} days</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="capitalize font-medium bg-primary/10 text-primary">
-                              {assignment.submission_type || 'text'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {assignment.mentor?.full_name || (
-                              <span className="text-muted-foreground italic">No mentor assigned</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <Clock className="w-4 h-4 text-muted-foreground" />
-                              <span>{new Date(assignment.created_at).toLocaleDateString()}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleEdit(assignment)}
-                                className="hover:bg-primary/10 hover:border-primary/30"
-                              >
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDelete(assignment.id)}
-                                className="hover:bg-destructive/10 hover:border-destructive/30"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      {/* All Assignments Section */}
+      <div className="bg-white rounded-lg border">
+        <div className="p-6 border-b">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-4 h-4 text-purple-600" />
+            </div>
+            <h2 className="text-xl font-semibold">All Assignments</h2>
+          </div>
+        </div>
+        
+        <div className="overflow-x-auto">
+          {assignments.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <FileText className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2">No assignments found</h3>
+              <p className="text-gray-500">Create your first assignment to get started.</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="font-semibold">Title</TableHead>
+                  <TableHead className="font-semibold">Recording</TableHead>
+                  <TableHead className="font-semibold">Due Days</TableHead>
+                  <TableHead className="font-semibold">Type</TableHead>
+                  <TableHead className="font-semibold">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assignments.map((assignment) => (
+                  <TableRow key={assignment.id} className="hover:bg-gray-50">
+                    <TableCell className="font-medium">{assignment.name}</TableCell>
+                    <TableCell>
+                      <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
+                        {assignment.recording?.recording_title || 'Available immediately'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{assignment.due_days || 7} days</TableCell>
+                    <TableCell>
+                      <span className="capitalize">{assignment.submission_type || 'text'}</span>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEdit(assignment)}
+                          className="hover:bg-gray-50"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDelete(assignment.id)}
+                          className="hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </div>
       </div>
     </div>
