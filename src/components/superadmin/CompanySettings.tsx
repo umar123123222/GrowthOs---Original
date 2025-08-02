@@ -9,14 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send } from 'lucide-react';
+import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
 import { getLogoUrl } from '@/utils/logoUtils';
 import { InvoiceTemplate } from '@/components/InvoiceTemplate';
 import PaymentMethodEditor from '@/components/PaymentMethodEditor';
-import { SMTPConfigurationDialog } from '@/components/SMTPConfigurationDialog';
 
 // Import types from the new questionnaire module
 import { QuestionItem, validateQuestionnaireStructure } from '@/types/questionnaire';
@@ -103,9 +102,6 @@ export function CompanySettings() {
   
   // State for invoice preview
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
-  
-  // State for SMTP dialog
-  const [smtpDialogOpen, setSmtpDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchCompanySettings();
@@ -318,13 +314,6 @@ export function CompanySettings() {
             Configure your organization details and billing parameters
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={() => setSmtpDialogOpen(true)}
-        >
-          <Mail className="w-4 h-4 mr-2" />
-          SMTP Settings
-        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -783,20 +772,6 @@ export function CompanySettings() {
 
         {/* Email Configuration section removed - using Supabase built-in email */}
         
-        {/* SMTP Notice */}
-        <Card className="lg:col-span-2">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-              <Mail className="h-5 w-5 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-blue-900">Email Configuration Note</p>
-                <p className="text-sm text-blue-700">
-                  SMTP settings are configured in the database. Supabase's built-in email functionality will be used for all outgoing emails.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Save Button */}
         <div className="lg:col-span-2 flex justify-end">
@@ -810,11 +785,6 @@ export function CompanySettings() {
         </div>
       </div>
 
-      {/* SMTP Configuration Dialog */}
-      <SMTPConfigurationDialog 
-        open={smtpDialogOpen} 
-        onOpenChange={setSmtpDialogOpen} 
-      />
     </div>
   );
 }

@@ -19,8 +19,5 @@ enabled = true
 
 [[edge_functions.clustered]]
 
-[functions.invoice-scheduler]
-verify_jwt = false
-
 [analytics]
 enabled = false

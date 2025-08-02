@@ -100,31 +100,6 @@ const Teams = () => {
     }
   };
 
-  const sendInvitationEmail = async (email: string, fullName: string, role: string, tempPassword: string) => {
-    try {
-      const loginUrl = `${window.location.origin}/login`;
-      
-      const response = await supabase.functions.invoke('send-admin-invitation', {
-        body: {
-          email,
-          full_name: fullName,
-          role,
-          temp_password: tempPassword,
-          login_url: loginUrl
-        }
-      });
-
-      if (response.error) {
-        console.error('Error sending invitation:', response.error);
-        throw response.error;
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to send invitation email:', error);
-      throw error;
-    }
-  };
 
   const handleAddMember = async () => {
     if (!newMember.full_name || !newMember.email || !newMember.role) {

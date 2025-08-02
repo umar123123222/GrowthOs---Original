@@ -76,33 +76,11 @@ export const useSecureStudentCreation = () => {
         return data;
       }
 
-      // Success - trigger email processing
-      console.log("Student creation successful, triggering email queue processing for user:", data.studentId);
-      try {
-        const emailResponse = await supabase.functions.invoke('process-email-queue');
-        console.log("Email queue processing response:", emailResponse);
-        
-        if (emailResponse.error) {
-          console.error("Email queue processing error:", emailResponse.error);
-          toast({
-            title: "Student Created",
-            description: "Account created but welcome email could not be sent automatically. Please check email settings.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Student Created Successfully",
-            description: "Welcome email will be sent shortly. Check email status in admin panel.",
-          });
-        }
-      } catch (emailError) {
-        console.error('Email processing failed:', emailError);
-        toast({
-          title: "Student Created",
-          description: "Account created but welcome email could not be sent automatically. Please check email settings.",
-          variant: "destructive",
-        });
-      }
+      // Success - student created
+      toast({
+        title: "Student Created Successfully",
+        description: "Student account has been created.",
+      });
 
       return data;
 

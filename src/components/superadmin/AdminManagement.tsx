@@ -36,7 +36,6 @@ import { Plus, Activity, Key, Trash2, UserPlus, Shield } from 'lucide-react';
 import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
 import { CredentialDisplay } from '@/components/ui/credential-display';
 import { generateSecurePassword } from '@/utils/passwordGenerator';
-import { EmailTestButton } from '@/components/EmailTestButton';
 
 
 interface Admin {
@@ -85,31 +84,6 @@ export const AdminManagement = () => {
     }
   };
 
-  const sendInvitationEmail = async (email: string, fullName: string, tempPassword: string) => {
-    try {
-      const loginUrl = `${window.location.origin}/login`;
-      
-      const response = await supabase.functions.invoke('send-admin-invitation', {
-        body: {
-          email,
-          full_name: fullName,
-          role: 'admin',
-          temp_password: tempPassword,
-          login_url: loginUrl
-        }
-      });
-
-      if (response.error) {
-        console.error('Error sending invitation:', response.error);
-        throw response.error;
-      }
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to send invitation email:', error);
-      throw error;
-    }
-  };
 
   const handleAddAdmin = async () => {
     if (!newAdmin.full_name || !newAdmin.email) {
@@ -144,34 +118,10 @@ export const AdminManagement = () => {
         throw new Error(response.data?.error || 'Failed to create admin');
       }
 
-      // Trigger email processing
-      console.log("Admin creation successful, triggering email queue processing");
-      try {
-        const emailResponse = await supabase.functions.invoke('process-email-queue');
-        console.log("Email queue processing response:", emailResponse);
-        
-        if (emailResponse.error) {
-          console.error("Email queue processing error:", emailResponse.error);
-          toast({
-            title: "Partial Success",
-            description: `Account created but welcome email could not be sent automatically. Please check email settings.`,
-            variant: "destructive"
-          });
-        } else {
-          toast({
-            title: "Success",
-            description: `Admin account created and welcome email will be sent to ${newAdmin.email}`
-          });
-        }
-      } catch (emailError) {
-        console.error('Email processing failed:', emailError);
-        // User was created but email failed
-        toast({
-          title: "Partial Success",
-          description: `Account created but welcome email could not be sent automatically. Please check email settings.`,
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Success",
+        description: `Admin account created successfully`
+      });
 
       setNewAdmin({
         full_name: '',
@@ -239,7 +189,6 @@ export const AdminManagement = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <EmailTestButton />
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>

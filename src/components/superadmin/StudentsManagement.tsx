@@ -5,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { SecureStudentCreationDialog } from '@/components/SecureStudentCreationDialog';
-import { EmailStatusIndicator } from '@/components/EmailStatusIndicator';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -1041,7 +1040,6 @@ export function StudentsManagement() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Fees Structure</TableHead>
                   <TableHead>LMS Status</TableHead>
-                  <TableHead>Email Status</TableHead>
                   <TableHead>Created By</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -1079,9 +1077,6 @@ export function StudentsManagement() {
                              {getInstallmentStatus(student).status}
                            </Badge>
                           </div>
-                         </TableCell>
-                         <TableCell>
-                           <EmailStatusIndicator userId={student.id} userName={student.full_name} />
                          </TableCell>
                         <TableCell>
                          <div className="text-sm">
