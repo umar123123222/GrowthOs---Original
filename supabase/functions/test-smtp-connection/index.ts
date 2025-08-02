@@ -30,8 +30,13 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const body: TestSMTPRequest = await req.json();
     
-    // Validate required fields
-    if (!body.smtp_host || !body.smtp_username || !body.smtp_password || !body.test_email) {
+    // Validate required fields and trim whitespace
+    const trimmedHost = body.smtp_host?.trim();
+    const trimmedUsername = body.smtp_username?.trim();
+    const trimmedPassword = body.smtp_password?.trim();
+    const trimmedEmail = body.test_email?.trim();
+    
+    if (!trimmedHost || !trimmedUsername || !trimmedPassword || !trimmedEmail) {
       return new Response(
         JSON.stringify({ 
           success: false, 
@@ -44,25 +49,25 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Testing SMTP connection to ${body.smtp_host}:${body.smtp_port}...`);
+    console.log(`Testing SMTP connection to ${trimmedHost}:${body.smtp_port}...`);
 
     // Create SMTP client
     const client = new SMTPClient({
       connection: {
-        hostname: body.smtp_host,
+        hostname: trimmedHost,
         port: body.smtp_port,
         tls: body.smtp_secure,
         auth: {
-          username: body.smtp_username,
-          password: body.smtp_password,
+          username: trimmedUsername,
+          password: trimmedPassword,
         },
       },
     });
 
     // Test connection by sending a test email
     const testEmail = {
-      from: `SMTP Test <${body.test_email}>`,
-      to: body.test_email, // Send to the same email for testing
+      from: `SMTP Test <${trimmedEmail}>`,
+      to: trimmedEmail, // Send to the same email for testing
       subject: "SMTP Configuration Test - Success!",
       content: `
         SMTP Configuration Test
@@ -70,10 +75,10 @@ const handler = async (req: Request): Promise<Response> => {
         This email confirms that your SMTP settings are configured correctly.
         
         Configuration Details:
-        - Host: ${body.smtp_host}
+        - Host: ${trimmedHost}
         - Port: ${body.smtp_port}
         - Secure: ${body.smtp_secure ? 'Yes' : 'No'}
-        - Username: ${body.smtp_username}
+        - Username: ${trimmedUsername}
         
         Test completed at: ${new Date().toISOString()}
         
@@ -90,10 +95,10 @@ const handler = async (req: Request): Promise<Response> => {
             <div style="background: white; border: 1px solid #e1e5e9; border-radius: 8px; padding: 20px; margin: 20px 0;">
               <h3>📋 Configuration Details</h3>
               <ul style="list-style: none; padding: 0;">
-                <li><strong>Host:</strong> ${body.smtp_host}</li>
+                <li><strong>Host:</strong> ${trimmedHost}</li>
                 <li><strong>Port:</strong> ${body.smtp_port}</li>
                 <li><strong>Secure:</strong> ${body.smtp_secure ? 'Yes (TLS/SSL)' : 'No'}</li>
-                <li><strong>Username:</strong> ${body.smtp_username}</li>
+                <li><strong>Username:</strong> ${trimmedUsername}</li>
               </ul>
             </div>
             
