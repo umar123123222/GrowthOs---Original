@@ -116,14 +116,20 @@ export function StudentDashboard() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {recordings.map((recording) => (
+            {recordings.map((recording, index) => (
               <div
                 key={recording.id}
-                className={`flex items-center justify-between p-3 rounded-lg border ${
-                  recording.isUnlocked ? 'bg-background' : 'bg-muted/50'
+                className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
+                  recording.isUnlocked 
+                    ? 'bg-background border-border hover:border-primary/30' 
+                    : 'bg-muted/30 border-muted'
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-sm font-medium">
+                    {index + 1}
+                  </div>
+                  
                   {recording.isUnlocked ? (
                     recording.isWatched ? (
                       <CheckCircle className="w-5 h-5 text-success" />
@@ -134,19 +140,27 @@ export function StudentDashboard() {
                     <Lock className="w-5 h-5 text-muted-foreground" />
                   )}
                   
-                  <div>
+                  <div className="flex-1">
                     <h4 className={`font-medium ${!recording.isUnlocked ? 'text-muted-foreground' : ''}`}>
                       {recording.recording_title}
                     </h4>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
                       {recording.duration_min && (
-                        <span>{recording.duration_min} min</span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {recording.duration_min} min
+                        </span>
                       )}
                       {recording.hasAssignment && (
                         <Badge variant="outline" className="text-xs">
                           <BookOpen className="w-3 h-3 mr-1" />
-                          Assignment
+                          Assignment Required
                         </Badge>
+                      )}
+                      {!recording.isUnlocked && (
+                        <span className="text-xs text-orange-600 font-medium">
+                          Complete previous assignment to unlock
+                        </span>
                       )}
                     </div>
                   </div>
@@ -156,14 +170,14 @@ export function StudentDashboard() {
                   {recording.isWatched && (
                     <Badge variant="outline" className="bg-success/10 text-success border-success/20">
                       <CheckCircle className="w-3 h-3 mr-1" />
-                      Watched
+                      Completed
                     </Badge>
                   )}
                   
                   {recording.hasAssignment && recording.assignmentSubmitted && (
-                    <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
                       <Clock className="w-3 h-3 mr-1" />
-                      Submitted
+                      Assignment Submitted
                     </Badge>
                   )}
 
@@ -172,6 +186,7 @@ export function StudentDashboard() {
                     size="sm"
                     disabled={!recording.isUnlocked || !recording.recording_url}
                     onClick={() => handleWatchRecording(recording)}
+                    className={!recording.isUnlocked ? 'opacity-50' : ''}
                   >
                     {recording.isUnlocked ? (
                       recording.isWatched ? 'Rewatch' : 'Watch'
@@ -185,11 +200,11 @@ export function StudentDashboard() {
           </div>
 
           {recordings.length === 0 && (
-            <div className="text-center py-8">
+            <div className="text-center py-12">
               <Play className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium">No recordings available</h3>
               <p className="text-muted-foreground">
-                Check back later for new content.
+                Contact your instructor for course content.
               </p>
             </div>
           )}
