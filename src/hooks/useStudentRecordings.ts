@@ -33,6 +33,7 @@ export const useStudentRecordings = () => {
 
     try {
       console.log('StudentRecordings: Fetching recordings for user:', user.id);
+      console.log('StudentRecordings: User role:', user.role);
       
       // Fetch all recordings with their assignments
       const { data: recordingsData, error: recordingsError } = await supabase

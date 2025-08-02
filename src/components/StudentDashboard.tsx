@@ -27,6 +27,9 @@ export function StudentDashboard() {
     return <div className="flex justify-center items-center h-64">Loading dashboard...</div>;
   }
 
+  console.log('StudentDashboard: Total recordings:', recordings.length);
+  console.log('StudentDashboard: User:', user?.role);
+
   const unlockedRecordings = recordings.filter(r => r.isUnlocked);
   const nextRecording = unlockedRecordings.find(r => !r.isWatched);
 
@@ -106,7 +109,10 @@ export function StudentDashboard() {
       {/* All Recordings */}
       <Card>
         <CardHeader>
-          <CardTitle>All Recordings</CardTitle>
+          <CardTitle>All Recordings ({recordings.length} total)</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Progress through recordings sequentially. Complete assignments to unlock the next recording.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
