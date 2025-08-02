@@ -32,6 +32,8 @@ export const useStudentRecordings = () => {
     if (!user?.id) return;
 
     try {
+      console.log('StudentRecordings: Fetching recordings for user:', user.id);
+      
       // Fetch all recordings with their assignments
       const { data: recordingsData, error: recordingsError } = await supabase
         .from('available_lessons')
@@ -46,6 +48,7 @@ export const useStudentRecordings = () => {
         .order('sequence_order');
 
       if (recordingsError) throw recordingsError;
+      console.log('StudentRecordings: Found recordings:', recordingsData?.length || 0);
 
       // Fetch recording views for this user
       const { data: viewsData, error: viewsError } = await supabase
@@ -78,6 +81,8 @@ export const useStudentRecordings = () => {
         const assignment = assignmentsData?.find(a => a.recording_id === recording.id);
         const submission = assignment ? submissionsData?.find(s => s.assignment_id === assignment.id) : null;
 
+        console.log(`Recording ${recording.recording_title}: unlocked=${isUnlocked}, watched=${view?.watched || false}`);
+
         return {
           id: recording.id,
           recording_title: recording.recording_title || 'Untitled Recording',
@@ -92,6 +97,7 @@ export const useStudentRecordings = () => {
         };
       });
 
+      console.log('StudentRecordings: Processed recordings:', processedRecordings.length);
       setRecordings(processedRecordings);
     } catch (error) {
       console.error('Error fetching student recordings:', error);

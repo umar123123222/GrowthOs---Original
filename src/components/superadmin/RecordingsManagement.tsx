@@ -20,6 +20,7 @@ interface Recording {
   duration_min: number;
   sequence_order: number;
   notes: string;
+  assignment_id: string | null;
   module: {
     id: string;
     title: string;
@@ -203,7 +204,7 @@ export function RecordingsManagement() {
       sequence_order: recording.sequence_order,
       notes: recording.notes,
       module_id: recording.module?.id || '',
-      assignment_id: ''
+      assignment_id: recording.assignment_id || ''
     });
     setDialogOpen(true);
   };
