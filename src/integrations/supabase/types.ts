@@ -1709,6 +1709,10 @@ export type Database = {
           is_recording_unlocked: boolean
         }[]
       }
+      initialize_student_unlocks: {
+        Args: { p_student_id: string }
+        Returns: undefined
+      }
       is_module_completed: {
         Args: { _user_id: string; _module_id: string }
         Returns: boolean
@@ -1735,6 +1739,10 @@ export type Database = {
           p_metadata?: Json
         }
         Returns: number
+      }
+      unlock_next_recording: {
+        Args: { p_student_id: string; p_current_recording_id: string }
+        Returns: undefined
       }
       update_company_branding: {
         Args: { branding_data: Json }
