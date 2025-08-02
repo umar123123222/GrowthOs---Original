@@ -417,9 +417,10 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
         
         <StudentSubmissionDialog
           open={submissionDialogOpen}
-          onClose={() => setSubmissionDialogOpen(false)}
+          onOpenChange={setSubmissionDialogOpen}
           assignment={selectedAssignmentData}
-          onSubmissionSuccess={() => {
+          userId={user?.id || ''}
+          onSubmissionComplete={() => {
             fetchSubmissions();
             setSubmissionDialogOpen(false);
           }}
