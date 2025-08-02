@@ -1,59 +1,37 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { StudentSubmissionDialog } from "@/components/assignments/StudentSubmissionDialog";
-import { ModuleCard } from "@/components/ModuleCard";
-import { useVideosData } from "@/hooks/useVideosData";
+import { useStudentRecordings } from "@/hooks/useStudentRecordings";
+import { useAuth } from "@/hooks/useAuth";
 import { useProgressTracker } from "@/hooks/useProgressTracker";
 import { RoleGuard } from "@/components/RoleGuard";
-import { Play } from "lucide-react";
+import { Play, Lock, CheckCircle, Clock, BookOpen } from "lucide-react";
 
-interface VideosProps {
-  user?: any;
-}
-
-const Videos = ({ user }: VideosProps = {}) => {
+const Videos = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { recordings, loading, refreshRecordings } = useStudentRecordings();
+  const { markRecordingWatched } = useProgressTracker(user);
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
-  const [selectedAssignment, setSelectedAssignment] = useState<{
-    id: string;
-    title: string;
-    lessonTitle: string;
-    submitted: boolean;
-  } | null>(null);
-  const [expandedModules, setExpandedModules] = useState<{ [key: string | number]: boolean }>({});
-  
-  const { modules, loading, refreshData } = useVideosData(user);
-  const { markModuleComplete, markRecordingWatched } = useProgressTracker(user, modules);
+  const [selectedRecording, setSelectedRecording] = useState<any>(null);
 
-  // Initialize first module as expanded
-  React.useEffect(() => {
-    if (modules.length > 0 && Object.keys(expandedModules).length === 0) {
-      setExpandedModules({ [modules[0].id]: true });
-    }
-  }, [modules, expandedModules]);
+  const handleWatchRecording = async (recording: any) => {
+    if (!recording.isUnlocked || !recording.recording_url) return;
 
+    // Mark as watched
+    await markRecordingWatched(recording.id);
+    
+    // Navigate to video player
+    navigate(`/video-player?id=${recording.id}`);
+  };
 
-  const handleWatchNow = useCallback((moduleId: number, lessonId: number) => {
-    navigate(`/videos/${moduleId}/${lessonId}`);
-  }, [navigate]);
-
-  const handleAssignmentClick = useCallback((lessonTitle: string, assignmentTitle: string, assignmentSubmitted: boolean, assignmentId?: string) => {
-    setSelectedAssignment({
-      id: assignmentId || `temp-${Date.now()}`,
-      title: assignmentTitle,
-      lessonTitle: lessonTitle,
-      submitted: assignmentSubmitted
-    });
+  const handleAssignmentClick = (recording: any) => {
+    setSelectedRecording(recording);
     setAssignmentDialogOpen(true);
-  }, []);
-
-  const toggleModule = useCallback((moduleId: string | number) => {
-    setExpandedModules(prev => ({
-      ...prev,
-      [moduleId]: !prev[moduleId]
-    }));
-  }, []);
+  };
 
   if (loading) {
     return (
@@ -73,7 +51,7 @@ const Videos = ({ user }: VideosProps = {}) => {
           </p>
         </div>
 
-        {modules.length === 0 ? (
+        {recordings.length === 0 ? (
           <Card className="shadow-medium border-border/50">
             <CardContent className="p-8 text-center">
               <div className="text-muted-foreground">
@@ -84,39 +62,133 @@ const Videos = ({ user }: VideosProps = {}) => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
-            {modules.map((module, index) => (
-              <ModuleCard
-                key={module.id}
-                module={module}
-                index={index}
-                isExpanded={expandedModules[module.id]}
-                onToggle={toggleModule}
-                onWatchNow={handleWatchNow}
-                onAssignmentClick={handleAssignmentClick}
-              />
-            ))}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Course Recordings ({recordings.length} total)</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Progress through recordings sequentially. Complete assignments to unlock the next recording.
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recordings.map((recording, index) => (
+                  <div
+                    key={recording.id}
+                    className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
+                      recording.isUnlocked 
+                        ? 'bg-background border-border hover:border-primary/30' 
+                        : 'bg-muted/30 border-muted'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-full bg-muted text-sm font-medium">
+                        {index + 1}
+                      </div>
+                      
+                      {recording.isUnlocked ? (
+                        recording.isWatched ? (
+                          <CheckCircle className="w-6 h-6 text-success" />
+                        ) : (
+                          <Play className="w-6 h-6 text-primary" />
+                        )
+                      ) : (
+                        <Lock className="w-6 h-6 text-muted-foreground" />
+                      )}
+                      
+                      <div className="flex-1">
+                        <h4 className={`font-semibold text-lg ${!recording.isUnlocked ? 'text-muted-foreground' : ''}`}>
+                          {recording.recording_title}
+                        </h4>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
+                          {recording.duration_min && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {recording.duration_min} minutes
+                            </span>
+                          )}
+                          {recording.hasAssignment && (
+                            <Badge variant="outline" className="text-xs">
+                              <BookOpen className="w-3 h-3 mr-1" />
+                              Assignment Required
+                            </Badge>
+                          )}
+                          {!recording.isUnlocked && (
+                            <span className="text-orange-600 font-medium text-sm">
+                              Complete previous assignment to unlock
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                      {recording.isWatched && (
+                        <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Completed
+                        </Badge>
+                      )}
+                      
+                      {recording.hasAssignment && recording.assignmentSubmitted && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          <Clock className="w-3 h-3 mr-1" />
+                          Assignment Submitted
+                        </Badge>
+                      )}
+
+                      {recording.hasAssignment && recording.isUnlocked && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleAssignmentClick(recording)}
+                          className="mr-2"
+                        >
+                          <BookOpen className="w-4 h-4 mr-1" />
+                          Assignment
+                        </Button>
+                      )}
+
+                      <Button
+                        variant={recording.isWatched ? "outline" : "default"}
+                        size="sm"
+                        disabled={!recording.isUnlocked || !recording.recording_url}
+                        onClick={() => handleWatchRecording(recording)}
+                        className={!recording.isUnlocked ? 'opacity-50' : ''}
+                      >
+                        <Play className="w-4 h-4 mr-1" />
+                        {recording.isUnlocked ? (
+                          recording.isWatched ? 'Rewatch' : 'Watch Now'
+                        ) : (
+                          'Locked'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
-        {selectedAssignment && (
+        {selectedRecording && selectedRecording.hasAssignment && (
           <StudentSubmissionDialog
             open={assignmentDialogOpen}
             onOpenChange={(open) => {
               setAssignmentDialogOpen(open);
               if (!open) {
-                // Refresh data when dialog closes to update unlock status
-                setTimeout(refreshData, 500);
+                setSelectedRecording(null);
+                // Refresh recordings to update unlock status
+                setTimeout(refreshRecordings, 500);
               }
             }}
             assignment={{
-              id: selectedAssignment.id,
-              name: selectedAssignment.title
+              id: selectedRecording.id,
+              name: `Assignment for ${selectedRecording.recording_title}`
             }}
             userId={user?.id || ""}
-            hasSubmitted={selectedAssignment.submitted}
+            hasSubmitted={selectedRecording.assignmentSubmitted}
             onSubmissionComplete={() => {
-              setTimeout(refreshData, 500);
+              setTimeout(refreshRecordings, 500);
             }}
           />
         )}

@@ -162,7 +162,7 @@ const App = () => {
                     } />
                     
                     {/* Shared routes */}
-                    <Route path="videos" element={<Videos user={user} />} />
+                    <Route path="videos" element={<Videos />} />
                     <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
                     <Route path="video-player" element={<VideoPlayer />} />
                     <Route path="assignments" element={<Assignments user={user} />} />
