@@ -12,7 +12,9 @@ import {
   Clock, 
   CheckCircle, 
   AlertTriangle,
-  Upload
+  Upload,
+  Lock,
+  MessageSquare
 } from "lucide-react";
 
 interface Assignment {
@@ -212,186 +214,258 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
   const remainingAssignments = assignments.length - incompleteAssignments.length;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Assignment List */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-bold">Assignments</h2>
-        {assignments.length === 0 ? (
-          <Card className="p-8 text-center">
-            <div className="text-gray-500">
-              <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">No Assignments Available</h3>
-              <p>Check back later for new assignments or contact your instructor.</p>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
+      <div className="container mx-auto p-6">
+        <div className="mb-8 text-center">
+          <div className="flex items-center justify-center mb-4">
+            <div className="p-3 bg-primary/10 rounded-full mr-4">
+              <FileText className="w-8 h-8 text-primary" />
             </div>
-          </Card>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              My Assignments
+            </h1>
+          </div>
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            Complete your assignments to unlock new content and progress in your learning journey
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Assignment List */}
+          <div className="space-y-6">
+            <div className="flex items-center space-x-3">
+              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                <FileText className="w-4 h-4 text-primary" />
+              </div>
+              <h2 className="text-2xl font-bold">Assignment List</h2>
+            </div>
+            {assignments.length === 0 ? (
+              <Card className="p-8 text-center border-dashed border-2 bg-muted/20">
+                <div className="text-muted-foreground">
+                  <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FileText className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">No Assignments Available</h3>
+                  <p className="text-sm">Check back later for new assignments or contact your instructor.</p>
+                </div>
+              </Card>
         ) : (
           <>
             {incompleteAssignments.map((assignment) => {
               const isSubmitted = submissions.some(s => s.assignment_id === assignment.id);
               const isLocked = !assignment.isUnlocked;
               
-              return (
-                <Card 
-                  key={assignment.id}
-                  className={`cursor-pointer transition-all ${
-                    selectedAssignment === assignment.id 
-                      ? "border-blue-500 shadow-md" 
-                      : "hover:shadow-sm"
-                  } ${isLocked ? "opacity-50" : ""}`}
-                  onClick={() => !isLocked && setSelectedAssignment(assignment.id)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className={`font-semibold text-sm ${isLocked ? "text-gray-400" : ""}`}>
-                        {isLocked ? "🔒 " : ""}{assignment.name}
-                      </h3>
-                      {getStatusBadge(assignment)}
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>Created: {new Date(assignment.created_at).toLocaleDateString()}</span>
-                    </div>
-                    
-                    <div className="mt-2 flex items-center justify-between">
-                      {isSubmitted && (
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
+                return (
+                  <Card 
+                    key={assignment.id}
+                    className={`group cursor-pointer transition-all duration-300 border-2 ${
+                      selectedAssignment === assignment.id 
+                        ? "border-primary shadow-lg bg-primary/5 ring-2 ring-primary/20" 
+                        : "border-border/60 hover:border-primary/30 hover:shadow-md"
+                    } ${isLocked ? "opacity-60" : ""}`}
+                    onClick={() => !isLocked && setSelectedAssignment(assignment.id)}
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center space-x-3">
+                          {isLocked ? (
+                            <div className="w-8 h-8 bg-muted/50 rounded-lg flex items-center justify-center">
+                              <Lock className="w-4 h-4 text-muted-foreground" />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center">
+                              <FileText className="w-4 h-4 text-primary" />
+                            </div>
+                          )}
+                          <h3 className={`font-semibold ${isLocked ? "text-muted-foreground" : "text-foreground"}`}>
+                            {assignment.name}
+                          </h3>
+                        </div>
+                        {getStatusBadge(assignment)}
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                          <Clock className="w-3 h-3" />
+                          <span>{new Date(assignment.created_at).toLocaleDateString()}</span>
+                        </div>
+                        
+                        {isSubmitted && (
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
             })}
             
-            {/* Other Assignments Button */}
-            {remainingAssignments > 0 && (
-              <Card className="border-2 border-dashed border-gray-300 bg-gray-50">
-                <CardContent className="p-4 text-center">
-                  <div className="flex items-center justify-center space-x-2 text-gray-500">
-                    <span className="text-2xl">✅</span>
-                    <div>
-                      <h3 className="font-semibold text-sm">Completed Assignments</h3>
-                      <p className="text-xs">{remainingAssignments} assignments completed</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        )}
-      </div>
-
-      {/* Assignment Details */}
-      <div className="lg:col-span-2">
-        {selectedAssignmentData && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl">{selectedAssignmentData.name}</CardTitle>
-                {getStatusBadge(selectedAssignmentData)}
-              </div>
-              <div className="flex items-center space-x-4 text-sm text-gray-600">
-                <span>Created: {new Date(selectedAssignmentData.created_at).toLocaleDateString()}</span>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-6">
-              {/* Description */}
-              <div>
-                <h3 className="font-semibold mb-2">Assignment Description</h3>
-                <p className="text-gray-600">{selectedAssignmentData.description || 'No description provided'}</p>
-              </div>
-
-              {/* Submission Area */}
-              <div>
-                <h3 className="font-semibold mb-2">Your Submission</h3>
-                {selectedSubmission ? (
-                  <div className="space-y-4">
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-green-800">
-                          Status: {selectedSubmission.status}
-                        </span>
-                        <span className="text-xs text-green-600">
-                          {new Date(selectedSubmission.created_at).toLocaleDateString()}
-                        </span>
+              {/* Completed Assignments Summary */}
+              {remainingAssignments > 0 && (
+                <Card className="border-2 border-dashed border-green-200 bg-green-50/50">
+                  <CardContent className="p-5 text-center">
+                    <div className="flex items-center justify-center space-x-3">
+                      <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                        <CheckCircle className="w-5 h-5 text-green-600" />
                       </div>
-                      <p className="text-sm text-gray-700">{selectedSubmission.content}</p>
-                      {selectedSubmission.notes && (
-                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
-                          <h4 className="text-sm font-medium text-blue-800 mb-1">Feedback</h4>
-                          <p className="text-sm text-blue-700">{selectedSubmission.notes}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <Textarea
-                      placeholder="Write your assignment submission here..."
-                      value={submission}
-                      onChange={(e) => setSubmission(e.target.value)}
-                      className="min-h-32"
-                    />
-                    
-                    <div className="flex items-center space-x-4">
-                      <Button 
-                        className="bg-blue-600 hover:bg-blue-700"
-                        onClick={submitAssignment}
-                        disabled={!submission.trim() || userLMSStatus !== 'active'}
-                      >
-                        <FileText className="w-4 h-4 mr-2" />
-                        Submit Assignment
-                      </Button>
-                      
-                      <Button 
-                        variant="outline"
-                        onClick={() => setSubmissionDialogOpen(true)}
-                        disabled={!selectedAssignmentData?.isUnlocked || userLMSStatus !== 'active'}
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Submit with File
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {userLMSStatus !== 'active' && (
-                <Card className="bg-red-50 border-red-200">
-                  <CardContent className="p-4">
-                    <div className="flex items-start space-x-3">
-                      <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5" />
                       <div>
-                        <h4 className="font-semibold text-red-800">Access Suspended</h4>
-                        <p className="text-red-700 text-sm mt-1">
-                          Your LMS access has been suspended. Please contact support to restore access.
-                        </p>
+                        <h3 className="font-semibold text-green-800">Completed Assignments</h3>
+                        <p className="text-sm text-green-600">{remainingAssignments} assignments completed successfully</p>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )}
-            </CardContent>
-          </Card>
+          </>
         )}
       </div>
 
-      {/* Assignment Submission Dialog */}
-      {selectedAssignmentData && (
-        <StudentSubmissionDialog
-          open={submissionDialogOpen}
-          onOpenChange={setSubmissionDialogOpen}
-          assignment={{
-            id: selectedAssignmentData.id,
-            name: selectedAssignmentData.name
-          }}
-          userId={user?.id || ""}
-          onSubmissionComplete={() => {
-            fetchSubmissions();
-            fetchAssignments();
-          }}
-        />
-      )}
+          {/* Assignment Details */}
+          <div className="lg:col-span-2">
+            {selectedAssignmentData && (
+              <Card className="shadow-lg border-0 bg-card/80 backdrop-blur-sm">
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-primary/20 to-primary/30 rounded-xl flex items-center justify-center">
+                        <FileText className="w-6 h-6 text-primary" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-2xl font-bold">{selectedAssignmentData.name}</CardTitle>
+                        <div className="flex items-center space-x-3 mt-2">
+                          <div className="flex items-center space-x-1 text-sm text-muted-foreground">
+                            <Clock className="w-4 h-4" />
+                            <span>{new Date(selectedAssignmentData.created_at).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {getStatusBadge(selectedAssignmentData)}
+                  </div>
+                </CardHeader>
+            
+                <CardContent className="space-y-8">
+                  {/* Description */}
+                  <div className="bg-muted/30 rounded-xl p-6">
+                    <div className="flex items-center space-x-2 mb-4">
+                      <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <FileText className="w-4 h-4 text-primary" />
+                      </div>
+                      <h3 className="font-semibold text-lg">Assignment Description</h3>
+                    </div>
+                    <p className="text-muted-foreground leading-relaxed">{selectedAssignmentData.description || 'No description provided'}</p>
+                  </div>
+
+                  {/* Submission Area */}
+                  <div>
+                    <div className="flex items-center space-x-2 mb-6">
+                      <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
+                        <Upload className="w-4 h-4 text-primary" />
+                      </div>
+                      <h3 className="font-semibold text-lg">Your Submission</h3>
+                    </div>
+                    {selectedSubmission ? (
+                      <div className="space-y-4">
+                        <div className="p-6 bg-gradient-to-r from-green-50 to-green-50/50 border-2 border-green-200 rounded-xl">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center space-x-2">
+                              <CheckCircle className="w-5 h-5 text-green-600" />
+                              <span className="font-semibold text-green-800">
+                                Status: {selectedSubmission.status.toUpperCase()}
+                              </span>
+                            </div>
+                            <span className="text-sm text-green-600 bg-green-100 px-3 py-1 rounded-full">
+                              {new Date(selectedSubmission.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          <div className="bg-white/60 p-4 rounded-lg">
+                            <p className="text-gray-700 leading-relaxed">{selectedSubmission.content}</p>
+                          </div>
+                          {selectedSubmission.notes && (
+                            <div className="mt-4 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                              <div className="flex items-center space-x-2 mb-2">
+                                <MessageSquare className="w-4 h-4 text-blue-600" />
+                                <h4 className="font-semibold text-blue-800">Instructor Feedback</h4>
+                              </div>
+                              <p className="text-blue-700 leading-relaxed">{selectedSubmission.notes}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
+                        <div className="bg-muted/30 rounded-xl p-6">
+                          <Textarea
+                            placeholder="Write your assignment submission here..."
+                            value={submission}
+                            onChange={(e) => setSubmission(e.target.value)}
+                            className="min-h-32 border-2 bg-background/50 focus:bg-background transition-colors"
+                          />
+                        </div>
+                        
+                        <div className="flex items-center space-x-4">
+                          <Button 
+                            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all"
+                            onClick={submitAssignment}
+                            disabled={!submission.trim() || userLMSStatus !== 'active'}
+                          >
+                            <FileText className="w-4 h-4 mr-2" />
+                            Submit Assignment
+                          </Button>
+                          
+                          <Button 
+                            variant="outline"
+                            onClick={() => setSubmissionDialogOpen(true)}
+                            disabled={!selectedAssignmentData?.isUnlocked || userLMSStatus !== 'active'}
+                            className="border-2 hover:bg-muted/50"
+                          >
+                            <Upload className="w-4 h-4 mr-2" />
+                            Submit with File
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {userLMSStatus !== 'active' && (
+                    <Card className="bg-gradient-to-r from-red-50 to-red-50/50 border-2 border-red-200">
+                      <CardContent className="p-6">
+                        <div className="flex items-start space-x-4">
+                          <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                            <AlertTriangle className="w-5 h-5 text-red-600" />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-red-800 mb-2">Access Suspended</h4>
+                            <p className="text-red-700 leading-relaxed">
+                              Your LMS access has been suspended. Please contact support to restore access and continue with your assignments.
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+
+        {/* Assignment Submission Dialog */}
+        {selectedAssignmentData && (
+          <StudentSubmissionDialog
+            open={submissionDialogOpen}
+            onOpenChange={setSubmissionDialogOpen}
+            assignment={{
+              id: selectedAssignmentData.id,
+              name: selectedAssignmentData.name
+            }}
+            userId={user?.id || ""}
+            onSubmissionComplete={() => {
+              fetchSubmissions();
+              fetchAssignments();
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };
