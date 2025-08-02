@@ -59,25 +59,37 @@ export type Database = {
         Row: {
           created_at: string | null
           description: string | null
+          due_days: number | null
           id: string
+          instructions: string | null
           mentor_id: string | null
           name: string
+          recording_id: string | null
+          submission_type: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           description?: string | null
+          due_days?: number | null
           id?: string
+          instructions?: string | null
           mentor_id?: string | null
           name: string
+          recording_id?: string | null
+          submission_type?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           description?: string | null
+          due_days?: number | null
           id?: string
+          instructions?: string | null
           mentor_id?: string | null
           name?: string
+          recording_id?: string | null
+          submission_type?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -86,6 +98,20 @@ export type Database = {
             columns: ["mentor_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "available_lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignments_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "session_recordings"
             referencedColumns: ["id"]
           },
         ]
