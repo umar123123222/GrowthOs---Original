@@ -1622,6 +1622,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_student_unlock_sequence: {
+        Args: { p_user_id: string }
+        Returns: {
+          recording_id: string
+          sequence_order: number
+          is_unlocked: boolean
+          unlock_reason: string
+        }[]
+      }
       get_user_lms_status: {
         Args: { user_id: string }
         Returns: string
