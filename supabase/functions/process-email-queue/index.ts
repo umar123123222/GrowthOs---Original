@@ -38,7 +38,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log("Starting email queue processing...");
+  console.log("Welcome email handler fired - starting email queue processing...");
 
   try {
     const supabase = createClient(
@@ -80,6 +80,16 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("Error fetching company settings:", settingsError);
       throw settingsError;
     }
+
+    console.log("SMTP configuration loaded:", {
+      smtp_host: settings.smtp_host,
+      smtp_port: settings.smtp_port,
+      smtp_username: settings.smtp_username,
+      smtp_secure: settings.smtp_secure,
+      lms_from_email: settings.lms_from_email,
+      invoice_from_email: settings.invoice_from_email,
+      hasResendKey: !!Deno.env.get("RESEND_API_KEY")
+    });
 
     let processedCount = 0;
     const errors: string[] = [];
@@ -153,10 +163,38 @@ const handler = async (req: Request): Promise<Response> => {
 };
 
 async function sendEmail(email: EmailQueueItem, settings: CompanySettings): Promise<void> {
-  // Prefer SMTP if configured, fallback to Resend
+  console.log(`Attempting to send email of type ${email.email_type} to ${email.recipient_email}`);
+  
+  // Test SMTP connection if SMTP is configured
   if (settings.smtp_host && settings.smtp_username && settings.smtp_password) {
-    await sendViaSMTP(email, settings);
+    console.log("Testing SMTP connection...");
+    try {
+      const testClient = new SMTPClient({
+        connection: {
+          hostname: settings.smtp_host,
+          port: settings.smtp_port || 587,
+          tls: settings.smtp_secure !== false,
+          auth: {
+            username: settings.smtp_username,
+            password: settings.smtp_password,
+          },
+        },
+      });
+      await testClient.connect();
+      await testClient.close();
+      console.log("SMTP connection test successful");
+      await sendViaSMTP(email, settings);
+    } catch (smtpError) {
+      console.error("SMTP connection/send failed:", smtpError);
+      if (Deno.env.get("RESEND_API_KEY")) {
+        console.log("Falling back to Resend...");
+        await sendViaResend(email, settings);
+      } else {
+        throw new Error(`SMTP failed: ${smtpError.message}. No Resend fallback available.`);
+      }
+    }
   } else if (Deno.env.get("RESEND_API_KEY")) {
+    console.log("Using Resend for email delivery");
     await sendViaResend(email, settings);
   } else {
     throw new Error("No email service configured. Please configure SMTP in company settings or set RESEND_API_KEY.");
@@ -167,6 +205,8 @@ async function sendViaResend(email: EmailQueueItem, settings: CompanySettings): 
   const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
   const { subject, html, fromName, fromEmail } = generateEmailContent(email, settings);
 
+  console.log(`Sending via Resend from ${fromEmail} to ${email.recipient_email} with subject: ${subject}`);
+
   const response = await resend.emails.send({
     from: `${fromName} <${fromEmail}>`,
     to: [email.recipient_email],
@@ -175,12 +215,17 @@ async function sendViaResend(email: EmailQueueItem, settings: CompanySettings): 
   });
 
   if (response.error) {
+    console.error("Resend API error:", response.error);
     throw new Error(`Resend error: ${response.error.message}`);
   }
+  
+  console.log("Email sent successfully via Resend:", response.data);
 }
 
 async function sendViaSMTP(email: EmailQueueItem, settings: CompanySettings): Promise<void> {
   const { subject, html, fromName, fromEmail } = generateEmailContent(email, settings);
+
+  console.log(`Sending via SMTP from ${fromEmail} to ${email.recipient_email} with subject: ${subject}`);
 
   const client = new SMTPClient({
     connection: {
@@ -203,6 +248,7 @@ async function sendViaSMTP(email: EmailQueueItem, settings: CompanySettings): Pr
   });
 
   await client.close();
+  console.log("Email sent successfully via SMTP");
 }
 
 function generateEmailContent(email: EmailQueueItem, settings: CompanySettings) {

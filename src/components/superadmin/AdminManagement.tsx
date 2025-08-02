@@ -36,6 +36,7 @@ import { Plus, Activity, Key, Trash2, UserPlus, Shield } from 'lucide-react';
 import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
 import { CredentialDisplay } from '@/components/ui/credential-display';
 import { generateSecurePassword } from '@/utils/passwordGenerator';
+import { EmailTestButton } from '@/components/EmailTestButton';
 
 
 interface Admin {
@@ -144,14 +145,26 @@ export const AdminManagement = () => {
       }
 
       // Trigger email processing
+      console.log("Admin creation successful, triggering email queue processing");
       try {
-        await supabase.functions.invoke('process-email-queue');
+        const emailResponse = await supabase.functions.invoke('process-email-queue');
+        console.log("Email queue processing response:", emailResponse);
         
-        toast({
-          title: "Success",
-          description: `Admin account created and welcome email will be sent to ${newAdmin.email}`
-        });
+        if (emailResponse.error) {
+          console.error("Email queue processing error:", emailResponse.error);
+          toast({
+            title: "Partial Success",
+            description: `Account created but welcome email could not be sent automatically. Please check email settings.`,
+            variant: "destructive"
+          });
+        } else {
+          toast({
+            title: "Success",
+            description: `Admin account created and welcome email will be sent to ${newAdmin.email}`
+          });
+        }
       } catch (emailError) {
+        console.error('Email processing failed:', emailError);
         // User was created but email failed
         toast({
           title: "Partial Success",
@@ -225,13 +238,15 @@ export const AdminManagement = () => {
             <p className="text-muted-foreground">Manage system administrators</p>
           </div>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <UserPlus className="w-4 h-4 mr-2" />
-              Add Admin
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <EmailTestButton />
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Add Admin
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Administrator</DialogTitle>
@@ -262,6 +277,7 @@ export const AdminManagement = () => {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Stats Card */}

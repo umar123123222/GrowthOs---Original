@@ -70,7 +70,23 @@ const handler = async (req: Request): Promise<Response> => {
 
     const lmsPassword = role === 'student' ? generateSecurePassword() : null;
 
-    console.log(`Creating ${role} user: ${email}`);
+    console.log(`Welcome email handler fired - Creating ${role} user: ${email}`);
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      console.error('Invalid email format:', email);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Invalid email format. Please provide a valid email address.'
+      }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
+    }
 
     // Check if user already exists
     const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers();
@@ -162,6 +178,14 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('User profile updated successfully');
+
+    // Log successful user creation for email trigger debugging
+    console.log('Team member created successfully:', {
+      userId: authData.user.id,
+      email: email,
+      role: role,
+      fullName: full_name
+    });
 
     const responseData: any = { 
       success: true, 
