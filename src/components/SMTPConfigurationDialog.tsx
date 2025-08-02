@@ -128,12 +128,12 @@ export const SMTPConfigurationDialog = ({ open, onOpenChange }: SMTPConfiguratio
     try {
       const response = await supabase.functions.invoke('test-smtp-connection', {
         body: {
-          smtp_host: settings.smtp_host,
+          smtp_host: settings.smtp_host.trim(),
           smtp_port: settings.smtp_port,
-          smtp_username: settings.smtp_username,
-          smtp_password: settings.smtp_password,
+          smtp_username: settings.smtp_username.trim(),
+          smtp_password: settings.smtp_password.trim(),
           smtp_secure: settings.smtp_secure,
-          test_email: settings.lms_from_email
+          test_email: settings.lms_from_email.trim()
         }
       });
 
