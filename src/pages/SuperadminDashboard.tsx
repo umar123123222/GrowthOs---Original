@@ -13,7 +13,6 @@ import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessio
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { CompanySettings } from '@/components/superadmin/CompanySettings';
-import { DocumentationViewer } from '@/components/superadmin/DocumentationViewer';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -52,8 +51,6 @@ export default function SuperadminDashboard() {
         return <SupportManagement />;
       case 'company-settings':
         return <CompanySettings />;
-      case 'docs':
-        return <DocumentationViewer />;
       default:
         return <DashboardContent />;
     }
