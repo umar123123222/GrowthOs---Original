@@ -44,11 +44,9 @@ interface Admin {
   email: string;
   role: string;
   lms_user_id: string;
-  lms_password: string;
   created_at: string;
   last_active_at: string;
   status: string;
-  temp_password?: string;
 }
 
 export const AdminManagement = () => {
@@ -302,10 +300,18 @@ export const AdminManagement = () => {
                             <DialogHeader>
                               <DialogTitle>Login Credentials - {admin.full_name}</DialogTitle>
                             </DialogHeader>
-                            <CredentialDisplay
-                              email={admin.email}
-                              password={admin.temp_password}
-                            />
+                            <div className="space-y-3">
+                              <div>
+                                <Label className="text-sm font-medium">Email</Label>
+                                <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded">{admin.email}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium">Access</Label>
+                                <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded">
+                                  Credentials are securely managed through the system
+                                </p>
+                              </div>
+                            </div>
                           </DialogContent>
                         </Dialog>
                         

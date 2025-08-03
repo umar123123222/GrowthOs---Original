@@ -34,8 +34,6 @@ interface Student {
   email: string;
   phone: string;
   lms_user_id: string;
-  lms_password: string;
-  temp_password: string;
   created_at: string;
   last_active_at: string;
   fees_structure: string;
@@ -671,10 +669,12 @@ export const StudentManagement = () => {
   };
 
   const handleEditPassword = (student: Student, type: 'temp' | 'lms') => {
-    setSelectedStudentForPassword(student);
-    setPasswordType(type);
-    setNewPassword(type === 'temp' ? student.temp_password || '' : student.lms_password || '');
-    setPasswordEditDialog(true);
+    // Password functionality removed for security
+    toast({
+      title: "Information",
+      description: "Password management has been moved to secure encrypted storage",
+      variant: "default"
+    });
   };
 
   const handleUpdatePassword = async () => {
@@ -1132,65 +1132,12 @@ export const StudentManagement = () => {
                                   )}
                                 </div>
                               </div>
-                              {student.lms_password && student.lms_password !== student.temp_password ? (
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-700">Current Password</Label>
-                                  <div className="flex items-center space-x-2">
-                                    <p className="text-sm text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">
-                                      {student.lms_password}
-                                    </p>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => navigator.clipboard.writeText(student.lms_password)}
-                                      title="Copy to clipboard"
-                                    >
-                                      <Key className="w-3 h-3" />
-                                    </Button>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm"
-                                      onClick={() => handleEditPassword(student, 'lms')}
-                                      title="Edit Current Password"
-                                    >
-                                      <Edit className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    New password (changed from temp)
-                                  </p>
-                                </div>
-                              ) : (
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-700">Temporary Password</Label>
-                                  <div className="flex items-center space-x-2">
-                                    <p className="text-sm text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">
-                                      {student.temp_password || 'Not set'}
-                                    </p>
-                                    {student.temp_password && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => navigator.clipboard.writeText(student.temp_password)}
-                                        title="Copy to clipboard"
-                                      >
-                                        <Key className="w-3 h-3" />
-                                      </Button>
-                                    )}
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm"
-                                      onClick={() => handleEditPassword(student, 'temp')}
-                                      title="Edit Temporary Password"
-                                    >
-                                      <Edit className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Temporary password (unchanged)
-                                  </p>
-                                </div>
-                              )}
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700">Access Information</Label>
+                                <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded">
+                                  Student credentials are now securely encrypted and managed through the system.
+                                </p>
+                              </div>
                             </div>
                             
                             {/* Installment Payment Buttons */}

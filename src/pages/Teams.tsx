@@ -53,11 +53,9 @@ interface TeamMember {
   email: string;
   role: string;
   lms_user_id: string;
-  lms_password: string;
   created_at: string;
   last_active_at: string;
   status: string;
-  temp_password?: string;
 }
 
 const Teams = () => {
@@ -191,7 +189,7 @@ const Teams = () => {
     try {
       const updateData: any = {};
       if (editData.email) updateData.email = editData.email;
-      if (editData.password) updateData.temp_password = editData.password;
+      // Password updates removed for security
 
       const { error } = await supabase
         .from('users')
@@ -403,10 +401,18 @@ const Teams = () => {
                           <DialogHeader>
                             <DialogTitle>Login Credentials - {member.full_name}</DialogTitle>
                           </DialogHeader>
-                          <CredentialDisplay
-                            email={member.email}
-                            password={member.temp_password}
-                          />
+                          <div className="space-y-3">
+                            <div>
+                              <Label className="text-sm font-medium">Email</Label>
+                              <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded">{member.email}</p>
+                            </div>
+                            <div>
+                              <Label className="text-sm font-medium">Access</Label>
+                              <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded">
+                                Credentials are securely managed through the system
+                              </p>
+                            </div>
+                          </div>
                         </DialogContent>
                       </Dialog>
                       
