@@ -1046,9 +1046,8 @@ export function StudentsManagement() {
               </TableHeader>
               <TableBody>
                 {displayStudents.map((student) => {
-                  return (
-                    <React.Fragment key={student.id}>
-                      <TableRow>
+                  const rowElements = [
+                    <TableRow key={`main-${student.id}`}>
                       <TableCell>
                         <Checkbox
                           checked={selectedStudents.has(student.id)}
@@ -1063,69 +1062,57 @@ export function StudentsManagement() {
                         <TableCell>
                            <div className="flex flex-wrap gap-2">
                              <Badge className={getLMSStatusColor(student.lms_status)}>
-                               {getLMSStatusIcon(student.lms_status)}
-                               {getLMSStatusLabel(student.lms_status)}
+                               <div className="flex items-center">
+                                 {getLMSStatusIcon(student.lms_status)}
+                                 <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
+                               </div>
                              </Badge>
-                            {student.fees_overdue && (
-                              <Badge className="bg-orange-100 text-orange-800">
-                                <Clock className="w-3 h-3 mr-1" />
-                                Overdue
-                              </Badge>
-                            )}
-                           <Badge className={getInstallmentStatus(student).color}>
-                             <DollarSign className="w-3 h-3 mr-1" />
-                             {getInstallmentStatus(student).status}
-                           </Badge>
-                          </div>
+                             {student.fees_overdue && (
+                               <Badge variant="destructive">
+                                 <DollarSign className="w-3 h-3 mr-1" />
+                                 <span className="text-xs">Fees Due</span>
+                               </Badge>
+                             )}
+                           </div>
                          </TableCell>
-                        <TableCell>
-                         <div className="text-sm">
-                           {student.creator ? (
-                             <div>
-                               <div className="font-medium">{student.creator.full_name}</div>
-                               <div className="text-muted-foreground text-xs">{student.creator.email}</div>
-                             </div>
-                           ) : (
-                             <span className="text-muted-foreground">—</span>
-                           )}
-                         </div>
-                       </TableCell>
-                       <TableCell>
-                        <div className="flex space-x-2">
-                           <Button
-                             variant="outline"
-                             size="sm"
-                             onClick={() => {
-                               // Edit functionality disabled - using SecureStudentCreationDialog for new students only
-                               toast({
-                                 title: "Edit Disabled",
-                                 description: "Student editing has been disabled. Please contact system administrator.",
-                                 variant: "destructive"
-                               });
-                             }}
-                             title="Edit Student Details"
-                             className="hover-scale hover:border-blue-300 hover:text-blue-600"
-                           >
-                             <Edit className="w-4 h-4" />
-                           </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => toggleRowExpansion(student.id)}
-                            title={expandedRows.has(student.id) ? "Collapse" : "Expand"}
-                            className="hover-scale hover:border-green-300 hover:text-green-600"
-                          >
-                            {expandedRows.has(student.id) ? 
-                              <ChevronUp className="w-4 h-4" /> : 
-                              <ChevronDown className="w-4 h-4" />
-                            }
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    
-                    {expandedRows.has(student.id) && (
-                      <TableRow className="animate-accordion-down">
+                         <TableCell>{student.creator?.full_name || 'System'}</TableCell>
+                         <TableCell>
+                           <div className="flex space-x-1">
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => {
+                                 toast({
+                                   title: "Edit Disabled",
+                                   description: "Student editing has been disabled. Please contact system administrator.",
+                                   variant: "destructive"
+                                 });
+                               }}
+                               title="Edit Student Details"
+                               className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                             >
+                               <Edit className="w-4 h-4" />
+                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => toggleRowExpansion(student.id)}
+                              title={expandedRows.has(student.id) ? "Collapse" : "Expand"}
+                              className="hover-scale hover:border-green-300 hover:text-green-600"
+                            >
+                              {expandedRows.has(student.id) ? 
+                                <ChevronUp className="w-4 h-4" /> : 
+                                <ChevronDown className="w-4 h-4" />
+                              }
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                  ];
+
+                  if (expandedRows.has(student.id)) {
+                    rowElements.push(
+                      <TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
                         <TableCell colSpan={7} className="bg-gradient-to-r from-slate-50 to-blue-50 p-4 border-l-4 border-l-blue-200">
                           <div className="space-y-3">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1357,9 +1344,10 @@ export function StudentsManagement() {
                           </div>
                         </TableCell>
                       </TableRow>
-                     )}
-                   </React.Fragment>
-                  );
+                    );
+                  }
+
+                  return rowElements;
                 })}
               </TableBody>
             </Table>
