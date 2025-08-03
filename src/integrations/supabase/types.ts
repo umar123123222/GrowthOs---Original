@@ -1214,7 +1214,7 @@ export type Database = {
           metadata: Json | null
           occurred_at: string | null
           reference_id: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           activity_type: string
@@ -1222,7 +1222,7 @@ export type Database = {
           metadata?: Json | null
           occurred_at?: string | null
           reference_id?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           activity_type?: string
@@ -1230,7 +1230,7 @@ export type Database = {
           metadata?: Json | null
           occurred_at?: string | null
           reference_id?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
