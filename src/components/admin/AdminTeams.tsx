@@ -49,7 +49,6 @@ interface TeamMember {
   email: string;
   role: string;
   lms_user_id: string;
-  lms_password: string;
   created_at: string;
   last_active_at: string;
   status: string;

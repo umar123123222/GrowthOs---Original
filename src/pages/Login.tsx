@@ -53,18 +53,10 @@ const Login = () => {
       if (authError) {
         console.error('Auth error:', authError);
 
-        // Check if this is a student account that was created by admin
+        // Handle invalid login credentials
         if (authError.message.includes('Invalid login credentials')) {
-          const { data: studentData } = await supabase
-            .from('users')
-            .select('temp_password, role, full_name')
-            .eq('email', email)
-            .maybeSingle();
-            
-          if (studentData && studentData.role === 'student' && studentData.temp_password) {
-            setLoginError("Please use the temporary password provided by your admin. Contact your mentor if you need the password.");
-            return;
-          }
+          setLoginError("Invalid email or password. Please check your credentials and try again.");
+          return;
         }
         
         // Use centralized error handling for auth errors
@@ -85,22 +77,9 @@ const Login = () => {
       if (userError || !userData) {
         console.log('User not found in users table, creating...', { userError });
 
-        // Determine role based on email
-        let userRole = 'student';
-        let fullName = authData.user.user_metadata?.full_name || null;
-        if (email === 'umaridmpakistan@gmail.com') {
-          userRole = 'superadmin';
-          fullName = 'Umar (Super Admin)';
-        } else if (email === 'umarservices0@gmail.com') {
-          userRole = 'admin';
-          fullName = 'Umar Services (Admin)';
-        } else if (email === 'test@gmail.com') {
-          userRole = 'mentor';
-          fullName = 'Test Mentor';
-        } else if (email === 'test0@gmail.com') {
-          userRole = 'student';
-          fullName = 'Test Student';
-        }
+        // Default role for new users
+        const userRole = 'student';
+        const fullName = authData.user.user_metadata?.full_name || null;
 
         // Create user if they don't exist
         const { data: newUser, error: createError } = await supabase

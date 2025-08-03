@@ -1,0 +1,158 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    )
+
+    const authHeader = req.headers.get('Authorization')!
+    const token = authHeader.replace('Bearer ', '')
+    
+    // Verify the caller's token
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Check if user has permission to create students
+    const { data: userRole, error: roleError } = await supabaseClient
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (roleError || !userRole || !['admin', 'superadmin', 'enrollment_manager'].includes(userRole.role)) {
+      return new Response(
+        JSON.stringify({ error: 'Insufficient permissions' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const { full_name, email, phone, fees_structure } = await req.json()
+
+    if (!full_name || !email || !phone || !fees_structure) {
+      return new Response(
+        JSON.stringify({ error: 'Missing required fields: full_name, email, phone, fees_structure' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Check if student already exists
+    const { data: existingStudent } = await supabaseClient
+      .from('users')
+      .select('id')
+      .eq('email', email)
+      .eq('role', 'student')
+      .single()
+
+    if (existingStudent) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Student Email Exists',
+          details: 'A student with this email already exists'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Generate secure temporary password
+    const tempPassword = generateSecurePassword()
+
+    // Create auth user
+    const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
+      email,
+      password: tempPassword,
+      user_metadata: {
+        full_name,
+        role: 'student'
+      }
+    })
+
+    if (createError) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: createError.message 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Create student record using atomic function
+    const installments = parseInt(fees_structure.replace('_installments', '')) || 3
+    const { data: studentResult, error: studentError } = await supabaseClient
+      .rpc('create_student_atomic', {
+        p_full_name: full_name,
+        p_email: email,
+        p_phone: phone,
+        p_installments: installments
+      })
+
+    if (studentError) {
+      // Rollback auth user if student creation fails
+      await supabaseClient.auth.admin.deleteUser(newUser.user.id)
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: studentError.message 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Send welcome email (placeholder for future implementation)
+    console.log('Student created successfully:', {
+      studentId: newUser.user.id,
+      email,
+      tempPassword: '[REDACTED]'
+    })
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        studentId: newUser.user.id,
+        tempPassword: tempPassword,
+        emailSent: false, // TODO: Implement email sending
+        invoiceCreated: true
+      }),
+      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+
+  } catch (error) {
+    console.error('Student creation error:', error)
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error.message 
+      }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
+  }
+})
+
+function generateSecurePassword(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*'
+  let password = ''
+  
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  
+  return password
+}

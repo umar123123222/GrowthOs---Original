@@ -73,16 +73,15 @@ serve(async (req) => {
       )
     }
 
-    // Create the profile
+    // Create the user record in our users table
     const { data: profile, error: profileError } = await supabaseClient
-      .from('profiles')
+      .from('users')
       .insert({
         id: newUser.user.id,
         email: target_email,
         full_name: target_full_name || target_email,
         role: target_role,
-        metadata: target_metadata || {},
-        created_by: user.id  // Automatically set the creator
+        created_at: new Date().toISOString()
       })
       .select()
       .single()
@@ -90,10 +89,10 @@ serve(async (req) => {
     if (profileError) {
       // Rollback: delete the auth user if profile creation fails
       await supabaseClient.auth.admin.deleteUser(newUser.user.id)
-      return new Response(
-        JSON.stringify({ error: `Failed to create profile: ${profileError.message}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+        return new Response(
+          JSON.stringify({ error: `Failed to create user record: ${profileError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
     }
 
     return new Response(

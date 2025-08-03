@@ -49,7 +49,7 @@ const MetaAdsDashboard = () => {
     setLoading(true);
     try {
       // Check if user has Meta Ads credentials
-      if (!user?.meta_ads_credentials) {
+      if (!user?.encrypted_meta_ads_credentials) {
         setConnectionStatus('disconnected');
         setLoading(false);
         return;

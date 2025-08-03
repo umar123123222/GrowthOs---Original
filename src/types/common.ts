@@ -11,15 +11,28 @@ export interface User {
   avatar_url?: string;
   student_id?: string;
   mentor_id?: string;
-  shopify_credentials?: string;
+  encrypted_shopify_credentials?: string;
   shopify_domain?: string;
-  meta_ads_credentials?: string;
+  encrypted_meta_ads_credentials?: string;
   onboarding_done?: boolean;
   fees_overdue?: boolean;
   fees_due_date?: string;
   status?: string;
   lms_status?: string;
   last_active_at?: string;
+}
+
+// Legacy interfaces for backward compatibility (remove temp_password and lms_password)
+export interface Student extends User {
+  role: 'student';
+}
+
+export interface Admin extends User {
+  role: 'admin' | 'superadmin';
+}
+
+export interface TeamMember extends User {
+  role: 'student' | 'admin' | 'mentor' | 'superadmin' | 'enrollment_manager';
 }
 
 export interface PendingInvoice {
