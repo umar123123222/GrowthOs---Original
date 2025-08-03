@@ -2,372 +2,289 @@
 
 ## Overview
 
-Growth OS implements a comprehensive role-based authentication system using Supabase Auth with 5 distinct user roles and granular permissions. The system provides secure session management, automated onboarding, and fine-grained access control.
+Growth OS implements a comprehensive role-based authentication system supporting five distinct user roles with granular permissions and secure access controls.
 
-## User Roles & Permissions
+## User Roles
 
-### 1. Student Role
-**Purpose**: End users who consume learning content
+### Role Hierarchy
 
-**Capabilities:**
-- Access assigned modules and videos
-- Submit assignments and view feedback
-- Participate in live sessions
-- View personal progress and certificates
-- Create support tickets
-- Manage personal profile
+1. **Superadmin** - Complete system control and configuration
+2. **Admin** - Platform administration and user management
+3. **Enrollment Manager** - Student onboarding and enrollment
+4. **Mentor** - Student guidance and assignment review
+5. **Student** - Learning platform access and progress tracking
 
-**Restrictions:**
-- Cannot access other students' data
-- Cannot modify course content
-- Cannot access administrative functions
+### Role Creation Matrix
 
-### 2. Mentor Role
-**Purpose**: Instructors who guide and evaluate students
+| Creator Role | Can Create | Access Page |
+|--------------|------------|-------------|
+| **Superadmin** | All roles | `/teams`, `/students` |
+| **Admin** | Mentor, Enrollment Manager, Student | `/teams`, `/students` |
+| **Enrollment Manager** | Student only | `/students` |
+| **Mentor** | None | N/A |
+| **Student** | None | N/A |
 
-**Capabilities:**
-- View assigned students' progress
-- Review and grade assignments
-- Provide feedback and mentorship notes
-- Schedule and host success sessions
-- Access student performance analytics
-- Manage own availability and calendar
+## Technical Implementation
 
-**Access Scope:**
-- Only students assigned to them
-- All course content for reference
-- Mentorship tools and analytics
+### Database Structure
 
-### 3. Admin Role
-**Purpose**: System administrators for day-to-day operations
+```sql
+-- User profiles table
+CREATE TABLE public.users (
+  id UUID PRIMARY KEY REFERENCES auth.users(id),
+  email TEXT UNIQUE NOT NULL,
+  full_name TEXT NOT NULL,
+  role user_role NOT NULL,
+  student_id TEXT UNIQUE,
+  mentor_id UUID REFERENCES public.users(id),
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
 
-**Capabilities:**
-- Manage students, mentors, and enrollment managers
-- Configure company settings and branding
-- Process payments and invoices
-- Access all reporting and analytics
-- Manage support tickets
-- Upload and organize course content
-
-**Restrictions:**
-- Cannot manage other admins
-- Cannot access system-level settings
-- Cannot delete critical system data
-
-### 4. Superadmin Role
-**Purpose**: Full system access and configuration
-
-**Capabilities:**
-- All admin capabilities plus:
-- Manage admin accounts
-- Configure system-wide settings
-- Access debug and audit logs
-- Manage integrations and API keys
-- Perform database operations
-- Configure email templates and automation
-
-### 5. Enrollment Manager Role
-**Purpose**: Specialized role for student onboarding and enrollment
-
-**Capabilities:**
-- Create and manage student accounts
-- Process enrollment applications
-- Track payment status and follow-ups
-- Manage onboarding workflows
-- View enrollment analytics
-- Handle initial student support
-
-## Authentication Flow
-
-### Registration Process
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant C as Client
-    participant A as Supabase Auth
-    participant E as Edge Function
-    participant D as Database
-    participant S as Email Service
-    
-    U->>C: Registration Request
-    C->>A: Create Auth User
-    A->>A: Generate JWT
-    A->>C: Return User + Token
-    C->>E: Invoke user creation
-    E->>D: Create user profile
-    E->>S: Send welcome email
-    E->>D: Log activity
-    E->>C: Confirm creation
-    C->>U: Registration Complete
+-- Role enumeration
+CREATE TYPE user_role AS ENUM (
+  'superadmin',
+  'admin', 
+  'enrollment_manager',
+  'mentor',
+  'student'
+);
 ```
 
-### Login Process
+### Authentication Flow
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant C as Client
-    participant A as Supabase Auth
-    participant D as Database
-    
-    U->>C: Login Credentials
-    C->>A: Authenticate
-    A->>A: Verify Password
-    A->>C: JWT Token + Session
-    C->>D: Fetch User Profile
-    D->>D: Apply RLS Policies
-    D->>C: User Data + Permissions
-    C->>U: Redirect to Dashboard
-```
+1. **User Registration**
+   - Supabase Auth creates auth.users record
+   - Edge function creates corresponding profiles record
+   - Role-based permissions validated
+   - Welcome email sent via notification system
 
-## Implementation Details
+2. **Login Process**
+   - Supabase Auth handles authentication
+   - JWT token contains user metadata
+   - Role-based route access enforced
+   - Session management via React context
 
-### Code Entry Points
+3. **Permission Validation**
+   - Server-side validation in Edge Functions
+   - Client-side guards using RoleGuard component
+   - Row Level Security policies enforce data access
+   - Real-time permission updates
 
-**Frontend Authentication:**
-- `src/hooks/useAuth.ts` - Main authentication hook
-- `src/components/RoleGuard.tsx` - Role-based route protection
-- `src/pages/Login.tsx` - Login/registration interface
-
-**Backend Authentication:**
-- `supabase/functions/create-user-with-role/index.ts` - User creation
-- `supabase/functions/whoami/index.ts` - User identity verification
-- Database RLS policies for each table
-
-### Session Management
-
-**Session Configuration:**
-```typescript
-// src/integrations/supabase/client.ts
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    storage: localStorage,
-    persistSession: true,
-    autoRefreshToken: true,
-  }
-});
-```
-
-**Session Validation:**
-- JWT tokens automatically refresh
-- 1-hour token expiry (configurable)
-- Persistent sessions across browser restarts
-- Automatic logout on token expiration
+## Security Features
 
 ### Row Level Security (RLS)
 
-**Policy Examples:**
-
 ```sql
--- Students can only view their own data
-CREATE POLICY "Students view own data" ON users
-FOR SELECT USING (auth.uid() = id AND role = 'student');
+-- Users can view their own profile
+CREATE POLICY "Users can view own profile" 
+ON public.users FOR SELECT 
+USING (auth.uid() = id);
 
--- Mentors can view assigned students
-CREATE POLICY "Mentors view assigned students" ON users
-FOR SELECT USING (
-  role = 'student' AND mentor_id = auth.uid()
-  OR auth.uid() = id
-);
-
--- Admins can view all users except superadmins
-CREATE POLICY "Admins manage users" ON users
-FOR ALL USING (
-  auth.uid() IN (
-    SELECT id FROM users WHERE role IN ('admin', 'superadmin')
-  )
+-- Admins can view non-superadmin profiles
+CREATE POLICY "Admins can view managed users" 
+ON public.users FOR SELECT 
+USING (
+  get_current_user_role() IN ('admin', 'superadmin') 
+  AND (role != 'superadmin' OR get_current_user_role() = 'superadmin')
 );
 ```
-
-## Configuration Matrix
-
-### Environment Variables
-
-| Variable | Purpose | Required | Default |
-|----------|---------|----------|---------|
-| `SUPABASE_URL` | Authentication service URL | Yes | - |
-| `SUPABASE_ANON_KEY` | Public API key | Yes | - |
-| JWT expiry | Token lifetime | No | 3600s |
-
-### Dashboard Settings
-
-**Supabase Auth Configuration:**
-- Site URL: `https://majqoqagohicjigmsilu.lovable.app`
-- Email confirmation: Disabled (for testing)
-- Password requirements: 6+ characters
-- Additional redirect URLs: `https://lovable.dev`
-
-### Hard-coded Defaults
-
-**Role Hierarchy (unchangeable):**
-```typescript
-const ROLE_HIERARCHY = {
-  'student': 1,
-  'enrollment_manager': 2,
-  'mentor': 3,
-  'admin': 4,
-  'superadmin': 5
-};
-```
-
-**Default Permissions:**
-- Students: Read-only access to assigned content
-- Mentors: Read/write access to assigned students
-- Admins: Full access except user management
-- Superadmins: Unrestricted access
-
-## Security Considerations
 
 ### Password Security
 
-- **Minimum length**: 6 characters (configurable in Supabase)
-- **Complexity**: No special requirements (can be enhanced)
-- **Reset mechanism**: Email-based password reset
-- **Account lockout**: Not implemented (potential enhancement)
+- Minimum 8 characters required
+- Automatic password generation for new users
+- Password reset via email verification
+- Session timeout configuration
+- Rate limiting on login attempts
 
-### Session Security
+### Access Control
 
-- **Token storage**: localStorage (secure for SPA)
-- **Auto-refresh**: Prevents session expiration
-- **Secure cookies**: Not applicable (JWT tokens)
-- **Cross-site protection**: Built into Supabase Auth
+- Route-level protection using React Router guards
+- Component-level access control via RoleGuard
+- API endpoint protection via JWT validation
+- Feature-level permissions based on user role
 
-### API Security
+## Edge Functions
 
-- **Rate limiting**: Supabase built-in protection
-- **SQL injection**: Prevented by Supabase client
-- **XSS protection**: React built-in escaping
-- **CSRF protection**: JWT tokens prevent CSRF
+### create-user-with-role
 
-### Common Vulnerabilities
+Creates new users with role validation:
 
-**Potential Issues:**
-1. **Privilege escalation**: Role changes not immediately reflected
-2. **Session fixation**: Tokens cached in memory
-3. **Information disclosure**: Verbose error messages
-
-**Mitigation Strategies:**
-1. Implement role validation in Edge Functions
-2. Clear client state on logout
-3. Use generic error messages for auth failures
-
-## Failure Modes
-
-### Authentication Failures
-
-**Login Issues:**
-- Invalid credentials → User-friendly error message
-- Account disabled → "Contact administrator" message
-- Network errors → Retry mechanism with exponential backoff
-
-**Session Issues:**
-- Token expiry → Automatic refresh or redirect to login
-- Storage unavailable → Graceful degradation to session-only auth
-- Network connectivity → Offline mode with limited functionality
-
-### Recovery Procedures
-
-**Password Reset:**
 ```typescript
-// Trigger password reset email
-const { error } = await supabase.auth.resetPasswordForEmail(email, {
-  redirectTo: `${window.location.origin}/reset-password`,
-});
+// Role creation permissions validation
+const canCreate = await validateRoleCreation(
+  currentUserRole, 
+  targetRole
+);
+
+if (!canCreate) {
+  throw new Error('Insufficient permissions');
+}
+
+// Create auth user and profile
+const authUser = await createAuthUser(email, password);
+const profile = await createUserProfile(authUser.id, userData);
 ```
 
-**Account Recovery:**
-- Email-based verification link
-- Manual admin intervention for locked accounts
-- Backup authentication via admin panel
+### delete-user-with-role
 
-## Extension Guidelines
+Handles user deletion with cascade cleanup:
 
-### Adding New Roles
+```typescript
+// Permission validation
+const canDelete = await validateDeletionPermissions(
+  currentUserRole,
+  targetUserId
+);
 
-1. **Update role enum** in database:
-   ```sql
-   ALTER TYPE user_role ADD VALUE 'new_role';
-   ```
+// Cascade delete related data
+await deleteUserData(targetUserId);
+await deleteAuthUser(targetUserId);
+```
 
-2. **Create RLS policies** for new role:
-   ```sql
-   CREATE POLICY "new_role_policy" ON table_name
-   FOR operation USING (role_condition);
-   ```
+### whoami
 
-3. **Update frontend guards**:
-   ```typescript
-   <RoleGuard allowedRoles={['new_role', 'admin']}>
-     <NewRoleComponent />
-   </RoleGuard>
-   ```
+Returns current user profile information:
 
-### Custom Authentication Methods
+```typescript
+const user = await getCurrentUser();
+return {
+  id: user.id,
+  email: user.email,
+  role: user.role,
+  permissions: getRolePermissions(user.role)
+};
+```
 
-**OAuth Integration:**
-1. Configure provider in Supabase Dashboard
-2. Add OAuth buttons to login form
-3. Handle OAuth callback and user creation
-4. Map OAuth user data to Growth OS profile
+## React Integration
 
-**SSO Integration:**
-1. Configure SAML/OIDC in Supabase
-2. Implement custom authentication flow
-3. Map SSO attributes to user roles
-4. Handle account linking and migration
+### useAuth Hook
 
-### Enhanced Security Features
+Manages authentication state and user information:
 
-**Two-Factor Authentication:**
-- Implement using Supabase MFA
-- Require for admin and superadmin roles
-- SMS or authenticator app options
-- Backup codes for recovery
+```typescript
+const useAuth = () => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  
+  // Authentication state management
+  // Role-based permission checking
+  // Session management
+  
+  return { user, loading, login, logout, hasRole };
+};
+```
 
-**Audit Logging:**
-- Enhanced login/logout tracking
-- Failed authentication attempt monitoring
-- Privilege escalation alerts
-- Suspicious activity detection
+### RoleGuard Component
+
+Protects routes and components based on user role:
+
+```typescript
+interface RoleGuardProps {
+  allowedRoles: string[];
+  children: React.ReactNode;
+  fallback?: React.ReactNode;
+}
+
+const RoleGuard = ({ allowedRoles, children, fallback }) => {
+  const { user } = useAuth();
+  
+  if (!user || !allowedRoles.includes(user.role)) {
+    return fallback || <Navigate to="/unauthorized" />;
+  }
+  
+  return children;
+};
+```
+
+## User Management Workflows
+
+### Student Creation (Enrollment Manager)
+
+1. Validate enrollment manager permissions
+2. Generate secure password
+3. Create Supabase auth user
+4. Create profile with student role
+5. Send welcome email with credentials
+6. Initialize student learning progress
+
+### Staff Member Creation (Admin/Superadmin)
+
+1. Validate role creation permissions
+2. Create auth user with temporary password
+3. Create profile with specified role
+4. Send onboarding email
+5. Set up role-specific dashboard access
+
+### User Deletion
+
+1. Validate deletion permissions
+2. Archive user data for audit purposes
+3. Delete related records (assignments, progress)
+4. Remove auth user
+5. Log deletion action
 
 ## Troubleshooting
 
 ### Common Issues
 
-**1. Login Failures**
-```typescript
-// Debug authentication state
-const { data: session, error } = await supabase.auth.getSession();
-console.log('Session:', session, 'Error:', error);
-```
+**Login Failures**
+- Check email verification status
+- Verify password requirements
+- Check for account suspension
+- Validate role assignments
 
-**2. Permission Denied Errors**
-```sql
--- Check user role and permissions
-SELECT role, lms_status FROM users WHERE id = auth.uid();
-```
+**Permission Errors**
+- Verify user role in database
+- Check RLS policy configuration
+- Validate JWT token claims
+- Review Edge Function permissions
 
-**3. Session Persistence Issues**
-```typescript
-// Clear and re-initialize auth state
-localStorage.clear();
-window.location.reload();
-```
+**Session Issues**
+- Clear browser cache and cookies
+- Check session timeout settings
+- Verify JWT token expiration
+- Review authentication state
 
 ### Debug Commands
 
-```bash
-# Test authentication endpoint
-curl -X POST "https://majqoqagohicjigmsilu.supabase.co/auth/v1/token" \
-  -H "Content-Type: application/json" \
-  -d '{"email":"test@example.com","password":"password"}'
+```sql
+-- Check user role and status
+SELECT id, email, role, created_at 
+FROM public.users 
+WHERE email = 'user@example.com';
 
-# Verify Edge Function access
-curl -X POST "https://majqoqagohicjigmsilu.supabase.co/functions/v1/whoami" \
-  -H "Authorization: Bearer <jwt-token>"
+-- Verify RLS policies
+SELECT schemaname, tablename, policyname, roles, cmd, qual 
+FROM pg_policies 
+WHERE tablename = 'users';
+
+-- Check authentication logs
+SELECT * FROM auth.audit_log_entries 
+WHERE created_at > NOW() - INTERVAL '24 hours'
+ORDER BY created_at DESC;
 ```
+
+## Integration Points
+
+### Notification System
+- Welcome emails for new users
+- Password reset notifications
+- Role change notifications
+- Security alerts
+
+### Activity Logging
+- Login/logout events
+- Role changes
+- Permission violations
+- Admin actions
+
+### Support System
+- Role-based ticket assignment
+- Escalation workflows
+- Admin oversight capabilities
 
 ## Next Steps
 
-Configure user roles and permissions, then proceed to [Student Management](./student-management.md) to understand the complete user lifecycle.
+Review [Student Management](./student-management.md) for detailed student workflows and [User Activity Logging](./user-activity-logging.md) for audit and compliance features.

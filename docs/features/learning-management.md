@@ -2,496 +2,337 @@
 
 ## Overview
 
-The Learning Management System (LMS) provides structured content delivery with sequential unlocking, progress tracking, and adaptive learning paths. Students progress through modules by completing assignments and meeting prerequisites.
+The Learning Management System (LMS) provides structured content delivery with sequential unlocking, progress tracking, and assessment integration. Students progress through modules and recordings in a gated manner, ensuring mastery before advancement.
 
-## Content Structure
+## Core Concepts
 
-```mermaid
-graph TB
-    A[Course] --> B[Module 1]
-    A --> C[Module 2]
-    A --> D[Module N]
-    
-    B --> E[Video 1.1]
-    B --> F[Video 1.2]
-    B --> G[Assignment 1]
-    
-    E --> H[Quiz 1.1]
-    F --> I[Assignment 1.2]
-    
-    style A fill:#e3f2fd
-    style G fill:#fff3e0
-    style H fill:#f3e5f5
-```
+### Module Structure
 
-## Core Features
+**Modules** are the primary organizational unit containing:
+- **Recordings** - Video lessons with sequential ordering
+- **Assignments** - Practical exercises requiring mentor approval
+- **Quizzes** - Knowledge assessments with scoring
+- **Resources** - Supplementary materials and downloads
 
-### 1. Module Management
+### Content Progression Model
 
-**Module Structure:**
-- **Title**: Descriptive module name
-- **Description**: Learning objectives and overview
-- **Order**: Sequential progression (1, 2, 3...)
-- **Quiz Questions**: Optional module assessments
-- **Prerequisites**: Required prior completions
+1. **Sequential Access** - Content unlocks in predetermined order
+2. **Assignment Gates** - Mentor approval required to advance
+3. **Mastery Requirements** - Minimum scores for quiz progression
+4. **Prerequisite Validation** - Previous content must be completed
 
-**Code Entry Points:**
-- `src/components/superadmin/ModulesManagement.tsx` - Module CRUD operations
-- `src/components/ModuleCard.tsx` - Student module display
-- `src/hooks/useModulesWithRecordings.ts` - Module data fetching
+## Technical Implementation
 
-**Database Schema:**
+### Database Structure
+
 ```sql
-CREATE TABLE modules (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+-- Module organization
+CREATE TABLE public.modules (
+  id UUID PRIMARY KEY,
   title TEXT NOT NULL,
   description TEXT,
   order INTEGER,
-  quiz_questions JSONB,
-  tenant_id UUID,
+  is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Video lessons
+CREATE TABLE public.available_lessons (
+  id UUID PRIMARY KEY,
+  recording_title TEXT NOT NULL,
+  recording_url TEXT,
+  thumbnail_url TEXT,
+  module UUID REFERENCES public.modules(id),
+  sequence_order INTEGER,
+  duration_minutes INTEGER,
+  is_active BOOLEAN DEFAULT true
+);
+
+-- Student progress tracking
+CREATE TABLE public.recording_views (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id),
+  recording_id UUID REFERENCES public.available_lessons(id),
+  watched BOOLEAN DEFAULT false,
+  watch_time_seconds INTEGER DEFAULT 0,
+  completed_at TIMESTAMPTZ,
+  UNIQUE(user_id, recording_id)
+);
+
+-- Content unlocking system
+CREATE TABLE public.user_unlocks (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id),
+  recording_id UUID REFERENCES public.available_lessons(id),
+  is_unlocked BOOLEAN DEFAULT false,
+  unlocked_at TIMESTAMPTZ,
+  UNIQUE(user_id, recording_id)
 );
 ```
 
-### 2. Video/Recording Management
+### Core Components
 
-**Recording Structure:**
-- **Title**: Video lesson name
-- **URL**: Video file location or stream URL
-- **Duration**: Length in minutes
-- **Sequence Order**: Unlock progression within module
-- **Module Assignment**: Parent module relationship
-- **Upload Metadata**: Uploader and timestamp
+**Module Display**: `ModuleCard.tsx`
+- Module overview and progress visualization
+- Expandable recording lists
+- Assignment status indicators
+- Progress completion metrics
 
-**Sequential Unlocking Logic:**
-```typescript
-// Students can only access videos in sequence
-const isVideoUnlocked = (videoId: string, userProgress: Progress[]) => {
-  const video = getVideoById(videoId);
-  const previousVideos = getVideosBeforeSequence(video.sequence_order);
-  
-  return previousVideos.every(prevVideo => 
-    userProgress.some(p => p.recording_id === prevVideo.id && p.watched)
-  );
-};
-```
+**Video Player**: `VideoPlayer.tsx`
+- Integrated video playback
+- Progress tracking and resume functionality
+- Speed controls and quality settings
+- Completion detection
 
-**Code Entry Points:**
-- `src/components/superadmin/RecordingsManagement.tsx` - Video upload and management
-- `src/components/LessonRow.tsx` - Individual video display and interaction
-- `src/hooks/useStudentRecordings.ts` - Student video access logic
+**Progress Tracking**: `useProgressTracker.ts`
+- Watch time monitoring
+- Completion state management
+- Unlock logic coordination
+- Analytics data collection
 
-### 3. Progress Tracking System
+## Content Unlocking System
 
-**Progress Metrics:**
-- **Video Completion**: Tracked per recording
-- **Module Completion**: All videos + assignments completed
-- **Quiz Scores**: Performance on module assessments
-- **Time Spent**: Learning engagement metrics
-- **Unlock Status**: Content accessibility tracking
+### Unlock Logic
 
-**Progress Data Structure:**
-```typescript
-interface UserProgress {
-  user_id: string;
-  module_id: string;
-  recording_id?: string;
-  is_completed: boolean;
-  completed_at?: Date;
-  time_spent_minutes?: number;
-  quiz_score?: number;
-}
-```
+The system implements a sophisticated unlocking mechanism:
 
-**Implementation:**
-```typescript
-// Mark video as watched
-const markVideoWatched = async (recordingId: string) => {
-  await supabase.from('recording_views').upsert({
-    user_id: user.id,
-    recording_id: recordingId,
-    watched: true,
-    watched_at: new Date().toISOString()
-  });
-  
-  // Check if this unlocks next content
-  await checkAndUnlockNext(recordingId);
-};
-```
+1. **First Recording** - Always unlocked for new students
+2. **Sequential Requirements** - Each recording requires previous completion
+3. **Assignment Gates** - Mentor approval unlocks next content
+4. **Module Boundaries** - Module completion unlocks next module
 
-### 4. Content Unlocking System
+### Database Functions
 
-**Unlock Logic Flow:**
-```mermaid
-sequenceDiagram
-    participant S as Student
-    participant C as Client
-    participant F as Unlock Function
-    participant D as Database
-    
-    S->>C: Complete Video/Assignment
-    C->>F: Check Unlock Criteria
-    F->>D: Verify Prerequisites
-    D->>F: Return Completion Status
-    F->>D: Unlock Next Content
-    F->>C: Updated Access List
-    C->>S: Show New Content
-```
-
-**Unlock Criteria:**
-1. **Sequential Videos**: Previous video watched + assignment passed
-2. **Module Progression**: All module content completed
-3. **Assignment Gates**: Assignment approval required
-4. **Quiz Thresholds**: Minimum score requirements
-
-**Database Functions:**
+**Unlock Status Calculation**:
 ```sql
--- Get student unlock sequence
-CREATE OR REPLACE FUNCTION get_student_unlock_sequence(p_user_id UUID)
-RETURNS TABLE(recording_id UUID, sequence_order INTEGER, is_unlocked BOOLEAN, unlock_reason TEXT);
-
--- Initialize new student unlocks (first video only)
-CREATE OR REPLACE FUNCTION initialize_student_unlocks(p_student_id UUID);
+CREATE OR REPLACE FUNCTION get_user_unlock_status(_user_id uuid)
+RETURNS TABLE(
+  module_id uuid,
+  recording_id uuid, 
+  is_module_unlocked boolean,
+  is_recording_unlocked boolean
+)
+AS $$
+-- Complex logic determining unlock status
+-- Based on previous completions and assignments
+$$;
 ```
 
-## Content Types
-
-### 1. Video Lessons
-
-**Video Configuration:**
-- **Storage**: Supabase Storage or external CDN
-- **Formats**: MP4, WebM (browser compatibility)
-- **Quality**: Multiple resolutions (future enhancement)
-- **Streaming**: Direct URL or embedded player
-
-**Student Experience:**
-- Automatic progress tracking
-- Resume from last position (future enhancement)
-- Playback speed controls
-- Download for offline viewing (configurable)
-
-### 2. Module Quizzes
-
-**Quiz Structure:**
-```json
-{
-  "questions": [
-    {
-      "id": "q1",
-      "question_text": "What is the key to successful e-commerce?",
-      "options": ["Price", "Quality", "Marketing", "All of the above"],
-      "correct_option": "All of the above",
-      "explanation": "Success requires balancing all these factors."
-    }
-  ]
-}
-```
-
-**Quiz Features:**
-- Multiple choice questions
-- Immediate feedback
-- Unlimited attempts (configurable)
-- Progress gate for module completion
-- Performance analytics
-
-### 3. Interactive Content
-
-**Future Enhancements:**
-- Document downloads (PDFs, worksheets)
-- Interactive simulations
-- Code exercises for technical content
-- Virtual labs and sandboxes
-
-## Configuration Matrix
-
-### Environment Variables
-
-No specific environment variables required for core LMS functionality. Uses Supabase configuration.
-
-### Dashboard Settings
-
-**Module Configuration:**
-- **Sequential Unlocking**: Enabled by default
-- **Quiz Requirements**: Optional per module
-- **Assignment Gates**: Configurable per video
-- **Progress Tracking**: Always enabled
-
-**Content Upload Settings:**
-- **Max File Size**: 500MB per video (Supabase Storage limit)
-- **Allowed Formats**: MP4, WebM, MOV
-- **Storage Location**: Supabase Storage bucket
-- **CDN Integration**: External URL support
-
-### Hard-coded Defaults
-
-**Unlock Logic:**
-```typescript
-const UNLOCK_RULES = {
-  FIRST_VIDEO_AUTO_UNLOCK: true,
-  SEQUENTIAL_REQUIRED: true,
-  ASSIGNMENT_COMPLETION_REQUIRED: true,
-  QUIZ_PASSING_SCORE: 70 // percentage
-};
-```
-
-**Progress Thresholds:**
-```typescript
-const COMPLETION_CRITERIA = {
-  VIDEO_WATCH_PERCENTAGE: 90, // 90% viewed = completed
-  MODULE_COMPLETION_THRESHOLD: 100, // All content must be completed
-  QUIZ_ATTEMPTS_LIMIT: null // Unlimited attempts
-};
-```
-
-## Student Learning Experience
-
-### Dashboard View
-
-**Learning Dashboard Components:**
-- **Progress Overview**: Completion percentage and current module
-- **Next Assignment**: Immediate next action required
-- **Recent Activity**: Last videos watched and assignments submitted
-- **Leaderboard**: Peer comparison and motivation
-
-**Navigation Flow:**
-1. Student logs in → Dashboard shows current progress
-2. Click "Continue Learning" → Directed to next unlocked content
-3. Complete video → Assignment unlocked (if exists)
-4. Submit assignment → Next video unlocked after approval
-5. Complete module → Next module becomes available
-
-### Video Player Interface
-
-**Player Features:**
-- Full-screen support
-- Playback controls (play, pause, seek)
-- Volume control
-- Playback speed (future enhancement)
-- Progress indicator
-
-**Progress Tracking:**
-- Automatic progress saves every 30 seconds
-- Completion triggered at 90% viewed
-- Resume from last position on return
-- Mobile-responsive player
-
-### Assignment Integration
-
-**Assignment Workflow within LMS:**
-1. Student watches video content
-2. Assignment becomes available/unlocked
-3. Student completes and submits assignment
-4. Mentor reviews and provides feedback
-5. Upon approval, next content unlocks
-6. Progress updates and notifications sent
-
-## Advanced Features
-
-### 1. Adaptive Learning Paths
-
-**Future Enhancement:**
-- **Skill-based Progression**: Unlock based on competency
-- **Personalized Recommendations**: AI-suggested content
-- **Learning Preferences**: Visual, auditory, kinesthetic paths
-- **Difficulty Adjustment**: Content complexity adaptation
-
-### 2. Offline Learning
-
-**Implementation Considerations:**
-- Video download for offline viewing
-- Sync progress when reconnected
-- Offline assignment completion
-- Local storage management
-
-### 3. Collaborative Learning
-
-**Social Features:**
-- Student discussion forums
-- Peer review assignments
-- Group projects and presentations
-- Study groups and partnerships
-
-## Analytics & Reporting
-
-### Student Analytics
-
-**Individual Metrics:**
-- Learning velocity (modules per week)
-- Engagement time per session
-- Quiz performance trends
-- Assignment submission patterns
-- Video rewatch frequency
-
-**Implementation:**
+**Automatic Unlocking**:
 ```sql
--- Student learning analytics view
-CREATE VIEW student_learning_analytics AS
-SELECT 
-  u.id,
-  u.full_name,
-  COUNT(DISTINCT ump.module_id) as modules_completed,
-  AVG(rv.time_spent_min) as avg_session_time,
-  COUNT(rv.recording_id) as videos_watched
-FROM users u
-LEFT JOIN user_module_progress ump ON u.id = ump.user_id
-LEFT JOIN recording_views rv ON u.id = rv.user_id
-WHERE u.role = 'student'
-GROUP BY u.id, u.full_name;
+CREATE OR REPLACE FUNCTION unlock_next_recording(
+  p_student_id uuid,
+  p_current_recording_id uuid
+)
+AS $$
+-- Unlock next recording after completion
+-- Triggered by assignment approval or completion
+$$;
 ```
 
-### Content Analytics
+### Student Experience
 
-**Content Performance:**
-- Video completion rates
-- Most rewatched segments
-- Assignment difficulty analysis
-- Module progression bottlenecks
-- Quiz question effectiveness
+**Content Access Flow**:
+1. Student logs into dashboard
+2. Available modules and recordings displayed
+3. Locked content shown with requirements
+4. Click unlocked recording to begin lesson
+5. Progress tracked automatically
+6. Assignment submission required for advancement
 
-### System Analytics
+**Progress Visualization**:
+- Module completion percentages
+- Recording watch status indicators
+- Assignment submission status
+- Overall course progress bar
+- Estimated completion timeline
 
-**Usage Patterns:**
-- Peak learning hours
-- Device usage distribution
-- Content consumption patterns
-- Drop-off points identification
-- Engagement correlation analysis
+## Assignment Integration
+
+### Assignment Gates
+
+Assignments serve as progression gates:
+- **Linked to Recordings** - Each recording may have associated assignments
+- **Mentor Review Required** - Submissions must be approved
+- **Blocking Mechanism** - Next content locked until approval
+- **Resubmission Support** - Multiple attempts allowed
+
+### Assignment Workflow
+
+1. **Recording Completion** - Student watches video lesson
+2. **Assignment Notification** - System prompts for assignment
+3. **Submission Process** - Student submits text, files, or URLs
+4. **Mentor Review** - Assigned mentor evaluates submission
+5. **Approval/Decline** - Mentor provides feedback and decision
+6. **Content Unlock** - Approval unlocks next recording
+
+## Progress Analytics
+
+### Student Metrics
+
+**Engagement Tracking**:
+- Time spent per recording
+- Replay frequency and patterns
+- Assignment submission timing
+- Login frequency and duration
+
+**Performance Indicators**:
+- Module completion rates
+- Assignment pass rates
+- Quiz scores and attempts
+- Overall progress velocity
+
+**Learning Patterns**:
+- Peak learning times
+- Content difficulty analysis
+- Support request frequency
+- Mentor interaction patterns
+
+### Administrative Analytics
+
+**Course Performance**:
+- Module completion statistics
+- Common student bottlenecks
+- Assignment difficulty metrics
+- Content engagement analysis
+
+**Student Cohort Analysis**:
+- Progression rate comparisons
+- Success rate tracking
+- Risk factor identification
+- Intervention effectiveness
+
+## Content Management
+
+### Administrative Tools
+
+**Module Management**: `ModulesManagement.tsx`
+- Create and organize modules
+- Set sequence ordering
+- Configure unlock requirements
+- Manage module metadata
+
+**Recording Management**: `RecordingsManagement.tsx`
+- Upload and organize videos
+- Set sequence within modules
+- Configure assignment links
+- Manage video metadata
+
+**Content Publishing**:
+- Draft/published state management
+- Scheduled content releases
+- Bulk content operations
+- Version control and rollback
+
+### Content Organization
+
+**Hierarchical Structure**:
+```
+Course
+├── Module 1: Foundations
+│   ├── Recording 1.1: Introduction
+│   ├── Assignment 1.1: Setup Task
+│   ├── Recording 1.2: Basic Concepts
+│   └── Assignment 1.2: Practice Exercise
+├── Module 2: Intermediate Topics
+│   ├── Recording 2.1: Advanced Theory
+│   └── Quiz 2.1: Knowledge Check
+```
+
+## Integration Points
+
+### Notification System
+- Progress milestone notifications
+- Assignment deadline reminders
+- New content availability alerts
+- Completion celebrations
+
+### Mentorship Program
+- Assignment review workflows
+- Student progress monitoring
+- Intervention triggers
+- Performance feedback
+
+### Certificate System
+- Module completion certificates
+- Course completion credentials
+- Skill verification badges
+- External credential integration
+
+## Performance Optimization
+
+### Video Delivery
+- CDN integration for fast loading
+- Adaptive bitrate streaming
+- Video compression optimization
+- Global edge caching
+
+### Database Performance
+- Optimized queries for progress calculation
+- Efficient indexing strategies
+- Caching for frequently accessed data
+- Pagination for large datasets
+
+### User Experience
+- Progressive loading for content lists
+- Offline content caching
+- Resume functionality
+- Responsive design across devices
 
 ## Security Considerations
 
 ### Content Protection
+- Secure video streaming URLs
+- Time-limited access tokens
+- Download prevention measures
+- Screen recording deterrents
 
-**Access Control:**
-- Video URLs are signed and time-limited
-- Student-specific content visibility
-- Download restrictions (configurable)
-- Screenshot/recording prevention (future)
-
-**Data Privacy:**
-- Learning progress anonymization options
-- GDPR compliance for student data
-- Secure video storage and delivery
-- Audit trails for content access
-
-### Performance Security
-
-**Rate Limiting:**
-- Video streaming bandwidth limits
-- Quiz attempt frequency controls
-- Assignment submission limits
-- API request throttling
-
-## Failure Modes
-
-### Content Delivery Failures
-
-**Video Streaming Issues:**
-- CDN fallback mechanisms
-- Multiple video quality options
-- Offline download capabilities
-- Progressive loading for slow connections
-
-**Recovery Actions:**
-- Automatic retry logic
-- Manual refresh options
-- Alternative content formats
-- Customer support escalation
-
-### Progress Tracking Failures
-
-**Data Consistency:**
-- Progress synchronization checks
-- Duplicate progress prevention
-- Manual progress correction tools
-- Audit trail reconciliation
-
-## Extension Guidelines
-
-### Adding New Content Types
-
-**Implementation Steps:**
-1. **Database Schema**: Add content type tables
-2. **Upload Interface**: Admin content management UI
-3. **Student Display**: Rendering components
-4. **Progress Tracking**: Completion criteria
-5. **Unlock Logic**: Integration with existing system
-
-**Example - Document Content:**
-```sql
--- Add document content type
-CREATE TABLE documents (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  title TEXT NOT NULL,
-  file_url TEXT NOT NULL,
-  module_id UUID REFERENCES modules(id),
-  sequence_order INTEGER,
-  download_allowed BOOLEAN DEFAULT true
-);
-```
-
-### Custom Progress Metrics
-
-**Advanced Tracking:**
-- Time-based milestones
-- Engagement quality scores
-- Knowledge retention testing
-- Skill competency mapping
-- Learning style adaptation
-
-### Integration with External LMS
-
-**Standards Compliance:**
-- SCORM package support
-- xAPI (Tin Can API) integration
-- LTI (Learning Tools Interoperability)
-- QTI (Question & Test Interoperability)
+### Access Control
+- Row Level Security for user data
+- Role-based content access
+- Mentor assignment validation
+- Student data isolation
 
 ## Troubleshooting
 
 ### Common Issues
 
-**1. Content Not Unlocking**
+**Content Not Unlocking**:
+- Verify previous recording completion
+- Check assignment approval status
+- Validate sequence order configuration
+- Review unlock function logs
+
+**Progress Tracking Problems**:
+- Clear browser cache and cookies
+- Check video player event handling
+- Verify database trigger functionality
+- Review user unlock records
+
+**Performance Issues**:
+- Monitor video loading times
+- Check database query performance
+- Analyze user session duration
+- Review CDN cache hit rates
+
+### Debug Procedures
+
 ```sql
--- Check unlock status for student
-SELECT * FROM get_student_unlock_sequence('student-uuid');
+-- Check student unlock status
+SELECT * FROM get_user_unlock_status('student-uuid');
 
--- Verify assignment completion
-SELECT * FROM submissions WHERE student_id = 'student-uuid' AND status = 'approved';
+-- Verify recording completion
+SELECT * FROM public.recording_views 
+WHERE user_id = 'student-uuid'
+ORDER BY completed_at DESC;
+
+-- Check assignment blocking
+SELECT a.*, s.status 
+FROM public.assignments a
+LEFT JOIN public.assignment_submissions s ON s.assignment_id = a.id
+WHERE s.student_id = 'student-uuid';
 ```
-
-**2. Progress Not Saving**
-```sql
--- Check recording views
-SELECT * FROM recording_views WHERE user_id = 'student-uuid' ORDER BY watched_at DESC;
-
--- Verify module progress
-SELECT * FROM user_module_progress WHERE user_id = 'student-uuid';
-```
-
-**3. Video Playback Issues**
-```typescript
-// Client-side debugging
-console.log('Video element:', videoElement);
-console.log('Can play type:', videoElement.canPlayType('video/mp4'));
-console.log('Network state:', videoElement.networkState);
-```
-
-### Performance Optimization
-
-**Database Queries:**
-```sql
--- Add indexes for better performance
-CREATE INDEX idx_recording_views_user_id ON recording_views(user_id);
-CREATE INDEX idx_user_module_progress_user_id ON user_module_progress(user_id);
-CREATE INDEX idx_available_lessons_sequence ON available_lessons(sequence_order);
-```
-
-**Caching Strategy:**
-- Module data cached in React Query
-- Video metadata preloaded
-- Progress updates debounced
-- Student unlock status cached
 
 ## Next Steps
 
-Understanding the LMS structure prepares you for [Assignment System](./assignment-system.md) integration, which builds upon the content unlocking mechanisms.
+Review [Assignment System](./assignment-system.md) for detailed assignment workflows and [Quiz Assessment](./quiz-assessment.md) for assessment integration.

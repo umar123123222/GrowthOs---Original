@@ -2,413 +2,354 @@
 
 ## Overview
 
-The student management system handles the complete student lifecycle from registration through graduation, including automated onboarding, LMS access control, progress tracking, and administrative oversight.
+The Student Management System handles the complete student lifecycle from initial enrollment through course completion, including onboarding, progress tracking, and administrative oversight.
 
 ## Student Lifecycle
 
-```mermaid
-graph TB
-    A[Registration Request] --> B[Admin Creates Student]
-    B --> C[Auto-Generate Credentials]
-    C --> D[Send Welcome Email]
-    D --> E[Onboarding Questionnaire]
-    E --> F[Payment Setup]
-    F --> G[LMS Access Granted]
-    G --> H[Learning Journey Begins]
-    H --> I[Progress Tracking]
-    I --> J[Completion/Graduation]
-    
-    style A fill:#e3f2fd
-    style J fill:#e8f5e8
-```
+### 1. Enrollment Process
 
-## Core Features
+**Initiated By**: Enrollment Managers, Admins, Superadmins
 
-### 1. Student Creation & Onboarding
+1. **Student Creation**
+   - Collect basic information (name, email, phone)
+   - Configure payment plan (installment options)
+   - Generate secure login credentials
+   - Create student profile and learning records
 
-**Automated Student Creation Process:**
+2. **Payment Setup**
+   - Configure installment schedule
+   - Generate initial invoice
+   - Process first payment (if applicable)
+   - Set up automated payment reminders
 
-**Entry Point:** `src/components/admin/StudentManagement.tsx`
-**Edge Function:** `supabase/functions/create-student/index.ts`
+3. **Account Activation**
+   - Send welcome email with credentials
+   - Grant LMS access
+   - Initialize learning progress tracking
+   - Assign mentor (if configured)
 
-**Process Flow:**
-1. Admin inputs student details (name, email, phone, installment plan)
-2. System validates for duplicate email/phone
-3. Generates unique student ID (format: STU000001)
-4. Creates user account with randomly generated password
-5. Triggers automated email sequence
-6. Creates installment payment records
-7. Logs all activities for audit trail
+### 2. Onboarding Workflow
 
-**Configuration:**
-- **Student ID Format**: `STU` + 6-digit sequential number
-- **Password Generation**: 12-character random string (letters + numbers)
-- **Default Status**: "Active" with LMS status "inactive"
-- **Email Templates**: Customizable via company settings
+**Student Experience**:
+1. Receive welcome email with login credentials
+2. First-time login prompts onboarding questionnaire
+3. Complete required profile information
+4. Review learning objectives and expectations
+5. Access first learning module
 
-### 2. LMS Access Management
+**Admin Oversight**:
+- Monitor onboarding completion rates
+- Track student engagement metrics
+- Identify students needing additional support
+- Automate follow-up communications
 
-**Access Control System:**
+### 3. Learning Progress Management
 
-**Implementation:** Row Level Security (RLS) policies
-**Status Types:**
-- `active`: Full LMS access
-- `inactive`: No course access (default for new students)
-- `suspended`: Temporary access revocation
+**Content Unlocking System**:
+- Sequential module access based on completion
+- Assignment gates prevent progress without approval
+- Mentor review required for advancement
+- Automated progress notifications
 
-**Access Granting Process:**
+**Progress Tracking**:
+- Module completion percentages
+- Assignment submission status
+- Quiz scores and attempts
+- Time spent in learning materials
+- Engagement analytics
+
+## Technical Implementation
+
+### Core Components
+
+**Student Creation**: `SecureStudentCreationDialog.tsx`
+- Form validation and data collection
+- Payment plan configuration
+- Secure credential generation
+- Integration with Edge Functions
+
+**Student Dashboard**: `StudentDashboard.tsx`
+- Progress visualization
+- Next assignment display
+- Mentor communication tools
+- Notification center
+
+**Management Interface**: `StudentManagement.tsx`
+- Bulk student operations
+- Search and filtering
+- Status management
+- Financial overview
+
+### Database Structure
+
 ```sql
--- Enable LMS access
-UPDATE users 
-SET lms_status = 'active' 
-WHERE id = 'student-uuid';
+-- Core student data
+CREATE TABLE public.users (
+  id UUID PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  full_name TEXT NOT NULL,
+  phone TEXT,
+  role TEXT DEFAULT 'student',
+  student_id TEXT UNIQUE,
+  mentor_id UUID REFERENCES public.users(id),
+  status TEXT DEFAULT 'Active',
+  lms_status TEXT DEFAULT 'inactive',
+  fees_structure TEXT,
+  onboarding_done BOOLEAN DEFAULT false
+);
 
--- Suspend access
-UPDATE users 
-SET lms_status = 'suspended' 
-WHERE id = 'student-uuid';
-```
+-- Student progress tracking
+CREATE TABLE public.user_module_progress (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id),
+  module_id UUID REFERENCES public.modules(id),
+  progress_percentage INTEGER DEFAULT 0,
+  is_completed BOOLEAN DEFAULT false,
+  completed_at TIMESTAMPTZ
+);
 
-**Code Entry Points:**
-- `src/components/admin/StudentManagement.tsx` - Access control UI
-- `src/hooks/useAuth.ts` - Client-side access validation
-- Database RLS policies enforce server-side access control
-
-### 3. Student Information Management
-
-**Profile Fields:**
-- **Basic Info**: Full name, email, phone number
-- **Academic**: Student ID, enrollment date, status
-- **Financial**: Fee structure, installment plan, payment status
-- **Learning**: Progress tracking, mentor assignment
-- **System**: LMS status, last login, account creation date
-
-**Editable by Role:**
-- **Students**: Personal information only
-- **Mentors**: Progress notes and assessments
-- **Admins**: All fields except system-generated data
-- **Superadmins**: All fields including system data
-
-### 4. Bulk Operations
-
-**Mass Student Management:**
-
-**Supported Operations:**
-- Bulk status updates (Active/Suspended)
-- Mass LMS access changes
-- Batch payment status updates
-- Group email communications
-
-**Implementation:**
-```typescript
-// Bulk status update
-const updateMultipleStudents = async (studentIds: string[], status: string) => {
-  const { error } = await supabase
-    .from('users')
-    .update({ status })
-    .in('id', studentIds);
-};
-```
-
-## Configuration Matrix
-
-### Environment Variables
-
-| Variable | Purpose | Impact | Default |
-|----------|---------|--------|---------|
-| `SMTP_LMS_FROM_EMAIL` | Student email sender | Onboarding emails | `lms@company.com` |
-| `SMTP_LMS_FROM_NAME` | Sender display name | Email branding | "LMS Team" |
-
-### Dashboard Settings
-
-**Company Settings → Student Management:**
-- **Maximum Installments**: 3 (configurable 1-12)
-- **Default Fee Amount**: $3000 (customizable)
-- **Auto-enrollment**: Enabled/Disabled
-- **Onboarding Questionnaire**: Custom questions in JSON format
-
-### Hard-coded Defaults
-
-**Student Creation:**
-```typescript
-// Default values for new students
-const DEFAULT_STUDENT = {
-  role: 'student',
-  status: 'Active',
-  lms_status: 'inactive',
-  onboarding_done: false,
-  fees_structure: '3_installments' // Based on selected plan
-};
-```
-
-**Student ID Generation:**
-```sql
--- Sequential ID generation
-SELECT 'STU' || LPAD(
-  (COALESCE(MAX(CAST(SUBSTRING(student_id FROM 4) AS INTEGER)), 0) + 1)::TEXT, 
-  6, '0'
-) FROM users WHERE role = 'student';
-```
-
-## Onboarding System
-
-### Automated Email Sequence
-
-**Email Types:**
-1. **Welcome Email**: Login credentials and platform overview
-2. **Onboarding Email**: Questionnaire link and next steps
-3. **Payment Reminder**: Payment instructions and deadline
-4. **LMS Access**: Course access notification
-
-**Email Jobs System:**
-- **Table**: `student_onboarding_jobs`
-- **Job Types**: EMAIL, INVOICE
-- **Retry Logic**: Exponential backoff (1h, 2h, 4h, 8h, 24h)
-- **Status Tracking**: PENDING, PROCESSING, COMPLETED, FAILED
-
-### Onboarding Questionnaire
-
-**Configuration:**
-```json
-{
-  "questions": [
-    {
-      "id": "q1",
-      "text": "What is your previous e-commerce experience?",
-      "answerType": "multiSelect",
-      "options": ["Beginner", "Intermediate", "Advanced"],
-      "order": 1
-    }
-  ]
-}
-```
-
-**Answer Types Supported:**
-- `singleLine`: Short text input
-- `multiLine`: Long text area
-- `singleSelect`: Radio buttons
-- `multiSelect`: Checkboxes
-- `file`: File upload
-
-## Progress Tracking
-
-### Learning Progress
-
-**Tracking Metrics:**
-- Modules completed
-- Videos watched
-- Assignments submitted
-- Quiz scores
-- Time spent learning
-
-**Implementation:**
-```typescript
-// Track module completion
-const markModuleComplete = async (userId: string, moduleId: string) => {
-  await supabase.from('user_module_progress').upsert({
-    user_id: userId,
-    module_id: moduleId,
-    is_completed: true,
-    completed_at: new Date().toISOString()
-  });
-};
-```
-
-### Status Updates
-
-**Automatic Status Changes:**
-- **"Passed out / Completed"**: All modules completed
-- **"Suspended"**: Payment overdue > 30 days
-- **"Inactive"**: No activity > 14 days
-
-**Manual Status Management:**
-- Admins can override automatic status
-- Status changes trigger notifications
-- Audit trail tracks all changes
-
-## Security Considerations
-
-### Data Protection
-
-**Student PII Security:**
-- Email addresses encrypted in database
-- Phone numbers masked in UI for non-admins
-- Payment information separate from profile data
-- Audit logs track all data access
-
-**Access Controls:**
-```sql
--- Students can only view their own data
-CREATE POLICY "students_view_own" ON users
-FOR SELECT USING (auth.uid() = id AND role = 'student');
-
--- Mentors can view assigned students
-CREATE POLICY "mentors_view_assigned" ON users
-FOR SELECT USING (
-  mentor_id = auth.uid() 
-  OR (role = 'mentor' AND auth.uid() = id)
+-- Payment tracking
+CREATE TABLE public.installment_payments (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES public.users(id),
+  installment_number INTEGER NOT NULL,
+  total_installments INTEGER NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  due_date DATE,
+  paid_date DATE,
+  status TEXT DEFAULT 'pending'
 );
 ```
 
-### Account Security
+### Edge Functions
 
-**Password Management:**
-- Auto-generated secure passwords
-- Password reset via email only
-- No password storage in plain text
-- Failed login attempt monitoring
-
-**Session Management:**
-- JWT token expiration (1 hour)
-- Automatic session refresh
-- Device-based session tracking
-- Suspicious activity alerts
-
-## Failure Modes
-
-### Onboarding Failures
-
-**Email Delivery Issues:**
-- SMTP configuration errors
-- Invalid email addresses
-- Rate limiting by email provider
-- Bounce handling and retry logic
-
-**Recovery Actions:**
-- Manual email resend options
-- Alternative contact methods
-- Admin override capabilities
-- Error logging and alerting
-
-### Data Integrity Issues
-
-**Duplicate Prevention:**
-- Email uniqueness constraints
-- Phone number validation
-- Student ID collision detection
-- Rollback mechanisms for failed operations
-
-### System Performance
-
-**Large Student Lists:**
-- Pagination for admin views
-- Lazy loading of student data
-- Search and filtering optimization
-- Database indexing on key fields
-
-## Extension Guidelines
-
-### Adding Custom Fields
-
-**Database Schema:**
-```sql
--- Add custom student fields
-ALTER TABLE users ADD COLUMN custom_field TEXT;
-
--- Update RLS policies
-CREATE POLICY "custom_field_access" ON users
-FOR SELECT USING (/* role-based conditions */);
-```
-
-**Frontend Integration:**
+**create-student**: Atomic student creation
 ```typescript
-// Update student form
-const StudentForm = () => {
-  const [customField, setCustomField] = useState('');
-  // ... form implementation
-};
+export async function createStudent(studentData) {
+  // Validate permissions
+  // Generate student ID
+  // Create user record
+  // Set up payment schedule
+  // Initialize progress tracking
+  // Send welcome email
+  
+  return { success: true, studentId };
+}
 ```
 
-### Custom Onboarding Workflows
+**cleanup-inactive-students**: Automated maintenance
+```typescript
+export async function cleanupInactiveStudents() {
+  // Identify inactive students
+  // Send reactivation reminders
+  // Archive long-term inactive accounts
+  // Update analytics
+}
+```
 
-**Multi-step Onboarding:**
-1. Create additional onboarding tables
-2. Implement step-by-step progress tracking
-3. Add conditional logic for different student types
-4. Customize email sequences per workflow
+## Administrative Features
 
-**Integration Points:**
-- Payment processor webhooks
-- CRM system synchronization
-- Marketing automation triggers
-- Custom analytics tracking
+### Student Search and Filtering
 
-### Reporting Enhancements
+**Search Capabilities**:
+- Name, email, phone, student ID search
+- Status filtering (Active, Inactive, Suspended)
+- Payment status filtering
+- Mentor assignment filtering
+- Date range filtering (enrollment, last activity)
 
-**Student Analytics:**
-- Enrollment trend analysis
+**Bulk Operations**:
+- Status updates (suspend, reactivate)
+- Mentor reassignment
+- Payment status updates
+- Email broadcasts
+- Progress resets
+
+### Student Status Management
+
+**Status Types**:
+- **Active**: Full platform access
+- **Inactive**: Limited access, payment pending
+- **Suspended**: No platform access
+- **Completed**: Course finished successfully
+- **Withdrawn**: Voluntarily left program
+
+**LMS Access Control**:
+- **active**: Full learning platform access
+- **inactive**: Login only, no content access
+- **suspended**: Complete access blocked
+
+### Financial Management Integration
+
+**Payment Tracking**:
+- Real-time installment status
+- Automated payment reminders
+- Overdue payment notifications
+- Payment history and receipts
+
+**Financial Reports**:
+- Revenue by student cohort
+- Payment completion rates
+- Outstanding balances
+- Refund tracking
+
+## Student Support Features
+
+### Communication Tools
+
+**Direct Messaging**:
+- Student-to-mentor communication
+- Support ticket system
+- Automated notifications
+- Bulk announcements
+
+**Progress Notifications**:
+- Assignment submissions
+- Grade notifications
+- Module completions
+- Achievement badges
+
+### Mentor Assignment
+
+**Assignment Logic**:
+- Automatic assignment based on capacity
+- Manual assignment by administrators
+- Mentor expertise matching
+- Workload balancing (max 20 students per mentor)
+
+**Mentor Management**:
+- Student portfolio overview
+- Progress tracking dashboard
+- Communication history
+- Performance analytics
+
+## Integration Points
+
+### Learning Management System
+- Content unlocking based on progress
+- Assignment submission workflows
+- Quiz and assessment integration
+- Certificate generation
+
+### Notification System
+- Welcome and onboarding emails
+- Progress milestone notifications
+- Payment reminders
+- Support communications
+
+### Analytics and Reporting
+- Student engagement metrics
 - Completion rate tracking
-- Engagement metrics
-- Financial performance reporting
+- Performance analytics
+- Cohort analysis
 
-**Implementation:**
-```sql
--- Student performance view
-CREATE VIEW student_performance AS
-SELECT 
-  u.id,
-  u.full_name,
-  COUNT(ump.module_id) as modules_completed,
-  AVG(qa.is_correct::int) as quiz_average
-FROM users u
-LEFT JOIN user_module_progress ump ON u.id = ump.user_id
-LEFT JOIN quiz_attempts qa ON u.id = qa.user_id
-WHERE u.role = 'student'
-GROUP BY u.id, u.full_name;
-```
+## Security and Privacy
+
+### Data Protection
+- Student data encrypted at rest
+- Row Level Security policies
+- GDPR compliance features
+- Data retention policies
+
+### Access Controls
+- Role-based data access
+- Mentor-student data isolation
+- Admin audit logging
+- Privacy controls
+
+## Workflows and Automation
+
+### Automated Processes
+
+1. **Welcome Sequence**
+   - Send credentials immediately after creation
+   - Follow-up onboarding reminders
+   - Initial mentor introduction
+   - First assignment notifications
+
+2. **Progress Monitoring**
+   - Weekly progress reports
+   - Inactivity alerts after 7 days
+   - Assignment deadline reminders
+   - Completion celebrations
+
+3. **Payment Processing**
+   - Automated invoice generation
+   - Payment due reminders
+   - Overdue notifications
+   - Suspension workflows
+
+### Manual Interventions
+
+**Common Admin Tasks**:
+- Password resets
+- Status changes
+- Mentor reassignments
+- Payment adjustments
+- Progress overrides
+
+**Escalation Procedures**:
+- Support ticket escalation
+- Payment dispute resolution
+- Academic integrity issues
+- Technical support requests
+
+## Performance and Scalability
+
+### Optimization Strategies
+- Efficient database queries with proper indexing
+- Lazy loading for large student lists
+- Caching for frequently accessed data
+- Background processing for bulk operations
+
+### Monitoring and Analytics
+- Student engagement tracking
+- System performance metrics
+- Error rate monitoring
+- User experience analytics
 
 ## Troubleshooting
 
 ### Common Issues
 
-**1. Student Creation Failures**
-```bash
-# Check Edge Function logs
-supabase functions logs create-student
+**Student Creation Failures**:
+- Email already exists validation
+- Phone number conflicts
+- Payment plan configuration errors
+- Edge Function timeout issues
 
-# Verify SMTP configuration
-SELECT * FROM company_settings WHERE id = 1;
-```
+**Access Problems**:
+- Password reset requests
+- Email delivery issues
+- LMS status synchronization
+- Role permission conflicts
 
-**2. LMS Access Problems**
+**Progress Tracking Issues**:
+- Module unlock problems
+- Assignment gate failures
+- Progress percentage calculation
+- Mentor assignment conflicts
+
+### Debug Procedures
+
 ```sql
--- Check student LMS status
-SELECT id, full_name, lms_status, status 
-FROM users 
+-- Check student status
+SELECT id, email, status, lms_status, onboarding_done
+FROM public.users 
 WHERE role = 'student' AND email = 'student@example.com';
 
--- Verify RLS policies
-EXPLAIN (ANALYZE, BUFFERS) 
-SELECT * FROM users WHERE role = 'student';
-```
+-- Verify progress tracking
+SELECT ump.*, m.title 
+FROM public.user_module_progress ump
+JOIN public.modules m ON m.id = ump.module_id
+WHERE ump.user_id = 'student-uuid';
 
-**3. Onboarding Email Issues**
-```sql
--- Check onboarding job status
-SELECT * FROM student_onboarding_jobs 
-WHERE student_id = 'uuid' 
-ORDER BY created_at DESC;
-
--- Check message delivery
-SELECT * FROM messages 
-WHERE user_id = 'uuid' 
-ORDER BY sent_at DESC;
-```
-
-### Debug Commands
-
-```bash
-# Test student creation endpoint
-curl -X POST "https://majqoqagohicjigmsilu.supabase.co/functions/v1/create-student" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token>" \
-  -d '{"full_name":"Test Student","email":"test@example.com","phone":"1234567890","installments":3}'
-
-# Verify email configuration
-curl -X POST "https://majqoqagohicjigmsilu.supabase.co/functions/v1/whoami" \
-  -H "Authorization: Bearer <token>"
+-- Payment status check
+SELECT * FROM public.installment_payments 
+WHERE user_id = 'student-uuid'
+ORDER BY installment_number;
 ```
 
 ## Next Steps
 
-After configuring student management, proceed to [Learning Management](./learning-management.md) to understand how students interact with course content.
+Review [Learning Management](./learning-management.md) for content delivery details and [Assignment System](./assignment-system.md) for student assessment workflows.

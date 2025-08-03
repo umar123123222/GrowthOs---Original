@@ -2,378 +2,263 @@
 
 ## Overview
 
-Growth OS supports multiple deployment strategies, from local development to production environments. This guide covers the complete deployment pipeline using Lovable, Supabase, and GitHub integration.
+This guide covers deploying Growth OS from local development to production environments, including database migrations, environment configuration, and service integrations.
 
-## Prerequisites
+## Environment Setup
 
-- Node.js 18+ and npm
-- Git for version control
-- Supabase account and project
-- Resend account for email delivery
-- GitHub repository (for production deployment)
+### Development Environment
 
-## Local Development Setup
-
-### 1. Repository Setup
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd growth-os
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-### 2. Supabase Local Development
-
-```bash
-# Install Supabase CLI
-npm install -g supabase
-
-# Login to Supabase
-supabase login
-
-# Link to your project
-supabase link --project-ref majqoqagohicjigmsilu
-
-# Pull latest schema
-supabase db pull
-
-# Start local development
-npm run dev
-```
-
-### 3. Environment Configuration
-
-Local development uses the production Supabase instance by default. No additional environment variables are needed for basic functionality.
-
-**Optional: Local Supabase Instance**
-```bash
-# Start local Supabase (optional)
-supabase start
-
-# Update src/integrations/supabase/client.ts with local URLs
-# SUPABASE_URL = "http://localhost:54321"
-# SUPABASE_ANON_KEY = "local_anon_key"
-```
-
-## Staging Environment
-
-### 1. Supabase Staging Project
-
-```bash
-# Create new Supabase project for staging
-supabase projects create growth-os-staging
-
-# Update configuration for staging
-# supabase/config.toml
-project_id = "staging-project-id"
-site_url = "https://staging.yourapp.com"
-```
-
-### 2. Database Migration
-
-```bash
-# Apply migrations to staging
-supabase db push --project-ref staging-project-id
-
-# Verify migration success
-supabase db diff --project-ref staging-project-id
-```
-
-### 3. Staging Secrets Configuration
-
-Configure all environment variables in Supabase Dashboard:
-- **Resend API Key**: Use staging/test Resend key
-- **SMTP Configuration**: Point to staging email service
-- **Other secrets**: Use non-production values
-
-## Production Deployment
-
-### 1. Lovable Platform Deployment
-
-Growth OS uses Lovable's built-in deployment system:
-
-1. **Push to GitHub**:
+1. **Prerequisites**
    ```bash
-   git add .
-   git commit -m "Deploy to production"
-   git push origin main
+   - Node.js 18+ 
+   - npm or yarn
+   - Git
+   - Supabase CLI (optional but recommended)
    ```
 
-2. **Automatic Deployment**:
-   - Lovable automatically detects changes
-   - Builds and deploys the application
-   - Updates live site immediately
+2. **Local Setup**
+   ```bash
+   git clone <repository-url>
+   cd growth-os
+   npm install
+   cp .env.example .env.local
+   npm run dev
+   ```
 
-3. **Custom Domain** (Optional):
-   - Navigate to Project Settings → Domains
-   - Add your custom domain
-   - Configure DNS settings as instructed
+3. **Environment Variables**
+   - Configure all required variables (see [Environment Reference](./env-reference.md))
+   - Ensure Supabase project is properly configured
+   - Set up email service credentials
 
-### 2. Database Production Setup
+### Staging Environment
 
-```bash
-# Ensure production migrations are applied
-supabase db push --project-ref majqoqagohicjigmsilu
+1. **Supabase Project Setup**
+   - Create new Supabase project for staging
+   - Run database migrations
+   - Configure authentication providers
+   - Set up storage buckets
 
-# Verify database schema
-supabase db diff --project-ref majqoqagohicjigmsilu
-```
+2. **Environment Configuration**
+   ```bash
+   SUPABASE_URL=https://your-staging-project.supabase.co
+   SUPABASE_ANON_KEY=your-staging-anon-key
+   RESEND_API_KEY=your-resend-api-key
+   ```
 
-### 3. Production Secrets
+3. **Deploy Application**
+   - Build application: `npm run build`
+   - Deploy to staging platform (Vercel, Netlify, etc.)
+   - Test all integrations and functionality
 
-Configure in Supabase Dashboard → Edge Functions → Secrets:
+### Production Environment
 
-**Required Secrets:**
-```
-RESEND_API_KEY=re_production_key
-SMTP_HOST=smtp.production.com
-SMTP_PORT=587
-SMTP_USER=production@yourcompany.com
-SMTP_PASSWORD=production_password
-SMTP_FROM_EMAIL=noreply@yourcompany.com
-SMTP_FROM_NAME=Your Company
-SMTP_LMS_FROM_EMAIL=lms@yourcompany.com
-SMTP_LMS_FROM_NAME=LMS Team
-```
+1. **Infrastructure Requirements**
+   - Production Supabase project
+   - Custom domain setup
+   - SSL certificate configuration
+   - CDN configuration for static assets
 
-### 4. Edge Functions Deployment
+2. **Database Migration**
+   ```bash
+   # Using Supabase CLI
+   supabase db push --project-ref YOUR_PROJECT_REF
+   
+   # Or manually execute migration files
+   ```
 
-Edge Functions are automatically deployed with the application:
+3. **Environment Secrets**
+   - Configure all production environment variables
+   - Use secure secret management
+   - Enable production-level security settings
 
-```bash
-# Manual deployment (if needed)
-supabase functions deploy --project-ref majqoqagohicjigmsilu
+## Database Migrations
 
-# Deploy specific function
-supabase functions deploy create-student --project-ref majqoqagohicjigmsilu
-```
+### Migration Process
 
-## Deployment Verification
+1. **Pre-Migration Checklist**
+   - Backup existing database
+   - Test migrations on staging environment
+   - Review RLS policies and permissions
+   - Validate Edge Function deployments
 
-### 1. Health Check Script
+2. **Running Migrations**
+   ```sql
+   -- Core table structure
+   \i database-migration-complete.sql
+   
+   -- Verify data integrity
+   SELECT * FROM company_settings LIMIT 1;
+   SELECT COUNT(*) FROM users;
+   ```
 
-Create `scripts/health-check.ts`:
+3. **Post-Migration Verification**
+   - Test user authentication flow
+   - Verify role-based access controls
+   - Test file upload functionality
+   - Validate email notification system
 
-```typescript
-import { supabase } from '../src/integrations/supabase/client';
+### Edge Functions Deployment
 
-async function healthCheck() {
-  console.log('🔍 Starting health check...');
-  
-  try {
-    // Test database connection
-    const { data: users, error: dbError } = await supabase
-      .from('users')
-      .select('count')
-      .limit(1);
-    
-    if (dbError) throw dbError;
-    console.log('✅ Database connection: OK');
-    
-    // Test Edge Functions
-    const { data: whoami, error: funcError } = await supabase.functions.invoke('whoami');
-    if (funcError) throw funcError;
-    console.log('✅ Edge Functions: OK');
-    
-    // Test authentication
-    const { data: session, error: authError } = await supabase.auth.getSession();
-    console.log('✅ Authentication service: OK');
-    
-    console.log('🎉 All systems operational!');
-    
-  } catch (error) {
-    console.error('❌ Health check failed:', error);
-    process.exit(1);
-  }
-}
+1. **Function Deployment**
+   ```bash
+   # Deploy all functions
+   supabase functions deploy --project-ref YOUR_PROJECT_REF
+   
+   # Deploy specific function
+   supabase functions deploy create-student --project-ref YOUR_PROJECT_REF
+   ```
 
-healthCheck();
-```
+2. **Environment Secrets**
+   ```bash
+   # Set required secrets
+   supabase secrets set RESEND_API_KEY=your-key --project-ref YOUR_PROJECT_REF
+   supabase secrets set SMTP_HOST=your-smtp-host --project-ref YOUR_PROJECT_REF
+   ```
 
-### 2. Manual Testing Checklist
+## Service Integrations
 
-**Authentication & User Management:**
-- [ ] User registration works
-- [ ] Login/logout functionality
-- [ ] Role-based access control
-- [ ] Password reset emails
+### Email Service (Resend)
 
-**Core Features:**
-- [ ] Student can access modules
-- [ ] Assignment submission works
-- [ ] Mentor can review submissions
-- [ ] Payment tracking functions
-- [ ] Email notifications sent
+1. **Account Setup**
+   - Sign up at [resend.com](https://resend.com)
+   - Verify your domain at [resend.com/domains](https://resend.com/domains)
+   - Generate API key at [resend.com/api-keys](https://resend.com/api-keys)
 
-**Admin Functions:**
-- [ ] User management panel
-- [ ] Company settings update
-- [ ] File upload functionality
-- [ ] Reporting features work
+2. **Configuration**
+   ```bash
+   RESEND_API_KEY=re_your_api_key
+   SMTP_FROM_EMAIL=noreply@yourdomain.com
+   SMTP_FROM_NAME=Growth OS
+   ```
 
-### 3. Performance Verification
+### File Storage
 
-```bash
-# Test application load time
-curl -w "@curl-format.txt" -o /dev/null -s "https://yourapp.lovable.app"
+1. **Storage Buckets**
+   ```sql
+   -- Create required buckets
+   INSERT INTO storage.buckets (id, name, public) VALUES 
+   ('assignment-files', 'assignment-files', true),
+   ('company-branding', 'company-branding', true);
+   ```
 
-# Check Edge Function response time
-curl -w "@curl-format.txt" -o /dev/null -s -X POST "https://majqoqagohicjigmsilu.supabase.co/functions/v1/whoami"
-```
+2. **Storage Policies**
+   - Configure RLS policies for file access
+   - Set up CDN optimization
+   - Configure file size limits
 
-## Monitoring & Maintenance
+### Third-Party Integrations
 
-### 1. Application Monitoring
+1. **Shopify (Optional)**
+   - Configure Shopify app credentials
+   - Set up webhook endpoints
+   - Test data synchronization
 
-**Supabase Monitoring:**
-- Database performance via Supabase Dashboard
-- Edge Function logs and error rates
-- Authentication metrics and usage
+2. **Zapier (Optional)**
+   - Configure webhook endpoints
+   - Set up automation workflows
+   - Test integration endpoints
 
-**Lovable Monitoring:**
-- Application uptime and response times
-- Build success/failure notifications
-- Traffic and usage analytics
+## Security Configuration
 
-### 2. Regular Maintenance Tasks
+### Authentication Settings
 
-**Weekly:**
-- Review Edge Function error logs
-- Check email delivery rates
-- Monitor database performance
+1. **Supabase Auth Configuration**
+   - Enable email confirmations
+   - Configure password requirements
+   - Set up rate limiting
+   - Configure session timeout
 
-**Monthly:**
-- Update dependencies (`npm audit` and `npm update`)
-- Review and rotate API keys
-- Backup critical configuration
+2. **Row Level Security**
+   - Verify all RLS policies are active
+   - Test role-based access controls
+   - Validate data isolation between users
 
-**Quarterly:**
-- Security audit of user permissions
-- Performance optimization review
-- Disaster recovery testing
+### SSL and Domain Configuration
 
-### 3. Log Management
+1. **Custom Domain Setup**
+   - Configure DNS records
+   - Set up SSL certificates
+   - Configure CDN settings
+   - Test domain functionality
 
-**Application Logs:**
-```bash
-# View real-time Edge Function logs
-supabase functions logs --project-ref majqoqagohicjigmsilu
+2. **Security Headers**
+   ```javascript
+   // Configure security headers
+   {
+     "X-Frame-Options": "DENY",
+     "X-Content-Type-Options": "nosniff",
+     "Referrer-Policy": "strict-origin-when-cross-origin"
+   }
+   ```
 
-# Filter logs by function
-supabase functions logs create-student --project-ref majqoqagohicjigmsilu
-```
+## Monitoring and Maintenance
 
-**Database Logs:**
-```sql
--- View recent admin activity
-SELECT * FROM admin_logs 
-ORDER BY created_at DESC 
-LIMIT 100;
+### Health Checks
 
--- Check user activity patterns
-SELECT activity_type, COUNT(*) 
-FROM user_activity_logs 
-WHERE occurred_at > NOW() - INTERVAL '24 hours'
-GROUP BY activity_type;
-```
+1. **Application Monitoring**
+   - Set up uptime monitoring
+   - Configure error tracking
+   - Monitor performance metrics
+   - Set up alerting for critical issues
 
-## Rollback Procedures
+2. **Database Monitoring**
+   - Monitor query performance
+   - Track storage usage
+   - Monitor connection pools
+   - Set up backup schedules
 
-### 1. Application Rollback
+### Backup Strategy
 
-**Lovable Platform:**
-1. Navigate to project history in Lovable
-2. Select previous working version
-3. Click "Restore" to rollback code
-4. Verify application functionality
+1. **Database Backups**
+   - Configure automated daily backups
+   - Test backup restoration process
+   - Store backups in secure location
+   - Document recovery procedures
 
-**GitHub Integration:**
-```bash
-# Rollback to previous commit
-git revert HEAD
-git push origin main
+2. **File Storage Backups**
+   - Configure storage bucket backups
+   - Monitor storage usage and costs
+   - Test file recovery procedures
 
-# Rollback multiple commits
-git reset --hard <previous-commit-hash>
-git push --force origin main
-```
+## Troubleshooting
 
-### 2. Database Rollback
+### Common Deployment Issues
 
-```bash
-# Create backup before rollback
-pg_dump $(supabase status | grep 'DB URL' | cut -d: -f2-) > backup.sql
+1. **Environment Variable Errors**
+   - Verify all required variables are set
+   - Check variable names for typos
+   - Validate API keys and credentials
 
-# Apply down migrations
-supabase migration down <migration-timestamp>
+2. **Database Connection Issues**
+   - Check Supabase project status
+   - Verify connection strings
+   - Check firewall and network settings
 
-# Verify rollback success
-supabase db diff
-```
+3. **Email Delivery Issues**
+   - Verify Resend API key
+   - Check domain verification status
+   - Monitor email delivery logs
 
-### 3. Emergency Rollback Checklist
+### Performance Optimization
 
-1. **Identify Issue**: Determine scope and impact
-2. **Stop New Deployments**: Prevent additional changes
-3. **Rollback Application**: Use platform rollback or git revert
-4. **Rollback Database** (if needed): Apply down migrations
-5. **Verify Functionality**: Run health checks
-6. **Notify Stakeholders**: Communicate status and timeline
-7. **Post-Incident Review**: Document lessons learned
+1. **Database Optimization**
+   - Monitor slow queries
+   - Optimize indexes
+   - Review RLS policy performance
 
-## Disaster Recovery
-
-### 1. Data Backup Strategy
-
-**Automated Backups:**
-- Supabase provides automatic daily backups
-- Configure backup retention policy (7-30 days recommended)
-- Test backup restoration quarterly
-
-**Manual Backup:**
-```bash
-# Export database schema and data
-supabase db dump --project-ref majqoqagohicjigmsilu > growth-os-backup.sql
-
-# Export user files from storage
-# Use Supabase Dashboard or API to download storage contents
-```
-
-### 2. Recovery Procedures
-
-**Database Recovery:**
-```bash
-# Restore from Supabase backup
-# Use Supabase Dashboard → Database → Backups
-
-# Or restore from manual backup
-psql $(supabase status | grep 'DB URL' | cut -d: -f2-) < growth-os-backup.sql
-```
-
-**Application Recovery:**
-1. Recreate Lovable project if needed
-2. Restore code from GitHub repository
-3. Reconfigure environment variables
-4. Test all functionality
-
-### 3. Business Continuity
-
-**Communication Plan:**
-- Status page for system outages
-- Email notifications to administrators
-- Escalation procedures for critical issues
-
-**Recovery Time Objectives:**
-- Application: 30 minutes maximum downtime
-- Database: 1 hour maximum data loss
-- User files: 24 hours maximum recovery time
+2. **Frontend Optimization**
+   - Enable gzip compression
+   - Configure CDN caching
+   - Optimize image assets
+   - Monitor bundle size
 
 ## Next Steps
 
-Once deployment is complete, configure your system using the [Company Branding](./features/company-branding.md) and [Authentication System](./features/authentication-system.md) documentation.
+After successful deployment:
+1. Set up monitoring and alerting
+2. Configure backup procedures
+3. Train administrators on system management
+4. Plan regular maintenance windows
+5. Review security settings regularly
+
+For ongoing maintenance, refer to the [FAQ](./faq.md) and feature-specific documentation for troubleshooting guides.
