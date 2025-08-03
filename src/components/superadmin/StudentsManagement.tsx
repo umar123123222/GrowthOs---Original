@@ -1113,120 +1113,108 @@ export function StudentsManagement() {
                   if (expandedRows.has(student.id)) {
                     rowElements.push(
                       <TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
-                        <TableCell colSpan={7} className="bg-gradient-to-r from-slate-50 to-blue-50 p-4 border-l-4 border-l-blue-200">
-                          <div className="space-y-3">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(student.last_invoice_date)}</p>
+                        <TableCell colSpan={7} className="bg-gradient-to-r from-slate-50 to-blue-50 p-3 border-l-4 border-l-blue-200">
+                          <div className="space-y-2">
+                            {/* Main Info Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Last Invoice Sent Date</Label>
+                                <p className="text-sm text-gray-900 font-medium">{formatDate(student.last_invoice_date)}</p>
                               </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Joining Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(student.created_at)}</p>
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Joining Date</Label>
+                                <p className="text-sm text-gray-900 font-medium">{formatDate(student.created_at)}</p>
                               </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
-                                <p className="text-sm text-gray-900">{getInvoiceStatus(student)}</p>
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Invoice Status</Label>
+                                <p className="text-sm text-gray-900 font-medium">{getInvoiceStatus(student)}</p>
                               </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
-                                <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Fees Structure</Label>
+                                <p className="text-sm text-gray-900 font-medium">{getFeesStructureLabel(student.fees_structure)}</p>
                               </div>
+                            </div>
+
+                            {/* Secondary Info Grid */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 pt-2 border-t border-blue-200">
                               {student.fees_due_date && (
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
-                                  <p className={`text-sm ${student.fees_overdue ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Invoice Due Date</Label>
+                                  <p className={`text-sm font-medium ${student.fees_overdue ? 'text-red-600' : 'text-gray-900'}`}>
                                     {formatDate(student.fees_due_date)}
                                   </p>
                                 </div>
                               )}
                               {student.last_suspended_date && (
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-700">Last Suspended Date</Label>
-                                  <p className="text-sm text-red-600">{formatDate(student.last_suspended_date)}</p>
+                                <div className="space-y-1">
+                                  <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Last Suspended Date</Label>
+                                  <p className="text-sm text-red-600 font-medium">{formatDate(student.last_suspended_date)}</p>
                                 </div>
                               )}
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
-                                <div className="flex items-center space-x-2">
-                                  <p className="text-sm text-gray-900">{student.lms_user_id || 'Not set'}</p>
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">LMS User ID</Label>
+                                <div className="flex items-center gap-1">
+                                  <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">{student.lms_user_id || 'Not set'}</code>
                                   {student.lms_user_id && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       onClick={() => navigator.clipboard.writeText(student.lms_user_id)}
+                                      className="h-6 w-6 p-0"
                                     >
                                       <Key className="w-3 h-3" />
                                     </Button>
                                   )}
                                 </div>
                               </div>
-                              {student.lms_password && student.lms_password !== student.temp_password ? (
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-700">Current Password</Label>
-                                  <div className="flex items-center space-x-2">
-                                    <p className="text-sm text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">
-                                      {student.lms_password}
-                                    </p>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => navigator.clipboard.writeText(student.lms_password)}
-                                      title="Copy to clipboard"
-                                    >
-                                      <Key className="w-3 h-3" />
-                                    </Button>
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm"
-                                      onClick={() => handleEditPassword(student, 'lms')}
-                                      title="Edit Current Password"
-                                    >
-                                      <Edit className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    New password (changed from temp)
-                                  </p>
-                                </div>
-                              ) : (
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-700">Temporary Password</Label>
-                                  <div className="flex items-center space-x-2">
-                                    <p className="text-sm text-gray-900 font-mono bg-gray-100 px-2 py-1 rounded">
-                                      {student.temp_password || 'Not set'}
-                                    </p>
-                                    {student.temp_password && (
+                            </div>
+
+                            {/* Password Section */}
+                            <div className="pt-2 border-t border-blue-200">
+                              <div className="space-y-1">
+                                <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide">Current Password</Label>
+                                <div className="flex items-center gap-1">
+                                  <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                                    {student.lms_password && student.lms_password !== student.temp_password 
+                                      ? student.lms_password 
+                                      : student.temp_password || 'Not set'}
+                                  </code>
+                                  {(student.lms_password || student.temp_password) && (
+                                    <>
                                       <Button
                                         variant="ghost"
                                         size="sm"
-                                        onClick={() => navigator.clipboard.writeText(student.temp_password)}
+                                        onClick={() => navigator.clipboard.writeText(student.lms_password || student.temp_password)}
+                                        className="h-6 w-6 p-0"
                                         title="Copy to clipboard"
                                       >
                                         <Key className="w-3 h-3" />
                                       </Button>
-                                    )}
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm"
-                                      onClick={() => handleEditPassword(student, 'temp')}
-                                      title="Edit Temporary Password"
-                                    >
-                                      <Edit className="w-3 h-3" />
-                                    </Button>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    Temporary password (unchanged)
-                                  </p>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        onClick={() => handleEditPassword(student, student.lms_password !== student.temp_password ? 'lms' : 'temp')}
+                                        className="h-6 w-6 p-0"
+                                        title="Edit Password"
+                                      >
+                                        <Edit className="w-3 h-3" />
+                                      </Button>
+                                    </>
+                                  )}
                                 </div>
-                              )}
+                                <p className="text-xs text-gray-500">
+                                  {student.lms_password && student.lms_password !== student.temp_password 
+                                    ? 'New password (changed from temp)' 
+                                    : 'Temporary password'}
+                                </p>
+                              </div>
                             </div>
                             
                             {/* Installment Payment Buttons */}
                             {(student.fees_structure === '1_installment' || student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && (
-                              <div className="pt-3 border-t border-blue-200">
-                                <Label className="text-sm font-medium text-gray-700 mb-2 block">Installment Payments</Label>
-                                <div className="flex flex-wrap gap-2">
+                              <div className="pt-2 border-t border-blue-200">
+                                <Label className="text-xs font-medium text-gray-600 uppercase tracking-wide mb-2 block">Installment Payments</Label>
+                                <div className="flex flex-wrap gap-1">
                                   {Array.from({ 
                                     length: student.fees_structure === '1_installment' ? 1 : 
                                            student.fees_structure === '2_installments' ? 2 : 3 
@@ -1242,9 +1230,9 @@ export function StudentsManagement() {
                                         size="sm"
                                         disabled={isPaid}
                                         onClick={() => handleMarkInstallmentPaid(student.id, installmentNumber)}
-                                        className={`hover-scale ${isPaid ? "bg-green-500 hover:bg-green-600" : "hover:border-green-300 hover:text-green-600"}`}
+                                        className={`text-xs ${isPaid ? "bg-green-500 hover:bg-green-600" : "hover:border-green-300 hover:text-green-600"}`}
                                       >
-                                        {isPaid ? <CheckCircle className="w-4 h-4 mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
+                                        {isPaid ? <CheckCircle className="w-3 h-3 mr-1" /> : <DollarSign className="w-3 h-3 mr-1" />}
                                         {isPaid ? `${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid` : `Mark ${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid`}
                                       </Button>
                                     );
@@ -1253,23 +1241,24 @@ export function StudentsManagement() {
                               </div>
                             )}
                             
-                            <div className="flex flex-wrap gap-2 pt-3 border-t border-blue-200">
+                            {/* Action Buttons */}
+                            <div className="flex flex-wrap gap-1 pt-2 border-t border-blue-200">
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleViewActivityLogs(student.id)}
-                                className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                                className="text-xs hover:border-blue-300 hover:text-blue-600"
                               >
-                                <Eye className="w-4 h-4 mr-2" />
+                                <Eye className="w-3 h-3 mr-1" />
                                 View Activity Logs
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => generateInvoice(student.id)}
-                                className="hover-scale hover:border-purple-300 hover:text-purple-600"
+                                className="text-xs hover:border-purple-300 hover:text-purple-600"
                               >
-                                <FileText className="w-4 h-4 mr-2" />
+                                <FileText className="w-3 h-3 mr-1" />
                                 Generate Invoice
                               </Button>
                               {student.last_invoice_date && (
@@ -1277,9 +1266,9 @@ export function StudentsManagement() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => downloadInvoicePDF(student)}
-                                  className="hover-scale hover:border-orange-300 hover:text-orange-600"
+                                  className="text-xs hover:border-orange-300 hover:text-orange-600"
                                 >
-                                  <Download className="w-4 h-4 mr-2" />
+                                  <Download className="w-3 h-3 mr-1" />
                                   Download Invoice
                                 </Button>
                               )}
@@ -1287,25 +1276,25 @@ export function StudentsManagement() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleStatusUpdate(student.id)}
-                                className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                                className="text-xs hover:border-blue-300 hover:text-blue-600"
                               >
-                                <Settings className="w-4 h-4 mr-2" />
+                                <Settings className="w-3 h-3 mr-1" />
                                 Update Status
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleToggleLMSSuspension(student.id, student.lms_status)}
-                                className={`hover-scale ${student.lms_status === 'suspended' ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:text-red-700 hover:border-red-300"}`}
+                                className={`text-xs ${student.lms_status === 'suspended' ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:text-red-700 hover:border-red-300"}`}
                               >
                                 {student.lms_status === 'suspended' ? (
                                   <>
-                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    <CheckCircle className="w-3 h-3 mr-1" />
                                     Activate LMS
                                   </>
                                 ) : (
                                   <>
-                                    <Ban className="w-4 h-4 mr-2" />
+                                    <Ban className="w-3 h-3 mr-1" />
                                     Suspend LMS
                                   </>
                                  )}
@@ -1316,9 +1305,9 @@ export function StudentsManagement() {
                                    <Button
                                      variant="outline"
                                      size="sm"
-                                     className="hover-scale text-red-600 hover:text-red-700 hover:border-red-300"
+                                     className="text-xs text-red-600 hover:text-red-700 hover:border-red-300"
                                    >
-                                     <Trash2 className="w-4 h-4 mr-2" />
+                                     <Trash2 className="w-3 h-3 mr-1" />
                                      Delete Student
                                    </Button>
                                  </AlertDialogTrigger>
