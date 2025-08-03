@@ -32,6 +32,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const MentorDashboard = lazy(() => import("./pages/MentorDashboard"));
 const SuperadminDashboard = lazy(() => import("./pages/SuperadminDashboard"));
+const SuperadminDocs = lazy(() => import("./pages/SuperadminDocs"));
 const EnrollmentManagerDashboard = lazy(() => import("./pages/EnrollmentManagerDashboard"));
 const Videos = lazy(() => import("./pages/Videos"));
 const VideoPlayer = lazy(() => import("./pages/VideoPlayer"));
@@ -184,6 +185,8 @@ const App = () => {
                     <Route path="mentor" element={<MentorDashboard />} />
                     <Route path="mentor/sessions" element={<MentorSessionsPage />} />
                     <Route path="superadmin" element={<SuperadminDashboard />} />
+                    <Route path="superadmin/docs" element={<SuperadminDocs />} />
+                    <Route path="superadmin/docs/:slug" element={<SuperadminDocs />} />
                     <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
                     
                     
