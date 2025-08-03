@@ -45,15 +45,7 @@ export type Database = {
           id?: string
           performed_by?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "admin_logs_performed_by_fkey"
-            columns: ["performed_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       assignments: {
         Row: {
