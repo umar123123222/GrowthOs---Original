@@ -1378,6 +1378,8 @@ export type Database = {
           deleted_at: string | null
           dream_goal_summary: string | null
           email: string
+          encrypted_meta_ads_credentials: string | null
+          encrypted_shopify_credentials: string | null
           fees_due_date: string | null
           fees_overdue: boolean | null
           fees_structure: string | null
@@ -1391,7 +1393,6 @@ export type Database = {
           last_invoice_date: string | null
           last_invoice_sent: boolean | null
           last_suspended_date: string | null
-          lms_password: string | null
           lms_status: string | null
           lms_user_id: string | null
           mentor_id: string | null
@@ -1409,7 +1410,6 @@ export type Database = {
           status_after_3_months: string | null
           student_id: string | null
           success_meaning: string | null
-          temp_password: string | null
           tenant_id: string | null
           tried_ecommerce_before: string | null
           weekly_time_commitment: string | null
@@ -1424,6 +1424,8 @@ export type Database = {
           deleted_at?: string | null
           dream_goal_summary?: string | null
           email: string
+          encrypted_meta_ads_credentials?: string | null
+          encrypted_shopify_credentials?: string | null
           fees_due_date?: string | null
           fees_overdue?: boolean | null
           fees_structure?: string | null
@@ -1437,7 +1439,6 @@ export type Database = {
           last_invoice_date?: string | null
           last_invoice_sent?: boolean | null
           last_suspended_date?: string | null
-          lms_password?: string | null
           lms_status?: string | null
           lms_user_id?: string | null
           mentor_id?: string | null
@@ -1455,7 +1456,6 @@ export type Database = {
           status_after_3_months?: string | null
           student_id?: string | null
           success_meaning?: string | null
-          temp_password?: string | null
           tenant_id?: string | null
           tried_ecommerce_before?: string | null
           weekly_time_commitment?: string | null
@@ -1470,6 +1470,8 @@ export type Database = {
           deleted_at?: string | null
           dream_goal_summary?: string | null
           email?: string
+          encrypted_meta_ads_credentials?: string | null
+          encrypted_shopify_credentials?: string | null
           fees_due_date?: string | null
           fees_overdue?: boolean | null
           fees_structure?: string | null
@@ -1483,7 +1485,6 @@ export type Database = {
           last_invoice_date?: string | null
           last_invoice_sent?: boolean | null
           last_suspended_date?: string | null
-          lms_password?: string | null
           lms_status?: string | null
           lms_user_id?: string | null
           mentor_id?: string | null
@@ -1501,7 +1502,6 @@ export type Database = {
           status_after_3_months?: string | null
           student_id?: string | null
           success_meaning?: string | null
-          temp_password?: string | null
           tenant_id?: string | null
           tried_ecommerce_before?: string | null
           weekly_time_commitment?: string | null
