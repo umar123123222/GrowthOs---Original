@@ -1126,9 +1126,9 @@ export function StudentsManagement() {
                     
                     {expandedRows.has(student.id) && (
                       <TableRow className="animate-accordion-down">
-                        <TableCell colSpan={7} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <TableCell colSpan={7} className="bg-gradient-to-r from-slate-50 to-blue-50 p-4 border-l-4 border-l-blue-200">
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
                                 <p className="text-sm text-gray-900">{formatDate(student.last_invoice_date)}</p>
@@ -1266,7 +1266,7 @@ export function StudentsManagement() {
                               </div>
                             )}
                             
-                            <div className="flex flex-wrap gap-2 pt-4 border-t border-blue-200">
+                            <div className="flex flex-wrap gap-2 pt-3 border-t border-blue-200">
                               <Button
                                 variant="outline"
                                 size="sm"
