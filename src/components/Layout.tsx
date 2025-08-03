@@ -347,6 +347,10 @@ const Layout = memo(({
         href: "/superadmin?tab=company-settings",
         icon: Building2
       }, {
+        name: "Documentation",
+        href: "/superadmin?tab=docs",
+        icon: BookOpen
+      }, {
         name: "Profile",
         href: "/profile",
         icon: User

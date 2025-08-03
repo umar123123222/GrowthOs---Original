@@ -3,6 +3,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Syntax highlighting for code blocks */
+@import 'highlight.js/styles/github.css';
+
+/* Dark mode syntax highlighting */
+@media (prefers-color-scheme: dark) {
+  @import 'highlight.js/styles/github-dark.css';
+}
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
