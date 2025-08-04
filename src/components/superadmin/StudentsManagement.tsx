@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-// Removed SecureStudentCreationDialog - rebuilding student creation system
+import { StudentCreationDialog } from '@/components/StudentCreationDialog';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -842,7 +842,11 @@ export function StudentsManagement() {
           </Button>
         </div>
         
-        {/* TODO: Replace with new StudentCreationDialog when rebuilt */}
+        <StudentCreationDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          onStudentCreated={fetchStudents}
+        />
       </div>
 
       {/* Stats Cards */}

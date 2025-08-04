@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Trash2, Plus, UserPlus, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserManagement } from "@/hooks/useUserManagement";
-// Removed SecureStudentCreationDialog - rebuilding student creation system
+import { StudentCreationDialog } from "@/components/StudentCreationDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -102,7 +102,11 @@ const StudentsManagement = () => {
         </Button>
       </div>
 
-      {/* TODO: Replace with new StudentCreationDialog when rebuilt */}
+      <StudentCreationDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onStudentCreated={handleStudentCreated}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

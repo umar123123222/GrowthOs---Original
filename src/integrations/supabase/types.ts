@@ -1615,6 +1615,19 @@ export type Database = {
             }
         Returns: Json
       }
+      create_student_complete: {
+        Args: {
+          p_email: string
+          p_password: string
+          p_full_name: string
+          p_phone?: string
+          p_address?: string
+          p_mentor_id?: string
+          p_batch_id?: string
+          p_pod_id?: string
+        }
+        Returns: Json
+      }
       delete_student_atomic: {
         Args: { p_user_id: string }
         Returns: Json
