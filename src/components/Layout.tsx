@@ -350,10 +350,6 @@ const Layout = memo(({
         name: "Profile",
         href: "/profile",
         icon: User
-      }, {
-        name: "Documentation",
-        href: "/superadmin/docs",
-        icon: FileText
       }];
     } else if (isUserAdmin) {
       return [{
