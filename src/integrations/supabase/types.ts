@@ -1393,6 +1393,7 @@ export type Database = {
           last_invoice_date: string | null
           last_invoice_sent: boolean | null
           last_suspended_date: string | null
+          lms_password: string | null
           lms_status: string | null
           lms_user_id: string | null
           mentor_id: string | null
@@ -1439,6 +1440,7 @@ export type Database = {
           last_invoice_date?: string | null
           last_invoice_sent?: boolean | null
           last_suspended_date?: string | null
+          lms_password?: string | null
           lms_status?: string | null
           lms_user_id?: string | null
           mentor_id?: string | null
@@ -1485,6 +1487,7 @@ export type Database = {
           last_invoice_date?: string | null
           last_invoice_sent?: boolean | null
           last_suspended_date?: string | null
+          lms_password?: string | null
           lms_status?: string | null
           lms_user_id?: string | null
           mentor_id?: string | null
