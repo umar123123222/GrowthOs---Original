@@ -1595,14 +1595,24 @@ export type Database = {
         Returns: string
       }
       create_student_atomic: {
-        Args: {
-          p_full_name: string
-          p_email: string
-          p_phone: string
-          p_installments: number
-          p_company_id?: string
-          p_course_id?: string
-        }
+        Args:
+          | {
+              p_full_name: string
+              p_email: string
+              p_phone: string
+              p_installments: number
+              p_company_id?: string
+              p_course_id?: string
+            }
+          | {
+              p_user_id: string
+              p_full_name: string
+              p_email: string
+              p_phone: string
+              p_installments: number
+              p_company_id?: string
+              p_course_id?: string
+            }
         Returns: Json
       }
       delete_student_atomic: {

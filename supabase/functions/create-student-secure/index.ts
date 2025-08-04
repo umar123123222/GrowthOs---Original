@@ -167,6 +167,7 @@ serve(async (req) => {
     console.log('Creating student with installments:', installments)
     const { data: studentResult, error: studentError } = await supabaseClient
       .rpc('create_student_atomic', {
+        p_user_id: newUser.user.id, // Pass the auth user ID to prevent ID mismatch
         p_full_name: full_name,
         p_email: email,
         p_phone: phone,
