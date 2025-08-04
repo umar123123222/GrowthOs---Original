@@ -52,6 +52,75 @@ serve(async (req) => {
       )
     }
 
+    // Robust fees structure parsing function
+    function parseFeesStructure(feesStructure: string): number {
+      console.log('Parsing fees_structure:', feesStructure)
+      
+      // Use regex to extract number from both singular and plural forms
+      const match = feesStructure.match(/^(\d+)_installments?$/)
+      
+      if (!match) {
+        console.error('Invalid fees_structure format:', feesStructure)
+        throw new Error(`Invalid fees_structure format: ${feesStructure}. Expected format: "N_installment" or "N_installments"`)
+      }
+      
+      const installments = parseInt(match[1], 10)
+      
+      if (isNaN(installments) || installments < 1) {
+        console.error('Invalid installment number:', match[1])
+        throw new Error(`Invalid installment number: ${match[1]}. Must be a positive integer`)
+      }
+      
+      console.log('Parsed installments:', installments)
+      return installments
+    }
+
+    // Parse and validate fees structure
+    let installments: number
+    try {
+      installments = parseFeesStructure(fees_structure)
+    } catch (error) {
+      console.error('Fees structure parsing error:', error.message)
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid fees structure format',
+          details: error.message
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Validate against company settings
+    const { data: companySettings, error: settingsError } = await supabaseClient
+      .from('company_settings')
+      .select('maximum_installment_count')
+      .single()
+
+    if (settingsError || !companySettings) {
+      console.error('Failed to fetch company settings:', settingsError)
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Configuration error',
+          details: 'Unable to validate installment limits'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    if (installments > companySettings.maximum_installment_count) {
+      console.error(`Installments ${installments} exceed maximum allowed ${companySettings.maximum_installment_count}`)
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid installment count',
+          details: `Installments (${installments}) exceed maximum allowed (${companySettings.maximum_installment_count})`
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Check if student already exists
     const { data: existingStudent } = await supabaseClient
       .from('users')
@@ -94,8 +163,8 @@ serve(async (req) => {
       )
     }
 
-    // Create student record using atomic function
-    const installments = parseInt(fees_structure.replace('_installments', '')) || 3
+    // Create student record using atomic function with validated installments
+    console.log('Creating student with installments:', installments)
     const { data: studentResult, error: studentError } = await supabaseClient
       .rpc('create_student_atomic', {
         p_full_name: full_name,
