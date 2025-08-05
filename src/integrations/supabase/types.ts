@@ -279,6 +279,59 @@ export type Database = {
         }
         Relationships: []
       }
+      email_queue: {
+        Row: {
+          created_at: string | null
+          credentials: Json
+          email_type: string
+          error_message: string | null
+          id: string
+          recipient_email: string
+          recipient_name: string
+          retry_count: number | null
+          sent_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          credentials: Json
+          email_type: string
+          error_message?: string | null
+          id?: string
+          recipient_email: string
+          recipient_name: string
+          retry_count?: number | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          credentials?: Json
+          email_type?: string
+          error_message?: string | null
+          id?: string
+          recipient_email?: string
+          recipient_name?: string
+          retry_count?: number | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       installment_plans: {
         Row: {
           created_at: string | null
@@ -539,6 +592,7 @@ export type Database = {
           created_at: string | null
           enrollment_date: string | null
           id: string
+          installment_count: number | null
           installment_plan_id: string | null
           lms_username: string
           onboarding_completed: boolean | null
@@ -550,6 +604,7 @@ export type Database = {
           created_at?: string | null
           enrollment_date?: string | null
           id?: string
+          installment_count?: number | null
           installment_plan_id?: string | null
           lms_username: string
           onboarding_completed?: boolean | null
@@ -561,6 +616,7 @@ export type Database = {
           created_at?: string | null
           enrollment_date?: string | null
           id?: string
+          installment_count?: number | null
           installment_plan_id?: string | null
           lms_username?: string
           onboarding_completed?: boolean | null
