@@ -25,19 +25,21 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
+    phone: '',
     installment_count: 1
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!formData.email || !formData.full_name || formData.installment_count < 1) {
+    if (!formData.email || !formData.full_name || !formData.phone || formData.installment_count < 1) {
       return
     }
 
     const result = await createStudent({
       full_name: formData.full_name,
       email: formData.email,
+      phone: formData.phone,
       installment_count: formData.installment_count
     })
 
@@ -45,6 +47,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
       setFormData({
         full_name: '',
         email: '',
+        phone: '',
         installment_count: 1
       })
       onOpenChange(false)
@@ -88,6 +91,18 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
           </div>
           
           <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number *</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={(e) => handleInputChange('phone', e.target.value)}
+              placeholder="Enter phone number"
+              required
+            />
+          </div>
+          
+          <div className="space-y-2">
             <Label htmlFor="installments">Number of Installments *</Label>
             <Select 
               value={formData.installment_count.toString()} 
@@ -121,7 +136,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !formData.email || !formData.full_name || installmentLoading}
+              disabled={isLoading || !formData.email || !formData.full_name || !formData.phone || installmentLoading}
             >
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Student

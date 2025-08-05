@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast'
 export interface EnhancedStudentData {
   email: string
   full_name: string
+  phone: string
   installment_count: number
 }
 

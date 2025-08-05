@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { StudentCreationDialog } from '@/components/StudentCreationDialog';
+import { EnhancedStudentCreationDialog } from '@/components/EnhancedStudentCreationDialog';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -853,7 +853,7 @@ export function StudentsManagement() {
           </Button>
         </div>
         
-        <StudentCreationDialog
+        <EnhancedStudentCreationDialog
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           onStudentCreated={fetchStudents}

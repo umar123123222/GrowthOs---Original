@@ -10,6 +10,7 @@ const corsHeaders = {
 interface CreateEnhancedStudentRequest {
   email: string;
   full_name: string;
+  phone: string;
   installment_count: number;
 }
 
@@ -72,8 +73,8 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     // Parse request body
-    const { email, full_name, installment_count }: CreateEnhancedStudentRequest = await req.json();
-    console.log('Request data:', { email, full_name, installment_count });
+    const { email, full_name, phone, installment_count }: CreateEnhancedStudentRequest = await req.json();
+    console.log('Request data:', { email, full_name, phone, installment_count });
 
     // Generate passwords
     const loginPassword = generateSecurePassword();
@@ -81,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
     const lmsUserId = email; // LMS user ID is the email
 
     // Validate input
-    if (!email || !full_name || !installment_count) {
+    if (!email || !full_name || !phone || !installment_count) {
       return new Response(
         JSON.stringify({ success: false, error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -128,6 +129,7 @@ const handler = async (req: Request): Promise<Response> => {
         id: authUser.user.id,
         email,
         full_name,
+        phone: phone,
         role: 'student',
         password_display: loginPassword,
         lms_user_id: lmsUserId,
