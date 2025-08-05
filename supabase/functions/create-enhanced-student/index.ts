@@ -257,34 +257,51 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Create first invoice
+    // Create ALL installments at once
     try {
-      // Get company settings for fee calculation
       const { data: companySettings } = await supabaseAdmin
         .from('company_settings')
-        .select('original_fee_amount')
+        .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days')
         .single();
 
-      const totalFee = companySettings?.original_fee_amount || 3000;
-      const installmentAmount = totalFee / installment_count;
+      if (companySettings) {
+        const installmentAmount = companySettings.original_fee_amount / installment_count;
+        const intervalDays = companySettings.invoice_send_gap_days || 30;
+        
+        // Create all installments
+        const installments = [];
+        for (let i = 1; i <= installment_count; i++) {
+          const issueDate = new Date();
+          issueDate.setDate(issueDate.getDate() + ((i - 1) * intervalDays));
+          
+          const dueDate = new Date(issueDate);
+          dueDate.setDate(dueDate.getDate() + (companySettings.invoice_overdue_days || 5));
+
+          installments.push({
+            student_id: studentRecord.id,
+            amount: installmentAmount,
+            installment_number: i,
+            due_date: dueDate.toISOString(),
+            status: i === 1 ? 'pending' : 'scheduled',
+            created_at: issueDate.toISOString()
+          });
+        }
+
+        const { error: installmentError } = await supabaseAdmin
+          .from('invoices')
+          .insert(installments);
+
+        if (installmentError) {
+          console.error('Error creating installments:', installmentError);
+        } else {
+          console.log(`All ${installment_count} installments created successfully`);
+        }
+      }
       
-      // Create first invoice
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 7); // Due in 7 days
-
-      await supabaseAdmin
-        .from('invoices')
-        .insert({
-          student_id: studentRecord.id,
-          installment_number: 1,
-          amount: installmentAmount,
-          due_date: dueDate.toISOString(),
-          status: 'pending'
-        });
-
-      console.log('First invoice created successfully');
+      console.log('Installment creation completed successfully');
     } catch (invoiceError) {
       console.error('Invoice creation error:', invoiceError);
-      // Continue anyway - invoice can be created manually
+      // Continue anyway - invoices can be created manually
     }
 
     const response: CreateEnhancedStudentResponse = {
