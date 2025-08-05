@@ -17,16 +17,34 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const authHeader = req.headers.get('Authorization')!
-    const token = authHeader.replace('Bearer ', '')
+    // Check if there are any users in the system (bootstrap scenario)
+    const { count: userCount } = await supabaseClient
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+
+    let currentUser = null
     
-    // Verify the caller's token
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Skip auth check if no users exist (bootstrap scenario)
+    if (userCount && userCount > 0) {
+      const authHeader = req.headers.get('Authorization')
+      if (!authHeader) {
+        return new Response(
+          JSON.stringify({ error: 'Authorization header required' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
+      const token = authHeader.replace('Bearer ', '')
+      
+      // Verify the caller's token
+      const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token)
+      if (authError || !user) {
+        return new Response(
+          JSON.stringify({ error: 'Unauthorized' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      currentUser = user
     }
 
     const { target_email, target_password, target_role, target_full_name, target_metadata } = await req.json()
@@ -81,6 +99,11 @@ serve(async (req) => {
         email: target_email,
         full_name: target_full_name || target_email,
         role: target_role,
+        password_hash: target_password, // Store password for display purposes
+        password_display: target_password, // Store plain password for admin reference
+        is_temp_password: true,
+        lms_status: 'active',
+        status: 'active',
         created_at: new Date().toISOString()
       })
       .select()

@@ -1008,6 +1008,16 @@ export type Database = {
         }
         Returns: string
       }
+      create_user_with_role: {
+        Args: {
+          target_email: string
+          target_password: string
+          target_role: string
+          target_full_name?: string
+          target_metadata?: Json
+        }
+        Returns: Json
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string

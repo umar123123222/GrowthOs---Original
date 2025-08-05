@@ -28,9 +28,30 @@ export const useUserManagement = () => {
   const createUser = async (userData: CreateUserRequest): Promise<boolean> => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('create-user-with-role', {
+      // Check if there are any users in the system first
+      const { count: userCount } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true });
+
+      // For the first user (bootstrap), we don't need authentication
+      const invokeOptions: any = {
         body: userData
-      });
+      };
+
+      // Only add auth header if users exist in the system
+      if (userCount && userCount > 0) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: "You must be logged in to create users"
+          });
+          return false;
+        }
+      }
+
+      const { data, error } = await supabase.functions.invoke('create-user-with-role', invokeOptions);
 
       if (error || data?.error) {
         toast({
