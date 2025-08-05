@@ -117,19 +117,32 @@ export const StudentManagement = () => {
 
   const fetchInstallmentPayments = async () => {
     try {
+      // Use invoices table instead of installment_payments for now
       const { data, error } = await supabase
-        .from('installment_payments')
+        .from('invoices')
         .select('*')
         .order('installment_number', { ascending: true });
 
       if (error) throw error;
 
-      // Group payments by user_id
+      // Group invoices by student_id and convert to installment payment format
       const paymentsMap = new Map<string, InstallmentPayment[]>();
-      data?.forEach((payment) => {
-        const userPayments = paymentsMap.get(payment.user_id) || [];
+      data?.forEach((invoice) => {
+        const payment: InstallmentPayment = {
+          id: invoice.id,
+          user_id: invoice.student_id,
+          installment_number: invoice.installment_number,
+          total_installments: 1, // Default value
+          amount: invoice.amount,
+          status: invoice.status,
+          payment_date: invoice.paid_at,
+          invoice_id: invoice.id,
+          created_at: invoice.created_at,
+          updated_at: invoice.updated_at
+        };
+        const userPayments = paymentsMap.get(invoice.student_id) || [];
         userPayments.push(payment);
-        paymentsMap.set(payment.user_id, userPayments);
+        paymentsMap.set(invoice.student_id, userPayments);
       });
 
       setInstallmentPayments(paymentsMap);

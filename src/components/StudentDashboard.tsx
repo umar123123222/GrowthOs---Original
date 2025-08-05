@@ -127,16 +127,8 @@ export function StudentDashboard() {
         { id: '5', title: 'Meta Ads Connected', completed: !!userData?.meta_ads_credentials, icon: '📊' }
       ]);
 
-      // Fetch leaderboard position
-      const { data: leaderboard } = await supabase
-        .from('leaderboard')
-        .select('rank, user_id')
-        .order('rank', { ascending: true });
-
-      const userRank = leaderboard?.find(l => l.user_id === user.id);
-      if (userRank && leaderboard) {
-        setLeaderboardPosition({ rank: userRank.rank, total: leaderboard.length });
-      }
+      // Skip leaderboard for now since table doesn't exist
+      // We'll implement this later when the leaderboard table is properly created
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);

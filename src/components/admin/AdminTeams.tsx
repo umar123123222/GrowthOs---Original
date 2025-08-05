@@ -94,14 +94,19 @@ const AdminTeams = () => {
   const fetchActivityLogs = async (userId: string) => {
     try {
       const { data, error } = await supabase
-        .from('user_activity_logs')
+        .from('admin_logs')
         .select('*')
-        .eq('user_id', userId)
-        .order('occurred_at', { ascending: false })
+        .eq('performed_by', userId)
+        .order('created_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
-      setActivityLogs(data || []);
+      setActivityLogs((data || []).map(log => ({
+        ...log,
+        activity_type: log.action,
+        occurred_at: log.created_at,
+        metadata: log.data
+      })));
     } catch (error: any) {
       toast({
         title: "Error",
@@ -138,7 +143,9 @@ const AdminTeams = () => {
           full_name: newMember.full_name,
           email: newMember.email,
           role: newMember.role,
-          status: 'Active'
+          status: 'active',
+          password_display: 'temp123',
+          password_hash: 'temp123'
         }]);
 
       if (error) throw error;

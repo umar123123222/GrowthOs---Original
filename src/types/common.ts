@@ -11,20 +11,30 @@ export interface User {
   avatar_url?: string;
   student_id?: string;
   mentor_id?: string;
-  encrypted_shopify_credentials?: string;
-  shopify_domain?: string;
-  encrypted_meta_ads_credentials?: string;
+  shopify_credentials?: string;
+  meta_ads_credentials?: string;
+  dream_goal_summary?: string;
   onboarding_done?: boolean;
   fees_overdue?: boolean;
   fees_due_date?: string;
   status?: string;
   lms_status?: string;
+  lms_user_id?: string;
   last_active_at?: string;
+  password_display?: string;
+  password_hash?: string;
+  is_temp_password?: boolean;
 }
 
-// Legacy interfaces for backward compatibility (remove temp_password and lms_password)
+// Legacy interfaces for backward compatibility
 export interface Student extends User {
   role: 'student';
+  student_id?: string;
+  phone?: string;
+  fees_structure?: any;
+  fees_overdue?: boolean;
+  installment_count?: number;
+  last_invoice_date?: string;
 }
 
 export interface Admin extends User {
@@ -33,6 +43,8 @@ export interface Admin extends User {
 
 export interface TeamMember extends User {
   role: 'student' | 'admin' | 'mentor' | 'superadmin' | 'enrollment_manager';
+  lms_user_id?: string;
+  last_active_at?: string;
 }
 
 export interface PendingInvoice {
@@ -210,7 +222,7 @@ export interface TicketReply {
 
 export interface InstallmentPayment {
   id: string;
-  user_id: string;
+  user_id?: string; // Make optional since we map from invoice.student_id
   installment_number: number;
   total_installments: number;
   amount?: number;

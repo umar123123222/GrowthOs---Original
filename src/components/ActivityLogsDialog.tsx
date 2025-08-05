@@ -58,10 +58,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
     try {
       let query = supabase
         .from('admin_logs')
-        .select(`
-          *,
-          users:performed_by (email, role, full_name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       // Role-based filtering
@@ -104,7 +101,22 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       const { data, error } = await query;
 
       if (error) throw error;
-      setLogs(data || []);
+      
+      // Fetch user details for each log separately since foreign key doesn't exist
+      const logsWithUsers = await Promise.all((data || []).map(async (log) => {
+        let userData = null;
+        if (log.performed_by) {
+          const { data: user } = await supabase
+            .from('users')
+            .select('email, role, full_name')
+            .eq('id', log.performed_by)
+            .single();
+          userData = user;
+        }
+        return { ...log, users: userData };
+      }));
+      
+      setLogs(logsWithUsers);
     } catch (error) {
       console.error('Error fetching activity logs:', error);
       toast({

@@ -39,12 +39,9 @@ export const ActivityLogs = () => {
   const fetchLogs = async () => {
     try {
       let query = supabase
-        .from('user_activity_logs')
-        .select(`
-          *,
-          users (email, role)
-        `)
-        .order('occurred_at', { ascending: false })
+        .from('admin_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
         .limit(100);
 
       // Apply date filter
@@ -52,7 +49,7 @@ export const ActivityLogs = () => {
         const days = parseInt(dateRange.replace('days', ''));
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
-        query = query.gte('occurred_at', startDate.toISOString());
+        query = query.gte('created_at', startDate.toISOString());
       }
 
       // Apply role filter
@@ -62,13 +59,36 @@ export const ActivityLogs = () => {
 
       // Apply activity filter
       if (activityFilter !== 'all') {
-        query = query.eq('activity_type', activityFilter);
+        query = query.eq('action', activityFilter);
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
-      setLogs(data || []);
+      
+      // Fetch user details for each log separately
+      const logsWithUsers = await Promise.all((data || []).map(async (log) => {
+        let userData = null;
+        if (log.performed_by) {
+          const { data: user } = await supabase
+            .from('users')
+            .select('email, role')
+            .eq('id', log.performed_by)
+            .single();
+          userData = user;
+        }
+        return { 
+          ...log, 
+          users: userData,
+          activity_type: log.action,
+          occurred_at: log.created_at,
+          user_id: log.performed_by,
+          metadata: log.data,
+          reference_id: log.entity_id
+        };
+      }));
+      
+      setLogs(logsWithUsers);
     } catch (error) {
       console.error('Error fetching activity logs:', error);
       toast({

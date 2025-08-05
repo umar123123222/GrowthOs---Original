@@ -888,42 +888,60 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          dream_goal_summary: string | null
           email: string
           full_name: string
           id: string
           is_temp_password: boolean | null
+          last_active_at: string | null
           last_login_at: string | null
+          lms_status: string | null
+          lms_user_id: string | null
+          meta_ads_credentials: string | null
           password_display: string
           password_hash: string
           role: string
+          shopify_credentials: string | null
           status: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          dream_goal_summary?: string | null
           email: string
           full_name: string
           id?: string
           is_temp_password?: boolean | null
+          last_active_at?: string | null
           last_login_at?: string | null
+          lms_status?: string | null
+          lms_user_id?: string | null
+          meta_ads_credentials?: string | null
           password_display: string
           password_hash: string
           role: string
+          shopify_credentials?: string | null
           status?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           created_by?: string | null
+          dream_goal_summary?: string | null
           email?: string
           full_name?: string
           id?: string
           is_temp_password?: boolean | null
+          last_active_at?: string | null
           last_login_at?: string | null
+          lms_status?: string | null
+          lms_user_id?: string | null
+          meta_ads_credentials?: string | null
           password_display?: string
           password_hash?: string
           role?: string
+          shopify_credentials?: string | null
           status?: string | null
           updated_at?: string | null
         }
