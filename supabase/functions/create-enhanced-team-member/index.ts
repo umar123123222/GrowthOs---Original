@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.1';
-import { Resend } from "npm:resend@2.0.0";
+import { SMTPClient } from '../_shared/smtp-client.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -178,52 +178,52 @@ const handler = async (req: Request): Promise<Response> => {
       // Continue anyway - email can be sent manually
     }
 
-    // Send welcome email with credentials
+    // Send welcome email with credentials via SMTP
     try {
-      if (Deno.env.get('RESEND_API_KEY')) {
-        const resend = new Resend(Deno.env.get('RESEND_API_KEY'));
-        
-        await resend.emails.send({
-          from: 'Growth OS <noreply@growthapp.ai>',
-          to: [email],
-          subject: 'Welcome to Growth OS - Your Login Credentials',
-          html: `
-            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-              <h2>Welcome to Growth OS, ${full_name}!</h2>
-              
-              <p>Your ${role} account has been created successfully. Here are your login credentials:</p>
-              
-              <div style="background-color: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3>Login Credentials</h3>
-                <p><strong>Email:</strong> ${email}</p>
-                <p><strong>Password:</strong> ${generatedPassword}</p>
-                <p><strong>Role:</strong> ${role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ')}</p>
-              </div>
-              
-              <p>Please keep these credentials secure. You can change your password after logging in.</p>
-              
-              <p>If you have any questions, please contact the system administrator.</p>
-              
-              <p>Best regards,<br>Growth OS Team</p>
+      const smtpClient = SMTPClient.fromEnv();
+      
+      await smtpClient.sendEmail({
+        to: email,
+        subject: 'Welcome to Growth OS - Your Login Credentials',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Welcome to Growth OS, ${full_name}!</h2>
+            
+            <p>Your ${role} account has been created successfully. Here are your login credentials:</p>
+            
+            <div style="background-color: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3>Login Credentials</h3>
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>Password:</strong> ${generatedPassword}</p>
+              <p><strong>Role:</strong> ${role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ')}</p>
             </div>
-          `,
-        });
+            
+            <p>Please keep these credentials secure. You can change your password after logging in.</p>
+            
+            <p>If you have any questions, please contact the system administrator.</p>
+            
+            <p>Best regards,<br>Growth OS Team</p>
+          </div>
+        `,
+      });
 
-        // Update email queue status
-        await supabaseAdmin
-          .from('email_queue')
-          .update({ status: 'sent', sent_at: new Date().toISOString() })
-          .eq('user_id', authUser.user.id)
-          .eq('email_type', 'team_member_credentials');
-      }
+      console.log('Email sent successfully via SMTP to:', email);
+
+      // Update email queue status
+      await supabaseAdmin
+        .from('email_queue')
+        .update({ status: 'sent', sent_at: new Date().toISOString() })
+        .eq('user_id', authUser.user.id)
+        .eq('email_type', 'team_member_credentials');
+        
     } catch (emailError) {
-      console.error('Email sending error:', emailError);
+      console.error('SMTP email sending error:', emailError);
       // Update email queue with error
       await supabaseAdmin
         .from('email_queue')
         .update({ 
           status: 'failed', 
-          error_message: emailError instanceof Error ? emailError.message : 'Unknown email error'
+          error_message: emailError instanceof Error ? emailError.message : 'Unknown SMTP error'
         })
         .eq('user_id', authUser.user.id)
         .eq('email_type', 'team_member_credentials');
