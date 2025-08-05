@@ -178,6 +178,15 @@ const handler = async (req: Request): Promise<Response> => {
       // Continue anyway - email can be sent manually
     }
 
+    // Get custom domain from company settings
+    const { data: companySettings } = await supabaseAdmin
+      .from('company_settings')
+      .select('custom_domain')
+      .eq('id', 1)
+      .single();
+    
+    const loginUrl = companySettings?.custom_domain || 'https://majqoqagohicjigmsilu.lovable.app';
+
     // Send welcome email with credentials via SMTP
     try {
       const smtpClient = SMTPClient.fromEnv();
@@ -199,7 +208,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="https://majqoqagohicjigmsilu.lovable.app/login" 
+              <a href="${loginUrl}/login" 
                  style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
                 Access Your Dashboard
               </a>

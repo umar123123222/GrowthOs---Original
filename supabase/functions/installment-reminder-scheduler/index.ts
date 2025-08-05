@@ -21,6 +21,15 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
+    // Get custom domain from company settings
+    const { data: companySettings } = await supabaseAdmin
+      .from('company_settings')
+      .select('custom_domain')
+      .eq('id', 1)
+      .single();
+    
+    const loginUrl = companySettings?.custom_domain || 'https://majqoqagohicjigmsilu.lovable.app';
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -42,7 +51,7 @@ serve(async (req) => {
           .eq('id', invoice.id);
 
         // Send issue email
-        await sendInstallmentIssueEmail(invoice);
+        await sendInstallmentIssueEmail(invoice, loginUrl);
         
         // Create notification
         await createInstallmentNotification(
@@ -86,7 +95,7 @@ serve(async (req) => {
             .update({ status: 'due' })
             .eq('id', invoice.id);
 
-          await sendDueEmail(invoice);
+          await sendDueEmail(invoice, loginUrl);
           await createInstallmentNotification(
             supabaseAdmin,
             invoice.students.user_id,
@@ -108,7 +117,7 @@ serve(async (req) => {
             })
             .eq('id', invoice.id);
 
-          await sendFirstReminderEmail(invoice);
+          await sendFirstReminderEmail(invoice, loginUrl);
           await createInstallmentNotification(
             supabaseAdmin,
             invoice.students.user_id,
@@ -130,7 +139,7 @@ serve(async (req) => {
             })
             .eq('id', invoice.id);
 
-          await sendSecondReminderEmail(invoice);
+          await sendSecondReminderEmail(invoice, loginUrl);
           await createInstallmentNotification(
             supabaseAdmin,
             invoice.students.user_id,
@@ -168,7 +177,7 @@ serve(async (req) => {
   }
 });
 
-async function sendInstallmentIssueEmail(invoice: any) {
+async function sendInstallmentIssueEmail(invoice: any, loginUrl: string) {
   try {
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
@@ -197,7 +206,7 @@ async function sendInstallmentIssueEmail(invoice: any) {
           <p>Please ensure payment is made by the due date to avoid any service interruptions.</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://majqoqagohicjigmsilu.lovable.app/login" 
+            <a href="${loginUrl}/login" 
                style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
               View Payment Details
             </a>
@@ -216,7 +225,7 @@ async function sendInstallmentIssueEmail(invoice: any) {
   }
 }
 
-async function sendFirstReminderEmail(invoice: any) {
+async function sendFirstReminderEmail(invoice: any, loginUrl: string) {
   try {
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
@@ -245,7 +254,7 @@ async function sendFirstReminderEmail(invoice: any) {
           <p>Please make your payment by the due date to continue your learning journey without interruption.</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://majqoqagohicjigmsilu.lovable.app/login" 
+            <a href="${loginUrl}/login" 
                style="background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
               Make Payment Now
             </a>
@@ -264,7 +273,7 @@ async function sendFirstReminderEmail(invoice: any) {
   }
 }
 
-async function sendSecondReminderEmail(invoice: any) {
+async function sendSecondReminderEmail(invoice: any, loginUrl: string) {
   try {
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
@@ -293,7 +302,7 @@ async function sendSecondReminderEmail(invoice: any) {
           <p><strong>Important:</strong> Failure to make payment by the due date may result in temporary suspension of your learning platform access.</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://majqoqagohicjigmsilu.lovable.app/login" 
+            <a href="${loginUrl}/login" 
                style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
               Pay Now to Avoid Suspension
             </a>
@@ -312,7 +321,7 @@ async function sendSecondReminderEmail(invoice: any) {
   }
 }
 
-async function sendDueEmail(invoice: any) {
+async function sendDueEmail(invoice: any, loginUrl: string) {
   try {
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
@@ -339,7 +348,7 @@ async function sendDueEmail(invoice: any) {
           <p><strong>Action Required:</strong> Your learning platform access may be suspended until payment is received. Please make payment immediately to restore full access.</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="https://majqoqagohicjigmsilu.lovable.app/login" 
+            <a href="${loginUrl}/login" 
                style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
               Pay Now - Restore Access
             </a>

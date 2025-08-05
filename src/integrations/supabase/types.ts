@@ -196,6 +196,7 @@ export type Database = {
           contact_email: string
           created_at: string | null
           currency: string
+          custom_domain: string | null
           enable_student_signin: boolean | null
           id: number
           installment_plans: string[] | null
@@ -219,6 +220,7 @@ export type Database = {
           contact_email?: string
           created_at?: string | null
           currency?: string
+          custom_domain?: string | null
           enable_student_signin?: boolean | null
           id?: number
           installment_plans?: string[] | null
@@ -242,6 +244,7 @@ export type Database = {
           contact_email?: string
           created_at?: string | null
           currency?: string
+          custom_domain?: string | null
           enable_student_signin?: boolean | null
           id?: number
           installment_plans?: string[] | null
