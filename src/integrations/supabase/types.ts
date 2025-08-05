@@ -956,6 +956,7 @@ export type Database = {
           meta_ads_credentials: string | null
           password_display: string
           password_hash: string
+          phone: string | null
           role: string
           shopify_credentials: string | null
           status: string | null
@@ -976,6 +977,7 @@ export type Database = {
           meta_ads_credentials?: string | null
           password_display: string
           password_hash: string
+          phone?: string | null
           role: string
           shopify_credentials?: string | null
           status?: string | null
@@ -996,6 +998,7 @@ export type Database = {
           meta_ads_credentials?: string | null
           password_display?: string
           password_hash?: string
+          phone?: string | null
           role?: string
           shopify_credentials?: string | null
           status?: string | null
