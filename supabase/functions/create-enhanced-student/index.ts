@@ -44,6 +44,14 @@ function generateSecurePassword(): string {
   return password;
 }
 
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -79,6 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate passwords
     const loginPassword = generateSecurePassword();
     const lmsPassword = generateSecurePassword();
+    const passwordHash = await hashPassword(loginPassword);
     const lmsUserId = email; // LMS user ID is the email
 
     // Validate input
@@ -132,6 +141,7 @@ const handler = async (req: Request): Promise<Response> => {
         phone: phone,
         role: 'student',
         password_display: loginPassword,
+        password_hash: passwordHash,
         lms_user_id: lmsUserId,
         status: 'active',
         lms_status: 'active',
