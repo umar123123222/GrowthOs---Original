@@ -99,7 +99,7 @@ const Teams = () => {
   };
 
 
-  const handleAddMember = async () => {
+const handleAddMember = async () => {
     if (!newMember.full_name || !newMember.email || !newMember.role) {
       toast({
         title: "Error",
@@ -110,16 +110,14 @@ const Teams = () => {
     }
 
     try {
-      // Generate a secure temporary password
-      const tempPassword = generateSecurePassword();
+      // Auto-generate secure password for team members
       
-      // Create user via edge function with admin privileges
-      const response = await supabase.functions.invoke('create-team-member', {
+      // Create user via enhanced edge function
+      const response = await supabase.functions.invoke('create-enhanced-team-member', {
         body: {
           email: newMember.email,
           full_name: newMember.full_name,
-          role: newMember.role,
-          temp_password: tempPassword
+          role: newMember.role
         }
       });
 
@@ -154,22 +152,18 @@ const Teams = () => {
         console.log('Email processing result:', processResult);
         
         
-        const successMessage = newMember.role === 'student' && response.data?.lmsPassword
-          ? `${newMember.role} account created and invitation email sent to ${newMember.email}. LMS Password: ${response.data.lmsPassword}`
-          : `${newMember.role} account created and invitation email sent to ${newMember.email}`;
+        const successMessage = `${newMember.role} account created and credential email sent to ${newMember.email}`;
           
         toast({
           title: "Success",
           description: successMessage
         });
       } catch (emailError) {
-        // User was created but email failed
-        const failureMessage = newMember.role === 'student' && response.data?.lmsPassword
-          ? `Account created but failed to send invitation email. Login Password: ${tempPassword} | LMS Password: ${response.data.lmsPassword}`
-          : `Account created but failed to send invitation email. Manual credentials: ${tempPassword}`;
+        // User was created but email failed  
+        const failureMessage = `Account created but failed to send credential email. Password: ${response.data?.generated_password || 'Contact admin'}`;
           
         toast({
-          title: "Partial Success",
+          title: "Warning",
           description: failureMessage,
           variant: "destructive"
         });

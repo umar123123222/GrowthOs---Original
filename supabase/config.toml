@@ -21,3 +21,9 @@ enabled = true
 
 [analytics]
 enabled = false
+
+[functions.create-enhanced-student]
+verify_jwt = true
+
+[functions.create-enhanced-team-member]
+verify_jwt = true
