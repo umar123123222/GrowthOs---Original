@@ -46,6 +46,7 @@ interface CompanySettingsData {
   invoice_overdue_days: number;
   invoice_send_gap_days: number;
   payment_methods: PaymentMethod[];
+  lms_url: string;
   // Student Sign-in & Questionnaire
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
@@ -91,6 +92,7 @@ export function CompanySettings() {
     invoice_overdue_days: 30,
     invoice_send_gap_days: 7,
     payment_methods: [],
+    lms_url: 'https://growthos.core47.ai',
     // Student Sign-in & Questionnaire
     enable_student_signin: false,
     questionnaire: []
@@ -394,6 +396,17 @@ export function CompanySettings() {
                 value={settings.contact_email}
                 onChange={(e) => handleInputChange('contact_email', e.target.value)}
                 placeholder="contact@company.com"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lms_url">LMS URL</Label>
+              <Input
+                id="lms_url"
+                type="url"
+                value={settings.lms_url}
+                onChange={(e) => handleInputChange('lms_url', e.target.value)}
+                placeholder="Growthos.Core47.ai"
               />
             </div>
           </CardContent>

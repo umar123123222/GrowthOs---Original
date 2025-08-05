@@ -21,14 +21,14 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get custom domain from company settings
+    // Get LMS URL from company settings
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
-      .select('custom_domain')
+      .select('lms_url')
       .eq('id', 1)
       .single();
     
-    const loginUrl = companySettings?.custom_domain || 'https://majqoqagohicjigmsilu.lovable.app';
+    const loginUrl = `${companySettings?.lms_url || 'https://growthos.core47.ai'}/signin`;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);

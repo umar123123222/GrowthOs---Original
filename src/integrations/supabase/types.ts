@@ -203,6 +203,7 @@ export type Database = {
           invoice_notes: string | null
           invoice_overdue_days: number
           invoice_send_gap_days: number
+          lms_url: string | null
           maximum_installment_count: number
           original_fee_amount: number
           payment_methods: Json | null
@@ -227,6 +228,7 @@ export type Database = {
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
+          lms_url?: string | null
           maximum_installment_count?: number
           original_fee_amount?: number
           payment_methods?: Json | null
@@ -251,6 +253,7 @@ export type Database = {
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
+          lms_url?: string | null
           maximum_installment_count?: number
           original_fee_amount?: number
           payment_methods?: Json | null
