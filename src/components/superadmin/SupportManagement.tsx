@@ -87,7 +87,7 @@ export function SupportManagement() {
   const fetchTicketReplies = async (ticketId: string) => {
     try {
       const { data, error } = await supabase
-        .from('ticket_replies')
+        .from('support_ticket_replies')
         .select(`
           *,
           users (
@@ -118,7 +118,7 @@ export function SupportManagement() {
       if (!currentUser.data.user) throw new Error('Not authenticated');
 
       const { error } = await supabase
-        .from('ticket_replies')
+        .from('support_ticket_replies')
         .insert({
           ticket_id: ticketId,
           user_id: currentUser.data.user.id,

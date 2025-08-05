@@ -222,15 +222,9 @@ export interface TicketReply {
 
 export interface InstallmentPayment {
   id: string;
-  user_id?: string; // Make optional since we map from invoice.student_id
   installment_number: number;
-  total_installments: number;
-  amount?: number;
+  amount: number;
   status?: 'pending' | 'paid' | 'overdue' | 'cancelled';
-  payment_date?: string;
-  invoice_id?: string;
-  created_at: string;
-  updated_at: string;
 }
 
 // API Response types

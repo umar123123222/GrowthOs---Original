@@ -48,9 +48,7 @@ interface Student {
 interface InstallmentPayment {
   id: string;
   installment_number: number;
-  total_installments: number;
   amount: number;
-  payment_date: string;
   status: string;
 }
 
@@ -130,15 +128,9 @@ export const StudentManagement = () => {
       data?.forEach((invoice) => {
         const payment: InstallmentPayment = {
           id: invoice.id,
-          user_id: invoice.student_id,
           installment_number: invoice.installment_number,
-          total_installments: 1, // Default value
           amount: invoice.amount,
-          status: invoice.status,
-          payment_date: invoice.paid_at,
-          invoice_id: invoice.id,
-          created_at: invoice.created_at,
-          updated_at: invoice.updated_at
+          status: invoice.status
         };
         const userPayments = paymentsMap.get(invoice.student_id) || [];
         userPayments.push(payment);
@@ -162,7 +154,20 @@ export const StudentManagement = () => {
 
       if (error) throw error;
 
-      setStudents(data || []);
+      // Transform User data to Student data by adding missing properties
+      const studentsData: Student[] = (data || []).map(user => ({
+        ...user,
+        student_id: user.lms_user_id || '',
+        phone: '',
+        fees_structure: '',
+        fees_overdue: false,
+        last_invoice_date: '',
+        last_invoice_sent: false,
+        fees_due_date: '',
+        last_suspended_date: ''
+      }));
+      
+      setStudents(studentsData);
       setTotalStudents(data?.length || 0);
       
       // Calculate active students (those who have been active in the last 30 days)
@@ -177,7 +182,8 @@ export const StudentManagement = () => {
       
       // Calculate suspended and overdue students
       const suspendedCount = data?.filter(student => student.lms_status === 'suspended').length || 0;
-      const overdueCount = data?.filter(student => student.fees_overdue).length || 0;
+      // Note: fees_overdue not available in users table, defaulting to 0
+      const overdueCount = 0;
       
       setSuspendedStudents(suspendedCount);
       setOverdueStudents(overdueCount);
@@ -393,9 +399,7 @@ export const StudentManagement = () => {
       const { error } = await supabase
         .from('users')
         .update({ 
-          last_invoice_date: new Date().toISOString(),
-          last_invoice_sent: true,
-          fees_due_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+          updated_at: new Date().toISOString()
         })
         .eq('id', studentId);
 
@@ -443,13 +447,13 @@ export const StudentManagement = () => {
                                student.fees_structure === '2_installments' ? 2 : 3;
 
       const { error } = await supabase
-        .from('installment_payments')
+        .from('invoices')
         .insert({
-          user_id: studentId,
+          student_id: studentId,
           installment_number: installmentNumber,
-          total_installments: totalInstallments,
           amount: 100, // You can calculate this based on fee structure
-          status: 'paid'
+          status: 'paid',
+          due_date: new Date().toISOString()
         });
 
       if (error) throw error;

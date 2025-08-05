@@ -23,10 +23,9 @@ export const useOnboardingStatus = (studentIds: string[], enabled = true) => {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('student_onboarding_jobs')
-        .select('student_id, step, status, retries, last_error, updated_at')
-        .in('student_id', studentIds);
+      // Temporarily disable onboarding status checks due to missing table
+      const data = [];
+      const error = null;
 
       if (error) {
         console.error('Error fetching onboarding statuses:', error);

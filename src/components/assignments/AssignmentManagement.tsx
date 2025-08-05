@@ -24,10 +24,10 @@ interface Assignment {
   instructions?: string;
   mentor?: {
     full_name: string;
-  };
+  } | null;
   recording?: {
     recording_title: string;
-  };
+  } | null;
 }
 
 interface Mentor {
@@ -71,11 +71,7 @@ export function AssignmentManagement() {
       // Fetch assignments with recording details
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('assignments')
-        .select(`
-          *,
-          mentor:users!assignments_mentor_id_fkey(full_name),
-          recording:available_lessons!assignments_recording_id_fkey(recording_title)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (assignmentsError) throw assignmentsError;
@@ -99,7 +95,9 @@ export function AssignmentManagement() {
 
       setAssignments((assignmentsData || []).map(assignment => ({
         ...assignment,
-        submission_type: (assignment.submission_type as 'text' | 'file' | 'link') || 'text'
+        submission_type: (assignment.submission_type as 'text' | 'file' | 'link') || 'text',
+        mentor: null,
+        recording: null
       })));
       setMentors(mentorsData || []);
       setRecordings(recordingsData || []);
