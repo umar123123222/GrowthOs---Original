@@ -129,7 +129,7 @@ export const useAuth = () => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, email, role, full_name, created_at, shopify_credentials, meta_ads_credentials, onboarding_done, fees_overdue, fees_due_date')
+        .select('id, email, role, full_name, created_at, last_login_at, status, password_display, is_temp_password, updated_at, created_by')
         .eq('id', userId)
         .maybeSingle();
       
