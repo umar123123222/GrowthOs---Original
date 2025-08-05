@@ -28,7 +28,7 @@ serve(async (req) => {
       .eq('id', 1)
       .single();
     
-    const loginUrl = `${companySettings?.lms_url || 'https://growthos.core47.ai'}/signin`;
+    const loginUrl = companySettings?.lms_url || 'https://growthos.core47.ai';
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -206,7 +206,7 @@ async function sendInstallmentIssueEmail(invoice: any, loginUrl: string) {
           <p>Please ensure payment is made by the due date to avoid any service interruptions.</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}/login" 
+            <a href="${loginUrl}" 
                style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
               View Payment Details
             </a>
@@ -254,7 +254,7 @@ async function sendFirstReminderEmail(invoice: any, loginUrl: string) {
           <p>Please make your payment by the due date to continue your learning journey without interruption.</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}/login" 
+            <a href="${loginUrl}" 
                style="background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
               Make Payment Now
             </a>
@@ -302,7 +302,7 @@ async function sendSecondReminderEmail(invoice: any, loginUrl: string) {
           <p><strong>Important:</strong> Failure to make payment by the due date may result in temporary suspension of your learning platform access.</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}/login" 
+            <a href="${loginUrl}" 
                style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
               Pay Now to Avoid Suspension
             </a>
@@ -348,7 +348,7 @@ async function sendDueEmail(invoice: any, loginUrl: string) {
           <p><strong>Action Required:</strong> Your learning platform access may be suspended until payment is received. Please make payment immediately to restore full access.</p>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}/login" 
+            <a href="${loginUrl}" 
                style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
               Pay Now - Restore Access
             </a>

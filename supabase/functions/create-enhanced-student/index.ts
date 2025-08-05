@@ -209,7 +209,7 @@ const handler = async (req: Request): Promise<Response> => {
       .eq('id', 1)
       .single();
     
-    const loginUrl = `${companySettings?.lms_url || 'https://growthos.core47.ai'}/signin`;
+    const loginUrl = companySettings?.lms_url || 'https://growthos.core47.ai';
 
     // Send welcome email with credentials via SMTP
     try {
@@ -233,7 +233,7 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${loginUrl}/login" 
+              <a href="${loginUrl}" 
                  style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
                 Start Your Learning Journey
               </a>
