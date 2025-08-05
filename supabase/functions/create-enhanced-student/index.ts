@@ -216,6 +216,13 @@ const handler = async (req: Request): Promise<Response> => {
               <p><strong>Password:</strong> ${loginPassword}</p>
             </div>
             
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://majqoqagohicjigmsilu.lovable.app/login" 
+                 style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                Start Your Learning Journey
+              </a>
+            </div>
+            
             <p><strong>Payment Plan:</strong> ${installment_count} installment${installment_count > 1 ? 's' : ''}</p>
             
             <p>Please keep these credentials secure. You can change your password after logging in.</p>

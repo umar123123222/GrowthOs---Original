@@ -198,6 +198,13 @@ const handler = async (req: Request): Promise<Response> => {
               <p><strong>Role:</strong> ${role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ')}</p>
             </div>
             
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://majqoqagohicjigmsilu.lovable.app/login" 
+                 style="background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                Access Your Dashboard
+              </a>
+            </div>
+            
             <p>Please keep these credentials secure. You can change your password after logging in.</p>
             
             <p>If you have any questions, please contact the system administrator.</p>
