@@ -25,9 +25,11 @@ interface SupportTicket {
   id: string;
   title: string;
   description: string;
-  type: string;
+  category?: string | null;
   status: string;
   priority: string;
+  user_id: string;
+  assigned_to?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -35,7 +37,7 @@ interface SupportTicket {
 interface TicketReply {
   id: string;
   message: string;
-  is_staff: boolean;
+  is_internal: boolean;
   created_at: string;
   user_id: string;
 }
@@ -78,7 +80,7 @@ const Support = () => {
       const ticketsWithReplies = await Promise.all(
         (data || []).map(async (ticket) => {
           const { data: replies, error: repliesError } = await supabase
-            .from('ticket_replies')
+            .from('support_ticket_replies')
             .select('*')
             .eq('ticket_id', ticket.id)
             .order('created_at', { ascending: true });
@@ -132,7 +134,7 @@ const Support = () => {
         .insert({
           title: newTicket.title,
           description: newTicket.description,
-          type: newTicket.type,
+          category: newTicket.type,
           priority: newTicket.priority,
           user_id: user.id
         });
@@ -171,11 +173,11 @@ const Support = () => {
       }
 
       const { error } = await supabase
-        .from('ticket_replies')
+        .from('support_ticket_replies')
         .insert({
           ticket_id: ticketId,
           message: newReply,
-          is_staff: false,
+          is_internal: false,
           user_id: user.id
         });
 
@@ -344,9 +346,9 @@ const Support = () => {
                       <Badge variant="outline" className={getPriorityColor(ticket.priority)}>
                         {ticket.priority}
                       </Badge>
-                      <Badge variant="outline">
-                        {ticket.type}
-                      </Badge>
+                       <Badge variant="outline">
+                         {ticket.category || 'General'}
+                       </Badge>
                     </div>
                   </div>
                   <div className="text-right text-sm text-muted-foreground">
@@ -377,7 +379,7 @@ const Support = () => {
                           <div
                             key={reply.id}
                             className={`p-3 rounded-lg ${
-                              reply.is_staff 
+                              reply.is_internal 
                                 ? 'bg-blue-50 border-l-4 border-l-blue-500' 
                                 : 'bg-gray-50 border-l-4 border-l-gray-300'
                             }`}
@@ -386,7 +388,7 @@ const Support = () => {
                               <div className="flex items-center gap-2">
                                 <User className="w-3 h-3" />
                                 <span className="text-sm font-medium">
-                                  {reply.is_staff ? 'Support Team' : 'You'}
+                                  {reply.is_internal ? 'Support Team' : 'You'}
                                 </span>
                               </div>
                               <span className="text-xs text-muted-foreground">

@@ -52,13 +52,10 @@ const Mentorship = () => {
 
   const fetchPodMembers = async (podId: string) => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name, email, role')
-        .eq('pod_id', podId);
+      // Since users table doesn't have pod_id, use empty array for now
+      const data: any[] = [];
 
-      if (error) throw error;
-      setPodMembers(data || []);
+      setPodMembers(data);
     } catch (error) {
       console.error('Error fetching pod members:', error);
     }

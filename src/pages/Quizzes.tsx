@@ -110,14 +110,31 @@ const Quizzes = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Use user_activity_logs to track quiz attempts
       const { data, error } = await supabase
-        .from('quiz_attempts')
+        .from('user_activity_logs')
         .select('*')
         .eq('user_id', user.id)
-        .order('attempted_at', { ascending: false });
+        .eq('activity_type', 'quiz_attempt')
+        .order('occurred_at', { ascending: false });
 
       if (error) throw error;
-      setAttempts(data || []);
+      
+      // Map activity logs to quiz attempts format
+      const mappedAttempts = data?.map(log => {
+        const metadata = log.metadata as any;
+        return {
+          id: log.id,
+          question_id: metadata?.question_id || '',
+          module_id: metadata?.module_id || '',
+          selected_option: metadata?.selected_option || '',
+          is_correct: metadata?.is_correct || false,
+          attempt_number: metadata?.attempt_number || 1,
+          attempted_at: log.occurred_at
+        };
+      }) || [];
+      
+      setAttempts(mappedAttempts);
     } catch (error) {
       console.error('Error fetching attempts:', error);
     }
@@ -133,15 +150,19 @@ const Quizzes = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
 
+      // Store quiz attempt in user_activity_logs
       const { error } = await supabase
-        .from('quiz_attempts')
+        .from('user_activity_logs')
         .insert({
           user_id: user.id,
-          module_id: selectedModule!,
-          question_id: question.id,
-          selected_option: selectedAnswer,
-          is_correct: isCorrect,
-          attempt_number: 1
+          activity_type: 'quiz_attempt',
+          metadata: {
+            module_id: selectedModule!,
+            question_id: question.id,
+            selected_option: selectedAnswer,
+            is_correct: isCorrect,
+            attempt_number: 1
+          }
         });
 
       if (error) throw error;

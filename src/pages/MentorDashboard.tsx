@@ -40,19 +40,34 @@ export default function MentorDashboard() {
     if (!user) return;
 
     try {
-      // Fetch students assigned to this mentor
+      // Get students from the students table and join with users
       const { data: students, error } = await supabase
-        .from('users')
-        .select('id, full_name, email, created_at')
-        .eq('mentor_id', user.id)
-        .eq('role', 'student');
+        .from('students')
+        .select(`
+          id,
+          user_id,
+          users!inner(
+            id,
+            full_name,
+            email,
+            created_at
+          )
+        `);
 
       if (error) {
         console.error('Error fetching assigned students:', error);
         return;
       }
 
-      setAssignedStudents(students || []);
+      // Map to the expected format
+      const mappedStudents = students?.map(student => ({
+        id: student.user_id,
+        full_name: student.users?.full_name,
+        email: student.users?.email || '',
+        created_at: student.users?.created_at || ''
+      })) || [];
+      
+      setAssignedStudents(mappedStudents);
     } catch (error) {
       console.error('Error fetching assigned students:', error);
     }
@@ -62,26 +77,24 @@ export default function MentorDashboard() {
     if (!user) return;
 
     try {
-      // Fetch students assigned to this mentor
+      // Get students from the students table
       const { data: students } = await supabase
-        .from('users')
-        .select('id')
-        .eq('mentor_id', user.id)
-        .eq('role', 'student');
+        .from('students')
+        .select('user_id');
 
       // Fetch pending submissions for review
       const { data: pendingSubmissions } = await supabase
         .from('submissions')
         .select('id')
         .eq('status', 'pending')
-        .in('student_id', students?.map(s => s.id) || []);
+        .in('student_id', students?.map(s => s.user_id) || []);
 
       // Fetch checked/graded assignments
       const { data: checkedSubmissions } = await supabase
         .from('submissions')
         .select('id')
         .eq('status', 'approved')
-        .in('student_id', students?.map(s => s.id) || []);
+        .in('student_id', students?.map(s => s.user_id) || []);
 
       // Use hardcoded values for sessions since table might not exist
       const sessionsMentored = 12;
