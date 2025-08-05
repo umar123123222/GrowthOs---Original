@@ -86,13 +86,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "assignments_mentor_id_fkey"
-            columns: ["mentor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "assignments_recording_id_fkey"
             columns: ["recording_id"]
             isOneToOne: false
@@ -152,13 +145,6 @@ export type Database = {
             referencedRelation: "modules"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "session_recordings_uploaded_by_fkey"
-            columns: ["uploaded_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       badges: {
@@ -199,44 +185,6 @@ export type Database = {
           name?: string
         }
         Relationships: []
-      }
-      certificates: {
-        Row: {
-          certificate_url: string
-          downloaded: boolean | null
-          id: string
-          issued_at: string | null
-          tenant_id: string | null
-          track: string
-          user_id: string
-        }
-        Insert: {
-          certificate_url: string
-          downloaded?: boolean | null
-          id?: string
-          issued_at?: string | null
-          tenant_id?: string | null
-          track: string
-          user_id: string
-        }
-        Update: {
-          certificate_url?: string
-          downloaded?: boolean | null
-          id?: string
-          issued_at?: string | null
-          tenant_id?: string | null
-          track?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "certificates_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       company_settings: {
         Row: {
@@ -331,200 +279,97 @@ export type Database = {
         }
         Relationships: []
       }
-      feedback: {
+      installment_plans: {
         Row: {
-          ai_score: number | null
-          id: string
-          module_id: string | null
-          reflection: string | null
-          submitted_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          ai_score?: number | null
-          id?: string
-          module_id?: string | null
-          reflection?: string | null
-          submitted_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          ai_score?: number | null
-          id?: string
-          module_id?: string | null
-          reflection?: string | null
-          submitted_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "feedback_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "modules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "feedback_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      installment_payments: {
-        Row: {
-          amount: number | null
           created_at: string | null
           id: string
-          installment_number: number
-          invoice_id: string | null
-          payment_date: string | null
-          status: string | null
-          total_installments: number
+          interval_days: number
+          is_active: boolean | null
+          name: string
+          num_installments: number
+          total_amount: number
           updated_at: string | null
-          user_id: string
         }
         Insert: {
-          amount?: number | null
           created_at?: string | null
           id?: string
-          installment_number: number
-          invoice_id?: string | null
-          payment_date?: string | null
-          status?: string | null
-          total_installments: number
+          interval_days: number
+          is_active?: boolean | null
+          name: string
+          num_installments: number
+          total_amount: number
           updated_at?: string | null
-          user_id: string
         }
         Update: {
-          amount?: number | null
           created_at?: string | null
+          id?: string
+          interval_days?: number
+          is_active?: boolean | null
+          name?: string
+          num_installments?: number
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string | null
+          due_date: string
+          first_reminder_sent: boolean | null
+          first_reminder_sent_at: string | null
+          id: string
+          installment_number: number
+          notes: string | null
+          paid_at: string | null
+          payment_method: string | null
+          second_reminder_sent: boolean | null
+          second_reminder_sent_at: string | null
+          status: string | null
+          student_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          due_date: string
+          first_reminder_sent?: boolean | null
+          first_reminder_sent_at?: string | null
+          id?: string
+          installment_number: number
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          second_reminder_sent?: boolean | null
+          second_reminder_sent_at?: string | null
+          status?: string | null
+          student_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          due_date?: string
+          first_reminder_sent?: boolean | null
+          first_reminder_sent_at?: string | null
           id?: string
           installment_number?: number
-          invoice_id?: string | null
-          payment_date?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          second_reminder_sent?: boolean | null
+          second_reminder_sent_at?: string | null
           status?: string | null
-          total_installments?: number
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "installment_payments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      leaderboard: {
-        Row: {
-          id: string
-          points: number | null
-          rank: number | null
-          updated_at: string | null
-          user_id: string | null
-        }
-        Insert: {
-          id?: string
-          points?: number | null
-          rank?: number | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          id?: string
-          points?: number | null
-          rank?: number | null
-          updated_at?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "leaderboard_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      mentorship_notes: {
-        Row: {
-          added_at: string | null
-          id: string
-          mentor_id: string | null
-          note: string | null
-          student_id: string | null
-        }
-        Insert: {
-          added_at?: string | null
-          id?: string
-          mentor_id?: string | null
-          note?: string | null
           student_id?: string | null
-        }
-        Update: {
-          added_at?: string | null
-          id?: string
-          mentor_id?: string | null
-          note?: string | null
-          student_id?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "mentorship_notes_mentor_id_fkey"
-            columns: ["mentor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "mentorship_notes_student_id_fkey"
+            foreignKeyName: "invoices_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      messages: {
-        Row: {
-          context: Json | null
-          id: string
-          response_id: string | null
-          sent_at: string | null
-          status: string | null
-          template_name: string | null
-          user_id: string | null
-        }
-        Insert: {
-          context?: Json | null
-          id?: string
-          response_id?: string | null
-          sent_at?: string | null
-          status?: string | null
-          template_name?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          context?: Json | null
-          id?: string
-          response_id?: string | null
-          sent_at?: string | null
-          status?: string | null
-          template_name?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "messages_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "students"
             referencedColumns: ["id"]
           },
         ]
@@ -556,128 +401,6 @@ export type Database = {
         }
         Relationships: []
       }
-      notifications: {
-        Row: {
-          channel: string | null
-          error_message: string | null
-          id: string
-          payload: Json | null
-          sent_at: string | null
-          status: string | null
-          type: string | null
-          user_id: string | null
-        }
-        Insert: {
-          channel?: string | null
-          error_message?: string | null
-          id?: string
-          payload?: Json | null
-          sent_at?: string | null
-          status?: string | null
-          type?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          channel?: string | null
-          error_message?: string | null
-          id?: string
-          payload?: Json | null
-          sent_at?: string | null
-          status?: string | null
-          type?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "notifications_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      onboarding_responses: {
-        Row: {
-          answer_data: Json | null
-          answer_value: string | null
-          created_at: string
-          id: string
-          question_text: string
-          question_type: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          answer_data?: Json | null
-          answer_value?: string | null
-          created_at?: string
-          id?: string
-          question_text: string
-          question_type: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          answer_data?: Json | null
-          answer_value?: string | null
-          created_at?: string
-          id?: string
-          question_text?: string
-          question_type?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "onboarding_responses_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "onboarding_responses_user_id_fkey1"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      performance_record: {
-        Row: {
-          id: number
-          times_recovered: number | null
-          user_id: string | null
-        }
-        Insert: {
-          id?: number
-          times_recovered?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          id?: number
-          times_recovered?: number | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "Performance Record_user_ID_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "performance_record_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       pods: {
         Row: {
           created_at: string | null
@@ -703,118 +426,7 @@ export type Database = {
           notes?: string | null
           tenant_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fk_mentor"
-            columns: ["mentor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      progress: {
-        Row: {
-          completed_at: string | null
-          id: string
-          module_id: string | null
-          score: number | null
-          started_at: string | null
-          status: string | null
-          time_spent_min: number | null
-          user_id: string | null
-        }
-        Insert: {
-          completed_at?: string | null
-          id?: string
-          module_id?: string | null
-          score?: number | null
-          started_at?: string | null
-          status?: string | null
-          time_spent_min?: number | null
-          user_id?: string | null
-        }
-        Update: {
-          completed_at?: string | null
-          id?: string
-          module_id?: string | null
-          score?: number | null
-          started_at?: string | null
-          status?: string | null
-          time_spent_min?: number | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "progress_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "modules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "progress_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      quiz_attempts: {
-        Row: {
-          attempt_number: number | null
-          attempted_at: string | null
-          id: string
-          is_correct: boolean | null
-          module_id: string
-          question_id: string
-          selected_option: string | null
-          user_id: string
-        }
-        Insert: {
-          attempt_number?: number | null
-          attempted_at?: string | null
-          id?: string
-          is_correct?: boolean | null
-          module_id: string
-          question_id: string
-          selected_option?: string | null
-          user_id: string
-        }
-        Update: {
-          attempt_number?: number | null
-          attempted_at?: string | null
-          id?: string
-          is_correct?: boolean | null
-          module_id?: string
-          question_id?: string
-          selected_option?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quiz_attempts_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "modules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quiz_attempts_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "quiz_questions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "quiz_attempts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       quiz_questions: {
         Row: {
@@ -851,177 +463,51 @@ export type Database = {
           },
         ]
       }
-      recording_views: {
+      students: {
         Row: {
+          created_at: string | null
+          enrollment_date: string | null
           id: string
-          recording_id: string
-          user_id: string
-          watched: boolean | null
-          watched_at: string | null
-        }
-        Insert: {
-          id?: string
-          recording_id: string
-          user_id: string
-          watched?: boolean | null
-          watched_at?: string | null
-        }
-        Update: {
-          id?: string
-          recording_id?: string
-          user_id?: string
-          watched?: boolean | null
-          watched_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "recording_views_recording_id_fkey"
-            columns: ["recording_id"]
-            isOneToOne: false
-            referencedRelation: "available_lessons"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recording_views_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      session_attendance: {
-        Row: {
-          id: string
-          joined_at: string | null
-          left_at: string | null
-          live_session_id: string | null
+          installment_plan_id: string | null
+          lms_username: string
+          onboarding_completed: boolean | null
+          student_id: string | null
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          created_at?: string | null
+          enrollment_date?: string | null
           id?: string
-          joined_at?: string | null
-          left_at?: string | null
-          live_session_id?: string | null
+          installment_plan_id?: string | null
+          lms_username: string
+          onboarding_completed?: boolean | null
+          student_id?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          created_at?: string | null
+          enrollment_date?: string | null
           id?: string
-          joined_at?: string | null
-          left_at?: string | null
-          live_session_id?: string | null
+          installment_plan_id?: string | null
+          lms_username?: string
+          onboarding_completed?: boolean | null
+          student_id?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "session_attendance_live_session_id_fkey"
-            columns: ["live_session_id"]
+            foreignKeyName: "students_installment_plan_id_fkey"
+            columns: ["installment_plan_id"]
             isOneToOne: false
-            referencedRelation: "segmented_weekly_success_sessions"
+            referencedRelation: "installment_plans"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "session_attendance_live_session_id_fkey"
-            columns: ["live_session_id"]
-            isOneToOne: false
-            referencedRelation: "success_sessions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "session_attendance_user_id_fkey"
+            foreignKeyName: "students_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      student_onboarding_jobs: {
-        Row: {
-          created_at: string
-          id: string
-          last_error: string | null
-          metadata: Json | null
-          retries: number
-          status: Database["public"]["Enums"]["onboarding_status"]
-          step: Database["public"]["Enums"]["onboarding_step"]
-          student_id: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          last_error?: string | null
-          metadata?: Json | null
-          retries?: number
-          status?: Database["public"]["Enums"]["onboarding_status"]
-          step: Database["public"]["Enums"]["onboarding_step"]
-          student_id: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          last_error?: string | null
-          metadata?: Json | null
-          retries?: number
-          status?: Database["public"]["Enums"]["onboarding_status"]
-          step?: Database["public"]["Enums"]["onboarding_step"]
-          student_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_onboarding_jobs_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      submissions: {
-        Row: {
-          assignment_id: string
-          content: string
-          created_at: string | null
-          id: string
-          notes: string | null
-          status: string
-          student_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          assignment_id: string
-          content: string
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          status?: string
-          student_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          assignment_id?: string
-          content?: string
-          created_at?: string | null
-          id?: string
-          notes?: string | null
-          status?: string
-          student_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "submissions_assignment_id_fkey"
-            columns: ["assignment_id"]
-            isOneToOne: false
-            referencedRelation: "assignments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "submissions_student_id_fkey"
-            columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -1083,69 +569,7 @@ export type Database = {
           zoom_meeting_id?: string | null
           zoom_passcode?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "live_sessions_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "success_sessions_mentor_id_fkey"
-            columns: ["mentor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      support_tickets: {
-        Row: {
-          assigned_to: string | null
-          created_at: string
-          description: string
-          id: string
-          priority: string
-          status: string
-          title: string
-          type: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string
-          description: string
-          id?: string
-          priority?: string
-          status?: string
-          title: string
-          type: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string
-          description?: string
-          id?: string
-          priority?: string
-          status?: string
-          title?: string
-          type?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "support_tickets_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tenants: {
         Row: {
@@ -1165,370 +589,55 @@ export type Database = {
         }
         Relationships: []
       }
-      ticket_replies: {
-        Row: {
-          created_at: string
-          id: string
-          is_staff: boolean
-          message: string
-          ticket_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          is_staff?: boolean
-          message: string
-          ticket_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          is_staff?: boolean
-          message?: string
-          ticket_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ticket_replies_ticket_id_fkey"
-            columns: ["ticket_id"]
-            isOneToOne: false
-            referencedRelation: "support_tickets"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ticket_replies_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_activity_logs: {
-        Row: {
-          activity_type: string
-          id: string
-          metadata: Json | null
-          occurred_at: string | null
-          reference_id: string | null
-          user_id: string | null
-        }
-        Insert: {
-          activity_type: string
-          id?: string
-          metadata?: Json | null
-          occurred_at?: string | null
-          reference_id?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          activity_type?: string
-          id?: string
-          metadata?: Json | null
-          occurred_at?: string | null
-          reference_id?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_activity_logs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_badges: {
-        Row: {
-          badge_id: string | null
-          earned_at: string | null
-          id: string
-          user_id: string | null
-        }
-        Insert: {
-          badge_id?: string | null
-          earned_at?: string | null
-          id?: string
-          user_id?: string | null
-        }
-        Update: {
-          badge_id?: string | null
-          earned_at?: string | null
-          id?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_badges_badge_id_fkey"
-            columns: ["badge_id"]
-            isOneToOne: false
-            referencedRelation: "badges"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_badges_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_module_progress: {
-        Row: {
-          completed_at: string | null
-          created_at: string
-          id: string
-          is_completed: boolean
-          module_id: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          completed_at?: string | null
-          created_at?: string
-          id?: string
-          is_completed?: boolean
-          module_id: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          completed_at?: string | null
-          created_at?: string
-          id?: string
-          is_completed?: boolean
-          module_id?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      user_segments: {
-        Row: {
-          confidence_score: number | null
-          created_at: string | null
-          id: string
-          reason: Json | null
-          segment: string | null
-          set_by: string | null
-          user_id: string | null
-        }
-        Insert: {
-          confidence_score?: number | null
-          created_at?: string | null
-          id?: string
-          reason?: Json | null
-          segment?: string | null
-          set_by?: string | null
-          user_id?: string | null
-        }
-        Update: {
-          confidence_score?: number | null
-          created_at?: string | null
-          id?: string
-          reason?: Json | null
-          segment?: string | null
-          set_by?: string | null
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_segments_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      user_unlocks: {
-        Row: {
-          is_unlocked: boolean | null
-          recording_id: string
-          unlocked_at: string | null
-          user_id: string
-        }
-        Insert: {
-          is_unlocked?: boolean | null
-          recording_id: string
-          unlocked_at?: string | null
-          user_id: string
-        }
-        Update: {
-          is_unlocked?: boolean | null
-          recording_id?: string
-          unlocked_at?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       users: {
         Row: {
-          avatar_url: string | null
-          batch_id: string | null
-          biggest_blocker: string | null
-          course_track_id: string | null
           created_at: string | null
           created_by: string | null
-          deleted_at: string | null
-          dream_goal_summary: string | null
           email: string
-          encrypted_meta_ads_credentials: string | null
-          encrypted_shopify_credentials: string | null
-          fees_due_date: string | null
-          fees_overdue: boolean | null
-          fees_structure: string | null
-          final_goal: string | null
           full_name: string
           id: string
-          income_goal_3_months: string | null
-          income_reason: string | null
-          knows_facebook_ads: string | null
-          last_active_at: string | null
-          last_invoice_date: string | null
-          last_invoice_sent: boolean | null
-          last_suspended_date: string | null
-          lms_password: string | null
-          lms_status: string | null
-          lms_user_id: string | null
-          mentor_id: string | null
-          meta_ads_credentials: string | null
-          onboarding_data: Json | null
-          onboarding_done: boolean | null
-          path: string | null
-          phone: string | null
-          pod_id: string | null
+          is_temp_password: boolean | null
+          last_login_at: string | null
+          password_display: string
+          password_hash: string
           role: string
-          shopify_credentials: string | null
-          shopify_experience: string | null
-          short_term_goal: string | null
           status: string | null
-          status_after_3_months: string | null
-          student_id: string | null
-          success_meaning: string | null
-          tenant_id: string | null
-          tried_ecommerce_before: string | null
-          weekly_time_commitment: string | null
+          updated_at: string | null
         }
         Insert: {
-          avatar_url?: string | null
-          batch_id?: string | null
-          biggest_blocker?: string | null
-          course_track_id?: string | null
           created_at?: string | null
           created_by?: string | null
-          deleted_at?: string | null
-          dream_goal_summary?: string | null
           email: string
-          encrypted_meta_ads_credentials?: string | null
-          encrypted_shopify_credentials?: string | null
-          fees_due_date?: string | null
-          fees_overdue?: boolean | null
-          fees_structure?: string | null
-          final_goal?: string | null
           full_name: string
           id?: string
-          income_goal_3_months?: string | null
-          income_reason?: string | null
-          knows_facebook_ads?: string | null
-          last_active_at?: string | null
-          last_invoice_date?: string | null
-          last_invoice_sent?: boolean | null
-          last_suspended_date?: string | null
-          lms_password?: string | null
-          lms_status?: string | null
-          lms_user_id?: string | null
-          mentor_id?: string | null
-          meta_ads_credentials?: string | null
-          onboarding_data?: Json | null
-          onboarding_done?: boolean | null
-          path?: string | null
-          phone?: string | null
-          pod_id?: string | null
-          role?: string
-          shopify_credentials?: string | null
-          shopify_experience?: string | null
-          short_term_goal?: string | null
+          is_temp_password?: boolean | null
+          last_login_at?: string | null
+          password_display: string
+          password_hash: string
+          role: string
           status?: string | null
-          status_after_3_months?: string | null
-          student_id?: string | null
-          success_meaning?: string | null
-          tenant_id?: string | null
-          tried_ecommerce_before?: string | null
-          weekly_time_commitment?: string | null
+          updated_at?: string | null
         }
         Update: {
-          avatar_url?: string | null
-          batch_id?: string | null
-          biggest_blocker?: string | null
-          course_track_id?: string | null
           created_at?: string | null
           created_by?: string | null
-          deleted_at?: string | null
-          dream_goal_summary?: string | null
           email?: string
-          encrypted_meta_ads_credentials?: string | null
-          encrypted_shopify_credentials?: string | null
-          fees_due_date?: string | null
-          fees_overdue?: boolean | null
-          fees_structure?: string | null
-          final_goal?: string | null
           full_name?: string
           id?: string
-          income_goal_3_months?: string | null
-          income_reason?: string | null
-          knows_facebook_ads?: string | null
-          last_active_at?: string | null
-          last_invoice_date?: string | null
-          last_invoice_sent?: boolean | null
-          last_suspended_date?: string | null
-          lms_password?: string | null
-          lms_status?: string | null
-          lms_user_id?: string | null
-          mentor_id?: string | null
-          meta_ads_credentials?: string | null
-          onboarding_data?: Json | null
-          onboarding_done?: boolean | null
-          path?: string | null
-          phone?: string | null
-          pod_id?: string | null
+          is_temp_password?: boolean | null
+          last_login_at?: string | null
+          password_display?: string
+          password_hash?: string
           role?: string
-          shopify_credentials?: string | null
-          shopify_experience?: string | null
-          short_term_goal?: string | null
           status?: string | null
-          status_after_3_months?: string | null
-          student_id?: string | null
-          success_meaning?: string | null
-          tenant_id?: string | null
-          tried_ecommerce_before?: string | null
-          weekly_time_commitment?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "users_course_track_id_fkey"
-            columns: ["course_track_id"]
-            isOneToOne: false
-            referencedRelation: "course_tracks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "users_mentor_id_fkey"
-            columns: ["mentor_id"]
+            foreignKeyName: "users_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "users_pod_id_fkey"
-            columns: ["pod_id"]
-            isOneToOne: false
-            referencedRelation: "pods"
             referencedColumns: ["id"]
           },
         ]
@@ -1572,15 +681,7 @@ export type Database = {
           status?: string | null
           title?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "success_sessions_mentor_id_fkey"
-            columns: ["mentor_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
@@ -1593,48 +694,6 @@ export type Database = {
           p_metadata?: Json
         }
         Returns: string
-      }
-      create_student_atomic: {
-        Args:
-          | {
-              p_full_name: string
-              p_email: string
-              p_phone: string
-              p_installments: number
-              p_company_id?: string
-              p_course_id?: string
-            }
-          | {
-              p_user_id: string
-              p_full_name: string
-              p_email: string
-              p_phone: string
-              p_installments: number
-              p_company_id?: string
-              p_course_id?: string
-            }
-        Returns: Json
-      }
-      create_student_complete: {
-        Args: {
-          p_email: string
-          p_password: string
-          p_full_name: string
-          p_phone?: string
-          p_address?: string
-          p_mentor_id?: string
-          p_batch_id?: string
-          p_pod_id?: string
-        }
-        Returns: Json
-      }
-      delete_student_atomic: {
-        Args: { p_user_id: string }
-        Returns: Json
-      }
-      enqueue_student_onboarding_jobs: {
-        Args: { p_student_id: string }
-        Returns: undefined
       }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
@@ -1661,10 +720,6 @@ export type Database = {
           is_module_unlocked: boolean
           is_recording_unlocked: boolean
         }[]
-      }
-      initialize_student_unlocks: {
-        Args: { p_student_id: string }
-        Returns: undefined
       }
       is_module_completed: {
         Args: { _user_id: string; _module_id: string }
@@ -1713,8 +768,6 @@ export type Database = {
         | "accepted"
         | "rejected"
         | "resubmit"
-      onboarding_status: "PENDING" | "SUCCESS" | "FAILED" | "RETRY"
-      onboarding_step: "EMAIL" | "INVOICE"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1849,8 +902,6 @@ export const Constants = {
         "rejected",
         "resubmit",
       ],
-      onboarding_status: ["PENDING", "SUCCESS", "FAILED", "RETRY"],
-      onboarding_step: ["EMAIL", "INVOICE"],
     },
   },
 } as const
