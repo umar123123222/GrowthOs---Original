@@ -14,16 +14,18 @@ import { RoleGuard } from '@/components/RoleGuard';
 
 interface ActivityLog {
   id: string;
-  user_id: string;
-  activity_type: string;
-  occurred_at: string;
-  metadata: any;
-  reference_id: string | null;
+  entity_id: string;
+  entity_type: string;
+  action: string;
+  description: string | null;
+  created_at: string;
+  data: any;
+  performed_by: string | null;
   users: {
     email: string;
     role: string;
     full_name: string;
-  };
+  } | null;
 }
 
 interface ActivityLogsDialogProps {
@@ -55,12 +57,12 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
     setLoading(true);
     try {
       let query = supabase
-        .from('user_activity_logs')
+        .from('admin_logs')
         .select(`
           *,
-          users (email, role, full_name)
+          users:performed_by (email, role, full_name)
         `)
-        .order('occurred_at', { ascending: false });
+        .order('created_at', { ascending: false });
 
       // Role-based filtering
       if (user.role === 'admin') {
@@ -72,7 +74,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         
         if (users) {
           const allowedUserIds = users.map(u => u.id);
-          query = query.in('user_id', allowedUserIds);
+          query = query.in('performed_by', allowedUserIds);
         }
       } else if (user.role !== 'superadmin') {
         // Only superadmins and admins can access activity logs
@@ -83,7 +85,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
 
       // Filter by specific user if userId is provided
       if (userId) {
-        query = query.eq('user_id', userId);
+        query = query.eq('performed_by', userId);
       }
 
       // Apply date filter
@@ -91,12 +93,12 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         const days = parseInt(dateRange.replace('days', ''));
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - days);
-        query = query.gte('occurred_at', startDate.toISOString());
+        query = query.gte('created_at', startDate.toISOString());
       }
 
       // Apply activity filter
       if (activityFilter !== 'all') {
-        query = query.eq('activity_type', activityFilter);
+        query = query.eq('action', activityFilter);
       }
 
       const { data, error } = await query;
@@ -120,12 +122,12 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       const csvContent = [
         ['Date', 'User', 'Name', 'Role', 'Activity', 'Details'].join(','),
         ...filteredLogs.map(log => [
-          new Date(log.occurred_at).toISOString(),
+          new Date(log.created_at).toISOString(),
           log.users?.email || 'Unknown',
           log.users?.full_name || 'Unknown',
           log.users?.role || 'Unknown',
-          log.activity_type,
-          JSON.stringify(log.metadata || {})
+          log.action,
+          JSON.stringify(log.data || {})
         ].join(','))
       ].join('\n');
 
@@ -178,7 +180,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.users?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          log.users?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.activity_type.toLowerCase().includes(searchTerm.toLowerCase());
+                         log.action.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || log.users?.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -296,63 +298,45 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                   <Table>
                     <TableBody>
                       {filteredLogs.map((log) => (
-                        <TableRow key={log.id} className="hover:bg-muted/30">
-                          <TableCell className="whitespace-nowrap font-mono text-sm">
-                            {new Date(log.occurred_at).toLocaleString('en-US', {
-                              month: 'numeric',
-                              day: 'numeric',
-                              year: 'numeric',
-                              hour: 'numeric',
-                              minute: '2-digit',
-                              second: '2-digit',
-                              hour12: true
-                            })}
-                          </TableCell>
-                          <TableCell className="max-w-[200px] truncate">
-                            {log.users?.email || 'Unknown'}
-                          </TableCell>
-                          <TableCell className="max-w-[150px] truncate">
-                            {log.users?.full_name || 'Unknown'}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getRoleBadge(log.users?.role || '')}>
-                              {log.users?.role || 'Unknown'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getActivityBadge(log.activity_type)}>
-                              {log.activity_type.replace('_', ' ')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="max-w-[300px]">
-                            {log.metadata ? (
-                              <div className="text-sm text-muted-foreground">
-                                {(() => {
-                                  switch (log.activity_type) {
-                                    case 'page_visit':
-                                      return `Visited page: ${log.metadata.page || 'Unknown page'}`;
-                                    case 'login':
-                                      return `User logged in from ${log.metadata.ip_address || 'unknown IP'}`;
-                                    case 'logout':
-                                      return `User logged out after ${log.metadata.session_duration || 'unknown'} minutes`;
-                                    case 'video_watched':
-                                      return `Watched video: "${log.metadata.video_title || 'Unknown video'}"${log.metadata.duration ? ` for ${log.metadata.duration} minutes` : ''}`;
-                                    case 'assignment_submitted':
-                                      return `Submitted assignment: "${log.metadata.assignment_title || 'Unknown assignment'}"${log.metadata.submission_type ? ` (${log.metadata.submission_type})` : ''}`;
-                                    case 'profile_updated':
-                                      return `Updated profile fields: ${log.metadata.updated_fields ? log.metadata.updated_fields.join(', ') : 'profile information'}`;
-                                    case 'module_completed':
-                                      return `Completed module: "${log.metadata.module_title || 'Unknown module'}"${log.metadata.score ? ` with score ${log.metadata.score}%` : ''}`;
-                                    default:
-                                      return JSON.stringify(log.metadata);
-                                  }
-                                })()}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">No details</span>
-                            )}
-                          </TableCell>
-                        </TableRow>
+                         <TableRow key={log.id} className="hover:bg-muted/30">
+                           <TableCell className="whitespace-nowrap font-mono text-sm">
+                             {new Date(log.created_at).toLocaleString('en-US', {
+                               month: 'numeric',
+                               day: 'numeric',
+                               year: 'numeric',
+                               hour: 'numeric',
+                               minute: '2-digit',
+                               second: '2-digit',
+                               hour12: true
+                             })}
+                           </TableCell>
+                           <TableCell className="max-w-[200px] truncate">
+                             {log.users?.email || 'Unknown'}
+                           </TableCell>
+                           <TableCell className="max-w-[150px] truncate">
+                             {log.users?.full_name || 'Unknown'}
+                           </TableCell>
+                           <TableCell>
+                             <Badge className={getRoleBadge(log.users?.role || '')}>
+                               {log.users?.role || 'Unknown'}
+                             </Badge>
+                           </TableCell>
+                           <TableCell>
+                             <Badge className={getActivityBadge(log.action)}>
+                               {log.action.replace('_', ' ')}
+                             </Badge>
+                           </TableCell>
+                           <TableCell className="max-w-[300px]">
+                             <div className="text-sm text-muted-foreground">
+                               {log.description || log.action}
+                               {log.data && Object.keys(log.data).length > 0 && (
+                                 <div className="text-xs mt-1 text-gray-500">
+                                   {JSON.stringify(log.data)}
+                                 </div>
+                               )}
+                             </div>
+                           </TableCell>
+                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>

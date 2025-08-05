@@ -37,17 +37,17 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
     try {
       if (!userId) return;
 
-      // Check user's LMS status
+      // Check user's status
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('lms_status')
+        .select('status')
         .eq('id', userId)
         .single();
       
       if (userError) throw userError;
       
       // If user is inactive, don't show any assignments
-      if (userData?.lms_status !== 'active') {
+      if (userData?.status !== 'active') {
         setNextAssignment(null);
         setLoading(false);
         return;
