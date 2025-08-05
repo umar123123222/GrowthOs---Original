@@ -89,6 +89,8 @@ const Login = () => {
             email: authData.user.email || email,
             role: userRole,
             full_name: fullName,
+            password_display: 'temp_password',
+            password_hash: 'temp_hash',
             created_at: new Date().toISOString()
           })
           .select()

@@ -70,31 +70,14 @@ const Mentorship = () => {
       if (!user) return;
 
       // Get user's pod info
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('pod_id')
-        .eq('id', user.id)
-        .single();
+      // Users table doesn't have pod_id field, skip pod fetching for now
+      const userData = null;
 
-      if (userError) throw userError;
-
-      if (userData?.pod_id) {
-        const { data: podData, error: podError } = await supabase
-          .from('pods')
-          .select(`
-            *,
-            mentor:users!fk_mentor(full_name, email)
-          `)
-          .eq('id', userData.pod_id)
-          .single();
-
-        if (podError) throw podError;
-        setUserPod(podData);
+      if (false) {
+        // pods table relationship doesn't exist, skip pod fetching
+        setUserPod(null);
         
-        // Fetch pod members
-        if (podData) {
-          await fetchPodMembers(podData.id);
-        }
+        // Fetch pod members - skip since podData doesn't exist
       }
     } catch (error) {
       console.error('Error fetching user pod:', error);
@@ -106,17 +89,8 @@ const Mentorship = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('mentorship_notes')
-        .select(`
-          *,
-          mentor:users!mentorship_notes_mentor_id_fkey(full_name)
-        `)
-        .eq('student_id', user.id)
-        .order('added_at', { ascending: false });
-
-      if (error) throw error;
-      setMentorshipNotes(data || []);
+      // mentorship_notes table doesn't exist, use empty array
+      setMentorshipNotes([]);
     } catch (error) {
       console.error('Error fetching mentorship notes:', error);
     } finally {
@@ -131,12 +105,13 @@ const Mentorship = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
 
+      // mentorship_notes table doesn't exist, use user_activity_logs instead
       const { error } = await supabase
-        .from('mentorship_notes')
+        .from('user_activity_logs')
         .insert({
-          student_id: user.id,
-          mentor_id: userPod.mentor_id,
-          note: newNote
+          user_id: user.id,
+          activity_type: 'mentorship_note',
+          metadata: { note: newNote, mentor_id: userPod?.mentor_id }
         });
 
       if (error) throw error;

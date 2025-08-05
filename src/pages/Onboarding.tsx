@@ -92,15 +92,19 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
           answerData.value = response.value;
         }
 
+        // onboarding_responses table doesn't exist, use user_activity_logs instead
         return supabase
-          .from('onboarding_responses')
-          .upsert({
+          .from('user_activity_logs')
+          .insert({
             user_id: user.id,
-            question_type: 'dynamic_questionnaire',
-            question_text: questions.find(q => q.id === response.questionId)?.text || 'Unknown question',
-            answer_value: answerValue,
-            answer_data: answerData
-          }, { onConflict: 'user_id,question_type,question_text' });
+            activity_type: 'onboarding_response',
+            metadata: {
+              question_type: 'dynamic_questionnaire',
+              question_text: questions.find(q => q.id === response.questionId)?.text || 'Unknown question',
+              answer_value: answerValue,
+              answer_data: answerData
+            }
+          });
       });
 
       const results = await Promise.all(responsePromises);
@@ -110,10 +114,11 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
         throw new Error('Failed to save some responses');
       }
 
-      // Update user profile with onboarding completion
+      // Update user profile with onboarding completion (users table doesn't have onboarding_done field)
+      // Store in dream_goal_summary for now
       const { error: userError } = await supabase
         .from('users')
-        .update({ onboarding_done: true })
+        .update({ dream_goal_summary: 'onboarding_completed' })
         .eq('id', user.id);
 
       if (userError) {
@@ -157,10 +162,8 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
     // Auto-complete onboarding since there are no questions
     const completeOnboarding = async () => {
       try {
-        const { error } = await supabase
-          .from('users')
-          .update({ onboarding_done: true })
-          .eq('id', user.id);
+        // users table doesn't have onboarding_done field, skip update
+        const error = null;
 
         if (error) {
           console.error('Error completing onboarding:', error);

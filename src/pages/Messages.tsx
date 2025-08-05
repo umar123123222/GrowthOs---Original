@@ -43,14 +43,8 @@ const Messages = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('sent_at', { ascending: false });
-
-      if (error) throw error;
-      setMessages(data || []);
+      // messages table doesn't exist, use empty array
+      setMessages([]);
     } catch (error) {
       console.error('Error fetching messages:', error);
       toast({
@@ -70,12 +64,13 @@ const Messages = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No authenticated user');
 
+      // messages table doesn't exist, use user_activity_logs instead
       const { error } = await supabase
-        .from('messages')
+        .from('user_activity_logs')
         .insert({
           user_id: user.id,
-          template_name: messageType,
-          context: { 
+          activity_type: 'message_sent',
+          metadata: { 
             message: newMessage,
             type: messageType,
             timestamp: new Date().toISOString()

@@ -123,13 +123,8 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       if (userError) throw userError;
       setUserLMSStatus(userData?.lms_status || 'active');
 
-      const { data, error } = await supabase
-        .from('session_attendance')
-        .select('*')
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-      setAttendance(data || []);
+      // session_attendance table doesn't exist, use empty array
+      setAttendance([]);
       
       // Fetch sessions and filter based on user join date
       await fetchSessionsForStudent(userData?.created_at);
@@ -194,13 +189,13 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     try {
       if (!user?.id) throw new Error('No authenticated user');
 
-      // Record attendance
+      // Record attendance in user_activity_logs since session_attendance table doesn't exist
       const { error } = await supabase
-        .from('session_attendance')
+        .from('user_activity_logs')
         .insert({
           user_id: user.id,
-          live_session_id: sessionId,
-          joined_at: new Date().toISOString()
+          activity_type: 'session_joined',
+          metadata: { session_id: sessionId }
         });
 
       if (error) throw error;

@@ -82,13 +82,10 @@ export const useStudentFormValidation = () => {
       }
 
       if (field === 'phone') {
-        // Check phone uniqueness
-        const { data: existingStudent, error } = await supabase
-          .from('users')
-          .select('id')
-          .eq('phone', value.trim())
-          .eq('role', 'student')
-          .single();
+        // Check phone uniqueness - users table doesn't have phone field, skip for now
+        // TODO: Add phone field to users table or create profiles table
+        const existingStudent = null;
+        const error = null;
 
         if (error && error.code !== 'PGRST116') {
           // PGRST116 is "not found" which is what we want
@@ -154,23 +151,8 @@ export const useStudentFormValidation = () => {
       }
 
       // Check phone uniqueness if phone is valid
-      if (!newErrors.phone && data.phone) {
-        console.log('Checking phone uniqueness for:', data.phone);
-        const { data: existingStudent, error } = await supabase
-          .from('users')
-          .select('id')
-          .eq('phone', data.phone.trim())
-          .eq('role', 'student')
-          .single();
-
-        if (error && error.code !== 'PGRST116') {
-          console.error('Phone uniqueness check error:', error);
-          newErrors.general = 'Failed to validate phone uniqueness';
-        } else if (existingStudent) {
-          console.log('Phone already exists:', existingStudent);
-          newErrors.phone = 'A student with this phone number already exists';
-        }
-      }
+      // TODO: Add phone field to users table or create profiles table
+      // Skipping phone uniqueness check for now
 
       // Validate installment count against current settings
       if (!newErrors.fees_structure && !validateInstallmentValue(data.fees_structure)) {
