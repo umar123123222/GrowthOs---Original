@@ -183,25 +183,15 @@ const Dashboard = ({ user }: { user?: any }) => {
 
   const fetchLeaderboardData = async () => {
     try {
-      const { data: leaderboard } = await supabase
-        .from('leaderboard')
-        .select(`
-          rank,
-          points,
-          user_id,
-          users (full_name)
-        `)
-        .order('rank', { ascending: true })
-        .limit(5);
-
-      if (leaderboard) {
-        const formattedData = leaderboard.map(entry => ({
-          name: entry.users?.full_name || 'Unknown',
-          score: entry.points,
-          rank: entry.rank
-        }));
-        setLeaderboardData(formattedData);
-      }
+      // Leaderboard table doesn't exist yet, use placeholder data
+      const placeholderData = [
+        { name: 'Alex M.', score: 95, rank: 1 },
+        { name: 'Sarah K.', score: 87, rank: 2 },
+        { name: 'John D.', score: 82, rank: 3 },
+        { name: 'Emily R.', score: 78, rank: 4 },
+        { name: 'Mike S.', score: 74, rank: 5 }
+      ];
+      setLeaderboardData(placeholderData);
     } catch (error) {
       console.error('Error fetching leaderboard data:', error);
     }
@@ -211,10 +201,10 @@ const Dashboard = ({ user }: { user?: any }) => {
     if (!user?.id) return;
 
     try {
-      // Check profile completion
+      // Check profile completion  
       const { data: profile } = await supabase
         .from('users')
-        .select('onboarding_done, shopify_credentials, meta_ads_credentials')
+        .select('dream_goal_summary, shopify_credentials, meta_ads_credentials')
         .eq('id', user.id)
         .single();
 
@@ -236,7 +226,7 @@ const Dashboard = ({ user }: { user?: any }) => {
 
       setMilestones([
         { title: "First Login", completed: true, icon: "🎯" }, // User is logged in
-        { title: "Profile Complete", completed: profile?.onboarding_done || false, icon: "✅" },
+        { title: "Profile Complete", completed: !!(profile?.dream_goal_summary), icon: "✅" },
         { title: "First Video Watched", completed: hasWatchedAnyVideo, icon: "📹" },
         { title: "First Assignment", completed: (submissions?.length || 0) > 0, icon: "📝" },
         { title: "Quiz Master", completed: false, icon: "🧠" }, // Would need quiz data

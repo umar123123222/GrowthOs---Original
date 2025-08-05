@@ -35,14 +35,8 @@ const Certificates = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('certificates')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('issued_at', { ascending: false });
-
-      if (error) throw error;
-      setCertificates(data || []);
+      // Certificates table doesn't exist yet, show empty for now
+      setCertificates([]);
     } catch (error) {
       console.error('Error fetching certificates:', error);
       toast({
@@ -57,13 +51,7 @@ const Certificates = () => {
 
   const downloadCertificate = async (certificate: Certificate) => {
     try {
-      // Mark as downloaded
-      const { error } = await supabase
-        .from('certificates')
-        .update({ downloaded: true })
-        .eq('id', certificate.id);
-
-      if (error) throw error;
+      // TODO: Mark as downloaded when certificates table exists
 
       // Open certificate URL
       window.open(certificate.certificate_url, '_blank');

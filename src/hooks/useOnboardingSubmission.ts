@@ -21,29 +21,12 @@ export const useOnboardingSubmission = () => {
   ): Promise<boolean> => {
     setLoading(true);
     try {
-      // For now, save to the existing onboarding_responses table structure
-      // TODO: Create onboarding_answers table in migration
-      const { error: answersError } = await supabase
-        .from('onboarding_responses')
-        .upsert({
-          user_id: userId,
-          question_type: 'comprehensive_onboarding',
-          question_text: 'Comprehensive Onboarding Questions',
-          answer_data: data as any,
-          answer_value: JSON.stringify(data)
-        }, { onConflict: 'user_id,question_type' });
-
-      if (answersError) {
-        throw new Error(`Failed to save onboarding answers: ${answersError.message}`);
-      }
-
-      // Update user profile with onboarding completion and first_login_complete
+      // Store onboarding data in user's dream_goal_summary field for now
+      // TODO: Create proper onboarding_responses table in migration
       const { error: userError } = await supabase
         .from('users')
         .update({
-          onboarding_done: true,
-          
-          onboarding_data: data as any // Also store in the existing field for backward compatibility
+          dream_goal_summary: JSON.stringify(data)
         })
         .eq('id', userId);
 

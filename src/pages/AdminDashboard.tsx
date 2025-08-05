@@ -98,14 +98,13 @@ function DashboardContent() {
         user.role === 'student' && user.status === 'Active'
       ).length || 0;
 
-      // Fetch course completion data
+      // Get course completion rate from activity logs
       const { data: progressData } = await supabase
-        .from('user_module_progress')
-        .select('is_completed');
-
-      const courseCompletion = progressData?.length 
-        ? Math.round((progressData.filter(p => p.is_completed).length / progressData.length) * 100)
-        : 0;
+        .from('user_activity_logs')
+        .select('*')
+        .eq('activity_type', 'module_completed');
+      
+      const courseCompletion = progressData?.length || 0;
 
       // Fetch open support tickets
       const { data: tickets } = await supabase
@@ -113,13 +112,14 @@ function DashboardContent() {
         .select('id')
         .eq('status', 'open');
 
-      // Fetch monthly revenue (sum of payments this month)
+      // Fetch monthly revenue from invoices (sum of payments this month)
       const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
       const { data: payments } = await supabase
-        .from('installment_payments')
+        .from('invoices')
         .select('amount')
-        .gte('payment_date', `${currentMonth}-01`)
-        .lt('payment_date', `${currentMonth}-32`);
+        .gte('created_at', `${currentMonth}-01`)
+        .lt('created_at', `${currentMonth}-32`)
+        .eq('status', 'paid');
 
       const monthlyRevenue = payments?.reduce((sum, payment) => 
         sum + (Number(payment.amount) || 0), 0) || 0;

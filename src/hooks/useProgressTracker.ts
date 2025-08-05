@@ -37,13 +37,14 @@ export const useProgressTracker = (user?: any, modules?: any[]) => {
     if (!user?.id) return;
 
     try {
+      // TODO: Create user_module_progress table in migration
+      // For now, log the activity in user_activity_logs
       await supabase
-        .from('user_module_progress')
-        .upsert({
+        .from('user_activity_logs')
+        .insert({
           user_id: user.id,
-          module_id: moduleId,
-          is_completed: true,
-          completed_at: new Date().toISOString()
+          activity_type: 'module_completed',
+          metadata: { module_id: moduleId }
         });
     } catch (error) {
       console.error('Error marking module as complete:', error);

@@ -10,8 +10,8 @@ const Connect = () => {
   const { user, refreshUser } = useAuth();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
-  const hasShopifyConnection = !!user?.encrypted_shopify_credentials;
-  const hasMetaConnection = !!user?.encrypted_meta_ads_credentials;
+  const hasShopifyConnection = !!user?.shopify_credentials;
+  const hasMetaConnection = !!user?.meta_ads_credentials;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
