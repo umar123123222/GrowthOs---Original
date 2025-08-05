@@ -157,7 +157,8 @@ const handler = async (req: Request): Promise<Response> => {
       email,
       role,
       status: 'Active',
-      temp_password, // Store for credential viewing
+      password_display: temp_password, // Store for credential viewing
+      password_hash: temp_password, // Store password hash
       created_by: createdBy // Set who created this user
     };
 
