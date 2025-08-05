@@ -309,6 +309,27 @@ const handler = async (req: Request): Promise<Response> => {
           console.error('Error creating installments:', installmentError);
         } else {
           console.log(`All ${installment_count} installments created successfully`);
+          
+          // Send first invoice email immediately for the pending invoice
+          if (installments.length > 0) {
+            const firstInvoice = installments[0];
+            try {
+              await sendFirstInvoiceEmail({
+                installment_number: firstInvoice.installment_number,
+                amount: firstInvoice.amount,
+                due_date: firstInvoice.due_date,
+                students: {
+                  users: {
+                    email: email,
+                    full_name: full_name
+                  }
+                }
+              }, loginUrl);
+              console.log(`First invoice email sent to ${email}`);
+            } catch (emailError) {
+              console.error('Error sending first invoice email:', emailError);
+            }
+          }
         }
       }
       
@@ -357,6 +378,55 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
+}
+
+async function sendFirstInvoiceEmail(invoice: any, loginUrl: string) {
+  try {
+    const smtpClient = SMTPClient.fromEnv();
+    const studentEmail = invoice.students.users.email;
+    const studentName = invoice.students.users.full_name;
+    const dueDate = new Date(invoice.due_date).toLocaleDateString();
+    
+    await smtpClient.sendEmail({
+      to: studentEmail,
+      subject: `Welcome! Your First Installment #${invoice.installment_number} - Payment Due ${dueDate}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #2563eb;">Welcome to Your Learning Journey!</h2>
+          
+          <p>Dear ${studentName},</p>
+          
+          <p>Congratulations on starting your learning journey with us! Your first installment payment has been issued:</p>
+          
+          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin-top: 0;">First Payment Details</h3>
+            <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
+            <p><strong>Amount:</strong> $${invoice.amount}</p>
+            <p><strong>Due Date:</strong> ${dueDate}</p>
+            <p><strong>Status:</strong> Pending Payment</p>
+          </div>
+          
+          <p>Please ensure payment is made by the due date to continue your learning journey without interruption.</p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${loginUrl}" 
+               style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+              View Payment Details & Access Learning Platform
+            </a>
+          </div>
+          
+          <p>You can use the login credentials we sent you in the previous email to access your learning platform and view payment details.</p>
+          
+          <p>If you have any questions, please contact our support team.</p>
+          
+          <p>Best regards,<br>The Learning Team</p>
+        </div>
+      `
+    });
+
+    console.log(`First invoice email sent to ${studentEmail} for installment ${invoice.installment_number}`);
+  } catch (error) {
+    console.error('Error sending first invoice email:', error);
   }
 };
 
