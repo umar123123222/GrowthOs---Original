@@ -217,15 +217,10 @@ const handler = async (req: Request): Promise<Response> => {
             
             <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
               <h3>LMS Access Credentials</h3>
-              <p><strong>LMS User ID:</strong> ${lmsUserId}</p>
-              <p><strong>LMS Password:</strong> ${lmsPassword}</p>
               <p><strong>Student ID:</strong> ${studentRecord.student_id}</p>
-            </div>
-            
-            <div style="background-color: #e8f4fd; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3>Platform Login Credentials</h3>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Password:</strong> ${loginPassword}</p>
+              <p><strong>Installments:</strong> ${installment_count} installment${installment_count > 1 ? 's' : ''}</p>
+              <p><strong>User ID:</strong> ${email}</p>
+              <p><strong>Current Password:</strong> ${loginPassword}</p>
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -234,8 +229,6 @@ const handler = async (req: Request): Promise<Response> => {
                 Start Your Learning Journey
               </a>
             </div>
-            
-            <p><strong>Payment Plan:</strong> ${installment_count} installment${installment_count > 1 ? 's' : ''}</p>
             
             <p>Please keep these credentials secure. You can change your password after logging in.</p>
             
