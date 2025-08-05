@@ -125,15 +125,22 @@ const Teams = () => {
 
       if (response.error) {
         console.error('Error creating team member:', response.error);
-        // For non-2xx responses, the error message is in response.error.message
-        const errorMessage = response.error.message || 'Failed to create team member';
-        // Try to parse the error message as JSON to get the actual error
-        try {
-          const errorData = JSON.parse(errorMessage);
-          throw new Error(errorData.error || errorMessage);
-        } catch {
-          throw new Error(errorMessage);
+        
+        // Handle different types of errors from the edge function
+        let errorMessage = 'Failed to create team member';
+        
+        if (response.error.message) {
+          try {
+            // Try to parse as JSON first (for structured error responses)
+            const errorData = JSON.parse(response.error.message);
+            errorMessage = errorData.error || errorData.message || response.error.message;
+          } catch {
+            // If not JSON, use the message directly
+            errorMessage = response.error.message;
+          }
         }
+        
+        throw new Error(errorMessage);
       }
 
       if (!response.data?.success) {
