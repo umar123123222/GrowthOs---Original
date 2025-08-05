@@ -1,7 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.1';
 import { Resend } from "npm:resend@2.0.0";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -37,6 +36,14 @@ function generateSecurePassword(): string {
   }
   
   return password;
+}
+
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -75,7 +82,7 @@ const handler = async (req: Request): Promise<Response> => {
     const generatedPassword = generateSecurePassword();
     
     // Hash the password for database storage
-    const passwordHash = await bcrypt.hash(generatedPassword, 10);
+    const passwordHash = await hashPassword(generatedPassword);
 
     // Validate input
     if (!email || !full_name || !role) {
