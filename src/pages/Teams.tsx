@@ -100,7 +100,7 @@ const Teams = () => {
 
 
 const handleAddMember = async () => {
-    if (!newMember.full_name || !newMember.email || !newMember.role) {
+    if (!newMember.full_name.trim() || !newMember.email.trim() || !newMember.role) {
       toast({
         title: "Error",
         description: "Please fill in all required fields",
@@ -109,14 +109,43 @@ const handleAddMember = async () => {
       return;
     }
 
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newMember.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Check if email already exists in our database
     try {
-      // Auto-generate secure password for team members
-      
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id, email, role')
+        .eq('email', newMember.email.toLowerCase())
+        .maybeSingle();
+
+      if (existingUser) {
+        toast({
+          title: "Email Already Exists",
+          description: `A ${existingUser.role} with email ${existingUser.email} already exists. Please use a different email address.`,
+          variant: "destructive"
+        });
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking existing email:', error);
+    }
+
+    try {
       // Create user via enhanced edge function
       const response = await supabase.functions.invoke('create-enhanced-team-member', {
         body: {
-          email: newMember.email,
-          full_name: newMember.full_name,
+          email: newMember.email.toLowerCase().trim(),
+          full_name: newMember.full_name.trim(),
           role: newMember.role
         }
       });
@@ -138,11 +167,35 @@ const handleAddMember = async () => {
           }
         }
         
+        // Handle specific error cases with better messaging
+        if (errorMessage.toLowerCase().includes('already exists') || 
+            errorMessage.toLowerCase().includes('email_exists')) {
+          toast({
+            title: "Email Already Registered",
+            description: "This email is already registered in the system. Please use a different email address.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
         throw new Error(errorMessage);
       }
 
       if (!response.data?.success) {
-        throw new Error(response.data?.error || 'Failed to create team member');
+        const errorMsg = response.data?.error || 'Failed to create team member';
+        
+        // Handle duplicate email from edge function response
+        if (errorMsg.toLowerCase().includes('already exists') || 
+            errorMsg.toLowerCase().includes('email_exists')) {
+          toast({
+            title: "Email Already Registered", 
+            description: "This email is already registered in the system. Please use a different email address.",
+            variant: "destructive"
+          });
+          return;
+        }
+        
+        throw new Error(errorMsg);
       }
 
       // Trigger email processing instead of direct email sending
