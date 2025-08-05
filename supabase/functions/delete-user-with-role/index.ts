@@ -52,24 +52,9 @@ serve(async (req) => {
       )
     }
 
-    // Delete the user record - CASCADE will automatically handle related records
+    // Delete the auth user first - this will trigger cascading deletion of all related records
     console.log('Starting deletion process for user:', target_user_id)
     
-    const { error: deletionError } = await supabaseClient
-      .from('users')
-      .delete()
-      .eq('id', target_user_id)
-    
-    console.log('Deleted user record, error:', deletionError)
-
-    if (deletionError) {
-      return new Response(
-        JSON.stringify({ error: deletionError.message }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Delete the auth user
     const { error: authDeleteError } = await supabaseClient.auth.admin.deleteUser(target_user_id)
 
     if (authDeleteError) {
@@ -78,6 +63,8 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log('Successfully deleted user from auth and triggered cascading deletion')
 
     return new Response(
       JSON.stringify({
