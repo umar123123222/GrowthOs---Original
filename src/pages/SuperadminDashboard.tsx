@@ -58,7 +58,7 @@ export default function SuperadminDashboard() {
 
   return (
     <RoleGuard allowedRoles={['superadmin']}>
-      <div className="container mx-auto p-6 animate-fade-in">
+      <div className="w-full max-w-none p-6 animate-fade-in">
         {renderContent()}
       </div>
     </RoleGuard>
