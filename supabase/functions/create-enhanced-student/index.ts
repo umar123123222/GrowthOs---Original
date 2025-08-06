@@ -180,7 +180,7 @@ const handler = async (req: Request): Promise<Response> => {
         password_hash: passwordHash,
         lms_user_id: lmsUserId,
         status: 'active',
-        lms_status: 'active',
+        lms_status: 'inactive',
         is_temp_password: true,
         created_by: createdBy
       })

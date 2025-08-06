@@ -687,14 +687,22 @@ export function StudentsManagement() {
 
       if (error) throw error;
 
-      // If this is the last installment, update the user's fees status
+      // If this is the first installment, activate LMS status
+      if (installmentNumber === 1) {
+        await supabase
+          .from('users')
+          .update({ 
+            lms_status: 'active'
+          })
+          .eq('id', studentId);
+      }
+
+      // If this is the last installment, update the user's status  
       if (installmentNumber === totalInstallments) {
         await supabase
           .from('users')
           .update({ 
-            fees_overdue: false,
-            lms_status: 'active',
-            fees_due_date: null
+            updated_at: new Date().toISOString()
           })
           .eq('id', studentId);
       }
