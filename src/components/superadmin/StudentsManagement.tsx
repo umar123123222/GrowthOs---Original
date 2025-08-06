@@ -149,41 +149,35 @@ export function StudentsManagement() {
 
   const fetchStudents = async () => {
     try {
+      // Fetch students with creator information in a single query using JOIN
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select(`
+          *,
+          creator:created_by (
+            full_name,
+            email
+          )
+        `)
         .eq('role', 'student')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Fetch creator information for each student
-      const studentsWithCreators: Student[] = [];
-      for (const student of data || []) {
-        let creator = null;
-        // Check if created_by field exists and fetch creator info
-        if ((student as any).created_by) {
-          const { data: creatorData } = await supabase
-            .from('users')
-            .select('full_name, email')
-            .eq('id', (student as any).created_by)
-            .single();
-          creator = creatorData;
-        }
-        studentsWithCreators.push({
-          ...student,
-          student_id: student.lms_user_id || '',
-          phone: '',
-          fees_structure: '',
-          fees_overdue: false,
-          last_invoice_date: '',
-          last_invoice_sent: false,
-          fees_due_date: '',
-          last_suspended_date: '',
-          created_by: (student as any).created_by || null,
-          creator
-        });
-      }
+      // Transform the data to include creator information
+      const studentsWithCreators: Student[] = (data || []).map(student => ({
+        ...student,
+        student_id: student.lms_user_id || '',
+        phone: '',
+        fees_structure: '',
+        fees_overdue: false,
+        last_invoice_date: '',
+        last_invoice_sent: false,
+        fees_due_date: '',
+        last_suspended_date: '',
+        created_by: student.created_by || null,
+        creator: student.creator || null
+      }));
 
       setStudents(studentsWithCreators);
       setTotalStudents(data?.length || 0);
