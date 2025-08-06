@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.1';
 import { SMTPClient } from '../_shared/smtp-client.ts';
-import { generateInvoicePDF, type InvoiceData, type CompanyDetails } from '../_shared/pdf-generator.ts';
+// Note: PDF generation removed to avoid Deno file system restrictions
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,6 +31,13 @@ interface CreateEnhancedStudentResponse {
     created_at: string;
   };
   error?: string;
+}
+
+interface CompanyDetails {
+  company_name: string;
+  address: string;
+  contact_email: string;
+  primary_phone: string;
 }
 
 function generateSecurePassword(): string {
@@ -450,67 +457,124 @@ async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: s
     
     const currencySymbol = getCurrencySymbol(currency);
     
-    // Generate PDF invoice
-    const invoiceData: InvoiceData = {
-      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
-      date: new Date().toLocaleDateString(),
-      due_date: dueDate,
-      student_name: studentName,
-      student_email: studentEmail,
-      items: [{
-        description: `Course Installment Payment`,
-        installment_number: invoice.installment_number,
-        price: parseFloat(invoice.amount),
-        total: parseFloat(invoice.amount)
-      }],
-      subtotal: parseFloat(invoice.amount),
-      tax: 0,
-      total: parseFloat(invoice.amount),
-      currency: currency,
-      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
-      terms: 'Please send payment within 30 days of receiving this invoice.'
-    };
-    
-    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
+    // Generate payment methods HTML
+    const paymentMethodsHtml = paymentMethods.filter((pm: any) => pm.enabled).map((method: any) => `
+      <div style="border-left: 3px solid #2563eb; padding-left: 15px; margin-bottom: 15px;">
+        <h4 style="margin: 0 0 10px 0; color: #1e40af;">${method.name}</h4>
+        ${Object.entries(method.details).map(([key, value]) => `
+          <p style="margin: 5px 0; font-size: 14px;"><strong>${key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}:</strong> ${value}</p>
+        `).join('')}
+      </div>
+    `).join('');
     
     await smtpClient.sendEmail({
       to: studentEmail,
-      subject: `Your First Installment Invoice #${invoice.installment_number} - Due ${dueDate}`,
+      subject: `Invoice #${invoice.installment_number.toString().padStart(3, '0')} - Payment Due ${dueDate}`,
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #2563eb;">Welcome! Your First Installment Invoice</h2>
-          
-          <p>Dear ${studentName},</p>
-          
-          <p>Welcome to our learning platform! Your first installment invoice has been generated:</p>
-          
-          <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
-            <h3 style="margin-top: 0;">Invoice Details</h3>
-            <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-            <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
-            <p><strong>Due Date:</strong> ${dueDate}</p>
-            <p><strong>Status:</strong> Pending Payment</p>
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Invoice #${invoice.installment_number.toString().padStart(3, '0')}</title>
+        </head>
+        <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+          <div style="max-width: 600px; margin: 0 auto; background-color: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; padding: 30px 40px; text-align: center;">
+              <h1 style="margin: 0; font-size: 28px; font-weight: bold;">INVOICE</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">${companyDetails.company_name}</p>
+            </div>
+            
+            <!-- Content -->
+            <div style="padding: 40px;">
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Dear ${studentName},</p>
+              
+              <p style="color: #374151; font-size: 16px; line-height: 1.6;">Your installment invoice has been generated. Please find the details below:</p>
+              
+              <!-- Invoice Details -->
+              <div style="background-color: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 25px; margin: 25px 0;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                  <div>
+                    <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">Invoice To:</h3>
+                    <p style="margin: 0; font-weight: bold; color: #111827;">${studentName}</p>
+                    <p style="margin: 5px 0 0 0; color: #6b7280;">${studentEmail}</p>
+                  </div>
+                  <div style="text-align: right;">
+                    <p style="margin: 0; color: #6b7280;">Invoice #: <strong>INV-${invoice.installment_number.toString().padStart(3, '0')}</strong></p>
+                    <p style="margin: 5px 0; color: #6b7280;">Date: <strong>${new Date().toLocaleDateString()}</strong></p>
+                    <p style="margin: 5px 0; color: #6b7280;">Due Date: <strong>${dueDate}</strong></p>
+                  </div>
+                </div>
+                
+                <!-- Amount Due -->
+                <div style="background-color: white; border-radius: 6px; padding: 20px; text-align: center; border: 2px solid #2563eb;">
+                  <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">AMOUNT DUE</p>
+                  <p style="margin: 0; font-size: 36px; font-weight: bold; color: #2563eb;">${currencySymbol}${parseFloat(invoice.amount).toLocaleString()}</p>
+                </div>
+              </div>
+              
+              <!-- Course Details -->
+              <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                <h3 style="margin: 0 0 15px 0; color: #374151;">Course Details:</h3>
+                <div style="border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 10px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span style="color: #374151;">Course Installment Payment #${invoice.installment_number}</span>
+                    <span style="font-weight: bold; color: #111827;">${currencySymbol}${parseFloat(invoice.amount).toLocaleString()}</span>
+                  </div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: #2563eb;">
+                  <span>Total Amount Due:</span>
+                  <span>${currencySymbol}${parseFloat(invoice.amount).toLocaleString()}</span>
+                </div>
+              </div>
+              
+              <!-- Payment Methods -->
+              ${paymentMethodsHtml ? `
+              <div style="margin: 25px 0;">
+                <h3 style="margin: 0 0 20px 0; color: #374151;">Payment Methods:</h3>
+                ${paymentMethodsHtml}
+              </div>
+              ` : ''}
+              
+              <!-- Action Button -->
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${loginUrl}" style="background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; text-decoration: none; padding: 15px 30px; border-radius: 6px; font-weight: bold; display: inline-block;">
+                  Access Learning Platform
+                </a>
+              </div>
+              
+              <!-- Footer Notes -->
+              <div style="background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 20px; margin: 25px 0;">
+                <h4 style="margin: 0 0 10px 0; color: #92400e;">Important Notes:</h4>
+                <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+                  <li>Payment is due by ${dueDate}</li>
+                  <li>Access to courses may be restricted for overdue payments</li>
+                  <li>Contact support if you have any payment-related questions</li>
+                </ul>
+              </div>
+              
+              <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">If you have any questions about this invoice or need assistance with payment, please contact our support team.</p>
+              
+              <p style="color: #374151; font-size: 16px; margin-top: 30px;">Best regards,<br><strong>${companyDetails.company_name} Team</strong></p>
+            </div>
+            
+            <!-- Footer -->
+            <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+              <p style="margin: 0; color: #6b7280; font-size: 12px;">${companyDetails.company_name}</p>
+              <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">${companyDetails.address}</p>
+              <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${companyDetails.contact_email} | Phone: ${companyDetails.primary_phone}</p>
+            </div>
           </div>
-          
-          <p>Your login credentials were sent in a previous email. You can use them to access the learning platform and view detailed payment instructions.</p>
-          
-          <p>Please make your payment by the due date to ensure uninterrupted access to your courses. The detailed invoice is attached to this email.</p>
-          
-          <p>If you have any questions, please contact our support team.</p>
-          
-          <p>Best regards,<br>The Learning Team</p>
-        </div>
-      `,
-      attachments: [{
-        filename: `Invoice-${invoice.installment_number}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf'
-      }]
+        </body>
+        </html>
+      `
     });
 
-    console.log(`First invoice email sent to ${studentEmail} for installment ${invoice.installment_number}`);
+    console.log(`First invoice email sent successfully to ${studentEmail} for installment ${invoice.installment_number}`);
   } catch (error) {
     console.error('Error sending first invoice email:', error);
+    throw error;
   }
 };
 
