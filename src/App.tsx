@@ -16,14 +16,17 @@ import { logger } from "@/lib/logger";
 
 // Wrapper component to handle onboarding completion properly
 const OnboardingWrapper = ({ user }: { user: any }) => {
+  const navigate = useNavigate();
   const { refreshUser } = useAuth();
   
   const handleOnboardingComplete = async () => {
-    logger.info('Onboarding completed, refreshing user data');
+    logger.info('Onboarding completed, navigating to dashboard');
     // Refresh user data to get updated onboarding status
     if (refreshUser) {
       await refreshUser();
     }
+    // Navigate to dashboard
+    navigate('/dashboard');
   };
   
   return <Onboarding user={user} onComplete={handleOnboardingComplete} />;
@@ -158,6 +161,15 @@ const App = () => {
                   <Route path="/" element={<Layout user={user} />}>
                     {/* Role-based dashboard routing */}
                     <Route index element={
+                      user.role === 'admin' ? <AdminDashboard /> :
+                      user.role === 'mentor' ? <MentorDashboard /> :
+                      user.role === 'superadmin' ? <SuperadminDashboard /> :
+                      user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
+                      <Dashboard user={user} />
+                    } />
+                    
+                    {/* Dashboard route */}
+                    <Route path="dashboard" element={
                       user.role === 'admin' ? <AdminDashboard /> :
                       user.role === 'mentor' ? <MentorDashboard /> :
                       user.role === 'superadmin' ? <SuperadminDashboard /> :
