@@ -595,8 +595,10 @@ export type Database = {
       }
       students: {
         Row: {
+          answers_json: Json | null
           created_at: string | null
           enrollment_date: string | null
+          goal_brief: string | null
           id: string
           installment_count: number | null
           installment_plan_id: string | null
@@ -607,8 +609,10 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          answers_json?: Json | null
           created_at?: string | null
           enrollment_date?: string | null
+          goal_brief?: string | null
           id?: string
           installment_count?: number | null
           installment_plan_id?: string | null
@@ -619,8 +623,10 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          answers_json?: Json | null
           created_at?: string | null
           enrollment_date?: string | null
+          goal_brief?: string | null
           id?: string
           installment_count?: number | null
           installment_plan_id?: string | null

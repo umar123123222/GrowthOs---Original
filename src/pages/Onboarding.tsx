@@ -67,7 +67,7 @@ const Onboarding = ({
   const handleQuestionnaireComplete = async (responses: QuestionnaireResponse[]) => {
     setSubmitting(true);
     try {
-      // Save responses to user_activity_logs
+      // 1. Save responses to user_activity_logs for audit trail
       const responsePromises = responses.map(response => {
         let answerValue = '';
         let answerData: any = {
@@ -103,10 +103,10 @@ const Onboarding = ({
       const hasErrors = results.some(result => result.error);
 
       if (hasErrors) {
-        throw new Error('Failed to save some responses');
+        throw new Error('Failed to save some responses to activity logs');
       }
 
-      // Generate dream goal summary from answers
+      // 2. Generate goal summary from answers
       const questionAnswers = responses.map((response, index) => {
         const question = questions.find(q => q.id === response.questionId);
         let answerText = '';
@@ -127,32 +127,69 @@ const Onboarding = ({
         };
       });
 
-      const dreamGoalSummary = generateDreamGoalSummary(questionAnswers);
+      const goalBrief = generateDreamGoalSummary(questionAnswers) || 'Goal set from questionnaire completion';
 
-      // Update user profile with dream goal summary
+      // 3. Prepare answers JSON for storage
+      const answersJson = responses.reduce((acc, response) => {
+        const question = questions.find(q => q.id === response.questionId);
+        acc[response.questionId] = {
+          questionText: question?.text || '',
+          value: response.value,
+          order: question?.order || 0
+        };
+        return acc;
+      }, {} as Record<string, any>);
+
+      // 4. Update students table with completion data
+      const { error: studentError } = await supabase
+        .from('students')
+        .update({
+          onboarding_completed: true,
+          answers_json: answersJson,
+          goal_brief: goalBrief,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (studentError) {
+        throw new Error(`Failed to update student record: ${studentError.message}`);
+      }
+
+      // 5. Also update user profile with dream goal summary for backward compatibility
       const { error: userError } = await supabase
         .from('users')
         .update({
-          dream_goal_summary: dreamGoalSummary || 'Goal set from questionnaire completion'
+          dream_goal_summary: goalBrief
         })
         .eq('id', user.id);
 
       if (userError) {
-        throw new Error(`Failed to update user profile: ${userError.message}`);
+        console.error('Warning: Failed to update user profile:', userError);
+        // Don't throw here as student record is the primary source
       }
 
+      // 6. Show success message
       toast({
         title: "Welcome to your learning journey!",
         description: "Your ultimate goal has been set. Let's achieve it together!"
       });
 
-      onComplete();
+      // 7. Navigate to dashboard
+      setTimeout(() => {
+        onComplete();
+      }, 1500); // Brief delay to show the success message
+
+      // 8. Safety net - force navigation after 4 seconds if something stalls
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 4000);
+
     } catch (error: any) {
-      console.error('Onboarding submission error:', error);
+      console.error('Onboarding completion error:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: error.message || "Failed to save onboarding information"
+        title: "Could not save your answers",
+        description: error.message || "Please try again."
       });
     } finally {
       setSubmitting(false);
