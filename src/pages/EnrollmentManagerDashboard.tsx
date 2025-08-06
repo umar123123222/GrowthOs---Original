@@ -79,7 +79,7 @@ const EnrollmentManagerDashboard = () => {
         const lastMonth = startOfMonth(subMonths(new Date(), 1));
         const thisMonth = startOfMonth(new Date());
 
-        // Fetch enrollment data with user details
+        // Fetch enrollment data with user details - only for current enrollment manager
         const { data: enrollmentsData, error: enrollmentsError } = await supabase
           .from('students')
           .select(`
@@ -103,16 +103,21 @@ const EnrollmentManagerDashboard = () => {
 
         if (enrollmentsError) throw enrollmentsError;
 
-        // Fetch payment status data
+        // Filter by current enrollment manager's created students
+        const myEnrollments = (enrollmentsData || []).filter(student => 
+          student.users?.created_by === user?.id
+        );
+
+        // Fetch payment status data for my students only
         const { data: invoicesData, error: invoicesError } = await supabase
           .from('invoices')
           .select('student_id, status, due_date')
-          .in('student_id', enrollmentsData?.map(s => s.id) || []);
+          .in('student_id', myEnrollments?.map(s => s.id) || []);
 
         if (invoicesError) throw invoicesError;
 
-        // Process enrollment records
-        const processedEnrollments: EnrollmentRecord[] = (enrollmentsData || [])
+        // Process enrollment records for my students only
+        const processedEnrollments: EnrollmentRecord[] = myEnrollments
           .filter(student => student.users)
           .map(student => {
             const user = student.users;
@@ -150,20 +155,20 @@ const EnrollmentManagerDashboard = () => {
         const overduePayments = processedEnrollments.filter(e => e.payment_status === 'overdue').length;
         const pendingOnboarding = processedEnrollments.filter(e => !e.onboarding_completed).length;
 
-        // Calculate monthly growth
+        // Calculate monthly growth for my enrollments only
         const { data: lastMonthData } = await supabase
           .from('students')
-          .select('id')
+          .select('id, users!students_user_id_fkey(created_by)')
           .gte('enrollment_date', lastMonth.toISOString())
           .lt('enrollment_date', thisMonth.toISOString());
 
         const { data: thisMonthData } = await supabase
           .from('students')
-          .select('id')
+          .select('id, users!students_user_id_fkey(created_by)')
           .gte('enrollment_date', thisMonth.toISOString());
 
-        const lastMonthCount = lastMonthData?.length || 0;
-        const thisMonthCount = thisMonthData?.length || 0;
+        const lastMonthCount = (lastMonthData || []).filter(s => s.users?.created_by === user?.id).length;
+        const thisMonthCount = (thisMonthData || []).filter(s => s.users?.created_by === user?.id).length;
         const monthlyGrowth = lastMonthCount > 0 
           ? ((thisMonthCount - lastMonthCount) / lastMonthCount) * 100 
           : 0;
@@ -237,7 +242,12 @@ const EnrollmentManagerDashboard = () => {
               .order('enrollment_date', { ascending: false });
 
             if (enrollmentsData) {
-              const processedEnrollments: EnrollmentRecord[] = enrollmentsData
+              // Filter by current enrollment manager's created students
+              const myEnrollments = enrollmentsData.filter(student => 
+                student.users?.created_by === user?.id
+              );
+
+              const processedEnrollments: EnrollmentRecord[] = myEnrollments
                 .filter(student => student.users)
                 .map(student => ({
                   id: student.id,
@@ -291,7 +301,12 @@ const EnrollmentManagerDashboard = () => {
               .order('enrollment_date', { ascending: false });
 
             if (enrollmentsData) {
-              const processedEnrollments: EnrollmentRecord[] = enrollmentsData
+              // Filter by current enrollment manager's created students
+              const myEnrollments = enrollmentsData.filter(student => 
+                student.users?.created_by === user?.id
+              );
+
+              const processedEnrollments: EnrollmentRecord[] = myEnrollments
                 .filter(student => student.users)
                 .map(student => ({
                   id: student.id,
@@ -502,13 +517,13 @@ const EnrollmentManagerDashboard = () => {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              Recent Enrollments
+              My Enrollments
               <Badge variant="secondary" className="text-xs">
                 Live Updates
               </Badge>
             </CardTitle>
             <CardDescription>
-              Students enrolled in the selected period (updates automatically)
+              Students I enrolled in the selected period (updates automatically)
             </CardDescription>
           </CardHeader>
           <CardContent>
