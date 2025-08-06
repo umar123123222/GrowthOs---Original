@@ -56,6 +56,7 @@ interface TeamMember {
   created_at: string;
   last_active_at: string;
   status: string;
+  password_display?: string;
 }
 
 const Teams = () => {
@@ -469,10 +470,18 @@ const handleAddMember = async () => {
                               <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded">{member.email}</p>
                             </div>
                             <div>
-                              <Label className="text-sm font-medium">Access</Label>
-                              <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded">
-                                Credentials are securely managed through the system
-                              </p>
+                              <Label className="text-sm font-medium">
+                                {user?.role === 'superadmin' ? 'Password' : 'Access'}
+                              </Label>
+                              {user?.role === 'superadmin' ? (
+                                <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded font-mono">
+                                  {member.password_display || 'Password not available'}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded">
+                                  Credentials are securely managed through the system
+                                </p>
+                              )}
                             </div>
                           </div>
                         </DialogContent>
