@@ -119,9 +119,9 @@ const Login = () => {
             .from('company_settings')
             .select('contact_email')
             .eq('id', 1)
-            .single();
+            .maybeSingle();
           
-          const contactEmail = companySettings?.contact_email || 'support@company.com';
+          const contactEmail = companySettings?.contact_email || 'support@growthos.com';
           
           // Sign out the user immediately
           await supabase.auth.signOut();
