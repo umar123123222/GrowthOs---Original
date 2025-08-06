@@ -899,15 +899,15 @@ export function StudentsManagement() {
   const displayStudents = filteredStudents.length > 0 ? filteredStudents : students;
 
   return (
-    <div className="w-full min-h-screen space-y-6 animate-fade-in">
-      <div className="flex justify-between items-center">
+    <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden">
+      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div className="animate-fade-in">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
             👥 Students Management
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">Manage student records and track their progress</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-shrink-0">
           <Button 
             onClick={() => setIsDialogOpen(true)} 
             className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in"
@@ -925,7 +925,7 @@ export function StudentsManagement() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         <Card className="border-l-4 border-l-blue-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-blue-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-800">Total Students</CardTitle>
