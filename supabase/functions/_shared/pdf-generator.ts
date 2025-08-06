@@ -1,5 +1,5 @@
 // PDF generation utility for invoices using HTML-to-PDF conversion
-import { launch } from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
+import puppeteer from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
 
 export interface InvoiceItem {
   description: string;
@@ -43,17 +43,32 @@ export interface CompanyDetails {
 }
 
 export async function generateInvoicePDF(invoiceData: InvoiceData, companyDetails: CompanyDetails): Promise<Uint8Array> {
-  const browser = await launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-
   try {
+    console.log('Starting PDF generation for invoice:', invoiceData.invoice_number);
+    
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--disable-images',
+        '--disable-gpu'
+      ]
+    });
+
     const page = await browser.newPage();
     const html = generateInvoiceHTML(invoiceData, companyDetails);
     
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    console.log('Setting HTML content for PDF generation');
+    await page.setContent(html, { 
+      waitUntil: 'domcontentloaded',
+      timeout: 30000 
+    });
     
+    console.log('Generating PDF...');
     const pdf = await page.pdf({
       format: 'A4',
       printBackground: true,
@@ -62,12 +77,17 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyDetail
         right: '0.5in',
         bottom: '0.5in',
         left: '0.5in'
-      }
+      },
+      preferCSSPageSize: true
     });
 
-    return pdf;
-  } finally {
     await browser.close();
+    console.log('PDF generated successfully, size:', pdf.length, 'bytes');
+    
+    return pdf;
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw new Error(`PDF generation failed: ${error.message}`);
   }
 }
 
