@@ -25,6 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserManagement } from '@/hooks/useUserManagement';
+import { useAuth } from '@/hooks/useAuth';
 
 import jsPDF from 'jspdf';
 
@@ -70,6 +71,7 @@ interface ActivityLog {
 export function StudentsManagement() {
   const { toast } = useToast();
   const { deleteMultipleUsers, loading: userManagementLoading } = useUserManagement();
+  const { user } = useAuth();
   
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +101,14 @@ export function StudentsManagement() {
   const [selectedStudentForPassword, setSelectedStudentForPassword] = useState<Student | null>(null);
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
+  const [editDialog, setEditDialog] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    full_name: '',
+    email: '',
+    phone: '',
+    lms_user_id: '',
+    lms_status: 'inactive'
+  });
   
   // Debug: Ensure statusFilter is completely removed
   console.log('StudentsManagement component loaded - statusFilter removed');
@@ -786,6 +796,53 @@ export function StudentsManagement() {
     }
   };
 
+  const handleEditStudent = (student: Student) => {
+    setEditingStudent(student);
+    setEditFormData({
+      full_name: student.full_name,
+      email: student.email,
+      phone: student.phone || '',
+      lms_user_id: student.lms_user_id || '',
+      lms_status: student.lms_status
+    });
+    setEditDialog(true);
+  };
+
+  const handleUpdateStudent = async () => {
+    if (!editingStudent) return;
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: editFormData.full_name,
+          email: editFormData.email,
+          phone: editFormData.phone,
+          lms_user_id: editFormData.lms_user_id,
+          lms_status: editFormData.lms_status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', editingStudent.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Student details updated successfully"
+      });
+
+      setEditDialog(false);
+      setEditingStudent(null);
+      fetchStudents();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: "Failed to update student details: " + error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleEditPassword = (student: Student, type: 'temp' | 'lms') => {
     // Password functionality removed for security
     toast({
@@ -1098,21 +1155,26 @@ export function StudentsManagement() {
                          <TableCell>{student.creator?.full_name || 'System'}</TableCell>
                          <TableCell>
                            <div className="flex space-x-1">
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => {
-                                 toast({
-                                   title: "Edit Disabled",
-                                   description: "Student editing has been disabled. Please contact system administrator.",
-                                   variant: "destructive"
-                                 });
-                               }}
-                               title="Edit Student Details"
-                               className="hover-scale hover:border-blue-300 hover:text-blue-600"
-                             >
-                               <Edit className="w-4 h-4" />
-                             </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  // Check if user has permission to edit
+                                  if (user?.role === 'admin' || user?.role === 'superadmin') {
+                                    handleEditStudent(student);
+                                  } else {
+                                    toast({
+                                      title: "Access Denied",
+                                      description: "Only admins and superadmins can edit student details.",
+                                      variant: "destructive"
+                                    });
+                                  }
+                                }}
+                                title="Edit Student Details"
+                                className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </Button>
                             <Button
                               variant="outline"
                               size="sm"
@@ -1554,6 +1616,90 @@ export function StudentsManagement() {
               </Button>
               <Button onClick={saveStatusUpdate}>
                 Update LMS Status
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Student Edit Dialog */}
+      <Dialog open={editDialog} onOpenChange={setEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              Edit Student Details - {editingStudent?.full_name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit_full_name">Full Name</Label>
+                <Input
+                  id="edit_full_name"
+                  value={editFormData.full_name}
+                  onChange={(e) => setEditFormData({...editFormData, full_name: e.target.value})}
+                  placeholder="Enter full name"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_email">Email</Label>
+                <Input
+                  id="edit_email"
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
+                  placeholder="Enter email"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_phone">Phone</Label>
+                <Input
+                  id="edit_phone"
+                  value={editFormData.phone}
+                  onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
+                  placeholder="Enter phone number"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_lms_user_id">LMS User ID</Label>
+                <Input
+                  id="edit_lms_user_id"
+                  value={editFormData.lms_user_id}
+                  onChange={(e) => setEditFormData({...editFormData, lms_user_id: e.target.value})}
+                  placeholder="Enter LMS User ID"
+                />
+              </div>
+              <div>
+                <Label htmlFor="edit_lms_status">LMS Status</Label>
+                <Select 
+                  value={editFormData.lms_status} 
+                  onValueChange={(value) => setEditFormData({...editFormData, lms_status: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select LMS status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
+                    <SelectItem value="dropout">Dropout</SelectItem>
+                    <SelectItem value="complete">Complete</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setEditDialog(false);
+                  setEditingStudent(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handleUpdateStudent}>
+                Update Student
               </Button>
             </div>
           </div>
