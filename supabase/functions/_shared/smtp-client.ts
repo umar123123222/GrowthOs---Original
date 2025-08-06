@@ -12,6 +12,13 @@ interface EmailOptions {
   subject: string;
   html: string;
   text?: string;
+  attachments?: EmailAttachment[];
+}
+
+interface EmailAttachment {
+  filename: string;
+  content: Uint8Array;
+  contentType: string;
 }
 
 export class SMTPClient {
@@ -44,7 +51,7 @@ export class SMTPClient {
   }
 
   async sendEmail(options: EmailOptions): Promise<void> {
-    const { to, subject, html, text } = options;
+    const { to, subject, html, text, attachments } = options;
 
     // Create SMTP connection
     const conn = await Deno.connect({
@@ -111,16 +118,56 @@ export class SMTPClient {
       await readResponse();
 
       // Email headers and body
-      const emailContent = [
-        `From: ${this.config.fromName} <${this.config.fromEmail}>`,
-        `To: ${to}`,
-        `Subject: ${subject}`,
-        'MIME-Version: 1.0',
-        'Content-Type: text/html; charset=utf-8',
-        '',
-        html,
-        '.',
-      ].join('\r\n');
+      const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+      
+      let emailContent: string;
+      
+      if (attachments && attachments.length > 0) {
+        // Multipart email with attachments
+        const emailParts = [
+          `From: ${this.config.fromName} <${this.config.fromEmail}>`,
+          `To: ${to}`,
+          `Subject: ${subject}`,
+          'MIME-Version: 1.0',
+          `Content-Type: multipart/mixed; boundary="${boundary}"`,
+          '',
+          `--${boundary}`,
+          'Content-Type: text/html; charset=utf-8',
+          'Content-Transfer-Encoding: 8bit',
+          '',
+          html,
+          ''
+        ];
+
+        // Add attachments
+        for (const attachment of attachments) {
+          const base64Content = btoa(String.fromCharCode(...attachment.content));
+          emailParts.push(
+            `--${boundary}`,
+            `Content-Type: ${attachment.contentType}`,
+            'Content-Transfer-Encoding: base64',
+            `Content-Disposition: attachment; filename="${attachment.filename}"`,
+            '',
+            base64Content,
+            ''
+          );
+        }
+
+        emailParts.push(`--${boundary}--`, '.');
+        emailContent = emailParts.join('\r\n');
+      } else {
+        // Simple HTML email
+        emailContent = [
+          `From: ${this.config.fromName} <${this.config.fromEmail}>`,
+          `To: ${to}`,
+          `Subject: ${subject}`,
+          'MIME-Version: 1.0',
+          'Content-Type: text/html; charset=utf-8',
+          '',
+          html,
+          '.',
+        ].join('\r\n');
+      }
 
       await sendCommand(emailContent);
       await readResponse();

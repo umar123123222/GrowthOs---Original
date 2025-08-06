@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
 import { SMTPClient } from '../_shared/smtp-client.ts'
+import { generateInvoicePDF, type InvoiceData, type CompanyDetails } from '../_shared/pdf-generator.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,14 +22,21 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get LMS URL from company settings
+    // Get company settings including currency and company details
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url')
+      .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods')
       .eq('id', 1)
       .single();
     
     const loginUrl = companySettings?.lms_url || 'https://growthos.core47.ai';
+    const currency = companySettings?.currency || 'USD';
+    const companyDetails: CompanyDetails = {
+      company_name: companySettings?.company_name || 'Your Company',
+      address: companySettings?.address || '',
+      contact_email: companySettings?.contact_email || '',
+      primary_phone: companySettings?.primary_phone || ''
+    };
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -51,15 +59,16 @@ serve(async (req) => {
           .eq('id', invoice.id);
 
         // Send issue email
-        await sendInstallmentIssueEmail(invoice, loginUrl);
+        await sendInstallmentIssueEmail(invoice, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
         
         // Create notification
+        const currencySymbol = currency === 'PKR' ? '₨' : currency === 'USD' ? '$' : currency;
         await createInstallmentNotification(
           supabaseAdmin,
           invoice.students.user_id,
           'installment_issued',
           'New Installment Issued',
-          `Installment #${invoice.installment_number} of $${invoice.amount} has been issued. Due date: ${new Date(invoice.due_date).toLocaleDateString()}`,
+          `Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} has been issued. Due date: ${new Date(invoice.due_date).toLocaleDateString()}`,
           { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date }
         );
 
@@ -95,7 +104,7 @@ serve(async (req) => {
             .update({ status: 'due' })
             .eq('id', invoice.id);
 
-          await sendDueEmail(invoice, loginUrl);
+          await sendDueEmail(invoice, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
           await createInstallmentNotification(
             supabaseAdmin,
             invoice.students.user_id,
@@ -117,7 +126,7 @@ serve(async (req) => {
             })
             .eq('id', invoice.id);
 
-          await sendFirstReminderEmail(invoice, loginUrl);
+          await sendFirstReminderEmail(invoice, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
           await createInstallmentNotification(
             supabaseAdmin,
             invoice.students.user_id,
@@ -139,7 +148,7 @@ serve(async (req) => {
             })
             .eq('id', invoice.id);
 
-          await sendSecondReminderEmail(invoice, loginUrl);
+          await sendSecondReminderEmail(invoice, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
           await createInstallmentNotification(
             supabaseAdmin,
             invoice.students.user_id,
@@ -177,12 +186,45 @@ serve(async (req) => {
   }
 });
 
-async function sendInstallmentIssueEmail(invoice: any, loginUrl: string) {
+async function sendInstallmentIssueEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
     const dueDate = new Date(invoice.due_date).toLocaleDateString();
+    
+    // Get currency symbol
+    const getCurrencySymbol = (curr: string = 'USD') => {
+      const symbols: { [key: string]: string } = {
+        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
+      };
+      return symbols[curr] || curr;
+    };
+    
+    const currencySymbol = getCurrencySymbol(currency);
+    
+    // Generate PDF invoice
+    const invoiceData: InvoiceData = {
+      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
+      date: new Date().toLocaleDateString(),
+      due_date: dueDate,
+      student_name: studentName,
+      student_email: studentEmail,
+      items: [{
+        description: `Course Installment Payment`,
+        installment_number: invoice.installment_number,
+        price: parseFloat(invoice.amount),
+        total: parseFloat(invoice.amount)
+      }],
+      subtotal: parseFloat(invoice.amount),
+      tax: 0,
+      total: parseFloat(invoice.amount),
+      currency: currency,
+      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
+      terms: 'Please send payment within 30 days of receiving this invoice.'
+    };
+    
+    const pdfBuffer = generateInvoicePDF(invoiceData, companyDetails);
     
     await smtpClient.sendEmail({
       to: studentEmail,
@@ -198,25 +240,23 @@ async function sendInstallmentIssueEmail(invoice: any, loginUrl: string) {
           <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <h3 style="margin-top: 0;">Payment Details</h3>
             <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-            <p><strong>Amount:</strong> $${invoice.amount}</p>
+            <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
             <p><strong>Due Date:</strong> ${dueDate}</p>
             <p><strong>Status:</strong> Pending Payment</p>
           </div>
           
-          <p>Please ensure payment is made by the due date to avoid any service interruptions.</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}" 
-               style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
-              View Payment Details
-            </a>
-          </div>
+          <p>Please ensure payment is made by the due date to avoid any service interruptions. The detailed invoice with payment instructions is attached to this email.</p>
           
           <p>If you have any questions, please contact our support team.</p>
           
           <p>Best regards,<br>The Learning Team</p>
         </div>
-      `
+      `,
+      attachments: [{
+        filename: `Invoice-${invoice.installment_number}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
     });
 
     console.log(`Issue email sent to ${studentEmail} for installment ${invoice.installment_number}`);
@@ -225,12 +265,45 @@ async function sendInstallmentIssueEmail(invoice: any, loginUrl: string) {
   }
 }
 
-async function sendFirstReminderEmail(invoice: any, loginUrl: string) {
+async function sendFirstReminderEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
     const dueDate = new Date(invoice.due_date).toLocaleDateString();
+    
+    // Get currency symbol
+    const getCurrencySymbol = (curr: string = 'USD') => {
+      const symbols: { [key: string]: string } = {
+        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
+      };
+      return symbols[curr] || curr;
+    };
+    
+    const currencySymbol = getCurrencySymbol(currency);
+    
+    // Generate PDF invoice
+    const invoiceData: InvoiceData = {
+      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
+      date: new Date().toLocaleDateString(),
+      due_date: dueDate,
+      student_name: studentName,
+      student_email: studentEmail,
+      items: [{
+        description: `Course Installment Payment`,
+        installment_number: invoice.installment_number,
+        price: parseFloat(invoice.amount),
+        total: parseFloat(invoice.amount)
+      }],
+      subtotal: parseFloat(invoice.amount),
+      tax: 0,
+      total: parseFloat(invoice.amount),
+      currency: currency,
+      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
+      terms: 'Please send payment within 30 days of receiving this invoice.'
+    };
+    
+    const pdfBuffer = generateInvoicePDF(invoiceData, companyDetails);
     
     await smtpClient.sendEmail({
       to: studentEmail,
@@ -246,25 +319,23 @@ async function sendFirstReminderEmail(invoice: any, loginUrl: string) {
           <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
             <h3 style="margin-top: 0;">Payment Details</h3>
             <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-            <p><strong>Amount:</strong> $${invoice.amount}</p>
+            <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
             <p><strong>Due Date:</strong> ${dueDate}</p>
             <p><strong>Status:</strong> Pending Payment</p>
           </div>
           
-          <p>Please make your payment by the due date to continue your learning journey without interruption.</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}" 
-               style="background-color: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
-              Make Payment Now
-            </a>
-          </div>
+          <p>Please make your payment by the due date to continue your learning journey without interruption. The detailed invoice with payment instructions is attached to this email.</p>
           
           <p>If you have any questions or need assistance, please contact our support team.</p>
           
           <p>Best regards,<br>The Learning Team</p>
         </div>
-      `
+      `,
+      attachments: [{
+        filename: `Invoice-${invoice.installment_number}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
     });
 
     console.log(`First reminder email sent to ${studentEmail} for installment ${invoice.installment_number}`);
@@ -273,12 +344,43 @@ async function sendFirstReminderEmail(invoice: any, loginUrl: string) {
   }
 }
 
-async function sendSecondReminderEmail(invoice: any, loginUrl: string) {
+async function sendSecondReminderEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
     const dueDate = new Date(invoice.due_date).toLocaleDateString();
+    
+    const getCurrencySymbol = (curr: string = 'USD') => {
+      const symbols: { [key: string]: string } = {
+        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
+      };
+      return symbols[curr] || curr;
+    };
+    
+    const currencySymbol = getCurrencySymbol(currency);
+    
+    const invoiceData: InvoiceData = {
+      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
+      date: new Date().toLocaleDateString(),
+      due_date: dueDate,
+      student_name: studentName,
+      student_email: studentEmail,
+      items: [{
+        description: `Course Installment Payment`,
+        installment_number: invoice.installment_number,
+        price: parseFloat(invoice.amount),
+        total: parseFloat(invoice.amount)
+      }],
+      subtotal: parseFloat(invoice.amount),
+      tax: 0,
+      total: parseFloat(invoice.amount),
+      currency: currency,
+      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
+      terms: 'Please send payment within 30 days of receiving this invoice.'
+    };
+    
+    const pdfBuffer = generateInvoicePDF(invoiceData, companyDetails);
     
     await smtpClient.sendEmail({
       to: studentEmail,
@@ -286,33 +388,25 @@ async function sendSecondReminderEmail(invoice: any, loginUrl: string) {
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #dc2626;">Final Payment Reminder</h2>
-          
           <p>Dear ${studentName},</p>
-          
           <p><strong>This is your final reminder</strong> that your installment payment is due soon:</p>
-          
           <div style="background-color: #fee2e2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
             <h3 style="margin-top: 0;">Payment Details</h3>
             <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-            <p><strong>Amount:</strong> $${invoice.amount}</p>
+            <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
             <p><strong>Due Date:</strong> ${dueDate}</p>
             <p><strong>Status:</strong> Payment Required</p>
           </div>
-          
-          <p><strong>Important:</strong> Failure to make payment by the due date may result in temporary suspension of your learning platform access.</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}" 
-               style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
-              Pay Now to Avoid Suspension
-            </a>
-          </div>
-          
+          <p><strong>Important:</strong> Failure to make payment by the due date may result in temporary suspension of your learning platform access. The detailed invoice with payment instructions is attached to this email.</p>
           <p>If you're experiencing financial difficulties, please contact our support team immediately to discuss payment options.</p>
-          
           <p>Best regards,<br>The Learning Team</p>
         </div>
-      `
+      `,
+      attachments: [{
+        filename: `Invoice-${invoice.installment_number}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
     });
 
     console.log(`Second reminder email sent to ${studentEmail} for installment ${invoice.installment_number}`);
@@ -321,11 +415,44 @@ async function sendSecondReminderEmail(invoice: any, loginUrl: string) {
   }
 }
 
-async function sendDueEmail(invoice: any, loginUrl: string) {
+async function sendDueEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
+    
+    // Get currency symbol
+    const getCurrencySymbol = (curr: string = 'USD') => {
+      const symbols: { [key: string]: string } = {
+        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
+      };
+      return symbols[curr] || curr;
+    };
+    
+    const currencySymbol = getCurrencySymbol(currency);
+    
+    // Generate PDF invoice
+    const invoiceData: InvoiceData = {
+      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
+      date: new Date().toLocaleDateString(),
+      due_date: new Date(invoice.due_date).toLocaleDateString(),
+      student_name: studentName,
+      student_email: studentEmail,
+      items: [{
+        description: `Course Installment Payment`,
+        installment_number: invoice.installment_number,
+        price: parseFloat(invoice.amount),
+        total: parseFloat(invoice.amount)
+      }],
+      subtotal: parseFloat(invoice.amount),
+      tax: 0,
+      total: parseFloat(invoice.amount),
+      currency: currency,
+      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
+      terms: 'Please send payment within 30 days of receiving this invoice.'
+    };
+    
+    const pdfBuffer = generateInvoicePDF(invoiceData, companyDetails);
     
     await smtpClient.sendEmail({
       to: studentEmail,
@@ -341,24 +468,22 @@ async function sendDueEmail(invoice: any, loginUrl: string) {
           <div style="background-color: #fecaca; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #dc2626;">
             <h3 style="margin-top: 0; color: #dc2626;">Overdue Payment</h3>
             <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-            <p><strong>Amount:</strong> $${invoice.amount}</p>
+            <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
             <p><strong>Status:</strong> OVERDUE</p>
           </div>
           
-          <p><strong>Action Required:</strong> Your learning platform access may be suspended until payment is received. Please make payment immediately to restore full access.</p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}" 
-               style="background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
-              Pay Now - Restore Access
-            </a>
-          </div>
+          <p><strong>Action Required:</strong> Your learning platform access may be suspended until payment is received. Please make payment immediately to restore full access. The detailed invoice with payment instructions is attached to this email.</p>
           
           <p>If you need assistance or wish to discuss payment arrangements, please contact our support team immediately.</p>
           
           <p>Best regards,<br>The Learning Team</p>
         </div>
-      `
+      `,
+      attachments: [{
+        filename: `Invoice-${invoice.installment_number}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
     });
 
     console.log(`Due email sent to ${studentEmail} for installment ${invoice.installment_number}`);

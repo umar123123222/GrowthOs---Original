@@ -54,7 +54,8 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
       GBP: '£',
       INR: '₹',
       CAD: 'C$',
-      AUD: 'A$'
+      AUD: 'A$',
+      PKR: '₨'
     };
     return symbols[currency] || currency;
   };

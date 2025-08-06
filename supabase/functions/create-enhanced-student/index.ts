@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.52.1';
 import { SMTPClient } from '../_shared/smtp-client.ts';
+import { generateInvoicePDF, type InvoiceData, type CompanyDetails } from '../_shared/pdf-generator.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -202,14 +203,21 @@ const handler = async (req: Request): Promise<Response> => {
       // Continue anyway - email can be sent manually
     }
 
-    // Get LMS URL from company settings
+    // Get company settings including currency and company details
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url')
+      .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods')
       .eq('id', 1)
       .single();
     
     const loginUrl = companySettings?.lms_url || 'https://growthos.core47.ai';
+    const currency = companySettings?.currency || 'USD';
+    const companyDetails: CompanyDetails = {
+      company_name: companySettings?.company_name || 'Your Company',
+      address: companySettings?.address || '',
+      contact_email: companySettings?.contact_email || '',
+      primary_phone: companySettings?.primary_phone || ''
+    };
 
     // Send welcome email with credentials via SMTP
     try {
@@ -318,13 +326,9 @@ const handler = async (req: Request): Promise<Response> => {
                 installment_number: firstInvoice.installment_number,
                 amount: firstInvoice.amount,
                 due_date: firstInvoice.due_date,
-                students: {
-                  users: {
-                    email: email,
-                    full_name: full_name
-                  }
-                }
-              }, loginUrl);
+                student_email: email,
+                student_name: full_name
+              }, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
               console.log(`First invoice email sent to ${email}`);
             } catch (emailError) {
               console.error('Error sending first invoice email:', emailError);
@@ -381,48 +385,79 @@ const handler = async (req: Request): Promise<Response> => {
   }
 };
 
-async function sendFirstInvoiceEmail(invoice: any, loginUrl: string) {
+async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
     const smtpClient = SMTPClient.fromEnv();
-    const studentEmail = invoice.students.users.email;
-    const studentName = invoice.students.users.full_name;
+    const studentEmail = invoice.student_email;
+    const studentName = invoice.student_name;
     const dueDate = new Date(invoice.due_date).toLocaleDateString();
+    
+    // Get currency symbol
+    const getCurrencySymbol = (curr: string = 'USD') => {
+      const symbols: { [key: string]: string } = {
+        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
+      };
+      return symbols[curr] || curr;
+    };
+    
+    const currencySymbol = getCurrencySymbol(currency);
+    
+    // Generate PDF invoice
+    const invoiceData: InvoiceData = {
+      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
+      date: new Date().toLocaleDateString(),
+      due_date: dueDate,
+      student_name: studentName,
+      student_email: studentEmail,
+      items: [{
+        description: `Course Installment Payment`,
+        installment_number: invoice.installment_number,
+        price: parseFloat(invoice.amount),
+        total: parseFloat(invoice.amount)
+      }],
+      subtotal: parseFloat(invoice.amount),
+      tax: 0,
+      total: parseFloat(invoice.amount),
+      currency: currency,
+      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
+      terms: 'Please send payment within 30 days of receiving this invoice.'
+    };
+    
+    const pdfBuffer = generateInvoicePDF(invoiceData, companyDetails);
     
     await smtpClient.sendEmail({
       to: studentEmail,
-      subject: `Welcome! Your First Installment #${invoice.installment_number} - Payment Due ${dueDate}`,
+      subject: `Your First Installment Invoice #${invoice.installment_number} - Due ${dueDate}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #2563eb;">Welcome to Your Learning Journey!</h2>
+          <h2 style="color: #2563eb;">Welcome! Your First Installment Invoice</h2>
           
           <p>Dear ${studentName},</p>
           
-          <p>Congratulations on starting your learning journey with us! Your first installment payment has been issued:</p>
+          <p>Welcome to our learning platform! Your first installment invoice has been generated:</p>
           
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0;">First Payment Details</h3>
+          <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+            <h3 style="margin-top: 0;">Invoice Details</h3>
             <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-            <p><strong>Amount:</strong> $${invoice.amount}</p>
+            <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
             <p><strong>Due Date:</strong> ${dueDate}</p>
             <p><strong>Status:</strong> Pending Payment</p>
           </div>
           
-          <p>Please ensure payment is made by the due date to continue your learning journey without interruption.</p>
+          <p>Your login credentials were sent in a previous email. You can use them to access the learning platform and view detailed payment instructions.</p>
           
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${loginUrl}" 
-               style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
-              View Payment Details & Access Learning Platform
-            </a>
-          </div>
-          
-          <p>You can use the login credentials we sent you in the previous email to access your learning platform and view payment details.</p>
+          <p>Please make your payment by the due date to ensure uninterrupted access to your courses. The detailed invoice is attached to this email.</p>
           
           <p>If you have any questions, please contact our support team.</p>
           
           <p>Best regards,<br>The Learning Team</p>
         </div>
-      `
+      `,
+      attachments: [{
+        filename: `Invoice-${invoice.installment_number}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
     });
 
     console.log(`First invoice email sent to ${studentEmail} for installment ${invoice.installment_number}`);
