@@ -16,16 +16,16 @@ interface SupportTicket {
   user_id: string;
   title: string;
   description: string;
-  type: 'complaint' | 'feedback' | 'technical' | 'billing';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  category?: string | null;
+  priority: string;
+  status: string;
   created_at: string;
   updated_at: string;
-  assigned_to?: string;
+  assigned_to?: string | null;
   users: {
     full_name: string;
     email: string;
-    student_id?: string;
+    student_id?: string | null;
   };
 }
 
@@ -34,7 +34,7 @@ interface TicketReply {
   ticket_id: string;
   user_id: string;
   message: string;
-  is_staff: boolean;
+  is_internal: boolean;
   created_at: string;
   users: {
     full_name: string;
@@ -58,20 +58,42 @@ export function SupportManagement() {
 
   const fetchTickets = async () => {
     try {
-      const { data, error } = await supabase
+      // First get all tickets
+      const { data: ticketsData, error: ticketsError } = await supabase
         .from('support_tickets')
-        .select(`
-          *,
-          users (
-            full_name,
-            email,
-            student_id
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setTickets((data as any) || []);
+      if (ticketsError) throw ticketsError;
+
+      // Then get user data for each ticket
+      const ticketsWithUsers = await Promise.all(
+        (ticketsData || []).map(async (ticket) => {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('full_name, email')
+            .eq('id', ticket.user_id)
+            .single();
+
+          // Get student_id from students table if user is a student
+          const { data: studentData } = await supabase
+            .from('students')
+            .select('student_id')
+            .eq('user_id', ticket.user_id)
+            .maybeSingle();
+
+          return {
+            ...ticket,
+            users: {
+              full_name: userData?.full_name || 'Unknown User',
+              email: userData?.email || 'No Email',
+              student_id: studentData?.student_id || null
+            }
+          };
+        })
+      );
+
+      setTickets(ticketsWithUsers as SupportTicket[]);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       toast({
@@ -86,20 +108,35 @@ export function SupportManagement() {
 
   const fetchTicketReplies = async (ticketId: string) => {
     try {
-      const { data, error } = await supabase
+      // First get all replies
+      const { data: repliesData, error: repliesError } = await supabase
         .from('support_ticket_replies')
-        .select(`
-          *,
-          users (
-            full_name,
-            role
-          )
-        `)
+        .select('*')
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      setTicketReplies((data as any) || []);
+      if (repliesError) throw repliesError;
+
+      // Then get user data for each reply
+      const repliesWithUsers = await Promise.all(
+        (repliesData || []).map(async (reply) => {
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('full_name, role')
+            .eq('id', reply.user_id)
+            .single();
+
+          return {
+            ...reply,
+            users: {
+              full_name: userData?.full_name || 'Unknown User',
+              role: userData?.role || 'user'
+            }
+          };
+        })
+      );
+
+      setTicketReplies(repliesWithUsers);
     } catch (error) {
       console.error('Error fetching replies:', error);
       toast({
@@ -123,7 +160,7 @@ export function SupportManagement() {
           ticket_id: ticketId,
           user_id: currentUser.data.user.id,
           message: replyMessage,
-          is_staff: true
+          is_internal: false // Changed from is_staff to is_internal based on schema
         });
 
       if (error) throw error;
@@ -204,7 +241,7 @@ export function SupportManagement() {
     }
   };
 
-  const getTypeIcon = (type: string) => {
+  const getTypeIcon = (type: string | null) => {
     switch (type) {
       case 'complaint': return <AlertCircle className="w-4 h-4" />;
       case 'feedback': return <MessageSquare className="w-4 h-4" />;
@@ -216,7 +253,7 @@ export function SupportManagement() {
 
   const filteredTickets = tickets.filter(ticket => {
     const statusMatch = filterStatus === 'all' || ticket.status === filterStatus;
-    const typeMatch = filterType === 'all' || ticket.type === filterType;
+    const typeMatch = filterType === 'all' || (ticket.category && ticket.category === filterType);
     return statusMatch && typeMatch;
   });
 
@@ -296,8 +333,8 @@ export function SupportManagement() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      {getTypeIcon(ticket.type)}
-                      <span className="capitalize">{ticket.type}</span>
+                      {getTypeIcon(ticket.category)}
+                      <span className="capitalize">{ticket.category || 'General'}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -344,7 +381,7 @@ export function SupportManagement() {
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">Type:</span>
-                                  <Badge variant="outline">{selectedTicket.type}</Badge>
+                                  <Badge variant="outline">{selectedTicket.category || 'General'}</Badge>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">Priority:</span>
@@ -382,7 +419,7 @@ export function SupportManagement() {
                                     <div
                                       key={reply.id}
                                       className={`p-3 rounded-lg ${
-                                        reply.is_staff 
+                                        reply.users.role !== 'student' 
                                           ? 'bg-blue-50 border-l-4 border-blue-500 ml-4' 
                                           : 'bg-white border-l-4 border-gray-300 mr-4'
                                       }`}
@@ -390,7 +427,7 @@ export function SupportManagement() {
                                       <div className="flex justify-between items-start mb-2">
                                         <span className="font-medium text-sm">
                                           {reply.users.full_name}
-                                          {reply.is_staff && (
+                                          {reply.users.role !== 'student' && (
                                             <Badge variant="outline" className="ml-2 text-xs">
                                               Staff
                                             </Badge>
