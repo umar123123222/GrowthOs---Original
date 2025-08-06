@@ -493,11 +493,6 @@ export function StudentsManagement() {
         lms_status: newLMSStatus,
       };
       
-      // If we're suspending, set the last_suspended_date
-      if (newLMSStatus === 'suspended') {
-        updateData.last_suspended_date = new Date().toISOString();
-      }
-      
       const { error } = await supabase
         .from('users')
         .update(updateData)
@@ -565,11 +560,6 @@ export function StudentsManagement() {
       const updateData: any = { 
         lms_status: newLMSStatus
       };
-
-      // If setting LMS status to suspended, update the last_suspended_date
-      if (newLMSStatus === 'suspended' && selectedStudentForStatus.lms_status !== 'suspended') {
-        updateData.last_suspended_date = new Date().toISOString();
-      }
 
       const { error } = await supabase
         .from('users')
