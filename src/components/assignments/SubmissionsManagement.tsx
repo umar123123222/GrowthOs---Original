@@ -52,31 +52,60 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
     if (!user) return;
     
     try {
+      // First get submissions
       let query = supabase
         .from('submissions')
         .select('*')
         .order('created_at', { ascending: false });
-
-      // Apply mentor-specific filtering based on role
-      if (userRole === 'mentor') {
-        // Only show submissions for assignments assigned to this mentor
-        query = query.eq('assignments.mentor_id', user.id);
-      }
 
       // Apply status filter if not 'all'
       if (filterStatus !== 'all') {
         query = query.eq('status', filterStatus);
       }
 
-      const { data, error } = await query;
+      const { data: submissionsData, error: submissionsError } = await query;
 
-      if (error) {
-        console.error('Error fetching submissions:', error);
-        throw error;
+      if (submissionsError) {
+        console.error('Error fetching submissions:', submissionsError);
+        throw submissionsError;
       }
+
+      if (!submissionsData || submissionsData.length === 0) {
+        setSubmissions([]);
+        return;
+      }
+
+      // Get assignment and user data separately
+      const assignmentIds = [...new Set(submissionsData.map(s => s.assignment_id))];
+      const studentIds = [...new Set(submissionsData.map(s => s.student_id))];
+
+      const [assignmentsData, usersData] = await Promise.all([
+        supabase.from('assignments').select('id, name, description').in('id', assignmentIds),
+        supabase.from('users').select('id, full_name, email').in('id', studentIds)
+      ]);
+
+      // Map the data to match the expected format
+      const mappedSubmissions = submissionsData.map(submission => {
+        const assignment = assignmentsData.data?.find(a => a.id === submission.assignment_id) || 
+          { name: 'Unknown Assignment', description: '' };
+        const user = usersData.data?.find(u => u.id === submission.student_id);
+        
+        return {
+          ...submission,
+          assignment,
+          student: user ? {
+            full_name: user.full_name || 'Unknown Student',
+            email: user.email || '',
+            student_id: user.id
+          } : {
+            full_name: 'Unknown Student',
+            email: '',
+            student_id: submission.student_id
+          }
+        };
+      });
       
-      // For now, just set empty data as relationships are broken
-      setSubmissions([]);
+      setSubmissions(mappedSubmissions);
     } catch (error) {
       console.error('Fetch submissions error:', error);
       toast({
