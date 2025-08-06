@@ -10,7 +10,6 @@ import { Eye, EyeOff, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react
 import { AppLogo } from "@/components/AppLogo";
 import { ErrorMessage, FieldError } from "@/components/ui/error-message";
 import { errorHandler, handleApiError } from "@/lib/error-handler";
-
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,16 +18,20 @@ const Login = () => {
   const [loginError, setLoginError] = useState<string>("");
   const [emailError, setEmailError] = useState<string>("");
   const [passwordError, setPasswordError] = useState<string>("");
-  const { toast } = useToast();
-  const { refreshUser } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    refreshUser
+  } = useAuth();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Clear previous errors
     setLoginError("");
     setEmailError("");
     setPasswordError("");
-    
+
     // Basic validation
     if (!email) {
       setEmailError("Email is required");
@@ -38,18 +41,18 @@ const Login = () => {
       setPasswordError("Password is required");
       return;
     }
-    
     setIsLoading(true);
-    
     try {
       console.log('Login attempt for:', email);
 
       // First authenticate with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const {
+        data: authData,
+        error: authError
+      } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      
       if (authError) {
         console.error('Auth error:', authError);
 
@@ -58,58 +61,54 @@ const Login = () => {
           setLoginError("Invalid email or password. Please check your credentials and try again.");
           return;
         }
-        
+
         // Use centralized error handling for auth errors
         const userError = handleApiError(authError, 'login');
         setLoginError(userError.message);
         return;
       }
-      
       console.log('Auth successful, checking user data...');
 
       // Check if user exists in our users table
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .maybeSingle();
-        
+      const {
+        data: userData,
+        error: userError
+      } = await supabase.from('users').select('*').eq('id', authData.user.id).maybeSingle();
       if (userError || !userData) {
-        console.log('User not found in users table, creating...', { userError });
+        console.log('User not found in users table, creating...', {
+          userError
+        });
 
         // Default role for new users
         const userRole = 'student';
         const fullName = authData.user.user_metadata?.full_name || null;
 
         // Create user if they don't exist
-        const { data: newUser, error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: authData.user.email || email,
-            role: userRole,
-            full_name: fullName,
-            password_display: 'temp_password',
-            password_hash: 'temp_hash',
-            created_at: new Date().toISOString()
-          })
-          .select()
-          .single();
-          
+        const {
+          data: newUser,
+          error: createError
+        } = await supabase.from('users').insert({
+          id: authData.user.id,
+          email: authData.user.email || email,
+          role: userRole,
+          full_name: fullName,
+          password_display: 'temp_password',
+          password_hash: 'temp_hash',
+          created_at: new Date().toISOString()
+        }).select().single();
         if (createError) {
           console.error('Error creating user:', createError);
           const userError = handleApiError(createError, 'user_creation');
           setLoginError(`Failed to set up your account. ${userError.message}`);
           return;
         }
-        
         toast({
           title: "Welcome!",
           description: `Hello ${newUser.full_name || newUser.email}, you've successfully logged in.`
         });
       } else {
         console.log('User found:', userData);
-        
+
         // Only block suspended students from signing in
         if (userData.role === 'student' && userData.lms_status === 'suspended') {
           console.log('Student LMS access is suspended');
@@ -118,7 +117,6 @@ const Login = () => {
           setLoginError("Your LMS access is currently suspended. Please contact support for assistance.");
           return;
         }
-        
         toast({
           title: "Welcome!",
           description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`
@@ -151,14 +149,7 @@ const Login = () => {
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500"></div>
         
         <CardHeader className="text-center pb-8 pt-8">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
-              <div className="relative bg-white p-3 rounded-2xl shadow-lg flex items-center justify-center">
-                <AppLogo className="h-12 w-auto object-contain" alt="Company Logo" />
-              </div>
-            </div>
-          </div>
+          
           
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent mb-2">
             Welcome to Growth OS
@@ -172,13 +163,7 @@ const Login = () => {
         </CardHeader>
         
         <CardContent className="px-8 pb-8">
-          {loginError && (
-            <ErrorMessage 
-              error={loginError} 
-              className="mb-6"
-              onDismiss={() => setLoginError("")}
-            />
-          )}
+          {loginError && <ErrorMessage error={loginError} className="mb-6" onDismiss={() => setLoginError("")} />}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -186,22 +171,10 @@ const Login = () => {
                 Email Address
               </Label>
               <div className="relative">
-                <Input 
-                  id="email" 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (emailError) setEmailError("");
-                  }}
-                  className={`h-12 pl-4 pr-4 border-2 transition-all duration-200 rounded-lg ${
-                    emailError 
-                      ? 'border-destructive focus:border-destructive' 
-                      : 'border-gray-200 focus:border-blue-500'
-                  }`}
-                  placeholder="your@email.com" 
-                  required 
-                />
+                <Input id="email" type="email" value={email} onChange={e => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError("");
+              }} className={`h-12 pl-4 pr-4 border-2 transition-all duration-200 rounded-lg ${emailError ? 'border-destructive focus:border-destructive' : 'border-gray-200 focus:border-blue-500'}`} placeholder="your@email.com" required />
               </div>
               <FieldError error={emailError} />
             </div>
@@ -211,52 +184,26 @@ const Login = () => {
                 Password
               </Label>
               <div className="relative">
-                <Input 
-                  id="password" 
-                  type={showPassword ? "text" : "password"} 
-                  value={password} 
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (passwordError) setPasswordError("");
-                  }}
-                  className={`h-12 pl-4 pr-12 border-2 transition-all duration-200 rounded-lg ${
-                    passwordError 
-                      ? 'border-destructive focus:border-destructive' 
-                      : 'border-gray-200 focus:border-blue-500'
-                  }`}
-                  placeholder="••••••••" 
-                  required 
-                />
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm" 
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100" 
-                  onClick={() => setShowPassword(!showPassword)}
-                >
+                <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={e => {
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError("");
+              }} className={`h-12 pl-4 pr-12 border-2 transition-all duration-200 rounded-lg ${passwordError ? 'border-destructive focus:border-destructive' : 'border-gray-200 focus:border-blue-500'}`} placeholder="••••••••" required />
+                <Button type="button" variant="ghost" size="sm" className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100" onClick={() => setShowPassword(!showPassword)}>
                   {showPassword ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-gray-500" />}
                 </Button>
               </div>
               <FieldError error={passwordError} />
             </div>
             
-            <Button 
-              type="submit" 
-              className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group" 
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
+            <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group" disabled={isLoading}>
+              {isLoading ? <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Signing In...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
+                </div> : <div className="flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
                   <Shield className="w-4 h-4" />
                   <span>Sign In to Growth OS</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                </div>
-              )}
+                </div>}
             </Button>
           </form>
           
