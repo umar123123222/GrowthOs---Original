@@ -1,4 +1,6 @@
-// PDF generation utility for invoices
+// PDF generation utility for invoices using HTML-to-PDF conversion
+import { launch } from "https://deno.land/x/puppeteer@16.2.0/mod.ts";
+
 export interface InvoiceItem {
   description: string;
   installment_number: number;
@@ -40,8 +42,37 @@ export interface CompanyDetails {
   company_logo?: string;
 }
 
-export function generateInvoicePDF(invoiceData: InvoiceData, companyDetails: CompanyDetails): Uint8Array {
-  // Get currency symbol
+export async function generateInvoicePDF(invoiceData: InvoiceData, companyDetails: CompanyDetails): Promise<Uint8Array> {
+  const browser = await launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+
+  try {
+    const page = await browser.newPage();
+    const html = generateInvoiceHTML(invoiceData, companyDetails);
+    
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    
+    const pdf = await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: {
+        top: '0.5in',
+        right: '0.5in',
+        bottom: '0.5in',
+        left: '0.5in'
+      }
+    });
+
+    return pdf;
+  } finally {
+    await browser.close();
+  }
+}
+
+function generateInvoiceHTML(invoiceData: InvoiceData, companyDetails: CompanyDetails): string {
+  // Currency symbol helper function
   const getCurrencySymbol = (currency: string = 'USD') => {
     const symbols: { [key: string]: string } = {
       USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
@@ -52,259 +83,415 @@ export function generateInvoicePDF(invoiceData: InvoiceData, companyDetails: Com
   const currency = invoiceData.currency || 'USD';
   const currencySymbol = getCurrencySymbol(currency);
 
-  // Create professional PDF content using proper PDF structure
-  const pdfContent = createProfessionalPDF(invoiceData, companyDetails, currencySymbol);
-  return new TextEncoder().encode(pdfContent);
-}
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice #${invoiceData.invoice_number}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-function createProfessionalPDF(invoiceData: InvoiceData, companyDetails: CompanyDetails, currencySymbol: string): string {
-  // Enhanced PDF with proper structure matching the reference design
-  const pdfData = `%PDF-1.7
-1 0 obj
-<<
-/Type /Catalog
-/Pages 2 0 R
-/PageLayout /OneColumn
->>
-endobj
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: white;
+            color: #0f172a;
+            line-height: 1.5;
+        }
 
-2 0 obj
-<<
-/Type /Pages
-/Kids [3 0 R]
-/Count 1
->>
-endobj
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 0;
+        }
 
-3 0 obj
-<<
-/Type /Page
-/Parent 2 0 R
-/MediaBox [0 0 595 842]
-/Contents 4 0 R
-/Resources <<
-/Font <<
-/F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
-/F2 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
-/F3 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Oblique >>
->>
-/ColorSpace <<
-/CS1 [/DeviceRGB]
->>
->>
->>
-endobj
+        .invoice-header {
+            background: linear-gradient(135deg, #2563eb, #7c3aed, #a855f7);
+            color: white;
+            padding: 2rem;
+            position: relative;
+            overflow: hidden;
+        }
 
-4 0 obj
-<<
-/Length ${calculateContentLength(invoiceData, companyDetails, currencySymbol)}
->>
-stream
-BT
+        .logo-circles {
+            position: absolute;
+            left: 2rem;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: -12px;
+        }
 
-% Header Section with Gradient Background (Blue to Purple)
-0.15 0.39 0.92 rg
-50 750 495 70 re f
+        .logo-circle {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(4px);
+            margin-left: -12px;
+        }
 
-% Logo circles (simplified representation)
-0.8 0.8 1 rg
-70 780 15 15 re f
-90 780 15 15 re f
-110 780 15 15 re f
+        .logo-circle:first-child {
+            margin-left: 0;
+            background: rgba(255, 255, 255, 0.2);
+        }
 
-% INVOICE Title
-/F2 32 Tf
-1 1 1 rg
-420 785 Td
-(INVOICE) Tj
+        .logo-circle:nth-child(2) {
+            background: rgba(255, 255, 255, 0.3);
+        }
 
-% Reset to black text
-0 0 0 rg
+        .logo-circle:nth-child(3) {
+            background: rgba(255, 255, 255, 0.25);
+        }
 
-% Invoice Details Section
-/F2 12 Tf
-50 700 Td
-(INVOICE TO:) Tj
+        .invoice-title {
+            text-align: right;
+        }
 
-/F2 18 Tf
-50 680 Td
-(${invoiceData.student_name}) Tj
+        .invoice-title h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+        }
 
-/F1 10 Tf
-50 665 Td
-(${invoiceData.student_email || ''}) Tj
+        .invoice-content {
+            padding: 2rem;
+        }
 
-% Date and Invoice Details
-/F1 11 Tf
-280 700 Td
-(Date: ${invoiceData.date}) Tj
-280 685 Td
-(Due Date: ${invoiceData.due_date}) Tj
-280 670 Td
-(Invoice No: ${invoiceData.invoice_number}) Tj
+        .invoice-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
 
-% Total Due Section
-/F2 12 Tf
-450 700 Td
-(TOTAL DUE:) Tj
+        .meta-group h3 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
 
-/F2 20 Tf
-450 680 Td
-(${currencySymbol}${invoiceData.total.toLocaleString()}) Tj
+        .student-name {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.25rem;
+        }
 
-% Table Header with Background
-0.15 0.39 0.92 rg
-50 630 495 25 re f
+        .student-underline {
+            height: 4px;
+            width: 48px;
+            background: #0f172a;
+            margin-bottom: 0.5rem;
+        }
 
-% Table Headers
-/F2 11 Tf
-1 1 1 rg
-60 640 Td
-(Description) Tj
-200 640 Td
-(Installment Number) Tj
-340 640 Td
-(Price) Tj
-450 640 Td
-(Total) Tj
+        .student-email {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
 
-% Table Content
-0 0 0 rg
-0.9 0.9 0.9 rg
-50 605 495 25 re f
+        .total-due {
+            text-align: right;
+        }
 
-/F1 10 Tf
-0 0 0 rg
-60 615 Td
-(${invoiceData.items[0]?.description || 'Course Fee - Installment'}) Tj
-200 615 Td
-(${invoiceData.items[0]?.installment_number || '1'}/${invoiceData.total_installments || '1'}) Tj
-340 615 Td
-(${currencySymbol}${invoiceData.items[0]?.price || invoiceData.total}) Tj
-450 615 Td
-(${currencySymbol}${invoiceData.items[0]?.total || invoiceData.total}) Tj
+        .total-due h3 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            margin-bottom: 0.5rem;
+        }
 
-% Payment Methods Section
-/F2 14 Tf
-50 560 Td
-(Payment Methods) Tj
+        .total-amount {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
 
-${generatePaymentMethodsText(invoiceData.payment_methods || [], currencySymbol)}
+        .items-table {
+            width: 100%;
+            margin-bottom: 2rem;
+            border-collapse: collapse;
+            overflow: hidden;
+            border-radius: 8px;
+        }
 
-% Totals Section
-/F1 11 Tf
-350 420 Td
-(Sub-total:) Tj
-450 420 Td
-(${currencySymbol}${invoiceData.subtotal.toLocaleString()}) Tj
+        .items-table thead {
+            background: linear-gradient(135deg, #2563eb, #7c3aed, #a855f7);
+            color: white;
+        }
 
-350 405 Td
-(Tax:) Tj
-450 405 Td
-(${currencySymbol}${invoiceData.tax}) Tj
+        .items-table th {
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
 
-% Final Total with Background
-0.15 0.39 0.92 rg
-350 380 195 25 re f
+        .items-table th:nth-child(2),
+        .items-table th:nth-child(3),
+        .items-table th:nth-child(4) {
+            text-align: center;
+        }
 
-/F2 12 Tf
-1 1 1 rg
-360 390 Td
-(Total:) Tj
-450 390 Td
-(${currencySymbol}${invoiceData.total.toLocaleString()}) Tj
+        .items-table td {
+            padding: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
 
-% Notes Section
-0 0 0 rg
-/F2 14 Tf
-50 340 Td
-(Notes) Tj
+        .items-table tbody tr:nth-child(odd) {
+            background: #f8fafc;
+        }
 
-/F3 10 Tf
-50 320 Td
-(${invoiceData.terms || 'Please send payment within 30 days of receiving this invoice.'}) Tj
+        .items-table tbody tr:nth-child(even) {
+            background: white;
+        }
 
-% Company Signature
-/F2 16 Tf
-350 200 Td
-(${companyDetails.company_name}) Tj
+        .items-table td:nth-child(2),
+        .items-table td:nth-child(3),
+        .items-table td:nth-child(4) {
+            text-align: center;
+        }
 
-/F1 10 Tf
-350 185 Td
-(Administrator) Tj
+        .items-table td:nth-child(4) {
+            font-weight: 600;
+        }
 
-% Footer
-/F1 8 Tf
-150 80 Td
-(${companyDetails.company_name}) Tj
-150 70 Td
-(${companyDetails.address}) Tj
-150 60 Td
-(${companyDetails.contact_email} | ${companyDetails.primary_phone}) Tj
+        .bottom-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 2rem;
+        }
 
-ET
-endstream
-endobj
+        .payment-methods h3 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1rem;
+        }
 
-xref
-0 5
-0000000000 65535 f 
-0000000010 00000 n 
-0000000080 00000 n 
-0000000130 00000 n 
-0000000450 00000 n 
-trailer
-<<
-/Size 5
-/Root 1 0 R
->>
-startxref
-${2000 + calculateContentLength(invoiceData, companyDetails, currencySymbol)}
-%%EOF`;
+        .payment-method {
+            border-left: 2px solid #d1d5db;
+            padding-left: 0.75rem;
+            margin-bottom: 1rem;
+        }
 
-  return pdfData;
-}
+        .payment-method-name {
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 0.25rem;
+        }
 
-function generatePaymentMethodsText(paymentMethods: PaymentMethod[], currencySymbol: string): string {
-  if (!paymentMethods || paymentMethods.filter(pm => pm.enabled).length === 0) {
-    return `/F3 10 Tf
-50 540 Td
-(No payment methods configured) Tj`;
-  }
+        .payment-detail {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+        }
 
-  let text = '';
-  let yPos = 540;
-  
-  paymentMethods.filter(pm => pm.enabled).forEach((method, index) => {
-    text += `/F2 11 Tf
-50 ${yPos} Td
-(${method.name}) Tj
-`;
-    yPos -= 15;
-    
-    Object.entries(method.details).forEach(([key, value]) => {
-      const formattedKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      text += `/F1 9 Tf
-50 ${yPos} Td
-(${formattedKey}: ${value}) Tj
-`;
-      yPos -= 12;
-    });
-    yPos -= 5; // Extra space between payment methods
-  });
-  
-  return text;
-}
+        .totals-section {
+            text-align: right;
+        }
 
-function calculateContentLength(invoiceData: InvoiceData, companyDetails: CompanyDetails, currencySymbol: string): number {
-  // Estimate content length for PDF structure
-  const baseLength = 2000;
-  const variableContent = JSON.stringify({
-    student: invoiceData.student_name,
-    company: companyDetails.company_name,
-    items: invoiceData.items,
-    methods: invoiceData.payment_methods
-  }).length;
-  
-  return baseLength + variableContent;
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .total-row.final {
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            color: white;
+            padding: 0.75rem;
+            border-radius: 6px;
+            font-weight: 700;
+            margin-top: 0.5rem;
+        }
+
+        .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .notes h3 {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1rem;
+        }
+
+        .notes p {
+            font-size: 0.875rem;
+            color: #64748b;
+            font-style: italic;
+            line-height: 1.6;
+        }
+
+        .signature {
+            text-align: right;
+        }
+
+        .company-name {
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+
+        .company-role {
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .company-footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <header class="invoice-header">
+            <div class="logo-circles">
+                <div class="logo-circle"></div>
+                <div class="logo-circle"></div>
+                <div class="logo-circle"></div>
+            </div>
+            <div class="invoice-title">
+                <h1>INVOICE</h1>
+            </div>
+        </header>
+
+        <div class="invoice-content">
+            <div class="invoice-meta">
+                <div>
+                    <h3>INVOICE TO:</h3>
+                    <div class="student-name">${invoiceData.student_name}</div>
+                    <div class="student-underline"></div>
+                    ${invoiceData.student_email ? `<div class="student-email">${invoiceData.student_email}</div>` : ''}
+                </div>
+                
+                <div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.875rem; color: #64748b;">Date: </span>
+                        <span style="font-weight: 500;">${invoiceData.date}</span>
+                    </div>
+                    <div style="margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.875rem; color: #64748b;">Due Date: </span>
+                        <span style="font-weight: 500;">${invoiceData.due_date}</span>
+                    </div>
+                    <div>
+                        <span style="font-size: 0.875rem; color: #64748b;">Invoice No: </span>
+                        <span style="font-weight: 500;">${invoiceData.invoice_number}</span>
+                    </div>
+                </div>
+
+                <div class="total-due">
+                    <h3>TOTAL DUE:</h3>
+                    <div class="total-amount">
+                        ${currencySymbol}${invoiceData.total.toLocaleString()}
+                        ${invoiceData.total_program_cost ? `<span style="font-size: 0.875rem; font-weight: normal; color: #64748b; margin-left: 0.5rem;">of ${currencySymbol}${invoiceData.total_program_cost.toLocaleString()}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Installment Number</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${invoiceData.items.map(item => `
+                        <tr>
+                            <td style="font-weight: 500;">${item.description}</td>
+                            <td>
+                                ${invoiceData.total_installments 
+                                    ? `${item.installment_number}/${invoiceData.total_installments}`
+                                    : item.installment_number
+                                }
+                            </td>
+                            <td>${currencySymbol}${item.price}</td>
+                            <td style="font-weight: 600;">${currencySymbol}${item.total}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div class="bottom-section">
+                <div class="payment-methods">
+                    <h3>Payment Methods</h3>
+                    ${invoiceData.payment_methods && invoiceData.payment_methods.filter(method => method.enabled).length > 0 
+                        ? invoiceData.payment_methods.filter(method => method.enabled).map(method => `
+                            <div class="payment-method">
+                                <div class="payment-method-name">${method.name}</div>
+                                ${Object.entries(method.details).map(([key, value]) => `
+                                    <div class="payment-detail">
+                                        <span style="font-weight: 500;">${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}:</span> ${value}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `).join('')
+                        : '<div style="font-size: 0.875rem; color: #64748b; font-style: italic;">No payment methods configured</div>'
+                    }
+                </div>
+
+                <div class="totals-section">
+                    <div class="total-row">
+                        <span style="font-weight: 500;">Sub-total:</span>
+                        <span>${currencySymbol}${invoiceData.subtotal.toLocaleString()}</span>
+                    </div>
+                    <div class="total-row">
+                        <span style="font-weight: 500;">Tax:</span>
+                        <span>${currencySymbol}${invoiceData.tax}</span>
+                    </div>
+                    <div class="total-row final">
+                        <span>Total:</span>
+                        <span>${currencySymbol}${invoiceData.total.toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="signature-section">
+                <div class="notes">
+                    <h3>Notes</h3>
+                    <p>${invoiceData.terms || 'Please send payment within 30 days of receiving this invoice.'}</p>
+                </div>
+
+                <div class="signature">
+                    <div class="company-name">${companyDetails.company_name}</div>
+                    <div class="company-role">Administrator</div>
+                </div>
+            </div>
+
+            <div class="company-footer">
+                <div>${companyDetails.company_name}</div>
+                <div>${companyDetails.address}</div>
+                <div>${companyDetails.contact_email} | ${companyDetails.primary_phone}</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+  `;
 }

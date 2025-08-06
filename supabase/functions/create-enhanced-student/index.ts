@@ -423,7 +423,7 @@ async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: s
       terms: 'Please send payment within 30 days of receiving this invoice.'
     };
     
-    const pdfBuffer = generateInvoicePDF(invoiceData, companyDetails);
+    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
     
     await smtpClient.sendEmail({
       to: studentEmail,

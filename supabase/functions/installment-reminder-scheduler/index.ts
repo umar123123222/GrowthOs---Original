@@ -224,7 +224,7 @@ async function sendInstallmentIssueEmail(invoice: any, loginUrl: string, currenc
       terms: 'Please send payment within 30 days of receiving this invoice.'
     };
     
-    const pdfBuffer = generateInvoicePDF(invoiceData, companyDetails);
+    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
     
     await smtpClient.sendEmail({
       to: studentEmail,
@@ -303,7 +303,7 @@ async function sendFirstReminderEmail(invoice: any, loginUrl: string, currency: 
       terms: 'Please send payment within 30 days of receiving this invoice.'
     };
     
-    const pdfBuffer = generateInvoicePDF(invoiceData, companyDetails);
+    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
     
     await smtpClient.sendEmail({
       to: studentEmail,
@@ -380,7 +380,7 @@ async function sendSecondReminderEmail(invoice: any, loginUrl: string, currency:
       terms: 'Please send payment within 30 days of receiving this invoice.'
     };
     
-    const pdfBuffer = generateInvoicePDF(invoiceData, companyDetails);
+    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
     
     await smtpClient.sendEmail({
       to: studentEmail,
@@ -452,7 +452,7 @@ async function sendDueEmail(invoice: any, loginUrl: string, currency: string, co
       terms: 'Please send payment within 30 days of receiving this invoice.'
     };
     
-    const pdfBuffer = generateInvoicePDF(invoiceData, companyDetails);
+    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
     
     await smtpClient.sendEmail({
       to: studentEmail,
