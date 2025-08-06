@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RoleGuard } from "@/components/RoleGuard";
+import { EnhancedStudentCreationDialog } from "@/components/EnhancedStudentCreationDialog";
 
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -17,7 +18,8 @@ import {
   Filter,
   DollarSign,
   AlertTriangle,
-  Clock
+  Clock,
+  Plus
 } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay, startOfMonth, subMonths } from 'date-fns';
 
@@ -64,6 +66,7 @@ const EnrollmentManagerDashboard = () => {
   const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState('30'); // days
+  const [showStudentDialog, setShowStudentDialog] = useState(false);
 
   // Fetch real data from Supabase
   useEffect(() => {
@@ -373,7 +376,13 @@ const EnrollmentManagerDashboard = () => {
             <p className="text-gray-600 mt-1">Manage student enrollments and track performance</p>
           </div>
           
-          
+          <Button 
+            onClick={() => setShowStudentDialog(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Student
+          </Button>
         </div>
 
         {/* Period Filter */}
@@ -573,6 +582,62 @@ const EnrollmentManagerDashboard = () => {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Student Creation Dialog */}
+        <EnhancedStudentCreationDialog
+          open={showStudentDialog}
+          onOpenChange={setShowStudentDialog}
+          onStudentCreated={() => {
+            // Refetch data after student creation
+            const fetchData = async () => {
+              const periodDays = parseInt(selectedPeriod);
+              const endDate = new Date();
+              const startDate = subDays(endDate, periodDays);
+
+              const { data: enrollmentsData } = await supabase
+                .from('students')
+                .select(`
+                  id,
+                  user_id,
+                  enrollment_date,
+                  onboarding_completed,
+                  users!students_user_id_fkey (
+                    id,
+                    full_name,
+                    email,
+                    lms_status,
+                    created_by
+                  )
+                `)
+                .gte('enrollment_date', startDate.toISOString())
+                .lte('enrollment_date', endDate.toISOString())
+                .order('enrollment_date', { ascending: false });
+
+              if (enrollmentsData) {
+                const myEnrollments = enrollmentsData.filter(student => 
+                  student.users?.created_by === user?.id
+                );
+
+                const processedEnrollments: EnrollmentRecord[] = myEnrollments
+                  .filter(student => student.users)
+                  .map(student => ({
+                    id: student.id,
+                    student_name: student.users.full_name,
+                    student_email: student.users.email,
+                    enrollment_date: student.enrollment_date,
+                    lms_status: (student.users.lms_status as 'active' | 'inactive' | 'suspended') || 'inactive',
+                    payment_status: 'current' as const,
+                    onboarding_completed: student.onboarding_completed || false,
+                    created_by: student.users.created_by || '',
+                  }));
+                
+                setEnrollments(processedEnrollments);
+              }
+            };
+            
+            fetchData();
+          }}
+        />
       </div>
     </RoleGuard>
   );
