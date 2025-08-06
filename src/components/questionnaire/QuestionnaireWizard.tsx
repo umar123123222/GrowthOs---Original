@@ -346,22 +346,31 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
       });
       return;
     }
+    
     setIsSubmitting(true);
+    console.log('QuestionnaireWizard: Starting submission...');
+    
     try {
       const formData = form.getValues();
+      console.log('QuestionnaireWizard: Form data:', formData);
+      
       const responses: QuestionnaireResponse[] = questions.map(question => ({
         questionId: question.id,
         value: formData[question.id] || null
       }));
+      
+      console.log('QuestionnaireWizard: Calling onComplete with responses:', responses);
       await onComplete(responses);
 
       // Clear saved data on successful submission
       localStorage.removeItem(STORAGE_KEY);
+      console.log('QuestionnaireWizard: Submission completed successfully');
+      
     } catch (error) {
-      console.error('Submission error:', error);
+      console.error('QuestionnaireWizard: Submission error:', error);
       toast({
         title: 'Submission failed',
-        description: 'Please try again.',
+        description: 'Please try again. If the problem persists, refresh the page.',
         variant: 'destructive'
       });
     } finally {

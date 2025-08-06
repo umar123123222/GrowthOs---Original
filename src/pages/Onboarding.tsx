@@ -66,7 +66,34 @@ const Onboarding = ({
   }, []);
   const handleQuestionnaireComplete = async (responses: QuestionnaireResponse[]) => {
     setSubmitting(true);
+    
+    // Add timeout to prevent getting stuck
+    const timeoutId = setTimeout(() => {
+      setSubmitting(false);
+      toast({
+        variant: "destructive",
+        title: "Request timed out",
+        description: "Please try again. If the problem persists, refresh the page."
+      });
+    }, 30000); // 30 second timeout
+
     try {
+      console.log('Starting onboarding completion for user:', user.id);
+      
+      // First, verify student record exists
+      const { data: studentCheck, error: checkError } = await supabase
+        .from('students')
+        .select('id, user_id, onboarding_completed')
+        .eq('user_id', user.id)
+        .single();
+
+      if (checkError || !studentCheck) {
+        console.error('Student record not found:', checkError);
+        throw new Error('Student record not found. Please contact support.');
+      }
+
+      console.log('Student record found:', studentCheck);
+
       // 1. Save responses to user_activity_logs for audit trail
       const responsePromises = responses.map(response => {
         let answerValue = '';
@@ -99,10 +126,12 @@ const Onboarding = ({
         });
       });
 
+      console.log('Saving activity logs...');
       const results = await Promise.all(responsePromises);
       const hasErrors = results.some(result => result.error);
 
       if (hasErrors) {
+        console.error('Activity log errors:', results.filter(r => r.error));
         throw new Error('Failed to save some responses to activity logs');
       }
 
@@ -140,8 +169,10 @@ const Onboarding = ({
         return acc;
       }, {} as Record<string, any>);
 
+      console.log('Updating student record with onboarding completion...');
+      
       // 4. Update students table with completion data
-      const { error: studentError } = await supabase
+      const { data: updateData, error: studentError } = await supabase
         .from('students')
         .update({
           onboarding_completed: true,
@@ -149,11 +180,15 @@ const Onboarding = ({
           goal_brief: goalBrief,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .select();
 
       if (studentError) {
+        console.error('Student update error:', studentError);
         throw new Error(`Failed to update student record: ${studentError.message}`);
       }
+
+      console.log('Student record updated successfully:', updateData);
 
       // 5. Also update user profile with dream goal summary for backward compatibility
       const { error: userError } = await supabase
@@ -168,21 +203,31 @@ const Onboarding = ({
         // Don't throw here as student record is the primary source
       }
 
+      // Clear timeout since we succeeded
+      clearTimeout(timeoutId);
+
       // 6. Show success message
       toast({
         title: "Welcome to your learning journey!",
         description: "Your ultimate goal has been set. Let's achieve it together!"
       });
 
-      // 7. Complete onboarding
-      onComplete();
+      console.log('Onboarding completed successfully, calling onComplete...');
+      
+      // 7. Complete onboarding with a small delay to ensure UI updates
+      setTimeout(() => {
+        onComplete();
+      }, 100);
 
     } catch (error: any) {
+      // Clear timeout
+      clearTimeout(timeoutId);
+      
       console.error('Onboarding completion error:', error);
       toast({
         variant: "destructive",
         title: "Could not save your answers",
-        description: error.message || "Please try again."
+        description: error.message || "Please try again. If the problem persists, refresh the page."
       });
     } finally {
       setSubmitting(false);
