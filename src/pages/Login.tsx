@@ -113,9 +113,19 @@ const Login = () => {
         // Only block suspended students from signing in
         if (userData.role === 'student' && userData.lms_status === 'suspended') {
           console.log('Student LMS access is suspended');
+          
+          // Fetch company settings to get contact email
+          const { data: companySettings } = await supabase
+            .from('company_settings')
+            .select('contact_email')
+            .eq('id', 1)
+            .single();
+          
+          const contactEmail = companySettings?.contact_email || 'support@company.com';
+          
           // Sign out the user immediately
           await supabase.auth.signOut();
-          setLoginError("Your LMS access is currently suspended. Please contact support for assistance.");
+          setLoginError(`Your LMS access is currently suspended. Please contact support at ${contactEmail} for assistance.`);
           return;
         }
         
