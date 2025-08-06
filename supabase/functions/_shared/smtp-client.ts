@@ -52,70 +52,123 @@ export class SMTPClient {
 
   async sendEmail(options: EmailOptions): Promise<void> {
     const { to, subject, html, text, attachments } = options;
-
-    // Create SMTP connection
-    const conn = await Deno.connect({
-      hostname: this.config.host,
-      port: this.config.port,
-    });
+    let conn: Deno.TcpConn | null = null;
+    let tlsConn: Deno.TlsConn | null = null;
 
     try {
+      console.log(`Attempting to send email to: ${to}`);
+      
+      // Create SMTP connection with timeout
+      conn = await Promise.race([
+        Deno.connect({
+          hostname: this.config.host,
+          port: this.config.port,
+        }),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Connection timeout')), 10000)
+        )
+      ]);
+
+      console.log('SMTP connection established');
+
       // Convert connection to TLS if needed
-      let tlsConn = conn;
       if (this.config.port === 587 || this.config.port === 465) {
         tlsConn = await Deno.startTls(conn, { hostname: this.config.host });
+        console.log('TLS connection established');
+      } else {
+        tlsConn = conn as any;
       }
 
       const reader = tlsConn.readable.getReader();
       const writer = tlsConn.writable.getWriter();
 
-      // Helper function to read SMTP response
-      const readResponse = async () => {
+      // Helper function to read SMTP response with timeout
+      const readResponse = async (): Promise<string> => {
         const decoder = new TextDecoder();
-        const chunk = await reader.read();
-        if (chunk.value) {
-          return decoder.decode(chunk.value);
+        const timeout = setTimeout(() => {
+          throw new Error('SMTP response timeout');
+        }, 5000);
+
+        try {
+          const chunk = await reader.read();
+          clearTimeout(timeout);
+          if (chunk.value) {
+            const response = decoder.decode(chunk.value);
+            console.log('SMTP Response:', response.trim());
+            return response;
+          }
+          return '';
+        } catch (error) {
+          clearTimeout(timeout);
+          throw error;
         }
-        return '';
       };
 
       // Helper function to send SMTP command
       const sendCommand = async (command: string) => {
         const encoder = new TextEncoder();
+        console.log('SMTP Command:', command.replace(/^AUTH LOGIN$|^[A-Za-z0-9+/=]+$/, '[REDACTED]'));
         await writer.write(encoder.encode(command + '\r\n'));
       };
 
-      // SMTP conversation
-      await readResponse(); // Welcome message
+      // SMTP conversation with error checking
+      const welcomeResponse = await readResponse();
+      if (!welcomeResponse.startsWith('220')) {
+        throw new Error(`SMTP server rejected connection: ${welcomeResponse}`);
+      }
 
       await sendCommand(`EHLO ${this.config.host}`);
-      await readResponse();
+      const ehloResponse = await readResponse();
+      if (!ehloResponse.startsWith('250')) {
+        throw new Error(`EHLO failed: ${ehloResponse}`);
+      }
 
       // Start TLS if on port 587
       if (this.config.port === 587) {
         await sendCommand('STARTTLS');
-        await readResponse();
+        const tlsResponse = await readResponse();
+        if (!tlsResponse.startsWith('220')) {
+          throw new Error(`STARTTLS failed: ${tlsResponse}`);
+        }
       }
 
       // Authentication
       await sendCommand('AUTH LOGIN');
-      await readResponse();
+      const authResponse = await readResponse();
+      if (!authResponse.startsWith('334')) {
+        throw new Error(`AUTH LOGIN failed: ${authResponse}`);
+      }
 
       await sendCommand(btoa(this.config.username));
-      await readResponse();
+      const userResponse = await readResponse();
+      if (!userResponse.startsWith('334')) {
+        throw new Error(`Username authentication failed: ${userResponse}`);
+      }
 
       await sendCommand(btoa(this.config.password));
-      await readResponse();
+      const passResponse = await readResponse();
+      if (!passResponse.startsWith('235')) {
+        throw new Error(`Password authentication failed: ${passResponse}`);
+      }
 
       // Send email
       await sendCommand(`MAIL FROM:<${this.config.fromEmail}>`);
-      await readResponse();
+      const mailResponse = await readResponse();
+      if (!mailResponse.startsWith('250')) {
+        throw new Error(`MAIL FROM failed: ${mailResponse}`);
+      }
 
       await sendCommand(`RCPT TO:<${to}>`);
-      await readResponse();
+      const rcptResponse = await readResponse();
+      if (!rcptResponse.startsWith('250')) {
+        throw new Error(`RCPT TO failed: ${rcptResponse}`);
+      }
 
       await sendCommand('DATA');
-      await readResponse();
+      const dataResponse = await readResponse();
+      if (!dataResponse.startsWith('354')) {
+        throw new Error(`DATA command failed: ${dataResponse}`);
+      }
 
       // Email headers and body
       const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substring(2)}`;
@@ -123,6 +176,7 @@ export class SMTPClient {
       let emailContent: string;
       
       if (attachments && attachments.length > 0) {
+        console.log(`Preparing email with ${attachments.length} attachments`);
         // Multipart email with attachments
         const emailParts = [
           `From: ${this.config.fromName} <${this.config.fromEmail}>`,
@@ -153,7 +207,7 @@ export class SMTPClient {
           );
         }
 
-        emailParts.push(`--${boundary}--`, '.');
+        emailParts.push(`--${boundary}--`);
         emailContent = emailParts.join('\r\n');
       } else {
         // Simple HTML email
@@ -165,21 +219,40 @@ export class SMTPClient {
           'Content-Type: text/html; charset=utf-8',
           '',
           html,
-          '.',
         ].join('\r\n');
       }
 
       await sendCommand(emailContent);
-      await readResponse();
+      await sendCommand('.');
+      const sendResponse = await readResponse();
+      if (!sendResponse.startsWith('250')) {
+        throw new Error(`Email sending failed: ${sendResponse}`);
+      }
 
       await sendCommand('QUIT');
       await readResponse();
 
+      console.log(`Email sent successfully via SMTP to: ${to}`);
+
+    } catch (error) {
+      console.error('SMTP Error:', error);
+      throw new Error(`Failed to send email to ${to}: ${error.message}`);
     } finally {
+      // Clean up connections in reverse order
       try {
-        conn.close();
+        if (tlsConn && tlsConn !== conn) {
+          tlsConn.close();
+        }
       } catch (e) {
-        console.warn('Error closing SMTP connection:', e);
+        console.warn('Error closing TLS connection:', e.message);
+      }
+      
+      try {
+        if (conn) {
+          conn.close();
+        }
+      } catch (e) {
+        console.warn('Error closing TCP connection:', e.message);
       }
     }
   }

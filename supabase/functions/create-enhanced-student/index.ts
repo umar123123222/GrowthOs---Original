@@ -321,17 +321,30 @@ const handler = async (req: Request): Promise<Response> => {
           // Send first invoice email immediately for the pending invoice
           if (installments.length > 0) {
             const firstInvoice = installments[0];
-            try {
-              await sendFirstInvoiceEmail({
-                installment_number: firstInvoice.installment_number,
-                amount: firstInvoice.amount,
-                due_date: firstInvoice.due_date,
-                student_email: email,
-                student_name: full_name
-              }, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
-              console.log(`First invoice email sent to ${email}`);
-            } catch (emailError) {
-              console.error('Error sending first invoice email:', emailError);
+            let emailSent = false;
+            const maxRetries = 3;
+            
+            for (let attempt = 1; attempt <= maxRetries && !emailSent; attempt++) {
+              try {
+                console.log(`Invoice email attempt ${attempt}/${maxRetries} for ${email}`);
+                await sendFirstInvoiceEmail({
+                  installment_number: firstInvoice.installment_number,
+                  amount: firstInvoice.amount,
+                  due_date: firstInvoice.due_date,
+                  student_email: email,
+                  student_name: full_name
+                }, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
+                console.log(`First invoice email sent successfully on attempt ${attempt} to ${email}`);
+                emailSent = true;
+              } catch (emailError) {
+                console.error(`Invoice email attempt ${attempt} failed:`, emailError);
+                if (attempt === maxRetries) {
+                  console.error(`All ${maxRetries} invoice email attempts failed for ${email}`);
+                } else {
+                  console.log(`Waiting 2 seconds before retry ${attempt + 1}...`);
+                  await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+              }
             }
           }
         }
