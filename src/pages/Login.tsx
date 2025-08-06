@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react";
-import { AppLogo } from "@/components/AppLogo";
+
 import { ErrorMessage, FieldError } from "@/components/ui/error-message";
 import { errorHandler, handleApiError } from "@/lib/error-handler";
 
@@ -151,14 +151,6 @@ const Login = () => {
         <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500"></div>
         
         <CardHeader className="text-center pb-8 pt-8">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-emerald-500 rounded-2xl blur-lg opacity-30 animate-pulse"></div>
-              <div className="relative bg-white p-3 rounded-2xl shadow-lg flex items-center justify-center">
-                <AppLogo className="h-12 w-auto object-contain" alt="Company Logo" />
-              </div>
-            </div>
-          </div>
           
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent mb-2">
             Welcome to Growth OS
