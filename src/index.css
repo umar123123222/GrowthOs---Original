@@ -266,3 +266,36 @@ All colors MUST be HSL.
 .shadow-elevated {
   box-shadow: var(--shadow-elevated);
 }
+
+/* Wizard specific styles */
+.wizard-card {
+  @apply w-full mx-auto shadow-lg border;
+}
+
+.wizard-nav {
+  @apply flex items-center justify-between;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+  .wizard-card {
+    @apply shadow-none border-0 rounded-none m-0 min-h-screen;
+  }
+  
+  .wizard-nav {
+    @apply flex-col gap-3;
+  }
+  
+  .wizard-nav > button {
+    @apply w-full;
+  }
+}
+
+/* Accessibility and animation preferences */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
