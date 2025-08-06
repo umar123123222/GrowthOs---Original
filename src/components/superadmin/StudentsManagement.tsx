@@ -844,7 +844,7 @@ export function StudentsManagement() {
   const displayStudents = filteredStudents.length > 0 ? filteredStudents : students;
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="w-full min-h-screen space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div className="animate-fade-in">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
