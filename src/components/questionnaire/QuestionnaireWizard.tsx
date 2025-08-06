@@ -10,52 +10,85 @@ import { QuestionItem, QuestionnaireResponse } from '@/types/questionnaire';
 import { QuestionRenderer } from './QuestionRenderer';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { errorHandler } from '@/lib/error-handler';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 interface QuestionnaireWizardProps {
   questions: QuestionItem[];
   onComplete: (responses: QuestionnaireResponse[]) => void;
   isLoading?: boolean;
 }
 
-// Create dynamic schema based on questions
+// Create dynamic schema based on questions with error handling
 const createQuestionnaireSchema = (questions: QuestionItem[]) => {
-  const schemaObject: Record<string, z.ZodTypeAny> = {};
-  questions.forEach(question => {
-    let fieldSchema: z.ZodTypeAny;
-    switch (question.answerType) {
-      case 'singleLine':
-      case 'multiLine':
-        fieldSchema = z.string();
-        break;
-      case 'singleSelect':
-        fieldSchema = z.string();
-        break;
-      case 'multiSelect':
-        fieldSchema = z.array(z.string()).min(0);
-        break;
-      case 'file':
-        fieldSchema = z.object({
-          fileName: z.string(),
-          fileUrl: z.string(),
-          fileSize: z.number()
-        }).nullable();
-        break;
-      default:
-        fieldSchema = z.any();
+  try {
+    // Defensive check for questions array
+    if (!questions || !Array.isArray(questions) || questions.length === 0) {
+      console.warn('QuestionnaireWizard: Creating empty schema - questions array is empty or invalid');
+      return z.object({});
     }
-    if (question.required) {
-      if (question.answerType === 'multiSelect') {
-        fieldSchema = (fieldSchema as z.ZodArray<any>).min(1, 'Please select at least one option');
-      } else if (question.answerType === 'file') {
-        fieldSchema = fieldSchema.refine(val => val !== null, 'File is required');
-      } else {
-        fieldSchema = (fieldSchema as z.ZodString).min(1, 'This field is required');
+
+    const schemaObject: Record<string, z.ZodTypeAny> = {};
+    
+    questions.forEach((question, index) => {
+      try {
+        // Defensive checks for question structure
+        if (!question || !question.id || !question.answerType) {
+          console.warn(`QuestionnaireWizard: Skipping invalid question at index ${index}:`, question);
+          return;
+        }
+
+        let fieldSchema: z.ZodTypeAny;
+        
+        switch (question.answerType) {
+          case 'singleLine':
+          case 'multiLine':
+            fieldSchema = z.string();
+            break;
+          case 'singleSelect':
+            fieldSchema = z.string();
+            break;
+          case 'multiSelect':
+            fieldSchema = z.array(z.string()).min(0);
+            break;
+          case 'file':
+            fieldSchema = z.object({
+              fileName: z.string(),
+              fileUrl: z.string(),
+              fileSize: z.number()
+            }).nullable();
+            break;
+          default:
+            console.warn(`QuestionnaireWizard: Unknown answer type "${question.answerType}" for question ${question.id}`);
+            fieldSchema = z.any();
+        }
+
+        // Apply required validation
+        if (question.required) {
+          if (question.answerType === 'multiSelect') {
+            fieldSchema = (fieldSchema as z.ZodArray<any>).min(1, 'Please select at least one option');
+          } else if (question.answerType === 'file') {
+            fieldSchema = fieldSchema.refine(val => val !== null, 'File is required');
+          } else {
+            fieldSchema = (fieldSchema as z.ZodString).min(1, 'This field is required');
+          }
+        } else {
+          fieldSchema = fieldSchema.optional();
+        }
+
+        schemaObject[question.id] = fieldSchema;
+      } catch (error) {
+        console.error(`QuestionnaireWizard: Error processing question ${question?.id || index}:`, error);
+        // Continue with other questions instead of failing completely
       }
-    } else {
-      fieldSchema = fieldSchema.optional();
-    }
-    schemaObject[question.id] = fieldSchema;
-  });
-  return z.object(schemaObject);
+    });
+
+    return z.object(schemaObject);
+  } catch (error) {
+    console.error('QuestionnaireWizard: Critical error creating schema:', error);
+    errorHandler.handleError(error, 'questionnaire_schema_creation');
+    // Return empty schema as fallback
+    return z.object({});
+  }
 };
 
 // Local storage key
@@ -67,7 +100,24 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [initializationError, setInitializationError] = useState<string | null>(null);
   const stepRef = useRef<HTMLDivElement>(null);
+
+  // Early return for invalid questions
+  if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center p-4">
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="text-center p-8">
+            <p className="text-muted-foreground">Loading questionnaire...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Validate current step
+  const validCurrentStep = Math.max(0, Math.min(currentStep, questions.length - 1));
   
   // Load saved data from localStorage
   const loadSavedData = () => {
@@ -83,42 +133,84 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
     return {};
   };
 
-  // Initialize default values properly - ensure questions exist first
+  // Initialize default values properly with error handling
   const getDefaultValues = useMemo(() => {
-    if (!questions || questions.length === 0) {
+    try {
+      if (!questions || questions.length === 0) {
+        return {};
+      }
+      
+      const savedData = loadSavedData();
+      const defaults: Record<string, any> = {};
+      
+      questions.forEach(question => {
+        try {
+          if (!question || !question.id) {
+            console.warn('QuestionnaireWizard: Skipping invalid question in defaults:', question);
+            return;
+          }
+
+          if (savedData[question.id] !== undefined) {
+            defaults[question.id] = savedData[question.id];
+          } else {
+            // Set appropriate default values based on answer type
+            switch (question.answerType) {
+              case 'multiSelect':
+                defaults[question.id] = [];
+                break;
+              case 'file':
+                defaults[question.id] = null;
+                break;
+              default:
+                defaults[question.id] = '';
+            }
+          }
+        } catch (error) {
+          console.error(`QuestionnaireWizard: Error setting default for question ${question?.id}:`, error);
+        }
+      });
+      
+      return defaults;
+    } catch (error) {
+      console.error('QuestionnaireWizard: Error creating default values:', error);
+      setInitializationError('Failed to initialize form');
       return {};
     }
-    
-    const savedData = loadSavedData();
-    const defaults: Record<string, any> = {};
-    
-    questions.forEach(question => {
-      if (savedData[question.id] !== undefined) {
-        defaults[question.id] = savedData[question.id];
-      } else {
-        // Set appropriate default values based on answer type
-        switch (question.answerType) {
-          case 'multiSelect':
-            defaults[question.id] = [];
-            break;
-          case 'file':
-            defaults[question.id] = null;
-            break;
-          default:
-            defaults[question.id] = '';
-        }
-      }
-    });
-    return defaults;
   }, [questions]);
 
-  const schema = createQuestionnaireSchema(questions);
+  // Create schema with error handling
+  const schema = useMemo(() => {
+    try {
+      return createQuestionnaireSchema(questions);
+    } catch (error) {
+      console.error('QuestionnaireWizard: Schema creation failed:', error);
+      setInitializationError('Failed to initialize questionnaire');
+      return z.object({});
+    }
+  }, [questions]);
   
+  // Initialize form with comprehensive error handling
   const form = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: getDefaultValues
+    defaultValues: getDefaultValues,
+    shouldFocusError: true,
+    criteriaMode: 'all'
   });
+
+  // Reset form when questions change
+  useEffect(() => {
+    try {
+      if (questions && questions.length > 0 && getDefaultValues) {
+        form.reset(getDefaultValues);
+        setCurrentStep(0);
+        setInitializationError(null);
+      }
+    } catch (error) {
+      console.error('QuestionnaireWizard: Error resetting form:', error);
+      setInitializationError('Failed to reset form');
+    }
+  }, [questions, form, getDefaultValues]);
   const {
     formState: {
       isValid,
@@ -127,10 +219,45 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
     watch,
     trigger
   } = form;
-  const currentQuestion = questions[currentStep];
+  const currentQuestion = questions[validCurrentStep];
   const totalSteps = questions.length;
-  const progress = (currentStep + 1) / totalSteps * 100;
-  const isLastStep = currentStep === totalSteps - 1;
+  const progress = (validCurrentStep + 1) / totalSteps * 100;
+  const isLastStep = validCurrentStep === totalSteps - 1;
+
+  // Show error state if initialization failed
+  if (initializationError) {
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center p-4">
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="text-center p-8 space-y-4">
+            <div className="text-destructive font-medium">Questionnaire Error</div>
+            <p className="text-muted-foreground text-sm">{initializationError}</p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              variant="outline"
+              size="sm"
+            >
+              Refresh Page
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Defensive check for current question
+  if (!currentQuestion) {
+    console.error('QuestionnaireWizard: Current question is undefined', { currentStep: validCurrentStep, totalQuestions: questions.length });
+    return (
+      <div className="min-h-[50vh] flex items-center justify-center p-4">
+        <Card className="w-full max-w-md mx-auto">
+          <CardContent className="text-center p-8">
+            <p className="text-muted-foreground">Loading question...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Watch all form values to save to localStorage
   const watchedValues = watch();
@@ -164,19 +291,24 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
     return result && !errors[currentQuestion.id];
   };
   const handleNext = async () => {
-    const stepValid = await isCurrentStepValid();
-    if (!stepValid) {
-      // Announce error for screen readers
-      const errorElement = document.querySelector(`[data-error="${currentQuestion.id}"]`);
-      if (errorElement) {
-        errorElement.setAttribute('aria-live', 'assertive');
+    try {
+      const stepValid = await isCurrentStepValid();
+      if (!stepValid) {
+        // Announce error for screen readers
+        const errorElement = document.querySelector(`[data-error="${currentQuestion.id}"]`);
+        if (errorElement) {
+          errorElement.setAttribute('aria-live', 'assertive');
+        }
+        return;
       }
-      return;
-    }
-    if (isLastStep) {
-      await handleSubmit();
-    } else {
-      setCurrentStep(prev => prev + 1);
+      if (isLastStep) {
+        await handleSubmit();
+      } else {
+        setCurrentStep(prev => Math.min(prev + 1, questions.length - 1));
+      }
+    } catch (error) {
+      console.error('QuestionnaireWizard: Error in handleNext:', error);
+      errorHandler.handleError(error, 'questionnaire_navigation');
     }
   };
   const handlePrevious = () => {
@@ -234,8 +366,10 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
       opacity: 0
     })
   };
-  return <div className="min-h-[80vh] flex items-center justify-center p-4 py-8">
-      <Card className="wizard-card w-full max-w-[560px] mx-auto shadow-xl border-0 bg-white/95 backdrop-blur-sm">
+  return (
+    <ErrorBoundary>
+      <div className="min-h-[80vh] flex items-center justify-center p-4 py-8">
+        <Card className="wizard-card w-full max-w-[560px] mx-auto shadow-xl border-0 bg-white/95 backdrop-blur-sm">
         <CardHeader className="text-center space-y-6 pb-8">
           <div className="space-y-2">
             
@@ -250,16 +384,16 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
           {/* Progress Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between text-sm font-medium">
-              <span className="text-primary">Step {currentStep + 1} of {totalSteps}</span>
+              <span className="text-primary">Step {validCurrentStep + 1} of {totalSteps}</span>
               <span className="text-muted-foreground">{Math.round(progress)}% complete</span>
             </div>
             
             <div className="space-y-3">
-              <Progress value={progress} className="h-2.5 bg-muted/50" aria-label={`Progress: ${Math.round(progress)}% complete`} aria-valuenow={currentStep + 1} aria-valuemax={totalSteps} />
+              <Progress value={progress} className="h-2.5 bg-muted/50" aria-label={`Progress: ${Math.round(progress)}% complete`} aria-valuenow={validCurrentStep + 1} aria-valuemax={totalSteps} />
               
               {/* Step Indicators */}
               <div className="flex justify-center gap-2" role="tablist" aria-label="Questionnaire steps">
-                {questions.map((_, index) => <div key={index} role="tab" aria-selected={index === currentStep} aria-label={`Step ${index + 1}${index < currentStep ? ' - completed' : index === currentStep ? ' - current' : ' - upcoming'}`} className={`h-2.5 rounded-full transition-all duration-500 ${index === currentStep ? 'bg-primary w-8 shadow-sm' : index < currentStep ? 'bg-primary/80 w-2.5' : 'bg-muted w-2.5'}`} />)}
+                {questions.map((_, index) => <div key={index} role="tab" aria-selected={index === validCurrentStep} aria-label={`Step ${index + 1}${index < validCurrentStep ? ' - completed' : index === validCurrentStep ? ' - current' : ' - upcoming'}`} className={`h-2.5 rounded-full transition-all duration-500 ${index === validCurrentStep ? 'bg-primary w-8 shadow-sm' : index < validCurrentStep ? 'bg-primary/80 w-2.5' : 'bg-muted w-2.5'}`} />)}
               </div>
             </div>
           </div>
@@ -269,7 +403,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
           {/* Question Content */}
           <div className="relative overflow-hidden">
             <AnimatePresence mode="wait" custom={1}>
-              <motion.div key={currentStep} ref={stepRef} custom={1} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{
+              <motion.div key={validCurrentStep} ref={stepRef} custom={1} variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{
               x: {
                 type: "spring",
                 stiffness: 300,
@@ -304,7 +438,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
           
           {/* Navigation */}
           <nav className="wizard-nav flex items-center justify-between pt-6 border-t border-border/50" aria-label="Questionnaire navigation">
-            {currentStep > 0 ? <Button type="button" variant="ghost" onClick={handlePrevious} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" aria-label="Go to previous question">
+            {validCurrentStep > 0 ? <Button type="button" variant="ghost" onClick={handlePrevious} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" aria-label="Go to previous question">
                 <ChevronLeft className="h-4 w-4" />
                 Back
               </Button> : <div />}
@@ -326,5 +460,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
           </nav>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+    </ErrorBoundary>
+  );
 };
