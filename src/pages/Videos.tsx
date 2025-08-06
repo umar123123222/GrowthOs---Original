@@ -8,8 +8,10 @@ import { useModulesWithRecordings } from "@/hooks/useModulesWithRecordings";
 import { useAuth } from "@/hooks/useAuth";
 import { useProgressTracker } from "@/hooks/useProgressTracker";
 import { RoleGuard } from "@/components/RoleGuard";
+import { InactiveLMSBanner } from "@/components/InactiveLMSBanner";
 import { Play, Lock, CheckCircle, Clock, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { supabase } from "@/integrations/supabase/client";
 
 const Videos = () => {
   const navigate = useNavigate();
@@ -19,8 +21,29 @@ const Videos = () => {
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedRecording, setSelectedRecording] = useState<any>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
+  const [userLMSStatus, setUserLMSStatus] = useState<string>('active');
+
+  // Fetch user's LMS status
+  React.useEffect(() => {
+    const fetchUserLMSStatus = async () => {
+      if (!user?.id) return;
+      
+      const { data } = await supabase
+        .from('users')
+        .select('lms_status')
+        .eq('id', user.id)
+        .single();
+      
+      if (data) {
+        setUserLMSStatus(data.lms_status || 'active');
+      }
+    };
+    
+    fetchUserLMSStatus();
+  }, [user?.id]);
 
   const handleWatchRecording = async (recording: any) => {
+    if (userLMSStatus !== 'active') return;
     if (!recording.isUnlocked || !recording.recording_url) return;
 
     // Mark as watched
@@ -31,6 +54,7 @@ const Videos = () => {
   };
 
   const handleAssignmentClick = (recording: any) => {
+    if (userLMSStatus !== 'active') return;
     setSelectedRecording(recording);
     setAssignmentDialogOpen(true);
   };
@@ -60,6 +84,8 @@ const Videos = () => {
   return (
     <RoleGuard allowedRoles={['student', 'admin', 'mentor', 'superadmin']}>
       <div className="space-y-6 animate-fade-in">
+        <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
+        
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground">Available Lessons</h1>
           <p className="text-muted-foreground text-sm sm:text-base">
@@ -115,7 +141,7 @@ const Videos = () => {
                           <div
                             key={recording.id}
                             className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
-                              recording.isUnlocked 
+                              recording.isUnlocked && userLMSStatus === 'active'
                                 ? 'bg-white border-border hover:border-primary/30 hover:shadow-sm' 
                                 : 'bg-muted/30 border-muted'
                             }`}
@@ -125,7 +151,7 @@ const Videos = () => {
                                 {index + 1}
                               </div>
                               
-                              {recording.isUnlocked ? (
+                              {recording.isUnlocked && userLMSStatus === 'active' ? (
                                 recording.isWatched ? (
                                   <CheckCircle className="w-5 h-5 text-success" />
                                 ) : (
@@ -136,7 +162,7 @@ const Videos = () => {
                               )}
                               
                               <div className="flex-1">
-                                <h4 className={`font-medium ${!recording.isUnlocked ? 'text-muted-foreground' : ''}`}>
+                                <h4 className={`font-medium ${!(recording.isUnlocked && userLMSStatus === 'active') ? 'text-muted-foreground' : ''}`}>
                                   {recording.recording_title}
                                 </h4>
                                 <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
@@ -152,7 +178,12 @@ const Videos = () => {
                                       Assignment Required
                                     </Badge>
                                   )}
-                                  {!recording.isUnlocked && (
+                                  {userLMSStatus !== 'active' && (
+                                    <span className="text-orange-600 font-medium text-xs">
+                                      Please clear your fees to access content
+                                    </span>
+                                  )}
+                                  {userLMSStatus === 'active' && !recording.isUnlocked && (
                                     <span className="text-orange-600 font-medium text-xs">
                                       Complete previous assignment to unlock
                                     </span>
@@ -176,7 +207,7 @@ const Videos = () => {
                                 </Badge>
                               )}
 
-                              {recording.hasAssignment && recording.isUnlocked && (
+                              {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && (
                                 <Button
                                   variant="outline"
                                   size="sm"
@@ -191,16 +222,17 @@ const Videos = () => {
                               <Button
                                 variant={recording.isWatched ? "outline" : "default"}
                                 size="sm"
-                                disabled={!recording.isUnlocked || !recording.recording_url}
+                                disabled={userLMSStatus !== 'active' || !recording.isUnlocked || !recording.recording_url}
                                 onClick={() => handleWatchRecording(recording)}
-                                className={!recording.isUnlocked ? 'opacity-50' : ''}
+                                className={!(recording.isUnlocked && userLMSStatus === 'active') ? 'opacity-50' : ''}
                               >
                                 <Play className="w-4 h-4 mr-1" />
-                                {recording.isUnlocked ? (
-                                  recording.isWatched ? 'Rewatch' : 'Watch Now'
-                                ) : (
-                                  'Locked'
-                                )}
+                                {userLMSStatus !== 'active' ? 'Clear Fees' : 
+                                  recording.isUnlocked ? (
+                                    recording.isWatched ? 'Rewatch' : 'Watch Now'
+                                  ) : (
+                                    'Locked'
+                                  )}
                               </Button>
                             </div>
                           </div>

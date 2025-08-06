@@ -110,7 +110,7 @@ const Login = () => {
       } else {
         console.log('User found:', userData);
         
-        // Check if student's LMS access is suspended
+        // Only block suspended students from signing in
         if (userData.role === 'student' && userData.lms_status === 'suspended') {
           console.log('Student LMS access is suspended');
           // Sign out the user immediately

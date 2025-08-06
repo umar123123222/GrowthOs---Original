@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { StudentSubmissionDialog } from "@/components/assignments/StudentSubmissionDialog";
 import { SubmissionsManagement } from "@/components/assignments/SubmissionsManagement";
+import { InactiveLMSBanner } from "@/components/InactiveLMSBanner";
 import { 
   FileText, 
   Clock, 
@@ -96,7 +97,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
 
       if (submissionsError) throw submissionsError;
 
-      // For now, all assignments are unlocked (simplified version)
+      // Assignments are only unlocked if user has active LMS status
       const processedAssignments = assignmentsData?.map(assignment => ({
         ...assignment,
         isUnlocked: userLMSStatus === 'active'
@@ -215,6 +216,8 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
 
   return (
     <div className="p-6 space-y-6">
+      <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
+      
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold text-gray-700">Assignments Management</h1>
@@ -248,7 +251,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                 <div className="space-y-3">
                   {incompleteAssignments.map((assignment) => {
                     const isSubmitted = submissions.some(s => s.assignment_id === assignment.id);
-                    const isLocked = !assignment.isUnlocked;
+                    const isLocked = !assignment.isUnlocked || userLMSStatus !== 'active';
                     
                     return (
                       <div 

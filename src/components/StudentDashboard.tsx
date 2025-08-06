@@ -8,6 +8,7 @@ import { ConnectAccountsDialog } from '@/components/ConnectAccountsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useStudentRecordings } from '@/hooks/useStudentRecordings';
 import { supabase } from '@/integrations/supabase/client';
+import { InactiveLMSBanner } from '@/components/InactiveLMSBanner';
 import { useToast } from '@/hooks/use-toast';
 import { formatDreamGoalForDisplay } from '@/utils/dreamGoalUtils';
 import { 
@@ -54,6 +55,7 @@ export function StudentDashboard() {
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [leaderboardPosition, setLeaderboardPosition] = useState<{ rank: number; total: number } | null>(null);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
+  const [userLMSStatus, setUserLMSStatus] = useState<string>('active');
 
   // Fetch all dashboard data
   useEffect(() => {
@@ -69,7 +71,7 @@ export function StudentDashboard() {
       // Fetch user data including dream goal and connections
       const { data: userData } = await supabase
         .from('users')
-        .select('dream_goal_summary, shopify_credentials, meta_ads_credentials')
+        .select('dream_goal_summary, shopify_credentials, meta_ads_credentials, lms_status')
         .eq('id', user.id)
         .single();
 
@@ -77,6 +79,7 @@ export function StudentDashboard() {
         setDreamGoal(userData.dream_goal_summary || '');
         setShopifyConnected(!!userData.shopify_credentials);
         setMetaConnected(!!userData.meta_ads_credentials);
+        setUserLMSStatus(userData.lms_status || 'active');
       }
 
       // Calculate course progress
@@ -153,6 +156,8 @@ export function StudentDashboard() {
 
   return (
     <div className="space-y-6">
+      <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
+      
       {/* Top Full-Width Goal Banner */}
       <Card className="bg-gradient-to-r from-primary/20 to-primary/15 border-primary/30 shadow-soft">
         <CardContent className="p-8">
