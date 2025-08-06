@@ -86,7 +86,29 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   const form = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: loadSavedData()
+    defaultValues: () => {
+      const savedData = loadSavedData();
+      // Initialize with proper default values for each question
+      const defaults: Record<string, any> = {};
+      questions.forEach(question => {
+        if (savedData[question.id] !== undefined) {
+          defaults[question.id] = savedData[question.id];
+        } else {
+          // Set appropriate default values based on answer type
+          switch (question.answerType) {
+            case 'multiSelect':
+              defaults[question.id] = [];
+              break;
+            case 'file':
+              defaults[question.id] = null;
+              break;
+            default:
+              defaults[question.id] = '';
+          }
+        }
+      });
+      return defaults;
+    }
   });
   const {
     formState: {
@@ -129,7 +151,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   // Check if current step is valid
   const isCurrentStepValid = async () => {
     if (!currentQuestion.required) return true;
-    const result = await trigger(currentQuestion.id);
+    const result = await trigger(currentQuestion.id as any);
     return result && !errors[currentQuestion.id];
   };
   const handleNext = async () => {
@@ -278,7 +300,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
                 Back
               </Button> : <div />}
             
-            <Button type="button" onClick={handleNext} disabled={isSubmitting || isLoading} className="flex items-center gap-2 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-primary-foreground font-medium px-6 py-2.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-200" aria-label={isLastStep ? "Complete questionnaire" : "Go to next question"}>
+            <Button type="button" onClick={handleNext} disabled={isSubmitting || isLoading} className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 py-2.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-200" aria-label={isLastStep ? "Complete questionnaire" : "Go to next question"}>
               {isSubmitting || isLoading ? <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
                   {isLastStep ? 'Submitting...' : 'Loading...'}
