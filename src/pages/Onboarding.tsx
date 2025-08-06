@@ -168,7 +168,7 @@ const Onboarding = ({
       <Card className="w-full max-w-2xl shadow-elevated border-0">
         
         
-        <CardContent className="bg-transparent">
+        <CardContent className="bg-slate-50">
           <StudentQuestionnaireForm questions={questions} onComplete={handleQuestionnaireComplete} isLoading={submitting} />
         </CardContent>
       </Card>
