@@ -1036,16 +1036,16 @@ export function StudentsManagement() {
       )}
 
       {/* Students Table */}
-      <Card className="hover-scale transition-all duration-300 hover:shadow-lg animate-fade-in">
+      <Card className="w-full hover-scale transition-all duration-300 hover:shadow-lg animate-fade-in">
         <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b">
           <CardTitle className="flex items-center text-xl">
             <Users className="w-5 h-5 mr-2 text-blue-600" />
             Students Directory ({displayStudents.length})
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
+        <CardContent className="w-full p-0">
+          <div className="w-full overflow-x-auto">
+            <Table className="w-full">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
