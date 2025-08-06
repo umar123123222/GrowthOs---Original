@@ -129,7 +129,11 @@ export const useAuth = () => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, email, role, full_name, created_at, last_login_at, status, password_display, is_temp_password, updated_at, created_by')
+        .select(`
+          id, email, role, full_name, created_at, last_login_at, status, 
+          password_display, is_temp_password, updated_at, created_by,
+          students!inner(onboarding_completed)
+        `)
         .eq('id', userId)
         .maybeSingle();
       
@@ -153,7 +157,12 @@ export const useAuth = () => {
         }
       } else if (data) {
         logger.debug('fetchUserProfile: Setting user data', { role: data.role, email: data.email });
-        setUser(data as User);
+        // Add onboarding status for students
+        const userData = {
+          ...data,
+          onboarding_done: data.role === 'student' ? data.students?.[0]?.onboarding_completed || false : true
+        };
+        setUser(userData as User);
       } else {
         logger.warn('fetchUserProfile: No data returned but session exists');
         // User record doesn't exist but session is valid - use session data

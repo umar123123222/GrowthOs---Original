@@ -16,10 +16,14 @@ import { logger } from "@/lib/logger";
 
 // Wrapper component to handle onboarding completion properly
 const OnboardingWrapper = ({ user }: { user: any }) => {
-  const handleOnboardingComplete = () => {
-    // Use React Router navigation instead of hard reload
-    logger.info('Onboarding completed, refreshing application');
-    window.location.reload();
+  const { refreshUser } = useAuth();
+  
+  const handleOnboardingComplete = async () => {
+    logger.info('Onboarding completed, refreshing user data');
+    // Refresh user data to get updated onboarding status
+    if (refreshUser) {
+      await refreshUser();
+    }
   };
   
   return <Onboarding user={user} onComplete={handleOnboardingComplete} />;
@@ -84,7 +88,7 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
   const [showPaywall, setShowPaywall] = useState(false);
   const [pendingInvoice, setPendingInvoice] = useState<PendingInvoice | null>(null);
 

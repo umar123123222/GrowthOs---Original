@@ -174,15 +174,8 @@ const Onboarding = ({
         description: "Your ultimate goal has been set. Let's achieve it together!"
       });
 
-      // 7. Navigate to dashboard
-      setTimeout(() => {
-        onComplete();
-      }, 1500); // Brief delay to show the success message
-
-      // 8. Safety net - force navigation after 4 seconds if something stalls
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 4000);
+      // 7. Complete onboarding
+      onComplete();
 
     } catch (error: any) {
       console.error('Onboarding completion error:', error);
