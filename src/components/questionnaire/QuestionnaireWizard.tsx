@@ -83,32 +83,34 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
     }
     return {};
   };
+  // Initialize default values properly
+  const getDefaultValues = () => {
+    const savedData = loadSavedData();
+    const defaults: Record<string, any> = {};
+    questions.forEach(question => {
+      if (savedData[question.id] !== undefined) {
+        defaults[question.id] = savedData[question.id];
+      } else {
+        // Set appropriate default values based on answer type
+        switch (question.answerType) {
+          case 'multiSelect':
+            defaults[question.id] = [];
+            break;
+          case 'file':
+            defaults[question.id] = null;
+            break;
+          default:
+            defaults[question.id] = '';
+        }
+      }
+    });
+    return defaults;
+  };
+
   const form = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: () => {
-      const savedData = loadSavedData();
-      // Initialize with proper default values for each question
-      const defaults: Record<string, any> = {};
-      questions.forEach(question => {
-        if (savedData[question.id] !== undefined) {
-          defaults[question.id] = savedData[question.id];
-        } else {
-          // Set appropriate default values based on answer type
-          switch (question.answerType) {
-            case 'multiSelect':
-              defaults[question.id] = [];
-              break;
-            case 'file':
-              defaults[question.id] = null;
-              break;
-            default:
-              defaults[question.id] = '';
-          }
-        }
-      });
-      return defaults;
-    }
+    defaultValues: getDefaultValues()
   });
   const {
     formState: {
