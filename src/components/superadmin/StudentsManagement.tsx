@@ -1130,11 +1130,11 @@ export function StudentsManagement() {
                       </TableRow>
                   ];
 
-                  if (expandedRows.has(student.id)) {
-                    rowElements.push(
-                      <TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
-                        <TableCell colSpan={7} className="bg-gradient-to-r from-slate-50 to-blue-50 p-4 border-l-4 border-l-blue-200">
-                          <div className="space-y-3">
+                   if (expandedRows.has(student.id)) {
+                     rowElements.push(
+                       <TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
+                         <TableCell colSpan={9} className="w-full bg-gradient-to-r from-slate-50 to-blue-50 p-0 border-l-4 border-l-blue-200">
+                          <div className="w-full space-y-3 p-4 box-border">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
