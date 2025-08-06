@@ -35,6 +35,7 @@ interface Student {
   email: string;
   phone: string;
   lms_user_id: string;
+  password_display: string;
   created_at: string;
   last_active_at: string;
   fees_structure: string;
@@ -181,6 +182,7 @@ export function StudentsManagement() {
           ...student,
           student_id: studentRecord?.student_id || student.lms_user_id || '',
           phone: student.phone || '',
+          password_display: student.password_display || '',
           fees_structure: feesStructure,
           fees_overdue: false,
           last_invoice_date: '',
@@ -1180,10 +1182,22 @@ export function StudentsManagement() {
                                 </div>
                               </div>
                               <div>
-                                <Label className="text-sm font-medium text-gray-700">Access Information</Label>
-                                <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded">
-                                  Student credentials are now securely encrypted and managed through the system.
-                                </p>
+                                <Label className="text-sm font-medium text-gray-700">LMS Password</Label>
+                                <div className="flex items-center space-x-2">
+                                  <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
+                                    {student.password_display || 'Not set'}
+                                  </p>
+                                  {student.password_display && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => navigator.clipboard.writeText(student.password_display)}
+                                      title="Copy password"
+                                    >
+                                      <Key className="w-3 h-3" />
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                             
