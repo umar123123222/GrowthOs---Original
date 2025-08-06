@@ -9,13 +9,9 @@ interface AppLogoProps {
 export function AppLogo({ variant = 'header', className = "h-10 w-auto max-w-[200px]", alt = "Company Logo" }: AppLogoProps) {
   const logoUrl = useCompanyLogo();
 
+  // Only show logo if one is set in company settings
   if (!logoUrl) {
-    // Fallback to text logo if no logo is uploaded
-    return (
-      <div className={`flex items-center font-bold text-2xl text-primary ${className.replace('h-10', 'h-auto').replace('max-w-[200px]', '')}`}>
-        GrowthOS
-      </div>
-    );
+    return null;
   }
 
   return (
@@ -24,15 +20,9 @@ export function AppLogo({ variant = 'header', className = "h-10 w-auto max-w-[20
       alt={alt}
       className={`${className} object-contain`}
       onError={(e) => {
-        // If image fails to load, replace with fallback
+        // If image fails to load, hide the element
         const target = e.target as HTMLImageElement;
         target.style.display = 'none';
-        if (target.parentNode) {
-          const fallback = document.createElement('div');
-          fallback.className = `flex items-center font-bold text-2xl text-primary ${className.replace('h-10', 'h-auto').replace('max-w-[200px]', '')}`;
-          fallback.textContent = 'GrowthOS';
-          target.parentNode.replaceChild(fallback, target);
-        }
       }}
     />
   );
