@@ -172,6 +172,7 @@ export class SMTPClient {
 
       // Email headers and body
       const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substring(2)}`;
+      const messageId = `<${Date.now()}.${Math.random().toString(36).substring(2)}@${this.config.fromEmail.split('@')[1]}>`;
       
       let emailContent: string;
       
@@ -182,8 +183,12 @@ export class SMTPClient {
           `From: ${this.config.fromName} <${this.config.fromEmail}>`,
           `To: ${to}`,
           `Subject: ${subject}`,
+          `Message-ID: ${messageId}`,
+          `Date: ${new Date().toUTCString()}`,
           'MIME-Version: 1.0',
           `Content-Type: multipart/mixed; boundary="${boundary}"`,
+          `X-Mailer: Growth OS`,
+          `X-Priority: 3`,
           '',
           `--${boundary}`,
           'Content-Type: text/html; charset=utf-8',
@@ -215,8 +220,13 @@ export class SMTPClient {
           `From: ${this.config.fromName} <${this.config.fromEmail}>`,
           `To: ${to}`,
           `Subject: ${subject}`,
+          `Message-ID: ${messageId}`,
+          `Date: ${new Date().toUTCString()}`,
           'MIME-Version: 1.0',
           'Content-Type: text/html; charset=utf-8',
+          'Content-Transfer-Encoding: 8bit',
+          `X-Mailer: Growth OS`,
+          `X-Priority: 3`,
           '',
           html,
         ].join('\r\n');

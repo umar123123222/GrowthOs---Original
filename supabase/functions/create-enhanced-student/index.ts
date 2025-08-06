@@ -327,6 +327,12 @@ const handler = async (req: Request): Promise<Response> => {
             for (let attempt = 1; attempt <= maxRetries && !emailSent; attempt++) {
               try {
                 console.log(`Invoice email attempt ${attempt}/${maxRetries} for ${email}`);
+                // Validate email before sending
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(email)) {
+                  throw new Error(`Invalid email format: ${email}`);
+                }
+                
                 await sendFirstInvoiceEmail({
                   installment_number: firstInvoice.installment_number,
                   amount: firstInvoice.amount,
