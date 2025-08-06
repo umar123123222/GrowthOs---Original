@@ -207,9 +207,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
       <Card className="wizard-card w-full max-w-[560px] mx-auto shadow-xl border-0 bg-white/95 backdrop-blur-sm">
         <CardHeader className="text-center space-y-6 pb-8">
           <div className="space-y-2">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full flex items-center justify-center mb-4">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-full"></div>
-            </div>
+            
             <CardTitle className="text-2xl font-bold text-foreground sm:text-3xl">
               Tell us about yourself
             </CardTitle>
@@ -226,31 +224,11 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
             </div>
             
             <div className="space-y-3">
-              <Progress 
-                value={progress} 
-                className="h-2.5 bg-muted/50" 
-                aria-label={`Progress: ${Math.round(progress)}% complete`} 
-                aria-valuenow={currentStep + 1} 
-                aria-valuemax={totalSteps} 
-              />
+              <Progress value={progress} className="h-2.5 bg-muted/50" aria-label={`Progress: ${Math.round(progress)}% complete`} aria-valuenow={currentStep + 1} aria-valuemax={totalSteps} />
               
               {/* Step Indicators */}
               <div className="flex justify-center gap-2" role="tablist" aria-label="Questionnaire steps">
-                {questions.map((_, index) => (
-                  <div 
-                    key={index} 
-                    role="tab" 
-                    aria-selected={index === currentStep} 
-                    aria-label={`Step ${index + 1}${index < currentStep ? ' - completed' : index === currentStep ? ' - current' : ' - upcoming'}`} 
-                    className={`h-2.5 rounded-full transition-all duration-500 ${
-                      index === currentStep 
-                        ? 'bg-primary w-8 shadow-sm' 
-                        : index < currentStep 
-                        ? 'bg-primary/80 w-2.5' 
-                        : 'bg-muted w-2.5'
-                    }`} 
-                  />
-                ))}
+                {questions.map((_, index) => <div key={index} role="tab" aria-selected={index === currentStep} aria-label={`Step ${index + 1}${index < currentStep ? ' - completed' : index === currentStep ? ' - current' : ' - upcoming'}`} className={`h-2.5 rounded-full transition-all duration-500 ${index === currentStep ? 'bg-primary w-8 shadow-sm' : index < currentStep ? 'bg-primary/80 w-2.5' : 'bg-muted w-2.5'}`} />)}
               </div>
             </div>
           </div>
@@ -276,26 +254,18 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
                       {currentQuestion.text}
                       {currentQuestion.required && <span className="text-destructive ml-1" aria-label="required">*</span>}
                     </label>
-                    {currentQuestion.required && (
-                      <p className="text-sm text-muted-foreground">
+                    {currentQuestion.required && <p className="text-sm text-muted-foreground">
                         This field is required to continue
-                      </p>
-                    )}
+                      </p>}
                   </div>
                   
                   <QuestionRenderer question={currentQuestion} control={form.control} error={errors[currentQuestion.id]?.message as string} />
                   
                   {/* Error Display */}
-                  {errors[currentQuestion.id] && (
-                    <div 
-                      data-error={currentQuestion.id} 
-                      aria-live="polite" 
-                      className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-3 animate-in slide-in-from-left-2"
-                    >
+                  {errors[currentQuestion.id] && <div data-error={currentQuestion.id} aria-live="polite" className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-md p-3 animate-in slide-in-from-left-2">
                       <div className="w-1.5 h-1.5 bg-destructive rounded-full flex-shrink-0"></div>
                       {errors[currentQuestion.id]?.message as string}
-                    </div>
-                  )}
+                    </div>}
                 </div>
               </motion.div>
             </AnimatePresence>
@@ -303,46 +273,24 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
           
           {/* Navigation */}
           <nav className="wizard-nav flex items-center justify-between pt-6 border-t border-border/50" aria-label="Questionnaire navigation">
-            {currentStep > 0 ? (
-              <Button 
-                type="button" 
-                variant="ghost" 
-                onClick={handlePrevious} 
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" 
-                aria-label="Go to previous question"
-              >
+            {currentStep > 0 ? <Button type="button" variant="ghost" onClick={handlePrevious} className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" aria-label="Go to previous question">
                 <ChevronLeft className="h-4 w-4" />
                 Back
-              </Button>
-            ) : <div />}
+              </Button> : <div />}
             
-            <Button 
-              type="button" 
-              onClick={handleNext} 
-              disabled={isSubmitting || isLoading} 
-              className="flex items-center gap-2 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-primary-foreground font-medium px-6 py-2.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-200" 
-              aria-label={isLastStep ? "Complete questionnaire" : "Go to next question"}
-            >
-              {isSubmitting || isLoading ? (
-                <>
+            <Button type="button" onClick={handleNext} disabled={isSubmitting || isLoading} className="flex items-center gap-2 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 text-primary-foreground font-medium px-6 py-2.5 rounded-lg shadow-sm hover:shadow-md transition-all duration-200" aria-label={isLastStep ? "Complete questionnaire" : "Go to next question"}>
+              {isSubmitting || isLoading ? <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-current" />
                   {isLastStep ? 'Submitting...' : 'Loading...'}
-                </>
-              ) : (
-                <>
-                  {isLastStep ? (
-                    <>
+                </> : <>
+                  {isLastStep ? <>
                       <Check className="h-4 w-4" />
                       Complete
-                    </>
-                  ) : (
-                    <>
+                    </> : <>
                       Continue
                       <ChevronRight className="h-4 w-4" />
-                    </>
-                  )}
-                </>
-              )}
+                    </>}
+                </>}
             </Button>
           </nav>
         </CardContent>
