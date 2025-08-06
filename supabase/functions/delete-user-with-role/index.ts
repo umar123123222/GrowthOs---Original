@@ -45,7 +45,7 @@ serve(async (req) => {
     // Get user info before deletion for logging and verification
     const { data: userToDelete, error: userFetchError } = await supabaseClient
       .from('users')
-      .select('role, student_id, full_name, email')
+      .select('role, full_name, email')
       .eq('id', target_user_id)
       .single()
 
