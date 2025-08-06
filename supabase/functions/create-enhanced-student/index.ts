@@ -378,7 +378,8 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
-}
+  }
+};
 
 async function sendFirstInvoiceEmail(invoice: any, loginUrl: string) {
   try {
