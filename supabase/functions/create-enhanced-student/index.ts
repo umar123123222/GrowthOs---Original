@@ -132,6 +132,31 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Get the current user who is creating this student
+    const authHeader = req.headers.get('authorization');
+    let createdBy = null;
+    
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '');
+        const supabaseClient = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+          {
+            global: {
+              headers: { authorization: authHeader }
+            }
+          }
+        );
+        
+        const { data: { user } } = await supabaseClient.auth.getUser(token);
+        createdBy = user?.id || null;
+        console.log('Student being created by user:', createdBy);
+      } catch (error) {
+        console.log('Could not determine creator:', error);
+      }
+    }
+
     // Create user profile in public.users
     const { data: userProfile, error: profileError } = await supabaseAdmin
       .from('users')
@@ -146,7 +171,8 @@ const handler = async (req: Request): Promise<Response> => {
         lms_user_id: lmsUserId,
         status: 'active',
         lms_status: 'active',
-        is_temp_password: true
+        is_temp_password: true,
+        created_by: createdBy
       })
       .select()
       .single();
