@@ -149,7 +149,7 @@ export function StudentsManagement() {
 
   const fetchStudents = async () => {
     try {
-      // Fetch students with creator information in a single query using JOIN
+      // Fetch students with creator information and student details
       const { data, error } = await supabase
         .from('users')
         .select(`
@@ -157,6 +157,11 @@ export function StudentsManagement() {
           creator:created_by (
             full_name,
             email
+          ),
+          students (
+            installment_count,
+            student_id,
+            lms_username
           )
         `)
         .eq('role', 'student')
@@ -164,20 +169,28 @@ export function StudentsManagement() {
 
       if (error) throw error;
 
-      // Transform the data to include creator information
-      const studentsWithCreators: Student[] = (data || []).map(student => ({
-        ...student,
-        student_id: student.lms_user_id || '',
-        phone: '',
-        fees_structure: '',
-        fees_overdue: false,
-        last_invoice_date: '',
-        last_invoice_sent: false,
-        fees_due_date: '',
-        last_suspended_date: '',
-        created_by: student.created_by || null,
-        creator: student.creator || null
-      }));
+      // Transform the data to include creator information and proper fees structure
+      const studentsWithCreators: Student[] = (data || []).map(student => {
+        const studentRecord = student.students?.[0]; // Get first student record
+        const installmentCount = studentRecord?.installment_count || 1;
+        const feesStructure = installmentCount === 1 ? '1_installment' : 
+                             installmentCount === 2 ? '2_installments' : 
+                             installmentCount === 3 ? '3_installments' : '1_installment';
+        
+        return {
+          ...student,
+          student_id: studentRecord?.student_id || student.lms_user_id || '',
+          phone: student.phone || '',
+          fees_structure: feesStructure,
+          fees_overdue: false,
+          last_invoice_date: '',
+          last_invoice_sent: false,
+          fees_due_date: '',
+          last_suspended_date: '',
+          created_by: student.created_by || null,
+          creator: student.creator || null
+        };
+      });
 
       setStudents(studentsWithCreators);
       setTotalStudents(data?.length || 0);
