@@ -5,28 +5,28 @@ import { useToast } from "@/hooks/use-toast";
 import { StudentQuestionnaireForm } from "@/components/questionnaire/StudentQuestionnaireForm";
 import { supabase } from "@/integrations/supabase/client";
 import { QuestionItem, QuestionnaireResponse } from "@/types/questionnaire";
-
 interface OnboardingProps {
   user: any;
   onComplete: () => void;
 }
-
-const Onboarding = ({ user, onComplete }: OnboardingProps) => {
-  const { toast } = useToast();
+const Onboarding = ({
+  user,
+  onComplete
+}: OnboardingProps) => {
+  const {
+    toast
+  } = useToast();
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isEnabled, setIsEnabled] = useState(false);
-
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const { data: settings, error } = await supabase
-          .from('company_settings')
-          .select('enable_student_signin, questionnaire')
-          .eq('id', 1)
-          .single();
-
+        const {
+          data: settings,
+          error
+        } = await supabase.from('company_settings').select('enable_student_signin, questionnaire').eq('id', 1).single();
         if (error) {
           console.error('Error fetching company settings:', error);
           // If no settings found, assume questionnaire is disabled
@@ -34,14 +34,10 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
           setQuestions([]);
         } else {
           setIsEnabled(settings?.enable_student_signin || false);
-          
           if (settings?.enable_student_signin && settings?.questionnaire) {
             try {
               // Parse questionnaire if it's a string, otherwise use as-is
-              const questionnaireData = typeof settings.questionnaire === 'string' 
-                ? JSON.parse(settings.questionnaire) 
-                : settings.questionnaire;
-              
+              const questionnaireData = typeof settings.questionnaire === 'string' ? JSON.parse(settings.questionnaire) : settings.questionnaire;
               if (Array.isArray(questionnaireData)) {
                 // Sort questions by order
                 const sortedQuestions = questionnaireData.sort((a, b) => a.order - b.order);
@@ -65,10 +61,8 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
         setLoading(false);
       }
     };
-
     fetchQuestions();
   }, []);
-
   const handleQuestionnaireComplete = async (responses: QuestionnaireResponse[]) => {
     setSubmitting(true);
     try {
@@ -93,43 +87,37 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
         }
 
         // onboarding_responses table doesn't exist, use user_activity_logs instead
-        return supabase
-          .from('user_activity_logs')
-          .insert({
-            user_id: user.id,
-            activity_type: 'onboarding_response',
-            metadata: {
-              question_type: 'dynamic_questionnaire',
-              question_text: questions.find(q => q.id === response.questionId)?.text || 'Unknown question',
-              answer_value: answerValue,
-              answer_data: answerData
-            }
-          });
+        return supabase.from('user_activity_logs').insert({
+          user_id: user.id,
+          activity_type: 'onboarding_response',
+          metadata: {
+            question_type: 'dynamic_questionnaire',
+            question_text: questions.find(q => q.id === response.questionId)?.text || 'Unknown question',
+            answer_value: answerValue,
+            answer_data: answerData
+          }
+        });
       });
-
       const results = await Promise.all(responsePromises);
       const hasErrors = results.some(result => result.error);
-      
       if (hasErrors) {
         throw new Error('Failed to save some responses');
       }
 
       // Update user profile with onboarding completion (users table doesn't have onboarding_done field)
       // Store in dream_goal_summary for now
-      const { error: userError } = await supabase
-        .from('users')
-        .update({ dream_goal_summary: 'onboarding_completed' })
-        .eq('id', user.id);
-
+      const {
+        error: userError
+      } = await supabase.from('users').update({
+        dream_goal_summary: 'onboarding_completed'
+      }).eq('id', user.id);
       if (userError) {
         throw new Error(`Failed to update user profile: ${userError.message}`);
       }
-
       toast({
         title: "Onboarding Complete",
         description: "Your information has been saved successfully."
       });
-
       onComplete();
     } catch (error: any) {
       console.error('Onboarding submission error:', error);
@@ -145,16 +133,14 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
 
   // If loading, show loading state
   if (loading) {
-    return (
-      <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+    return <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl shadow-elevated border-0">
           <CardContent className="p-8 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading questionnaire...</p>
           </CardContent>
         </Card>
-      </div>
-    );
+      </div>;
   }
 
   // If questionnaire is disabled or no questions, skip onboarding
@@ -164,7 +150,6 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
       try {
         // users table doesn't have onboarding_done field, skip update
         const error = null;
-
         if (error) {
           console.error('Error completing onboarding:', error);
         }
@@ -179,26 +164,14 @@ const Onboarding = ({ user, onComplete }: OnboardingProps) => {
     completeOnboarding();
     return null;
   }
-
-  return (
-    <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+  return <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl shadow-elevated border-0">
-        <CardHeader>
-          <CardTitle className="text-xl sm:text-2xl font-bold text-foreground">
-            Welcome! Let's get to know you better.
-          </CardTitle>
-        </CardHeader>
         
-        <CardContent>
-          <StudentQuestionnaireForm
-            questions={questions}
-            onComplete={handleQuestionnaireComplete}
-            isLoading={submitting}
-          />
+        
+        <CardContent className="bg-transparent">
+          <StudentQuestionnaireForm questions={questions} onComplete={handleQuestionnaireComplete} isLoading={submitting} />
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default Onboarding;

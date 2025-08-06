@@ -206,7 +206,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   return <div className="min-h-[80vh] flex items-center justify-center p-4 py-8">
       <Card className="wizard-card w-full max-w-[560px] mx-auto shadow-lg">
         <CardHeader className="text-center space-y-6 pb-8">
-          <CardTitle className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+          <CardTitle className="text-2xl bg-gradient-to-r from-primary to-secondary bg-clip-text text-black text-center font-bold sm:text-3xl my-[12px]">
             Welcome! Let's get to know you
           </CardTitle>
           
