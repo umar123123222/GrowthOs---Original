@@ -109,6 +109,16 @@ const Login = () => {
         });
       } else {
         console.log('User found:', userData);
+        
+        // Check if student's LMS access is suspended
+        if (userData.role === 'student' && userData.lms_status === 'suspended') {
+          console.log('Student LMS access is suspended');
+          // Sign out the user immediately
+          await supabase.auth.signOut();
+          setLoginError("Your LMS access is currently suspended. Please contact support for assistance.");
+          return;
+        }
+        
         toast({
           title: "Welcome!",
           description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`
