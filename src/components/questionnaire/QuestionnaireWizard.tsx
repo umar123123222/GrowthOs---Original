@@ -284,11 +284,31 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
     }
   }, [currentStep]);
 
-  // Check if current step is valid
+  // Check if current step is valid - only validate current question
   const isCurrentStepValid = async () => {
-    if (!currentQuestion.required) return true;
-    const result = await trigger(currentQuestion.id as any);
-    return result && !errors[currentQuestion.id];
+    try {
+      if (!currentQuestion || !currentQuestion.required) return true;
+      
+      // Get current value
+      const currentValue = form.getValues(currentQuestion.id);
+      
+      // Validate based on answer type
+      switch (currentQuestion.answerType) {
+        case 'singleLine':
+        case 'multiLine':
+        case 'singleSelect':
+          return currentValue && typeof currentValue === 'string' && currentValue.trim().length > 0;
+        case 'multiSelect':
+          return Array.isArray(currentValue) && currentValue.length > 0;
+        case 'file':
+          return currentValue !== null && currentValue !== undefined;
+        default:
+          return true;
+      }
+    } catch (error) {
+      console.error('Error validating current step:', error);
+      return false;
+    }
   };
   const handleNext = async () => {
     try {
