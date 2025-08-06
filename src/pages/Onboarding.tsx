@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { StudentQuestionnaireForm } from "@/components/questionnaire/StudentQuestionnaireForm";
 import { supabase } from "@/integrations/supabase/client";
 import { QuestionItem, QuestionnaireResponse } from "@/types/questionnaire";
+import { generateDreamGoalSummary } from "@/utils/dreamGoalUtils";
 interface OnboardingProps {
   user: any;
   onComplete: () => void;
@@ -66,7 +67,7 @@ const Onboarding = ({
   const handleQuestionnaireComplete = async (responses: QuestionnaireResponse[]) => {
     setSubmitting(true);
     try {
-      // Save responses to onboarding_responses table
+      // Save responses to user_activity_logs
       const responsePromises = responses.map(response => {
         let answerValue = '';
         let answerData: any = {
@@ -86,7 +87,6 @@ const Onboarding = ({
           answerData.value = response.value;
         }
 
-        // onboarding_responses table doesn't exist, use user_activity_logs instead
         return supabase.from('user_activity_logs').insert({
           user_id: user.id,
           activity_type: 'onboarding_response',
@@ -98,26 +98,54 @@ const Onboarding = ({
           }
         });
       });
+
       const results = await Promise.all(responsePromises);
       const hasErrors = results.some(result => result.error);
+
       if (hasErrors) {
         throw new Error('Failed to save some responses');
       }
 
-      // Update user profile with onboarding completion (users table doesn't have onboarding_done field)
-      // Store in dream_goal_summary for now
-      const {
-        error: userError
-      } = await supabase.from('users').update({
-        dream_goal_summary: 'onboarding_completed'
-      }).eq('id', user.id);
+      // Generate dream goal summary from answers
+      const questionAnswers = responses.map((response, index) => {
+        const question = questions.find(q => q.id === response.questionId);
+        let answerText = '';
+        
+        if (Array.isArray(response.value)) {
+          answerText = response.value.join(', ');
+        } else if (response.value instanceof File) {
+          answerText = response.value.name;
+        } else {
+          answerText = String(response.value || '');
+        }
+
+        return {
+          id: response.questionId,
+          questionText: question?.text || '',
+          answer: answerText,
+          order: question?.order || index
+        };
+      });
+
+      const dreamGoalSummary = generateDreamGoalSummary(questionAnswers);
+
+      // Update user profile with dream goal summary
+      const { error: userError } = await supabase
+        .from('users')
+        .update({
+          dream_goal_summary: dreamGoalSummary || 'Goal set from questionnaire completion'
+        })
+        .eq('id', user.id);
+
       if (userError) {
         throw new Error(`Failed to update user profile: ${userError.message}`);
       }
+
       toast({
-        title: "Onboarding Complete",
-        description: "Your information has been saved successfully."
+        title: "Welcome to your learning journey!",
+        description: "Your ultimate goal has been set. Let's achieve it together!"
       });
+
       onComplete();
     } catch (error: any) {
       console.error('Onboarding submission error:', error);
