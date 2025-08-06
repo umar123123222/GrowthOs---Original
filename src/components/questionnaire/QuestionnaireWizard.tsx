@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -68,8 +68,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const stepRef = useRef<HTMLDivElement>(null);
-  const schema = createQuestionnaireSchema(questions);
-
+  
   // Load saved data from localStorage
   const loadSavedData = () => {
     try {
@@ -83,10 +82,16 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
     }
     return {};
   };
-  // Initialize default values properly
-  const getDefaultValues = () => {
+
+  // Initialize default values properly - ensure questions exist first
+  const getDefaultValues = useMemo(() => {
+    if (!questions || questions.length === 0) {
+      return {};
+    }
+    
     const savedData = loadSavedData();
     const defaults: Record<string, any> = {};
+    
     questions.forEach(question => {
       if (savedData[question.id] !== undefined) {
         defaults[question.id] = savedData[question.id];
@@ -105,12 +110,14 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
       }
     });
     return defaults;
-  };
+  }, [questions]);
 
+  const schema = createQuestionnaireSchema(questions);
+  
   const form = useForm({
     resolver: zodResolver(schema),
     mode: 'onChange',
-    defaultValues: getDefaultValues()
+    defaultValues: getDefaultValues
   });
   const {
     formState: {
