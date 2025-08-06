@@ -136,25 +136,28 @@ const handler = async (req: Request): Promise<Response> => {
     const authHeader = req.headers.get('authorization');
     let createdBy = null;
     
-    if (authHeader) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
         const token = authHeader.replace('Bearer ', '');
+        console.log('Auth token received:', token ? 'Present' : 'Missing');
+        
         const supabaseClient = createClient(
           Deno.env.get('SUPABASE_URL') ?? '',
-          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-          {
-            global: {
-              headers: { authorization: authHeader }
-            }
-          }
+          Deno.env.get('SUPABASE_ANON_KEY') ?? ''
         );
         
-        const { data: { user } } = await supabaseClient.auth.getUser(token);
-        createdBy = user?.id || null;
-        console.log('Student being created by user:', createdBy);
+        const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+        if (userError) {
+          console.log('Error getting user from token:', userError);
+        } else {
+          createdBy = user?.id || null;
+          console.log('Student being created by user:', createdBy);
+        }
       } catch (error) {
         console.log('Could not determine creator:', error);
       }
+    } else {
+      console.log('No authorization header found or invalid format');
     }
 
     // Create user profile in public.users
