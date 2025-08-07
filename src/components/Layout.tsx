@@ -10,8 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { FloatingActivityButton } from "./FloatingActivityButton";
 import { ActivityLogsDialog } from "./ActivityLogsDialog";
 import { MotivationalNotifications } from "./MotivationalNotifications";
-import { MobileNav } from "@/components/ui/mobile-nav";
-import { useIsMobile } from "@/hooks/use-mobile";
+
 import { PageSkeleton } from "./LoadingStates/PageSkeleton";
 import { throttle } from "@/utils/performance";
 interface LayoutProps {
@@ -19,136 +18,242 @@ interface LayoutProps {
 }
 
 // Memoized navigation items to prevent unnecessary re-computations
-const NavigationItems = memo(({
-  isUserSuperadmin,
-  isUserAdmin,
-  isUserMentor,
+const NavigationItems = memo(({ 
+  isUserSuperadmin, 
+  isUserAdmin, 
+  isUserMentor, 
   isUserEnrollmentManager,
   connectionStatus,
   courseMenuOpen,
   setCourseMenuOpen,
   location,
-  sidebarCollapsed
+  sidebarCollapsed 
 }: any) => {
   const navigationItems = useMemo(() => {
-    const items = [{
-      to: "/",
-      icon: Monitor,
-      label: "Dashboard",
-      roles: ['student', 'admin', 'superadmin', 'mentor', 'enrollment_manager']
-    }, {
-      to: "/videos",
-      icon: Video,
-      label: "Modules & Videos",
-      roles: ['student', 'admin', 'superadmin', 'mentor']
-    }, {
-      to: "/assignments",
-      icon: FileText,
-      label: "Assignments",
-      roles: ['student', 'admin', 'superadmin', 'mentor']
-    }, {
-      to: "/live-sessions",
-      icon: Calendar,
-      label: "Live Sessions",
-      roles: ['student', 'admin', 'superadmin', 'mentor']
-    }, {
-      to: "/mentorship",
-      icon: Users,
-      label: "Mentorship",
-      roles: ['student', 'mentor']
-    }, {
-      to: "/teams",
-      icon: Users,
-      label: "Teams",
-      roles: ['admin', 'superadmin']
-    }, {
-      to: "/support",
-      icon: MessageSquare,
-      label: "Support",
-      roles: ['student', 'admin', 'superadmin', 'mentor']
-    }];
+    const items = [
+      {
+        to: "/",
+        icon: Monitor,
+        label: "Dashboard",
+        roles: ['student', 'admin', 'superadmin', 'mentor', 'enrollment_manager']
+      },
+      {
+        to: "/videos",
+        icon: Video,
+        label: "Modules & Videos",
+        roles: ['student', 'admin', 'superadmin', 'mentor']
+      },
+      {
+        to: "/assignments",
+        icon: FileText,
+        label: "Assignments",
+        roles: ['student', 'admin', 'superadmin', 'mentor']
+      },
+      {
+        to: "/live-sessions",
+        icon: Calendar,
+        label: "Live Sessions",
+        roles: ['student', 'admin', 'superadmin', 'mentor']
+      },
+      {
+        to: "/mentorship",
+        icon: Users,
+        label: "Mentorship",
+        roles: ['student', 'mentor']
+      },
+      {
+        to: "/teams",
+        icon: Users,
+        label: "Teams",
+        roles: ['admin', 'superadmin']
+      },
+      {
+        to: "/support",
+        icon: MessageSquare,
+        label: "Support",
+        roles: ['student', 'admin', 'superadmin', 'mentor']
+      }
+    ];
 
     // Add conditional items based on user role
     if (isUserSuperadmin) {
-      items.push({
-        to: "/superadmin",
-        icon: Building2,
-        label: "Super Admin",
-        roles: ['superadmin']
-      });
+      items.push(
+        {
+          to: "/superadmin",
+          icon: Building2,
+          label: "Super Admin",
+          roles: ['superadmin']
+        }
+      );
     }
+
     if (isUserAdmin || isUserSuperadmin) {
-      items.push({
-        to: "/admin",
-        icon: UserCheck,
-        label: "Admin Panel",
-        roles: ['admin', 'superadmin']
-      });
+      items.push(
+        {
+          to: "/admin",
+          icon: UserCheck,
+          label: "Admin Panel",
+          roles: ['admin', 'superadmin']
+        }
+      );
     }
+
     if (isUserMentor) {
-      items.push({
-        to: "/mentor",
-        icon: User,
-        label: "Mentor Dashboard",
-        roles: ['mentor']
-      });
+      items.push(
+        {
+          to: "/mentor",
+          icon: User,
+          label: "Mentor Dashboard",
+          roles: ['mentor']
+        }
+      );
     }
+
     if (isUserEnrollmentManager) {
-      items.push({
-        to: "/enrollment-manager",
-        icon: UserCheck,
-        label: "Enrollment Manager",
-        roles: ['enrollment_manager']
-      });
+      items.push(
+        {
+          to: "/enrollment-manager",
+          icon: UserCheck,
+          label: "Enrollment Manager",
+          roles: ['enrollment_manager']
+        }
+      );
     }
+
     return items;
   }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager]);
-  return <nav className="space-y-2 px-4">
-      {navigationItems.map(item => <Link key={item.to} to={item.to} className={`
+
+  return (
+    <nav className="space-y-2 px-4">
+      {navigationItems.map((item) => (
+        <Link
+          key={item.to}
+          to={item.to}
+          className={`
             flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
-            ${location.pathname === item.to ? 'bg-primary text-primary-foreground shadow-sm' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
+            ${location.pathname === item.to
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+            }
             ${sidebarCollapsed ? 'justify-center' : ''}
-          `}>
+          `}
+        >
           <item.icon className="h-4 w-4 flex-shrink-0" />
-          {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-        </Link>)}
+          {!sidebarCollapsed && (
+            <span className="truncate">{item.label}</span>
+          )}
+        </Link>
+      ))}
       
       {/* Course navigation */}
-      {!sidebarCollapsed}
+      {!sidebarCollapsed && (
+        <div className="pt-4">
+          <button
+            onClick={() => setCourseMenuOpen(!courseMenuOpen)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors w-full"
+          >
+            <BookOpen className="h-4 w-4" />
+            <span>Course</span>
+            {courseMenuOpen ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronRight className="h-4 w-4 ml-auto" />}
+          </button>
+          
+          {courseMenuOpen && (
+            <div className="ml-6 mt-2 space-y-2">
+              <Link
+                to="/quizzes"
+                className={`
+                  flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
+                  ${location.pathname === '/quizzes'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                Quizzes
+              </Link>
+              <Link
+                to="/certificates"
+                className={`
+                  flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
+                  ${location.pathname === '/certificates'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                Certificates
+              </Link>
+              <Link
+                to="/leaderboard"
+                className={`
+                  flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
+                  ${location.pathname === '/leaderboard'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                Leaderboard
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Connection status indicators */}
-      {!sidebarCollapsed && (connectionStatus.shopify || connectionStatus.meta) && <div className="pt-4 border-t border-gray-200">
+      {!sidebarCollapsed && (connectionStatus.shopify || connectionStatus.meta) && (
+        <div className="pt-4 border-t border-gray-200">
           <div className="px-3 py-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
               Integrations
             </h3>
             <div className="space-y-2">
-              {connectionStatus.shopify && <Link to="/shopify" className={`
+              {connectionStatus.shopify && (
+                <Link
+                  to="/shopify"
+                  className={`
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
-                    ${location.pathname === '/shopify' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
-                  `}>
+                    ${location.pathname === '/shopify'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }
+                  `}
+                >
                   <ShoppingBag className="h-4 w-4" />
                   <span>Shopify</span>
                   <Badge variant="outline" className="ml-auto text-xs">
                     Connected
                   </Badge>
-                </Link>}
-              {connectionStatus.meta && <Link to="/meta-ads" className={`
+                </Link>
+              )}
+              {connectionStatus.meta && (
+                <Link
+                  to="/meta-ads"
+                  className={`
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
-                    ${location.pathname === '/meta-ads' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
-                  `}>
+                    ${location.pathname === '/meta-ads'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }
+                  `}
+                >
                   <Target className="h-4 w-4" />
                   <span>Meta Ads</span>
                   <Badge variant="outline" className="ml-auto text-xs">
                     Connected
                   </Badge>
-                </Link>}
+                </Link>
+              )}
             </div>
           </div>
-        </div>}
-    </nav>;
+        </div>
+      )}
+    </nav>
+  );
 });
+
 NavigationItems.displayName = "NavigationItems";
+
 const Layout = memo(({
   user
 }: LayoutProps) => {
@@ -157,10 +262,10 @@ const Layout = memo(({
   const {
     toast
   } = useToast();
-  const isMobile = useIsMobile();
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  
   const [connectionStatus, setConnectionStatus] = useState({
     shopify: false,
     meta: false
@@ -429,55 +534,88 @@ const Layout = memo(({
       });
     }
   };
-  return <div className="min-h-screen bg-background">
-      {/* Mobile/Desktop Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 sm:h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            {/* Mobile Navigation */}
-            {isMobile ? <MobileNav user={user} connectionStatus={connectionStatus} /> : <Button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground h-9 w-9 p-0" aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+  return <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <Button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
                 {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
-              </Button>}
-            <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">
-              GrowthOS
+              </Button>
+              <h1 className="text-xl font-bold text-gray-900">GrowthOS
             </h1>
-          </div>
-          
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            <NotificationDropdown />
+            </div>
             
-            {/* Activity Logs Button - Hidden on mobile, shown on tablet+ */}
-            {(isUserSuperadmin || isUserAdmin) && !isMobile && <ActivityLogsDialog>
-                <Button variant="outline" size="sm" className="hidden sm:flex text-muted-foreground hover:text-primary hover:border-primary/50 h-9" title="View Activity Logs">
-                  <Activity className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden lg:inline">Activity Logs</span>
-                </Button>
-              </ActivityLogsDialog>}
-            
-            <Button onClick={handleLogout} variant="outline" size="sm" className="text-muted-foreground hover:text-destructive hover:border-destructive/50 h-9 min-w-[44px]">
-              <LogOut className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
+            <div className="flex items-center space-x-4">
+              <NotificationDropdown />
+              
+              {/* Activity Logs Button for authorized users - Only admins and superadmins */}
+              {(isUserSuperadmin || isUserAdmin) && <ActivityLogsDialog>
+                  <Button variant="outline" size="sm" className="text-gray-700 hover:text-blue-600 hover:border-blue-200" title="View Activity Logs">
+                    <Activity className="w-4 h-4 mr-2" />
+                    Activity Logs
+                  </Button>
+                </ActivityLogsDialog>}
+              
+              <Button onClick={handleLogout} variant="outline" className="text-gray-700 hover:text-red-600 hover:border-red-200">
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
       <div className="flex">
-        {/* Desktop Sidebar - Hidden on mobile */}
-        {!isMobile && <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64 lg:w-80'} bg-card border-r min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] transition-all duration-300 fixed top-14 sm:top-16 left-0 z-40 overflow-y-auto`}>
-            <NavigationItems isUserSuperadmin={isUserSuperadmin} isUserAdmin={isUserAdmin} isUserMentor={isUserMentor} isUserEnrollmentManager={isUserEnrollmentManager} connectionStatus={connectionStatus} courseMenuOpen={courseMenuOpen} setCourseMenuOpen={setCourseMenuOpen} location={location} sidebarCollapsed={sidebarCollapsed} />
-          </aside>}
+        {/* Sidebar */}
+        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg min-h-screen transition-all duration-300 fixed top-16 left-0 z-30 overflow-y-auto`}>
+          <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
+            <div className="space-y-2">
+              {navigation.map(item => {
+              if (item.isExpandable) {
+                const isExpanded = courseMenuOpen && !sidebarCollapsed;
+                const Icon = item.icon;
+                return <div key={item.name}>
+                      <button onClick={() => !sidebarCollapsed && setCourseMenuOpen(!courseMenuOpen)} className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover-scale" title={sidebarCollapsed ? item.name : undefined}>
+                        <div className="flex items-center">
+                          <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 text-gray-400`} />
+                          {!sidebarCollapsed && item.name}
+                        </div>
+                        {!sidebarCollapsed && (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
+                      </button>
+                      
+                      {isExpanded && !sidebarCollapsed && <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
+                          {item.subItems?.map(subItem => {
+                      const isActive = location.search.includes(`tab=${subItem.href.split('=')[1]}`);
+                      const SubIcon = subItem.icon;
+                      return <Link key={subItem.name} to={subItem.href} className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`}>
+                                <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
+                                {subItem.name}
+                              </Link>;
+                    })}
+                        </div>}
+                    </div>;
+              }
+              const isActive = location.pathname === item.href || item.href.includes('?tab=') && location.search.includes(item.href.split('=')[1]);
+              const Icon = item.icon;
+              return <Link key={item.name} to={item.href} className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`} title={sidebarCollapsed ? item.name : undefined}>
+                    <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
+                    {!sidebarCollapsed && item.name}
+                  </Link>;
+            })}
+            </div>
+          </nav>
+        </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 animate-fade-in ${!isMobile ? `${sidebarCollapsed ? 'ml-16' : 'ml-64 lg:ml-80'} transition-all duration-300` : ''}`}>
-          <div className="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)]">
-            <Outlet />
-          </div>
+        <main className={`flex-1 p-8 pt-24 animate-fade-in ${sidebarCollapsed ? 'ml-16' : 'ml-80'} transition-all duration-300`}>
+          <Outlet />
         </main>
       </div>
       
-      {/* Floating Activity Button - Hidden on mobile */}
-      {!isMobile && <FloatingActivityButton />}
+      {/* Floating Activity Button */}
+      <FloatingActivityButton />
       
       {/* Motivational Notifications for Students */}
       {user?.role === 'student' && <MotivationalNotifications />}
