@@ -64,9 +64,12 @@ export function extractFinancialGoalForDisplay(summary: string | null): string {
     return "Set your financial goal and reason for earning this money.";
   }
   
+  // Clean up the reason - if it's just "test" or similar, skip it
+  const cleanReason = reason && reason.toLowerCase() !== 'test' ? reason : '';
+  
   // Format in user-friendly manner: "Want to earn [amount] to [reason]"
-  if (reason) {
-    return `Want to earn ${incomeGoal} to ${reason.toLowerCase()}`;
+  if (cleanReason) {
+    return `Want to earn ${incomeGoal} to ${cleanReason.toLowerCase()}`;
   }
   
   // If only income goal is available
