@@ -1160,6 +1160,14 @@ export type Database = {
           is_recording_unlocked: boolean
         }[]
       }
+      initialize_student_unlocks: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      is_assignment_passed: {
+        Args: { _user_id: string; _assignment_id: string }
+        Returns: boolean
+      }
       is_module_completed: {
         Args: { _user_id: string; _module_id: string }
         Returns: boolean
