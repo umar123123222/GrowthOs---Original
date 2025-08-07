@@ -83,11 +83,12 @@ const Videos = () => {
 
   return (
     <RoleGuard allowedRoles={['student', 'admin', 'mentor', 'superadmin']}>
-      <div className="space-y-6 animate-fade-in">
-        <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
+      <div className="min-h-screen bg-background">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-4 sm:space-y-6 animate-fade-in">
+          <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
         
-        <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground">Available Lessons</h1>
+        <div className="mb-4 sm:mb-6 px-4 sm:px-0">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-2 text-foreground leading-tight">Available Lessons</h1>
           <p className="text-muted-foreground text-sm sm:text-base">
             Watch lessons and complete assignments to track your progress
           </p>
@@ -104,136 +105,146 @@ const Videos = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {modules.map((module) => (
-              <Card key={module.id} className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
+              <Card key={module.id} className="shadow-soft border border-border/50 bg-card overflow-hidden">
                 <Collapsible
                   open={expandedModules.has(module.id)}
                   onOpenChange={() => toggleModule(module.id)}
                 >
                   <CollapsibleTrigger asChild>
-                    <CardHeader className="cursor-pointer hover:bg-gray-50/50 transition-colors border-b">
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors border-b border-border/50 p-4 sm:p-6">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle className="text-xl font-semibold flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg lg:text-xl font-semibold flex items-center gap-2 sm:gap-3">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs sm:text-sm flex-shrink-0">
                               {module.order}
                             </div>
-                            {module.title}
+                            <span className="truncate">{module.title}</span>
                           </CardTitle>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {module.recordings.length} recordings • {module.recordings.filter(r => r.isWatched).length} completed
+                          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                            {module.recordings.length} recording{module.recordings.length !== 1 ? 's' : ''} • {module.recordings.filter(r => r.isWatched).length} completed
                           </p>
                         </div>
-                        {expandedModules.has(module.id) ? (
-                          <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="w-5 h-5 text-muted-foreground" />
-                        )}
+                        <div className="flex-shrink-0 ml-2">
+                          {expandedModules.has(module.id) ? (
+                            <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                          )}
+                        </div>
                       </div>
                     </CardHeader>
                   </CollapsibleTrigger>
                   
                   <CollapsibleContent>
                     <CardContent className="p-0">
-                      <div className="space-y-2 p-4">
+                      <div className="space-y-1 sm:space-y-2 p-3 sm:p-4">
                         {module.recordings.map((recording, index) => (
                           <div
                             key={recording.id}
-                            className={`flex items-center justify-between p-4 rounded-lg border transition-all ${
+                            className={`flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border transition-all ${
                               recording.isUnlocked && userLMSStatus === 'active'
-                                ? 'bg-white border-border hover:border-primary/30 hover:shadow-sm' 
+                                ? 'bg-card border-border hover:border-primary/30 hover:shadow-soft' 
                                 : 'bg-muted/30 border-muted'
                             }`}
                           >
-                            <div className="flex items-center gap-4">
-                              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted text-sm font-medium">
+                            <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                              <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-muted text-xs sm:text-sm font-medium flex-shrink-0">
                                 {index + 1}
                               </div>
                               
-                              {recording.isUnlocked && userLMSStatus === 'active' ? (
-                                recording.isWatched ? (
-                                  <CheckCircle className="w-5 h-5 text-success" />
+                              <div className="flex-shrink-0">
+                                {recording.isUnlocked && userLMSStatus === 'active' ? (
+                                  recording.isWatched ? (
+                                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-success" />
+                                  ) : (
+                                    <Play className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                  )
                                 ) : (
-                                  <Play className="w-5 h-5 text-primary" />
-                                )
-                              ) : (
-                                <Lock className="w-5 h-5 text-muted-foreground" />
-                              )}
+                                  <Lock className="w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
+                                )}
+                              </div>
                               
-                              <div className="flex-1">
-                                <h4 className={`font-medium ${!(recording.isUnlocked && userLMSStatus === 'active') ? 'text-muted-foreground' : ''}`}>
+                              <div className="flex-1 min-w-0">
+                                <h4 className={`font-medium text-sm sm:text-base leading-tight ${!(recording.isUnlocked && userLMSStatus === 'active') ? 'text-muted-foreground' : ''}`}>
                                   {recording.recording_title}
                                 </h4>
-                                <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                                <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm text-muted-foreground mt-1">
                                   {recording.duration_min && (
-                                    <span className="flex items-center gap-1">
+                                    <span className="flex items-center gap-1 whitespace-nowrap">
                                       <Clock className="w-3 h-3" />
-                                      {recording.duration_min} minutes
+                                      {recording.duration_min} min
                                     </span>
                                   )}
                                   {recording.hasAssignment && (
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className="text-xs h-5">
                                       <BookOpen className="w-3 h-3 mr-1" />
-                                      Assignment Required
+                                      Assignment
                                     </Badge>
                                   )}
                                   {userLMSStatus !== 'active' && (
                                     <span className="text-orange-600 font-medium text-xs">
-                                      Please clear your fees to access content
+                                      Clear fees to access
                                     </span>
                                   )}
                                   {userLMSStatus === 'active' && !recording.isUnlocked && (
                                     <span className="text-orange-600 font-medium text-xs">
-                                      Complete previous assignment to unlock
+                                      Complete previous lesson
                                     </span>
                                   )}
                                 </div>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2">
-                              {recording.isWatched && (
-                                <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Completed
-                                </Badge>
-                              )}
-                              
-                              {recording.hasAssignment && recording.assignmentSubmitted && (
-                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  Assignment Submitted
-                                </Badge>
-                              )}
+                            <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 flex-wrap">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {recording.isWatched && (
+                                  <Badge variant="outline" className="bg-success/10 text-success border-success/20 text-xs h-6">
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Done
+                                  </Badge>
+                                )}
+                                
+                                {recording.hasAssignment && recording.assignmentSubmitted && (
+                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs h-6">
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    Submitted
+                                  </Badge>
+                                )}
+                              </div>
 
-                              {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && (
+                              <div className="flex items-center gap-2">
+                                {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleAssignmentClick(recording)}
+                                    className="text-xs sm:text-sm h-8 sm:h-9 min-w-[44px]"
+                                  >
+                                    <BookOpen className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                    <span className="hidden sm:inline">Assignment</span>
+                                  </Button>
+                                )}
+
                                 <Button
-                                  variant="outline"
+                                  variant={recording.isWatched ? "outline" : "default"}
                                   size="sm"
-                                  onClick={() => handleAssignmentClick(recording)}
-                                  className="mr-2"
+                                  disabled={userLMSStatus !== 'active' || !recording.isUnlocked || !recording.recording_url}
+                                  onClick={() => handleWatchRecording(recording)}
+                                  className={`text-xs sm:text-sm h-8 sm:h-9 min-w-[44px] ${!(recording.isUnlocked && userLMSStatus === 'active') ? 'opacity-50' : ''}`}
                                 >
-                                  <BookOpen className="w-4 h-4 mr-1" />
-                                  Assignment
+                                  <Play className="w-3 h-3 sm:w-4 sm:h-4 sm:mr-1" />
+                                  <span className="hidden sm:inline">
+                                    {userLMSStatus !== 'active' ? 'Clear Fees' : 
+                                      recording.isUnlocked ? (
+                                        recording.isWatched ? 'Rewatch' : 'Watch'
+                                      ) : (
+                                        'Locked'
+                                      )}
+                                  </span>
                                 </Button>
-                              )}
-
-                              <Button
-                                variant={recording.isWatched ? "outline" : "default"}
-                                size="sm"
-                                disabled={userLMSStatus !== 'active' || !recording.isUnlocked || !recording.recording_url}
-                                onClick={() => handleWatchRecording(recording)}
-                                className={!(recording.isUnlocked && userLMSStatus === 'active') ? 'opacity-50' : ''}
-                              >
-                                <Play className="w-4 h-4 mr-1" />
-                                {userLMSStatus !== 'active' ? 'Clear Fees' : 
-                                  recording.isUnlocked ? (
-                                    recording.isWatched ? 'Rewatch' : 'Watch Now'
-                                  ) : (
-                                    'Locked'
-                                  )}
-                              </Button>
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -268,6 +279,7 @@ const Videos = () => {
             }}
           />
         )}
+        </div>
       </div>
     </RoleGuard>
   );

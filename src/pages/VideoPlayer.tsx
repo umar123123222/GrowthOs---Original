@@ -165,24 +165,26 @@ const VideoPlayer = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      {/* Video Player Section */}
-      <div className="lg:col-span-3 space-y-6">
+    <div className="min-h-screen bg-background">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+          {/* Video Player Section */}
+          <div className="lg:col-span-3 space-y-4 sm:space-y-6">
         <div className="flex items-center gap-3 mb-4">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={() => navigate('/videos')}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 h-9 min-w-[44px]"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to Videos
+            <span className="hidden sm:inline">Back to Videos</span>
           </Button>
         </div>
 
-        <Card>
+        <Card className="shadow-soft border border-border/50 overflow-hidden">
           <CardContent className="p-0">
-            <div className="aspect-video bg-gray-900 rounded-t-lg">
+            <div className="aspect-video bg-gray-900 rounded-t-lg relative">
               {currentVideo && (
                 <iframe
                   src={currentVideo.videoUrl}
@@ -193,40 +195,42 @@ const VideoPlayer = () => {
                 />
               )}
             </div>
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
-              <p className="text-muted-foreground mb-4">{currentVideo?.description}</p>
+            <div className="p-4 sm:p-6">
+              <h2 className="text-lg sm:text-xl lg:text-2xl font-bold mb-2 leading-tight">{currentVideo?.title}</h2>
+              <p className="text-muted-foreground mb-4 text-sm sm:text-base">{currentVideo?.description}</p>
               
-              <div className="flex items-center space-x-4 mb-6">
-                <Badge className="bg-blue-100 text-blue-800">{currentVideo?.module}</Badge>
-                <Badge variant="outline">{currentVideo?.duration} duration</Badge>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-6">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge className="bg-blue-100 text-blue-800 text-xs">{currentVideo?.module}</Badge>
+                  <Badge variant="outline" className="text-xs">{currentVideo?.duration} duration</Badge>
+                </div>
                 <Button 
                   size="sm" 
-                  className="bg-green-600 hover:bg-green-700"
+                  className="bg-green-600 hover:bg-green-700 h-9 min-w-[44px]"
                   onClick={handleMarkComplete}
                   disabled={videoWatched}
                 >
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {videoWatched ? 'Completed' : 'Mark Complete'}
+                  <CheckCircle className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">{videoWatched ? 'Completed' : 'Mark Complete'}</span>
                 </Button>
               </div>
 
               {/* Action Checklist */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Action Checklist</CardTitle>
+              <Card className="border border-border/50">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base sm:text-lg">Action Checklist</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {currentVideo?.checklist?.map((item, index) => (
-                      <div key={index} className="flex items-center space-x-3">
+                      <div key={index} className="flex items-start space-x-3">
                         <input 
                           type="checkbox" 
-                          className="rounded" 
+                          className="rounded mt-0.5 w-4 h-4 min-w-[16px]" 
                           checked={checkedItems[index] || false}
                           onChange={() => handleChecklistToggle(index)}
                         />
-                        <span className={checkedItems[index] ? "line-through text-muted-foreground" : ""}>
+                        <span className={`text-sm sm:text-base leading-relaxed ${checkedItems[index] ? "line-through text-muted-foreground" : ""}`}>
                           {item}
                         </span>
                       </div>
@@ -248,24 +252,24 @@ const VideoPlayer = () => {
       </div>
 
       {/* Sidebar */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* ShoaibGPT Assistant */}
-        <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-full mr-2 flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-white" />
+        <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200 border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base sm:text-lg flex items-center">
+              <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-full mr-2 flex items-center justify-center flex-shrink-0">
+                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
               </div>
               ShoaibGPT
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground mb-3">
+            <p className="text-xs sm:text-sm text-muted-foreground mb-3">
               I'm here to help! Ask me anything about this video or your learning journey.
             </p>
             <Button 
               size="sm" 
-              className="w-full"
+              className="w-full h-9 min-w-[44px]"
               onClick={() => setShowShoaibGPT(true)}
             >
               Ask ShoaibGPT
@@ -275,9 +279,9 @@ const VideoPlayer = () => {
 
         {/* Module Progress */}
         {modules.map((module) => (
-          <Card key={module.id}>
-            <CardHeader>
-              <CardTitle className="text-lg">{module.title}</CardTitle>
+          <Card key={module.id} className="border border-border/50">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base sm:text-lg">{module.title}</CardTitle>
               <Progress value={module.progress} className="h-2" />
             </CardHeader>
             <CardContent>
@@ -285,7 +289,7 @@ const VideoPlayer = () => {
                 {module.lessons.map((lesson) => (
                   <div
                     key={lesson.id}
-                    className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                    className={`flex items-center space-x-3 p-2 sm:p-3 rounded-lg cursor-pointer transition-colors min-h-[44px] ${
                       lesson.locked 
                         ? "opacity-50 cursor-not-allowed" 
                         : lesson.id.toString() === lessonId
@@ -316,11 +320,13 @@ const VideoPlayer = () => {
         ))}
       </div>
 
-      {showShoaibGPT && (
-        <ShoaibGPT 
-          onClose={() => setShowShoaibGPT(false)}
-        />
-      )}
+        {showShoaibGPT && (
+          <ShoaibGPT 
+            onClose={() => setShowShoaibGPT(false)}
+          />
+        )}
+        </div>
+      </div>
     </div>
   );
 };
