@@ -167,102 +167,98 @@ export function StudentDashboard() {
     <div className="space-y-6">
       <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
       
-      {/* Enhanced Financial Goal Banner */}
-      <Card className="bg-gradient-to-r from-primary/20 via-primary/10 to-background border-primary/30 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.01] animate-fade-in">
-        <CardContent className="p-8">
-          <div className="space-y-6">
+      {/* Refined Financial Goal Banner */}
+      <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
+        <CardContent className="p-6">
+          <div className="space-y-5">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center animate-pulse">
-                <span className="text-2xl">🎯</span>
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-xl">🎯</span>
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-primary mb-1">Your Financial Goal</h2>
-                <p className="text-sm text-muted-foreground">Track your progress towards financial freedom</p>
+                <h2 className="text-xl font-medium text-primary mb-1">Your Financial Goal</h2>
+                <p className="text-xs text-muted-foreground">Track your progress towards financial freedom</p>
               </div>
             </div>
             
-            <div className="bg-background/50 rounded-lg p-4 border border-primary/20 hover:border-primary/40 transition-colors">
-              <p className="text-lg font-medium text-foreground leading-relaxed">
+            <div className="bg-background/80 rounded-lg p-4 border border-primary/10">
+              <p className="text-base font-normal text-foreground leading-relaxed">
                 {extractFinancialGoalForDisplay(dreamGoal)}
               </p>
             </div>
             
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-muted-foreground">Progress toward your goal</span>
-                <span className="text-lg font-bold text-primary animate-pulse">{courseProgress}% complete</span>
+                <span className="text-xs font-normal text-muted-foreground">Progress toward your goal</span>
+                <span className="text-sm font-medium text-primary">{courseProgress}% complete</span>
               </div>
               <div className="relative">
                 <Progress 
                   value={courseProgress} 
-                  className="h-3 transition-all duration-1000 ease-out"
+                  className="h-1.5 transition-all duration-1000 ease-out"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-transparent rounded-full pointer-events-none"></div>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Enhanced Three-Card Stats Section */}
+      {/* Refined Three-Card Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Course Progress Card */}
-        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-[1.02] border-l-4 border-l-blue-500 animate-fade-in">
+        <Card className="hover:shadow-md transition-all duration-300 border-l-2 border-l-blue-400 animate-fade-in">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-3 text-blue-600">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                <BarChart3 className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-2 text-blue-600 text-base font-medium">
+              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
+                <BarChart3 className="w-4 h-4" />
               </div>
               Course Progress
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="text-center">
-                <div className="text-4xl font-bold text-blue-600 mb-2 group-hover:scale-110 transition-transform">
+                <div className="text-3xl font-medium text-blue-600 mb-1">
                   {courseProgress}%
                 </div>
-                <p className="text-sm text-muted-foreground">Complete</p>
+                <p className="text-xs text-muted-foreground">Complete</p>
               </div>
-              <div className="relative">
-                <Progress value={courseProgress} className="h-2" />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-transparent rounded-full pointer-events-none"></div>
-              </div>
+              <Progress value={courseProgress} className="h-1.5" />
             </div>
           </CardContent>
         </Card>
 
         {/* Next Assignment Card */}
-        <Card className={`group hover:shadow-lg transition-all duration-300 hover:scale-[1.02] border-l-4 animate-fade-in ${
-          assignmentDueStatus === 'overdue' ? 'border-l-red-500' : 'border-l-orange-500'
+        <Card className={`hover:shadow-md transition-all duration-300 border-l-2 animate-fade-in ${
+          assignmentDueStatus === 'overdue' ? 'border-l-red-400' : 'border-l-orange-400'
         }`}>
           <CardHeader className="pb-3">
-            <CardTitle className={`flex items-center gap-3 ${
+            <CardTitle className={`flex items-center gap-2 text-base font-medium ${
               assignmentDueStatus === 'overdue' ? 'text-red-600' : 'text-orange-600'
             }`}>
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform ${
-                assignmentDueStatus === 'overdue' ? 'bg-red-100 group-hover:bg-red-200' : 'bg-orange-100 group-hover:bg-orange-200'
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                assignmentDueStatus === 'overdue' ? 'bg-red-50' : 'bg-orange-50'
               }`}>
-                <Upload className="w-5 h-5" />
+                <Upload className="w-4 h-4" />
               </div>
               Next Assignment
             </CardTitle>
           </CardHeader>
           <CardContent>
             {nextAssignment ? (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <div>
-                  <h3 className="font-medium text-foreground mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">
+                  <h3 className="font-normal text-foreground mb-2 line-clamp-2">
                     {nextAssignment.name}
                   </h3>
-                  <div className="flex items-center gap-2 text-sm">
+                  <div className="flex items-center gap-2 text-xs">
                     {assignmentDueStatus === 'overdue' ? (
-                      <AlertCircle className="w-4 h-4 text-red-500 animate-pulse" />
+                      <AlertCircle className="w-3 h-3 text-red-500" />
                     ) : (
-                      <Clock className="w-4 h-4 text-orange-500" />
+                      <Clock className="w-3 h-3 text-orange-500" />
                     )}
-                    <span className={`font-medium ${
-                      assignmentDueStatus === 'overdue' ? 'text-red-500 animate-pulse' : 'text-orange-500'
+                    <span className={`font-normal ${
+                      assignmentDueStatus === 'overdue' ? 'text-red-500' : 'text-orange-500'
                     }`}>
                       {assignmentDueStatus === 'overdue' ? 'Past Due' : 'Due Soon'}
                     </span>
@@ -270,66 +266,63 @@ export function StudentDashboard() {
                 </div>
                 <Button 
                   onClick={handleSubmitAssignment}
-                  className={`w-full shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105 ${
-                    assignmentDueStatus === 'overdue' 
-                      ? 'bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
-                      : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700'
-                  } text-white`}
+                  className="w-full text-sm font-normal"
                   variant={assignmentDueStatus === 'overdue' ? 'destructive' : 'default'}
+                  size="sm"
                 >
                   Submit Now
                 </Button>
               </div>
             ) : (
-              <div className="text-center py-8">
-                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3 animate-pulse" />
-                <p className="text-muted-foreground">All assignments completed!</p>
+              <div className="text-center py-6">
+                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">All assignments completed!</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Integrations Card */}
-        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-[1.02] border-l-4 border-l-purple-500 animate-fade-in">
+        <Card className="hover:shadow-md transition-all duration-300 border-l-2 border-l-purple-400 animate-fade-in">
           <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-3 text-purple-600">
-              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                <Zap className="w-5 h-5" />
+            <CardTitle className="flex items-center gap-2 text-purple-600 text-base font-medium">
+              <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center">
+                <Zap className="w-4 h-4" />
               </div>
               Integrations
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                <div className="flex items-center gap-3">
-                  <ShoppingBag className="w-5 h-5 text-green-600" />
-                  <span className="font-medium">Shopify</span>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
+                <div className="flex items-center gap-2">
+                  <ShoppingBag className="w-4 h-4 text-green-600" />
+                  <span className="font-normal text-sm">Shopify</span>
                 </div>
                 {shopifyConnected ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-green-600 font-medium">Connected</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-green-600">Connected</span>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" className="hover:bg-green-50 hover:text-green-600 hover:border-green-300 transition-colors">
+                  <Button variant="outline" size="sm" className="text-xs h-6 px-2">
                     Connect
                   </Button>
                 )}
               </div>
               
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="w-5 h-5 text-blue-600" />
-                  <span className="font-medium">Meta Ads</span>
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-blue-600" />
+                  <span className="font-normal text-sm">Meta Ads</span>
                 </div>
                 {metaConnected ? (
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-sm text-green-600 font-medium">Connected</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-green-600">Connected</span>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-600 hover:border-blue-300 transition-colors">
+                  <Button variant="outline" size="sm" className="text-xs h-6 px-2">
                     Connect
                   </Button>
                 )}
@@ -337,7 +330,8 @@ export function StudentDashboard() {
               
               <Button 
                 variant="outline" 
-                className="w-full hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 transition-all duration-300"
+                size="sm"
+                className="w-full text-xs font-normal"
                 onClick={() => setConnectDialogOpen(true)}
               >
                 Manage Connections
@@ -347,64 +341,56 @@ export function StudentDashboard() {
         </Card>
       </div>
 
-      {/* Enhanced Milestones & Leaderboard Grid */}
+      {/* Refined Milestones & Leaderboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Milestones Card */}
-        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-[1.01] animate-fade-in">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center shadow-md">
-                <Award className="w-5 h-5 text-white" />
+        <Card className="hover:shadow-md transition-all duration-300 animate-fade-in">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-100 to-orange-100 flex items-center justify-center">
+                <Award className="w-4 h-4 text-orange-600" />
               </div>
-              <span className="bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
+              <span className="text-base font-medium text-orange-600">
                 Milestones
               </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-muted-foreground">Progress</span>
-                <span className="text-sm font-bold text-orange-600">
+                <span className="text-xs font-normal text-muted-foreground">Progress</span>
+                <span className="text-xs font-medium text-orange-600">
                   {completedMilestones} of {milestones.length} completed
                 </span>
               </div>
-              <div className="relative">
-                <Progress value={(completedMilestones / milestones.length) * 100} className="h-2" />
-                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-orange-500/20 rounded-full pointer-events-none"></div>
-              </div>
+              <Progress value={(completedMilestones / milestones.length) * 100} className="h-1.5" />
               
-              <div className="space-y-3 max-h-48 overflow-y-auto">
+              <div className="space-y-2 max-h-48 overflow-y-auto">
                 {milestones.map((milestone) => (
                   <div 
                     key={milestone.id} 
-                    className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ${
+                    className={`flex items-center gap-2 p-2 rounded-md transition-all duration-300 ${
                       milestone.completed 
-                        ? 'bg-green-50 border border-green-200 shadow-sm hover:shadow-md' 
-                        : 'bg-muted/50 hover:bg-muted'
+                        ? 'bg-green-50/50 border border-green-100' 
+                        : 'bg-muted/20'
                     }`}
                   >
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
                       milestone.completed 
-                        ? 'bg-green-500 shadow-md' 
-                        : 'bg-muted border-2 border-dashed border-muted-foreground/30'
+                        ? 'bg-green-500' 
+                        : 'bg-muted border border-muted-foreground/20'
                     }`}>
                       {milestone.completed ? (
-                        <CheckCircle className="w-5 h-5 text-white" />
+                        <CheckCircle className="w-3 h-3 text-white" />
                       ) : (
-                        <span className="text-lg">{milestone.icon}</span>
+                        <span className="text-sm">{milestone.icon}</span>
                       )}
                     </div>
-                    <span className={`font-medium transition-colors ${
+                    <span className={`font-normal text-sm transition-colors ${
                       milestone.completed ? 'text-green-700' : 'text-foreground'
                     }`}>
                       {milestone.title}
                     </span>
-                    {milestone.completed && (
-                      <div className="ml-auto">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -413,75 +399,75 @@ export function StudentDashboard() {
         </Card>
 
         {/* Your Rank Card */}
-        <Card className="group hover:shadow-lg transition-all duration-300 hover:scale-[1.01] animate-fade-in">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-md">
-                <Trophy className="w-5 h-5 text-white" />
+        <Card className="hover:shadow-md transition-all duration-300 animate-fade-in">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center">
+                <Trophy className="w-4 h-4 text-purple-600" />
               </div>
-              <span className="bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+              <span className="text-base font-medium text-purple-600">
                 Your Rank
               </span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {leaderboardPosition ? (
-              <div className="text-center space-y-4">
+              <div className="text-center space-y-3">
                 <div className="relative">
-                  <div className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent group-hover:scale-110 transition-transform">
+                  <div className="text-4xl font-medium text-purple-600">
                     #{leaderboardPosition.rank}
                   </div>
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-400 rounded-full flex items-center justify-center animate-bounce">
-                    <span className="text-xs">🌟</span>
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-200 rounded-full flex items-center justify-center">
+                    <span className="text-xs">⭐</span>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <p className="text-lg font-semibold text-foreground">Outstanding performance!</p>
-                  <p className="text-sm text-muted-foreground">
+                <div className="space-y-1">
+                  <p className="text-base font-medium text-foreground">Great progress!</p>
+                  <p className="text-xs text-muted-foreground">
                     You're {leaderboardPosition.rank === 1 ? 'leading the pack' : `${leaderboardPosition.rank} of ${leaderboardPosition.total}`}
                   </p>
                 </div>
-                <div className="flex items-center justify-center space-x-1 mb-4">
+                <div className="flex items-center justify-center space-x-1 mb-3">
                   {[1, 2, 3].map(pos => (
                     <Star 
                       key={pos} 
-                      className={`w-6 h-6 transition-all duration-300 ${
+                      className={`w-4 h-4 transition-all duration-300 ${
                         pos <= 3 && leaderboardPosition.rank <= 3 
-                          ? 'text-yellow-500 fill-current animate-pulse' 
+                          ? 'text-yellow-500 fill-current' 
                           : 'text-muted'
                       }`} 
                     />
                   ))}
                 </div>
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
-                  <div className="flex items-center justify-center gap-2 text-sm font-medium text-purple-700">
-                    <Star className="w-4 h-4 fill-current" />
-                    Keep climbing higher!
-                    <Star className="w-4 h-4 fill-current" />
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-3 rounded-md border border-purple-100">
+                  <div className="flex items-center justify-center gap-1 text-xs font-normal text-purple-700">
+                    <Star className="w-3 h-3 fill-current" />
+                    Keep up the great work!
+                    <Star className="w-3 h-3 fill-current" />
                   </div>
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => navigate('/leaderboard')}
-                  className="w-full hover:bg-purple-50 hover:text-purple-600 hover:border-purple-300 transition-all duration-300"
+                  className="w-full text-xs font-normal"
                 >
                   View Full Leaderboard
                 </Button>
               </div>
             ) : (
-              <div className="text-center py-8 space-y-4">
-                <div className="w-16 h-16 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full mx-auto flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Target className="w-8 h-8 text-purple-500" />
+              <div className="text-center py-6 space-y-3">
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-50 to-pink-50 rounded-full mx-auto flex items-center justify-center">
+                  <Target className="w-6 h-6 text-purple-500" />
                 </div>
                 <div>
-                  <p className="font-semibold text-foreground mb-2">Start Your Journey</p>
-                  <p className="text-sm text-muted-foreground">
-                    Complete activities and engage with content to climb the leaderboard
+                  <p className="font-medium text-foreground mb-1">Start Your Journey</p>
+                  <p className="text-xs text-muted-foreground">
+                    Complete activities to see your ranking
                   </p>
                 </div>
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-3 rounded-lg border border-purple-200">
-                  <p className="text-sm text-purple-700 font-medium">Ready to make your mark? 🚀</p>
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-2 rounded-md border border-purple-100">
+                  <p className="text-xs text-purple-700 font-normal">Ready to climb the leaderboard? 🚀</p>
                 </div>
               </div>
             )}
