@@ -64,11 +64,11 @@ export function extractFinancialGoalForDisplay(summary: string | null): string {
     return "Set your financial goal and reason for earning this money.";
   }
   
-  // Format as "Goal: [amount] - Reason: [reason]"
+  // Format in user-friendly manner: "Want to earn [amount] to [reason]"
   if (reason) {
-    return `**Goal:** ${incomeGoal} **Reason:** ${reason}`;
+    return `Want to earn ${incomeGoal} to ${reason.toLowerCase()}`;
   }
   
   // If only income goal is available
-  return `**Goal:** ${incomeGoal}`;
+  return `Want to earn ${incomeGoal}`;
 }
