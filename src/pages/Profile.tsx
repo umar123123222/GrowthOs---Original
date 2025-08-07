@@ -192,7 +192,7 @@ const Profile = () => {
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <p className="text-gray-600 mb-4">Unable to load profile. Please try logging in again.</p>
-          <Button onClick={() => window.location.href = '/login'}>
+          <Button onClick={() => window.location.assign('/login')}>
             Go to Login
           </Button>
         </div>

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { safeMaybeSingle } from '@/lib/database-safety';
+import { logger } from '@/lib/logger';
 
 interface RecordingUnlock {
   recording_id: string;
@@ -24,7 +26,7 @@ export const useRecordingUnlocks = () => {
     if (!user?.id) return;
 
     try {
-      console.log('Fetching sequential unlock status for user:', user.id);
+      logger.debug('Fetching sequential unlock status for user:', { userId: user.id });
       
       // Use the new sequential unlock function
       const { data, error } = await supabase.rpc('get_student_unlock_sequence', {
@@ -32,14 +34,14 @@ export const useRecordingUnlocks = () => {
       });
 
       if (error) {
-        console.error('Error fetching unlock sequence:', error);
+        logger.error('Error fetching unlock sequence:', error);
         throw error;
       }
 
-      console.log('Sequential unlock data:', data);
+      logger.debug('Sequential unlock data:', { data });
       setUnlocks(data || []);
     } catch (error) {
-      console.error('Error fetching recording unlocks:', error);
+      logger.error('Error fetching recording unlocks:', error);
       // Fallback: unlock only first recording
       try {
         const { data: firstRecording } = await supabase
@@ -47,7 +49,7 @@ export const useRecordingUnlocks = () => {
           .select('id, sequence_order')
           .order('sequence_order')
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (firstRecording) {
           setUnlocks([{
@@ -58,7 +60,7 @@ export const useRecordingUnlocks = () => {
           }]);
         }
       } catch (fallbackError) {
-        console.error('Fallback unlock failed:', fallbackError);
+        logger.error('Fallback unlock failed:', fallbackError);
       }
     } finally {
       setLoading(false);

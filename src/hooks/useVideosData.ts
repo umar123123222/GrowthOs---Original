@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from '@/lib/logger';
 
 interface Module {
   id: string | number;
@@ -26,7 +27,7 @@ export const useVideosData = (user?: any) => {
       const now = Date.now();
       if (now - lastRefresh >= THROTTLE_DELAY) {
         lastRefresh = now;
-        console.log('Data changed, refreshing...');
+        logger.debug('Data changed, refreshing...');
         fetchModulesAndRecordings();
       }
     };
@@ -97,7 +98,7 @@ export const useVideosData = (user?: any) => {
           .from('users')
           .select('lms_status')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
         
         if (userError) throw userError;
         userLMSStatus = userData?.lms_status || 'active';
@@ -206,7 +207,7 @@ export const useVideosData = (user?: any) => {
 
       setModules(modulesWithLessons);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logger.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }

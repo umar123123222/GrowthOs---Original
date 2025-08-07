@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
+import { logger } from '@/lib/logger';
 
 interface UseVideoRatingProps {
   recordingId: string;
@@ -28,7 +29,7 @@ export function useVideoRating({ recordingId, lessonTitle }: UseVideoRatingProps
         .select('id')
         .eq('user_id', user.id)
         .eq('recording_id', recordingId)
-        .single();
+        .maybeSingle();
 
       setHasRated(!!data);
     } catch (error) {

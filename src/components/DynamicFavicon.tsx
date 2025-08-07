@@ -1,16 +1,17 @@
 import { useEffect } from 'react';
 import { getLogoVariants, updateFavicon } from '@/hooks/useCompanyBranding';
+import { logger } from '@/lib/logger';
 
 export function DynamicFavicon() {
   useEffect(() => {
     const updateAppFavicon = async () => {
       try {
         const variants = await getLogoVariants();
-        if (variants?.favicon) {
+        if (variants && typeof variants === 'object' && 'favicon' in variants && variants.favicon) {
           updateFavicon(variants.favicon);
         }
       } catch (error) {
-        console.error('Error updating favicon:', error);
+        logger.error('Error updating favicon:', error);
       }
     };
 

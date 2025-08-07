@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from './logger';
 
 interface ShopifyMetrics {
   connected: boolean;
@@ -19,7 +20,7 @@ export async function getShopifyMetrics(userId: string): Promise<ShopifyMetrics>
       .from('users')
       .select('shopify_credentials')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (userError || !user?.shopify_credentials) {
       return { connected: false };
@@ -41,7 +42,7 @@ export async function getShopifyMetrics(userId: string): Promise<ShopifyMetrics>
     });
 
     if (!ordersResponse.ok) {
-      console.error('Failed to fetch Shopify orders:', ordersResponse.status);
+      logger.error('Failed to fetch Shopify orders:', { status: ordersResponse.status });
       return { connected: false };
     }
 
@@ -75,7 +76,7 @@ export async function getShopifyMetrics(userId: string): Promise<ShopifyMetrics>
       }
     };
   } catch (error) {
-    console.error('Error fetching Shopify metrics:', error);
+    logger.error('Error fetching Shopify metrics:', error);
     return { connected: false };
   }
 }

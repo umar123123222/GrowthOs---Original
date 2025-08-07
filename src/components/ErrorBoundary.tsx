@@ -82,8 +82,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 </Button>
                 <Button onClick={() => {
                   this.setState({ hasError: false, error: null });
-                  // Use React's built-in state reset instead of window.location.reload()
-                  setTimeout(() => window.location.href = window.location.pathname, 100);
+                  // Use state-based reset instead of hard refresh
+                  this.forceUpdate();
                 }}>
                   Refresh Page
                 </Button>

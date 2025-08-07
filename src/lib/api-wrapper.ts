@@ -1,6 +1,8 @@
 // API wrapper with centralized error handling
 import { supabase } from '@/integrations/supabase/client';
 import { errorHandler } from './error-handler';
+import { safeQuery } from './database-safety';
+import { logger } from './logger';
 
 export interface ApiResponse<T> {
   data: T | null;
@@ -64,7 +66,7 @@ export class ApiWrapper {
           .update(updates)
           .eq('id', userId)
           .select()
-          .single();
+          .maybeSingle();
         return result;
       },
       'user_update'

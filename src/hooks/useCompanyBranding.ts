@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from "@/integrations/supabase/client";
 import { getLogoUrl } from "@/utils/logoUtils";
+import { safeMaybeSingle } from '@/lib/database-safety';
+import { logger } from '@/lib/logger';
 
 // Hook to get company logo from settings
 export const useCompanyLogo = () => {
@@ -13,16 +15,19 @@ export const useCompanyLogo = () => {
           .from('company_settings')
           .select('branding')
           .eq('id', 1)
-          .single();
+          .maybeSingle();
 
-        if (error) throw error;
+        if (error) {
+          logger.error('Failed to fetch company branding', error);
+          return;
+        }
 
         if (data?.branding) {
           const headerLogo = getLogoUrl(data.branding, 'header');
           setLogoUrl(headerLogo);
         }
       } catch (error) {
-        console.error('Error fetching company logo:', error);
+        logger.error('Error fetching company logo:', error);
       }
     };
 
@@ -53,9 +58,12 @@ export const getLogoVariants = async () => {
       .from('company_settings')
       .select('branding')
       .eq('id', 1)
-      .single();
+      .maybeSingle();
 
-    if (error) throw error;
+    if (error) {
+      logger.error('Failed to fetch company logo variants', error);
+      return [];
+    }
 
     if (data?.branding && typeof data.branding === 'object' && data.branding !== null) {
       const branding = data.branding as any;
@@ -70,7 +78,7 @@ export const getLogoVariants = async () => {
 
     return null;
   } catch (error) {
-    console.error('Error fetching logo variants:', error);
+    logger.error('Error fetching logo variants:', error);
     return null;
   }
 };

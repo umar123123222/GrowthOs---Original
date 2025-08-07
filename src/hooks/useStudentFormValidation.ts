@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { z } from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useInstallmentOptions } from './useInstallmentOptions';
+import { logger } from '@/lib/logger';
 
 // Phone regex: +{1-4 digits country code}{6-14 digits}
 const PHONE_REGEX = /^\+\d{1,4}\d{6,14}$/;
@@ -68,11 +69,11 @@ export const useStudentFormValidation = () => {
           .select('id')
           .eq('email', value.toLowerCase().trim())
           .eq('role', 'student')
-          .single();
+          .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
           // PGRST116 is "not found" which is what we want
-          console.error('Email uniqueness check error:', error);
+          logger.error('Email uniqueness check error:', error);
           throw error;
         }
 
@@ -89,7 +90,7 @@ export const useStudentFormValidation = () => {
 
         if (error && error.code !== 'PGRST116') {
           // PGRST116 is "not found" which is what we want
-          console.error('Phone uniqueness check error:', error);
+          logger.error('Phone uniqueness check error:', error);
           throw error;
         }
 
@@ -103,7 +104,7 @@ export const useStudentFormValidation = () => {
       fieldSchema.parse(value);
       return undefined;
     } catch (error) {
-      console.error(`Field validation error for ${field}:`, error);
+      logger.error(`Field validation error for ${field}:`, error);
       if (error instanceof z.ZodError) {
         return error.issues[0]?.message;
       }
@@ -115,14 +116,14 @@ export const useStudentFormValidation = () => {
     const schema = createStudentSchema(maxCount);
     const newErrors: ValidationErrors = {};
 
-    console.log('Validating form data:', data);
+    logger.debug('Validating form data:', { data });
 
     try {
       // First validate the structure with Zod
       const result = schema.safeParse(data);
       
       if (!result.success) {
-        console.log('Zod validation errors:', result.error.issues);
+        logger.debug('Zod validation errors:', { issues: result.error.issues });
         result.error.issues.forEach((issue) => {
           const field = issue.path[0] as keyof StudentFormData;
           if (field) {
@@ -133,19 +134,19 @@ export const useStudentFormValidation = () => {
 
       // Check email uniqueness if email is valid
       if (!newErrors.email && data.email) {
-        console.log('Checking email uniqueness for:', data.email);
+        logger.debug('Checking email uniqueness for:', { email: data.email });
         const { data: existingStudent, error } = await supabase
           .from('users')
           .select('id')
           .eq('email', data.email.toLowerCase().trim())
           .eq('role', 'student')
-          .single();
+          .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
-          console.error('Email uniqueness check error:', error);
+          logger.error('Email uniqueness check error:', error);
           newErrors.general = 'Failed to validate email uniqueness';
         } else if (existingStudent) {
-          console.log('Email already exists:', existingStudent);
+          logger.debug('Email already exists:', { existingStudent });
           newErrors.email = 'A student with this email already exists';
         }
       }
@@ -156,16 +157,16 @@ export const useStudentFormValidation = () => {
 
       // Validate installment count against current settings
       if (!newErrors.fees_structure && !validateInstallmentValue(data.fees_structure)) {
-        console.log('Invalid installment value:', data.fees_structure, 'Max allowed:', maxCount);
+        logger.debug('Invalid installment value:', { value: data.fees_structure, maxAllowed: maxCount });
         newErrors.fees_structure = 'The selected installment option is no longer available';
       }
 
     } catch (error) {
-      console.error('Form validation error:', error);
+      logger.error('Form validation error:', error);
       newErrors.general = 'Validation failed. Please try again.';
     }
 
-    console.log('Validation completed. Errors:', newErrors);
+    logger.debug('Validation completed. Errors:', { errors: newErrors });
     return newErrors;
   }, [maxCount, validateInstallmentValue]);
 

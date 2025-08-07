@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from './logger';
 
 export interface StudentIntegration {
   id: string;
@@ -19,7 +20,7 @@ export const StudentIntegrations = {
       .from('users')
       .select('id, shopify_credentials, meta_ads_credentials')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
       throw error;
@@ -56,7 +57,7 @@ export const StudentIntegrations = {
       .update(updates)
       .eq('id', integration.userId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
     return data;
