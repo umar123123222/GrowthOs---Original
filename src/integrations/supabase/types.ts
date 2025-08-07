@@ -433,6 +433,51 @@ export type Database = {
           },
         ]
       }
+      messages: {
+        Row: {
+          content: string
+          context: Json | null
+          created_at: string
+          id: string
+          replied_at: string | null
+          response_id: string | null
+          sent_at: string
+          status: string
+          template_name: string | null
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          context?: Json | null
+          created_at?: string
+          id?: string
+          replied_at?: string | null
+          response_id?: string | null
+          sent_at?: string
+          status?: string
+          template_name?: string | null
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          context?: Json | null
+          created_at?: string
+          id?: string
+          replied_at?: string | null
+          response_id?: string | null
+          sent_at?: string
+          status?: string
+          template_name?: string | null
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       modules: {
         Row: {
           description: string | null
