@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger';
 
 interface LectureRatingProps {
   recordingId: string;
@@ -81,7 +82,7 @@ export function LectureRating({
 
       if (onClose) onClose();
     } catch (error) {
-      console.error('Error submitting rating:', error);
+      logger.error('Error submitting rating:', error);
       toast({
         title: 'Error',
         description: 'Failed to submit rating. Please try again.',

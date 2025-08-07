@@ -11,6 +11,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { InactiveLMSBanner } from '@/components/InactiveLMSBanner';
 import { useToast } from '@/hooks/use-toast';
 import { formatDreamGoalForDisplay } from '@/utils/dreamGoalUtils';
+import { safeQuery } from '@/lib/database-safety';
+import { logger } from '@/lib/logger';
 import { 
   Trophy, 
   Target, 
@@ -69,13 +71,17 @@ export function StudentDashboard() {
 
     try {
       // Fetch user data including dream goal and connections
-      const { data: userData } = await supabase
-        .from('users')
-        .select('dream_goal_summary, shopify_credentials, meta_ads_credentials, lms_status')
-        .eq('id', user.id)
-        .single();
+      const userResult = await safeQuery(
+        supabase
+          .from('users')
+          .select('dream_goal_summary, shopify_credentials, meta_ads_credentials, lms_status')
+          .eq('id', user.id)
+          .single() as any,
+        `fetch user data for dashboard ${user.id}`
+      );
 
-      if (userData) {
+      if (userResult.data) {
+        const userData = userResult.data as any;
         setDreamGoal(userData.dream_goal_summary || '');
         setShopifyConnected(!!userData.shopify_credentials);
         setMetaConnected(!!userData.meta_ads_credentials);
@@ -125,16 +131,16 @@ export function StudentDashboard() {
       setMilestones([
         { id: '1', title: 'First Video Watched', completed: uniqueWatchedVideos.length > 0, icon: '📹' },
         { id: '2', title: 'First Assignment Submitted', completed: submittedIds.length > 0, icon: '📝' },
-        { id: '3', title: 'Shopify Connected', completed: !!userData?.shopify_credentials, icon: '🛒' },
+        { id: '3', title: 'Shopify Connected', completed: !!((userResult.data as any)?.shopify_credentials), icon: '🛒' },
         { id: '4', title: '50% Course Complete', completed: courseProgress >= 50, icon: '🎯' },
-        { id: '5', title: 'Meta Ads Connected', completed: !!userData?.meta_ads_credentials, icon: '📊' }
+        { id: '5', title: 'Meta Ads Connected', completed: !!((userResult.data as any)?.meta_ads_credentials), icon: '📊' }
       ]);
 
       // Skip leaderboard for now since table doesn't exist
       // We'll implement this later when the leaderboard table is properly created
 
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
+      logger.error('Error fetching dashboard data:', error);
     }
   };
 

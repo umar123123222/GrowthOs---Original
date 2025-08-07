@@ -15,6 +15,8 @@ import ShoaibGPT from "@/components/ShoaibGPT";
 import { LectureRating } from "@/components/LectureRating";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { safeMaybeSingle } from '@/lib/database-safety';
+import { logger } from '@/lib/logger';
 
 const VideoPlayer = () => {
   const { moduleId, lessonId } = useParams();
@@ -108,26 +110,32 @@ const VideoPlayer = () => {
 
     try {
       // Check if recording has been watched and no rating exists yet
-      const { data: watchedData } = await supabase
-        .from('recording_views')
-        .select('watched')
-        .eq('user_id', user.id)
-        .eq('recording_id', currentVideo.id)
-        .eq('watched', true)
-        .single();
+      const watchedResult = await safeMaybeSingle(
+        supabase
+          .from('recording_views')
+          .select('watched')
+          .eq('user_id', user.id)
+          .eq('recording_id', currentVideo.id)
+          .eq('watched', true)
+          .maybeSingle() as any,
+        `check if recording ${currentVideo.id} was watched by user ${user.id}`
+      );
 
-      const { data: ratingData } = await supabase
-        .from('lesson_ratings' as any)
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('recording_id', currentVideo.id)
-        .single();
+      const ratingResult = await safeMaybeSingle(
+        supabase
+          .from('lesson_ratings' as any)
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('recording_id', currentVideo.id)
+          .maybeSingle() as any,
+        `check if recording ${currentVideo.id} was rated by user ${user.id}`
+      );
 
-      if (watchedData && !ratingData) {
+      if (watchedResult.data && !ratingResult.data) {
         setShowRating(true);
       }
     } catch (error) {
-      console.error('Error checking video completion:', error);
+      logger.error('Error checking video completion:', error);
     }
   };
 

@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, FileText } from "lucide-react";
+import { safeQuery } from '@/lib/database-safety';
+import { logger } from '@/lib/logger';
 
 interface Assignment {
   id: string;
@@ -38,16 +40,19 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
       if (!userId) return;
 
       // Check user's status
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('status')
-        .eq('id', userId)
-        .single();
+      const userResult = await safeQuery(
+        supabase
+          .from('users')
+          .select('status')
+          .eq('id', userId)
+          .single() as any,
+        `fetch user status for ${userId}`
+      );
       
-      if (userError) throw userError;
+      if (!userResult.success) throw userResult.error;
       
       // If user is inactive, don't show any assignments
-      if (userData?.status !== 'active') {
+      if ((userResult.data as any)?.status !== 'active') {
         setNextAssignment(null);
         setLoading(false);
         return;
@@ -77,7 +82,7 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
 
       setNextAssignment(nextAssignment || null);
     } catch (error) {
-      console.error('Error fetching next assignment:', error);
+      logger.error('Error fetching next assignment:', error);
     } finally {
       setLoading(false);
     }

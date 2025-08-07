@@ -22,6 +22,8 @@ import {
   Target,
   Zap
 } from "lucide-react";
+import { safeQuery } from '@/lib/database-safety';
+import { logger } from '@/lib/logger';
 
 const Dashboard = ({ user }: { user?: any }) => {
   // For students, show the specialized student dashboard
@@ -41,19 +43,23 @@ const Dashboard = ({ user }: { user?: any }) => {
     const fetchConnectionStatus = async () => {
       if (user?.id) {
         try {
-          const { data, error } = await supabase
-            .from('users')
-            .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
-            .eq('id', user.id)
-            .single();
+          const result = await safeQuery(
+            supabase
+              .from('users')
+              .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
+              .eq('id', user.id)
+              .single() as any,
+            `fetch connection status for user ${user.id}`
+          );
 
-          if (error) throw error;
+          if (!result.success) throw result.error;
+          const data = result.data as any;
 
           setShopifyConnected(!!data?.shopify_credentials);
           setMetaConnected(!!data?.meta_ads_credentials);
           setDreamGoalSummary(data?.dream_goal_summary || null);
         } catch (error) {
-          console.error('Error fetching connection status:', error);
+          logger.error('Error fetching connection status:', error);
         }
       }
     };

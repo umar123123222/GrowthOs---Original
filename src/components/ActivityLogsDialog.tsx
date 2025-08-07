@@ -11,6 +11,8 @@ import { Activity, Download, Search, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { RoleGuard } from '@/components/RoleGuard';
+import { safeQuery } from '@/lib/database-safety';
+import { logger } from '@/lib/logger';
 
 interface ActivityLog {
   id: string;
@@ -106,19 +108,22 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       const logsWithUsers = await Promise.all((data || []).map(async (log) => {
         let userData = null;
         if (log.performed_by) {
-          const { data: user } = await supabase
+        const userResult = await safeQuery(
+          supabase
             .from('users')
             .select('email, role, full_name')
             .eq('id', log.performed_by)
-            .single();
-          userData = user;
+            .single() as any,
+          `fetch user for activity log ${log.performed_by}`
+        );
+        userData = userResult.data;
         }
         return { ...log, users: userData };
       }));
       
       setLogs(logsWithUsers);
     } catch (error) {
-      console.error('Error fetching activity logs:', error);
+      logger.error('Error fetching activity logs:', error);
       toast({
         title: 'Error',
         description: 'Failed to fetch activity logs',
@@ -156,7 +161,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         description: 'Activity logs exported successfully'
       });
     } catch (error) {
-      console.error('Error exporting logs:', error);
+      logger.error('Error exporting logs:', error);
       toast({
         title: 'Error',
         description: 'Failed to export logs',
