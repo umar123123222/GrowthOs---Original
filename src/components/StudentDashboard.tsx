@@ -203,62 +203,72 @@ export function StudentDashboard() {
         </CardContent>
       </Card>
 
-      {/* Refined Three-Card Stats Section */}
+      {/* Interactive Three-Card Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Course Progress Card */}
-        <Card className="hover:shadow-md transition-all duration-300 border-l-2 border-l-blue-400 animate-fade-in">
-          <CardHeader className="pb-3">
+        <Card className="hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 border-l-blue-400 animate-fade-in group cursor-pointer relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 via-blue-50/50 to-blue-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+          <CardHeader className="pb-3 relative z-10">
             <CardTitle className="flex items-center gap-2 text-blue-600 text-base font-medium">
-              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center">
-                <BarChart3 className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
+                <BarChart3 className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
               </div>
-              Course Progress
+              <span className="group-hover:translate-x-1 transition-transform duration-300">Course Progress</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             <div className="space-y-3">
               <div className="text-center">
-                <div className="text-3xl font-medium text-blue-600 mb-1">
+                <div className="text-3xl font-medium text-blue-600 mb-1 group-hover:scale-110 group-hover:text-blue-700 transition-all duration-300 relative">
                   {courseProgress}%
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-200 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping transition-all duration-300"></div>
                 </div>
-                <p className="text-xs text-muted-foreground">Complete</p>
+                <p className="text-xs text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">Complete</p>
               </div>
-              <Progress value={courseProgress} className="h-1.5" />
+              <div className="relative group/bar">
+                <Progress value={courseProgress} className="h-1.5 group-hover/bar:h-2 transition-all duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-300/30 to-blue-500/30 rounded-full opacity-0 group-hover/bar:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Next Assignment Card */}
-        <Card className={`hover:shadow-md transition-all duration-300 border-l-2 animate-fade-in ${
+        <Card className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
           assignmentDueStatus === 'overdue' ? 'border-l-red-400' : 'border-l-orange-400'
-        }`}>
-          <CardHeader className="pb-3">
+        }`} style={{ animationDelay: '150ms' }}>
+          <div className={`absolute inset-0 bg-gradient-to-r transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
+            assignmentDueStatus === 'overdue' ? 'from-red-50/0 via-red-50/50 to-red-50/0' : 'from-orange-50/0 via-orange-50/50 to-orange-50/0'
+          }`}></div>
+          <CardHeader className="pb-3 relative z-10">
             <CardTitle className={`flex items-center gap-2 text-base font-medium ${
               assignmentDueStatus === 'overdue' ? 'text-red-600' : 'text-orange-600'
             }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                assignmentDueStatus === 'overdue' ? 'bg-red-50' : 'bg-orange-50'
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 ${
+                assignmentDueStatus === 'overdue' 
+                  ? 'bg-red-50 group-hover:bg-red-100 group-hover:animate-pulse' 
+                  : 'bg-orange-50 group-hover:bg-orange-100 group-hover:rotate-12'
               }`}>
-                <Upload className="w-4 h-4" />
+                <Upload className="w-4 h-4 group-hover:scale-110 group-hover:-translate-y-0.5 transition-all duration-300" />
               </div>
-              Next Assignment
+              <span className="group-hover:translate-x-1 transition-transform duration-300">Next Assignment</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             {nextAssignment ? (
               <div className="space-y-3">
                 <div>
-                  <h3 className="font-normal text-foreground mb-2 line-clamp-2">
+                  <h3 className="font-normal text-foreground mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors duration-300">
                     {nextAssignment.name}
                   </h3>
                   <div className="flex items-center gap-2 text-xs">
                     {assignmentDueStatus === 'overdue' ? (
-                      <AlertCircle className="w-3 h-3 text-red-500" />
+                      <AlertCircle className="w-3 h-3 text-red-500 group-hover:animate-bounce" />
                     ) : (
-                      <Clock className="w-3 h-3 text-orange-500" />
+                      <Clock className="w-3 h-3 text-orange-500 group-hover:animate-spin" />
                     )}
-                    <span className={`font-normal ${
-                      assignmentDueStatus === 'overdue' ? 'text-red-500' : 'text-orange-500'
+                    <span className={`font-normal transition-all duration-300 ${
+                      assignmentDueStatus === 'overdue' ? 'text-red-500 group-hover:animate-pulse' : 'text-orange-500'
                     }`}>
                       {assignmentDueStatus === 'overdue' ? 'Past Due' : 'Due Soon'}
                     </span>
@@ -266,63 +276,65 @@ export function StudentDashboard() {
                 </div>
                 <Button 
                   onClick={handleSubmitAssignment}
-                  className="w-full text-sm font-normal"
+                  className="w-full text-sm font-normal group-hover:scale-105 transition-all duration-300 relative overflow-hidden"
                   variant={assignmentDueStatus === 'overdue' ? 'destructive' : 'default'}
                   size="sm"
                 >
-                  Submit Now
+                  <span className="relative z-10">Submit Now</span>
+                  <div className="absolute inset-0 bg-white/20 transform -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
                 </Button>
               </div>
             ) : (
               <div className="text-center py-6">
-                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <p className="text-xs text-muted-foreground">All assignments completed!</p>
+                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
+                <p className="text-xs text-muted-foreground group-hover:text-green-600 transition-colors duration-300">All assignments completed!</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Integrations Card */}
-        <Card className="hover:shadow-md transition-all duration-300 border-l-2 border-l-purple-400 animate-fade-in">
-          <CardHeader className="pb-3">
+        <Card className="hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 border-l-purple-400 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '300ms' }}>
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-50/0 via-purple-50/50 to-purple-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+          <CardHeader className="pb-3 relative z-10">
             <CardTitle className="flex items-center gap-2 text-purple-600 text-base font-medium">
-              <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center">
-                <Zap className="w-4 h-4" />
+              <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
+                <Zap className="w-4 h-4 group-hover:scale-110 group-hover:text-yellow-500 transition-all duration-300" />
               </div>
-              Integrations
+              <span className="group-hover:translate-x-1 transition-transform duration-300">Integrations</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md group-hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] cursor-pointer">
                 <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-green-600" />
-                  <span className="font-normal text-sm">Shopify</span>
+                  <ShoppingBag className="w-4 h-4 text-green-600 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
+                  <span className="font-normal text-sm group-hover:translate-x-0.5 transition-transform duration-300">Shopify</span>
                 </div>
                 {shopifyConnected ? (
                   <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                     <span className="text-xs text-green-600">Connected</span>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" className="text-xs h-6 px-2">
+                  <Button variant="outline" size="sm" className="text-xs h-6 px-2 hover:scale-105 transition-transform duration-200">
                     Connect
                   </Button>
                 )}
               </div>
               
-              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md group-hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] cursor-pointer">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-blue-600" />
-                  <span className="font-normal text-sm">Meta Ads</span>
+                  <TrendingUp className="w-4 h-4 text-blue-600 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
+                  <span className="font-normal text-sm group-hover:translate-x-0.5 transition-transform duration-300">Meta Ads</span>
                 </div>
                 {metaConnected ? (
                   <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
                     <span className="text-xs text-green-600">Connected</span>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" className="text-xs h-6 px-2">
+                  <Button variant="outline" size="sm" className="text-xs h-6 px-2 hover:scale-105 transition-transform duration-200">
                     Connect
                   </Button>
                 )}
@@ -331,66 +343,77 @@ export function StudentDashboard() {
               <Button 
                 variant="outline" 
                 size="sm"
-                className="w-full text-xs font-normal"
+                className="w-full text-xs font-normal group-hover:scale-105 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300 relative overflow-hidden"
                 onClick={() => setConnectDialogOpen(true)}
               >
-                Manage Connections
+                <span className="relative z-10">Manage Connections</span>
+                <div className="absolute inset-0 bg-purple-100/50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
               </Button>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Refined Milestones & Leaderboard Grid */}
+      {/* Interactive Milestones & Leaderboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Milestones Card */}
-        <Card className="hover:shadow-md transition-all duration-300 animate-fade-in">
-          <CardHeader className="pb-3">
+        <Card className="hover:shadow-xl hover:scale-[1.02] transition-all duration-500 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '450ms' }}>
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-50/0 via-orange-50/30 to-orange-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+          <CardHeader className="pb-3 relative z-10">
             <CardTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-100 to-orange-100 flex items-center justify-center">
-                <Award className="w-4 h-4 text-orange-600" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-100 to-orange-100 flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
+                <Award className="w-4 h-4 text-orange-600 group-hover:scale-110 transition-transform duration-300" />
               </div>
-              <span className="text-base font-medium text-orange-600">
+              <span className="text-base font-medium text-orange-600 group-hover:translate-x-1 transition-transform duration-300">
                 Milestones
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             <div className="space-y-3">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-normal text-muted-foreground">Progress</span>
-                <span className="text-xs font-medium text-orange-600">
+                <span className="text-xs font-medium text-orange-600 group-hover:scale-105 transition-transform duration-300">
                   {completedMilestones} of {milestones.length} completed
                 </span>
               </div>
-              <Progress value={(completedMilestones / milestones.length) * 100} className="h-1.5" />
+              <div className="relative group/progress">
+                <Progress value={(completedMilestones / milestones.length) * 100} className="h-1.5 group-hover/progress:h-2 transition-all duration-300" />
+                <div className="absolute inset-0 bg-gradient-to-r from-orange-300/30 to-yellow-300/30 rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+              </div>
               
               <div className="space-y-2 max-h-48 overflow-y-auto">
-                {milestones.map((milestone) => (
+                {milestones.map((milestone, index) => (
                   <div 
                     key={milestone.id} 
-                    className={`flex items-center gap-2 p-2 rounded-md transition-all duration-300 ${
+                    className={`flex items-center gap-2 p-2 rounded-md transition-all duration-300 hover:scale-[1.02] cursor-pointer ${
                       milestone.completed 
-                        ? 'bg-green-50/50 border border-green-100' 
-                        : 'bg-muted/20'
+                        ? 'bg-green-50/50 border border-green-100 hover:bg-green-50 hover:shadow-sm' 
+                        : 'bg-muted/20 hover:bg-muted/40'
                     }`}
+                    style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
                       milestone.completed 
-                        ? 'bg-green-500' 
-                        : 'bg-muted border border-muted-foreground/20'
+                        ? 'bg-green-500 hover:scale-110 hover:rotate-12' 
+                        : 'bg-muted border border-muted-foreground/20 hover:scale-105'
                     }`}>
                       {milestone.completed ? (
                         <CheckCircle className="w-3 h-3 text-white" />
                       ) : (
-                        <span className="text-sm">{milestone.icon}</span>
+                        <span className="text-sm hover:scale-110 transition-transform duration-300">{milestone.icon}</span>
                       )}
                     </div>
-                    <span className={`font-normal text-sm transition-colors ${
+                    <span className={`font-normal text-sm transition-colors duration-300 hover:translate-x-1 ${
                       milestone.completed ? 'text-green-700' : 'text-foreground'
                     }`}>
                       {milestone.title}
                     </span>
+                    {milestone.completed && (
+                      <div className="ml-auto">
+                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse hover:scale-110 transition-transform duration-200"></div>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -399,31 +422,33 @@ export function StudentDashboard() {
         </Card>
 
         {/* Your Rank Card */}
-        <Card className="hover:shadow-md transition-all duration-300 animate-fade-in">
-          <CardHeader className="pb-3">
+        <Card className="hover:shadow-xl hover:scale-[1.02] transition-all duration-500 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '600ms' }}>
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-50/0 via-purple-50/30 to-purple-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+          <CardHeader className="pb-3 relative z-10">
             <CardTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center">
-                <Trophy className="w-4 h-4 text-purple-600" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
+                <Trophy className="w-4 h-4 text-purple-600 group-hover:scale-110 group-hover:text-yellow-500 transition-all duration-300" />
               </div>
-              <span className="text-base font-medium text-purple-600">
+              <span className="text-base font-medium text-purple-600 group-hover:translate-x-1 transition-transform duration-300">
                 Your Rank
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative z-10">
             {leaderboardPosition ? (
               <div className="text-center space-y-3">
                 <div className="relative">
-                  <div className="text-4xl font-medium text-purple-600">
+                  <div className="text-4xl font-medium text-purple-600 group-hover:scale-110 group-hover:text-purple-700 transition-all duration-300">
                     #{leaderboardPosition.rank}
                   </div>
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-200 rounded-full flex items-center justify-center">
-                    <span className="text-xs">⭐</span>
+                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-200 rounded-full flex items-center justify-center group-hover:animate-bounce">
+                    <span className="text-xs group-hover:scale-110 transition-transform duration-300">⭐</span>
                   </div>
+                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-300/30 rounded-full opacity-0 group-hover:opacity-100 animate-ping"></div>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-base font-medium text-foreground">Great progress!</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-base font-medium text-foreground group-hover:text-purple-600 transition-colors duration-300">Great progress!</p>
+                  <p className="text-xs text-muted-foreground group-hover:text-purple-500 transition-colors duration-300">
                     You're {leaderboardPosition.rank === 1 ? 'leading the pack' : `${leaderboardPosition.rank} of ${leaderboardPosition.total}`}
                   </p>
                 </div>
@@ -431,43 +456,44 @@ export function StudentDashboard() {
                   {[1, 2, 3].map(pos => (
                     <Star 
                       key={pos} 
-                      className={`w-4 h-4 transition-all duration-300 ${
+                      className={`w-4 h-4 transition-all duration-300 hover:scale-125 cursor-pointer ${
                         pos <= 3 && leaderboardPosition.rank <= 3 
-                          ? 'text-yellow-500 fill-current' 
-                          : 'text-muted'
+                          ? 'text-yellow-500 fill-current hover:rotate-12' 
+                          : 'text-muted hover:text-yellow-400'
                       }`} 
                     />
                   ))}
                 </div>
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-3 rounded-md border border-purple-100">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-3 rounded-md border border-purple-100 group-hover:border-purple-200 group-hover:shadow-sm transition-all duration-300">
                   <div className="flex items-center justify-center gap-1 text-xs font-normal text-purple-700">
-                    <Star className="w-3 h-3 fill-current" />
-                    Keep up the great work!
-                    <Star className="w-3 h-3 fill-current" />
+                    <Star className="w-3 h-3 fill-current group-hover:animate-spin" />
+                    <span className="group-hover:scale-105 transition-transform duration-300">Keep up the great work!</span>
+                    <Star className="w-3 h-3 fill-current group-hover:animate-spin" />
                   </div>
                 </div>
                 <Button 
                   variant="outline" 
                   size="sm" 
                   onClick={() => navigate('/leaderboard')}
-                  className="w-full text-xs font-normal"
+                  className="w-full text-xs font-normal group-hover:scale-105 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300 relative overflow-hidden"
                 >
-                  View Full Leaderboard
+                  <span className="relative z-10">View Full Leaderboard</span>
+                  <div className="absolute inset-0 bg-purple-100/50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
                 </Button>
               </div>
             ) : (
               <div className="text-center py-6 space-y-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-50 to-pink-50 rounded-full mx-auto flex items-center justify-center">
-                  <Target className="w-6 h-6 text-purple-500" />
+                <div className="w-12 h-12 bg-gradient-to-r from-purple-50 to-pink-50 rounded-full mx-auto flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
+                  <Target className="w-6 h-6 text-purple-500 group-hover:scale-110 transition-transform duration-300" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground mb-1">Start Your Journey</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="font-medium text-foreground mb-1 group-hover:text-purple-600 transition-colors duration-300">Start Your Journey</p>
+                  <p className="text-xs text-muted-foreground group-hover:text-purple-500 transition-colors duration-300">
                     Complete activities to see your ranking
                   </p>
                 </div>
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-2 rounded-md border border-purple-100">
-                  <p className="text-xs text-purple-700 font-normal">Ready to climb the leaderboard? 🚀</p>
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-2 rounded-md border border-purple-100 group-hover:border-purple-200 group-hover:shadow-sm transition-all duration-300">
+                  <p className="text-xs text-purple-700 font-normal group-hover:scale-105 transition-transform duration-300">Ready to climb the leaderboard? 🚀</p>
                 </div>
               </div>
             )}
