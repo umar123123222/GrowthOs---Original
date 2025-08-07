@@ -10,7 +10,7 @@ import { useStudentRecordings } from '@/hooks/useStudentRecordings';
 import { supabase } from '@/integrations/supabase/client';
 import { InactiveLMSBanner } from '@/components/InactiveLMSBanner';
 import { useToast } from '@/hooks/use-toast';
-import { formatDreamGoalForDisplay } from '@/utils/dreamGoalUtils';
+import { extractFinancialGoalForDisplay } from '@/utils/dreamGoalUtils';
 import { safeQuery } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 import { 
@@ -169,9 +169,9 @@ export function StudentDashboard() {
         <CardContent className="p-8">
           <div className="space-y-4">
             <div>
-              <h2 className="text-xl font-semibold text-primary mb-2">Your Personal Goal</h2>
+              <h2 className="text-xl font-semibold text-primary mb-2">Your Financial Goal</h2>
               <p className="text-foreground text-base leading-relaxed">
-                {formatDreamGoalForDisplay(dreamGoal)}
+                {extractFinancialGoalForDisplay(dreamGoal)}
               </p>
             </div>
             <div className="space-y-2">
