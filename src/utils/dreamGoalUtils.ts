@@ -53,31 +53,22 @@ export function extractFinancialGoalForDisplay(summary: string | null): string {
     return "Set your financial goal and reason for earning this money.";
   }
   
-  // Split the summary by common separators to find financial-related content
-  const parts = summary.split(/[,;.]/);
+  // Split the comma-separated questionnaire answers
+  const answers = summary.split(',').map(answer => answer.trim());
   
-  // Look for financial keywords in the parts
-  const financialKeywords = ['money', 'dollar', '$', 'income', 'earn', 'revenue', 'profit', 'financial', 'pay', 'fund', 'invest', 'save', 'budget'];
+  // First answer is the income goal, second is the reason
+  const incomeGoal = answers[0] || '';
+  const reason = answers[1] || '';
   
-  const financialParts = parts.filter(part => 
-    financialKeywords.some(keyword => 
-      part.toLowerCase().includes(keyword)
-    )
-  );
-  
-  if (financialParts.length > 0) {
-    let result = financialParts.join(', ').trim();
-    // Ensure proper sentence structure
-    if (result && !result.endsWith('.') && !result.endsWith('!') && !result.endsWith('?')) {
-      result += '.';
-    }
-    // Capitalize first letter
-    if (result) {
-      result = result.charAt(0).toUpperCase() + result.slice(1);
-    }
-    return result;
+  if (!incomeGoal) {
+    return "Set your financial goal and reason for earning this money.";
   }
   
-  // If no financial keywords found, return the original summary with a focus message
-  return `Financial Goal: ${summary}`;
+  // Format as "Goal: [amount] - Reason: [reason]"
+  if (reason) {
+    return `**Goal:** ${incomeGoal} **Reason:** ${reason}`;
+  }
+  
+  // If only income goal is available
+  return `**Goal:** ${incomeGoal}`;
 }
