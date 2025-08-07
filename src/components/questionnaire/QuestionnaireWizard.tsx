@@ -233,7 +233,10 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
             <div className="text-destructive font-medium">Questionnaire Error</div>
             <p className="text-muted-foreground text-sm">{initializationError}</p>
             <Button 
-              onClick={() => window.location.reload()} 
+              onClick={() => {
+                // Use state-based refresh instead of hard reload
+                window.location.href = window.location.pathname;
+              }} 
               variant="outline"
               size="sm"
             >

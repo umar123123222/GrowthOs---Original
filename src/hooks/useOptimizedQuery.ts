@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { errorHandler } from '@/lib/error-handler';
+import { safeMaybeSingle } from '@/lib/database-safety';
 
 interface QueryOptions {
   enabled?: boolean;
@@ -181,9 +182,9 @@ export function useOptimizedUserData(userId?: string) {
       
       const { data, error } = await supabase
         .from('users')
-        .select('id, email, role, full_name, created_at, shopify_credentials, meta_ads_credentials, onboarding_done, fees_overdue, fees_due_date')
+        .select('id, email, role, full_name, created_at, shopify_credentials, meta_ads_credentials')
         .eq('id', userId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         errorHandler.handleError(error, 'user_data_fetch', false);
@@ -208,7 +209,7 @@ export function useOptimizedCompanySettings() {
         .from('company_settings')
         .select('*')
         .eq('id', 1)
-        .single();
+        .maybeSingle();
 
       if (error) {
         errorHandler.handleError(error, 'company_settings_fetch', false);

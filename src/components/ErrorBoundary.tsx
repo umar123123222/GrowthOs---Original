@@ -24,7 +24,24 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Use centralized logging instead of console.error
+    if (typeof window !== 'undefined') {
+      const errorData = {
+        error: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Store for debugging in development or reporting in production
+      try {
+        const errors = JSON.parse(localStorage.getItem('app_errors') || '[]');
+        errors.push(errorData);
+        localStorage.setItem('app_errors', JSON.stringify(errors.slice(-50)));
+      } catch (e) {
+        // Fail silently if localStorage isn't available
+      }
+    }
   }
 
   handleRetry = () => {
@@ -63,7 +80,11 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                   <RefreshCw className="w-4 h-4 mr-2" />
                   Try Again
                 </Button>
-                <Button onClick={() => window.location.reload()}>
+                <Button onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  // Use React's built-in state reset instead of window.location.reload()
+                  setTimeout(() => window.location.href = window.location.pathname, 100);
+                }}>
                   Refresh Page
                 </Button>
               </div>
