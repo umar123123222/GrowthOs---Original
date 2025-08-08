@@ -17,6 +17,7 @@ import {
   Lock,
   MessageSquare
 } from "lucide-react";
+import { logger } from "@/lib/logger";
 
 interface Assignment {
   id: string;
