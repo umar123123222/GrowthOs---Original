@@ -512,7 +512,7 @@ const ShopifyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {shopifyData.topProducts.map((product, index) => <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
+              {shopifyData.topProducts.slice(0, 5).map((product, index) => <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center space-x-4">
                     <Badge variant="secondary" className="min-w-[24px] h-6 flex items-center justify-center">
                       {index + 1}
