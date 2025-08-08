@@ -44,6 +44,7 @@ const ShopifyDashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState('checking');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 9;
+  const [lastMonthTop, setLastMonthTop] = useState<any[]>([]);
   const totalPages = Math.max(1, Math.ceil((shopifyData.products?.length || 0) / pageSize));
   const paginatedProducts = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
@@ -63,6 +64,14 @@ const ShopifyDashboard = () => {
       to: end
     };
   });
+  const lastMonthInfo = useMemo(() => {
+    const now = new Date();
+    const firstThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastMonthEnd = new Date(firstThisMonth.getTime() - 1);
+    const lastMonthStart = new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), 1);
+    return { from: lastMonthStart, to: lastMonthEnd, label: format(lastMonthStart, 'MMM yyyy') };
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user?.id) {
@@ -118,6 +127,12 @@ const ShopifyDashboard = () => {
       document.head.appendChild(link);
     }
   }, []);
+
+  useEffect(() => {
+    if (!authLoading && user?.id) {
+      fetchLastMonthTopProducts();
+    }
+  }, [authLoading, user?.id]);
   const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
   const fetchCachedMetrics = async (uid: string): Promise<boolean> => {
     try {
@@ -301,6 +316,23 @@ const ShopifyDashboard = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLastMonthTopProducts = async () => {
+    try {
+      if (authLoading || !user?.id) return;
+      const startISO = lastMonthInfo.from.toISOString();
+      const endISO = lastMonthInfo.to.toISOString();
+      const result = await fetchShopifyMetrics(user.id, { startDate: startISO, endDate: endISO });
+      if (result?.connected && result.metrics) {
+        const tops = (result.metrics.bestSellers || result.metrics.topProducts || []).slice(0, 5);
+        setLastMonthTop(tops);
+      } else {
+        setLastMonthTop([]);
+      }
+    } catch {
+      setLastMonthTop([]);
     }
   };
   const formatCurrency = (amount: number, currency: string = shopifyData.currency || 'USD') => {
@@ -519,26 +551,32 @@ const ShopifyDashboard = () => {
         {/* Top Products */}
         <Card className="hover-lift animate-fade-in">
           <CardHeader>
-            <CardTitle>Top Performing Products</CardTitle>
-            <CardDescription>Best selling products in the selected period</CardDescription>
+            <CardTitle>Top Performing Products (Last Month)</CardTitle>
+            <CardDescription>Top 5 in {lastMonthInfo.label}: units sold and revenue</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {shopifyData.topProducts.slice(0, 5).map((product, index) => <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <Badge variant="secondary" className="min-w-[24px] h-6 flex items-center justify-center">
-                      {index + 1}
-                    </Badge>
-                    <div>
-                      <h4 className="font-medium">{product.name}</h4>
-                      <p className="text-sm text-muted-foreground">{product.sales} sales</p>
+              {lastMonthTop.length > 0 ? (
+                lastMonthTop.slice(0, 5).map((product, index) => (
+                  <div key={product.id ?? index} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <Badge variant="secondary" className="min-w-[24px] h-6 flex items-center justify-center">
+                        {index + 1}
+                      </Badge>
+                      <div>
+                        <h4 className="font-medium">{product.name}</h4>
+                        <p className="text-sm text-muted-foreground">{product.sales} sold</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{formatCurrency(product.revenue)}</p>
+                      <p className="text-sm text-muted-foreground">Revenue</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium">{formatCurrency(product.revenue)}</p>
-                    <p className="text-sm text-muted-foreground">Revenue</p>
-                  </div>
-                </div>)}
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No data for last month.</p>
+              )}
             </div>
           </CardContent>
         </Card>
