@@ -65,6 +65,8 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
 
   const fetchAssignments = async () => {
     console.log('fetchAssignments called, user:', user);
+    const corrId = `asmt-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    const t0 = performance.now();
     try {
       if (!user?.id) {
         console.log('No user ID, returning');
@@ -72,28 +74,34 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
       }
 
       // Fetch user's LMS status
+      const tLmsStart = performance.now();
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('lms_status')
         .eq('id', user.id)
         .single();
+      logger.performance('asmt.fetch_lms_status', performance.now() - tLmsStart, { corrId });
       
       if (userError) throw userError;
       setUserLMSStatus(userData?.lms_status || 'active');
 
       // Fetch all assignments
+      const tAssignmentsStart = performance.now();
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('assignments')
         .select('*')
         .order('name');
+      logger.performance('asmt.fetch_assignments', performance.now() - tAssignmentsStart, { corrId });
 
       if (assignmentsError) throw assignmentsError;
 
       // Fetch user's submissions
+      const tSubsStart = performance.now();
       const { data: submissions, error: submissionsError } = await supabase
         .from('submissions')
         .select('*')
         .eq('student_id', user.id);
+      logger.performance('asmt.fetch_submissions', performance.now() - tSubsStart, { corrId });
 
       if (submissionsError) throw submissionsError;
 
@@ -107,6 +115,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
       if (processedAssignments && processedAssignments.length > 0) {
         setSelectedAssignment(processedAssignments[0].id);
       }
+      logger.performance('asmt.fetch_total', performance.now() - t0, { corrId });
     } catch (error) {
       console.error('Error fetching assignments:', error);
       toast({
@@ -121,10 +130,12 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
     try {
       if (!user?.id) return;
 
+      const tFetchSubsStart = performance.now();
       const { data, error } = await supabase
         .from('submissions')
         .select('*')
         .eq('student_id', user.id);
+      logger.performance('asmt.submissions_only_fetch', performance.now() - tFetchSubsStart, { userId: user.id });
 
       if (error) throw error;
       setSubmissions(data || []);
@@ -144,6 +155,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
       const assignment = assignments.find(a => a.id === selectedAssignment);
       if (!assignment) throw new Error('Assignment not found');
 
+      const tInsertStart = performance.now();
       const { error } = await supabase
         .from('submissions')
         .insert({
@@ -152,6 +164,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
           content: submission,
           status: 'pending'
         });
+      logger.performance('asmt.submit_assignment', performance.now() - tInsertStart, { assignmentId: assignment.id });
 
       if (error) throw error;
 

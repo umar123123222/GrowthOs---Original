@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecordingUnlocks } from '@/hooks/useRecordingUnlocks';
+import { logger } from '@/lib/logger';
 
 interface Recording {
   id: string;
@@ -38,18 +39,21 @@ export const useModulesWithRecordings = () => {
   const fetchModulesWithRecordings = async () => {
     if (!user?.id) return;
 
-    try {
-      console.log('ModulesWithRecordings: Fetching for user:', user.id);
+  try {
+      const corrId = `mods-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+      const t0 = performance.now();
+      logger.debug('ModulesWithRecordings: start', { corrId, userId: user.id });
       
-      // Fetch all modules
+      const tModulesStart = performance.now();
       const { data: modulesData, error: modulesError } = await supabase
         .from('modules')
         .select('id, title, order')
         .order('order');
+      logger.performance('mods.fetch_modules', performance.now() - tModulesStart, { corrId });
 
       if (modulesError) throw modulesError;
 
-      // Fetch all recordings with their module info
+      const tRecordingsStart = performance.now();
       const { data: recordingsData, error: recordingsError } = await supabase
         .from('available_lessons')
         .select(`
@@ -61,34 +65,39 @@ export const useModulesWithRecordings = () => {
           module
         `)
         .order('sequence_order');
+      logger.performance('mods.fetch_recordings', performance.now() - tRecordingsStart, { corrId });
 
       if (recordingsError) throw recordingsError;
 
-      // Fetch recording views for this user
+      const tViewsStart = performance.now();
       const { data: viewsData, error: viewsError } = await supabase
         .from('recording_views')
         .select('recording_id, watched')
         .eq('user_id', user.id);
+      logger.performance('mods.fetch_views', performance.now() - tViewsStart, { corrId });
 
       if (viewsError) throw viewsError;
 
-      // Fetch assignments linked to recordings
+      const tAssignStart = performance.now();
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('assignments')
         .select('id, recording_id')
         .not('recording_id', 'is', null);
+      logger.performance('mods.fetch_assignments', performance.now() - tAssignStart, { corrId });
 
       if (assignmentsError) throw assignmentsError;
 
-      // Fetch user's submissions
+      const tSubsStart = performance.now();
       const { data: submissionsData, error: submissionsError } = await supabase
         .from('submissions')
         .select('assignment_id, status')
         .eq('student_id', user.id);
+      logger.performance('mods.fetch_submissions', performance.now() - tSubsStart, { corrId });
 
       if (submissionsError) throw submissionsError;
 
       // Group recordings by module
+      const tProcessStart = performance.now();
       const processedModules = (modulesData || []).map(module => {
         const moduleRecordings = (recordingsData || [])
           .filter(recording => recording.module === module.id)
@@ -120,8 +129,9 @@ export const useModulesWithRecordings = () => {
           recordings: moduleRecordings
         };
       }).filter(module => module.recordings.length > 0);
+      logger.performance('mods.process_grouping', performance.now() - tProcessStart, { corrId });
 
-      console.log('ModulesWithRecordings: Processed modules:', processedModules.length);
+      logger.performance('mods.fetch_total', performance.now() - t0, { corrId });
       setModules(processedModules);
     } catch (error) {
       console.error('Error fetching modules with recordings:', error);

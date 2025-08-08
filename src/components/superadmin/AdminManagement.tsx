@@ -36,6 +36,7 @@ import { Plus, Activity, Key, Trash2, UserPlus, Shield } from 'lucide-react';
 import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
 import { CredentialDisplay } from '@/components/ui/credential-display';
 import { generateSecurePassword } from '@/utils/passwordGenerator';
+import { logger } from '@/lib/logger';
 
 
 interface Admin {
@@ -93,19 +94,21 @@ export const AdminManagement = () => {
       return;
     }
 
-    try {
+    try { const corrId = `admin-create-${Date.now()}-${Math.random().toString(36).slice(2,8)}`; const t0 = performance.now();
       // Generate a secure temporary password
       const tempPassword = generateSecurePassword();
       
-      // Create user via edge function with admin privileges
+      const tInvokeStart = performance.now();
       const response = await supabase.functions.invoke('create-team-member', {
         body: {
           email: newAdmin.email,
           full_name: newAdmin.full_name,
           role: 'admin',
           temp_password: tempPassword
-        }
+        },
+        headers: { 'x-correlation-id': corrId }
       });
+      logger.performance('edge.create_team_member', performance.now() - tInvokeStart, { corrId });
 
       if (response.error) {
         console.error('Error creating admin:', response.error);
