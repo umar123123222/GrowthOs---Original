@@ -21,10 +21,11 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { fetchShopifyMetrics } from '@/lib/student-integrations';
 import { supabase } from '@/integrations/supabase/client';
+import { syncShopifyMetrics } from '@/lib/metrics-sync';
 
 const ShopifyDashboard = () => {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [shopifyData, setShopifyData] = useState({
@@ -43,19 +44,120 @@ const ShopifyDashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState('checking');
 
   useEffect(() => {
+    if (authLoading) return;
+
+    if (!user?.id) {
+      setConnectionStatus('disconnected');
+      setLoading(false);
+      return;
+    }
+
+    // Initial fetch
     fetchShopifyData();
-  }, []);
+
+    // Listen for integration changes for this user
+    const channel = supabase
+      .channel('public:integrations')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'integrations', filter: `user_id=eq.${user.id}` },
+        () => {
+          fetchShopifyData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [authLoading, user?.id]);
+
+  const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
+
+  const fetchCachedMetrics = async (uid: string): Promise<boolean> => {
+    try {
+      const today = new Date();
+      const start = new Date();
+      start.setDate(today.getDate() - 7);
+      const startStr = toDateStr(start);
+
+      const { data, error } = await supabase
+        .from('user_metrics')
+        .select('date, metric, value')
+        .eq('user_id', uid)
+        .eq('source', 'shopify')
+        .gte('date', startStr)
+        .order('date', { ascending: true });
+
+      if (error || !data || data.length === 0) return false;
+
+      const gmvByDate = new Map<string, number>();
+      const ordersByDate = new Map<string, number>();
+
+      (data as any[]).forEach((row) => {
+        if (row.metric === 'gmv') {
+          gmvByDate.set(row.date, Number(row.value) || 0);
+        } else if (row.metric === 'orders') {
+          ordersByDate.set(row.date, Number(row.value) || 0);
+        }
+      });
+
+      // Build continuous 7-day trend
+      const salesTrend: Array<{ date: string; sales: number }> = [];
+      let totalGmv = 0;
+      let totalOrders = 0;
+      for (let i = 7; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const key = toDateStr(d);
+        const gmv = gmvByDate.get(key) ?? 0;
+        const orders = ordersByDate.get(key) ?? 0;
+        totalGmv += gmv;
+        totalOrders += orders;
+        salesTrend.push({ date: key, sales: gmv });
+      }
+
+      const aov = totalOrders > 0 ? Number((totalGmv / totalOrders).toFixed(2)) : 0;
+
+      setShopifyData((prev) => ({
+        storeUrl: prev.storeUrl || 'your-store.myshopify.com',
+        totalSales: totalGmv,
+        visitors: prev.visitors || 0,
+        averageOrderValue: aov,
+        conversionRate: prev.conversionRate || 0,
+        orderCount: totalOrders,
+        topProducts: [],
+        products: [],
+        salesTrend,
+        visitorTrend: prev.visitorTrend?.length ? prev.visitorTrend : [
+          { date: '2025-07-17', visitors: 245 },
+          { date: '2025-07-18', visitors: 312 },
+          { date: '2025-07-19', visitors: 398 },
+          { date: '2025-07-20', visitors: 356 },
+          { date: '2025-07-21', visitors: 445 },
+          { date: '2025-07-22', visitors: 502 },
+          { date: '2025-07-23', visitors: 589 },
+          { date: '2025-07-24', visitors: 467 }
+        ],
+        lastUpdated: new Date().toISOString(),
+      }));
+
+      setConnectionStatus('connected');
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   const fetchShopifyData = async () => {
     setLoading(true);
     try {
+      if (authLoading) return;
       if (!user?.id) {
         setConnectionStatus('disconnected');
-        setLoading(false);
         return;
       }
 
-      // Check integration details first; migrate legacy token if needed
       const { data: integ } = await supabase
         .from('integrations')
         .select('access_token, external_id')
@@ -63,7 +165,10 @@ const ShopifyDashboard = () => {
         .eq('source', 'shopify')
         .maybeSingle();
 
-      if (!integ?.access_token) {
+      let hasToken = !!integ?.access_token;
+      let hasDomain = !!integ?.external_id;
+
+      if (!hasToken) {
         // Fallback: migrate legacy token from users table into integrations
         const { data: legacy } = await supabase
           .from('users')
@@ -78,63 +183,75 @@ const ShopifyDashboard = () => {
             external_id: null,
           });
           setConnectionStatus('needs_domain');
-          setLoading(false);
+          return;
+        } else {
+          setConnectionStatus('disconnected');
+          // Try cached metrics if any exist
+          await fetchCachedMetrics(user.id);
           return;
         }
       }
 
-      if (integ?.access_token && !integ.external_id) {
+      if (hasToken && !hasDomain) {
         setConnectionStatus('needs_domain');
-        setLoading(false);
         return;
       }
 
-      // Fetch metrics from edge function
-      const result = await fetchShopifyMetrics(user.id);
-      
-      if (!result.connected) {
-        setConnectionStatus('disconnected');
-        setLoading(false);
-        return;
+      // Live metrics
+      try {
+        const result = await fetchShopifyMetrics(user.id);
+        if (!result?.connected) {
+          const usedCache = await fetchCachedMetrics(user.id);
+          if (!usedCache) {
+            setConnectionStatus('error');
+            toast({
+              title: 'Shopify connection issue',
+              description: 'We could not fetch live data. Please try again.',
+              variant: 'destructive',
+            });
+          }
+          return;
+        }
+
+        const metrics = result.metrics!;
+        const updated = {
+          storeUrl: integ?.external_id || 'your-store.myshopify.com',
+          totalSales: metrics.gmv,
+          visitors: 2847, // Mock visitor data - would need analytics API
+          averageOrderValue: metrics.aov,
+          conversionRate: metrics.conversionRate,
+          orderCount: metrics.orders,
+          topProducts: metrics.bestSellers || metrics.topProducts || [],
+          products: metrics.products || [],
+          salesTrend: metrics.salesTrend,
+          visitorTrend: [
+            { date: '2025-07-17', visitors: 245 },
+            { date: '2025-07-18', visitors: 312 },
+            { date: '2025-07-19', visitors: 398 },
+            { date: '2025-07-20', visitors: 356 },
+            { date: '2025-07-21', visitors: 445 },
+            { date: '2025-07-22', visitors: 502 },
+            { date: '2025-07-23', visitors: 589 },
+            { date: '2025-07-24', visitors: 467 }
+          ],
+          lastUpdated: new Date().toISOString(),
+        };
+
+        setShopifyData(updated);
+        setConnectionStatus('connected');
+        // Background sync to persist metrics
+        syncShopifyMetrics().catch(() => {});
+      } catch (e) {
+        const usedCache = await fetchCachedMetrics(user.id);
+        if (!usedCache) {
+          setConnectionStatus('error');
+          toast({
+            title: 'Shopify error',
+            description: 'Failed to fetch data. Showing nothing as no cache is available.',
+            variant: 'destructive',
+          });
+        }
       }
-
-      const metrics = result.metrics!;
-      
-      // Map the metrics to the expected format
-      const shopifyData = {
-        storeUrl: 'your-store.myshopify.com', // Would use user.shopify_domain when available
-        totalSales: metrics.gmv,
-        visitors: 2847, // Mock visitor data - would need analytics API
-        averageOrderValue: metrics.aov,
-        conversionRate: metrics.conversionRate,
-        orderCount: metrics.orders,
-        topProducts: metrics.bestSellers || metrics.topProducts || [],
-        products: metrics.products || [],
-        salesTrend: metrics.salesTrend,
-        visitorTrend: [
-          { date: '2025-07-17', visitors: 245 },
-          { date: '2025-07-18', visitors: 312 },
-          { date: '2025-07-19', visitors: 398 },
-          { date: '2025-07-20', visitors: 356 },
-          { date: '2025-07-21', visitors: 445 },
-          { date: '2025-07-22', visitors: 502 },
-          { date: '2025-07-23', visitors: 589 },
-          { date: '2025-07-24', visitors: 467 }
-        ],
-        lastUpdated: new Date().toISOString()
-      };
-
-      setShopifyData(shopifyData);
-      setConnectionStatus('connected');
-      
-    } catch (error) {
-      console.error('Error fetching Shopify data:', error);
-      setConnectionStatus('error');
-      toast({
-        title: "Connection Error",
-        description: "Failed to fetch Shopify data. Please check your store connection.",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
