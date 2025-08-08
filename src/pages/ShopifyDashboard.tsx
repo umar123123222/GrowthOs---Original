@@ -429,7 +429,21 @@ const ShopifyDashboard = () => {
             </div>
             <Popover>
               <PopoverTrigger asChild>
-                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn(
+                    "justify-start gap-2 min-w-[240px]",
+                    !(dateRange.from && dateRange.to) && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="h-4 w-4" />
+                  {dateRange.from && dateRange.to ? (
+                    <span>{format(dateRange.from, 'PPP')} - {format(dateRange.to, 'PPP')}</span>
+                  ) : (
+                    <span>Pick date range</span>
+                  )}
+                </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
                 <Calendar mode="range" selected={dateRange as any} onSelect={(range: any) => setDateRange(range)} numberOfMonths={2} className={cn("p-3 pointer-events-auto")} initialFocus />
@@ -453,9 +467,7 @@ const ShopifyDashboard = () => {
               <div className="text-2xl font-bold">{formatCurrency(shopifyData.totalSales)}</div>
               <Tooltip>
                 <TooltipTrigger>
-                  <p className="text-xs text-muted-foreground">
-                    +12.5% from last month
-                  </p>
+                  <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Revenue growth compared to previous month</p>
@@ -473,7 +485,7 @@ const ShopifyDashboard = () => {
               <div className="text-2xl font-bold">{shopifyData.orderCount.toLocaleString()}</div>
               <Tooltip>
                 <TooltipTrigger>
-                  <p className="text-xs text-muted-foreground">Selected period</p>
+                  <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Total orders in the selected period</p>
@@ -491,9 +503,7 @@ const ShopifyDashboard = () => {
               <div className="text-2xl font-bold">{formatCurrency(shopifyData.averageOrderValue)}</div>
               <Tooltip>
                 <TooltipTrigger>
-                  <p className="text-xs text-muted-foreground">
-                    +5.1% from last month
-                  </p>
+                  <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Average value per order</p>
@@ -511,7 +521,7 @@ const ShopifyDashboard = () => {
               <div className="text-2xl font-bold">{ordersPerDay.toFixed(1)}</div>
               <Tooltip>
                 <TooltipTrigger>
-                  <p className="text-xs text-muted-foreground">Selected period</p>
+                  <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
                 </TooltipTrigger>
                 <TooltipContent>
                   <p>Average orders per day in the selected period</p>
