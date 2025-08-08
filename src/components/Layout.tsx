@@ -280,20 +280,36 @@ const Layout = memo(({
 
   // Check connection status on mount and when user changes
   useEffect(() => {
-    const checkConnections = () => {
-      // Check Shopify connection from user credentials
-      const shopifyCredentials = user?.shopify_credentials;
-      // Check Meta connection from user credentials
-      const metaCredentials = user?.meta_ads_credentials;
-      setConnectionStatus({
-        shopify: !!shopifyCredentials,
-        meta: !!metaCredentials
-      });
+    let isMounted = true;
+    const checkConnections = async () => {
+      if (!user?.id) return;
+      try {
+        const { data, error } = await supabase
+          .from('integrations')
+          .select('source, access_token')
+          .eq('user_id', user.id);
+        if (error) throw error;
+        if (!isMounted) return;
+        const hasShopify = !!data?.some((r: any) => r.source === 'shopify' && r.access_token);
+        const hasMeta = !!data?.some((r: any) => r.source === 'meta_ads' && r.access_token);
+        setConnectionStatus({ shopify: hasShopify, meta: hasMeta });
+      } catch (e) {
+        // Fallback to legacy user columns if present
+        setConnectionStatus({
+          shopify: !!(user as any)?.shopify_credentials,
+          meta: !!(user as any)?.meta_ads_credentials
+        });
+      }
     };
-    if (user) {
+    if (user?.id) {
       checkConnections();
+      (window as any).checkIntegrations = checkConnections;
     }
-  }, [user]);
+    return () => {
+      isMounted = false;
+      if ((window as any).checkIntegrations) delete (window as any).checkIntegrations;
+    };
+  }, [user?.id]);
 
   // Check if any course submenu is active to keep it expanded
   const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=submissions') || location.search.includes('tab=success-sessions');
