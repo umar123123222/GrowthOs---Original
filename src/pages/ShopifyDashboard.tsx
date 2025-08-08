@@ -32,11 +32,12 @@ const ShopifyDashboard = () => {
     visitors: 0,
     averageOrderValue: 0,
     conversionRate: 0,
-    topProducts: [],
-    salesTrend: [],
-    visitorTrend: [],
+    topProducts: [] as any[],
+    products: [] as any[],
+    salesTrend: [] as any[],
+    visitorTrend: [] as any[],
     orderCount: 0,
-    lastUpdated: null
+    lastUpdated: null as string | null,
   });
   const [connectionStatus, setConnectionStatus] = useState('checking');
 
@@ -72,7 +73,8 @@ const ShopifyDashboard = () => {
         averageOrderValue: metrics.aov,
         conversionRate: metrics.conversionRate,
         orderCount: metrics.orders,
-        topProducts: metrics.topProducts,
+        topProducts: metrics.bestSellers || metrics.topProducts || [],
+        products: metrics.products || [],
         salesTrend: metrics.salesTrend,
         visitorTrend: [
           { date: '2025-07-17', visitors: 245 },
@@ -345,6 +347,36 @@ const ShopifyDashboard = () => {
                   </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* All Products */}
+        <Card>
+          <CardHeader>
+            <CardTitle>All Products</CardTitle>
+            <CardDescription>Products fetched from your store</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {shopifyData.products.map((p: any) => (
+                <div key={p.id} className="border rounded-lg p-4 flex items-start gap-4">
+                  {p.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.image} alt={`${p.name} product image`} className="w-16 h-16 rounded object-cover" loading="lazy" />
+                  )}
+                  <div className="flex-1">
+                    <h4 className="font-medium">{p.name}</h4>
+                    <p className="text-sm text-muted-foreground">{p.type || 'Product'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">{formatCurrency(p.price || 0)}</p>
+                  </div>
+                </div>
+              ))}
+              {shopifyData.products.length === 0 && (
+                <p className="text-sm text-muted-foreground">No products found.</p>
+              )}
             </div>
           </CardContent>
         </Card>

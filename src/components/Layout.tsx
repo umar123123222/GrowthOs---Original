@@ -451,8 +451,8 @@ const Layout = memo(({
       icon: MessageSquare
     }];
 
-    // Add dynamic integrations after Support
-    const dynamicItems = [];
+    // Insert dynamic integrations right after Connect Accounts
+    const dynamicItems: any[] = [];
     if (connectionStatus.shopify) {
       dynamicItems.push({
         name: "Shopify Dashboard",
@@ -468,13 +468,20 @@ const Layout = memo(({
       });
     }
 
+    // Find the index of "Connect Accounts" and insert right after it
+    const connectIdx = baseNavigation.findIndex(i => i.href === "/connect");
+    const withIntegrations = [...baseNavigation];
+    if (connectIdx !== -1 && dynamicItems.length) {
+      withIntegrations.splice(connectIdx + 1, 0, ...dynamicItems);
+    }
+
     // Add Profile at the end
     const profileItem = {
       name: "Profile",
       href: "/profile",
       icon: User
     };
-    return [...baseNavigation, ...dynamicItems, profileItem];
+    return [...withIntegrations, profileItem];
   }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager, connectionStatus]);
 
   // Auto-expand course menu if any course tab is active

@@ -58,8 +58,8 @@ serve(async (req) => {
     const apiToken = decrypt(integ.access_token)
     const domain = integ.external_id
 
-    // Fetch recent orders from Shopify Admin API
-    const ordersResponse = await fetch(`https://${domain}/admin/api/2024-07/orders.json?status=any&fields=total_price,created_at&limit=250`, {
+    // Fetch recent orders from Shopify Admin API (include line_items for best sellers)
+    const ordersResponse = await fetch(`https://${domain}/admin/api/2024-07/orders.json?status=any&limit=250&fields=total_price,created_at,line_items`, {
       headers: {
         'X-Shopify-Access-Token': apiToken
       }
@@ -91,20 +91,56 @@ serve(async (req) => {
       salesTrend.push({ date: dateStr, sales: dayTotal })
     }
 
-    // Mock top products (placeholder)
-    const topProducts = [
-      { id: '1', name: 'Premium T-Shirt', sales: 45, revenue: 1350 },
-      { id: '2', name: 'Classic Hoodie', sales: 32, revenue: 1920 },
-      { id: '3', name: 'Denim Jacket', sales: 28, revenue: 2240 },
-    ]
+    // Fetch products (basic info)
+    const productsResp = await fetch(`https://${domain}/admin/api/2024-07/products.json?limit=250&fields=id,title,handle,product_type,images,variants,created_at,status,vendor`, {
+      headers: { 'X-Shopify-Access-Token': apiToken }
+    })
+
+    const productsJson = productsResp.ok ? await productsResp.json() : { products: [] }
+    const products = (productsJson.products || []).map((p: any) => ({
+      id: String(p.id),
+      name: p.title,
+      type: p.product_type,
+      price: p.variants?.[0]?.price ? parseFloat(p.variants[0].price) : 0,
+      image: p.images?.[0]?.src || null,
+      status: p.status,
+      handle: p.handle,
+    }))
+
+    // Compute best sellers from last 30 days using line_items
+    const cutoff = new Date()
+    cutoff.setDate(cutoff.getDate() - 30)
+    const salesMap: Record<string, { id: string; name: string; sales: number; revenue: number }> = {}
+
+    for (const o of orders) {
+      const created = o.created_at ? new Date(o.created_at) : null
+      if (!created || created < cutoff) continue
+      const lineItems = o.line_items || []
+      for (const li of lineItems) {
+        const pid = String(li.product_id || li.variant_id || li.sku || li.title)
+        if (!salesMap[pid]) {
+          salesMap[pid] = { id: pid, name: li.title || `Product ${pid}` , sales: 0, revenue: 0 }
+        }
+        const qty = Number(li.quantity || 0)
+        const price = parseFloat(li.price || 0)
+        salesMap[pid].sales += qty
+        salesMap[pid].revenue += qty * price
+      }
+    }
+
+    const bestSellers = Object.values(salesMap)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 10)
 
     const metrics = {
       gmv,
       orders: orderCount,
       aov,
       conversionRate: 3.2,
-      topProducts,
-      salesTrend
+      topProducts: bestSellers, // backward compatibility
+      bestSellers,
+      salesTrend,
+      products,
     }
 
     return new Response(
