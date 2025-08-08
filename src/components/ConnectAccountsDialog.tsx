@@ -124,10 +124,59 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   };
 
   const handleShopDomainSave = async (domain: string) => {
-    await completeShopifyConnection(currentToken, domain);
-    setCurrentToken("");
-  };
+    // If we have a token in memory (user just entered it), complete full connection
+    if (currentToken) {
+      await completeShopifyConnection(currentToken, domain);
+      setCurrentToken("");
+      return;
+    }
 
+    // Otherwise, persist only the domain using the existing saved token
+    try {
+      if (!userId) return;
+
+      // Try to find existing integrations row
+      const { data: existing } = await supabase
+        .from('integrations')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('source', 'shopify')
+        .maybeSingle();
+
+      if (existing?.id) {
+        await supabase
+          .from('integrations')
+          .update({ external_id: domain, updated_at: new Date().toISOString() })
+          .eq('id', existing.id);
+      } else {
+        // Fall back to legacy saved token on users table via StudentIntegrations.get()
+        const token = integration?.shopify_api_token;
+        if (!token) {
+          toast({
+            title: 'Missing token',
+            description: 'We could not find your saved Shopify token. Please re-enter it.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        await supabase.from('integrations').insert({
+          user_id: userId,
+          source: 'shopify',
+          access_token: token,
+          external_id: domain,
+        });
+      }
+
+      setShopDomain(domain);
+      setShopifyConnected(true);
+      if (onConnectionUpdate) onConnectionUpdate();
+      if ((window as any).checkIntegrations) (window as any).checkIntegrations();
+      toast({ title: 'Domain saved', description: 'Your Shopify domain has been added.' });
+    } catch (e) {
+      console.error('Failed to save Shopify domain:', e);
+      toast({ title: 'Error', description: 'Could not save domain. Please try again.', variant: 'destructive' });
+    }
+  };
   const completeShopifyConnection = async (token: string, domain: string) => {
     try {
       // Validate on server (avoids CORS and gives clearer errors)
@@ -495,6 +544,14 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
               )}
               {shopifyConnected && !editingShopify && (
                 <div className="space-y-2">
+                  {!shopDomain && (
+                    <div className="p-3 border rounded-md text-xs text-yellow-900 bg-yellow-50">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>Store domain missing. Add your yourstore.myshopify.com to finish setup.</span>
+                        <Button size="sm" onClick={() => setAskDomainOpen(true)}>Add Store Domain</Button>
+                      </div>
+                    </div>
+                  )}
                   <Button 
                     variant="outline" 
                     size="sm" 

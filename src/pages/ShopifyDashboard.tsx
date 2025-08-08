@@ -55,13 +55,33 @@ const ShopifyDashboard = () => {
         return;
       }
 
-      // Check integration details first to detect missing domain
+      // Check integration details first; migrate legacy token if needed
       const { data: integ } = await supabase
         .from('integrations')
         .select('access_token, external_id')
         .eq('user_id', user.id)
         .eq('source', 'shopify')
         .maybeSingle();
+
+      if (!integ?.access_token) {
+        // Fallback: migrate legacy token from users table into integrations
+        const { data: legacy } = await supabase
+          .from('users')
+          .select('shopify_credentials')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (legacy?.shopify_credentials) {
+          await supabase.from('integrations').insert({
+            user_id: user.id,
+            source: 'shopify',
+            access_token: legacy.shopify_credentials,
+            external_id: null,
+          });
+          setConnectionStatus('needs_domain');
+          setLoading(false);
+          return;
+        }
+      }
 
       if (integ?.access_token && !integ.external_id) {
         setConnectionStatus('needs_domain');
