@@ -37,6 +37,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   const [askDomainOpen, setAskDomainOpen] = useState(false);
   const [currentToken, setCurrentToken] = useState("");
   const [integration, setIntegration] = useState<any>(null);
+  const [shopDomain, setShopDomain] = useState<string | null>(null);
 
   // Load existing integration settings
   useEffect(() => {
@@ -48,20 +49,35 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
         setMetaKey("");
         setShopTokenInput("");
         
-        try {
-          const integrationData = await StudentIntegrations.get(userId);
-          setIntegration(integrationData);
-          
-          if (integrationData) {
-            setShopifyConnected(integrationData.is_shopify_connected);
-            setMetaConnected(integrationData.is_meta_connected);
-          } else {
-            setShopifyConnected(false);
-            setMetaConnected(false);
+          try {
+            const integrationData = await StudentIntegrations.get(userId);
+            setIntegration(integrationData);
+
+            // Load persisted Shopify domain from normalized integrations table
+            try {
+              const { data: shopifyInt, error: intErr } = await supabase
+                .from('integrations')
+                .select('external_id')
+                .eq('user_id', userId)
+                .eq('source', 'shopify')
+                .maybeSingle();
+              if (intErr) console.warn('Failed to load Shopify integration domain', intErr);
+              setShopDomain(shopifyInt?.external_id || null);
+            } catch (e) {
+              console.warn('Error loading Shopify domain', e);
+              setShopDomain(null);
+            }
+            
+            if (integrationData) {
+              setShopifyConnected(integrationData.is_shopify_connected);
+              setMetaConnected(integrationData.is_meta_connected);
+            } else {
+              setShopifyConnected(false);
+              setMetaConnected(false);
+            }
+          } catch (error) {
+            console.error('Error loading integrations:', error);
           }
-        } catch (error) {
-          console.error('Error loading integrations:', error);
-        }
       }
     };
 
@@ -89,9 +105,9 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
       return;
     }
 
-    // Check if user already has a shop domain
-    if (integration?.shop_domain) {
-      await completeShopifyConnection(token, integration.shop_domain);
+    // Check if we already have a shop domain stored
+    if (shopDomain) {
+      await completeShopifyConnection(token, shopDomain);
     } else {
       // Need to ask for domain
       setCurrentToken(token);
@@ -106,35 +122,16 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
 
   const completeShopifyConnection = async (token: string, domain: string) => {
     try {
-      // Test the token by calling Shopify API
-      const response = await fetch(`https://${domain}/admin/api/2024-07/access_scopes.json`, {
-        headers: {
-          'X-Shopify-Access-Token': token
-        }
+      // Validate on server (avoids CORS and gives clearer errors)
+      const { data: validation, error: valError } = await supabase.functions.invoke('validate-shopify', {
+        body: { shopifyDomain: domain, apiKey: token }
       });
 
-      if (response.status === 401) {
-        toast({
-          title: "Invalid Token",
-          description: "The Shopify API token is invalid or expired.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (response.status === 403) {
-        toast({
-          title: "Missing Scopes",
-          description: "The token doesn't have required permissions.",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (!response.ok) {
+      if (valError || !validation?.valid) {
+        console.error('Shopify validation error:', valError || validation);
         toast({
           title: "Connection Failed",
-          description: `Failed to connect to Shopify (${response.status}).`,
+          description: `${valError?.message || validation?.error || 'Could not verify your Shopify token/domain.'} If you used a custom domain, try your myshopify.com domain like yourstore.myshopify.com and ensure the token starts with shpat_.`,
           variant: "destructive",
         });
         return;
@@ -185,6 +182,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
       setShopifyConnected(true);
       setEditingShopify(false);
       setShopTokenInput("");
+      setShopDomain(domain);
 
       // Kick off a background sync for last 7 days (non-blocking)
       try {
@@ -233,6 +231,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
       }
 
       setShopifyConnected(false);
+      setShopDomain(null);
       
       if (onConnectionUpdate) {
         onConnectionUpdate();

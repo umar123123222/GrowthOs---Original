@@ -72,7 +72,7 @@ export const AskShopDomainDialog = ({ open, onOpenChange, onDomainSave }: AskSho
               onKeyDown={(e) => e.key === 'Enter' && handleShopDomainSave()}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Enter your full Shopify domain (e.g., yourstore.myshopify.com)
+              Use your .myshopify.com domain (e.g., yourstore.myshopify.com). Do not use your custom domain.
             </p>
           </div>
           
