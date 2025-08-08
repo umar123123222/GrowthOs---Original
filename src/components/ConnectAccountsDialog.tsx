@@ -18,6 +18,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { syncShopifyMetrics } from "@/lib/metrics-sync";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 
+// Small green live indicator dot
+const LiveIndicator = () => (
+  <span className="relative inline-flex h-2.5 w-2.5">
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+  </span>
+);
+
 interface ConnectAccountsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -364,6 +372,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
                 Meta Ads API
                 {metaConnected && !editingMeta && (
                   <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+                    <LiveIndicator />
                     <Check className="w-3 h-3" />
                     Connected
                   </Badge>
@@ -452,6 +461,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
                 Shopify Store
                 {shopifyConnected && !editingShopify && (
                   <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+                    <LiveIndicator />
                     <Check className="w-3 h-3" />
                     Connected
                   </Badge>
