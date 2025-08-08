@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { fetchShopifyMetrics } from '@/lib/student-integrations';
+import { supabase } from '@/integrations/supabase/client';
 
 const ShopifyDashboard = () => {
   const { toast } = useToast();
@@ -54,7 +55,21 @@ const ShopifyDashboard = () => {
         return;
       }
 
-      // Use the new server function to get metrics
+      // Check integration details first to detect missing domain
+      const { data: integ } = await supabase
+        .from('integrations')
+        .select('access_token, external_id')
+        .eq('user_id', user.id)
+        .eq('source', 'shopify')
+        .maybeSingle();
+
+      if (integ?.access_token && !integ.external_id) {
+        setConnectionStatus('needs_domain');
+        setLoading(false);
+        return;
+      }
+
+      // Fetch metrics from edge function
       const result = await fetchShopifyMetrics(user.id);
       
       if (!result.connected) {
@@ -146,6 +161,24 @@ const ShopifyDashboard = () => {
           <Button onClick={() => navigate('/connect')}>
             <ExternalLink className="h-4 w-4 mr-2" />
             Connect Shopify Store
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (connectionStatus === 'needs_domain') {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center py-12">
+          <ShoppingBag className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
+          <h2 className="text-2xl font-bold mb-2">Finish Shopify Setup</h2>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Your Shopify token is saved, but we still need your store domain (e.g., yourstore.myshopify.com) to fetch data.
+          </p>
+          <Button onClick={() => navigate('/connect')}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Add Store Domain
           </Button>
         </div>
       </div>
