@@ -10,12 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Edit, Settings, Trash2 } from "lucide-react";
+import { Check, Edit, Settings, Trash2, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AskShopDomainDialog } from "./AskShopDomainDialog";
 import { StudentIntegrations, encryptToken } from "@/lib/student-integrations";
 import { supabase } from "@/integrations/supabase/client";
 import { syncShopifyMetrics } from "@/lib/metrics-sync";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 
 interface ConnectAccountsDialogProps {
   open: boolean;
@@ -418,6 +419,30 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
                   Edit Connection
                 </Button>
               )}
+              <Collapsible>
+                <CollapsibleTrigger className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground py-2">
+                  <span>Where to get these credentials</span>
+                  <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 rounded-md border bg-muted/30 p-3 text-xs space-y-2">
+                  <div>
+                    <p className="font-medium">Meta Ads access token</p>
+                    <ol className="list-decimal pl-4 space-y-1">
+                      <li>Go to Meta for Developers → My Apps and create or open your app.</li>
+                      <li>Add the Marketing API and generate a System User or User token.</li>
+                      <li>Include scopes: ads_read and ads_management.</li>
+                      <li>Copy the access token and paste it above.</li>
+                    </ol>
+                  </div>
+                  <div>
+                    <p className="font-medium">Ad Account ID</p>
+                    <ol className="list-decimal pl-4 space-y-1">
+                      <li>Open Ads Manager and check the URL or account dropdown.</li>
+                      <li>Use the numeric ID (e.g., 1234567890). "act_1234567890" also works.</li>
+                    </ol>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </CardContent>
           </Card>
 
@@ -481,6 +506,28 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
                   </Button>
                 </div>
               )}
+              <Collapsible>
+                <CollapsibleTrigger className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground py-2">
+                  <span>Where to get these credentials</span>
+                  <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-2 rounded-md border bg-muted/30 p-3 text-xs space-y-2">
+                  <div>
+                    <p className="font-medium">Admin API access token</p>
+                    <ol className="list-decimal pl-4 space-y-1">
+                      <li>Shopify Admin → Settings → Apps and sales channels → Develop apps.</li>
+                      <li>Create or open your app and enable Admin API scopes (e.g., read_orders, read_products).</li>
+                      <li>Install the app, then reveal and copy the Admin API access token (starts with shpat_).</li>
+                    </ol>
+                  </div>
+                  <div>
+                    <p className="font-medium">Shop domain</p>
+                    <ol className="list-decimal pl-4 space-y-1">
+                      <li>Use your store domain like store-name.myshopify.com.</li>
+                    </ol>
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
             </CardContent>
           </Card>
         </div>
