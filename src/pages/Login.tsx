@@ -11,8 +11,9 @@ import { Eye, EyeOff, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react
 import { ErrorMessage, FieldError } from "@/components/ui/error-message";
 import { errorHandler, handleApiError } from "@/lib/error-handler";
 import { useNavigate } from "react-router-dom";
-
-const Login = () => {
+import { logger } from "@/lib/logger";
+ 
+ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -23,8 +24,9 @@ const Login = () => {
   const { toast } = useToast();
   const { refreshUser } = useAuth();
   const navigate = useNavigate();
-  const handleSubmit = async (e: React.FormEvent) => {
+const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const startAll = performance.now();
     
     // Clear previous errors
     setLoginError("");
@@ -46,12 +48,13 @@ const Login = () => {
     try {
       console.log('Login attempt for:', email);
 
-      // First authenticate with Supabase Auth
+// First authenticate with Supabase Auth
+      const tAuthStart = performance.now();
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      
+      logger.performance('auth.signInWithPassword', performance.now() - tAuthStart, { email });
       if (authError) {
         console.error('Auth error:', authError);
 
@@ -69,12 +72,14 @@ const Login = () => {
       
       console.log('Auth successful, checking user data...');
 
-      // Check if user exists in our users table
+// Check if user exists in our users table
+      const tUserFetchStart = performance.now();
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('*')
         .eq('id', authData.user.id)
         .maybeSingle();
+      logger.performance('db.users.fetch_by_id', performance.now() - tUserFetchStart, { id: authData.user.id });
         
       if (userError || !userData) {
         console.log('User not found in users table, creating...', { userError });
@@ -83,7 +88,8 @@ const Login = () => {
         const userRole = 'student';
         const fullName = authData.user.user_metadata?.full_name || null;
 
-        // Create user if they don't exist
+// Create user if they don't exist
+        const tInsertStart = performance.now();
         const { data: newUser, error: createError } = await supabase
           .from('users')
           .insert({
@@ -97,6 +103,7 @@ const Login = () => {
           })
           .select()
           .single();
+        logger.performance('db.users.insert_profile', performance.now() - tInsertStart, { id: authData.user.id, role: userRole });
           
         if (createError) {
           console.error('Error creating user:', createError);
@@ -137,8 +144,11 @@ const Login = () => {
         });
       }
 
-      // Refresh the user data in our auth hook and navigate to dashboard
+// Refresh the user data in our auth hook and navigate to dashboard
+      const tRefreshStart = performance.now();
       await refreshUser();
+      logger.performance('auth.refresh_user', performance.now() - tRefreshStart);
+      logger.performance('auth.login_total', performance.now() - startAll, { email, result: 'success' });
       navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
