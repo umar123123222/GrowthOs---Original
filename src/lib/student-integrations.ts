@@ -87,10 +87,9 @@ export async function encryptToken(token: string): Promise<string> {
   return data.encrypted;
 }
 
-// Server-side Shopify metrics
-export async function fetchShopifyMetrics(userId: string) {
+export async function fetchShopifyMetrics(userId: string, opts?: { startDate?: string; endDate?: string }) {
   const { data, error } = await supabase.functions.invoke('shopify-metrics', {
-    body: { userId }
+    body: { userId, startDate: opts?.startDate, endDate: opts?.endDate }
   });
 
   if (error) throw error;

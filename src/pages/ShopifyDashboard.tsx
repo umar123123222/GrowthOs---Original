@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ShoppingBag, TrendingUp, Users, DollarSign, Package, RefreshCw, ExternalLink, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ShoppingBag, TrendingUp, Users, DollarSign, Package, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +13,10 @@ import { fetchShopifyMetrics } from '@/lib/student-integrations';
 import { supabase } from '@/integrations/supabase/client';
 import { syncShopifyMetrics } from '@/lib/metrics-sync';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 const ShopifyDashboard = () => {
   const {
     toast
@@ -37,7 +41,7 @@ const ShopifyDashboard = () => {
     lastUpdated: null as string | null,
     currency: 'USD'
   });
-const [connectionStatus, setConnectionStatus] = useState('checking');
+  const [connectionStatus, setConnectionStatus] = useState('checking');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 9;
   const totalPages = Math.max(1, Math.ceil((shopifyData.products?.length || 0) / pageSize));
@@ -45,6 +49,15 @@ const [connectionStatus, setConnectionStatus] = useState('checking');
     const start = (currentPage - 1) * pageSize;
     return (shopifyData.products || []).slice(start, start + pageSize);
   }, [shopifyData.products, currentPage]);
+
+  // Date range (default last 7 days)
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 6);
+    return { from: start, to: end };
+  });
+
   useEffect(() => {
     if (authLoading) return;
     if (!user?.id) {
@@ -70,10 +83,14 @@ const [connectionStatus, setConnectionStatus] = useState('checking');
     };
   }, [authLoading, user?.id]);
 
-  // Reset to first page when products change
+  // Fetch when date range changes and connected
   useEffect(() => {
-    setCurrentPage(1);
-  }, [shopifyData.products?.length]);
+    if (!authLoading && user?.id && dateRange.from && dateRange.to) {
+      fetchShopifyData();
+    }
+  }, [dateRange.from, dateRange.to]);
+
+  // Reset to first page when products change
 
   // SEO: set title and meta tags
   useEffect(() => {
@@ -194,16 +211,21 @@ const [connectionStatus, setConnectionStatus] = useState('checking');
         setConnectionStatus('disconnected');
         return;
       }
-      const {
-        data: integ
-      } = await supabase.from('integrations').select('access_token, external_id').eq('user_id', user.id).eq('source', 'shopify').maybeSingle();
+      const { data: integ } = await supabase
+        .from('integrations')
+        .select('access_token, external_id')
+        .eq('user_id', user.id)
+        .eq('source', 'shopify')
+        .maybeSingle();
+
       let hasToken = !!integ?.access_token;
       let hasDomain = !!integ?.external_id;
       if (!hasToken) {
-        // Fallback: migrate legacy token from users table into integrations
-        const {
-          data: legacy
-        } = await supabase.from('users').select('shopify_credentials').eq('id', user.id).maybeSingle();
+        const { data: legacy } = await supabase
+          .from('users')
+          .select('shopify_credentials')
+          .eq('id', user.id)
+          .maybeSingle();
         if (legacy?.shopify_credentials) {
           await supabase.from('integrations').insert({
             user_id: user.id,
@@ -215,7 +237,6 @@ const [connectionStatus, setConnectionStatus] = useState('checking');
           return;
         } else {
           setConnectionStatus('disconnected');
-          // Try cached metrics if any exist
           await fetchCachedMetrics(user.id);
           return;
         }
@@ -225,9 +246,13 @@ const [connectionStatus, setConnectionStatus] = useState('checking');
         return;
       }
 
+      // Determine date range
+      const startISO = dateRange.from ? dateRange.from.toISOString() : undefined;
+      const endISO = dateRange.to ? dateRange.to.toISOString() : undefined;
+
       // Live metrics
       try {
-        const result = await fetchShopifyMetrics(user.id);
+        const result = await fetchShopifyMetrics(user.id, { startDate: startISO, endDate: endISO });
         if (!result?.connected) {
           const usedCache = await fetchCachedMetrics(user.id);
           if (!usedCache) {
@@ -245,38 +270,13 @@ const [connectionStatus, setConnectionStatus] = useState('checking');
           storeUrl: integ?.external_id || 'your-store.myshopify.com',
           totalSales: metrics.gmv,
           visitors: 2847,
-          // Replace with analytics API if available
           averageOrderValue: metrics.aov,
           conversionRate: metrics.conversionRate,
           orderCount: metrics.orders,
           topProducts: metrics.bestSellers || metrics.topProducts || [],
           products: metrics.products || [],
           salesTrend: metrics.salesTrend,
-          visitorTrend: [{
-            date: '2025-07-17',
-            visitors: 245
-          }, {
-            date: '2025-07-18',
-            visitors: 312
-          }, {
-            date: '2025-07-19',
-            visitors: 398
-          }, {
-            date: '2025-07-20',
-            visitors: 356
-          }, {
-            date: '2025-07-21',
-            visitors: 445
-          }, {
-            date: '2025-07-22',
-            visitors: 502
-          }, {
-            date: '2025-07-23',
-            visitors: 589
-          }, {
-            date: '2025-07-24',
-            visitors: 467
-          }],
+          visitorTrend: shopifyData.visitorTrend,
           lastUpdated: new Date().toISOString(),
           currency: metrics.currency || 'USD'
         };
@@ -285,7 +285,6 @@ const [connectionStatus, setConnectionStatus] = useState('checking');
         }
         setShopifyData(updated);
         setConnectionStatus('connected');
-        // Background sync to persist metrics
         syncShopifyMetrics().catch(() => {});
       } catch (e) {
         const usedCache = await fetchCachedMetrics(user.id);
@@ -378,6 +377,29 @@ const [connectionStatus, setConnectionStatus] = useState('checking');
                 {connectionStatus === 'connected' ? 'Connected' : 'Connection Issue'}
               </span>
             </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className={cn("w-[260px] justify-start text-left font-normal", !dateRange.from && !dateRange.to && "text-muted-foreground")}
+                  aria-label="Select date range">
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange.from && dateRange.to ? (
+                    <span>{`${format(dateRange.from, 'MMM d, yyyy')} - ${format(dateRange.to, 'MMM d, yyyy')}`}</span>
+                  ) : (
+                    <span>Pick a date range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="range"
+                  selected={dateRange as any}
+                  onSelect={(range: any) => setDateRange(range)}
+                  numberOfMonths={2}
+                  className={cn("p-3 pointer-events-auto")}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
             <Button onClick={fetchShopifyData} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh

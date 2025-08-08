@@ -38,7 +38,20 @@ serve(async (req) => {
       )
     }
 
-    // Fetch Shopify credentials from normalized integrations table
+    // Optional payload for date range
+    let payload: any = {}
+    try { payload = await req.json(); } catch { payload = {} }
+    const startDateInput = payload?.startDate ? new Date(payload.startDate) : null
+    const endDateInput = payload?.endDate ? new Date(payload.endDate) : null
+
+    // Defaults: last 7 days
+    const endDate = endDateInput || new Date()
+    const startDate = startDateInput || new Date(new Date().setDate(endDate.getDate() - 6))
+    const createdMin = new Date(startDate)
+    createdMin.setHours(0,0,0,0)
+    const createdMax = new Date(endDate)
+    createdMax.setHours(23,59,59,999)
+
     const { data: integ, error: integErr } = await supabaseClient
       .from('integrations')
       .select('access_token, external_id')
@@ -65,8 +78,10 @@ serve(async (req) => {
     const shopJson = shopResp.ok ? await shopResp.json() : { shop: null }
     const currency = shopJson?.shop?.currency || 'USD'
 
-    // Fetch recent orders from Shopify Admin API (include line_items for best sellers)
-    const ordersResponse = await fetch(`https://${domain}/admin/api/2024-07/orders.json?status=any&limit=250&fields=total_price,created_at,line_items`, {
+    // Fetch recent orders within range from Shopify Admin API (include line_items)
+    const createdMinParam = encodeURIComponent(createdMin.toISOString())
+    const createdMaxParam = encodeURIComponent(createdMax.toISOString())
+    const ordersResponse = await fetch(`https://${domain}/admin/api/2024-07/orders.json?status=any&limit=250&fields=total_price,created_at,line_items&created_at_min=${createdMinParam}&created_at_max=${createdMaxParam}` , {
       headers: {
         'X-Shopify-Access-Token': apiToken
       }
@@ -84,12 +99,12 @@ serve(async (req) => {
     const orderCount = orders.length
     const aov = orderCount > 0 ? gmv / orderCount : 0
 
-    // Generate sales trend for last 7 days
-    const today = new Date()
+    // Generate sales trend for selected range
+    const dayMs = 24 * 60 * 60 * 1000
+    const days = Math.max(1, Math.ceil((createdMax.getTime() - createdMin.getTime()) / dayMs) + 1)
     const salesTrend: Array<{ date: string; sales: number }> = []
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today)
-      date.setDate(date.getDate() - i)
+    for (let i = 0; i < days; i++) {
+      const date = new Date(createdMin.getTime() + i * dayMs)
       const dateStr = date.toISOString().split('T')[0]
 
       const dayOrders = orders.filter((order: any) => order.created_at && order.created_at.startsWith(dateStr))
@@ -114,14 +129,12 @@ serve(async (req) => {
       handle: p.handle,
     }))
 
-    // Compute best sellers from last 30 days using line_items
-    const cutoff = new Date()
-    cutoff.setDate(cutoff.getDate() - 30)
+    // Compute best sellers within selected range using line_items
     const salesMap: Record<string, { id: string; name: string; sales: number; revenue: number }> = {}
 
     for (const o of orders) {
       const created = o.created_at ? new Date(o.created_at) : null
-      if (!created || created < cutoff) continue
+      if (!created || created < createdMin || created > createdMax) continue
       const lineItems = o.line_items || []
       for (const li of lineItems) {
         const pid = String(li.product_id || li.variant_id || li.sku || li.title)
