@@ -3,17 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { 
-  ShoppingBag, 
-  TrendingUp, 
-  Users, 
-  DollarSign, 
-  Package,
-  RefreshCw,
-  ExternalLink,
-  AlertCircle,
-  CheckCircle2
-} from 'lucide-react';
+import { ShoppingBag, TrendingUp, Users, DollarSign, Package, RefreshCw, ExternalLink, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -22,10 +12,14 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'rec
 import { fetchShopifyMetrics } from '@/lib/student-integrations';
 import { supabase } from '@/integrations/supabase/client';
 import { syncShopifyMetrics } from '@/lib/metrics-sync';
-
 const ShopifyDashboard = () => {
-  const { toast } = useToast();
-  const { user, loading: authLoading } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    user,
+    loading: authLoading
+  } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [shopifyData, setShopifyData] = useState({
@@ -40,13 +34,11 @@ const ShopifyDashboard = () => {
     visitorTrend: [] as any[],
     orderCount: 0,
     lastUpdated: null as string | null,
-    currency: 'USD',
+    currency: 'USD'
   });
   const [connectionStatus, setConnectionStatus] = useState('checking');
-
   useEffect(() => {
     if (authLoading) return;
-
     if (!user?.id) {
       setConnectionStatus('disconnected');
       setLoading(false);
@@ -57,17 +49,14 @@ const ShopifyDashboard = () => {
     fetchShopifyData();
 
     // Listen for integration changes for this user
-    const channel = supabase
-      .channel('public:integrations')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'integrations', filter: `user_id=eq.${user.id}` },
-        () => {
-          fetchShopifyData();
-        }
-      )
-      .subscribe();
-
+    const channel = supabase.channel('public:integrations').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'integrations',
+      filter: `user_id=eq.${user.id}`
+    }, () => {
+      fetchShopifyData();
+    }).subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
@@ -94,9 +83,7 @@ const ShopifyDashboard = () => {
       document.head.appendChild(link);
     }
   }, []);
-
   const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
-
   const fetchCachedMetrics = async (uid: string): Promise<boolean> => {
     try {
       const cachedCurrency = typeof window !== 'undefined' ? localStorage.getItem('shopifyCurrency') : null;
@@ -104,21 +91,16 @@ const ShopifyDashboard = () => {
       const start = new Date();
       start.setDate(today.getDate() - 7);
       const startStr = toDateStr(start);
-
-      const { data, error } = await supabase
-        .from('user_metrics')
-        .select('date, metric, value')
-        .eq('user_id', uid)
-        .eq('source', 'shopify')
-        .gte('date', startStr)
-        .order('date', { ascending: true });
-
+      const {
+        data,
+        error
+      } = await supabase.from('user_metrics').select('date, metric, value').eq('user_id', uid).eq('source', 'shopify').gte('date', startStr).order('date', {
+        ascending: true
+      });
       if (error || !data || data.length === 0) return false;
-
       const gmvByDate = new Map<string, number>();
       const ordersByDate = new Map<string, number>();
-
-      (data as any[]).forEach((row) => {
+      (data as any[]).forEach(row => {
         if (row.metric === 'gmv') {
           gmvByDate.set(row.date, Number(row.value) || 0);
         } else if (row.metric === 'orders') {
@@ -127,7 +109,10 @@ const ShopifyDashboard = () => {
       });
 
       // Build continuous 7-day trend
-      const salesTrend: Array<{ date: string; sales: number }> = [];
+      const salesTrend: Array<{
+        date: string;
+        sales: number;
+      }> = [];
       let totalGmv = 0;
       let totalOrders = 0;
       for (let i = 7; i >= 0; i--) {
@@ -138,12 +123,13 @@ const ShopifyDashboard = () => {
         const orders = ordersByDate.get(key) ?? 0;
         totalGmv += gmv;
         totalOrders += orders;
-        salesTrend.push({ date: key, sales: gmv });
+        salesTrend.push({
+          date: key,
+          sales: gmv
+        });
       }
-
       const aov = totalOrders > 0 ? Number((totalGmv / totalOrders).toFixed(2)) : 0;
-
-      setShopifyData((prev) => ({
+      setShopifyData(prev => ({
         storeUrl: prev.storeUrl || 'your-store.myshopify.com',
         totalSales: totalGmv,
         visitors: prev.visitors || 0,
@@ -153,27 +139,40 @@ const ShopifyDashboard = () => {
         topProducts: [],
         products: [],
         salesTrend,
-        visitorTrend: prev.visitorTrend?.length ? prev.visitorTrend : [
-          { date: '2025-07-17', visitors: 245 },
-          { date: '2025-07-18', visitors: 312 },
-          { date: '2025-07-19', visitors: 398 },
-          { date: '2025-07-20', visitors: 356 },
-          { date: '2025-07-21', visitors: 445 },
-          { date: '2025-07-22', visitors: 502 },
-          { date: '2025-07-23', visitors: 589 },
-          { date: '2025-07-24', visitors: 467 }
-        ],
+        visitorTrend: prev.visitorTrend?.length ? prev.visitorTrend : [{
+          date: '2025-07-17',
+          visitors: 245
+        }, {
+          date: '2025-07-18',
+          visitors: 312
+        }, {
+          date: '2025-07-19',
+          visitors: 398
+        }, {
+          date: '2025-07-20',
+          visitors: 356
+        }, {
+          date: '2025-07-21',
+          visitors: 445
+        }, {
+          date: '2025-07-22',
+          visitors: 502
+        }, {
+          date: '2025-07-23',
+          visitors: 589
+        }, {
+          date: '2025-07-24',
+          visitors: 467
+        }],
         lastUpdated: new Date().toISOString(),
-        currency: cachedCurrency || (prev as any).currency || 'USD',
+        currency: cachedCurrency || (prev as any).currency || 'USD'
       }));
-
       setConnectionStatus('connected');
       return true;
     } catch {
       return false;
     }
   };
-
   const fetchShopifyData = async () => {
     setLoading(true);
     try {
@@ -182,30 +181,22 @@ const ShopifyDashboard = () => {
         setConnectionStatus('disconnected');
         return;
       }
-
-      const { data: integ } = await supabase
-        .from('integrations')
-        .select('access_token, external_id')
-        .eq('user_id', user.id)
-        .eq('source', 'shopify')
-        .maybeSingle();
-
+      const {
+        data: integ
+      } = await supabase.from('integrations').select('access_token, external_id').eq('user_id', user.id).eq('source', 'shopify').maybeSingle();
       let hasToken = !!integ?.access_token;
       let hasDomain = !!integ?.external_id;
-
       if (!hasToken) {
         // Fallback: migrate legacy token from users table into integrations
-        const { data: legacy } = await supabase
-          .from('users')
-          .select('shopify_credentials')
-          .eq('id', user.id)
-          .maybeSingle();
+        const {
+          data: legacy
+        } = await supabase.from('users').select('shopify_credentials').eq('id', user.id).maybeSingle();
         if (legacy?.shopify_credentials) {
           await supabase.from('integrations').insert({
             user_id: user.id,
             source: 'shopify',
             access_token: legacy.shopify_credentials,
-            external_id: null,
+            external_id: null
           });
           setConnectionStatus('needs_domain');
           return;
@@ -216,7 +207,6 @@ const ShopifyDashboard = () => {
           return;
         }
       }
-
       if (hasToken && !hasDomain) {
         setConnectionStatus('needs_domain');
         return;
@@ -232,41 +222,54 @@ const ShopifyDashboard = () => {
             toast({
               title: 'Shopify connection issue',
               description: 'We could not fetch live data. Please try again.',
-              variant: 'destructive',
+              variant: 'destructive'
             });
           }
           return;
         }
-
         const metrics = result.metrics!;
         const updated = {
           storeUrl: integ?.external_id || 'your-store.myshopify.com',
           totalSales: metrics.gmv,
-          visitors: 2847, // Replace with analytics API if available
+          visitors: 2847,
+          // Replace with analytics API if available
           averageOrderValue: metrics.aov,
           conversionRate: metrics.conversionRate,
           orderCount: metrics.orders,
           topProducts: metrics.bestSellers || metrics.topProducts || [],
           products: metrics.products || [],
           salesTrend: metrics.salesTrend,
-          visitorTrend: [
-            { date: '2025-07-17', visitors: 245 },
-            { date: '2025-07-18', visitors: 312 },
-            { date: '2025-07-19', visitors: 398 },
-            { date: '2025-07-20', visitors: 356 },
-            { date: '2025-07-21', visitors: 445 },
-            { date: '2025-07-22', visitors: 502 },
-            { date: '2025-07-23', visitors: 589 },
-            { date: '2025-07-24', visitors: 467 }
-          ],
+          visitorTrend: [{
+            date: '2025-07-17',
+            visitors: 245
+          }, {
+            date: '2025-07-18',
+            visitors: 312
+          }, {
+            date: '2025-07-19',
+            visitors: 398
+          }, {
+            date: '2025-07-20',
+            visitors: 356
+          }, {
+            date: '2025-07-21',
+            visitors: 445
+          }, {
+            date: '2025-07-22',
+            visitors: 502
+          }, {
+            date: '2025-07-23',
+            visitors: 589
+          }, {
+            date: '2025-07-24',
+            visitors: 467
+          }],
           lastUpdated: new Date().toISOString(),
-          currency: metrics.currency || 'USD',
+          currency: metrics.currency || 'USD'
         };
-
         if (typeof window !== 'undefined' && updated.currency) {
           localStorage.setItem('shopifyCurrency', updated.currency);
         }
-
         setShopifyData(updated);
         setConnectionStatus('connected');
         // Background sync to persist metrics
@@ -278,7 +281,7 @@ const ShopifyDashboard = () => {
           toast({
             title: 'Shopify error',
             description: 'Failed to fetch data. Showing nothing as no cache is available.',
-            variant: 'destructive',
+            variant: 'destructive'
           });
         }
       }
@@ -286,7 +289,6 @@ const ShopifyDashboard = () => {
       setLoading(false);
     }
   };
-
   const formatCurrency = (amount: number, currency: string = shopifyData.currency || 'USD') => {
     try {
       return new Intl.NumberFormat(undefined, {
@@ -300,7 +302,6 @@ const ShopifyDashboard = () => {
       }).format(amount || 0);
     }
   };
-
   const getStatusIcon = () => {
     switch (connectionStatus) {
       case 'connected':
@@ -311,21 +312,16 @@ const ShopifyDashboard = () => {
         return <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />;
     }
   };
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-96">
+    return <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Loading Shopify data...</p>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (connectionStatus === 'disconnected') {
-    return (
-      <div className="max-w-4xl mx-auto">
+    return <div className="max-w-4xl mx-auto">
         <div className="text-center py-12">
           <ShoppingBag className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
           <h2 className="text-2xl font-bold mb-4">Connect Your Shopify Store</h2>
@@ -337,13 +333,10 @@ const ShopifyDashboard = () => {
             Connect Shopify Store
           </Button>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (connectionStatus === 'needs_domain') {
-    return (
-      <div className="max-w-4xl mx-auto">
+    return <div className="max-w-4xl mx-auto">
         <div className="text-center py-12">
           <ShoppingBag className="h-16 w-16 mx-auto mb-6 text-muted-foreground" />
           <h2 className="text-2xl font-bold mb-2">Finish Shopify Setup</h2>
@@ -355,15 +348,12 @@ const ShopifyDashboard = () => {
             Add Store Domain
           </Button>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <TooltipProvider>
+  return <TooltipProvider>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between rounded-xl p-6 gradient-primary shadow-medium animate-fade-in">
+        <div className="flex items-center justify-between rounded-xl p-6 gradient-primary shadow-medium animate-fade-in bg-indigo-600">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Shopify Dashboard</h1>
             <p className="text-muted-foreground">Real-time store performance and analytics</p>
@@ -473,26 +463,18 @@ const ShopifyDashboard = () => {
               <CardDescription>Daily sales performance</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer
-                config={{
-                  sales: {
-                    label: "Sales ($)",
-                    color: "hsl(var(--primary))",
-                  },
-                }}
-                className="h-[200px]"
-              >
+              <ChartContainer config={{
+              sales: {
+                label: "Sales ($)",
+                color: "hsl(var(--primary))"
+              }
+            }} className="h-[200px]">
                 <LineChart data={shopifyData.salesTrend}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="sales" 
-                    stroke="var(--color-sales)" 
-                    strokeWidth={2}
-                  />
+                  <Line type="monotone" dataKey="sales" stroke="var(--color-sales)" strokeWidth={2} />
                 </LineChart>
               </ChartContainer>
             </CardContent>
@@ -504,25 +486,18 @@ const ShopifyDashboard = () => {
               <CardDescription>Daily visitor count</CardDescription>
             </CardHeader>
             <CardContent>
-              <ChartContainer
-                config={{
-                  visitors: {
-                    label: "Visitors",
-                    color: "hsl(var(--primary))",
-                  },
-                }}
-                className="h-[200px]"
-              >
+              <ChartContainer config={{
+              visitors: {
+                label: "Visitors",
+                color: "hsl(var(--primary))"
+              }
+            }} className="h-[200px]">
                 <BarChart data={shopifyData.visitorTrend}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar 
-                    dataKey="visitors" 
-                    fill="var(--color-visitors)" 
-                    radius={[4, 4, 0, 0]}
-                  />
+                  <Bar dataKey="visitors" fill="var(--color-visitors)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ChartContainer>
             </CardContent>
@@ -537,8 +512,7 @@ const ShopifyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {shopifyData.topProducts.map((product, index) => (
-                <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
+              {shopifyData.topProducts.map((product, index) => <div key={product.id} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center space-x-4">
                     <Badge variant="secondary" className="min-w-[24px] h-6 flex items-center justify-center">
                       {index + 1}
@@ -552,8 +526,7 @@ const ShopifyDashboard = () => {
                     <p className="font-medium">{formatCurrency(product.revenue)}</p>
                     <p className="text-sm text-muted-foreground">Revenue</p>
                   </div>
-                </div>
-              ))}
+                </div>)}
             </div>
           </CardContent>
         </Card>
@@ -566,12 +539,10 @@ const ShopifyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {shopifyData.products.map((p: any) => (
-                <div key={p.id} className="border rounded-lg p-4 flex items-start gap-4">
-                  {p.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.image} alt={`${p.name} product image`} className="w-16 h-16 rounded object-cover" loading="lazy" />
-                  )}
+              {shopifyData.products.map((p: any) => <div key={p.id} className="border rounded-lg p-4 flex items-start gap-4">
+                  {p.image &&
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={p.image} alt={`${p.name} product image`} className="w-16 h-16 rounded object-cover" loading="lazy" />}
                   <div className="flex-1">
                     <h4 className="font-medium">{p.name}</h4>
                     <p className="text-sm text-muted-foreground">{p.type || 'Product'}</p>
@@ -579,11 +550,8 @@ const ShopifyDashboard = () => {
                   <div className="text-right">
                     <p className="font-medium">{formatCurrency(p.price || 0)}</p>
                   </div>
-                </div>
-              ))}
-              {shopifyData.products.length === 0 && (
-                <p className="text-sm text-muted-foreground">No products found.</p>
-              )}
+                </div>)}
+              {shopifyData.products.length === 0 && <p className="text-sm text-muted-foreground">No products found.</p>}
             </div>
           </CardContent>
         </Card>
@@ -593,8 +561,6 @@ const ShopifyDashboard = () => {
           Last updated: {shopifyData.lastUpdated ? new Date(shopifyData.lastUpdated).toLocaleString() : 'Never'}
         </div>
       </div>
-    </TooltipProvider>
-  );
+    </TooltipProvider>;
 };
-
 export default ShopifyDashboard;
