@@ -14,6 +14,8 @@ import { Check, Edit, Settings, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AskShopDomainDialog } from "./AskShopDomainDialog";
 import { StudentIntegrations, encryptToken } from "@/lib/student-integrations";
+import { supabase } from "@/integrations/supabase/client";
+import { syncShopifyMetrics } from "@/lib/metrics-sync";
 
 interface ConnectAccountsDialogProps {
   open: boolean;
@@ -146,9 +148,47 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
         is_shopify_connected: true
       });
 
+      // Mirror into normalized integrations table for analytics/sync
+      try {
+        const { data: existing } = await supabase
+          .from('integrations')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('source', 'shopify')
+          .maybeSingle();
+
+        if (existing?.id) {
+          await supabase
+            .from('integrations')
+            .update({
+              access_token: encryptedToken,
+              external_id: domain,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('integrations')
+            .insert({
+              user_id: userId,
+              source: 'shopify',
+              access_token: encryptedToken,
+              external_id: domain,
+            });
+        }
+      } catch (e) {
+        console.error('Failed to persist to integrations table:', e);
+      }
+
       setShopifyConnected(true);
       setEditingShopify(false);
       setShopTokenInput("");
+
+      // Kick off a background sync for last 7 days (non-blocking)
+      try {
+        syncShopifyMetrics().catch((err) => console.warn('syncShopifyMetrics failed', err));
+      } catch (_) {}
+      
       
       // Update navigation
       if (onConnectionUpdate) {

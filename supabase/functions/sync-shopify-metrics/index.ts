@@ -66,8 +66,13 @@ serve(async (req: Request) => {
       console.error("Integrations select error:", integError);
     }
 
-    const tokenFromIntegrations = integration?.access_token || null;
+    let tokenFromIntegrations = integration?.access_token || null;
     const domainFromIntegrations = integration?.external_id || null;
+
+    // Decrypt if stored via encrypt-token (base64)
+    if (tokenFromIntegrations) {
+      try { tokenFromIntegrations = atob(tokenFromIntegrations); } catch (_) {}
+    }
 
     // If we don't have both token and domain, gracefully no-op so we don't affect current behavior.
     if (!tokenFromIntegrations || !domainFromIntegrations) {
