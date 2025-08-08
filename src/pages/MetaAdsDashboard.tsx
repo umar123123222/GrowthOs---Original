@@ -21,6 +21,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 const MetaAdsDashboard = () => {
   const { toast } = useToast();
@@ -48,120 +49,28 @@ const MetaAdsDashboard = () => {
   const fetchMetaAdsData = async () => {
     setLoading(true);
     try {
-      // Check if user has Meta Ads credentials
-      if (!user?.meta_ads_credentials) {
+      const { data, error } = await supabase.functions.invoke('meta-ads-metrics');
+      if (error) throw error;
+
+      if (!data?.connected) {
         setConnectionStatus('disconnected');
         setLoading(false);
         return;
       }
 
-      // Mock API call to Meta Marketing API
-      // In production, this would go through your backend to make authenticated calls
-      const mockMetaData = {
-        campaigns: [
-          {
-            id: 1,
-            name: 'Growth Course Promotion',
-            status: 'Active',
-            budget: 500,
-            spend: 387.45,
-            impressions: 45678,
-            clicks: 1234,
-            conversions: 67,
-            ctr: 2.7,
-            cpc: 0.31,
-            conversionRate: 5.4,
-            performance: 'good' // good, average, poor
-          },
-          {
-            id: 2,
-            name: 'Retargeting Campaign',
-            status: 'Active',
-            budget: 300,
-            spend: 245.80,
-            impressions: 23456,
-            clicks: 890,
-            conversions: 45,
-            ctr: 3.8,
-            cpc: 0.28,
-            conversionRate: 5.1,
-            performance: 'excellent'
-          },
-          {
-            id: 3,
-            name: 'Brand Awareness',
-            status: 'Paused',
-            budget: 200,
-            spend: 156.20,
-            impressions: 78901,
-            clicks: 567,
-            conversions: 12,
-            ctr: 0.7,
-            cpc: 0.28,
-            conversionRate: 2.1,
-            performance: 'poor'
-          }
-        ],
-        adSets: [
-          {
-            id: 1,
-            campaignId: 1,
-            name: 'Interest Targeting - Marketing',
-            status: 'Active',
-            spend: 187.45,
-            impressions: 23456,
-            clicks: 654,
-            ctr: 2.8,
-            cpc: 0.29
-          },
-          {
-            id: 2,
-            campaignId: 1,
-            name: 'Lookalike Audience',
-            status: 'Active',
-            spend: 200.00,
-            impressions: 22222,
-            clicks: 580,
-            ctr: 2.6,
-            cpc: 0.34
-          }
-        ],
-        ads: [
-          {
-            id: 1,
-            adSetId: 1,
-            name: 'Video Ad - Course Intro',
-            status: 'Active',
-            spend: 97.45,
-            impressions: 12456,
-            clicks: 334,
-            ctr: 2.7,
-            cpc: 0.29,
-            performance: 'good'
-          },
-          {
-            id: 2,
-            adSetId: 1,
-            name: 'Carousel Ad - Success Stories',
-            status: 'Active',
-            spend: 90.00,
-            impressions: 11000,
-            clicks: 320,
-            ctr: 2.9,
-            cpc: 0.28,
-            performance: 'excellent'
-          }
-        ],
-        totalSpend: 789.45,
-        totalImpressions: 147835,
-        totalClicks: 2691,
-        totalConversions: 124,
-        averageCTR: 1.8,
-        averageCPC: 0.29,
+      const m = data.metrics || {};
+      setMetaData({
+        campaigns: m.campaigns || [],
+        adSets: m.adSets || [],
+        ads: m.ads || [],
+        totalSpend: m.totalSpend ?? m.spend ?? 0,
+        totalImpressions: m.totalImpressions ?? m.impressions ?? 0,
+        totalClicks: m.totalClicks ?? m.clicks ?? 0,
+        totalConversions: m.totalConversions ?? m.conversions ?? 0,
+        averageCTR: m.averageCTR ?? m.ctr ?? 0,
+        averageCPC: m.averageCPC ?? m.cpc ?? 0,
         lastUpdated: new Date().toISOString()
-      };
-
-      setMetaData(mockMetaData);
+      });
       setConnectionStatus('connected');
       
     } catch (error) {

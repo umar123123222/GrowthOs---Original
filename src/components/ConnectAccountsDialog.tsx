@@ -31,6 +31,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   const [editingMeta, setEditingMeta] = useState(false);
   const [editingShopify, setEditingShopify] = useState(false);
   const [metaKey, setMetaKey] = useState("");
+  const [metaAccountId, setMetaAccountId] = useState("");
   const [shopTokenInput, setShopTokenInput] = useState("");
   const [askDomainOpen, setAskDomainOpen] = useState(false);
   const [currentToken, setCurrentToken] = useState("");
@@ -218,6 +219,18 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   const handleShopifyDisconnect = async () => {
     try {
       await StudentIntegrations.disconnect(userId!, 'shopify');
+
+      // Also remove from normalized integrations table
+      try {
+        await supabase
+          .from('integrations')
+          .delete()
+          .eq('user_id', userId!)
+          .eq('source', 'shopify');
+      } catch (e) {
+        console.error('Failed to clean integrations row for Shopify:', e);
+      }
+
       setShopifyConnected(false);
       
       if (onConnectionUpdate) {
@@ -243,10 +256,10 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   };
 
   const handleMetaConnect = async () => {
-    if (!metaKey.trim()) {
+    if (!metaKey.trim() || !metaAccountId.trim()) {
       toast({
-        title: "Error",
-        description: "Please enter a valid Meta API access token.",
+        title: "Missing Info",
+        description: "Please enter both the Meta API token and Ad Account ID.",
         variant: "destructive",
       });
       return;
@@ -263,25 +276,61 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
 
     try {
       const encryptedToken = await encryptToken(metaKey);
-      
+
       await StudentIntegrations.upsert({
         userId,
         meta_api_token: encryptedToken,
         is_meta_connected: true
       });
 
+      // Mirror into normalized integrations table
+      try {
+        const accountId = metaAccountId.trim().startsWith('act_')
+          ? metaAccountId.trim().slice(4)
+          : metaAccountId.trim();
+
+        const { data: existing } = await supabase
+          .from('integrations')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('source', 'meta_ads')
+          .maybeSingle();
+
+        if (existing?.id) {
+          await supabase
+            .from('integrations')
+            .update({
+              access_token: encryptedToken,
+              external_id: accountId,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('integrations')
+            .insert({
+              user_id: userId,
+              source: 'meta_ads',
+              access_token: encryptedToken,
+              external_id: accountId,
+            });
+        }
+      } catch (e) {
+        console.error('Failed to persist Meta integration:', e);
+      }
+
       setMetaConnected(true);
       setEditingMeta(false);
       setMetaKey("");
-      
+
       if (onConnectionUpdate) {
         onConnectionUpdate();
       }
-      
+
       if (window.checkIntegrations) {
         window.checkIntegrations();
       }
-      
+
       toast({
         title: "Meta API Connected",
         description: "Your Meta Ads account has been successfully connected.",
@@ -336,11 +385,23 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
                       onChange={(e) => setMetaKey(e.target.value)}
                     />
                   </div>
+                  <div>
+                    <Label htmlFor="meta-account" className="text-xs">
+                      Meta Ad Account ID
+                    </Label>
+                    <Input
+                      id="meta-account"
+                      type="text"
+                      placeholder="act_1234567890 or 1234567890"
+                      value={metaAccountId}
+                      onChange={(e) => setMetaAccountId(e.target.value)}
+                    />
+                  </div>
                   <Button 
                     onClick={handleMetaConnect} 
                     size="sm" 
                     className="w-full"
-                    disabled={!metaKey.trim()}
+                    disabled={!metaKey.trim() || !metaAccountId.trim()}
                   >
                     {editingMeta ? "Update Connection" : "Connect Meta API"}
                   </Button>

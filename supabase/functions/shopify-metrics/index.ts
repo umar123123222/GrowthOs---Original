@@ -7,7 +7,7 @@ const corsHeaders = {
 }
 
 function decrypt(encryptedText: string): string {
-  return atob(encryptedText);
+  return atob(encryptedText)
 }
 
 serve(async (req) => {
@@ -21,32 +21,44 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const authHeader = req.headers.get('authorization')!
-    const token = authHeader.replace('Bearer ', '')
-    const { data: user } = await supabaseClient.auth.getUser(token)
-
-    if (!user.user) {
-      throw new Error('Unauthorized')
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ connected: false, error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    const { data: integration } = await supabaseClient
-      .from('student_integrations')
-      .select('shopify_api_token, shop_domain, is_shopify_connected')
-      .eq('user_id', user.user.id)
-      .single()
+    const token = authHeader.replace('Bearer ', '')
+    const { data: user } = await supabaseClient.auth.getUser(token)
+    if (!user.user) {
+      return new Response(
+        JSON.stringify({ connected: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
-    if (!integration?.is_shopify_connected || !integration.shopify_api_token) {
+    // Fetch Shopify credentials from normalized integrations table
+    const { data: integ, error: integErr } = await supabaseClient
+      .from('integrations')
+      .select('access_token, external_id')
+      .eq('user_id', user.user.id)
+      .eq('source', 'shopify')
+      .maybeSingle()
+
+    if (integErr) throw integErr
+
+    if (!integ?.access_token || !integ.external_id) {
       return new Response(
         JSON.stringify({ connected: false }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Decrypt the token
-    const apiToken = decrypt(integration.shopify_api_token)
-    const domain = integration.shop_domain
+    const apiToken = decrypt(integ.access_token)
+    const domain = integ.external_id
 
-    // Fetch orders from Shopify
+    // Fetch recent orders from Shopify Admin API
     const ordersResponse = await fetch(`https://${domain}/admin/api/2024-07/orders.json?status=any&fields=total_price,created_at&limit=250`, {
       headers: {
         'X-Shopify-Access-Token': apiToken
@@ -67,27 +79,19 @@ serve(async (req) => {
 
     // Generate sales trend for last 7 days
     const today = new Date()
-    const salesTrend = []
-    
+    const salesTrend: Array<{ date: string; sales: number }> = []
     for (let i = 6; i >= 0; i--) {
       const date = new Date(today)
       date.setDate(date.getDate() - i)
       const dateStr = date.toISOString().split('T')[0]
-      
-      const dayOrders = orders.filter((order: any) => 
-        order.created_at && order.created_at.startsWith(dateStr)
-      )
-      const dayTotal = dayOrders.reduce((sum: number, order: any) => 
-        sum + parseFloat(order.total_price || 0), 0
-      )
-      
-      salesTrend.push({
-        date: dateStr,
-        sales: dayTotal
-      })
+
+      const dayOrders = orders.filter((order: any) => order.created_at && order.created_at.startsWith(dateStr))
+      const dayTotal = dayOrders.reduce((sum: number, order: any) => sum + parseFloat(order.total_price || 0), 0)
+
+      salesTrend.push({ date: dateStr, sales: dayTotal })
     }
 
-    // Mock top products (would need products API call)
+    // Mock top products (placeholder)
     const topProducts = [
       { id: '1', name: 'Premium T-Shirt', sales: 45, revenue: 1350 },
       { id: '2', name: 'Classic Hoodie', sales: 32, revenue: 1920 },
@@ -98,7 +102,7 @@ serve(async (req) => {
       gmv,
       orders: orderCount,
       aov,
-      conversionRate: 3.2, // Would calculate from analytics
+      conversionRate: 3.2,
       topProducts,
       salesTrend
     }
@@ -107,11 +111,10 @@ serve(async (req) => {
       JSON.stringify({ connected: true, metrics }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
-
-  } catch (error) {
-    console.error('Error:', error)
+  } catch (error: any) {
+    console.error('shopify-metrics error:', error)
     return new Response(
-      JSON.stringify({ connected: false, error: error.message }),
+      JSON.stringify({ connected: false, error: error?.message || 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
