@@ -371,6 +371,47 @@ export type Database = {
         }
         Relationships: []
       }
+      integrations: {
+        Row: {
+          access_token: string
+          connected_at: string
+          external_id: string | null
+          id: number
+          refresh_token: string | null
+          source: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_token: string
+          connected_at?: string
+          external_id?: string | null
+          id?: number
+          refresh_token?: string | null
+          source: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_token?: string
+          connected_at?: string
+          external_id?: string | null
+          id?: number
+          refresh_token?: string | null
+          source?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoices: {
         Row: {
           amount: number
@@ -958,6 +999,44 @@ export type Database = {
             columns: ["badge_id"]
             isOneToOne: false
             referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_metrics: {
+        Row: {
+          date: string
+          fetched_at: string
+          id: number
+          metric: string
+          source: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          date: string
+          fetched_at?: string
+          id?: number
+          metric: string
+          source: string
+          user_id: string
+          value: number
+        }
+        Update: {
+          date?: string
+          fetched_at?: string
+          id?: number
+          metric?: string
+          source?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]

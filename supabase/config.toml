@@ -1,3 +1,4 @@
+
 project_id = "majqoqagohicjigmsilu"
 
 [auth]
@@ -26,4 +27,7 @@ enabled = false
 verify_jwt = true
 
 [functions.create-enhanced-team-member]
+verify_jwt = true
+
+[functions.sync-shopify-metrics]
 verify_jwt = true
