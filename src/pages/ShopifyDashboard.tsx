@@ -51,13 +51,18 @@ const ShopifyDashboard = () => {
   }, [shopifyData.products, currentPage]);
 
   // Date range (default last 7 days)
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => {
+  const [dateRange, setDateRange] = useState<{
+    from?: Date;
+    to?: Date;
+  }>(() => {
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - 6);
-    return { from: start, to: end };
+    return {
+      from: start,
+      to: end
+    };
   });
-
   useEffect(() => {
     if (authLoading) return;
     if (!user?.id) {
@@ -211,21 +216,15 @@ const ShopifyDashboard = () => {
         setConnectionStatus('disconnected');
         return;
       }
-      const { data: integ } = await supabase
-        .from('integrations')
-        .select('access_token, external_id')
-        .eq('user_id', user.id)
-        .eq('source', 'shopify')
-        .maybeSingle();
-
+      const {
+        data: integ
+      } = await supabase.from('integrations').select('access_token, external_id').eq('user_id', user.id).eq('source', 'shopify').maybeSingle();
       let hasToken = !!integ?.access_token;
       let hasDomain = !!integ?.external_id;
       if (!hasToken) {
-        const { data: legacy } = await supabase
-          .from('users')
-          .select('shopify_credentials')
-          .eq('id', user.id)
-          .maybeSingle();
+        const {
+          data: legacy
+        } = await supabase.from('users').select('shopify_credentials').eq('id', user.id).maybeSingle();
         if (legacy?.shopify_credentials) {
           await supabase.from('integrations').insert({
             user_id: user.id,
@@ -252,7 +251,10 @@ const ShopifyDashboard = () => {
 
       // Live metrics
       try {
-        const result = await fetchShopifyMetrics(user.id, { startDate: startISO, endDate: endISO });
+        const result = await fetchShopifyMetrics(user.id, {
+          startDate: startISO,
+          endDate: endISO
+        });
         if (!result?.connected) {
           const usedCache = await fetchCachedMetrics(user.id);
           if (!usedCache) {
@@ -266,12 +268,7 @@ const ShopifyDashboard = () => {
           return;
         }
         const metrics = result.metrics!;
-        const derivedVisitors =
-          typeof (metrics as any).visitors === 'number'
-            ? (metrics as any).visitors
-            : (metrics.conversionRate && metrics.conversionRate > 0
-                ? Math.round(metrics.orders / (metrics.conversionRate / 100))
-                : 0);
+        const derivedVisitors = typeof (metrics as any).visitors === 'number' ? (metrics as any).visitors : metrics.conversionRate && metrics.conversionRate > 0 ? Math.round(metrics.orders / (metrics.conversionRate / 100)) : 0;
         const updated = {
           storeUrl: integ?.external_id || 'your-store.myshopify.com',
           totalSales: metrics.gmv,
@@ -385,25 +382,10 @@ const ShopifyDashboard = () => {
             </div>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className={cn("w-[260px] justify-start text-left font-normal", !dateRange.from && !dateRange.to && "text-muted-foreground")}
-                  aria-label="Select date range">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange.from && dateRange.to ? (
-                    <span>{`${format(dateRange.from, 'MMM d, yyyy')} - ${format(dateRange.to, 'MMM d, yyyy')}`}</span>
-                  ) : (
-                    <span>Pick a date range</span>
-                  )}
-                </Button>
+                
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="range"
-                  selected={dateRange as any}
-                  onSelect={(range: any) => setDateRange(range)}
-                  numberOfMonths={2}
-                  className={cn("p-3 pointer-events-auto")}
-                  initialFocus
-                />
+                <Calendar mode="range" selected={dateRange as any} onSelect={(range: any) => setDateRange(range)} numberOfMonths={2} className={cn("p-3 pointer-events-auto")} initialFocus />
               </PopoverContent>
             </Popover>
             <Button onClick={fetchShopifyData} variant="outline" size="sm">
@@ -580,12 +562,10 @@ const ShopifyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginatedProducts.map((p: any) => (
-                <div key={p.id} className="border rounded-lg p-4 flex items-start gap-4">
-                  {p.image && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={p.image} alt={`${p.name} product image`} className="w-16 h-16 rounded object-cover" loading="lazy" />
-                  )}
+              {paginatedProducts.map((p: any) => <div key={p.id} className="border rounded-lg p-4 flex items-start gap-4">
+                  {p.image &&
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={p.image} alt={`${p.name} product image`} className="w-16 h-16 rounded object-cover" loading="lazy" />}
                   <div className="flex-1">
                     <h4 className="font-medium">{p.name}</h4>
                     <p className="text-sm text-muted-foreground">{p.type || 'Product'}</p>
@@ -593,27 +573,28 @@ const ShopifyDashboard = () => {
                   <div className="text-right">
                     <p className="font-medium">{formatCurrency(p.price || 0)}</p>
                   </div>
-                </div>
-              ))}
-              {shopifyData.products.length === 0 && (
-                <p className="text-sm text-muted-foreground">No products found.</p>
-              )}
+                </div>)}
+              {shopifyData.products.length === 0 && <p className="text-sm text-muted-foreground">No products found.</p>}
             </div>
-            {shopifyData.products.length > pageSize && (
-              <Pagination className="mt-6">
+            {shopifyData.products.length > pageSize && <Pagination className="mt-6">
                 <PaginationContent>
                   <PaginationItem>
-                    <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.max(1, p - 1)); }} />
+                    <PaginationPrevious href="#" onClick={e => {
+                  e.preventDefault();
+                  setCurrentPage(p => Math.max(1, p - 1));
+                }} />
                   </PaginationItem>
                   <PaginationItem>
                     <span className="text-sm text-muted-foreground px-2">Page {currentPage} of {totalPages}</span>
                   </PaginationItem>
                   <PaginationItem>
-                    <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.min(totalPages, p + 1)); }} />
+                    <PaginationNext href="#" onClick={e => {
+                  e.preventDefault();
+                  setCurrentPage(p => Math.min(totalPages, p + 1));
+                }} />
                   </PaginationItem>
                 </PaginationContent>
-              </Pagination>
-            )}
+              </Pagination>}
           </CardContent>
         </Card>
 
