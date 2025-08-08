@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
+import React, { Suspense, useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { ActivityLogsDialog } from "./ActivityLogsDialog";
 import { MotivationalNotifications } from "./MotivationalNotifications";
 
 import { PageSkeleton } from "./LoadingStates/PageSkeleton";
+import RouteContentLoader from "./LoadingStates/RouteContentLoader";
 import { throttle } from "@/utils/performance";
 interface LayoutProps {
   user: any;
@@ -309,7 +310,53 @@ const Layout = memo(({
       isMounted = false;
       if ((window as any).checkIntegrations) delete (window as any).checkIntegrations;
     };
-  }, [user?.id]);
+}, [user?.id]);
+
+  // Prefetch route chunks on idle to reduce perceived load during navigation
+  useEffect(() => {
+    const idle = (cb: () => void) =>
+      "requestIdleCallback" in window
+        ? (window as any).requestIdleCallback(cb)
+        : setTimeout(cb, 1200);
+
+    const idleId: any = idle(() => {
+      Promise.allSettled([
+        import("@/pages/Profile"),
+        import("@/pages/Teams"),
+        import("@/pages/Support"),
+        import("@/pages/Connect"),
+        import("@/pages/MentorSessionsPage"),
+        import("@/pages/ShopifyDashboard"),
+        import("@/pages/MetaAdsDashboard"),
+      ]);
+    });
+
+    return () => {
+      if (typeof idleId === "number") {
+        clearTimeout(idleId);
+      } else if ("cancelIdleCallback" in window) {
+        (window as any).cancelIdleCallback(idleId);
+      }
+    };
+  }, []);
+
+  // Hover prefetch for sidebar links
+  const prefetchByHref = useCallback((href: string) => {
+    try {
+      if (href.startsWith("/profile")) import("@/pages/Profile");
+      else if (href.startsWith("/teams")) import("@/pages/Teams");
+      else if (href.startsWith("/support")) import("@/pages/Support");
+      else if (href.startsWith("/connect")) import("@/pages/Connect");
+      else if (href.startsWith("/mentor/sessions")) import("@/pages/MentorSessionsPage");
+      else if (href.startsWith("/shopify-dashboard")) import("@/pages/ShopifyDashboard");
+      else if (href.startsWith("/meta-ads-dashboard")) import("@/pages/MetaAdsDashboard");
+      else if (href.startsWith("/admin")) import("@/pages/AdminDashboard");
+      else if (href.startsWith("/superadmin")) import("@/pages/SuperadminDashboard");
+      else if (href.startsWith("/enrollment-manager")) import("@/pages/EnrollmentManagerDashboard");
+    } catch (e) {
+      // noop
+    }
+  }, []);
 
   // Check if any course submenu is active to keep it expanded
   const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=submissions') || location.search.includes('tab=success-sessions');
@@ -612,7 +659,7 @@ const Layout = memo(({
                           {item.subItems?.map(subItem => {
                       const isActive = location.search.includes(`tab=${subItem.href.split('=')[1]}`);
                       const SubIcon = subItem.icon;
-                      return <Link key={subItem.name} to={subItem.href} className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`}>
+                      return <Link key={subItem.name} to={subItem.href} onMouseEnter={() => prefetchByHref(subItem.href)} className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`}>
                                 <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
                                 {subItem.name}
                               </Link>;
@@ -622,7 +669,7 @@ const Layout = memo(({
               }
               const isActive = location.pathname === item.href || item.href.includes('?tab=') && location.search.includes(item.href.split('=')[1]);
               const Icon = item.icon;
-              return <Link key={item.name} to={item.href} className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`} title={sidebarCollapsed ? item.name : undefined}>
+              return <Link key={item.name} to={item.href} onMouseEnter={() => prefetchByHref(item.href)} className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`} title={sidebarCollapsed ? item.name : undefined}>
                     <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
                     {!sidebarCollapsed && item.name}
                   </Link>;
@@ -633,7 +680,9 @@ const Layout = memo(({
 
         {/* Main Content */}
         <main className={`flex-1 p-8 pt-24 animate-fade-in ${sidebarCollapsed ? 'ml-16' : 'ml-80'} transition-all duration-300`}>
-          <Outlet />
+          <Suspense fallback={<RouteContentLoader path={location.pathname} />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
       
