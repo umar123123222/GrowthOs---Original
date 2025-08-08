@@ -40,6 +40,7 @@ const ShopifyDashboard = () => {
     visitorTrend: [] as any[],
     orderCount: 0,
     lastUpdated: null as string | null,
+    currency: 'USD',
   });
   const [connectionStatus, setConnectionStatus] = useState('checking');
 
@@ -72,10 +73,33 @@ const ShopifyDashboard = () => {
     };
   }, [authLoading, user?.id]);
 
+  // SEO: set title and meta tags
+  useEffect(() => {
+    document.title = 'Shopify Dashboard — Real-time Metrics';
+    const metaDesc = document.querySelector('meta[name="description"]');
+    const content = 'Shopify dashboard with live sales, orders, and product analytics.';
+    if (metaDesc) {
+      metaDesc.setAttribute('content', content);
+    } else {
+      const m = document.createElement('meta');
+      (m as HTMLMetaElement).name = 'description';
+      m.content = content;
+      document.head.appendChild(m);
+    }
+    const canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      const link = document.createElement('link');
+      link.rel = 'canonical';
+      link.href = window.location.href;
+      document.head.appendChild(link);
+    }
+  }, []);
+
   const toDateStr = (d: Date) => d.toISOString().slice(0, 10);
 
   const fetchCachedMetrics = async (uid: string): Promise<boolean> => {
     try {
+      const cachedCurrency = typeof window !== 'undefined' ? localStorage.getItem('shopifyCurrency') : null;
       const today = new Date();
       const start = new Date();
       start.setDate(today.getDate() - 7);
@@ -140,6 +164,7 @@ const ShopifyDashboard = () => {
           { date: '2025-07-24', visitors: 467 }
         ],
         lastUpdated: new Date().toISOString(),
+        currency: cachedCurrency || (prev as any).currency || 'USD',
       }));
 
       setConnectionStatus('connected');
@@ -217,7 +242,7 @@ const ShopifyDashboard = () => {
         const updated = {
           storeUrl: integ?.external_id || 'your-store.myshopify.com',
           totalSales: metrics.gmv,
-          visitors: 2847, // Mock visitor data - would need analytics API
+          visitors: 2847, // Replace with analytics API if available
           averageOrderValue: metrics.aov,
           conversionRate: metrics.conversionRate,
           orderCount: metrics.orders,
@@ -235,7 +260,12 @@ const ShopifyDashboard = () => {
             { date: '2025-07-24', visitors: 467 }
           ],
           lastUpdated: new Date().toISOString(),
+          currency: metrics.currency || 'USD',
         };
+
+        if (typeof window !== 'undefined' && updated.currency) {
+          localStorage.setItem('shopifyCurrency', updated.currency);
+        }
 
         setShopifyData(updated);
         setConnectionStatus('connected');
@@ -257,21 +287,28 @@ const ShopifyDashboard = () => {
     }
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+  const formatCurrency = (amount: number, currency: string = shopifyData.currency || 'USD') => {
+    try {
+      return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency
+      }).format(amount || 0);
+    } catch {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      }).format(amount || 0);
+    }
   };
 
   const getStatusIcon = () => {
     switch (connectionStatus) {
       case 'connected':
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+        return <CheckCircle2 className="h-4 w-4 text-primary" />;
       case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
+        return <AlertCircle className="h-4 w-4 text-destructive" />;
       default:
-        return <RefreshCw className="h-4 w-4 text-yellow-600 animate-spin" />;
+        return <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />;
     }
   };
 
@@ -279,7 +316,7 @@ const ShopifyDashboard = () => {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
           <p className="text-muted-foreground">Loading Shopify data...</p>
         </div>
       </div>
@@ -326,7 +363,7 @@ const ShopifyDashboard = () => {
     <TooltipProvider>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-xl p-6 gradient-primary shadow-medium animate-fade-in">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Shopify Dashboard</h1>
             <p className="text-muted-foreground">Real-time store performance and analytics</p>
@@ -347,7 +384,7 @@ const ShopifyDashboard = () => {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
+          <Card className="hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
               <DollarSign className="h-4 w-4 text-muted-foreground" />
@@ -367,7 +404,7 @@ const ShopifyDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Visitors</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
@@ -387,7 +424,7 @@ const ShopifyDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
@@ -407,7 +444,7 @@ const ShopifyDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
@@ -430,7 +467,7 @@ const ShopifyDashboard = () => {
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
+          <Card className="hover-lift animate-fade-in">
             <CardHeader>
               <CardTitle>Sales Trend (Last 7 Days)</CardTitle>
               <CardDescription>Daily sales performance</CardDescription>
@@ -461,7 +498,7 @@ const ShopifyDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover-lift animate-fade-in">
             <CardHeader>
               <CardTitle>Visitor Trend (Last 7 Days)</CardTitle>
               <CardDescription>Daily visitor count</CardDescription>
@@ -493,7 +530,7 @@ const ShopifyDashboard = () => {
         </div>
 
         {/* Top Products */}
-        <Card>
+        <Card className="hover-lift animate-fade-in">
           <CardHeader>
             <CardTitle>Top Performing Products</CardTitle>
             <CardDescription>Best selling products in the last 30 days</CardDescription>
@@ -522,7 +559,7 @@ const ShopifyDashboard = () => {
         </Card>
 
         {/* All Products */}
-        <Card>
+        <Card className="hover-lift animate-fade-in">
           <CardHeader>
             <CardTitle>All Products</CardTitle>
             <CardDescription>Products fetched from your store</CardDescription>

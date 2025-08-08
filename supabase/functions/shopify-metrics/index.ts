@@ -58,6 +58,13 @@ serve(async (req) => {
     const apiToken = decrypt(integ.access_token)
     const domain = integ.external_id
 
+    // Fetch shop details for currency/locale
+    const shopResp = await fetch(`https://${domain}/admin/api/2024-07/shop.json?fields=currency,primary_locale,money_format`, {
+      headers: { 'X-Shopify-Access-Token': apiToken }
+    })
+    const shopJson = shopResp.ok ? await shopResp.json() : { shop: null }
+    const currency = shopJson?.shop?.currency || 'USD'
+
     // Fetch recent orders from Shopify Admin API (include line_items for best sellers)
     const ordersResponse = await fetch(`https://${domain}/admin/api/2024-07/orders.json?status=any&limit=250&fields=total_price,created_at,line_items`, {
       headers: {
@@ -141,6 +148,7 @@ serve(async (req) => {
       bestSellers,
       salesTrend,
       products,
+      currency,
     }
 
     return new Response(
