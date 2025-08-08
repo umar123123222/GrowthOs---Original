@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'rec
 import { fetchShopifyMetrics } from '@/lib/student-integrations';
 import { supabase } from '@/integrations/supabase/client';
 import { syncShopifyMetrics } from '@/lib/metrics-sync';
+import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 const ShopifyDashboard = () => {
   const {
     toast
@@ -36,7 +37,14 @@ const ShopifyDashboard = () => {
     lastUpdated: null as string | null,
     currency: 'USD'
   });
-  const [connectionStatus, setConnectionStatus] = useState('checking');
+const [connectionStatus, setConnectionStatus] = useState('checking');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 9;
+  const totalPages = Math.max(1, Math.ceil((shopifyData.products?.length || 0) / pageSize));
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return (shopifyData.products || []).slice(start, start + pageSize);
+  }, [shopifyData.products, currentPage]);
   useEffect(() => {
     if (authLoading) return;
     if (!user?.id) {
@@ -61,6 +69,11 @@ const ShopifyDashboard = () => {
       supabase.removeChannel(channel);
     };
   }, [authLoading, user?.id]);
+
+  // Reset to first page when products change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [shopifyData.products?.length]);
 
   // SEO: set title and meta tags
   useEffect(() => {
@@ -539,10 +552,12 @@ const ShopifyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {shopifyData.products.map((p: any) => <div key={p.id} className="border rounded-lg p-4 flex items-start gap-4">
-                  {p.image &&
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={p.image} alt={`${p.name} product image`} className="w-16 h-16 rounded object-cover" loading="lazy" />}
+              {paginatedProducts.map((p: any) => (
+                <div key={p.id} className="border rounded-lg p-4 flex items-start gap-4">
+                  {p.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.image} alt={`${p.name} product image`} className="w-16 h-16 rounded object-cover" loading="lazy" />
+                  )}
                   <div className="flex-1">
                     <h4 className="font-medium">{p.name}</h4>
                     <p className="text-sm text-muted-foreground">{p.type || 'Product'}</p>
@@ -550,9 +565,27 @@ const ShopifyDashboard = () => {
                   <div className="text-right">
                     <p className="font-medium">{formatCurrency(p.price || 0)}</p>
                   </div>
-                </div>)}
-              {shopifyData.products.length === 0 && <p className="text-sm text-muted-foreground">No products found.</p>}
+                </div>
+              ))}
+              {shopifyData.products.length === 0 && (
+                <p className="text-sm text-muted-foreground">No products found.</p>
+              )}
             </div>
+            {shopifyData.products.length > pageSize && (
+              <Pagination className="mt-6">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious href="#" onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.max(1, p - 1)); }} />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <span className="text-sm text-muted-foreground px-2">Page {currentPage} of {totalPages}</span>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext href="#" onClick={(e) => { e.preventDefault(); setCurrentPage((p) => Math.min(totalPages, p + 1)); }} />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            )}
           </CardContent>
         </Card>
 
