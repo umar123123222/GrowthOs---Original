@@ -266,10 +266,16 @@ const ShopifyDashboard = () => {
           return;
         }
         const metrics = result.metrics!;
+        const derivedVisitors =
+          typeof (metrics as any).visitors === 'number'
+            ? (metrics as any).visitors
+            : (metrics.conversionRate && metrics.conversionRate > 0
+                ? Math.round(metrics.orders / (metrics.conversionRate / 100))
+                : 0);
         const updated = {
           storeUrl: integ?.external_id || 'your-store.myshopify.com',
           totalSales: metrics.gmv,
-          visitors: 2847,
+          visitors: derivedVisitors,
           averageOrderValue: metrics.aov,
           conversionRate: metrics.conversionRate,
           orderCount: metrics.orders,
