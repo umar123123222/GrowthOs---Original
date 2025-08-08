@@ -268,18 +268,17 @@ const ShopifyDashboard = () => {
           return;
         }
         const metrics = result.metrics!;
-        const derivedVisitors = typeof (metrics as any).visitors === 'number' ? (metrics as any).visitors : metrics.conversionRate && metrics.conversionRate > 0 ? Math.round(metrics.orders / (metrics.conversionRate / 100)) : 0;
         const updated = {
           storeUrl: integ?.external_id || 'your-store.myshopify.com',
           totalSales: metrics.gmv,
-          visitors: derivedVisitors,
+          visitors: 0, // not available accurately from Shopify Admin API
           averageOrderValue: metrics.aov,
-          conversionRate: metrics.conversionRate,
+          conversionRate: 0, // placeholder removed from UI
           orderCount: metrics.orders,
           topProducts: metrics.bestSellers || metrics.topProducts || [],
           products: metrics.products || [],
           salesTrend: metrics.salesTrend,
-          visitorTrend: shopifyData.visitorTrend,
+          visitorTrend: [],
           lastUpdated: new Date().toISOString(),
           currency: metrics.currency || 'USD'
         };
@@ -327,6 +326,22 @@ const ShopifyDashboard = () => {
         return <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />;
     }
   };
+  const daysInRange = useMemo(() => {
+    if (!dateRange.from || !dateRange.to) return 7;
+    const ms = dateRange.to.getTime() - dateRange.from.getTime();
+    return Math.max(1, Math.floor(ms / (1000 * 60 * 60 * 24)) + 1);
+  }, [dateRange.from, dateRange.to]);
+  const ordersPerDay = useMemo(() => {
+    return daysInRange > 0 ? shopifyData.orderCount / daysInRange : 0;
+  }, [shopifyData.orderCount, daysInRange]);
+  const periodLabel = useMemo(() => {
+    if (!dateRange.from || !dateRange.to) return 'Selected period';
+    try {
+      return `${format(dateRange.from, 'MMM d')} - ${format(dateRange.to, 'MMM d')}`;
+    } catch {
+      return 'Selected period';
+    }
+  }, [dateRange.from, dateRange.to]);
   if (loading) {
     return <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
@@ -419,19 +434,17 @@ const ShopifyDashboard = () => {
 
           <Card className="hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Visitors</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">Orders</CardTitle>
+              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{shopifyData.visitors.toLocaleString()}</div>
+              <div className="text-2xl font-bold">{shopifyData.orderCount.toLocaleString()}</div>
               <Tooltip>
                 <TooltipTrigger>
-                  <p className="text-xs text-muted-foreground">
-                    +8.2% from last week
-                  </p>
+                  <p className="text-xs text-muted-foreground">Selected period</p>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Unique visitors in the last 7 days</p>
+                  <p>Total orders in the selected period</p>
                 </TooltipContent>
               </Tooltip>
             </CardContent>
@@ -459,19 +472,17 @@ const ShopifyDashboard = () => {
 
           <Card className="hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+              <CardTitle className="text-sm font-medium">Orders per Day</CardTitle>
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{shopifyData.conversionRate}%</div>
+              <div className="text-2xl font-bold">{ordersPerDay.toFixed(1)}</div>
               <Tooltip>
                 <TooltipTrigger>
-                  <p className="text-xs text-muted-foreground">
-                    +0.3% from last week
-                  </p>
+                  <p className="text-xs text-muted-foreground">Selected period</p>
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p>Percentage of visitors who make a purchase</p>
+                  <p>Average orders per day in the selected period</p>
                 </TooltipContent>
               </Tooltip>
             </CardContent>
@@ -482,7 +493,7 @@ const ShopifyDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Card className="hover-lift animate-fade-in">
             <CardHeader>
-              <CardTitle>Sales Trend (Last 7 Days)</CardTitle>
+              <CardTitle>Sales Trend ({periodLabel})</CardTitle>
               <CardDescription>Daily sales performance</CardDescription>
             </CardHeader>
             <CardContent>
@@ -503,35 +514,13 @@ const ShopifyDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift animate-fade-in">
-            <CardHeader>
-              <CardTitle>Visitor Trend (Last 7 Days)</CardTitle>
-              <CardDescription>Daily visitor count</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={{
-              visitors: {
-                label: "Visitors",
-                color: "hsl(var(--primary))"
-              }
-            }} className="h-[200px]">
-                <BarChart data={shopifyData.visitorTrend}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="visitors" fill="var(--color-visitors)" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-          </Card>
         </div>
 
         {/* Top Products */}
         <Card className="hover-lift animate-fade-in">
           <CardHeader>
             <CardTitle>Top Performing Products</CardTitle>
-            <CardDescription>Best selling products in the last 30 days</CardDescription>
+            <CardDescription>Best selling products in the selected period</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

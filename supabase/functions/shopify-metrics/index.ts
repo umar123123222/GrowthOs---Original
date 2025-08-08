@@ -156,12 +156,12 @@ serve(async (req) => {
       gmv,
       orders: orderCount,
       aov,
-      conversionRate: 3.2,
       topProducts: bestSellers, // backward compatibility
       bestSellers,
       salesTrend,
       products,
       currency,
+      period: { start: createdMin.toISOString(), end: createdMax.toISOString() }
     }
 
     return new Response(
