@@ -132,7 +132,7 @@ export const useAuth = () => {
         .select(`
           id, email, role, full_name, created_at, last_login_at, status, 
           password_display, is_temp_password, updated_at, created_by,
-          students!inner(onboarding_completed)
+          students(onboarding_completed)
         `)
         .eq('id', userId)
         .maybeSingle();
@@ -194,6 +194,22 @@ export const useAuth = () => {
     }
   };
 
+  const refreshUser = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser?.id) {
+        await fetchUserProfile(authUser.id);
+      } else {
+        logger.warn('refreshUser: No auth user found');
+        setUser(null);
+        setLoading(false);
+      }
+    } catch (e) {
+      logger.error('refreshUser: Error refreshing user', e);
+      setLoading(false);
+    }
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -217,7 +233,7 @@ export const useAuth = () => {
     signOut,
     hasRole,
     canAccessLMS,
-    refreshUser: () => user && fetchUserProfile(user.id),
+    refreshUser,
     session
   };
 };
