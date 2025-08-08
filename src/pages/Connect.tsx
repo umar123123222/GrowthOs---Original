@@ -1,17 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { ConnectAccountsDialog } from '@/components/ConnectAccountsDialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingBag, Target, Check, Plus } from 'lucide-react';
+import { supabase } from "@/integrations/supabase/client";
+
+// Small green live indicator dot
+const LiveIndicator = () => (
+  <span className="relative inline-flex h-2.5 w-2.5">
+    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+  </span>
+);
 
 const Connect = () => {
   const { user, refreshUser } = useAuth();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const [shopifyConnected, setShopifyConnected] = useState(false);
+  const [metaConnected, setMetaConnected] = useState(false);
 
-  const hasShopifyConnection = !!user?.shopify_credentials;
-  const hasMetaConnection = !!user?.meta_ads_credentials;
+  useEffect(() => {
+    const check = async () => {
+      if (!user?.id) return;
+      try {
+        const { data, error } = await supabase
+          .from('integrations')
+          .select('source, access_token')
+          .eq('user_id', user.id);
+        if (error) throw error;
+        setShopifyConnected(!!data?.some((r: any) => r.source === 'shopify' && r.access_token));
+        setMetaConnected(!!data?.some((r: any) => r.source === 'meta_ads' && r.access_token));
+      } catch {
+        setShopifyConnected(!!(user as any)?.shopify_credentials);
+        setMetaConnected(!!(user as any)?.meta_ads_credentials);
+      }
+    };
+    check();
+    (window as any).checkIntegrations = check;
+    return () => { if ((window as any).checkIntegrations) delete (window as any).checkIntegrations; };
+  }, [user?.id]);
+
+  const hasShopifyConnection = shopifyConnected;
+  const hasMetaConnection = metaConnected;
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -37,9 +69,10 @@ const Connect = () => {
                   <CardDescription>E-commerce analytics and sales data</CardDescription>
                 </div>
               </div>
-              {hasShopifyConnection && (
-                <Badge className="bg-green-100 text-green-800">
-                  <Check className="h-3 w-3 mr-1" />
+{hasShopifyConnection && (
+                <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+                  <LiveIndicator />
+                  <Check className="h-3 w-3" />
                   Connected
                 </Badge>
               )}
@@ -89,9 +122,10 @@ const Connect = () => {
                   <CardDescription>Facebook & Instagram advertising metrics</CardDescription>
                 </div>
               </div>
-              {hasMetaConnection && (
-                <Badge className="bg-green-100 text-green-800">
-                  <Check className="h-3 w-3 mr-1" />
+{hasMetaConnection && (
+                <Badge className="bg-green-100 text-green-800 flex items-center gap-1">
+                  <LiveIndicator />
+                  <Check className="h-3 w-3" />
                   Connected
                 </Badge>
               )}
@@ -147,7 +181,7 @@ const Connect = () => {
                       <p className="text-sm text-muted-foreground">Connected and syncing</p>
                     </div>
                   </div>
-                  <Badge className="bg-green-100 text-green-800">Active</Badge>
+<Badge className="bg-green-100 text-green-800 flex items-center gap-1"><LiveIndicator /> Active</Badge>
                 </div>
               )}
               
@@ -160,7 +194,7 @@ const Connect = () => {
                       <p className="text-sm text-muted-foreground">Connected and syncing</p>
                     </div>
                   </div>
-                  <Badge className="bg-green-100 text-green-800">Active</Badge>
+                  <Badge className="bg-green-100 text-green-800 flex items-center gap-1"><LiveIndicator /> Active</Badge>
                 </div>
               )}
             </div>
