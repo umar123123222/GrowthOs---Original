@@ -52,6 +52,7 @@ serve(async (req) => {
     try { payload = await req.json(); } catch { payload = {}; }
     const startDateInput = payload?.startDate ? new Date(payload.startDate) : null;
     const endDateInput = payload?.endDate ? new Date(payload.endDate) : null;
+    const timeBasis: 'created' | 'processed' = (payload?.timeBasis === 'processed') ? 'processed' : 'created';
 
     const { data: integ, error: integErr } = await supabaseClient
       .from('integrations')
@@ -98,12 +99,13 @@ serve(async (req) => {
 
     // Fetch all orders with pagination
     const fields = [
-      'id','created_at','cancelled_at','test','financial_status',
+      'id','created_at','processed_at','cancelled_at','test','financial_status',
       'current_total_price','current_total_price_set','total_price','total_discounts','total_tax',
       'total_shipping_price_set','refunds','line_items'
     ].join(',');
 
-    let url = `https://${domain}/admin/api/2024-07/orders.json?status=any&limit=250&order=created_at%20asc&fields=${fields}&created_at_min=${minParam}&created_at_max=${maxParam}`;
+    const basisParam = timeBasis === 'processed' ? 'processed_at' : 'created_at';
+    let url = `https://${domain}/admin/api/2024-07/orders.json?status=any&limit=250&order=${basisParam}%20asc&fields=${fields}&${basisParam}_min=${minParam}&${basisParam}_max=${maxParam}`;
     const allOrders: any[] = [];
 
     while (url) {
@@ -132,21 +134,42 @@ serve(async (req) => {
       return true;
     });
 
+    // Helpers to compute net sales per order (exclude gift card purchases)
+    function netForOrder(o: any): number {
+      const set = o?.current_total_price_set?.shop_money;
+      const gross = set?.amount !== undefined
+        ? parseFloat(set.amount)
+        : parseFloat(o.current_total_price || o.total_price || 0);
+      const lineItems = Array.isArray(o?.line_items) ? o.line_items : [];
+      let giftCardSubtotal = 0;
+      for (const li of lineItems) {
+        const isGift = li?.gift_card === true || (typeof li?.title === 'string' && li.title.toLowerCase().includes('gift card'));
+        if (!isGift) continue;
+        const qty = Number(li?.quantity || 0);
+        const price = parseFloat(li?.price || 0);
+        const liDiscount = parseFloat(li?.total_discount || 0);
+        const liTotal = Math.max(0, qty * (isNaN(price) ? 0 : price) - (isNaN(liDiscount) ? 0 : liDiscount));
+        giftCardSubtotal += liTotal;
+      }
+      const net = (isNaN(gross) ? 0 : gross) - giftCardSubtotal;
+      return net > 0 ? net : 0;
+    }
+
     // Compute metrics
-    const totalSales = sumAmounts(filtered);
+    const totalSales = filtered.reduce((sum, o) => sum + netForOrder(o), 0);
     const orderCount = filtered.length;
     const aov = orderCount > 0 ? totalSales / orderCount : 0;
 
-    // Sales trend grouped by store-selected timezone
+    // Sales trend grouped by selected timezone and time basis
     const trendMap = new Map<string, number>();
     for (const o of filtered) {
-      const created = o?.created_at ? new Date(o.created_at) : null;
-      if (!created) continue;
-      const key = formatInTimeZone(created, tz, 'yyyy-MM-dd');
-      const set = o?.current_total_price_set?.shop_money;
-      const amt = set?.amount !== undefined ? parseFloat(set.amount) : parseFloat(o.current_total_price || o.total_price || 0);
+      const dateStr = timeBasis === 'processed' ? o?.processed_at : o?.created_at;
+      const basisDate = dateStr ? new Date(dateStr) : null;
+      if (!basisDate) continue;
+      const key = formatInTimeZone(basisDate, tz, 'yyyy-MM-dd');
+      const amt = netForOrder(o);
       const val = trendMap.get(key) || 0;
-      trendMap.set(key, val + (isNaN(amt) ? 0 : amt));
+      trendMap.set(key, val + amt);
     }
     const salesTrend = Array.from(trendMap.entries())
       .sort((a, b) => a[0].localeCompare(b[0]))
@@ -194,7 +217,7 @@ serve(async (req) => {
       salesTrend,
       currency,
       timezone: tz,
-      period: { start: createdMinUtc.toISOString(), end: createdMaxUtc.toISOString(), tz },
+      period: { start: createdMinUtc.toISOString(), end: createdMaxUtc.toISOString(), tz, basis: timeBasis },
       // Backward compatibility
       gmv: totalSales,
       topProducts: bestSellers,
