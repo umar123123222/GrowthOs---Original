@@ -151,10 +151,14 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-success/10 text-success border-success/20';
-      case 'declined': return 'bg-destructive/10 text-destructive border-destructive/20';
-      case 'pending': return 'bg-warning/10 text-warning border-warning/20';
-      default: return 'bg-muted text-muted-foreground';
+      case 'approved':
+        return 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-800';
+      case 'declined':
+        return 'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800';
+      case 'pending':
+        return 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800';
+      default:
+        return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -185,35 +189,35 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-700">Submissions Management</h1>
-          <p className="text-gray-500 mt-1">Manage assignment submissions and their assignments</p>
+          <h1 className="text-3xl font-bold header-accent">Submissions Management</h1>
+          <p className="text-muted-foreground mt-1">Manage assignment submissions and their assignments</p>
         </div>
         <div className="flex gap-3">
           <Button
             variant={filterStatus === 'all' ? 'default' : 'outline'}
             onClick={() => setFilterStatus('all')}
-            className={filterStatus === 'all' ? 'bg-purple-600 text-white' : ''}
+            className={filterStatus === 'all' ? 'bg-primary text-primary-foreground shadow-medium' : ''}
           >
             All
           </Button>
           <Button
             variant={filterStatus === 'pending' ? 'default' : 'outline'}
             onClick={() => setFilterStatus('pending')}
-            className={filterStatus === 'pending' ? 'bg-purple-600 text-white' : ''}
+            className={filterStatus === 'pending' ? 'bg-primary text-primary-foreground shadow-medium' : ''}
           >
             Pending
           </Button>
           <Button
             variant={filterStatus === 'approved' ? 'default' : 'outline'}
             onClick={() => setFilterStatus('approved')}
-            className={filterStatus === 'approved' ? 'bg-purple-600 text-white' : ''}
+            className={filterStatus === 'approved' ? 'bg-primary text-primary-foreground shadow-medium' : ''}
           >
             Approved
           </Button>
           <Button
             variant={filterStatus === 'declined' ? 'default' : 'outline'}
             onClick={() => setFilterStatus('declined')}
-            className={filterStatus === 'declined' ? 'bg-purple-600 text-white' : ''}
+            className={filterStatus === 'declined' ? 'bg-primary text-primary-foreground shadow-medium' : ''}
           >
             Declined
           </Button>
@@ -221,11 +225,11 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
       </div>
 
       {/* All Submissions Section */}
-      <div className="bg-white rounded-lg border">
-        <div className="p-6 border-b">
+      <div className="section-surface">
+        <div className="p-6 section-header rounded-t-xl">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-              <MessageSquare className="w-4 h-4 text-purple-600" />
+            <div className="icon-chip">
+              <MessageSquare className="w-4 h-4 text-primary" />
             </div>
             <h2 className="text-xl font-semibold">All Submissions</h2>
           </div>
@@ -233,12 +237,12 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
         
         <div className="overflow-x-auto">
           {submissions.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <MessageSquare className="w-8 h-8 text-gray-400" />
+                <div className="text-center py-12">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="w-8 h-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-semibold mb-2">No submissions found</h3>
-              <p className="text-gray-500">
+              <p className="text-muted-foreground">
                 {userRole === 'mentor' 
                   ? "No submissions from your assigned students yet."
                   : "No submissions available to review at the moment."}
@@ -247,7 +251,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50">
+                <TableRow className="bg-muted/40">
                   <TableHead className="font-semibold">Student</TableHead>
                   <TableHead className="font-semibold">Assignment</TableHead>
                   <TableHead className="font-semibold">Submitted</TableHead>
@@ -257,24 +261,24 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
               </TableHeader>
               <TableBody>
                 {submissions.map((submission) => (
-                  <TableRow key={submission.id} className="hover:bg-gray-50">
+                  <TableRow key={submission.id} className="table-row-hover">
                     <TableCell>
                       <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                          <span className="text-xs font-semibold text-gray-600">
+                        <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                          <span className="text-xs font-semibold text-foreground/80">
                             {submission.student.full_name.charAt(0).toUpperCase()}
                           </span>
                         </div>
                         <div>
                           <div className="font-medium">{submission.student.full_name}</div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground">
                             {submission.student.student_id || submission.student.email}
                           </div>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
+                      <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
                         {submission.assignment.name}
                       </Badge>
                     </TableCell>
@@ -374,9 +378,9 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                                     />
                                   </div>
                                   <div className="flex gap-4">
-                                    <Button
-                                      onClick={() => handleReviewSubmission(selectedSubmission.id, 'approved')}
-                                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        <Button
+                              onClick={() => handleReviewSubmission(selectedSubmission.id, 'approved')}
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-soft"
                                     >
                                       <CheckCircle className="w-4 h-4 mr-2" />
                                       Approve

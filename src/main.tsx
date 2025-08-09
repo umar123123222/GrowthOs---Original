@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
+import './styles/app.css'
 import { setupGlobalErrorHandling } from './lib/error-handler'
 
 // Setup global error handling

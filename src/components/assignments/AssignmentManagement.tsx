@@ -244,12 +244,12 @@ export function AssignmentManagement() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-700">Assignments Management</h1>
-          <p className="text-gray-500 mt-1">Manage assignment assignments and their assignments</p>
+          <h1 className="text-3xl font-bold header-accent">Assignments Management</h1>
+          <p className="text-muted-foreground mt-1">Manage assignment assignments and their assignments</p>
         </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={openCreateDialog} className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg">
+            <Button onClick={openCreateDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-medium">
               <Plus className="w-4 h-4 mr-2" />
               Add Assignment
             </Button>
@@ -361,11 +361,11 @@ export function AssignmentManagement() {
       </div>
 
       {/* All Assignments Section */}
-      <div className="bg-white rounded-lg border">
-        <div className="p-6 border-b">
+      <div className="section-surface">
+        <div className="p-6 section-header rounded-t-xl">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
-              <FileText className="w-4 h-4 text-purple-600" />
+            <div className="icon-chip">
+              <FileText className="w-4 h-4 text-primary" />
             </div>
             <h2 className="text-xl font-semibold">All Assignments</h2>
           </div>
@@ -383,7 +383,7 @@ export function AssignmentManagement() {
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="bg-gray-50">
+                <TableRow className="bg-muted/40">
                   <TableHead className="font-semibold">Title</TableHead>
                   <TableHead className="font-semibold">Due Days</TableHead>
                   <TableHead className="font-semibold">Type</TableHead>
@@ -392,7 +392,7 @@ export function AssignmentManagement() {
               </TableHeader>
               <TableBody>
                 {assignments.map((assignment) => (
-                  <TableRow key={assignment.id} className="hover:bg-gray-50">
+                  <TableRow key={assignment.id} className="table-row-hover">
                     <TableCell className="font-medium">{assignment.name}</TableCell>
                     <TableCell>{assignment.due_days || 7} days</TableCell>
                     <TableCell>
