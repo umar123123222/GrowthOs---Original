@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Edit, Trash2, FileText, MessageSquare, Play, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-
 interface Assignment {
   id: string;
   name: string;
@@ -29,29 +28,30 @@ interface Assignment {
     recording_title: string;
   } | null;
 }
-
 interface Mentor {
   id: string;
   full_name: string;
   email: string;
 }
-
 interface Recording {
   id: string;
   recording_title: string;
   sequence_order?: number;
 }
-
 export function AssignmentManagement() {
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const {
+    user
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
-  
+
   // Form state
   const [formData, setFormData] = useState({
     name: '',
@@ -61,41 +61,36 @@ export function AssignmentManagement() {
     submission_type: 'text' as 'text' | 'file' | 'link',
     instructions: ''
   });
-
   useEffect(() => {
     fetchData();
   }, []);
-
   const fetchData = async () => {
     try {
       // Fetch assignments with recording details
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('assignments')
-        .select('*')
-        .order('created_at', { ascending: false });
-
+      const {
+        data: assignmentsData,
+        error: assignmentsError
+      } = await supabase.from('assignments').select('*').order('created_at', {
+        ascending: false
+      });
       if (assignmentsError) throw assignmentsError;
 
       // Fetch mentors
-      const { data: mentorsData, error: mentorsError } = await supabase
-        .from('users')
-        .select('id, full_name, email')
-        .eq('role', 'mentor')
-        .order('full_name');
-
+      const {
+        data: mentorsData,
+        error: mentorsError
+      } = await supabase.from('users').select('id, full_name, email').eq('role', 'mentor').order('full_name');
       if (mentorsError) throw mentorsError;
 
       // Fetch recordings
-      const { data: recordingsData, error: recordingsError } = await supabase
-        .from('available_lessons')
-        .select('id, recording_title, sequence_order')
-        .order('sequence_order');
-
+      const {
+        data: recordingsData,
+        error: recordingsError
+      } = await supabase.from('available_lessons').select('id, recording_title, sequence_order').order('sequence_order');
       if (recordingsError) throw recordingsError;
-
       setAssignments((assignmentsData || []).map(assignment => ({
         ...assignment,
-        submission_type: (assignment.submission_type as 'text' | 'file' | 'link') || 'text',
+        submission_type: assignment.submission_type as 'text' | 'file' | 'link' || 'text',
         mentor: null,
         recording: null
       })));
@@ -112,10 +107,8 @@ export function AssignmentManagement() {
       setLoading(false);
     }
   };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!formData.name.trim()) {
       toast({
         title: 'Error',
@@ -124,7 +117,6 @@ export function AssignmentManagement() {
       });
       return;
     }
-
     try {
       const assignmentData = {
         name: formData.name.trim(),
@@ -134,34 +126,27 @@ export function AssignmentManagement() {
         submission_type: formData.submission_type,
         instructions: formData.instructions.trim() || null
       };
-
       if (editingAssignment) {
         // Update existing assignment
-        const { error } = await supabase
-          .from('assignments')
-          .update(assignmentData)
-          .eq('id', editingAssignment.id);
-
+        const {
+          error
+        } = await supabase.from('assignments').update(assignmentData).eq('id', editingAssignment.id);
         if (error) throw error;
-
         toast({
           title: 'Success',
           description: 'Assignment updated successfully'
         });
       } else {
         // Create new assignment
-        const { error } = await supabase
-          .from('assignments')
-          .insert(assignmentData);
-
+        const {
+          error
+        } = await supabase.from('assignments').insert(assignmentData);
         if (error) throw error;
-
         toast({
           title: 'Success',
           description: 'Assignment created successfully'
         });
       }
-
       setIsDialogOpen(false);
       setEditingAssignment(null);
       resetForm();
@@ -175,7 +160,6 @@ export function AssignmentManagement() {
       });
     }
   };
-
   const handleEdit = (assignment: Assignment) => {
     setEditingAssignment(assignment);
     setFormData({
@@ -188,25 +172,19 @@ export function AssignmentManagement() {
     });
     setIsDialogOpen(true);
   };
-
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this assignment? This action cannot be undone.')) {
       return;
     }
-
     try {
-      const { error } = await supabase
-        .from('assignments')
-        .delete()
-        .eq('id', id);
-
+      const {
+        error
+      } = await supabase.from('assignments').delete().eq('id', id);
       if (error) throw error;
-
       toast({
         title: 'Success',
         description: 'Assignment deleted successfully'
       });
-
       fetchData();
     } catch (error) {
       console.error('Error deleting assignment:', error);
@@ -217,7 +195,6 @@ export function AssignmentManagement() {
       });
     }
   };
-
   const resetForm = () => {
     setFormData({
       name: '',
@@ -228,19 +205,15 @@ export function AssignmentManagement() {
       instructions: ''
     });
   };
-
   const openCreateDialog = () => {
     setEditingAssignment(null);
     resetForm();
     setIsDialogOpen(true);
   };
-
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading assignments...</div>;
   }
-
-  return (
-    <div className="p-6 space-y-6">
+  return <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -271,13 +244,10 @@ export function AssignmentManagement() {
                     <FileText className="w-4 h-4 text-primary" />
                     <span>Assignment Name</span>
                   </label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="Enter assignment name..."
-                    required
-                    className="border-2 bg-background/50 focus:bg-background transition-colors"
-                  />
+                  <Input value={formData.name} onChange={e => setFormData({
+                  ...formData,
+                  name: e.target.value
+                })} placeholder="Enter assignment name..." required className="border-2 bg-background/50 focus:bg-background transition-colors" />
                 </div>
             
                 <div className="col-span-2 bg-muted/30 rounded-xl p-5">
@@ -285,29 +255,26 @@ export function AssignmentManagement() {
                     <MessageSquare className="w-4 h-4 text-primary" />
                     <span>Description</span>
                   </label>
-                  <Textarea
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Enter assignment description..."
-                    rows={3}
-                    className="border-2 bg-background/50 focus:bg-background transition-colors"
-                  />
+                  <Textarea value={formData.description} onChange={e => setFormData({
+                  ...formData,
+                  description: e.target.value
+                })} placeholder="Enter assignment description..." rows={3} className="border-2 bg-background/50 focus:bg-background transition-colors" />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Due After (Days)</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={formData.due_days}
-                    onChange={(e) => setFormData({ ...formData, due_days: parseInt(e.target.value) || 7 })}
-                    placeholder="7"
-                  />
+                  <Input type="number" min="1" value={formData.due_days} onChange={e => setFormData({
+                  ...formData,
+                  due_days: parseInt(e.target.value) || 7
+                })} placeholder="7" />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Submission Type</label>
-                  <Select value={formData.submission_type} onValueChange={(value: 'text' | 'file' | 'link') => setFormData({ ...formData, submission_type: value })}>
+                  <Select value={formData.submission_type} onValueChange={(value: 'text' | 'file' | 'link') => setFormData({
+                  ...formData,
+                  submission_type: value
+                })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select submission type..." />
                     </SelectTrigger>
@@ -321,29 +288,28 @@ export function AssignmentManagement() {
 
                 <div>
                   <label className="block text-sm font-medium mb-2">Assigned Mentor (Optional)</label>
-                  <Select value={formData.mentor_id} onValueChange={(value) => setFormData({ ...formData, mentor_id: value })}>
+                  <Select value={formData.mentor_id} onValueChange={value => setFormData({
+                  ...formData,
+                  mentor_id: value
+                })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a mentor..." />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">No mentor assigned</SelectItem>
-                      {mentors.map((mentor) => (
-                        <SelectItem key={mentor.id} value={mentor.id}>
+                      {mentors.map(mentor => <SelectItem key={mentor.id} value={mentor.id}>
                           {mentor.full_name} ({mentor.email})
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="col-span-2">
                   <label className="block text-sm font-medium mb-2">Instructions</label>
-                  <Textarea
-                    value={formData.instructions}
-                    onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                    placeholder="Enter detailed instructions for students..."
-                    rows={4}
-                  />
+                  <Textarea value={formData.instructions} onChange={e => setFormData({
+                  ...formData,
+                  instructions: e.target.value
+                })} placeholder="Enter detailed instructions for students..." rows={4} />
                 </div>
               </div>
 
@@ -372,16 +338,13 @@ export function AssignmentManagement() {
         </div>
         
         <div className="overflow-x-auto">
-          {assignments.length === 0 ? (
-            <div className="text-center py-12">
+          {assignments.length === 0 ? <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-gray-400" />
               </div>
               <h3 className="text-lg font-semibold mb-2">No assignments found</h3>
               <p className="text-gray-500">Create your first assignment to get started.</p>
-            </div>
-          ) : (
-            <Table>
+            </div> : <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
                   <TableHead className="font-semibold">Title</TableHead>
@@ -391,40 +354,26 @@ export function AssignmentManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments.map((assignment) => (
-                  <TableRow key={assignment.id} className="table-row-hover">
-                    <TableCell className="font-medium">{assignment.name}</TableCell>
-                    <TableCell>{assignment.due_days || 7} days</TableCell>
-                    <TableCell>
+                {assignments.map(assignment => <TableRow key={assignment.id} className="table-row-hover">
+                    <TableCell className="font-medium bg-white">{assignment.name}</TableCell>
+                    <TableCell className="bg-white">{assignment.due_days || 7} days</TableCell>
+                    <TableCell className="bg-white">
                       <span className="capitalize">{assignment.submission_type || 'text'}</span>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="bg-white">
                       <div className="flex items-center space-x-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(assignment)}
-                          className="hover:bg-gray-50"
-                        >
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(assignment)} className="hover:bg-gray-50">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(assignment.id)}
-                          className="hover:bg-red-50 hover:text-red-600"
-                        >
+                        <Button variant="outline" size="sm" onClick={() => handleDelete(assignment.id)} className="hover:bg-red-50 hover:text-red-600">
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ))}
+                  </TableRow>)}
               </TableBody>
-            </Table>
-          )}
+            </Table>}
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
