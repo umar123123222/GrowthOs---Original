@@ -1,124 +1,162 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { formatInTimeZone, fromZonedTime } from 'https://esm.sh/date-fns-tz@3.0.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
+};
 
 function decrypt(encryptedText: string): string {
-  return atob(encryptedText)
+  return atob(encryptedText);
+}
+
+function sumAmounts(orders: any[]): number {
+  return orders.reduce((sum: number, o: any) => {
+    const set = o?.current_total_price_set?.shop_money;
+    const amt = set?.amount !== undefined ? parseFloat(set.amount) : parseFloat(o.current_total_price || o.total_price || 0);
+    return sum + (isNaN(amt) ? 0 : amt);
+  }, 0);
 }
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    )
+    );
 
-    const authHeader = req.headers.get('authorization')
+    const authHeader = req.headers.get('authorization');
     if (!authHeader) {
       return new Response(
         JSON.stringify({ connected: false, error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
-    const token = authHeader.replace('Bearer ', '')
-    const { data: user } = await supabaseClient.auth.getUser(token)
+    const token = authHeader.replace('Bearer ', '');
+    const { data: user } = await supabaseClient.auth.getUser(token);
     if (!user.user) {
       return new Response(
         JSON.stringify({ connected: false, error: 'Unauthorized' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      );
     }
 
-    // Optional payload for date range
-    let payload: any = {}
-    try { payload = await req.json(); } catch { payload = {} }
-    const startDateInput = payload?.startDate ? new Date(payload.startDate) : null
-    const endDateInput = payload?.endDate ? new Date(payload.endDate) : null
-
-    // Defaults: last 7 days
-    const endDate = endDateInput || new Date()
-    const startDate = startDateInput || new Date(new Date().setDate(endDate.getDate() - 6))
-    const createdMin = new Date(startDate)
-    createdMin.setHours(0,0,0,0)
-    const createdMax = new Date(endDate)
-    createdMax.setHours(23,59,59,999)
+    // Parse payload
+    let payload: any = {};
+    try { payload = await req.json(); } catch { payload = {}; }
+    const startDateInput = payload?.startDate ? new Date(payload.startDate) : null;
+    const endDateInput = payload?.endDate ? new Date(payload.endDate) : null;
 
     const { data: integ, error: integErr } = await supabaseClient
       .from('integrations')
       .select('access_token, external_id')
       .eq('user_id', user.user.id)
       .eq('source', 'shopify')
-      .maybeSingle()
+      .maybeSingle();
 
-    if (integErr) throw integErr
-
+    if (integErr) throw integErr;
     if (!integ?.access_token || !integ.external_id) {
-      return new Response(
-        JSON.stringify({ connected: false }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      return new Response(JSON.stringify({ connected: false }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    const apiToken = decrypt(integ.access_token)
-    const domain = integ.external_id
+    const apiToken = decrypt(integ.access_token);
+    const domain = integ.external_id;
 
-    // Fetch shop details for currency/locale
-    const shopResp = await fetch(`https://${domain}/admin/api/2024-07/shop.json?fields=currency,primary_locale,money_format`, {
+    // Fetch shop details: currency and timezone
+    const shopResp = await fetch(`https://${domain}/admin/api/2024-07/shop.json?fields=currency,iana_timezone`, {
       headers: { 'X-Shopify-Access-Token': apiToken }
-    })
-    const shopJson = shopResp.ok ? await shopResp.json() : { shop: null }
-    const currency = shopJson?.shop?.currency || 'USD'
+    });
+    const shopJson = shopResp.ok ? await shopResp.json() : { shop: null };
+    const currency = shopJson?.shop?.currency || 'USD';
+    const shopTz = shopJson?.shop?.iana_timezone || 'UTC';
 
-    // Fetch recent orders within range from Shopify Admin API (include line_items)
-    const createdMinParam = encodeURIComponent(createdMin.toISOString())
-    const createdMaxParam = encodeURIComponent(createdMax.toISOString())
-    const ordersResponse = await fetch(`https://${domain}/admin/api/2024-07/orders.json?status=any&limit=250&fields=total_price,created_at,line_items&created_at_min=${createdMinParam}&created_at_max=${createdMaxParam}` , {
-      headers: {
-        'X-Shopify-Access-Token': apiToken
+    // Determine timezone to use
+    const tz: string = (payload?.timezone && typeof payload.timezone === 'string') ? payload.timezone : shopTz;
+
+    // Build start/end boundaries in chosen timezone
+    const now = new Date();
+    const defaultEnd = now;
+    const defaultStart = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+    const startBase = startDateInput || defaultStart;
+    const endBase = endDateInput || defaultEnd;
+
+    const startYmd = formatInTimeZone(startBase, tz, "yyyy-MM-dd");
+    const endYmd = formatInTimeZone(endBase, tz, "yyyy-MM-dd");
+
+    const createdMinUtc = fromZonedTime(`${startYmd}T00:00:00.000`, tz);
+    const createdMaxUtc = fromZonedTime(`${endYmd}T23:59:59.999`, tz);
+
+    const minParam = encodeURIComponent(createdMinUtc.toISOString());
+    const maxParam = encodeURIComponent(createdMaxUtc.toISOString());
+
+    // Fetch all orders with pagination
+    const fields = [
+      'id','created_at','cancelled_at','test','financial_status',
+      'current_total_price','current_total_price_set','total_price','total_discounts','total_tax',
+      'total_shipping_price_set','refunds','line_items'
+    ].join(',');
+
+    let url = `https://${domain}/admin/api/2024-07/orders.json?status=any&limit=250&order=created_at%20asc&fields=${fields}&created_at_min=${minParam}&created_at_max=${maxParam}`;
+    const allOrders: any[] = [];
+
+    while (url) {
+      const resp = await fetch(url, { headers: { 'X-Shopify-Access-Token': apiToken } });
+      if (!resp.ok) throw new Error(`Shopify API error: ${resp.status}`);
+      const json = await resp.json();
+      const pageOrders = Array.isArray(json?.orders) ? json.orders : [];
+      allOrders.push(...pageOrders);
+
+      // Parse Link header for next page
+      const link = resp.headers.get('link') || resp.headers.get('Link');
+      const nextMatch = link && link.split(',').find(p => p.includes('rel="next"'));
+      if (nextMatch) {
+        const m = nextMatch.match(/<([^>]+)>/);
+        url = m ? m[1] : '';
+      } else {
+        url = '';
       }
-    })
-
-    if (!ordersResponse.ok) {
-      throw new Error(`Shopify API error: ${ordersResponse.status}`)
     }
 
-    const ordersData = await ordersResponse.json()
-    const orders = ordersData.orders || []
+    // Filter to match Shopify dashboard
+    const filtered = allOrders.filter((o: any) => {
+      if (o?.test === true) return false;
+      if (o?.cancelled_at) return false;
+      if ((o?.financial_status || '').toLowerCase() === 'voided') return false;
+      return true;
+    });
 
-    // Calculate metrics
-    const gmv = orders.reduce((sum: number, order: any) => sum + parseFloat(order.total_price || 0), 0)
-    const orderCount = orders.length
-    const aov = orderCount > 0 ? gmv / orderCount : 0
+    // Compute metrics
+    const totalSales = sumAmounts(filtered);
+    const orderCount = filtered.length;
+    const aov = orderCount > 0 ? totalSales / orderCount : 0;
 
-    // Generate sales trend for selected range
-    const dayMs = 24 * 60 * 60 * 1000
-    const days = Math.max(1, Math.ceil((createdMax.getTime() - createdMin.getTime()) / dayMs) + 1)
-    const salesTrend: Array<{ date: string; sales: number }> = []
-    for (let i = 0; i < days; i++) {
-      const date = new Date(createdMin.getTime() + i * dayMs)
-      const dateStr = date.toISOString().split('T')[0]
-
-      const dayOrders = orders.filter((order: any) => order.created_at && order.created_at.startsWith(dateStr))
-      const dayTotal = dayOrders.reduce((sum: number, order: any) => sum + parseFloat(order.total_price || 0), 0)
-
-      salesTrend.push({ date: dateStr, sales: dayTotal })
+    // Sales trend grouped by store-selected timezone
+    const trendMap = new Map<string, number>();
+    for (const o of filtered) {
+      const created = o?.created_at ? new Date(o.created_at) : null;
+      if (!created) continue;
+      const key = formatInTimeZone(created, tz, 'yyyy-MM-dd');
+      const set = o?.current_total_price_set?.shop_money;
+      const amt = set?.amount !== undefined ? parseFloat(set.amount) : parseFloat(o.current_total_price || o.total_price || 0);
+      const val = trendMap.get(key) || 0;
+      trendMap.set(key, val + (isNaN(amt) ? 0 : amt));
     }
+    const salesTrend = Array.from(trendMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, sales]) => ({ date, sales }));
 
     // Fetch products (basic info)
     const productsResp = await fetch(`https://${domain}/admin/api/2024-07/products.json?limit=250&fields=id,title,handle,product_type,images,variants,created_at,status,vendor`, {
       headers: { 'X-Shopify-Access-Token': apiToken }
-    })
-
-    const productsJson = productsResp.ok ? await productsResp.json() : { products: [] }
+    });
+    const productsJson = productsResp.ok ? await productsResp.json() : { products: [] };
     const products = (productsJson.products || []).map((p: any) => ({
       id: String(p.id),
       name: p.title,
@@ -127,52 +165,52 @@ serve(async (req) => {
       image: p.images?.[0]?.src || null,
       status: p.status,
       handle: p.handle,
-    }))
+    }));
 
-    // Compute best sellers within selected range using line_items
-    const salesMap: Record<string, { id: string; name: string; sales: number; revenue: number }> = {}
-
-    for (const o of orders) {
-      const created = o.created_at ? new Date(o.created_at) : null
-      if (!created || created < createdMin || created > createdMax) continue
-      const lineItems = o.line_items || []
+    // Best sellers within range using line_items
+    const salesMap: Record<string, { id: string; name: string; sales: number; revenue: number }> = {};
+    for (const o of filtered) {
+      const lineItems = o.line_items || [];
       for (const li of lineItems) {
-        const pid = String(li.product_id || li.variant_id || li.sku || li.title)
+        const pid = String(li.product_id || li.variant_id || li.sku || li.title);
         if (!salesMap[pid]) {
-          salesMap[pid] = { id: pid, name: li.title || `Product ${pid}` , sales: 0, revenue: 0 }
+          salesMap[pid] = { id: pid, name: li.title || `Product ${pid}`, sales: 0, revenue: 0 };
         }
-        const qty = Number(li.quantity || 0)
-        const price = parseFloat(li.price || 0)
-        salesMap[pid].sales += qty
-        salesMap[pid].revenue += qty * price
+        const qty = Number(li.quantity || 0);
+        const price = parseFloat(li.price || 0);
+        salesMap[pid].sales += qty;
+        salesMap[pid].revenue += qty * (isNaN(price) ? 0 : price);
       }
     }
-
     const bestSellers = Object.values(salesMap)
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 10)
+      .slice(0, 10);
 
     const metrics = {
-      gmv,
+      // Primary fields matching Shopify dashboard
+      totalSales,
       orders: orderCount,
       aov,
-      topProducts: bestSellers, // backward compatibility
-      bestSellers,
       salesTrend,
-      products,
       currency,
-      period: { start: createdMin.toISOString(), end: createdMax.toISOString() }
-    }
+      timezone: tz,
+      period: { start: createdMinUtc.toISOString(), end: createdMaxUtc.toISOString(), tz },
+      // Backward compatibility
+      gmv: totalSales,
+      topProducts: bestSellers,
+      bestSellers,
+      products,
+    };
 
     return new Response(
       JSON.stringify({ connected: true, metrics }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    );
   } catch (error: any) {
-    console.error('shopify-metrics error:', error)
+    console.error('shopify-metrics error:', error);
     return new Response(
       JSON.stringify({ connected: false, error: error?.message || 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+    );
   }
-})
+});

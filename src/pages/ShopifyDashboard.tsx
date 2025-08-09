@@ -16,6 +16,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format } from 'date-fns';
 const ShopifyDashboard = () => {
   const {
@@ -72,6 +73,16 @@ const ShopifyDashboard = () => {
     return { from: lastMonthStart, to: lastMonthEnd, label: format(lastMonthStart, 'MMM yyyy') };
   }, []);
 
+  // Timezone selection
+  const [timezone, setTimezone] = useState<string | undefined>(undefined);
+  const timezones = useMemo(() => {
+    try {
+      const supported = (Intl as any).supportedValuesOf?.('timeZone') as string[] | undefined;
+      if (supported?.length) return supported;
+    } catch {}
+    return ['UTC','America/New_York','Europe/London','Europe/Berlin','Asia/Karachi','Asia/Kolkata','Asia/Singapore','Australia/Sydney'];
+  }, []);
+
   useEffect(() => {
     if (authLoading) return;
     if (!user?.id) {
@@ -97,12 +108,12 @@ const ShopifyDashboard = () => {
     };
   }, [authLoading, user?.id]);
 
-  // Fetch when date range changes and connected
+  // Fetch when date range or timezone changes and connected
   useEffect(() => {
     if (!authLoading && user?.id && dateRange.from && dateRange.to) {
       fetchShopifyData();
     }
-  }, [dateRange.from, dateRange.to]);
+  }, [dateRange.from, dateRange.to, timezone]);
 
   // Reset to first page when products change
 
@@ -268,7 +279,8 @@ const ShopifyDashboard = () => {
       try {
         const result = await fetchShopifyMetrics(user.id, {
           startDate: startISO,
-          endDate: endISO
+          endDate: endISO,
+          timezone
         });
         if (!result?.connected) {
           const usedCache = await fetchCachedMetrics(user.id);
@@ -283,9 +295,12 @@ const ShopifyDashboard = () => {
           return;
         }
         const metrics = result.metrics!;
+        if (!timezone && metrics.timezone) {
+          setTimezone(metrics.timezone);
+        }
         const updated = {
           storeUrl: integ?.external_id || 'your-store.myshopify.com',
-          totalSales: metrics.gmv,
+          totalSales: metrics.totalSales ?? metrics.gmv,
           visitors: 0, // not available accurately from Shopify Admin API
           averageOrderValue: metrics.aov,
           conversionRate: 0, // placeholder removed from UI
@@ -324,7 +339,7 @@ const ShopifyDashboard = () => {
       if (authLoading || !user?.id) return;
       const startISO = lastMonthInfo.from.toISOString();
       const endISO = lastMonthInfo.to.toISOString();
-      const result = await fetchShopifyMetrics(user.id, { startDate: startISO, endDate: endISO });
+      const result = await fetchShopifyMetrics(user.id, { startDate: startISO, endDate: endISO, timezone });
       if (result?.connected && result.metrics) {
         const tops = (result.metrics.bestSellers || result.metrics.topProducts || []).slice(0, 5);
         setLastMonthTop(tops);
@@ -449,6 +464,16 @@ const ShopifyDashboard = () => {
                 <Calendar mode="range" selected={dateRange as any} onSelect={(range: any) => setDateRange(range)} numberOfMonths={2} className={cn("p-3 pointer-events-auto")} initialFocus />
               </PopoverContent>
             </Popover>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger className="min-w-[200px]" aria-label="Timezone">
+                <SelectValue placeholder="Timezone (store default)" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64 overflow-auto">
+                {(timezones || []).map((tz) => (
+                  <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Button onClick={fetchShopifyData} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
