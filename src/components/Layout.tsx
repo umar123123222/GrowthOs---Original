@@ -667,7 +667,14 @@ const Layout = memo(({
                         </div>}
                     </div>;
               }
-              const isActive = location.pathname === item.href || item.href.includes('?tab=') && location.search.includes(item.href.split('=')[1]);
+              const searchParams = new URLSearchParams(location.search);
+              const currentTab = searchParams.get('tab');
+              const isTabLink = item.href.includes('?tab=');
+              const itemTab = isTabLink ? item.href.split('=')[1] : null;
+              // Active when:
+              // - tab link matches current tab
+              // - OR base path matches and no tab is selected (or tab=dashboard)
+              const isActive = (isTabLink && currentTab === itemTab) || (!isTabLink && location.pathname === item.href && (!currentTab || currentTab === 'dashboard'));
               const Icon = item.icon;
               return <Link key={item.name} to={item.href} onMouseEnter={() => prefetchByHref(item.href)} className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`} title={sidebarCollapsed ? item.name : undefined}>
                     <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
