@@ -9,7 +9,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { CheckCircle, XCircle, Eye, MessageSquare, Clock, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-
 interface Submission {
   id: string;
   assignment_id: string;
@@ -30,46 +29,46 @@ interface Submission {
     student_id?: string;
   } | null;
 }
-
 interface SubmissionsManagementProps {
   userRole?: 'mentor' | 'admin' | 'superadmin';
 }
-
-export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) {
-  const { user } = useAuth();
-  const { toast } = useToast();
+export function SubmissionsManagement({
+  userRole
+}: SubmissionsManagementProps) {
+  const {
+    user
+  } = useAuth();
+  const {
+    toast
+  } = useToast();
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
-
   useEffect(() => {
     fetchSubmissions();
   }, [user, filterStatus]);
-
   const fetchSubmissions = async () => {
     if (!user) return;
-    
     try {
       // First get submissions
-      let query = supabase
-        .from('submissions')
-        .select('*')
-        .order('created_at', { ascending: false });
+      let query = supabase.from('submissions').select('*').order('created_at', {
+        ascending: false
+      });
 
       // Apply status filter if not 'all'
       if (filterStatus !== 'all') {
         query = query.eq('status', filterStatus);
       }
-
-      const { data: submissionsData, error: submissionsError } = await query;
-
+      const {
+        data: submissionsData,
+        error: submissionsError
+      } = await query;
       if (submissionsError) {
         console.error('Error fetching submissions:', submissionsError);
         throw submissionsError;
       }
-
       if (!submissionsData || submissionsData.length === 0) {
         setSubmissions([]);
         return;
@@ -78,18 +77,15 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
       // Get assignment and user data separately
       const assignmentIds = [...new Set(submissionsData.map(s => s.assignment_id))];
       const studentIds = [...new Set(submissionsData.map(s => s.student_id))];
-
-      const [assignmentsData, usersData] = await Promise.all([
-        supabase.from('assignments').select('id, name, description').in('id', assignmentIds),
-        supabase.from('users').select('id, full_name, email').in('id', studentIds)
-      ]);
+      const [assignmentsData, usersData] = await Promise.all([supabase.from('assignments').select('id, name, description').in('id', assignmentIds), supabase.from('users').select('id, full_name, email').in('id', studentIds)]);
 
       // Map the data to match the expected format
       const mappedSubmissions = submissionsData.map(submission => {
-        const assignment = assignmentsData.data?.find(a => a.id === submission.assignment_id) || 
-          { name: 'Unknown Assignment', description: '' };
+        const assignment = assignmentsData.data?.find(a => a.id === submission.assignment_id) || {
+          name: 'Unknown Assignment',
+          description: ''
+        };
         const user = usersData.data?.find(u => u.id === submission.student_id);
-        
         return {
           ...submission,
           assignment,
@@ -104,7 +100,6 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
           }
         };
       });
-      
       setSubmissions(mappedSubmissions);
     } catch (error) {
       console.error('Fetch submissions error:', error);
@@ -117,25 +112,20 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
       setLoading(false);
     }
   };
-
   const handleReviewSubmission = async (submissionId: string, status: 'approved' | 'declined') => {
     try {
-      const { error } = await supabase
-        .from('submissions')
-        .update({
-          status,
-          notes: reviewNotes.trim() || null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', submissionId);
-
+      const {
+        error
+      } = await supabase.from('submissions').update({
+        status,
+        notes: reviewNotes.trim() || null,
+        updated_at: new Date().toISOString()
+      }).eq('id', submissionId);
       if (error) throw error;
-
       toast({
         title: 'Success',
         description: `Submission ${status} successfully`
       });
-
       setSelectedSubmission(null);
       setReviewNotes('');
       fetchSubmissions();
@@ -148,7 +138,6 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
       });
     }
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'approved':
@@ -161,31 +150,34 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
         return 'bg-muted text-muted-foreground border-border';
     }
   };
-
   const getTitle = () => {
     switch (userRole) {
-      case 'mentor': return 'My Students\' Submissions';
-      case 'admin': return 'Assignment Submissions';
-      case 'superadmin': return 'Assignment Submissions';
-      default: return 'Assignment Submissions';
+      case 'mentor':
+        return 'My Students\' Submissions';
+      case 'admin':
+        return 'Assignment Submissions';
+      case 'superadmin':
+        return 'Assignment Submissions';
+      default:
+        return 'Assignment Submissions';
     }
   };
-
   const getDescription = () => {
     switch (userRole) {
-      case 'mentor': return 'Review and approve submissions from your assigned students';
-      case 'admin': return 'Review and approve all student submissions';
-      case 'superadmin': return 'Review and approve all student submissions';
-      default: return 'Review and approve student submissions';
+      case 'mentor':
+        return 'Review and approve submissions from your assigned students';
+      case 'admin':
+        return 'Review and approve all student submissions';
+      case 'superadmin':
+        return 'Review and approve all student submissions';
+      default:
+        return 'Review and approve student submissions';
     }
   };
-
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading submissions...</div>;
   }
-
-  return (
-    <div className="p-6 space-y-6">
+  return <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -193,32 +185,16 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
           <p className="text-muted-foreground mt-1">Manage assignment submissions and their assignments</p>
         </div>
         <div className="flex gap-3">
-          <Button
-            variant={filterStatus === 'all' ? 'default' : 'outline'}
-            onClick={() => setFilterStatus('all')}
-            className={filterStatus === 'all' ? 'bg-primary text-primary-foreground shadow-medium' : ''}
-          >
+          <Button variant={filterStatus === 'all' ? 'default' : 'outline'} onClick={() => setFilterStatus('all')} className={filterStatus === 'all' ? 'bg-primary text-primary-foreground shadow-medium' : ''}>
             All
           </Button>
-          <Button
-            variant={filterStatus === 'pending' ? 'default' : 'outline'}
-            onClick={() => setFilterStatus('pending')}
-            className={filterStatus === 'pending' ? 'bg-primary text-primary-foreground shadow-medium' : ''}
-          >
+          <Button variant={filterStatus === 'pending' ? 'default' : 'outline'} onClick={() => setFilterStatus('pending')} className={filterStatus === 'pending' ? 'bg-primary text-primary-foreground shadow-medium' : ''}>
             Pending
           </Button>
-          <Button
-            variant={filterStatus === 'approved' ? 'default' : 'outline'}
-            onClick={() => setFilterStatus('approved')}
-            className={filterStatus === 'approved' ? 'bg-primary text-primary-foreground shadow-medium' : ''}
-          >
+          <Button variant={filterStatus === 'approved' ? 'default' : 'outline'} onClick={() => setFilterStatus('approved')} className={filterStatus === 'approved' ? 'bg-primary text-primary-foreground shadow-medium' : ''}>
             Approved
           </Button>
-          <Button
-            variant={filterStatus === 'declined' ? 'default' : 'outline'}
-            onClick={() => setFilterStatus('declined')}
-            className={filterStatus === 'declined' ? 'bg-primary text-primary-foreground shadow-medium' : ''}
-          >
+          <Button variant={filterStatus === 'declined' ? 'default' : 'outline'} onClick={() => setFilterStatus('declined')} className={filterStatus === 'declined' ? 'bg-primary text-primary-foreground shadow-medium' : ''}>
             Declined
           </Button>
         </div>
@@ -236,20 +212,15 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
         </div>
         
         <div className="overflow-x-auto">
-          {submissions.length === 0 ? (
-                <div className="text-center py-12">
+          {submissions.length === 0 ? <div className="text-center py-12">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="w-8 h-8 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-semibold mb-2">No submissions found</h3>
               <p className="text-muted-foreground">
-                {userRole === 'mentor' 
-                  ? "No submissions from your assigned students yet."
-                  : "No submissions available to review at the moment."}
+                {userRole === 'mentor' ? "No submissions from your assigned students yet." : "No submissions available to review at the moment."}
               </p>
-            </div>
-          ) : (
-            <Table>
+            </div> : <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40">
                   <TableHead className="font-semibold">Student</TableHead>
@@ -260,9 +231,8 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {submissions.map((submission) => (
-                  <TableRow key={submission.id} className="table-row-hover">
-                    <TableCell>
+                {submissions.map(submission => <TableRow key={submission.id} className="table-row-hover">
+                    <TableCell className="bg-white">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
                           <span className="text-xs font-semibold text-foreground/80">
@@ -277,29 +247,24 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="bg-white">
                       <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
                         {submission.assignment.name}
                       </Badge>
                     </TableCell>
-                    <TableCell>{new Date(submission.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>
+                    <TableCell className="bg-white">{new Date(submission.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="bg-white">
                       <Badge className={`${getStatusColor(submission.status)} font-medium`}>
                         {submission.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="bg-white">
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedSubmission(submission);
-                              setReviewNotes(submission.notes || '');
-                            }}
-                            className="hover:bg-gray-50"
-                          >
+                          <Button variant="outline" size="sm" onClick={() => {
+                      setSelectedSubmission(submission);
+                      setReviewNotes(submission.notes || '');
+                    }} className="hover:bg-gray-50">
                             <Eye className="w-4 h-4 mr-2" />
                             Review
                           </Button>
@@ -313,8 +278,7 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                               <span>Review Submission</span>
                             </DialogTitle>
                           </DialogHeader>
-                          {selectedSubmission && (
-                            <div className="space-y-8">
+                          {selectedSubmission && <div className="space-y-8">
                               <div className="grid grid-cols-2 gap-6">
                                 <div className="bg-muted/30 rounded-xl p-5">
                                   <div className="flex items-center space-x-2 mb-4">
@@ -362,43 +326,27 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                                 </div>
                               </div>
 
-                              {selectedSubmission.status === 'pending' && (
-                                <div className="space-y-6">
+                              {selectedSubmission.status === 'pending' && <div className="space-y-6">
                                   <div className="bg-muted/30 rounded-xl p-5">
                                     <label className="block text-sm font-semibold mb-3 flex items-center space-x-2">
                                       <MessageSquare className="w-4 h-4 text-primary" />
                                       <span>Review Notes</span>
                                     </label>
-                                    <Textarea
-                                      value={reviewNotes}
-                                      onChange={(e) => setReviewNotes(e.target.value)}
-                                      placeholder="Add feedback and notes for the student..."
-                                      rows={4}
-                                      className="border-2 bg-background/50 focus:bg-background transition-colors"
-                                    />
+                                    <Textarea value={reviewNotes} onChange={e => setReviewNotes(e.target.value)} placeholder="Add feedback and notes for the student..." rows={4} className="border-2 bg-background/50 focus:bg-background transition-colors" />
                                   </div>
                                   <div className="flex gap-4">
-                        <Button
-                              onClick={() => handleReviewSubmission(selectedSubmission.id, 'approved')}
-                              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-soft"
-                                    >
+                        <Button onClick={() => handleReviewSubmission(selectedSubmission.id, 'approved')} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white shadow-soft">
                                       <CheckCircle className="w-4 h-4 mr-2" />
                                       Approve
                                     </Button>
-                                    <Button
-                                      onClick={() => handleReviewSubmission(selectedSubmission.id, 'declined')}
-                                      variant="outline"
-                                      className="flex-1 border-red-200 hover:border-red-300 text-red-700 hover:bg-red-50"
-                                    >
+                                    <Button onClick={() => handleReviewSubmission(selectedSubmission.id, 'declined')} variant="outline" className="flex-1 border-red-200 hover:border-red-300 text-red-700 hover:bg-red-50">
                                       <XCircle className="w-4 h-4 mr-2" />
                                       Decline
                                     </Button>
                                   </div>
-                                </div>
-                              )}
+                                </div>}
 
-                              {selectedSubmission.status !== 'pending' && (
-                                <div className="bg-muted/30 rounded-xl p-6">
+                              {selectedSubmission.status !== 'pending' && <div className="bg-muted/30 rounded-xl p-6">
                                   <div className="flex items-center space-x-2 mb-4">
                                     <div className="w-6 h-6 bg-primary/10 rounded-lg flex items-center justify-center">
                                       <CheckCircle className="w-4 h-4 text-primary" />
@@ -408,29 +356,22 @@ export function SubmissionsManagement({ userRole }: SubmissionsManagementProps) 
                                   <Badge className={`${getStatusColor(selectedSubmission.status)} font-medium text-base px-4 py-2`}>
                                     {selectedSubmission.status.toUpperCase()}
                                   </Badge>
-                                  {selectedSubmission.notes && (
-                                    <div className="mt-4 p-4 bg-background/50 rounded-lg border">
+                                  {selectedSubmission.notes && <div className="mt-4 p-4 bg-background/50 rounded-lg border">
                                       <p className="font-medium mb-2 flex items-center space-x-2">
                                         <MessageSquare className="w-4 h-4" />
                                         <span>Feedback Notes:</span>
                                       </p>
                                       <p className="text-muted-foreground leading-relaxed">{selectedSubmission.notes}</p>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          )}
+                                    </div>}
+                                </div>}
+                            </div>}
                         </DialogContent>
                       </Dialog>
                     </TableCell>
-                  </TableRow>
-                ))}
+                  </TableRow>)}
               </TableBody>
-            </Table>
-          )}
+            </Table>}
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
