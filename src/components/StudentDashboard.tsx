@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+
 import { Progress } from '@/components/ui/progress';
 import { ConnectAccountsDialog } from '@/components/ConnectAccountsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useStudentRecordings } from '@/hooks/useStudentRecordings';
 import { supabase } from '@/integrations/supabase/client';
 import { InactiveLMSBanner } from '@/components/InactiveLMSBanner';
-import { useToast } from '@/hooks/use-toast';
+
 import { extractFinancialGoalForDisplay } from '@/utils/dreamGoalUtils';
 import { safeQuery } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
@@ -17,7 +17,6 @@ import {
   Trophy, 
   Target, 
   Clock, 
-  ShoppingCart, 
   BarChart3,
   Upload,
   CheckCircle,
@@ -25,8 +24,9 @@ import {
   Award,
   Star,
   Zap,
-  ShoppingBag,
-  TrendingUp
+  PlayCircle,
+  ListChecks,
+  MessageCircle
 } from 'lucide-react';
 
 interface Assignment {
@@ -48,7 +48,7 @@ export function StudentDashboard() {
   const { user } = useAuth();
   const { recordings, loading } = useStudentRecordings();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  
 
   // State
   const [dreamGoal, setDreamGoal] = useState<string>('');
@@ -155,6 +155,72 @@ export function StudentDashboard() {
 
   const completedMilestones = milestones.filter(m => m.completed).length;
 
+  const { totalVideos, videosWatched, totalAssignments, assignmentsCompleted, pendingAssignments, integrationsConnected } = useMemo(() => {
+    const totalV = recordings.length;
+    const watched = recordings.filter(r => r.isWatched).length;
+    const totalA = recordings.filter(r => r.hasAssignment).length;
+    const completedA = recordings.filter(r => r.hasAssignment && r.assignmentSubmitted).length;
+    const pendingA = Math.max(totalA - completedA, 0);
+    const integrations = (shopifyConnected ? 1 : 0) + (metaConnected ? 1 : 0);
+    return {
+      totalVideos: totalV,
+      videosWatched: watched,
+      totalAssignments: totalA,
+      assignmentsCompleted: completedA,
+      pendingAssignments: pendingA,
+      integrationsConnected: integrations,
+    };
+  }, [recordings, shopifyConnected, metaConnected]);
+
+  type StatVariant = 'primary' | 'secondary' | 'accent' | 'destructive' | 'muted';
+
+  const StatTile: React.FC<{
+    title: string;
+    value: React.ReactNode;
+    sublabel?: string;
+    icon?: React.ReactNode;
+    variant?: StatVariant;
+    onClick?: () => void;
+  }> = ({ title, value, sublabel, icon, variant = 'muted', onClick }) => {
+    const base =
+      'relative overflow-hidden rounded-lg border bg-card text-card-foreground shadow-sm transition-transform hover:scale-[1.02] focus-within:scale-[1.02]';
+    const variantCls: Record<StatVariant, string> = {
+      primary: 'border-l-2 border-primary bg-primary/5',
+      secondary: 'border-l-2 border-secondary bg-secondary/5',
+      accent: 'border-l-2 border-accent bg-accent/5',
+      destructive: 'border-l-2 border-destructive bg-destructive/5',
+      muted: 'border-l-2 border-muted bg-muted/20',
+    };
+    return (
+      <div
+        className={`${base} ${variantCls[variant]} p-4`}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : -1}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        aria-label={`${title}${typeof value === 'string' ? ` ${value}` : ''}`}
+      >
+        <div className="flex items-start justify-between">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground">{title}</p>
+            <div className="text-2xl font-semibold">{value}</div>
+            {sublabel && <p className="text-xs text-muted-foreground">{sublabel}</p>}
+          </div>
+          {icon && (
+            <div className="w-9 h-9 rounded-full bg-muted/50 flex items-center justify-center">
+              {icon}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -166,8 +232,93 @@ export function StudentDashboard() {
   return (
     <div className="space-y-6">
       <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
-      
-      {/* Refined Financial Goal Banner */}
+
+      {/* Hero Header */}
+      <header className="rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-background border border-primary/20 p-6 animate-fade-in">
+        <h1 className="text-2xl font-semibold tracking-tight">Learning Command Center</h1>
+        <p className="text-sm text-muted-foreground mt-1">Your personal progress and next steps</p>
+      </header>
+
+      {/* Metrics Tiles Grid */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <StatTile
+          title="Overall Progress"
+          value={`${courseProgress}%`}
+          sublabel="Complete"
+          icon={<BarChart3 className="w-4 h-4" />}
+          variant="primary"
+          onClick={() => navigate('/videos')}
+        />
+        <StatTile
+          title="Videos Watched"
+          value={`${videosWatched}/${totalVideos}`}
+          sublabel="Lessons completed"
+          icon={<PlayCircle className="w-4 h-4" />}
+          variant="accent"
+          onClick={() => navigate('/videos')}
+        />
+        <StatTile
+          title="Assignments Done"
+          value={`${assignmentsCompleted}/${totalAssignments}`}
+          sublabel="Submitted"
+          icon={<ListChecks className="w-4 h-4" />}
+          variant="secondary"
+          onClick={() => navigate('/assignments')}
+        />
+        <StatTile
+          title="Pending Assignments"
+          value={pendingAssignments}
+          sublabel="To be submitted"
+          icon={<Clock className="w-4 h-4" />}
+          variant={pendingAssignments > 0 ? 'destructive' : 'muted'}
+          onClick={() => navigate('/assignments')}
+        />
+        <StatTile
+          title="LMS Status"
+          value={userLMSStatus === 'inactive' ? 'Inactive' : 'Active'}
+          sublabel="Learning system"
+          icon={<Zap className="w-4 h-4" />}
+          variant={userLMSStatus === 'inactive' ? 'destructive' : 'primary'}
+        />
+        <StatTile
+          title="Next Assignment"
+          value={nextAssignment ? nextAssignment.name : 'All caught up'}
+          sublabel={nextAssignment ? (assignmentDueStatus === 'overdue' ? 'Past Due' : 'Due Soon') : 'No pending tasks'}
+          icon={<Upload className="w-4 h-4" />}
+          variant={nextAssignment ? (assignmentDueStatus === 'overdue' ? 'destructive' : 'accent') : 'muted'}
+          onClick={() => nextAssignment && navigate('/assignments')}
+        />
+        <StatTile
+          title="Integrations"
+          value={`${integrationsConnected}/2 Connected`}
+          sublabel="Shopify, Meta Ads"
+          icon={<Zap className="w-4 h-4" />}
+          variant="secondary"
+          onClick={() => setConnectDialogOpen(true)}
+        />
+        <StatTile
+          title="Milestones"
+          value={`${completedMilestones}/${milestones.length}`}
+          sublabel="Achieved"
+          icon={<Award className="w-4 h-4" />}
+          variant="accent"
+        />
+      </section>
+
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-2">
+        <Button variant="outline" size="sm" onClick={() => navigate('/videos')} className="hover-scale">
+          <PlayCircle className="w-4 h-4 mr-2" /> Continue Watching
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => navigate('/assignments')} className="hover-scale">
+          <ListChecks className="w-4 h-4 mr-2" /> View Assignments
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => navigate('/support')} className="hover-scale">
+          <MessageCircle className="w-4 h-4 mr-2" /> Ask Support
+        </Button>
+      </div>
+
+      {/* Financial Goal Banner */}
       <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
         <CardContent className="p-6">
           <div className="space-y-5">
@@ -202,160 +353,10 @@ export function StudentDashboard() {
           </div>
         </CardContent>
       </Card>
-
-      {/* Interactive Three-Card Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Course Progress Card */}
-        <Card className="hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 border-l-blue-400 animate-fade-in group cursor-pointer relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 via-blue-50/50 to-blue-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="flex items-center gap-2 text-blue-600 text-base font-medium">
-              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                <BarChart3 className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
-              </div>
-              <span className="group-hover:translate-x-1 transition-transform duration-300">Course Progress</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="space-y-3">
-              <div className="text-center">
-                <div className="text-3xl font-medium text-blue-600 mb-1 group-hover:scale-110 group-hover:text-blue-700 transition-all duration-300 relative">
-                  {courseProgress}%
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-200 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping transition-all duration-300"></div>
-                </div>
-                <p className="text-xs text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">Complete</p>
-              </div>
-              <div className="relative group/bar">
-                <Progress value={courseProgress} className="h-1.5 group-hover/bar:h-2 transition-all duration-300" />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-300/30 to-blue-500/30 rounded-full opacity-0 group-hover/bar:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Next Assignment Card */}
-        <Card className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
-          assignmentDueStatus === 'overdue' ? 'border-l-red-400' : 'border-l-orange-400'
-        }`} style={{ animationDelay: '150ms' }}>
-          <div className={`absolute inset-0 bg-gradient-to-r transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
-            assignmentDueStatus === 'overdue' ? 'from-red-50/0 via-red-50/50 to-red-50/0' : 'from-orange-50/0 via-orange-50/50 to-orange-50/0'
-          }`}></div>
-          <CardHeader className="pb-3 relative z-10">
-            <CardTitle className={`flex items-center gap-2 text-base font-medium ${
-              assignmentDueStatus === 'overdue' ? 'text-red-600' : 'text-orange-600'
-            }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 ${
-                assignmentDueStatus === 'overdue' 
-                  ? 'bg-red-50 group-hover:bg-red-100 group-hover:animate-pulse' 
-                  : 'bg-orange-50 group-hover:bg-orange-100 group-hover:rotate-12'
-              }`}>
-                <Upload className="w-4 h-4 group-hover:scale-110 group-hover:-translate-y-0.5 transition-all duration-300" />
-              </div>
-              <span className="group-hover:translate-x-1 transition-transform duration-300">Next Assignment</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            {nextAssignment ? (
-              <div className="space-y-3">
-                <div>
-                  <h3 className="font-normal text-foreground mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors duration-300">
-                    {nextAssignment.name}
-                  </h3>
-                  <div className="flex items-center gap-2 text-xs">
-                    {assignmentDueStatus === 'overdue' ? (
-                      <AlertCircle className="w-3 h-3 text-red-500 group-hover:animate-bounce" />
-                    ) : (
-                      <Clock className="w-3 h-3 text-orange-500 group-hover:animate-spin" />
-                    )}
-                    <span className={`font-normal transition-all duration-300 ${
-                      assignmentDueStatus === 'overdue' ? 'text-red-500 group-hover:animate-pulse' : 'text-orange-500'
-                    }`}>
-                      {assignmentDueStatus === 'overdue' ? 'Past Due' : 'Due Soon'}
-                    </span>
-                  </div>
-                </div>
-                <Button 
-                  onClick={handleSubmitAssignment}
-                  className="w-full text-sm font-normal group-hover:scale-105 transition-all duration-300 relative overflow-hidden"
-                  variant={assignmentDueStatus === 'overdue' ? 'destructive' : 'default'}
-                  size="sm"
-                >
-                  <span className="relative z-10">Submit Now</span>
-                  <div className="absolute inset-0 bg-white/20 transform -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
-                <p className="text-xs text-muted-foreground group-hover:text-green-600 transition-colors duration-300">All assignments completed!</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Integrations Card */}
-        <Card className="hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 border-l-purple-400 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '300ms' }}>
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-50/0 via-purple-50/50 to-purple-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="flex items-center gap-2 text-purple-600 text-base font-medium">
-              <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                <Zap className="w-4 h-4 group-hover:scale-110 group-hover:text-yellow-500 transition-all duration-300" />
-              </div>
-              <span className="group-hover:translate-x-1 transition-transform duration-300">Integrations</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md group-hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-green-600 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
-                  <span className="font-normal text-sm group-hover:translate-x-0.5 transition-transform duration-300">Shopify</span>
-                </div>
-                {shopifyConnected ? (
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-green-600">Connected</span>
-                  </div>
-                ) : (
-                  <Button variant="outline" size="sm" className="text-xs h-6 px-2 hover:scale-105 transition-transform duration-200">
-                    Connect
-                  </Button>
-                )}
-              </div>
-              
-              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md group-hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] cursor-pointer">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-blue-600 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
-                  <span className="font-normal text-sm group-hover:translate-x-0.5 transition-transform duration-300">Meta Ads</span>
-                </div>
-                {metaConnected ? (
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-green-600">Connected</span>
-                  </div>
-                ) : (
-                  <Button variant="outline" size="sm" className="text-xs h-6 px-2 hover:scale-105 transition-transform duration-200">
-                    Connect
-                  </Button>
-                )}
-              </div>
-              
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="w-full text-xs font-normal group-hover:scale-105 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300 relative overflow-hidden"
-                onClick={() => setConnectDialogOpen(true)}
-              >
-                <span className="relative z-10">Manage Connections</span>
-                <div className="absolute inset-0 bg-purple-100/50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
+    
       {/* Interactive Milestones & Leaderboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
         {/* Milestones Card */}
         <Card className="hover:shadow-xl hover:scale-[1.02] transition-all duration-500 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '450ms' }}>
           <div className="absolute inset-0 bg-gradient-to-r from-orange-50/0 via-orange-50/30 to-orange-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
