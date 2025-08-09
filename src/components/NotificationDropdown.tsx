@@ -27,6 +27,33 @@ const NotificationDropdown = () => {
 
   useEffect(() => {
     fetchNotifications();
+
+    // Realtime: subscribe to new notifications for current user
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      channel = supabase
+        .channel('realtime:notifications_dropdown')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        }, (payload: any) => {
+          const newNotif = payload.new as Notification;
+          // Only count unread (status 'sent')
+          if (newNotif.status === 'sent') {
+            setUnreadCount(prev => (prev >= 9 ? prev : prev + 1));
+            setNotifications(prev => [newNotif, ...prev].slice(0, 5));
+          }
+        })
+        .subscribe();
+    })();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchNotifications = async () => {
@@ -95,9 +122,21 @@ const NotificationDropdown = () => {
     }
   };
 
+  const markAllAsRead = async () => {
+    try {
+      const { error } = await supabase.rpc('mark_all_notifications_read');
+      if (error) throw error;
+      setNotifications([]);
+      setUnreadCount(0);
+      toast({ title: 'All caught up', description: 'All notifications marked as read' });
+    } catch (e) {
+      console.error('Error marking all as read', e);
+      toast({ title: 'Error', description: 'Failed to mark all as read', variant: 'destructive' });
+    }
+  };
+
   const getNotificationIcon = (type: string, status: string) => {
     if (status === 'error') return <AlertCircle className="h-4 w-4 text-red-500" />;
-    
     switch (type) {
       case 'assignment_submission':
         return <Clock className="h-4 w-4 text-blue-500" />;
@@ -144,11 +183,16 @@ const NotificationDropdown = () => {
         <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <h4 className="font-medium text-foreground">Notifications</h4>
-            <Link to="/notifications">
-              <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 transition-colors">
-                View all
+            <div className="flex items-center gap-1">
+              <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-muted-foreground hover:text-foreground">
+                Mark all as read
               </Button>
-            </Link>
+              <Link to="/notifications">
+                <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 transition-colors">
+                  View all
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
         

@@ -546,34 +546,103 @@ export type Database = {
         }
         Relationships: []
       }
+      notification_settings: {
+        Row: {
+          created_at: string
+          id: string
+          mutes: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mutes?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mutes?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_templates: {
+        Row: {
+          active: boolean
+          body_md: string
+          created_at: string
+          id: string
+          key: string
+          title_md: string
+          updated_at: string
+          variables: string[]
+        }
+        Insert: {
+          active?: boolean
+          body_md: string
+          created_at?: string
+          id?: string
+          key: string
+          title_md: string
+          updated_at?: string
+          variables?: string[]
+        }
+        Update: {
+          active?: boolean
+          body_md?: string
+          created_at?: string
+          id?: string
+          key?: string
+          title_md?: string
+          updated_at?: string
+          variables?: string[]
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           channel: string
           created_at: string
+          dismissed_at: string | null
           id: string
           payload: Json
+          payload_hash: string | null
+          read_at: string | null
           sent_at: string
           status: string
+          template_key: string | null
           type: string
           user_id: string
         }
         Insert: {
           channel?: string
           created_at?: string
+          dismissed_at?: string | null
           id?: string
           payload?: Json
+          payload_hash?: string | null
+          read_at?: string | null
           sent_at?: string
           status?: string
+          template_key?: string | null
           type: string
           user_id: string
         }
         Update: {
           channel?: string
           created_at?: string
+          dismissed_at?: string | null
           id?: string
           payload?: Json
+          payload_hash?: string | null
+          read_at?: string | null
           sent_at?: string
           status?: string
+          template_key?: string | null
           type?: string
           user_id?: string
         }
@@ -1239,9 +1308,17 @@ export type Database = {
           is_recording_unlocked: boolean
         }[]
       }
+      get_users_by_role: {
+        Args: { role_code: string }
+        Returns: string[]
+      }
       initialize_student_unlocks: {
         Args: { p_user_id: string }
         Returns: undefined
+      }
+      interpolate_template: {
+        Args: { t: string; vars: Json }
+        Returns: string
       }
       is_assignment_passed: {
         Args: { _user_id: string; _assignment_id: string }
@@ -1254,6 +1331,10 @@ export type Database = {
       is_recording_watched: {
         Args: { _user_id: string; _recording_id: string }
         Returns: boolean
+      }
+      mark_all_notifications_read: {
+        Args: Record<PropertyKey, never>
+        Returns: number
       }
       notify_all_students: {
         Args: {
@@ -1273,6 +1354,18 @@ export type Database = {
           p_metadata?: Json
         }
         Returns: number
+      }
+      notify_roles: {
+        Args: { role_codes: string[]; template_key: string; payload: Json }
+        Returns: string[]
+      }
+      notify_users: {
+        Args: { user_ids: string[]; template_key: string; payload: Json }
+        Returns: string[]
+      }
+      send_test_notification: {
+        Args: { template_key: string; payload: Json }
+        Returns: string[]
       }
       unlock_next_recording: {
         Args: { p_student_id: string; p_current_recording_id: string }

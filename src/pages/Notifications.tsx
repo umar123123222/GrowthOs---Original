@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Bell, Check, Clock, AlertCircle, Info } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Bell, Check, Clock, AlertCircle, Info, ExternalLink, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
 interface Notification {
   id: string;
@@ -19,10 +22,37 @@ interface Notification {
 const Notifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [templateKeys, setTemplateKeys] = useState<string[]>([]);
+  const [mutes, setMutes] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const unreadCount = useMemo(() => notifications.filter(n => n.status === 'sent').length, [notifications]);
 
   useEffect(() => {
     fetchNotifications();
+    fetchSettingsAndTemplates();
+
+    // Realtime: new notifications
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      channel = supabase
+        .channel('realtime:notifications_page')
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        }, (payload: any) => {
+          const n = payload.new as Notification;
+          setNotifications(prev => [n, ...prev]);
+        })
+        .subscribe();
+    })();
+
+    return () => { if (channel) supabase.removeChannel(channel); };
   }, []);
 
   const fetchNotifications = async () => {
@@ -118,6 +148,110 @@ const Notifications = () => {
     if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
     return date.toLocaleDateString();
   };
+
+  const markAllAsRead = async () => {
+    try {
+      const { error } = await supabase.rpc('mark_all_notifications_read');
+      if (error) throw error;
+      setNotifications(prev => prev.map(n => ({ ...n, status: 'read' })));
+      toast({ title: 'All caught up', description: 'All notifications marked as read' });
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Error', description: 'Failed to mark all as read', variant: 'destructive' });
+    }
+  };
+
+  const dismissNotification = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ status: 'read', dismissed_at: new Date().toISOString() })
+        .eq('id', id);
+      if (error) throw error;
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Error', description: 'Failed to dismiss', variant: 'destructive' });
+    }
+  };
+
+  const getNotificationLink = (n: Notification) => {
+    const key = (n as any).template_key || n.type;
+    const data = n.payload?.data || n.payload || {};
+    switch (key) {
+      case 'ticket_updated':
+        return data.ticket_id ? `/support?ticketId=${data.ticket_id}` : '/support';
+      case 'invoice_issued':
+      case 'invoice_due':
+        return data.invoice_id ? `/admin/financials?invoice=${data.invoice_id}` : '/admin/financials';
+      case 'student_added':
+        return data.student_id ? `/students?studentId=${data.student_id}` : '/students';
+      case 'learning_item_changed':
+        if (data.item_type === 'recording' && data.item_id) return `/videos?recordingId=${data.item_id}`;
+        if (data.item_type === 'assignment' && data.item_id) return `/assignments?assignmentId=${data.item_id}`;
+        if (data.item_type === 'success_session' && data.item_id) return `/live-sessions?sessionId=${data.item_id}`;
+        return '/';
+      default:
+        return undefined;
+    }
+  };
+
+  const openNotification = async (n: Notification) => {
+    await markAsRead(n.id);
+    const link = getNotificationLink(n);
+    if (link) navigate(link);
+  };
+
+  const fetchSettingsAndTemplates = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Try to load templates (admins); fallback to keys from notifications
+      const { data: tplData, error: tplError } = await supabase
+        .from('notification_templates')
+        .select('key');
+
+      if (!tplError && tplData) {
+        setTemplateKeys(tplData.map(t => t.key));
+      } else {
+        const keys = Array.from(new Set((notifications as any[]).map(n => (n as any).template_key || n.type).filter(Boolean)));
+        setTemplateKeys(keys);
+      }
+
+      // Load or init user's settings
+      const { data: settingsRow } = await supabase
+        .from('notification_settings')
+        .select('*')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (settingsRow) {
+        setMutes((settingsRow.mutes as any) || {});
+      } else {
+        setMutes({});
+      }
+    } catch (e) {
+      console.warn('Settings/templates load warning', e);
+    }
+  };
+
+  const toggleMute = async (key: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const next = { ...mutes, [key]: !mutes[key] };
+      setMutes(next);
+      // Upsert row
+      const { error } = await supabase
+        .from('notification_settings')
+        .upsert({ user_id: user.id, mutes: next }, { onConflict: 'user_id' });
+      if (error) throw error;
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Error', description: 'Failed to update notification settings', variant: 'destructive' });
+    }
+  }; 
 
   if (loading) {
     return (
