@@ -233,7 +233,7 @@ const Support = () => {
       <div className="space-y-8 animate-fade-in">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Support Center</h1>
+          <h1 className="text-3xl font-bold tracking-tight header-accent">Support Center</h1>
           <p className="text-muted-foreground text-lg">
             Get help with your questions and concerns
           </p>

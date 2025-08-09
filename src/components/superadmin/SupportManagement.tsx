@@ -223,24 +223,23 @@ export function SupportManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'bg-red-100 text-red-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-      case 'resolved': return 'bg-green-100 text-green-800';
-      case 'closed': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'open': return 'badge-soft-destructive';
+      case 'in_progress': return 'badge-soft-primary';
+      case 'resolved': return 'badge-soft-success';
+      case 'closed': return 'badge-soft-muted';
+      default: return 'badge-soft-muted';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'urgent': return 'badge-soft-destructive';
+      case 'high': return 'badge-soft-warning';
+      case 'medium': return 'badge-soft-primary';
+      case 'low': return 'badge-soft-success';
+      default: return 'badge-soft-muted';
     }
   };
-
   const getTypeIcon = (type: string | null) => {
     switch (type) {
       case 'complaint': return <AlertCircle className="w-4 h-4" />;
@@ -263,10 +262,10 @@ export function SupportManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Support Management</h1>
-          <p className="text-muted-foreground">Manage student support tickets and complaints</p>
+      <div className="flex items-center justify-between">
+        <div className="space-y-1.5">
+          <h1 className="text-3xl font-bold tracking-tight header-accent">Support Management</h1>
+          <p className="text-muted-foreground text-lg">Manage student support tickets and complaints</p>
         </div>
       </div>
 
@@ -298,9 +297,14 @@ export function SupportManagement() {
         </Select>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Support Tickets</CardTitle>
+      <Card className="section-surface overflow-hidden">
+        <CardHeader className="section-header">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="icon-chip"><MessageSquare className="w-4 h-4" /></div>
+              <CardTitle>All Tickets</CardTitle>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -316,8 +320,8 @@ export function SupportManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTickets.map((ticket) => (
-                <TableRow key={ticket.id}>
+                {filteredTickets.map((ticket) => (
+                  <TableRow key={ticket.id} className="table-row-hover">
                   <TableCell>
                     <div>
                       <div className="font-medium">{ticket.users.full_name}</div>
@@ -338,12 +342,12 @@ export function SupportManagement() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getPriorityColor(ticket.priority)}>
+                    <Badge className={`badge-pill ${getPriorityColor(ticket.priority)}`}>
                       {ticket.priority.toUpperCase()}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getStatusColor(ticket.status)}>
+                    <Badge className={`badge-pill ${getStatusColor(ticket.status)}`}>
                       {ticket.status.replace('_', ' ').toUpperCase()}
                     </Badge>
                   </TableCell>
@@ -385,13 +389,13 @@ export function SupportManagement() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">Priority:</span>
-                                  <Badge className={getPriorityColor(selectedTicket.priority)}>
+                                  <Badge className={`badge-pill ${getPriorityColor(selectedTicket.priority)}`}>
                                     {selectedTicket.priority}
                                   </Badge>
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">Status:</span>
-                                  <Badge className={getStatusColor(selectedTicket.status)}>
+                                  <Badge className={`badge-pill ${getStatusColor(selectedTicket.status)}`}>
                                     {selectedTicket.status.replace('_', ' ')}
                                   </Badge>
                                 </div>
