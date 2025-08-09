@@ -13,6 +13,7 @@ import { DynamicFavicon } from "./components/DynamicFavicon";
 import { supabase } from "@/integrations/supabase/client";
 import { PendingInvoice } from "@/types/common";
 import { logger } from "@/lib/logger";
+import { RoleGuard } from "@/components/RoleGuard";
 
 // Wrapper component to handle onboarding completion properly
 const OnboardingWrapper = ({ user }: { user: any }) => {
@@ -57,6 +58,8 @@ const Connect = lazy(() => import("./pages/Connect"));
 const ShopifyDashboard = lazy(() => import("./pages/ShopifyDashboard"));
 const MetaAdsDashboard = lazy(() => import("./pages/MetaAdsDashboard"));
 const MentorSessionsPage = lazy(() => import("./pages/MentorSessionsPage"));
+const AdminNotifications = lazy(() => import("./pages/AdminNotifications"));
+const DevSendNotification = lazy(() => import("./pages/DevSendNotification"));
 
 // Loading component
 const PageLoader = () => (
@@ -201,7 +204,24 @@ const App = () => {
                     <Route path="mentor/sessions" element={<MentorSessionsPage />} />
                     <Route path="superadmin" element={<SuperadminDashboard />} />
                     <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
-                    
+
+                    {/* Notifications admin + dev */}
+                    <Route
+                      path="admin/notifications"
+                      element={
+                        <RoleGuard allowedRoles={["admin","superadmin"]}>
+                          <AdminNotifications />
+                        </RoleGuard>
+                      }
+                    />
+                    <Route
+                      path="dev/notify-test"
+                      element={
+                        <RoleGuard allowedRoles={["superadmin"]}>
+                          <DevSendNotification />
+                        </RoleGuard>
+                      }
+                    />
                     
                     <Route path="*" element={<Navigate to="/" />} />
                   </Route>

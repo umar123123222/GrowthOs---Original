@@ -278,79 +278,129 @@ const Notifications = () => {
           <Bell className="h-8 w-8 text-blue-600" />
           Notifications
         </h1>
-        <Badge variant="outline" className="text-lg px-3 py-1">
-          {notifications.filter(n => n.status === 'sent').length} unread
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-lg px-3 py-1">
+            {unreadCount} unread
+          </Badge>
+          <Button variant="outline" size="sm" onClick={markAllAsRead}>Mark all as read</Button>
+        </div>
       </div>
 
-      {notifications.length === 0 ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <Bell className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications yet</h3>
-            <p className="text-gray-500">
-              You'll see important updates and announcements here.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {notifications.map((notification) => (
-            <Card 
-              key={notification.id} 
-              className={`transition-all hover:shadow-md ${
-                notification.status === 'sent' 
-                  ? 'bg-blue-50 border-blue-200' 
-                  : 'bg-white'
-              }`}
-            >
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-3">
-                    {getNotificationIcon(notification.type, notification.status)}
-                    <div>
-                      <CardTitle className="text-lg">
-                        {notification.payload?.title || `${notification.type} notification`}
-                      </CardTitle>
-                      <CardDescription className="flex items-center gap-2 mt-1">
-                        <span>{formatDate(notification.sent_at)}</span>
-                        <span>•</span>
-                        <span className="capitalize">{notification.channel}</span>
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getStatusBadge(notification.status)}
-                    {notification.status === 'sent' && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => markAsRead(notification.id)}
-                      >
-                        <Check className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <p className="text-gray-700">
-                  {notification.payload?.message || notification.payload?.description || 'No message content'}
-                </p>
-                {notification.error_message && (
-                  <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-sm text-red-700">
-                      <strong>Error:</strong> {notification.error_message}
-                    </p>
-                  </div>
-                )}
+      <Tabs defaultValue="all">
+        <TabsList>
+          <TabsTrigger value="all">All</TabsTrigger>
+          <TabsTrigger value="unread">Unread</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="all">
+          {notifications.length === 0 ? (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <Bell className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No notifications yet</h3>
+                <p className="text-gray-500">You'll see important updates and announcements here.</p>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+          ) : (
+            <div className="space-y-3">
+              {notifications.map((n) => (
+                <Card key={n.id} className={`transition-all hover:shadow-md ${n.status === 'sent' ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        {getNotificationIcon(n.type, n.status)}
+                        <div>
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            {n.payload?.title || `${n.type} notification`}
+                            <Badge variant="secondary" className="capitalize">{(n as any).template_key || n.type}</Badge>
+                          </CardTitle>
+                          <CardDescription className="flex items-center gap-2 mt-1">
+                            <span>{formatDate(n.sent_at)}</span>
+                            <span>•</span>
+                            <span className="capitalize">{n.channel}</span>
+                          </CardDescription>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {getStatusBadge(n.status)}
+                        <Button size="sm" variant="outline" onClick={() => openNotification(n)}>
+                          Open
+                        </Button>
+                        <Button size="icon" variant="ghost" onClick={() => dismissNotification(n.id)} title="Dismiss">
+                          <X className="h-4 w-4"/>
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-gray-700">
+                      {n.payload?.message || n.payload?.description || 'No message content'}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="unread">
+          {notifications.filter(n => n.status === 'sent').length === 0 ? (
+            <Card><CardContent className="p-8 text-center">You're all caught up 🎉</CardContent></Card>
+          ) : (
+            <div className="space-y-3">
+              {notifications.filter(n => n.status === 'sent').map((n) => (
+                <Card key={n.id}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-base">{n.payload?.title || `${n.type} notification`}</CardTitle>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="capitalize">{(n as any).template_key || n.type}</Badge>
+                        <Button size="sm" variant="outline" onClick={() => openNotification(n)}>
+                          Open
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0 flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground truncate">{n.payload?.message}</p>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="ghost" onClick={() => markAsRead(n.id)}><Check className="h-4 w-4 mr-1"/>Read</Button>
+                      <Button size="icon" variant="ghost" onClick={() => dismissNotification(n.id)} title="Dismiss"><X className="h-4 w-4"/></Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Settings</CardTitle>
+              <CardDescription>Mute specific templates</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {templateKeys.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No templates available.</div>
+              ) : (
+                templateKeys.map(k => (
+                  <div key={k} className="flex items-center justify-between rounded-md border p-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary">{k}</Badge>
+                      <span className="text-sm">Mute notifications from this template</span>
+                    </div>
+                    <Switch checked={!!mutes[k]} onCheckedChange={() => toggleMute(k)} />
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
-};
+}
 
 export default Notifications;
