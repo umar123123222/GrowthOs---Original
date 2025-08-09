@@ -75,6 +75,8 @@ const ShopifyDashboard = () => {
 
   // Timezone selection
   const [timezone, setTimezone] = useState<string | undefined>(undefined);
+  // Date basis (created vs processed)
+  const [timeBasis, setTimeBasis] = useState<'created' | 'processed'>('processed');
   const timezones = useMemo(() => {
     try {
       const supported = (Intl as any).supportedValuesOf?.('timeZone') as string[] | undefined;
@@ -108,12 +110,12 @@ const ShopifyDashboard = () => {
     };
   }, [authLoading, user?.id]);
 
-  // Fetch when date range or timezone changes and connected
+  // Fetch when date range, timezone or date basis changes and connected
   useEffect(() => {
     if (!authLoading && user?.id && dateRange.from && dateRange.to) {
       fetchShopifyData();
     }
-  }, [dateRange.from, dateRange.to, timezone]);
+  }, [dateRange.from, dateRange.to, timezone, timeBasis]);
 
   // Reset to first page when products change
 
@@ -280,7 +282,8 @@ const ShopifyDashboard = () => {
         const result = await fetchShopifyMetrics(user.id, {
           startDate: startISO,
           endDate: endISO,
-          timezone
+          timezone,
+          timeBasis
         });
         if (!result?.connected) {
           const usedCache = await fetchCachedMetrics(user.id);
@@ -339,7 +342,7 @@ const ShopifyDashboard = () => {
       if (authLoading || !user?.id) return;
       const startISO = lastMonthInfo.from.toISOString();
       const endISO = lastMonthInfo.to.toISOString();
-      const result = await fetchShopifyMetrics(user.id, { startDate: startISO, endDate: endISO, timezone });
+      const result = await fetchShopifyMetrics(user.id, { startDate: startISO, endDate: endISO, timezone, timeBasis });
       if (result?.connected && result.metrics) {
         const tops = (result.metrics.bestSellers || result.metrics.topProducts || []).slice(0, 5);
         setLastMonthTop(tops);
@@ -472,6 +475,15 @@ const ShopifyDashboard = () => {
                 {(timezones || []).map((tz) => (
                   <SelectItem key={tz} value={tz}>{tz}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+            <Select value={timeBasis} onValueChange={(v) => setTimeBasis(v as 'created' | 'processed')}>
+              <SelectTrigger className="min-w-[180px]" aria-label="Date basis">
+                <SelectValue placeholder="Date basis" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="created">Created date</SelectItem>
+                <SelectItem value="processed">Processed date</SelectItem>
               </SelectContent>
             </Select>
             <Button onClick={fetchShopifyData} variant="outline" size="sm">
