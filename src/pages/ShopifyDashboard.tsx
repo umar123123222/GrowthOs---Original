@@ -65,6 +65,17 @@ const ShopifyDashboard = () => {
       to: end
     };
   });
+  // Pending date range for the calendar (applied on Confirm)
+  const [pendingDateRange, setPendingDateRange] = useState<{
+    from?: Date;
+    to?: Date;
+  }>(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 6);
+    return { from: start, to: end };
+  });
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const lastMonthInfo = useMemo(() => {
     const now = new Date();
     const firstThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -445,7 +456,7 @@ const ShopifyDashboard = () => {
                 {connectionStatus === 'connected' ? 'Connected' : 'Connection Issue'}
               </span>
             </div>
-            <Popover>
+            <Popover open={calendarOpen} onOpenChange={(v) => { setCalendarOpen(v); if (v) setPendingDateRange(dateRange); }}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -464,7 +475,13 @@ const ShopifyDashboard = () => {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
-                <Calendar mode="range" selected={dateRange as any} onSelect={(range: any) => setDateRange(range)} numberOfMonths={2} className={cn("p-3 pointer-events-auto")} initialFocus />
+                <div className="space-y-2">
+                  <Calendar mode="range" selected={pendingDateRange as any} onSelect={(range: any) => setPendingDateRange(range)} numberOfMonths={2} className={cn("p-3 pointer-events-auto")} initialFocus />
+                  <div className="flex justify-end gap-2 px-3 pb-3">
+                    <Button variant="ghost" size="sm" onClick={() => { setCalendarOpen(false); setPendingDateRange(dateRange); }}>Cancel</Button>
+                    <Button size="sm" onClick={() => { setDateRange(pendingDateRange); setCalendarOpen(false); }}>Confirm</Button>
+                  </div>
+                </div>
               </PopoverContent>
             </Popover>
             <Select value={timezone} onValueChange={setTimezone}>
