@@ -8,17 +8,8 @@ import { useToast } from "@/hooks/use-toast";
 import { StudentSubmissionDialog } from "@/components/assignments/StudentSubmissionDialog";
 import { SubmissionsManagement } from "@/components/assignments/SubmissionsManagement";
 import { InactiveLMSBanner } from "@/components/InactiveLMSBanner";
-import { 
-  FileText, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle,
-  Upload,
-  Lock,
-  MessageSquare
-} from "lucide-react";
+import { FileText, Clock, CheckCircle, AlertTriangle, Upload, Lock, MessageSquare } from "lucide-react";
 import { logger } from "@/lib/logger";
-
 interface Assignment {
   id: string;
   name: string;
@@ -27,7 +18,6 @@ interface Assignment {
   created_at: string;
   isUnlocked?: boolean;
 }
-
 interface Submission {
   id: string;
   assignment_id: string;
@@ -36,17 +26,16 @@ interface Submission {
   created_at: string;
   notes: string;
 }
-
 interface AssignmentsProps {
   user?: any;
 }
-
-const Assignments = ({ user }: AssignmentsProps = {}) => {
+const Assignments = ({
+  user
+}: AssignmentsProps = {}) => {
   // If user is a mentor, admin, or superadmin, show submissions management instead
   if (user?.role === 'mentor' || user?.role === 'admin' || user?.role === 'superadmin') {
     return <SubmissionsManagement userRole={user.role} />;
   }
-
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
@@ -54,8 +43,9 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
   const [loading, setLoading] = useState(true);
   const [submissionDialogOpen, setSubmissionDialogOpen] = useState(false);
   const [userLMSStatus, setUserLMSStatus] = useState('active');
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     console.log('Assignments useEffect triggered, user:', user);
     if (user?.id) {
@@ -63,10 +53,9 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
       fetchSubmissions();
     }
   }, [user?.id]);
-
   const fetchAssignments = async () => {
     console.log('fetchAssignments called, user:', user);
-    const corrId = `asmt-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    const corrId = `asmt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const t0 = performance.now();
     try {
       if (!user?.id) {
@@ -76,34 +65,36 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
 
       // Fetch user's LMS status
       const tLmsStart = performance.now();
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('lms_status')
-        .eq('id', user.id)
-        .single();
-      logger.performance('asmt.fetch_lms_status', performance.now() - tLmsStart, { corrId });
-      
+      const {
+        data: userData,
+        error: userError
+      } = await supabase.from('users').select('lms_status').eq('id', user.id).single();
+      logger.performance('asmt.fetch_lms_status', performance.now() - tLmsStart, {
+        corrId
+      });
       if (userError) throw userError;
       setUserLMSStatus(userData?.lms_status || 'active');
 
       // Fetch all assignments
       const tAssignmentsStart = performance.now();
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('assignments')
-        .select('*')
-        .order('name');
-      logger.performance('asmt.fetch_assignments', performance.now() - tAssignmentsStart, { corrId });
-
+      const {
+        data: assignmentsData,
+        error: assignmentsError
+      } = await supabase.from('assignments').select('*').order('name');
+      logger.performance('asmt.fetch_assignments', performance.now() - tAssignmentsStart, {
+        corrId
+      });
       if (assignmentsError) throw assignmentsError;
 
       // Fetch user's submissions
       const tSubsStart = performance.now();
-      const { data: submissions, error: submissionsError } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('student_id', user.id);
-      logger.performance('asmt.fetch_submissions', performance.now() - tSubsStart, { corrId });
-
+      const {
+        data: submissions,
+        error: submissionsError
+      } = await supabase.from('submissions').select('*').eq('student_id', user.id);
+      logger.performance('asmt.fetch_submissions', performance.now() - tSubsStart, {
+        corrId
+      });
       if (submissionsError) throw submissionsError;
 
       // Assignments are only unlocked if user has active LMS status
@@ -111,33 +102,33 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
         ...assignment,
         isUnlocked: userLMSStatus === 'active'
       })) || [];
-
       setAssignments(processedAssignments);
       if (processedAssignments && processedAssignments.length > 0) {
         setSelectedAssignment(processedAssignments[0].id);
       }
-      logger.performance('asmt.fetch_total', performance.now() - t0, { corrId });
+      logger.performance('asmt.fetch_total', performance.now() - t0, {
+        corrId
+      });
     } catch (error) {
       console.error('Error fetching assignments:', error);
       toast({
         title: "Error",
         description: "Failed to load assignments",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const fetchSubmissions = async () => {
     try {
       if (!user?.id) return;
-
       const tFetchSubsStart = performance.now();
-      const { data, error } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('student_id', user.id);
-      logger.performance('asmt.submissions_only_fetch', performance.now() - tFetchSubsStart, { userId: user.id });
-
+      const {
+        data,
+        error
+      } = await supabase.from('submissions').select('*').eq('student_id', user.id);
+      logger.performance('asmt.submissions_only_fetch', performance.now() - tFetchSubsStart, {
+        userId: user.id
+      });
       if (error) throw error;
       setSubmissions(data || []);
     } catch (error) {
@@ -146,34 +137,29 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
       setLoading(false);
     }
   };
-
   const submitAssignment = async () => {
     if (!submission.trim() || !selectedAssignment) return;
-
     try {
       if (!user?.id) throw new Error('No authenticated user');
-
       const assignment = assignments.find(a => a.id === selectedAssignment);
       if (!assignment) throw new Error('Assignment not found');
-
       const tInsertStart = performance.now();
-      const { error } = await supabase
-        .from('submissions')
-        .insert({
-          student_id: user.id,
-          assignment_id: assignment.id,
-          content: submission,
-          status: 'pending'
-        });
-      logger.performance('asmt.submit_assignment', performance.now() - tInsertStart, { assignmentId: assignment.id });
-
+      const {
+        error
+      } = await supabase.from('submissions').insert({
+        student_id: user.id,
+        assignment_id: assignment.id,
+        content: submission,
+        status: 'pending'
+      });
+      logger.performance('asmt.submit_assignment', performance.now() - tInsertStart, {
+        assignmentId: assignment.id
+      });
       if (error) throw error;
-
       toast({
         title: "Success!",
-        description: "Assignment submitted successfully",
+        description: "Assignment submitted successfully"
       });
-
       setSubmission("");
       fetchSubmissions();
     } catch (error) {
@@ -181,18 +167,17 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
       toast({
         title: "Error",
         description: "Failed to submit assignment",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
-  const getStatusBadge = (assignment: Assignment & { isUnlocked?: boolean }) => {
+  const getStatusBadge = (assignment: Assignment & {
+    isUnlocked?: boolean;
+  }) => {
     const submissionForAssignment = submissions.find(s => s.assignment_id === assignment.id);
-    
     if (!assignment.isUnlocked) {
       return <Badge variant="secondary">Locked</Badge>;
     }
-    
     if (submissionForAssignment) {
       if (submissionForAssignment.status === 'approved') {
         return <Badge className="bg-green-100 text-green-800">Approved</Badge>;
@@ -202,34 +187,23 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
       }
       return <Badge className="bg-blue-100 text-blue-800">Pending</Badge>;
     }
-    
     return <Badge variant="outline">Not Started</Badge>;
   };
-
   const selectedAssignmentData = assignments.find(a => a.id === selectedAssignment);
-  const selectedSubmission = selectedAssignmentData ? 
-    submissions.find(s => s.assignment_id === selectedAssignmentData.id) : null;
-
+  const selectedSubmission = selectedAssignmentData ? submissions.find(s => s.assignment_id === selectedAssignmentData.id) : null;
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
+    return <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+      </div>;
   }
 
   // Filter assignments to show only incomplete ones
-  const incompleteAssignments = assignments
-    .filter(assignment => {
-      const submission = submissions.find(s => s.assignment_id === assignment.id);
-      return !submission || submission.status !== 'approved';
-    })
-    .slice(0, 4);
-
+  const incompleteAssignments = assignments.filter(assignment => {
+    const submission = submissions.find(s => s.assignment_id === assignment.id);
+    return !submission || submission.status !== 'approved';
+  }).slice(0, 4);
   const remainingAssignments = assignments.length - incompleteAssignments.length;
-
-  return (
-    <div className="p-6 space-y-6">
+  return <div className="p-6 space-y-6">
       <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
       
       {/* Header */}
@@ -240,7 +214,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
         
       {/* All Assignments Section */}
       <div className="bg-white rounded-lg border">
-        <div className="p-6 border-b">
+        <div className="p-6 border-b bg-purple-50">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
               <FileText className="w-4 h-4 text-purple-600" />
@@ -253,55 +227,34 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Assignment List */}
             <div className="space-y-4">
-              {assignments.length === 0 ? (
-                <div className="text-center py-8">
+              {assignments.length === 0 ? <div className="text-center py-8">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <FileText className="w-8 h-8 text-gray-400" />
                   </div>
                   <h3 className="text-lg font-semibold mb-2">No Assignments Available</h3>
                   <p className="text-gray-500 text-sm">Check back later for new assignments.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {incompleteAssignments.map((assignment) => {
-                    const isSubmitted = submissions.some(s => s.assignment_id === assignment.id);
-                    const isLocked = !assignment.isUnlocked || userLMSStatus !== 'active';
-                    
-                    return (
-                      <div 
-                        key={assignment.id}
-                        className={`p-4 border rounded-lg cursor-pointer transition-all ${
-                          selectedAssignment === assignment.id 
-                            ? "border-purple-200 bg-purple-50" 
-                            : "border-gray-200 hover:border-purple-200"
-                        } ${isLocked ? "opacity-60" : ""}`}
-                        onClick={() => !isLocked && setSelectedAssignment(assignment.id)}
-                      >
+                </div> : <div className="space-y-3">
+                  {incompleteAssignments.map(assignment => {
+                const isSubmitted = submissions.some(s => s.assignment_id === assignment.id);
+                const isLocked = !assignment.isUnlocked || userLMSStatus !== 'active';
+                return <div key={assignment.id} className={`p-4 border rounded-lg cursor-pointer transition-all ${selectedAssignment === assignment.id ? "border-purple-200 bg-purple-50" : "border-gray-200 hover:border-purple-200"} ${isLocked ? "opacity-60" : ""}`} onClick={() => !isLocked && setSelectedAssignment(assignment.id)}>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
-                            {isLocked ? (
-                              <Lock className="w-4 h-4 text-gray-400" />
-                            ) : (
-                              <FileText className="w-4 h-4 text-purple-600" />
-                            )}
+                            {isLocked ? <Lock className="w-4 h-4 text-gray-400" /> : <FileText className="w-4 h-4 text-purple-600" />}
                             <span className={`font-medium ${isLocked ? "text-gray-400" : "text-gray-900"}`}>
                               {assignment.name}
                             </span>
                           </div>
                           <div className="flex items-center space-x-2">
                             {getStatusBadge(assignment)}
-                            {isSubmitted && (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            )}
+                            {isSubmitted && <CheckCircle className="w-4 h-4 text-green-500" />}
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      </div>;
+              })}
                   
                   {/* Completed Assignments Summary */}
-                  {remainingAssignments > 0 && (
-                    <div className="p-4 border-2 border-dashed border-green-200 bg-green-50 rounded-lg text-center">
+                  {remainingAssignments > 0 && <div className="p-4 border-2 border-dashed border-green-200 bg-green-50 rounded-lg text-center">
                       <div className="flex items-center justify-center space-x-3">
                         <CheckCircle className="w-6 h-6 text-green-600" />
                         <div>
@@ -309,16 +262,13 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                           <p className="text-sm text-green-600">{remainingAssignments} assignments completed</p>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                    </div>}
+                </div>}
             </div>
 
             {/* Assignment Details */}
             <div className="lg:col-span-2">
-              {selectedAssignmentData && (
-                <div className="space-y-6">
+              {selectedAssignmentData && <div className="space-y-6">
                   <div className="border rounded-lg p-6 bg-white">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex items-center space-x-3">
@@ -349,8 +299,7 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                       <Upload className="w-5 h-5 text-purple-600" />
                       <h3 className="font-semibold">Your Submission</h3>
                     </div>
-                    {selectedSubmission ? (
-                      <div className="space-y-4">
+                    {selectedSubmission ? <div className="space-y-4">
                         <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center space-x-2">
@@ -366,51 +315,32 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                           <div className="bg-white p-3 rounded border">
                             <p className="text-gray-700">{selectedSubmission.content}</p>
                           </div>
-                          {selectedSubmission.notes && (
-                            <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                          {selectedSubmission.notes && <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
                               <div className="flex items-center space-x-2 mb-2">
                                 <MessageSquare className="w-4 h-4 text-blue-600" />
                                 <h4 className="font-medium text-blue-800">Feedback</h4>
                               </div>
                               <p className="text-blue-700">{selectedSubmission.notes}</p>
-                            </div>
-                          )}
+                            </div>}
                         </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <Textarea
-                          placeholder="Write your assignment submission here..."
-                          value={submission}
-                          onChange={(e) => setSubmission(e.target.value)}
-                          className="min-h-32"
-                        />
+                      </div> : <div className="space-y-4">
+                        <Textarea placeholder="Write your assignment submission here..." value={submission} onChange={e => setSubmission(e.target.value)} className="min-h-32" />
                         
                         <div className="flex items-center space-x-3">
-                          <Button 
-                            className="bg-purple-600 hover:bg-purple-700 text-white"
-                            onClick={submitAssignment}
-                            disabled={!submission.trim() || userLMSStatus !== 'active'}
-                          >
+                          <Button className="bg-purple-600 hover:bg-purple-700 text-white" onClick={submitAssignment} disabled={!submission.trim() || userLMSStatus !== 'active'}>
                             <FileText className="w-4 h-4 mr-2" />
                             Submit Assignment
                           </Button>
                           
-                          <Button 
-                            variant="outline"
-                            onClick={() => setSubmissionDialogOpen(true)}
-                            disabled={!selectedAssignmentData?.isUnlocked || userLMSStatus !== 'active'}
-                          >
+                          <Button variant="outline" onClick={() => setSubmissionDialogOpen(true)} disabled={!selectedAssignmentData?.isUnlocked || userLMSStatus !== 'active'}>
                             <Upload className="w-4 h-4 mr-2" />
                             Advanced Submission
                           </Button>
                         </div>
-                      </div>
-                    )}
+                      </div>}
                   </div>
 
-                  {userLMSStatus !== 'active' && (
-                    <Card className="bg-gradient-to-r from-red-50 to-red-50/50 border-2 border-red-200">
+                  {userLMSStatus !== 'active' && <Card className="bg-gradient-to-r from-red-50 to-red-50/50 border-2 border-red-200">
                       <CardContent className="p-6">
                         <div className="flex items-start space-x-4">
                           <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -424,29 +354,17 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
                           </div>
                         </div>
                       </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
+                    </Card>}
+                </div>}
             </div>
           </div>
         </div>
         
-        {selectedAssignmentData && (
-          <StudentSubmissionDialog
-            open={submissionDialogOpen}
-            onOpenChange={setSubmissionDialogOpen}
-            assignment={selectedAssignmentData}
-            userId={user?.id || ''}
-            onSubmissionComplete={() => {
-              fetchSubmissions();
-              setSubmissionDialogOpen(false);
-            }}
-          />
-        )}
+        {selectedAssignmentData && <StudentSubmissionDialog open={submissionDialogOpen} onOpenChange={setSubmissionDialogOpen} assignment={selectedAssignmentData} userId={user?.id || ''} onSubmissionComplete={() => {
+        fetchSubmissions();
+        setSubmissionDialogOpen(false);
+      }} />}
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Assignments;
