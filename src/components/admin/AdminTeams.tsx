@@ -66,6 +66,7 @@ const AdminTeams = () => {
     email: '',
     role: ''
   });
+  const [isAdding, setIsAdding] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -117,6 +118,7 @@ const AdminTeams = () => {
   };
 
   const handleAddMember = async () => {
+    if (isAdding) return;
     if (!newMember.full_name || !newMember.email || !newMember.role) {
       toast({
         title: "Error",
@@ -135,6 +137,7 @@ const AdminTeams = () => {
       });
       return;
     }
+    setIsAdding(true);
 
     try {
       const { error } = await supabase
@@ -168,6 +171,8 @@ const AdminTeams = () => {
         description: "Failed to add team member",
         variant: "destructive"
       });
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -264,8 +269,8 @@ const AdminTeams = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleAddMember} className="w-full">
-                Add Team Member
+              <Button onClick={handleAddMember} disabled={isAdding} className="w-full">
+                {isAdding ? 'Adding...' : 'Add Team Member'}
               </Button>
             </div>
           </DialogContent>

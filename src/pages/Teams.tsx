@@ -48,6 +48,7 @@ const Teams = () => {
     email: '',
     role: ''
   });
+  const [isAdding, setIsAdding] = useState(false);
   const {
     toast
   } = useToast();
@@ -56,9 +57,11 @@ const Teams = () => {
       const {
         data,
         error
-      } = await supabase.from('users').select('*').in('role', user?.role === 'superadmin' ? ['admin', 'mentor', 'superadmin', 'student'] : ['admin', 'mentor']).order('created_at', {
-        ascending: false
-      });
+      } = await supabase
+        .from('users')
+        .select('*')
+        .in('role', user?.role === 'superadmin' ? ['superadmin', 'admin', 'mentor', 'enrollment_manager'] : ['admin', 'mentor', 'enrollment_manager'])
+        .order('created_at', { ascending: false });
       if (error) throw error;
       setTeamMembers(data || []);
     } catch (error: any) {
@@ -91,18 +94,25 @@ const Teams = () => {
       });
       return;
     }
+    // Begin add operation
+    setIsAdding(true);
 
     // Check if email already exists in our database
     try {
       const {
         data: existingUser
-      } = await supabase.from('users').select('id, email, role').eq('email', newMember.email.toLowerCase()).maybeSingle();
+      } = await supabase
+        .from('users')
+        .select('id, email, role')
+        .eq('email', newMember.email.toLowerCase())
+        .maybeSingle();
       if (existingUser) {
         toast({
           title: "Email Already Exists",
           description: `A ${existingUser.role} with email ${existingUser.email} already exists. Please use a different email address.`,
           variant: "destructive"
         });
+        setIsAdding(false);
         return;
       }
     } catch (error) {
@@ -191,6 +201,8 @@ const Teams = () => {
         description: "Failed to add team member: " + error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsAdding(false);
     }
   };
   const handleEditMember = async () => {
@@ -316,8 +328,8 @@ const Teams = () => {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={handleAddMember} className="w-full">
-                Add Team Member
+              <Button onClick={handleAddMember} disabled={isAdding} className="w-full">
+                {isAdding ? 'Adding...' : 'Add Team Member'}
               </Button>
             </div>
           </DialogContent>
