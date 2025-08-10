@@ -1005,69 +1005,70 @@ export const StudentManagement = () => {
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>
+                                <Label className="text-sm font-medium text-gray-700">Joining Date</Label>
+                                <p className="text-sm text-gray-900">{formatDate(student.created_at)}</p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
+                                <p className="text-sm text-gray-900">{getDisplayFeesStructureLabel(student)}</p>
+                              </div>
+                              <div>
                                 <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
                                 <p className="text-sm text-gray-900">{formatDate(student.last_invoice_date)}</p>
                               </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>
-                                <Label className="text-sm font-medium text-gray-700">Joining Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(student.created_at)}</p>
+                                <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
+                                <p className="text-sm text-gray-900">{formatDate(getLatestInvoiceDueDate(student))}</p>
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
                                 <p className="text-sm text-gray-900">{getInvoiceStatus(student)}</p>
                               </div>
                               <div>
-                                <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
-                                <p className="text-sm text-gray-900">{getDisplayFeesStructureLabel(student)}</p>
+                                <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
+                                <div className="flex items-center space-x-2">
+                                  <p className="text-sm text-gray-900">{student.lms_user_id || 'Not set'}</p>
+                                  {student.lms_user_id && (
+                                    <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(student.lms_user_id)}>
+                                      <Key className="w-3 h-3" />
+                                    </Button>
+                                  )}
+                                </div>
                               </div>
-                              </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
-                                  <p className="text-sm text-gray-900">
-                                    {formatDate(getLatestInvoiceDueDate(student))}
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                              <div className="lg:col-span-3">
+                                <Label className="text-sm font-medium text-gray-700">LMS Password</Label>
+                                <div className="flex items-center space-x-2">
+                                  <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
+                                    {student.password_display || 'Not set'}
                                   </p>
-                                </div>
-                                {student.last_suspended_date && (
-                                  <div>
-                                    <Label className="text-sm font-medium text-gray-700">Last Suspended Date</Label>
-                                    <p className="text-sm text-red-600">{formatDate(student.last_suspended_date)}</p>
-                                  </div>
-                                )}
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
-                                  <div className="flex items-center space-x-2">
-                                    <p className="text-sm text-gray-900">{student.lms_user_id || 'Not set'}</p>
-                                    {student.lms_user_id && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => navigator.clipboard.writeText(student.lms_user_id)}
-                                      >
-                                        <Key className="w-3 h-3" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </div>
-                                <div>
-                                  <Label className="text-sm font-medium text-gray-700">LMS Password</Label>
-                                  <div className="flex items-center space-x-2">
-                                    <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
-                                      {student.password_display || 'Not set'}
-                                    </p>
-                                    {student.password_display && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => navigator.clipboard.writeText(student.password_display as string)}
-                                        title="Copy password"
-                                      >
-                                        <Key className="w-3 h-3" />
-                                      </Button>
-                                    )}
-                                  </div>
+                                  {student.password_display && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => navigator.clipboard.writeText(student.password_display as string)}
+                                      title="Copy password"
+                                    >
+                                      <Key className="w-3 h-3" />
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
+                            </div>
+
+                            {student.last_suspended_date && (
+                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                <div className="lg:col-span-3">
+                                  <Label className="text-sm font-medium text-gray-700">Last Suspended Date</Label>
+                                  <p className="text-sm text-red-600">{formatDate(student.last_suspended_date)}</p>
+                                </div>
+                              </div>
+                            )}
                             
                             {/* Installment Payment Buttons */}
                             {(student.fees_structure === '1_installment' || student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && <div className="pt-3 border-t border-blue-200">
