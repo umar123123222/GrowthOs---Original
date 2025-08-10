@@ -5,17 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { EnhancedStudentCreationDialog } from '@/components/EnhancedStudentCreationDialog';
-import { 
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -26,9 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { useAuth } from '@/hooks/useAuth';
-
 import jsPDF from 'jspdf';
-
 interface Student {
   id: string;
   student_id: string;
@@ -52,14 +40,12 @@ interface Student {
     email: string;
   } | null;
 }
-
 interface InstallmentPayment {
   id: string;
   installment_number: number;
   amount: number;
   status: string;
 }
-
 interface ActivityLog {
   id: string;
   activity_type: string;
@@ -67,12 +53,17 @@ interface ActivityLog {
   metadata: any;
   reference_id: string;
 }
-
 export function StudentsManagement() {
-  const { toast } = useToast();
-  const { deleteMultipleUsers, loading: userManagementLoading } = useUserManagement();
-  const { user } = useAuth();
-  
+  const {
+    toast
+  } = useToast();
+  const {
+    deleteMultipleUsers,
+    loading: userManagementLoading
+  } = useUserManagement();
+  const {
+    user
+  } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -86,7 +77,6 @@ export function StudentsManagement() {
   const [lmsStatusFilter, setLmsStatusFilter] = useState('all');
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
-  
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [activityLogsDialog, setActivityLogsDialog] = useState(false);
@@ -109,38 +99,33 @@ export function StudentsManagement() {
     lms_user_id: '',
     lms_status: 'inactive'
   });
-  
+
   // Debug: Ensure statusFilter is completely removed
   console.log('StudentsManagement component loaded - statusFilter removed');
-
   useEffect(() => {
     fetchStudents();
   }, []);
-
-
-
   useEffect(() => {
     if (students.length > 0) {
       fetchInstallmentPayments();
     }
   }, [students]);
-
   useEffect(() => {
     filterStudents();
   }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter]);
-
   const fetchInstallmentPayments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .order('installment_number', { ascending: true });
-
+      const {
+        data,
+        error
+      } = await supabase.from('invoices').select('*').order('installment_number', {
+        ascending: true
+      });
       if (error) throw error;
 
       // Group payments by student_id and transform to InstallmentPayment format
       const paymentsMap = new Map<string, InstallmentPayment[]>();
-      data?.forEach((invoice) => {
+      data?.forEach(invoice => {
         const payment: InstallmentPayment = {
           id: invoice.id,
           installment_number: invoice.installment_number,
@@ -151,19 +136,18 @@ export function StudentsManagement() {
         userPayments.push(payment);
         paymentsMap.set(invoice.student_id, userPayments);
       });
-
       setInstallmentPayments(paymentsMap);
     } catch (error) {
       console.error('Error fetching installment payments:', error);
     }
   };
-
   const fetchStudents = async () => {
     try {
       // Fetch students with creator information and student details
-      const { data, error } = await supabase
-        .from('users')
-        .select(`
+      const {
+        data,
+        error
+      } = await supabase.from('users').select(`
           *,
           creator:created_by (
             full_name,
@@ -174,20 +158,16 @@ export function StudentsManagement() {
             student_id,
             lms_username
           )
-        `)
-        .eq('role', 'student')
-        .order('created_at', { ascending: false });
-
+        `).eq('role', 'student').order('created_at', {
+        ascending: false
+      });
       if (error) throw error;
 
       // Transform the data to include creator information and proper fees structure
       const studentsWithCreators: Student[] = (data || []).map(student => {
         const studentRecord = student.students?.[0]; // Get first student record
         const installmentCount = studentRecord?.installment_count || 1;
-        const feesStructure = installmentCount === 1 ? '1_installment' : 
-                             installmentCount === 2 ? '2_installments' : 
-                             installmentCount === 3 ? '3_installments' : '1_installment';
-        
+        const feesStructure = installmentCount === 1 ? '1_installment' : installmentCount === 2 ? '2_installments' : installmentCount === 3 ? '3_installments' : '1_installment';
         return {
           ...student,
           student_id: studentRecord?.student_id || student.lms_user_id || '',
@@ -203,25 +183,19 @@ export function StudentsManagement() {
           creator: student.creator || null
         };
       });
-
       setStudents(studentsWithCreators);
       setTotalStudents(data?.length || 0);
-      
+
       // Calculate active students (those who have been active in the last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      
-      const activeCount = data?.filter(student => 
-        student.last_active_at && new Date(student.last_active_at) > thirtyDaysAgo
-      ).length || 0;
-      
+      const activeCount = data?.filter(student => student.last_active_at && new Date(student.last_active_at) > thirtyDaysAgo).length || 0;
       setActiveStudents(activeCount);
-      
+
       // Calculate suspended and overdue students
       const suspendedCount = data?.filter(student => student.lms_status === 'suspended').length || 0;
       // Note: fees_overdue not available in users table, defaulting to 0
       const overdueCount = 0;
-      
       setSuspendedStudents(suspendedCount);
       setOverdueStudents(overdueCount);
     } catch (error) {
@@ -235,19 +209,12 @@ export function StudentsManagement() {
       setLoading(false);
     }
   };
-
-
   const filterStudents = () => {
     let filtered = students;
 
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(student =>
-        student.student_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        student.phone?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      filtered = filtered.filter(student => student.student_id?.toLowerCase().includes(searchTerm.toLowerCase()) || student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || student.email.toLowerCase().includes(searchTerm.toLowerCase()) || student.phone?.toLowerCase().includes(searchTerm.toLowerCase()));
     }
 
     // Apply LMS status filter
@@ -268,31 +235,19 @@ export function StudentsManagement() {
     } else if (invoiceFilter === 'fees_cleared') {
       filtered = filtered.filter(student => !student.fees_overdue && student.last_invoice_sent);
     }
-
-
     setFilteredStudents(filtered);
   };
-
-
-
-
-
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this student?')) return;
-
     try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', id);
-
+      const {
+        error
+      } = await supabase.from('users').delete().eq('id', id);
       if (error) throw error;
-
       toast({
         title: 'Success',
         description: 'Student deleted successfully'
       });
-
       fetchStudents();
     } catch (error) {
       console.error('Error deleting student:', error);
@@ -303,25 +258,19 @@ export function StudentsManagement() {
       });
     }
   };
-
-
   const handleSuspendAccount = async (studentId: string) => {
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ 
-          lms_status: 'suspended',
-          last_suspended_date: new Date().toISOString(),
-        })
-        .eq('id', studentId);
-
+      const {
+        error
+      } = await supabase.from('users').update({
+        lms_status: 'suspended',
+        last_suspended_date: new Date().toISOString()
+      }).eq('id', studentId);
       if (error) throw error;
-
       toast({
         title: 'Success',
         description: 'Account suspended successfully'
       });
-
       fetchStudents();
     } catch (error) {
       console.error('Error suspending account:', error);
@@ -332,23 +281,18 @@ export function StudentsManagement() {
       });
     }
   };
-
   const generateInvoice = async (studentId: string) => {
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({ 
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', studentId);
-
+      const {
+        error
+      } = await supabase.from('users').update({
+        updated_at: new Date().toISOString()
+      }).eq('id', studentId);
       if (error) throw error;
-
       toast({
         title: 'Success',
         description: 'Invoice generated and sent'
       });
-
       fetchStudents();
     } catch (error) {
       console.error('Error generating invoice:', error);
@@ -359,13 +303,10 @@ export function StudentsManagement() {
       });
     }
   };
-
   const downloadInvoicePDF = (student: Student) => {
     const doc = new jsPDF();
-    
     doc.setFontSize(20);
     doc.text('Invoice', 20, 20);
-    
     doc.setFontSize(12);
     doc.text(`Student ID: ${student.student_id}`, 20, 40);
     doc.text(`Name: ${student.full_name}`, 20, 50);
@@ -373,24 +314,18 @@ export function StudentsManagement() {
     doc.text(`Fees Structure: ${student.fees_structure?.replace('_', ' ').toUpperCase()}`, 20, 70);
     doc.text(`Invoice Date: ${student.last_invoice_date ? formatDate(student.last_invoice_date) : 'N/A'}`, 20, 80);
     doc.text(`Due Date: ${student.fees_due_date ? formatDate(student.fees_due_date) : 'N/A'}`, 20, 90);
-    
     doc.save(`invoice_${student.student_id}.pdf`);
   };
-
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
     try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', studentId);
-
+      const {
+        error
+      } = await supabase.from('users').delete().eq('id', studentId);
       if (error) throw error;
-
       toast({
         title: 'Success',
         description: `${studentName} has been deleted successfully`
       });
-
       fetchStudents();
     } catch (error: any) {
       console.error('Error deleting student:', error);
@@ -401,7 +336,6 @@ export function StudentsManagement() {
       });
     }
   };
-
   const getLMSStatusColor = (lmsStatus: string) => {
     switch (lmsStatus) {
       case 'active':
@@ -418,7 +352,6 @@ export function StudentsManagement() {
         return 'bg-gray-100 text-gray-800';
     }
   };
-
   const getLMSStatusIcon = (lmsStatus: string) => {
     switch (lmsStatus) {
       case 'active':
@@ -435,7 +368,6 @@ export function StudentsManagement() {
         return <Clock className="w-3 h-3 mr-1" />;
     }
   };
-
   const getLMSStatusLabel = (lmsStatus: string) => {
     switch (lmsStatus) {
       case 'active':
@@ -452,7 +384,6 @@ export function StudentsManagement() {
         return 'Unknown';
     }
   };
-
   const formatDate = (dateString: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -461,8 +392,6 @@ export function StudentsManagement() {
       day: 'numeric'
     });
   };
-
-
   const getFeesStructureLabel = (structure: string) => {
     switch (structure) {
       case '1_installment':
@@ -475,7 +404,6 @@ export function StudentsManagement() {
         return 'N/A';
     }
   };
-
   const toggleRowExpansion = (studentId: string) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(studentId)) {
@@ -485,26 +413,20 @@ export function StudentsManagement() {
     }
     setExpandedRows(newExpanded);
   };
-
   const handleToggleLMSSuspension = async (studentId: string, currentStatus: string) => {
     try {
       const newLMSStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
-      const updateData: any = { 
-        lms_status: newLMSStatus,
+      const updateData: any = {
+        lms_status: newLMSStatus
       };
-      
-      const { error } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', studentId);
-
+      const {
+        error
+      } = await supabase.from('users').update(updateData).eq('id', studentId);
       if (error) throw error;
-
       toast({
         title: 'Success',
         description: `LMS account ${newLMSStatus === 'suspended' ? 'suspended' : 'activated'} successfully`
       });
-
       fetchStudents();
     } catch (error) {
       console.error('Error toggling LMS suspension:', error);
@@ -515,23 +437,18 @@ export function StudentsManagement() {
       });
     }
   };
-
   const handleViewActivityLogs = async (studentId: string) => {
     try {
       const student = students.find(s => s.id === studentId);
       if (!student) return;
-      
       setSelectedStudentForLogs(student);
-      
-      const { data, error } = await supabase
-        .from('user_activity_logs')
-        .select('*')
-        .eq('user_id', studentId)
-        .order('occurred_at', { ascending: false })
-        .limit(50);
-
+      const {
+        data,
+        error
+      } = await supabase.from('user_activity_logs').select('*').eq('user_id', studentId).order('occurred_at', {
+        ascending: false
+      }).limit(50);
       if (error) throw error;
-      
       setActivityLogs(data || []);
       setActivityLogsDialog(true);
     } catch (error) {
@@ -543,36 +460,27 @@ export function StudentsManagement() {
       });
     }
   };
-
   const handleStatusUpdate = async (studentId: string) => {
     const student = students.find(s => s.id === studentId);
     if (!student) return;
-    
     setSelectedStudentForStatus(student);
     setNewLMSStatus(student.lms_status);
     setStatusUpdateDialog(true);
   };
-
   const saveStatusUpdate = async () => {
     if (!selectedStudentForStatus || !newLMSStatus) return;
-
     try {
-      const updateData: any = { 
+      const updateData: any = {
         lms_status: newLMSStatus
       };
-
-      const { error } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', selectedStudentForStatus.id);
-
+      const {
+        error
+      } = await supabase.from('users').update(updateData).eq('id', selectedStudentForStatus.id);
       if (error) throw error;
-
       toast({
         title: 'Success',
         description: 'LMS status updated successfully'
       });
-
       setStatusUpdateDialog(false);
       setSelectedStudentForStatus(null);
       setNewLMSStatus('');
@@ -586,11 +494,9 @@ export function StudentsManagement() {
       });
     }
   };
-
   const formatActivityType = (type: string) => {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
-
   const formatDateTime = (dateString: string) => {
     if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString('en-US', {
@@ -601,26 +507,26 @@ export function StudentsManagement() {
       minute: '2-digit'
     });
   };
-
   const getInvoiceStatus = (student: Student) => {
     if (student.fees_overdue) return 'Fees Overdue';
     if (student.last_invoice_sent && !student.fees_overdue) return 'Fees Due';
     return 'No Invoice';
   };
-
   const getInstallmentStatus = (student: Student) => {
     const payments = installmentPayments.get(student.id) || [];
-    const totalInstallments = student.fees_structure === '2_installments' ? 2 : 
-                              student.fees_structure === '3_installments' ? 3 : 1;
-
+    const totalInstallments = student.fees_structure === '2_installments' ? 2 : student.fees_structure === '3_installments' ? 3 : 1;
     if (payments.length === 0) {
-      return { status: getInvoiceStatus(student), color: 'bg-gray-100 text-gray-800' };
+      return {
+        status: getInvoiceStatus(student),
+        color: 'bg-gray-100 text-gray-800'
+      };
     }
-
     const paidPayments = payments.filter(p => p.status === 'paid');
-    
     if (paidPayments.length === totalInstallments) {
-      return { status: 'Fees Cleared', color: 'bg-green-100 text-green-800' };
+      return {
+        status: 'Fees Cleared',
+        color: 'bg-green-100 text-green-800'
+      };
     } else if (paidPayments.length > 0) {
       const ordinalSuffix = (n: number) => {
         const j = n % 10;
@@ -630,29 +536,25 @@ export function StudentsManagement() {
         if (j === 3 && k !== 13) return `${n}rd`;
         return `${n}th`;
       };
-      return { 
-        status: `${ordinalSuffix(paidPayments.length)} Installment Paid`, 
-        color: 'bg-blue-100 text-blue-800' 
+      return {
+        status: `${ordinalSuffix(paidPayments.length)} Installment Paid`,
+        color: 'bg-blue-100 text-blue-800'
       };
     }
-
-    return { status: getInvoiceStatus(student), color: 'bg-orange-100 text-orange-800' };
+    return {
+      status: getInvoiceStatus(student),
+      color: 'bg-orange-100 text-orange-800'
+    };
   };
-
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
       const student = students.find(s => s.id === studentId);
       if (!student) return;
 
       // Check if this installment payment already exists
-      const { data: existingPayment } = await supabase
-        .from('invoices')
-        .select('id')
-        .eq('student_id', studentId)
-        .eq('installment_number', installmentNumber)
-        .eq('status', 'paid')
-        .single();
-
+      const {
+        data: existingPayment
+      } = await supabase.from('invoices').select('id').eq('student_id', studentId).eq('installment_number', installmentNumber).eq('status', 'paid').single();
       if (existingPayment) {
         toast({
           title: "Already Paid",
@@ -661,47 +563,36 @@ export function StudentsManagement() {
         });
         return;
       }
-
-      const totalInstallments = student.fees_structure === '2_installments' ? 2 : 
-                                student.fees_structure === '3_installments' ? 3 : 1;
-
-      const { error } = await supabase
-        .from('invoices')
-        .insert({
-          student_id: studentId,
-          installment_number: installmentNumber,
-          amount: 0, // You can set actual amount based on your business logic
-          status: 'paid',
-          due_date: new Date().toISOString()
-        });
-
+      const totalInstallments = student.fees_structure === '2_installments' ? 2 : student.fees_structure === '3_installments' ? 3 : 1;
+      const {
+        error
+      } = await supabase.from('invoices').insert({
+        student_id: studentId,
+        installment_number: installmentNumber,
+        amount: 0,
+        // You can set actual amount based on your business logic
+        status: 'paid',
+        due_date: new Date().toISOString()
+      });
       if (error) throw error;
 
       // If this is the first installment, activate LMS status
       if (installmentNumber === 1) {
-        await supabase
-          .from('users')
-          .update({ 
-            lms_status: 'active'
-          })
-          .eq('id', studentId);
+        await supabase.from('users').update({
+          lms_status: 'active'
+        }).eq('id', studentId);
       }
 
       // If this is the last installment, update the user's status  
       if (installmentNumber === totalInstallments) {
-        await supabase
-          .from('users')
-          .update({ 
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', studentId);
+        await supabase.from('users').update({
+          updated_at: new Date().toISOString()
+        }).eq('id', studentId);
       }
-
       toast({
         title: 'Success',
         description: `Installment ${installmentNumber} marked as paid`
       });
-
       fetchInstallmentPayments();
       fetchStudents();
     } catch (error) {
@@ -713,7 +604,6 @@ export function StudentsManagement() {
       });
     }
   };
-
   const handleSelectStudent = (studentId: string, checked: boolean) => {
     const newSelected = new Set(selectedStudents);
     if (checked) {
@@ -723,7 +613,6 @@ export function StudentsManagement() {
     }
     setSelectedStudents(newSelected);
   };
-
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedStudents(new Set(displayStudents.map(s => s.id)));
@@ -731,7 +620,6 @@ export function StudentsManagement() {
       setSelectedStudents(new Set());
     }
   };
-
   const handleBulkLMSAction = async (action: 'suspend' | 'activate') => {
     if (selectedStudents.size === 0) {
       toast({
@@ -741,24 +629,18 @@ export function StudentsManagement() {
       });
       return;
     }
-
     try {
       const lms_status = action === 'suspend' ? 'suspended' : 'active';
-
-      const { error } = await supabase
-        .from('users')
-        .update({ 
-          lms_status
-        })
-        .in('id', Array.from(selectedStudents));
-
+      const {
+        error
+      } = await supabase.from('users').update({
+        lms_status
+      }).in('id', Array.from(selectedStudents));
       if (error) throw error;
-
       toast({
         title: 'Success',
         description: `${selectedStudents.size} student(s) ${action === 'suspend' ? 'suspended' : 'activated'} successfully`
       });
-
       setSelectedStudents(new Set());
       setBulkActionDialog(false);
       fetchStudents();
@@ -771,7 +653,6 @@ export function StudentsManagement() {
       });
     }
   };
-
   const handleBulkDelete = async () => {
     if (selectedStudents.size === 0) {
       toast({
@@ -781,19 +662,15 @@ export function StudentsManagement() {
       });
       return;
     }
-
     const confirmMessage = `Are you sure you want to permanently delete ${selectedStudents.size} student(s)? This action cannot be undone.`;
     if (!confirm(confirmMessage)) return;
-
     const userIds = Array.from(selectedStudents);
     const result = await deleteMultipleUsers(userIds);
-    
     if (result.success > 0) {
       setSelectedStudents(new Set());
       fetchStudents();
     }
   };
-
   const handleEditStudent = (student: Student) => {
     setEditingStudent(student);
     setEditFormData({
@@ -805,30 +682,24 @@ export function StudentsManagement() {
     });
     setEditDialog(true);
   };
-
   const handleUpdateStudent = async () => {
     if (!editingStudent) return;
-
     try {
-      const { error } = await supabase
-        .from('users')
-        .update({
-          full_name: editFormData.full_name,
-          email: editFormData.email,
-          phone: editFormData.phone,
-          lms_user_id: editFormData.lms_user_id,
-          lms_status: editFormData.lms_status,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', editingStudent.id);
-
+      const {
+        error
+      } = await supabase.from('users').update({
+        full_name: editFormData.full_name,
+        email: editFormData.email,
+        phone: editFormData.phone,
+        lms_user_id: editFormData.lms_user_id,
+        lms_status: editFormData.lms_status,
+        updated_at: new Date().toISOString()
+      }).eq('id', editingStudent.id);
       if (error) throw error;
-
       toast({
         title: "Success",
         description: "Student details updated successfully"
       });
-
       setEditDialog(false);
       setEditingStudent(null);
       fetchStudents();
@@ -840,7 +711,6 @@ export function StudentsManagement() {
       });
     }
   };
-
   const handleEditPassword = (student: Student, type: 'temp' | 'lms') => {
     // Password functionality removed for security
     toast({
@@ -849,7 +719,6 @@ export function StudentsManagement() {
       variant: "default"
     });
   };
-
   const handleUpdatePassword = async () => {
     if (!selectedStudentForPassword || !newPassword.trim()) {
       toast({
@@ -859,21 +728,18 @@ export function StudentsManagement() {
       });
       return;
     }
-
     try {
       const updateField = passwordType === 'temp' ? 'temp_password' : 'lms_password';
-      const { error } = await supabase
-        .from('users')
-        .update({ [updateField]: newPassword })
-        .eq('id', selectedStudentForPassword.id);
-
+      const {
+        error
+      } = await supabase.from('users').update({
+        [updateField]: newPassword
+      }).eq('id', selectedStudentForPassword.id);
       if (error) throw error;
-
       toast({
         title: "Success",
         description: `${passwordType === 'temp' ? 'Temporary' : 'LMS'} password updated successfully`
       });
-
       setPasswordEditDialog(false);
       setNewPassword('');
       setSelectedStudentForPassword(null);
@@ -886,20 +752,14 @@ export function StudentsManagement() {
       });
     }
   };
-
   if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
+    return <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         <span className="ml-2 text-muted-foreground">Loading students...</span>
-      </div>
-    );
+      </div>;
   }
-
   const displayStudents = filteredStudents.length > 0 ? filteredStudents : students;
-
-  return (
-    <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden">
+  return <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden bg-slate-50">
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div className="animate-fade-in">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
@@ -908,20 +768,13 @@ export function StudentsManagement() {
           <p className="text-muted-foreground mt-2 text-lg">Manage student records and track their progress</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
-          <Button 
-            onClick={() => setIsDialogOpen(true)} 
-            className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in"
-          >
+          <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
             <Plus className="w-4 h-4 mr-2" />
             Add Student
           </Button>
         </div>
         
-        <EnhancedStudentCreationDialog
-          open={isDialogOpen}
-          onOpenChange={setIsDialogOpen}
-          onStudentCreated={fetchStudents}
-        />
+        <EnhancedStudentCreationDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} onStudentCreated={fetchStudents} />
       </div>
 
       {/* Stats Cards */}
@@ -977,7 +830,7 @@ export function StudentsManagement() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-purple-900">
-              {totalStudents > 0 ? Math.round((activeStudents / totalStudents) * 100) : 0}%
+              {totalStudents > 0 ? Math.round(activeStudents / totalStudents * 100) : 0}%
             </div>
             <p className="text-xs text-muted-foreground">Activity rate</p>
           </CardContent>
@@ -988,12 +841,7 @@ export function StudentsManagement() {
       <div className="flex gap-4 items-center flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search by ID, name, email, or phone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+          <Input placeholder="Search by ID, name, email, or phone..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
         
 
@@ -1038,57 +886,34 @@ export function StudentsManagement() {
       </div>
 
       {/* Bulk Actions */}
-      {selectedStudents.size > 0 && (
-        <Card className="bg-blue-50 border-blue-200">
+      {selectedStudents.size > 0 && <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <span className="text-sm font-medium text-blue-800">
                   {selectedStudents.size} student(s) selected
                 </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedStudents(new Set())}
-                  className="text-blue-600 border-blue-300 hover:bg-blue-100"
-                >
+                <Button variant="outline" size="sm" onClick={() => setSelectedStudents(new Set())} className="text-blue-600 border-blue-300 hover:bg-blue-100">
                   Clear Selection
                 </Button>
               </div>
               <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBulkLMSAction('suspend')}
-                  className="text-red-600 border-red-300 hover:bg-red-50"
-                >
+                <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('suspend')} className="text-red-600 border-red-300 hover:bg-red-50">
                   <Ban className="w-4 h-4 mr-2" />
                   Suspend LMS
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleBulkLMSAction('activate')}
-                  className="text-green-600 border-green-300 hover:bg-green-50"
-                >
+                <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('activate')} className="text-green-600 border-green-300 hover:bg-green-50">
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Activate LMS
                 </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleBulkDelete}
-                  disabled={userManagementLoading}
-                  className="hover:bg-red-600"
-                >
+                <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={userManagementLoading} className="hover:bg-red-600">
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete Students
                 </Button>
               </div>
             </div>
           </CardContent>
-        </Card>
-      )}
+        </Card>}
 
       {/* Students Table */}
       <Card className="w-full hover-scale transition-all duration-300 hover:shadow-lg animate-fade-in">
@@ -1104,10 +929,7 @@ export function StudentsManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
+                    <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
                   </TableHead>
                   <TableHead>Student ID</TableHead>
                   <TableHead>Name</TableHead>
@@ -1120,14 +942,10 @@ export function StudentsManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayStudents.map((student) => {
-                  const rowElements = [
-                    <TableRow key={`main-${student.id}`}>
+                {displayStudents.map(student => {
+                const rowElements = [<TableRow key={`main-${student.id}`}>
                       <TableCell>
-                        <Checkbox
-                          checked={selectedStudents.has(student.id)}
-                          onCheckedChange={(checked) => handleSelectStudent(student.id, checked as boolean)}
-                        />
+                        <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
                       </TableCell>
                       <TableCell className="font-medium">{student.student_id}</TableCell>
                       <TableCell>{student.full_name}</TableCell>
@@ -1142,57 +960,37 @@ export function StudentsManagement() {
                                  <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
                                </div>
                              </Badge>
-                             {student.fees_overdue && (
-                               <Badge variant="destructive">
+                             {student.fees_overdue && <Badge variant="destructive">
                                  <DollarSign className="w-3 h-3 mr-1" />
                                  <span className="text-xs">Fees Due</span>
-                               </Badge>
-                             )}
+                               </Badge>}
                            </div>
                          </TableCell>
                          <TableCell>{student.creator?.full_name || 'System'}</TableCell>
                          <TableCell>
                            <div className="flex space-x-1">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  // Check if user has permission to edit
-                                  if (user?.role === 'admin' || user?.role === 'superadmin') {
-                                    handleEditStudent(student);
-                                  } else {
-                                    toast({
-                                      title: "Access Denied",
-                                      description: "Only admins and superadmins can edit student details.",
-                                      variant: "destructive"
-                                    });
-                                  }
-                                }}
-                                title="Edit Student Details"
-                                className="hover-scale hover:border-blue-300 hover:text-blue-600"
-                              >
+                              <Button variant="outline" size="sm" onClick={() => {
+                        // Check if user has permission to edit
+                        if (user?.role === 'admin' || user?.role === 'superadmin') {
+                          handleEditStudent(student);
+                        } else {
+                          toast({
+                            title: "Access Denied",
+                            description: "Only admins and superadmins can edit student details.",
+                            variant: "destructive"
+                          });
+                        }
+                      }} title="Edit Student Details" className="hover-scale hover:border-blue-300 hover:text-blue-600">
                                 <Edit className="w-4 h-4" />
                               </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleRowExpansion(student.id)}
-                              title={expandedRows.has(student.id) ? "Collapse" : "Expand"}
-                              className="hover-scale hover:border-green-300 hover:text-green-600"
-                            >
-                              {expandedRows.has(student.id) ? 
-                                <ChevronUp className="w-4 h-4" /> : 
-                                <ChevronDown className="w-4 h-4" />
-                              }
+                            <Button variant="outline" size="sm" onClick={() => toggleRowExpansion(student.id)} title={expandedRows.has(student.id) ? "Collapse" : "Expand"} className="hover-scale hover:border-green-300 hover:text-green-600">
+                              {expandedRows.has(student.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </Button>
                           </div>
                         </TableCell>
-                      </TableRow>
-                  ];
-
-                   if (expandedRows.has(student.id)) {
-                     rowElements.push(
-                       <TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
+                      </TableRow>];
+                if (expandedRows.has(student.id)) {
+                  rowElements.push(<TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
                          <TableCell colSpan={9} className="w-full bg-gradient-to-r from-slate-50 to-blue-50 p-0 border-l-4 border-l-blue-200">
                           <div className="w-full space-y-3 p-4 box-border">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1212,33 +1010,23 @@ export function StudentsManagement() {
                                 <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
                                 <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
                               </div>
-                              {student.fees_due_date && (
-                                <div>
+                              {student.fees_due_date && <div>
                                   <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
                                   <p className={`text-sm ${student.fees_overdue ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
                                     {formatDate(student.fees_due_date)}
                                   </p>
-                                </div>
-                              )}
-                              {student.last_suspended_date && (
-                                <div>
+                                </div>}
+                              {student.last_suspended_date && <div>
                                   <Label className="text-sm font-medium text-gray-700">Last Suspended Date</Label>
                                   <p className="text-sm text-red-600">{formatDate(student.last_suspended_date)}</p>
-                                </div>
-                              )}
+                                </div>}
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
                                 <div className="flex items-center space-x-2">
                                   <p className="text-sm text-gray-900">{student.lms_user_id || 'Not set'}</p>
-                                  {student.lms_user_id && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => navigator.clipboard.writeText(student.lms_user_id)}
-                                    >
+                                  {student.lms_user_id && <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(student.lms_user_id)}>
                                       <Key className="w-3 h-3" />
-                                    </Button>
-                                  )}
+                                    </Button>}
                                 </div>
                               </div>
                               <div>
@@ -1247,116 +1035,61 @@ export function StudentsManagement() {
                                   <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
                                     {student.password_display || 'Not set'}
                                   </p>
-                                  {student.password_display && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => navigator.clipboard.writeText(student.password_display)}
-                                      title="Copy password"
-                                    >
+                                  {student.password_display && <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(student.password_display)} title="Copy password">
                                       <Key className="w-3 h-3" />
-                                    </Button>
-                                  )}
+                                    </Button>}
                                 </div>
                               </div>
                             </div>
                             
                             {/* Installment Payment Buttons */}
-                            {(student.fees_structure === '1_installment' || student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && (
-                              <div className="pt-3 border-t border-blue-200">
+                            {(student.fees_structure === '1_installment' || student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && <div className="pt-3 border-t border-blue-200">
                                 <Label className="text-sm font-medium text-gray-700 mb-2 block">Installment Payments</Label>
                                 <div className="flex flex-wrap gap-2">
-                                  {Array.from({ 
-                                    length: student.fees_structure === '1_installment' ? 1 : 
-                                           student.fees_structure === '2_installments' ? 2 : 3 
-                                  }, (_, index) => {
-                                    const installmentNumber = index + 1;
-                                    const payments = installmentPayments.get(student.id) || [];
-                                    const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
-                                    
-                                    return (
-                                      <Button
-                                        key={installmentNumber}
-                                        variant={isPaid ? "default" : "outline"}
-                                        size="sm"
-                                        disabled={isPaid}
-                                        onClick={() => handleMarkInstallmentPaid(student.id, installmentNumber)}
-                                        className={`hover-scale ${isPaid ? "bg-green-500 hover:bg-green-600" : "hover:border-green-300 hover:text-green-600"}`}
-                                      >
+                                  {Array.from({
+                              length: student.fees_structure === '1_installment' ? 1 : student.fees_structure === '2_installments' ? 2 : 3
+                            }, (_, index) => {
+                              const installmentNumber = index + 1;
+                              const payments = installmentPayments.get(student.id) || [];
+                              const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
+                              return <Button key={installmentNumber} variant={isPaid ? "default" : "outline"} size="sm" disabled={isPaid} onClick={() => handleMarkInstallmentPaid(student.id, installmentNumber)} className={`hover-scale ${isPaid ? "bg-green-500 hover:bg-green-600" : "hover:border-green-300 hover:text-green-600"}`}>
                                         {isPaid ? <CheckCircle className="w-4 h-4 mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
                                         {isPaid ? `${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid` : `Mark ${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid`}
-                                      </Button>
-                                    );
-                                  })}
+                                      </Button>;
+                            })}
                                 </div>
-                              </div>
-                            )}
+                              </div>}
                             
                             <div className="flex flex-wrap gap-2 pt-3 border-t border-blue-200">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleViewActivityLogs(student.id)}
-                                className="hover-scale hover:border-blue-300 hover:text-blue-600"
-                              >
+                              <Button variant="outline" size="sm" onClick={() => handleViewActivityLogs(student.id)} className="hover-scale hover:border-blue-300 hover:text-blue-600">
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Activity Logs
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => generateInvoice(student.id)}
-                                className="hover-scale hover:border-purple-300 hover:text-purple-600"
-                              >
+                              <Button variant="outline" size="sm" onClick={() => generateInvoice(student.id)} className="hover-scale hover:border-purple-300 hover:text-purple-600">
                                 <FileText className="w-4 h-4 mr-2" />
                                 Generate Invoice
                               </Button>
-                              {student.last_invoice_date && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => downloadInvoicePDF(student)}
-                                  className="hover-scale hover:border-orange-300 hover:text-orange-600"
-                                >
+                              {student.last_invoice_date && <Button variant="outline" size="sm" onClick={() => downloadInvoicePDF(student)} className="hover-scale hover:border-orange-300 hover:text-orange-600">
                                   <Download className="w-4 h-4 mr-2" />
                                   Download Invoice
-                                </Button>
-                              )}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleStatusUpdate(student.id)}
-                                className="hover-scale hover:border-blue-300 hover:text-blue-600"
-                              >
+                                </Button>}
+                              <Button variant="outline" size="sm" onClick={() => handleStatusUpdate(student.id)} className="hover-scale hover:border-blue-300 hover:text-blue-600">
                                 <Settings className="w-4 h-4 mr-2" />
                                 Update Status
                               </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleToggleLMSSuspension(student.id, student.lms_status)}
-                                className={`hover-scale ${student.lms_status === 'suspended' ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:text-red-700 hover:border-red-300"}`}
-                              >
-                                {student.lms_status === 'suspended' ? (
-                                  <>
+                              <Button variant="outline" size="sm" onClick={() => handleToggleLMSSuspension(student.id, student.lms_status)} className={`hover-scale ${student.lms_status === 'suspended' ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:text-red-700 hover:border-red-300"}`}>
+                                {student.lms_status === 'suspended' ? <>
                                     <CheckCircle className="w-4 h-4 mr-2" />
                                     Activate LMS
-                                  </>
-                                ) : (
-                                  <>
+                                  </> : <>
                                     <Ban className="w-4 h-4 mr-2" />
                                     Suspend LMS
-                                  </>
-                                 )}
+                                  </>}
                                </Button>
                                
                                <AlertDialog>
                                  <AlertDialogTrigger asChild>
-                                   <Button
-                                     variant="outline"
-                                     size="sm"
-                                     className="hover-scale text-red-600 hover:text-red-700 hover:border-red-300"
-                                   >
+                                   <Button variant="outline" size="sm" className="hover-scale text-red-600 hover:text-red-700 hover:border-red-300">
                                      <Trash2 className="w-4 h-4 mr-2" />
                                      Delete Student
                                    </Button>
@@ -1370,10 +1103,7 @@ export function StudentsManagement() {
                                    </AlertDialogHeader>
                                    <AlertDialogFooter>
                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                     <AlertDialogAction
-                                       onClick={() => handleDeleteStudent(student.id, student.full_name)}
-                                       className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                     >
+                                     <AlertDialogAction onClick={() => handleDeleteStudent(student.id, student.full_name)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                                        Delete
                                      </AlertDialogAction>
                                    </AlertDialogFooter>
@@ -1382,12 +1112,10 @@ export function StudentsManagement() {
                              </div>
                           </div>
                         </TableCell>
-                      </TableRow>
-                    );
-                  }
-
-                  return rowElements;
-                })}
+                      </TableRow>);
+                }
+                return rowElements;
+              })}
               </TableBody>
             </Table>
           </div>
@@ -1401,11 +1129,7 @@ export function StudentsManagement() {
             <DialogTitle className="text-xl font-semibold text-primary">
               Activity Logs - {selectedStudentForLogs?.full_name}
             </DialogTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-auto hover:bg-primary/10"
-            >
+            <Button variant="outline" size="sm" className="ml-auto hover:bg-primary/10">
               <Download className="w-4 h-4 mr-2" />
               Export CSV
             </Button>
@@ -1416,10 +1140,7 @@ export function StudentsManagement() {
             <div className="flex gap-4 items-center flex-wrap bg-muted/30 p-4 rounded-lg">
               <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by user or activity..."
-                  className="pl-10 bg-background"
-                />
+                <Input placeholder="Search by user or activity..." className="pl-10 bg-background" />
               </div>
               
               <Select defaultValue="last_7_days">
@@ -1492,18 +1213,14 @@ export function StudentsManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {activityLogs.length === 0 ? (
-                      <TableRow>
+                    {activityLogs.length === 0 ? <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
                           <div className="flex flex-col items-center space-y-2">
                             <Activity className="w-8 h-8 text-muted-foreground/50" />
                             <p>No activity logs found for this student.</p>
                           </div>
                         </TableCell>
-                      </TableRow>
-                    ) : (
-                      activityLogs.map((log, index) => (
-                        <TableRow key={log.id} className={index % 2 === 0 ? "bg-muted/20" : "bg-background"}>
+                      </TableRow> : activityLogs.map((log, index) => <TableRow key={log.id} className={index % 2 === 0 ? "bg-muted/20" : "bg-background"}>
                           <TableCell className="text-xs text-muted-foreground">
                             {formatDateTime(log.occurred_at)}
                           </TableCell>
@@ -1519,63 +1236,50 @@ export function StudentsManagement() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge 
-                              variant="outline" 
-                              className={`text-xs ${
-                                log.activity_type === 'login' ? 'bg-green-100 text-green-800 border-green-200' :
-                                log.activity_type === 'logout' ? 'bg-red-100 text-red-800 border-red-200' :
-                                log.activity_type === 'page_visit' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                                log.activity_type === 'video_watched' ? 'bg-purple-100 text-purple-800 border-purple-200' :
-                                log.activity_type === 'assignment_submitted' ? 'bg-orange-100 text-orange-800 border-orange-200' :
-                                log.activity_type === 'module_completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
-                                'bg-gray-100 text-gray-800 border-gray-200'
-                              }`}
-                            >
+                            <Badge variant="outline" className={`text-xs ${log.activity_type === 'login' ? 'bg-green-100 text-green-800 border-green-200' : log.activity_type === 'logout' ? 'bg-red-100 text-red-800 border-red-200' : log.activity_type === 'page_visit' ? 'bg-blue-100 text-blue-800 border-blue-200' : log.activity_type === 'video_watched' ? 'bg-purple-100 text-purple-800 border-purple-200' : log.activity_type === 'assignment_submitted' ? 'bg-orange-100 text-orange-800 border-orange-200' : log.activity_type === 'module_completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-800 border-gray-200'}`}>
                               {log.activity_type.replace(/_/g, ' ')}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-sm max-w-md">
                             <div className="truncate">
                               {(() => {
-                                const metadata = log.metadata || {};
-                                switch (log.activity_type) {
-                                  case 'page_visit':
-                                    return `Visited page: ${metadata.page || metadata.url || 'Unknown page'}`;
-                                  case 'video_watched':
-                                    return `Watched video: "${metadata.video_title || metadata.title || 'Unknown video'}" ${metadata.duration ? `(${metadata.duration})` : ''}`;
-                                  case 'assignment_submitted':
-                                    return `Submitted assignment: "${metadata.assignment_title || metadata.title || 'Unknown assignment'}" ${metadata.score ? `(Score: ${metadata.score})` : ''}`;
-                                  case 'module_completed':
-                                    return `Completed module: "${metadata.module_title || metadata.title || 'Unknown module'}" ${metadata.completion_percentage ? `(${metadata.completion_percentage}%)` : ''}`;
-                                  case 'quiz_attempted':
-                                    return `Attempted quiz: "${metadata.quiz_title || metadata.title || 'Unknown quiz'}" ${metadata.score ? `(Score: ${metadata.score}/${metadata.total_questions || 'N/A'})` : ''}`;
-                                  case 'certificate_generated':
-                                    return `Generated certificate for: "${metadata.course_title || metadata.title || 'Unknown course'}"`;
-                                  case 'fees_recorded':
-                                    return `Fees recorded: ${metadata.amount ? `$${metadata.amount}` : 'Amount not specified'} ${metadata.type ? `(${metadata.type})` : ''}`;
-                                  case 'invoice_generated':
-                                    return `Invoice generated: ${metadata.invoice_id || 'ID not specified'} ${metadata.amount ? `for $${metadata.amount}` : ''}`;
-                                  case 'file_download':
-                                    return `Downloaded file: "${metadata.filename || metadata.file_name || 'Unknown file'}" ${metadata.file_size ? `(${metadata.file_size})` : ''}`;
-                                  case 'session_joined':
-                                    return `Joined session: "${metadata.session_title || metadata.title || 'Unknown session'}" ${metadata.duration ? `(Duration: ${metadata.duration})` : ''}`;
-                                  case 'login':
-                                    return `Logged in ${metadata.ip_address ? `from ${metadata.ip_address}` : ''} ${metadata.device ? `on ${metadata.device}` : ''}`;
-                                  case 'logout':
-                                    return `Logged out ${metadata.session_duration ? `(Session: ${metadata.session_duration})` : ''}`;
-                                  case 'profile_updated':
-                                    return `Updated profile ${metadata.fields_changed ? `(Changed: ${metadata.fields_changed.join(', ')})` : ''}`;
-                                  case 'dashboard_access':
-                                    return `Accessed dashboard ${metadata.section ? `(Section: ${metadata.section})` : ''}`;
-                                  default:
-                                    return formatActivityType(log.activity_type);
-                                }
-                              })()}
+                          const metadata = log.metadata || {};
+                          switch (log.activity_type) {
+                            case 'page_visit':
+                              return `Visited page: ${metadata.page || metadata.url || 'Unknown page'}`;
+                            case 'video_watched':
+                              return `Watched video: "${metadata.video_title || metadata.title || 'Unknown video'}" ${metadata.duration ? `(${metadata.duration})` : ''}`;
+                            case 'assignment_submitted':
+                              return `Submitted assignment: "${metadata.assignment_title || metadata.title || 'Unknown assignment'}" ${metadata.score ? `(Score: ${metadata.score})` : ''}`;
+                            case 'module_completed':
+                              return `Completed module: "${metadata.module_title || metadata.title || 'Unknown module'}" ${metadata.completion_percentage ? `(${metadata.completion_percentage}%)` : ''}`;
+                            case 'quiz_attempted':
+                              return `Attempted quiz: "${metadata.quiz_title || metadata.title || 'Unknown quiz'}" ${metadata.score ? `(Score: ${metadata.score}/${metadata.total_questions || 'N/A'})` : ''}`;
+                            case 'certificate_generated':
+                              return `Generated certificate for: "${metadata.course_title || metadata.title || 'Unknown course'}"`;
+                            case 'fees_recorded':
+                              return `Fees recorded: ${metadata.amount ? `$${metadata.amount}` : 'Amount not specified'} ${metadata.type ? `(${metadata.type})` : ''}`;
+                            case 'invoice_generated':
+                              return `Invoice generated: ${metadata.invoice_id || 'ID not specified'} ${metadata.amount ? `for $${metadata.amount}` : ''}`;
+                            case 'file_download':
+                              return `Downloaded file: "${metadata.filename || metadata.file_name || 'Unknown file'}" ${metadata.file_size ? `(${metadata.file_size})` : ''}`;
+                            case 'session_joined':
+                              return `Joined session: "${metadata.session_title || metadata.title || 'Unknown session'}" ${metadata.duration ? `(Duration: ${metadata.duration})` : ''}`;
+                            case 'login':
+                              return `Logged in ${metadata.ip_address ? `from ${metadata.ip_address}` : ''} ${metadata.device ? `on ${metadata.device}` : ''}`;
+                            case 'logout':
+                              return `Logged out ${metadata.session_duration ? `(Session: ${metadata.session_duration})` : ''}`;
+                            case 'profile_updated':
+                              return `Updated profile ${metadata.fields_changed ? `(Changed: ${metadata.fields_changed.join(', ')})` : ''}`;
+                            case 'dashboard_access':
+                              return `Accessed dashboard ${metadata.section ? `(Section: ${metadata.section})` : ''}`;
+                            default:
+                              return formatActivityType(log.activity_type);
+                          }
+                        })()}
                             </div>
                           </TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                        </TableRow>)}
                   </TableBody>
                 </Table>
               </ScrollArea>
@@ -1632,47 +1336,38 @@ export function StudentsManagement() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="edit_full_name">Full Name</Label>
-                <Input
-                  id="edit_full_name"
-                  value={editFormData.full_name}
-                  onChange={(e) => setEditFormData({...editFormData, full_name: e.target.value})}
-                  placeholder="Enter full name"
-                />
+                <Input id="edit_full_name" value={editFormData.full_name} onChange={e => setEditFormData({
+                ...editFormData,
+                full_name: e.target.value
+              })} placeholder="Enter full name" />
               </div>
               <div>
                 <Label htmlFor="edit_email">Email</Label>
-                <Input
-                  id="edit_email"
-                  type="email"
-                  value={editFormData.email}
-                  onChange={(e) => setEditFormData({...editFormData, email: e.target.value})}
-                  placeholder="Enter email"
-                />
+                <Input id="edit_email" type="email" value={editFormData.email} onChange={e => setEditFormData({
+                ...editFormData,
+                email: e.target.value
+              })} placeholder="Enter email" />
               </div>
               <div>
                 <Label htmlFor="edit_phone">Phone</Label>
-                <Input
-                  id="edit_phone"
-                  value={editFormData.phone}
-                  onChange={(e) => setEditFormData({...editFormData, phone: e.target.value})}
-                  placeholder="Enter phone number"
-                />
+                <Input id="edit_phone" value={editFormData.phone} onChange={e => setEditFormData({
+                ...editFormData,
+                phone: e.target.value
+              })} placeholder="Enter phone number" />
               </div>
               <div>
                 <Label htmlFor="edit_lms_user_id">LMS User ID</Label>
-                <Input
-                  id="edit_lms_user_id"
-                  value={editFormData.lms_user_id}
-                  onChange={(e) => setEditFormData({...editFormData, lms_user_id: e.target.value})}
-                  placeholder="Enter LMS User ID"
-                />
+                <Input id="edit_lms_user_id" value={editFormData.lms_user_id} onChange={e => setEditFormData({
+                ...editFormData,
+                lms_user_id: e.target.value
+              })} placeholder="Enter LMS User ID" />
               </div>
               <div>
                 <Label htmlFor="edit_lms_status">LMS Status</Label>
-                <Select 
-                  value={editFormData.lms_status} 
-                  onValueChange={(value) => setEditFormData({...editFormData, lms_status: value})}
-                >
+                <Select value={editFormData.lms_status} onValueChange={value => setEditFormData({
+                ...editFormData,
+                lms_status: value
+              })}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select LMS status" />
                   </SelectTrigger>
@@ -1687,13 +1382,10 @@ export function StudentsManagement() {
               </div>
             </div>
             <div className="flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setEditDialog(false);
-                  setEditingStudent(null);
-                }}
-              >
+              <Button variant="outline" onClick={() => {
+              setEditDialog(false);
+              setEditingStudent(null);
+            }}>
                 Cancel
               </Button>
               <Button onClick={handleUpdateStudent}>
@@ -1717,23 +1409,14 @@ export function StudentsManagement() {
               <Label htmlFor="password">
                 {passwordType === 'temp' ? 'Temporary Password' : 'LMS Password'}
               </Label>
-              <Input
-                id="password"
-                type="text"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Enter new password"
-              />
+              <Input id="password" type="text" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Enter new password" />
             </div>
             <div className="flex justify-end space-x-2">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setPasswordEditDialog(false);
-                  setNewPassword('');
-                  setSelectedStudentForPassword(null);
-                }}
-              >
+              <Button variant="outline" onClick={() => {
+              setPasswordEditDialog(false);
+              setNewPassword('');
+              setSelectedStudentForPassword(null);
+            }}>
                 Cancel
               </Button>
               <Button onClick={handleUpdatePassword}>
@@ -1743,6 +1426,5 @@ export function StudentsManagement() {
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
+    </div>;
 }
