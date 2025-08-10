@@ -231,7 +231,7 @@ const NotificationDropdown = () => {
           
           {notifications.length > 0 && <>
               <Separator />
-              <div className="p-3">
+              <div className="p-3 bg-slate-50">
                 <Link to="/notifications">
                   <Button variant="ghost" className="w-full text-sm">
                     View all notifications
