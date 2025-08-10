@@ -580,20 +580,21 @@ export const StudentManagement = () => {
       .sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime());
     return any[0]?.due_date || '';
   };
-  const getFeesStructureLabel = (structure: string) => {
-    switch (structure) {
-      case '1_installment':
-        return '1 Installment';
-      case '2_installments':
-        return '2 Installments';
-      case '3_installments':
-        return '3 Installments';
-      default:
-        return 'N/A';
-    }
-  };
+  const getLastInvoiceStatus = (student: Student): string => {
+    const payments = getStudentInvoices(student);
+    if (!payments.length) return 'No Invoice';
 
-  // Derive display label from real data (invoices) or fallback to structure string
+    const sorted = payments
+      .map(p => ({ p, t: new Date((p.created_at || p.due_date || '') as string).getTime() }))
+      .filter(({ t }) => !Number.isNaN(t))
+      .sort((a, b) => b.t - a.t);
+
+    const last = sorted[0]?.p;
+    if (!last) return 'No Invoice';
+
+    const status = last.status || 'no_invoice';
+    return status.replace(/_/g, ' ').replace(/^\w/, c => c.toUpperCase());
+  };
   const parseInstallmentCount = (structure?: string): number => {
     if (!structure) return 0;
     if (structure.startsWith('1_')) return 1;
@@ -1075,7 +1076,7 @@ export const StudentManagement = () => {
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
-                                <p className="text-sm text-gray-900">{getInvoiceStatus(student)}</p>
+                                <p className="text-sm text-gray-900">{getLastInvoiceStatus(student)}</p>
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
