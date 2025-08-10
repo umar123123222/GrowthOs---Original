@@ -612,9 +612,14 @@ export const StudentManagement = () => {
     return getFeesStructureLabelFromCount(count);
   };
   const getInvoiceStatus = (student: Student) => {
-    if (student.fees_overdue) return 'Fees Overdue';
-    if (student.last_invoice_sent && !student.fees_overdue) return 'Fees Due';
-    return 'No Invoice';
+    const payments = getStudentInvoices(student);
+    if (!payments.length) return 'No Invoice';
+    const now = Date.now();
+    const unpaid = payments.filter(p => p.status !== 'paid');
+    if (unpaid.length === 0) return 'Cleared';
+    const anyOverdue = unpaid.some(p => p.due_date && new Date(p.due_date as string).getTime() < now);
+    if (anyOverdue) return 'Overdue';
+    return 'Due';
   };
   const getInstallmentStatus = (student: Student) => {
     const payments = installmentPayments.get(student.id) || [];
@@ -1076,7 +1081,7 @@ export const StudentManagement = () => {
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
-                                <p className="text-sm text-gray-900">{getLastInvoiceStatus(student)}</p>
+                                <p className="text-sm text-gray-900">{getInvoiceStatus(student)}</p>
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
