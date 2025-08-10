@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,7 +14,6 @@ import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { CompanySettings } from '@/components/superadmin/CompanySettings';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-
 interface DashboardStats {
   totalAdmins: number;
   totalSuperadmins: number;
@@ -26,13 +24,13 @@ interface DashboardStats {
   courseCompletionRate: number;
   recoveryRate: number;
 }
-
 export default function SuperadminDashboard() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const activeTab = searchParams.get('tab') || 'dashboard';
-
   const renderContent = () => {
     switch (activeTab) {
       case 'modules':
@@ -55,16 +53,12 @@ export default function SuperadminDashboard() {
         return <DashboardContent />;
     }
   };
-
-  return (
-    <RoleGuard allowedRoles={['superadmin']}>
-      <div className="w-full max-w-none p-6 animate-fade-in">
+  return <RoleGuard allowedRoles={['superadmin']}>
+      <div className="w-full max-w-none p-6 animate-fade-in px-0">
         {renderContent()}
       </div>
-    </RoleGuard>
-  );
+    </RoleGuard>;
 }
-
 function DashboardContent() {
   const [stats, setStats] = useState<DashboardStats>({
     totalAdmins: 0,
@@ -77,20 +71,18 @@ function DashboardContent() {
     recoveryRate: 0
   });
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     fetchDashboardStats();
   }, []);
-
   const fetchDashboardStats = async () => {
     try {
       setLoading(true);
-      
-      // Fetch user counts by role
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role, lms_status, status');
 
+      // Fetch user counts by role
+      const {
+        data: userData,
+        error: userError
+      } = await supabase.from('users').select('role, lms_status, status');
       if (userError) {
         console.error('Error fetching user data:', userError);
         return;
@@ -101,22 +93,18 @@ function DashboardContent() {
       const totalSuperadmins = userData?.filter(user => user.role === 'superadmin').length || 0;
       const totalMentors = userData?.filter(user => user.role === 'mentor').length || 0;
       const totalStudents = userData?.filter(user => user.role === 'student').length || 0;
-      
+
       // Count active students (status = 'Active')
-      const activeStudents = userData?.filter(user => 
-        user.role === 'student' && user.status === 'Active'
-      ).length || 0;
-      
+      const activeStudents = userData?.filter(user => user.role === 'student' && user.status === 'Active').length || 0;
+
       // Count students using LMS (lms_status = 'active')
-      const studentsUsingLMS = userData?.filter(user => 
-        user.role === 'student' && user.lms_status === 'active'
-      ).length || 0;
+      const studentsUsingLMS = userData?.filter(user => user.role === 'student' && user.lms_status === 'active').length || 0;
 
       // Calculate course completion using recording views
-      const { data: recordingViews, error: progressError } = await supabase
-        .from('recording_views')
-        .select('user_id, watched');
-
+      const {
+        data: recordingViews,
+        error: progressError
+      } = await supabase.from('recording_views').select('user_id, watched');
       if (progressError) {
         console.error('Error fetching progress data:', progressError);
       }
@@ -125,7 +113,7 @@ function DashboardContent() {
       let courseCompletionRate = 0;
       if (recordingViews && recordingViews.length > 0) {
         const watchedRecordings = recordingViews.filter(rv => rv.watched).length;
-        courseCompletionRate = Math.round((watchedRecordings / recordingViews.length) * 100);
+        courseCompletionRate = Math.round(watchedRecordings / recordingViews.length * 100);
       }
 
       // Use hardcoded recovery rate since performance_record table doesn't exist
@@ -141,24 +129,18 @@ function DashboardContent() {
         courseCompletionRate,
         recoveryRate
       });
-
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
       setLoading(false);
     }
   };
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
+    return <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg">Loading dashboard...</div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-8">
+  return <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div className="animate-fade-in">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
@@ -259,6 +241,5 @@ function DashboardContent() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 }

@@ -118,26 +118,21 @@ export function StudentsManagement() {
 
   // Re-render periodically so time-based invoice statuses update without refresh
   useEffect(() => {
-    const id = setInterval(() => setTimeTick((t) => t + 1), 60000);
+    const id = setInterval(() => setTimeTick(t => t + 1), 60000);
     return () => clearInterval(id);
   }, []);
-
   useEffect(() => {
-    const channel = supabase
-      .channel('realtime-invoices-superadmin')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'invoices' },
-        () => {
-          fetchInstallmentPayments();
-        }
-      )
-      .subscribe();
+    const channel = supabase.channel('realtime-invoices-superadmin').on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'invoices'
+    }, () => {
+      fetchInstallmentPayments();
+    }).subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
-
   const fetchInstallmentPayments = async () => {
     try {
       const {
@@ -336,31 +331,28 @@ export function StudentsManagement() {
         toast({
           title: 'Error',
           description: 'No student record to find invoices',
-          variant: 'destructive',
+          variant: 'destructive'
         });
         return;
       }
-
-      const { data: invoice, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('student_id', student.student_record_id)
-        .eq('status', 'issued')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
+      const {
+        data: invoice,
+        error
+      } = await supabase.from('invoices').select('*').eq('student_id', student.student_record_id).eq('status', 'issued').order('created_at', {
+        ascending: false
+      }).limit(1).maybeSingle();
       if (error) throw error;
       if (!invoice) {
         toast({
           title: 'No Issued Invoice',
           description: 'This student has no issued invoices to resend.',
-          variant: 'destructive',
+          variant: 'destructive'
         });
         return;
       }
-
-      const { error: rpcError } = await supabase.rpc('create_notification', {
+      const {
+        error: rpcError
+      } = await supabase.rpc('create_notification', {
         p_user_id: student.id,
         p_type: 'invoice_issued',
         p_title: 'Invoice Issued',
@@ -371,19 +363,23 @@ export function StudentsManagement() {
           amount: invoice.amount,
           due_date: invoice.due_date,
           installment_number: invoice.installment_number,
-          resent: true,
-        },
+          resent: true
+        }
       });
-
       if (rpcError) throw rpcError;
-
-      toast({ title: 'Success', description: 'Invoice re-sent to student.' });
+      toast({
+        title: 'Success',
+        description: 'Invoice re-sent to student.'
+      });
     } catch (e) {
       console.error('Error resending invoice:', e);
-      toast({ title: 'Error', description: 'Failed to resend invoice', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Failed to resend invoice',
+        variant: 'destructive'
+      });
     }
   };
-
   const downloadInvoicePDF = (student: Student) => {
     const doc = new jsPDF();
     doc.setFontSize(20);
@@ -840,7 +836,7 @@ export function StudentsManagement() {
       </div>;
   }
   const displayStudents = filteredStudents.length > 0 ? filteredStudents : students;
-  return <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden bg-slate-50">
+  return <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden bg-slate-50 px-0">
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div className="animate-fade-in">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">

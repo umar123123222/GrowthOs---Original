@@ -19,242 +19,163 @@ interface LayoutProps {
 }
 
 // Memoized navigation items to prevent unnecessary re-computations
-const NavigationItems = memo(({ 
-  isUserSuperadmin, 
-  isUserAdmin, 
-  isUserMentor, 
+const NavigationItems = memo(({
+  isUserSuperadmin,
+  isUserAdmin,
+  isUserMentor,
   isUserEnrollmentManager,
   connectionStatus,
   courseMenuOpen,
   setCourseMenuOpen,
   location,
-  sidebarCollapsed 
+  sidebarCollapsed
 }: any) => {
   const navigationItems = useMemo(() => {
-    const items = [
-      {
-        to: "/",
-        icon: Monitor,
-        label: "Dashboard",
-        roles: ['student', 'admin', 'superadmin', 'mentor', 'enrollment_manager']
-      },
-      {
-        to: "/videos",
-        icon: Video,
-        label: "Modules & Videos",
-        roles: ['student', 'admin', 'superadmin', 'mentor']
-      },
-      {
-        to: "/assignments",
-        icon: FileText,
-        label: "Assignments",
-        roles: ['student', 'admin', 'superadmin', 'mentor']
-      },
-      {
-        to: "/live-sessions",
-        icon: Calendar,
-        label: "Live Sessions",
-        roles: ['student', 'admin', 'superadmin', 'mentor']
-      },
-      {
-        to: "/mentorship",
-        icon: Users,
-        label: "Mentorship",
-        roles: ['student', 'mentor']
-      },
-      {
-        to: "/teams",
-        icon: Users,
-        label: "Teams",
-        roles: ['admin', 'superadmin']
-      },
-      {
-        to: "/support",
-        icon: MessageSquare,
-        label: "Support",
-        roles: ['student', 'admin', 'superadmin', 'mentor']
-      }
-    ];
+    const items = [{
+      to: "/",
+      icon: Monitor,
+      label: "Dashboard",
+      roles: ['student', 'admin', 'superadmin', 'mentor', 'enrollment_manager']
+    }, {
+      to: "/videos",
+      icon: Video,
+      label: "Modules & Videos",
+      roles: ['student', 'admin', 'superadmin', 'mentor']
+    }, {
+      to: "/assignments",
+      icon: FileText,
+      label: "Assignments",
+      roles: ['student', 'admin', 'superadmin', 'mentor']
+    }, {
+      to: "/live-sessions",
+      icon: Calendar,
+      label: "Live Sessions",
+      roles: ['student', 'admin', 'superadmin', 'mentor']
+    }, {
+      to: "/mentorship",
+      icon: Users,
+      label: "Mentorship",
+      roles: ['student', 'mentor']
+    }, {
+      to: "/teams",
+      icon: Users,
+      label: "Teams",
+      roles: ['admin', 'superadmin']
+    }, {
+      to: "/support",
+      icon: MessageSquare,
+      label: "Support",
+      roles: ['student', 'admin', 'superadmin', 'mentor']
+    }];
 
     // Add conditional items based on user role
     if (isUserSuperadmin) {
-      items.push(
-        {
-          to: "/superadmin",
-          icon: Building2,
-          label: "Super Admin",
-          roles: ['superadmin']
-        }
-      );
+      items.push({
+        to: "/superadmin",
+        icon: Building2,
+        label: "Super Admin",
+        roles: ['superadmin']
+      });
     }
-
     if (isUserAdmin || isUserSuperadmin) {
-      items.push(
-        {
-          to: "/admin",
-          icon: UserCheck,
-          label: "Admin Panel",
-          roles: ['admin', 'superadmin']
-        }
-      );
+      items.push({
+        to: "/admin",
+        icon: UserCheck,
+        label: "Admin Panel",
+        roles: ['admin', 'superadmin']
+      });
     }
-
     if (isUserMentor) {
-      items.push(
-        {
-          to: "/mentor",
-          icon: User,
-          label: "Mentor Dashboard",
-          roles: ['mentor']
-        }
-      );
+      items.push({
+        to: "/mentor",
+        icon: User,
+        label: "Mentor Dashboard",
+        roles: ['mentor']
+      });
     }
-
     if (isUserEnrollmentManager) {
-      items.push(
-        {
-          to: "/enrollment-manager",
-          icon: UserCheck,
-          label: "Enrollment Manager",
-          roles: ['enrollment_manager']
-        }
-      );
+      items.push({
+        to: "/enrollment-manager",
+        icon: UserCheck,
+        label: "Enrollment Manager",
+        roles: ['enrollment_manager']
+      });
     }
-
     return items;
   }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager]);
-
-  return (
-    <nav className="space-y-2 px-4">
-      {navigationItems.map((item) => (
-        <Link
-          key={item.to}
-          to={item.to}
-          className={`
+  return <nav className="space-y-2 px-4">
+      {navigationItems.map(item => <Link key={item.to} to={item.to} className={`
             flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200
-            ${location.pathname === item.to
-              ? 'bg-primary text-primary-foreground shadow-sm'
-              : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-            }
+            ${location.pathname === item.to ? 'bg-primary text-primary-foreground shadow-sm' : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'}
             ${sidebarCollapsed ? 'justify-center' : ''}
-          `}
-        >
+          `}>
           <item.icon className="h-4 w-4 flex-shrink-0" />
-          {!sidebarCollapsed && (
-            <span className="truncate">{item.label}</span>
-          )}
-        </Link>
-      ))}
+          {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+        </Link>)}
       
       {/* Course navigation */}
-      {!sidebarCollapsed && (
-        <div className="pt-4">
-          <button
-            onClick={() => setCourseMenuOpen(!courseMenuOpen)}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors w-full"
-          >
+      {!sidebarCollapsed && <div className="pt-4">
+          <button onClick={() => setCourseMenuOpen(!courseMenuOpen)} className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors w-full">
             <BookOpen className="h-4 w-4" />
             <span>Course</span>
             {courseMenuOpen ? <ChevronDown className="h-4 w-4 ml-auto" /> : <ChevronRight className="h-4 w-4 ml-auto" />}
           </button>
           
-          {courseMenuOpen && (
-            <div className="ml-6 mt-2 space-y-2">
-              <Link
-                to="/quizzes"
-                className={`
+          {courseMenuOpen && <div className="ml-6 mt-2 space-y-2">
+              <Link to="/quizzes" className={`
                   flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
-                  ${location.pathname === '/quizzes'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }
-                `}
-              >
+                  ${location.pathname === '/quizzes' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                `}>
                 Quizzes
               </Link>
-              <Link
-                to="/certificates"
-                className={`
+              <Link to="/certificates" className={`
                   flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
-                  ${location.pathname === '/certificates'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }
-                `}
-              >
+                  ${location.pathname === '/certificates' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                `}>
                 Certificates
               </Link>
-              <Link
-                to="/leaderboard"
-                className={`
+              <Link to="/leaderboard" className={`
                   flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
-                  ${location.pathname === '/leaderboard'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }
-                `}
-              >
+                  ${location.pathname === '/leaderboard' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                `}>
                 Leaderboard
               </Link>
-            </div>
-          )}
-        </div>
-      )}
+            </div>}
+        </div>}
       
       {/* Connection status indicators */}
-      {!sidebarCollapsed && (connectionStatus.shopify || connectionStatus.meta) && (
-        <div className="pt-4 border-t border-gray-200">
+      {!sidebarCollapsed && (connectionStatus.shopify || connectionStatus.meta) && <div className="pt-4 border-t border-gray-200">
           <div className="px-3 py-2">
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
               Integrations
             </h3>
             <div className="space-y-2">
-              {connectionStatus.shopify && (
-                <Link
-                  to="/shopify"
-                  className={`
+              {connectionStatus.shopify && <Link to="/shopify" className={`
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
-                    ${location.pathname === '/shopify'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }
-                  `}
-                >
+                    ${location.pathname === '/shopify' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                  `}>
                   <ShoppingBag className="h-4 w-4" />
                   <span>Shopify</span>
                   <Badge variant="outline" className="ml-auto text-xs">
                     Connected
                   </Badge>
-                </Link>
-              )}
-              {connectionStatus.meta && (
-                <Link
-                  to="/meta-ads"
-                  className={`
+                </Link>}
+              {connectionStatus.meta && <Link to="/meta-ads" className={`
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
-                    ${location.pathname === '/meta-ads'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }
-                  `}
-                >
+                    ${location.pathname === '/meta-ads' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                  `}>
                   <Target className="h-4 w-4" />
                   <span>Meta Ads</span>
                   <Badge variant="outline" className="ml-auto text-xs">
                     Connected
                   </Badge>
-                </Link>
-              )}
+                </Link>}
             </div>
           </div>
-        </div>
-      )}
-    </nav>
-  );
+        </div>}
+    </nav>;
 });
-
 NavigationItems.displayName = "NavigationItems";
-
 const Layout = memo(({
   user
 }: LayoutProps) => {
@@ -266,7 +187,6 @@ const Layout = memo(({
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  
   const [connectionStatus, setConnectionStatus] = useState({
     shopify: false,
     meta: false
@@ -285,15 +205,18 @@ const Layout = memo(({
     const checkConnections = async () => {
       if (!user?.id) return;
       try {
-        const { data, error } = await supabase
-          .from('integrations')
-          .select('source, access_token')
-          .eq('user_id', user.id);
+        const {
+          data,
+          error
+        } = await supabase.from('integrations').select('source, access_token').eq('user_id', user.id);
         if (error) throw error;
         if (!isMounted) return;
         const hasShopify = !!data?.some((r: any) => r.source === 'shopify' && r.access_token);
         const hasMeta = !!data?.some((r: any) => r.source === 'meta_ads' && r.access_token);
-        setConnectionStatus({ shopify: hasShopify, meta: hasMeta });
+        setConnectionStatus({
+          shopify: hasShopify,
+          meta: hasMeta
+        });
       } catch (e) {
         // Fallback to legacy user columns if present
         setConnectionStatus({
@@ -310,27 +233,14 @@ const Layout = memo(({
       isMounted = false;
       if ((window as any).checkIntegrations) delete (window as any).checkIntegrations;
     };
-}, [user?.id]);
+  }, [user?.id]);
 
   // Prefetch route chunks on idle to reduce perceived load during navigation
   useEffect(() => {
-    const idle = (cb: () => void) =>
-      "requestIdleCallback" in window
-        ? (window as any).requestIdleCallback(cb)
-        : setTimeout(cb, 1200);
-
+    const idle = (cb: () => void) => "requestIdleCallback" in window ? (window as any).requestIdleCallback(cb) : setTimeout(cb, 1200);
     const idleId: any = idle(() => {
-      Promise.allSettled([
-        import("@/pages/Profile"),
-        import("@/pages/Teams"),
-        import("@/pages/Support"),
-        import("@/pages/Connect"),
-        import("@/pages/MentorSessionsPage"),
-        import("@/pages/ShopifyDashboard"),
-        import("@/pages/MetaAdsDashboard"),
-      ]);
+      Promise.allSettled([import("@/pages/Profile"), import("@/pages/Teams"), import("@/pages/Support"), import("@/pages/Connect"), import("@/pages/MentorSessionsPage"), import("@/pages/ShopifyDashboard"), import("@/pages/MetaAdsDashboard")]);
     });
-
     return () => {
       if (typeof idleId === "number") {
         clearTimeout(idleId);
@@ -343,16 +253,7 @@ const Layout = memo(({
   // Hover prefetch for sidebar links
   const prefetchByHref = useCallback((href: string) => {
     try {
-      if (href.startsWith("/profile")) import("@/pages/Profile");
-      else if (href.startsWith("/teams")) import("@/pages/Teams");
-      else if (href.startsWith("/support")) import("@/pages/Support");
-      else if (href.startsWith("/connect")) import("@/pages/Connect");
-      else if (href.startsWith("/mentor/sessions")) import("@/pages/MentorSessionsPage");
-      else if (href.startsWith("/shopify-dashboard")) import("@/pages/ShopifyDashboard");
-      else if (href.startsWith("/meta-ads-dashboard")) import("@/pages/MetaAdsDashboard");
-      else if (href.startsWith("/admin")) import("@/pages/AdminDashboard");
-      else if (href.startsWith("/superadmin")) import("@/pages/SuperadminDashboard");
-      else if (href.startsWith("/enrollment-manager")) import("@/pages/EnrollmentManagerDashboard");
+      if (href.startsWith("/profile")) import("@/pages/Profile");else if (href.startsWith("/teams")) import("@/pages/Teams");else if (href.startsWith("/support")) import("@/pages/Support");else if (href.startsWith("/connect")) import("@/pages/Connect");else if (href.startsWith("/mentor/sessions")) import("@/pages/MentorSessionsPage");else if (href.startsWith("/shopify-dashboard")) import("@/pages/ShopifyDashboard");else if (href.startsWith("/meta-ads-dashboard")) import("@/pages/MetaAdsDashboard");else if (href.startsWith("/admin")) import("@/pages/AdminDashboard");else if (href.startsWith("/superadmin")) import("@/pages/SuperadminDashboard");else if (href.startsWith("/enrollment-manager")) import("@/pages/EnrollmentManagerDashboard");
     } catch (e) {
       // noop
     }
@@ -676,7 +577,7 @@ const Layout = memo(({
               // Active when:
               // - tab link matches current tab
               // - OR base path matches and no tab is selected (or tab=dashboard)
-              const isActive = (isTabLink && currentTab === itemTab) || (!isTabLink && location.pathname === item.href && (!currentTab || currentTab === 'dashboard'));
+              const isActive = isTabLink && currentTab === itemTab || !isTabLink && location.pathname === item.href && (!currentTab || currentTab === 'dashboard');
               const Icon = item.icon;
               return <Link key={item.name} to={item.href} onMouseEnter={() => prefetchByHref(item.href)} className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`} title={sidebarCollapsed ? item.name : undefined}>
                     <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
@@ -689,7 +590,7 @@ const Layout = memo(({
 
         {/* Main Content */}
         <main className={`flex-1 w-full max-w-full overflow-x-hidden pt-24 animate-fade-in ${sidebarCollapsed ? 'pl-16' : 'pl-80'} transition-all duration-300`}>
-          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 py-8 lg:px-[25px]">
             <Suspense fallback={<RouteContentLoader path={location.pathname} />}>
               <Outlet />
             </Suspense>
