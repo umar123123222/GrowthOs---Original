@@ -1244,7 +1244,6 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
                                   )}
                                 </div>
                               </div>
-                            </div>
                             
                             {/* Installment Payment Buttons */}
                             {(student.fees_structure === '1_installment' || student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && (
