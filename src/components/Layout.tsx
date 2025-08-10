@@ -688,7 +688,7 @@ const Layout = memo(({
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 p-8 pt-24 animate-fade-in ${sidebarCollapsed ? 'ml-16' : 'ml-80'} transition-all duration-300`}>
+        <main className={`flex-1 w-full max-w-full overflow-x-hidden p-8 pt-24 animate-fade-in ${sidebarCollapsed ? 'pl-16' : 'pl-80'} transition-all duration-300`}>
           <Suspense fallback={<RouteContentLoader path={location.pathname} />}>
             <Outlet />
           </Suspense>
