@@ -157,10 +157,23 @@ export const useAuth = () => {
         }
       } else if (data) {
         logger.debug('fetchUserProfile: Setting user data', { role: data.role, email: data.email });
-        // Add onboarding status for students
+        // Determine onboarding status directly from students table for reliability
+        let onboardingDone = true;
+        if (data.role === 'student') {
+          const { data: studentRow, error: studentErr } = await supabase
+            .from('students')
+            .select('onboarding_completed')
+            .eq('user_id', userId)
+            .maybeSingle();
+          if (studentErr) {
+            logger.warn('fetchUserProfile: Error fetching student onboarding status', studentErr);
+          }
+          onboardingDone = !!studentRow?.onboarding_completed;
+        }
+
         const userData = {
           ...data,
-          onboarding_done: data.role === 'student' ? data.students?.[0]?.onboarding_completed || false : true
+          onboarding_done: onboardingDone,
         };
         setUser(userData as User);
       } else {
