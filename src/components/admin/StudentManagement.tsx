@@ -148,18 +148,33 @@ const { createStudent: createEnhancedStudent, isLoading: creationLoading } = use
 
   const fetchStudents = async () => {
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('role', 'student')
-        .order('created_at', { ascending: false });
+      // Fetch users and their corresponding student records in parallel
+      const [usersRes, studentsRes] = await Promise.all([
+        supabase
+          .from('users')
+          .select('*')
+          .eq('role', 'student')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('students')
+          .select('user_id, student_id, installment_count')
+      ]);
 
-      if (error) throw error;
+      if (usersRes.error) throw usersRes.error;
+      if (studentsRes.error) {
+        console.warn('Warning fetching students table:', studentsRes.error);
+      }
 
-      // Transform User data to Student data by adding missing properties
-      const studentsData: Student[] = (data || []).map(user => ({
+      const usersData = usersRes.data || [];
+      const studentsTable = studentsRes.data || [];
+      const studentIdMap = new Map<string, { student_id: string | null }>(
+        studentsTable.map((s: any) => [s.user_id as string, { student_id: s.student_id as string | null }])
+      );
+
+      // Transform User data to Student data using real students.student_id
+      const studentsData: Student[] = usersData.map((user: any) => ({
         ...user,
-        student_id: user.lms_user_id || '',
+        student_id: studentIdMap.get(user.id)?.student_id || '',
         phone: user.phone || '',
         fees_structure: '',
         fees_overdue: false,
@@ -170,20 +185,20 @@ const { createStudent: createEnhancedStudent, isLoading: creationLoading } = use
       }));
       
       setStudents(studentsData);
-      setTotalStudents(data?.length || 0);
+      setTotalStudents(usersData.length || 0);
       
       // Calculate active students (those who have been active in the last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      const activeCount = data?.filter(student => 
+      const activeCount = usersData.filter((student: any) => 
         student.last_active_at && new Date(student.last_active_at) > thirtyDaysAgo
       ).length || 0;
       
       setActiveStudents(activeCount);
       
       // Calculate suspended and overdue students
-      const suspendedCount = data?.filter(student => student.lms_status === 'suspended').length || 0;
+      const suspendedCount = usersData.filter((student: any) => student.lms_status === 'suspended').length || 0;
       // Note: fees_overdue not available in users table, defaulting to 0
       const overdueCount = 0;
       
