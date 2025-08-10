@@ -81,6 +81,7 @@ export const StudentManagement = () => {
   const [selectedStudentForPassword, setSelectedStudentForPassword] = useState<Student | null>(null);
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
+  const [timeTick, setTimeTick] = useState(0); // triggers periodic re-render for time-based status updates
   const {
     toast
   } = useToast();
@@ -108,6 +109,30 @@ export const StudentManagement = () => {
   useEffect(() => {
     filterStudents();
   }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter]);
+
+  // Re-render periodically so time-based invoice statuses (due/overdue) update without refresh
+  useEffect(() => {
+    const id = setInterval(() => setTimeTick((t) => t + 1), 60000); // every 60s
+    return () => clearInterval(id);
+  }, []);
+
+  // Realtime updates for invoices to reflect payments/status changes instantly
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime-invoices')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'invoices' },
+        () => {
+          fetchInstallmentPayments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
   const fetchInstallmentPayments = async () => {
     try {
       // Use invoices table instead of installment_payments for now
