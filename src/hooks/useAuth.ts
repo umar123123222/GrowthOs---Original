@@ -116,9 +116,9 @@ export const useAuth = () => {
   // Add debouncing to prevent multiple calls
   const fetchUserProfileRef = useRef<string | null>(null);
   
-  const fetchUserProfile = async (userId: string) => {
-    // Prevent duplicate calls for the same user
-    if (fetchUserProfileRef.current === userId) {
+  const fetchUserProfile = async (userId: string, force = false) => {
+    // Prevent duplicate calls for the same user unless forced
+    if (!force && fetchUserProfileRef.current === userId) {
       logger.debug('fetchUserProfile: Skipping duplicate call for user', { userId });
       return;
     }
@@ -194,11 +194,11 @@ export const useAuth = () => {
     }
   };
 
-  const refreshUser = async () => {
+  const refreshUser = async (force = false) => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (authUser?.id) {
-        await fetchUserProfile(authUser.id);
+        await fetchUserProfile(authUser.id, force);
       } else {
         logger.warn('refreshUser: No auth user found');
         setUser(null);

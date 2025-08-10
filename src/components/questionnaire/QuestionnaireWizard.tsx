@@ -85,7 +85,7 @@ const createQuestionnaireSchema = (questions: QuestionItem[]) => {
     return z.object(schemaObject);
   } catch (error) {
     console.error('QuestionnaireWizard: Critical error creating schema:', error);
-    errorHandler.handleError(error, 'questionnaire_schema_creation');
+    errorHandler.handleError(error, 'questionnaire_schema_creation', false);
     // Return empty schema as fallback
     return z.object({});
   }
@@ -192,7 +192,8 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   // Initialize form with comprehensive error handling
   const form = useForm({
     resolver: zodResolver(schema),
-    mode: 'onChange',
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
     defaultValues: getDefaultValues,
     shouldFocusError: true,
     criteriaMode: 'all'
@@ -332,7 +333,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
       }
     } catch (error) {
       console.error('QuestionnaireWizard: Error in handleNext:', error);
-      errorHandler.handleError(error, 'questionnaire_navigation');
+      errorHandler.handleError(error, 'questionnaire_navigation', false);
     }
   };
   const handlePrevious = () => {

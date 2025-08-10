@@ -24,7 +24,7 @@ const OnboardingWrapper = ({ user }: { user: any }) => {
     logger.info('Onboarding completed, navigating to dashboard');
     // Refresh user data to get updated onboarding status
     if (refreshUser) {
-      await refreshUser();
+      await refreshUser(true);
     }
     // Navigate to dashboard
     navigate('/dashboard');
