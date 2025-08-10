@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-
 import { RoleGuard } from "@/components/RoleGuard";
 import { EnhancedStudentCreationDialog } from "@/components/EnhancedStudentCreationDialog";
 import { useAuth } from "@/hooks/useAuth";
@@ -62,7 +61,10 @@ const EnrollmentManagerDashboard = () => {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const defaultEnd = new Date();
   const defaultStart = subDays(defaultEnd, 30);
-  const [dateRangeApplied, setDateRangeApplied] = useState<DateRange>({ from: startOfDay(defaultStart), to: endOfDay(defaultEnd) });
+  const [dateRangeApplied, setDateRangeApplied] = useState<DateRange>({
+    from: startOfDay(defaultStart),
+    to: endOfDay(defaultEnd)
+  });
   const [dateRangePending, setDateRangePending] = useState<DateRange | undefined>();
   const [showStudentDialog, setShowStudentDialog] = useState(false);
 
@@ -333,35 +335,20 @@ const EnrollmentManagerDashboard = () => {
           </div>
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={cn("w-[280px] justify-start text-left font-normal", !dateRangeApplied && "text-muted-foreground")}
-              >
+              <Button variant="outline" className={cn("w-[280px] justify-start text-left font-normal", !dateRangeApplied && "text-muted-foreground")}>
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {dateRangeApplied?.from ? (
-                  dateRangeApplied.to ? (
-                    `${format(dateRangeApplied.from, 'MMM dd, yyyy')} - ${format(dateRangeApplied.to, 'MMM dd, yyyy')}`
-                  ) : (
-                    `${format(dateRangeApplied.from, 'MMM dd, yyyy')}`
-                  )
-                ) : (
-                  <span>Pick a date range</span>
-                )}
+                {dateRangeApplied?.from ? dateRangeApplied.to ? `${format(dateRangeApplied.from, 'MMM dd, yyyy')} - ${format(dateRangeApplied.to, 'MMM dd, yyyy')}` : `${format(dateRangeApplied.from, 'MMM dd, yyyy')}` : <span>Pick a date range</span>}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
               <div className="p-3 pointer-events-auto">
-                <Calendar
-                  mode="range"
-                  numberOfMonths={2}
-                  selected={dateRangePending || dateRangeApplied}
-                  onSelect={setDateRangePending}
-                  initialFocus
-                  className={cn("p-3 pointer-events-auto")}
-                />
+                <Calendar mode="range" numberOfMonths={2} selected={dateRangePending || dateRangeApplied} onSelect={setDateRangePending} initialFocus className={cn("p-3 pointer-events-auto")} />
                 <div className="flex items-center justify-end gap-2 border-t p-2">
                   <Button variant="ghost" onClick={() => setDateRangePending(undefined)}>Clear</Button>
-                  <Button onClick={() => { setDateRangeApplied(dateRangePending || dateRangeApplied); setCalendarOpen(false); }}>Confirm</Button>
+                  <Button onClick={() => {
+                  setDateRangeApplied(dateRangePending || dateRangeApplied);
+                  setCalendarOpen(false);
+                }}>Confirm</Button>
                 </div>
               </div>
             </PopoverContent>
@@ -461,17 +448,17 @@ const EnrollmentManagerDashboard = () => {
                       <TableCell>{enrollment.student_email}</TableCell>
                       <TableCell>{format(new Date(enrollment.enrollment_date), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>
-                        <Badge variant={getStatusBadgeVariant(enrollment.lms_status)}>
+                        <Badge variant={getStatusBadgeVariant(enrollment.lms_status)} className="bg-red-600">
                           {enrollment.lms_status.charAt(0).toUpperCase() + enrollment.lms_status.slice(1)}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getPaymentBadgeVariant(enrollment.payment_status)}>
+                        <Badge variant={getPaymentBadgeVariant(enrollment.payment_status)} className="bg-red-600">
                           {enrollment.payment_status.charAt(0).toUpperCase() + enrollment.payment_status.slice(1)}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={enrollment.onboarding_completed ? 'default' : 'secondary'}>
+                        <Badge variant={enrollment.onboarding_completed ? 'default' : 'secondary'} className="bg-red-600">
                           {enrollment.onboarding_completed ? 'Complete' : 'Pending'}
                         </Badge>
                       </TableCell>
