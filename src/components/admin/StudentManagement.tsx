@@ -638,17 +638,29 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
 
   const getInstallmentStatus = (student: Student) => {
     const payments = installmentPayments.get(student.id) || [];
-    const totalInstallments = student.fees_structure === '1_installment' ? 1 : 
-                             student.fees_structure === '2_installments' ? 2 : 3;
-    const paidCount = payments.filter(p => p.status === 'paid').length;
-    
-    if (paidCount === totalInstallments) {
-      return { status: 'Fees Cleared', color: 'bg-green-100 text-green-800' };
-    } else if (paidCount > 0) {
-      return { status: `${paidCount}/${totalInstallments} Paid`, color: 'bg-blue-100 text-blue-800' };
-    } else {
-      return { status: 'Unpaid', color: 'bg-red-100 text-red-800' };
+    const totalInstallments = student.fees_structure === '2_installments' ? 2 :
+                             student.fees_structure === '3_installments' ? 3 : 1;
+
+    if (payments.length === 0) {
+      return { status: getInvoiceStatus(student), color: 'bg-gray-100 text-gray-800' };
     }
+
+    const paidPayments = payments.filter(p => p.status === 'paid');
+    if (paidPayments.length === totalInstallments) {
+      return { status: 'Fees Cleared', color: 'bg-green-100 text-green-800' };
+    } else if (paidPayments.length > 0) {
+      const ordinalSuffix = (n: number) => {
+        const j = n % 10;
+        const k = n % 100;
+        if (j === 1 && k !== 11) return `${n}st`;
+        if (j === 2 && k !== 12) return `${n}nd`;
+        if (j === 3 && k !== 13) return `${n}rd`;
+        return `${n}th`;
+      };
+      return { status: `${ordinalSuffix(paidPayments.length)} Installment Paid`, color: 'bg-blue-100 text-blue-800' };
+    }
+
+    return { status: getInvoiceStatus(student), color: 'bg-orange-100 text-orange-800' };
   };
 
   const toggleRowExpansion = (studentId: string) => {
