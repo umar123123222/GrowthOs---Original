@@ -531,7 +531,7 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
       case 'active':
         return 'bg-green-100 text-green-800';
       case 'inactive':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-red-100 text-red-800';
       case 'suspended':
         return 'bg-red-100 text-red-800';
       case 'dropout':
