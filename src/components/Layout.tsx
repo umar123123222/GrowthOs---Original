@@ -688,10 +688,12 @@ const Layout = memo(({
         </aside>
 
         {/* Main Content */}
-        <main className={`flex-1 w-full max-w-full overflow-x-hidden p-8 pt-24 animate-fade-in ${sidebarCollapsed ? 'pl-16' : 'pl-80'} transition-all duration-300`}>
-          <Suspense fallback={<RouteContentLoader path={location.pathname} />}>
-            <Outlet />
-          </Suspense>
+        <main className={`flex-1 w-full max-w-full overflow-x-hidden pt-24 animate-fade-in ${sidebarCollapsed ? 'pl-16' : 'pl-80'} transition-all duration-300`}>
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+            <Suspense fallback={<RouteContentLoader path={location.pathname} />}>
+              <Outlet />
+            </Suspense>
+          </div>
         </main>
       </div>
       
