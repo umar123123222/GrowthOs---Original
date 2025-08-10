@@ -31,6 +31,7 @@ import jsPDF from 'jspdf';
 interface Student {
   id: string;
   student_id: string;
+  student_record_id?: string | null;
   full_name: string;
   email: string;
   phone: string;
@@ -51,6 +52,7 @@ interface InstallmentPayment {
   installment_number: number;
   amount: number;
   status: string;
+  due_date?: string;
 }
 
 interface ActivityLog {
@@ -132,7 +134,8 @@ const { createStudent: createEnhancedStudent, isLoading: creationLoading } = use
           id: invoice.id,
           installment_number: invoice.installment_number,
           amount: invoice.amount,
-          status: invoice.status
+          status: invoice.status,
+          due_date: invoice.due_date
         };
         const userPayments = paymentsMap.get(invoice.student_id) || [];
         userPayments.push(payment);
@@ -157,7 +160,7 @@ const { createStudent: createEnhancedStudent, isLoading: creationLoading } = use
           .order('created_at', { ascending: false }),
         supabase
           .from('students')
-          .select('user_id, student_id, installment_count')
+          .select('id, user_id, student_id, installment_count')
       ]);
 
       if (usersRes.error) throw usersRes.error;
@@ -167,14 +170,18 @@ const { createStudent: createEnhancedStudent, isLoading: creationLoading } = use
 
       const usersData = usersRes.data || [];
       const studentsTable = studentsRes.data || [];
-      const studentIdMap = new Map<string, { student_id: string | null }>(
-        studentsTable.map((s: any) => [s.user_id as string, { student_id: s.student_id as string | null }])
+      const studentIdMap = new Map<string, { student_id: string | null; student_record_id: string | null }>(
+        studentsTable.map((s: any) => [
+          s.user_id as string,
+          { student_id: s.student_id as string | null, student_record_id: s.id as string | null }
+        ])
       );
 
       // Transform User data to Student data using real students.student_id
       const studentsData: Student[] = usersData.map((user: any) => ({
         ...user,
         student_id: studentIdMap.get(user.id)?.student_id || '',
+        student_record_id: studentIdMap.get(user.id)?.student_record_id || null,
         phone: user.phone || '',
         fees_structure: '',
         fees_overdue: false,
@@ -621,7 +628,7 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
     count ? `${count} ${count === 1 ? 'Installment' : 'Installments'}` : 'N/A';
 
   const getDisplayFeesStructureLabel = (student: Student) => {
-    const payments = installmentPayments.get(student.id) || [];
+    const payments = installmentPayments.get(student.student_record_id || '') || [];
     const byInvoices = payments.length
       ? Math.max(...payments.map((p) => p.installment_number))
       : 0;
@@ -1166,14 +1173,12 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
                                 <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
                                 <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
                               </div>
-                              {student.fees_due_date && (
                                 <div>
                                   <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
-                                  <p className={`text-sm ${student.fees_overdue ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
-                                    {formatDate(student.fees_due_date)}
+                                  <p className={"text-sm text-gray-900"}>
+                                    {formatDate(((installmentPayments.get(student.student_record_id || '') || []).map(p => p.due_date).filter(Boolean).sort() as string[]).slice(-1)[0] || '')}
                                   </p>
                                 </div>
-                              )}
                               {student.last_suspended_date && (
                                 <div>
                                   <Label className="text-sm font-medium text-gray-700">Last Suspended Date</Label>
@@ -1213,7 +1218,7 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
                                            student.fees_structure === '2_installments' ? 2 : 3 
                                   }, (_, index) => {
                                     const installmentNumber = index + 1;
-                                    const payments = installmentPayments.get(student.id) || [];
+                                    const payments = installmentPayments.get(student.student_record_id || '') || [];
                                     const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
                                     
                                     return (
