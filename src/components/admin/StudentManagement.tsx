@@ -160,7 +160,7 @@ const { createStudent: createEnhancedStudent, isLoading: creationLoading } = use
       const studentsData: Student[] = (data || []).map(user => ({
         ...user,
         student_id: user.lms_user_id || '',
-        phone: '',
+        phone: user.phone || '',
         fees_structure: '',
         fees_overdue: false,
         last_invoice_date: '',
