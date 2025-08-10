@@ -868,7 +868,7 @@ export const StudentManagement = () => {
             <SelectValue placeholder="Fees Structure" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
-            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="all">All Installments</SelectItem>
             {installmentOptions.map(option => <SelectItem key={option.value} value={option.value}>
                 {option.label}
               </SelectItem>)}
