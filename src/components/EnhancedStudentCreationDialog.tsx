@@ -21,6 +21,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
 }) => {
   const { createStudent, isLoading } = useEnhancedStudentCreation()
   const { options: installmentOptions, isLoading: installmentLoading } = useInstallmentOptions()
+  const [isSubmitting, setIsSubmitting] = useState(false)
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -31,27 +32,34 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (isSubmitting || isLoading) return
+    setIsSubmitting(true)
     
-    if (!formData.email || !formData.full_name || !formData.phone || formData.installment_count < 1) {
-      return
-    }
+    try {
+      if (!formData.email || !formData.full_name || !formData.phone || formData.installment_count < 1) {
+        return
+      }
 
-    const result = await createStudent({
-      full_name: formData.full_name,
-      email: formData.email,
-      phone: formData.phone,
-      installment_count: formData.installment_count
-    })
-
-    if (result.success) {
-      setFormData({
-        full_name: '',
-        email: '',
-        phone: '',
-        installment_count: 1
+      const result = await createStudent({
+        full_name: formData.full_name,
+        email: formData.email,
+        phone: formData.phone,
+        installment_count: formData.installment_count
       })
-      onOpenChange(false)
-      onStudentCreated()
+
+      if (result.success) {
+        setFormData({
+          full_name: '',
+          email: '',
+          phone: '',
+          installment_count: 1
+        })
+        onOpenChange(false)
+        onStudentCreated()
+      }
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -125,20 +133,20 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             </Select>
           </div>
           
-          <div className="flex gap-2 pt-4">
+  <div className="flex gap-2 pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isLoading}
+              disabled={isLoading || isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !formData.email || !formData.full_name || !formData.phone || installmentLoading}
+              disabled={isLoading || isSubmitting || !formData.email || !formData.full_name || !formData.phone || installmentLoading}
             >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Create Student
             </Button>
           </div>

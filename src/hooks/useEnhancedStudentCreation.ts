@@ -65,13 +65,15 @@ export const useEnhancedStudentCreation = () => {
         })
         return data
       } else {
-        const errorMessage = data?.error || 'Unknown error occurred'
+        const rawError = data?.error || 'Unknown error occurred'
+        const isEmailExists = /already exists/i.test(rawError)
+        const friendlyMessage = isEmailExists ? 'A user with this email already exists.' : rawError
         toast({
           title: "Error",
-          description: errorMessage,
+          description: friendlyMessage,
           variant: "destructive",
         })
-        return data || { success: false, error: errorMessage }
+        return { success: false, error: friendlyMessage, error_code: isEmailExists ? 'EMAIL_EXISTS' : data?.error_code }
       }
     } catch (err) {
       console.error('Unexpected error:', err)
