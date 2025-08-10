@@ -187,7 +187,7 @@ const Assignments = ({
       }
       return <Badge className="bg-blue-100 text-blue-800">Pending</Badge>;
     }
-    return <Badge variant="outline">Not Started</Badge>;
+    return <Badge variant="outline" className="whitespace-nowrap">Not Started</Badge>;
   };
   const selectedAssignmentData = assignments.find(a => a.id === selectedAssignment);
   const selectedSubmission = selectedAssignmentData ? submissions.find(s => s.assignment_id === selectedAssignmentData.id) : null;
