@@ -136,20 +136,20 @@ const NotificationDropdown = () => {
   };
 
   const getNotificationIcon = (type: string, status: string) => {
-    if (status === 'error') return <AlertCircle className="h-4 w-4 text-red-500" />;
+    if (status === 'error') return <AlertCircle className="h-4 w-4 text-[hsl(var(--destructive))]" />;
     switch (type) {
       case 'assignment_submission':
-        return <Clock className="h-4 w-4 text-blue-500" />;
+        return <Clock className="h-4 w-4 text-[hsl(var(--primary))]" />;
       case 'success_session':
-        return <Clock className="h-4 w-4 text-purple-500" />;
+        return <Clock className="h-4 w-4 text-[hsl(var(--primary))]" />;
       case 'student_progress':
-        return <Check className="h-4 w-4 text-green-500" />;
+        return <Check className="h-4 w-4 text-[hsl(var(--success))]" />;
       case 'assignment':
-        return <Clock className="h-4 w-4 text-blue-500" />;
+        return <Clock className="h-4 w-4 text-[hsl(var(--primary))]" />;
       case 'achievement':
-        return <Check className="h-4 w-4 text-green-500" />;
+        return <Check className="h-4 w-4 text-[hsl(var(--success))]" />;
       default:
-        return <Info className="h-4 w-4 text-gray-500" />;
+        return <Info className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
@@ -179,94 +179,96 @@ const NotificationDropdown = () => {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-0 shadow-elevated border-border/50 bg-popover/95 backdrop-blur-sm" align="end">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            <h4 className="font-medium text-foreground">Notifications</h4>
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-muted-foreground hover:text-foreground">
-                Mark all as read
-              </Button>
-              <Link to="/notifications">
-                <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 transition-colors">
-                  View all
+      <PopoverContent className="w-[26rem] sm:w-[28rem] p-0 bg-transparent border-0 shadow-none" align="end">
+        <div className="section-surface overflow-hidden">
+          <div className="section-header p-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-foreground">Notifications</h4>
+              <div className="flex items-center gap-1">
+                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-muted-foreground hover:text-foreground">
+                  Mark all as read
                 </Button>
-              </Link>
+                <Link to="/notifications">
+                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 transition-colors">
+                    View all
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-        
-        <ScrollArea className="max-h-96">
-          {loading ? (
-            <div className="p-4 space-y-3">
-              {[1, 2, 3].map(i => (
-                <div key={i} className="animate-pulse">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                </div>
-              ))}
-            </div>
-          ) : notifications.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
-              <p className="text-sm">No unread notifications</p>
-            </div>
-          ) : (
-            <div className="p-2">
-              {notifications.map((notification, index) => (
-                <div key={notification.id}>
-                  <div className="flex items-start gap-3 p-3 hover:bg-accent rounded-lg group transition-colors">
-                    <div className="flex-shrink-0 mt-0.5">
-                      {getNotificationIcon(notification.type, notification.status)}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {notification.payload?.title || `${notification.type} notification`}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate mt-1">
-                        {notification.payload?.message || notification.payload?.description || 'No message content'}
-                      </p>
-                      <p className="text-xs text-muted-foreground/70 mt-1">
-                        {formatDate(notification.sent_at)}
-                      </p>
-                    </div>
-                    
-                    <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => toggleNotificationStatus(notification.id, notification.status)}
-                        className="h-8 w-8 p-0"
-                      >
-                        {notification.status === 'sent' ? (
-                          <EyeOff className="h-3 w-3" />
-                        ) : (
-                          <Eye className="h-3 w-3" />
-                        )}
-                      </Button>
-                    </div>
+          
+          <ScrollArea className="max-h-[26rem]">
+            {loading ? (
+              <div className="p-4 space-y-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="animate-pulse">
+                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-3 bg-muted rounded w-1/2"></div>
                   </div>
-                  
-                  {index < notifications.length - 1 && <Separator className="my-1" />}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : notifications.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground">
+                <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
+                <p className="text-sm">No unread notifications</p>
+              </div>
+            ) : (
+              <div className="p-2">
+                {notifications.map((notification, index) => (
+                  <div key={notification.id}>
+                    <div className="flex items-start gap-3 p-3 hover:bg-muted/40 rounded-lg group transition-colors">
+                      <div className="flex-shrink-0 mt-0.5 icon-chip">
+                        {getNotificationIcon(notification.type, notification.status)}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">
+                          {notification.payload?.title || `${notification.type} notification`}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate mt-1">
+                          {notification.payload?.message || notification.payload?.description || 'No message content'}
+                        </p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">
+                          {formatDate(notification.sent_at)}
+                        </p>
+                      </div>
+                      
+                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => toggleNotificationStatus(notification.id, notification.status)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {notification.status === 'sent' ? (
+                            <EyeOff className="h-3 w-3" />
+                          ) : (
+                            <Eye className="h-3 w-3" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {index < notifications.length - 1 && <Separator className="my-1" />}
+                  </div>
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+          
+          {notifications.length > 0 && (
+            <>
+              <Separator />
+              <div className="p-3">
+                <Link to="/notifications">
+                  <Button variant="ghost" className="w-full text-sm">
+                    View all notifications
+                  </Button>
+                </Link>
+              </div>
+            </>
           )}
-        </ScrollArea>
-        
-        {notifications.length > 0 && (
-          <>
-            <Separator />
-            <div className="p-3">
-              <Link to="/notifications">
-                <Button variant="ghost" className="w-full text-sm">
-                  View all notifications
-                </Button>
-              </Link>
-            </div>
-          </>
-        )}
+        </div>
       </PopoverContent>
     </Popover>
   );
