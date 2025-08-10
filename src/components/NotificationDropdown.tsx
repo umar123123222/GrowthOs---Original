@@ -195,7 +195,7 @@ const NotificationDropdown = () => {
                     <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
                     <div className="h-3 bg-muted rounded w-1/2"></div>
                   </div>)}
-              </div> : notifications.length === 0 ? <div className="p-4 text-center text-muted-foreground">
+              </div> : notifications.length === 0 ? <div className="p-4 text-center text-muted-foreground bg-white">
                 <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
                 <p className="text-sm">No unread notifications</p>
               </div> : <div className="p-2 bg-white">
