@@ -416,6 +416,60 @@ export const StudentManagement = () => {
       });
     }
   };
+  const handleResendInvoice = async (student: Student) => {
+    try {
+      if (!student.student_record_id) {
+        toast({
+          title: 'Error',
+          description: 'No student record to find invoices',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { data: invoice, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('student_id', student.student_record_id)
+        .eq('status', 'issued')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!invoice) {
+        toast({
+          title: 'No Issued Invoice',
+          description: 'This student has no issued invoices to resend.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { error: rpcError } = await supabase.rpc('create_notification', {
+        p_user_id: student.id,
+        p_type: 'invoice_issued',
+        p_title: 'Invoice Issued',
+        p_message: `Invoice #${invoice.installment_number || ''} has been re-sent.`,
+        p_metadata: {
+          invoice_id: invoice.id,
+          student_user_id: student.id,
+          amount: invoice.amount,
+          due_date: invoice.due_date,
+          installment_number: invoice.installment_number,
+          resent: true,
+        },
+      });
+
+      if (rpcError) throw rpcError;
+
+      toast({ title: 'Success', description: 'Invoice re-sent to student.' });
+    } catch (e) {
+      console.error('Error resending invoice:', e);
+      toast({ title: 'Error', description: 'Failed to resend invoice', variant: 'destructive' });
+    }
+  };
+
   const downloadInvoicePDF = (student: Student) => {
     const doc = new jsPDF();
     doc.setFontSize(20);
@@ -1202,9 +1256,9 @@ export const StudentManagement = () => {
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Activity Logs
                               </Button>
-                              <Button variant="outline" size="sm" onClick={() => generateInvoice(student.id)} className="hover-scale hover:border-purple-300 hover:text-purple-600">
+                              <Button variant="outline" size="sm" onClick={() => handleResendInvoice(student)} className="hover-scale hover:border-purple-300 hover:text-purple-600">
                                 <FileText className="w-4 h-4 mr-2" />
-                                Generate Invoice
+                                Resend Invoice
                               </Button>
                               {student.last_invoice_date && <Button variant="outline" size="sm" onClick={() => downloadInvoicePDF(student)} className="hover-scale hover:border-orange-300 hover:text-orange-600">
                                   <Download className="w-4 h-4 mr-2" />
