@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { Bell, Check, Eye, EyeOff, AlertCircle, Info, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
-
 interface Notification {
   id: string;
   type: string;
@@ -18,60 +17,60 @@ interface Notification {
   channel: string;
   error_message?: string;
 }
-
 const NotificationDropdown = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     fetchNotifications();
 
     // Realtime: subscribe to new notifications for current user
     let channel: ReturnType<typeof supabase.channel> | null = null;
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
-      channel = supabase
-        .channel('realtime:notifications_dropdown')
-        .on('postgres_changes', {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        }, (payload: any) => {
-          const newNotif = payload.new as Notification;
-          // Only count unread (status 'sent')
-          if (newNotif.status === 'sent') {
-            setUnreadCount(prev => (prev >= 9 ? prev : prev + 1));
-            setNotifications(prev => [newNotif, ...prev].slice(0, 5));
-          }
-        })
-        .subscribe();
+      channel = supabase.channel('realtime:notifications_dropdown').on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'notifications',
+        filter: `user_id=eq.${user.id}`
+      }, (payload: any) => {
+        const newNotif = payload.new as Notification;
+        // Only count unread (status 'sent')
+        if (newNotif.status === 'sent') {
+          setUnreadCount(prev => prev >= 9 ? prev : prev + 1);
+          setNotifications(prev => [newNotif, ...prev].slice(0, 5));
+        }
+      }).subscribe();
     })();
-
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
   }, []);
-
   const fetchNotifications = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: {
+          user
+        }
+      } = await supabase.auth.getUser();
       if (!user) return;
 
       // Fetch last 5 unread notifications
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('status', 'sent')
-        .order('sent_at', { ascending: false })
-        .limit(5);
-
+      const {
+        data,
+        error
+      } = await supabase.from('notifications').select('*').eq('user_id', user.id).eq('status', 'sent').order('sent_at', {
+        ascending: false
+      }).limit(5);
       if (error) throw error;
-
       setNotifications(data || []);
       setUnreadCount(data?.length || 0);
     } catch (error) {
@@ -80,25 +79,21 @@ const NotificationDropdown = () => {
       setLoading(false);
     }
   };
-
   const toggleNotificationStatus = async (notificationId: string, currentStatus: string) => {
     try {
       const newStatus = currentStatus === 'sent' ? 'read' : 'sent';
-      
-      const { error } = await supabase
-        .from('notifications')
-        .update({ status: newStatus })
-        .eq('id', notificationId);
-
+      const {
+        error
+      } = await supabase.from('notifications').update({
+        status: newStatus
+      }).eq('id', notificationId);
       if (error) throw error;
 
       // Update local state
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId 
-            ? { ...notif, status: newStatus }
-            : notif
-        ).filter(notif => notif.status === 'sent') // Keep only unread in dropdown
+      setNotifications(prev => prev.map(notif => notif.id === notificationId ? {
+        ...notif,
+        status: newStatus
+      } : notif).filter(notif => notif.status === 'sent') // Keep only unread in dropdown
       );
 
       // Update unread count
@@ -107,34 +102,40 @@ const NotificationDropdown = () => {
       } else {
         setUnreadCount(prev => prev + 1);
       }
-
       toast({
         title: newStatus === 'read' ? "Marked as read" : "Marked as unread",
-        description: `Notification ${newStatus === 'read' ? 'marked as read' : 'marked as unread'}`,
+        description: `Notification ${newStatus === 'read' ? 'marked as read' : 'marked as unread'}`
       });
     } catch (error) {
       console.error('Error updating notification status:', error);
       toast({
         title: "Error",
         description: "Failed to update notification status",
-        variant: "destructive",
+        variant: "destructive"
       });
     }
   };
-
   const markAllAsRead = async () => {
     try {
-      const { error } = await supabase.rpc('mark_all_notifications_read');
+      const {
+        error
+      } = await supabase.rpc('mark_all_notifications_read');
       if (error) throw error;
       setNotifications([]);
       setUnreadCount(0);
-      toast({ title: 'All caught up', description: 'All notifications marked as read' });
+      toast({
+        title: 'All caught up',
+        description: 'All notifications marked as read'
+      });
     } catch (e) {
       console.error('Error marking all as read', e);
-      toast({ title: 'Error', description: 'Failed to mark all as read', variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: 'Failed to mark all as read',
+        variant: 'destructive'
+      });
     }
   };
-
   const getNotificationIcon = (type: string, status: string) => {
     if (status === 'error') return <AlertCircle className="h-4 w-4 text-[hsl(var(--destructive))]" />;
     switch (type) {
@@ -152,31 +153,22 @@ const NotificationDropdown = () => {
         return <Info className="h-4 w-4 text-muted-foreground" />;
     }
   };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
     if (diffInHours < 1) return 'Just now';
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
     return date.toLocaleDateString();
   };
-
-  return (
-    <Popover>
+  return <Popover>
       <PopoverTrigger asChild>
         <Button variant="outline" size="icon" className="relative">
           <Bell className="h-4 w-4" />
-          {unreadCount > 0 && (
-            <Badge 
-              variant="destructive" 
-              className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-            >
+          {unreadCount > 0 && <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
               {unreadCount > 9 ? '9+' : unreadCount}
-            </Badge>
-          )}
+            </Badge>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[26rem] sm:w-[28rem] p-0 bg-transparent border-0 shadow-none" align="end">
@@ -198,24 +190,16 @@ const NotificationDropdown = () => {
           </div>
           
           <ScrollArea className="max-h-[26rem]">
-            {loading ? (
-              <div className="p-4 space-y-3">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="animate-pulse">
+            {loading ? <div className="p-4 space-y-3">
+                {[1, 2, 3].map(i => <div key={i} className="animate-pulse">
                     <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
                     <div className="h-3 bg-muted rounded w-1/2"></div>
-                  </div>
-                ))}
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-4 text-center text-muted-foreground">
+                  </div>)}
+              </div> : notifications.length === 0 ? <div className="p-4 text-center text-muted-foreground">
                 <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
                 <p className="text-sm">No unread notifications</p>
-              </div>
-            ) : (
-              <div className="p-2">
-                {notifications.map((notification, index) => (
-                  <div key={notification.id}>
+              </div> : <div className="p-2 bg-white">
+                {notifications.map((notification, index) => <div key={notification.id}>
                     <div className="flex items-start gap-3 p-3 hover:bg-muted/40 rounded-lg group transition-colors">
                       <div className="flex-shrink-0 mt-0.5 icon-chip">
                         {getNotificationIcon(notification.type, notification.status)}
@@ -234,30 +218,18 @@ const NotificationDropdown = () => {
                       </div>
                       
                       <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => toggleNotificationStatus(notification.id, notification.status)}
-                          className="h-8 w-8 p-0"
-                        >
-                          {notification.status === 'sent' ? (
-                            <EyeOff className="h-3 w-3" />
-                          ) : (
-                            <Eye className="h-3 w-3" />
-                          )}
+                        <Button size="sm" variant="ghost" onClick={() => toggleNotificationStatus(notification.id, notification.status)} className="h-8 w-8 p-0">
+                          {notification.status === 'sent' ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                         </Button>
                       </div>
                     </div>
                     
                     {index < notifications.length - 1 && <Separator className="my-1" />}
-                  </div>
-                ))}
-              </div>
-            )}
+                  </div>)}
+              </div>}
           </ScrollArea>
           
-          {notifications.length > 0 && (
-            <>
+          {notifications.length > 0 && <>
               <Separator />
               <div className="p-3">
                 <Link to="/notifications">
@@ -266,12 +238,9 @@ const NotificationDropdown = () => {
                   </Button>
                 </Link>
               </div>
-            </>
-          )}
+            </>}
         </div>
       </PopoverContent>
-    </Popover>
-  );
+    </Popover>;
 };
-
 export default NotificationDropdown;
