@@ -1,4 +1,4 @@
-
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -617,6 +617,15 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
+  const getLatestInvoiceDueDate = (student: Student): string => {
+    const payments = installmentPayments.get(student.student_record_id || '') || [];
+    const dates = payments
+      .map((p) => p.due_date)
+      .filter((d): d is string => typeof d === 'string' && d.length > 0)
+      .sort();
+    return dates.length ? dates[dates.length - 1] : '';
+  };
+
   const getFeesStructureLabel = (structure: string) => {
     switch (structure) {
       case '1_installment':
@@ -1080,8 +1089,8 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
               </TableHeader>
               <TableBody>
                 {displayStudents.map((student) => (
-                  <>
-                    <TableRow key={student.id}>
+                  <React.Fragment key={student.id}>
+                    <TableRow>
                       <TableCell>
                         <Checkbox
                           checked={selectedStudents.has(student.id)}
@@ -1192,8 +1201,8 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
                               </div>
                                 <div>
                                   <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
-                                  <p className={"text-sm text-gray-900"}>
-                                    {formatDate(((installmentPayments.get(student.student_record_id || '') || []).map(p => p.due_date).filter(Boolean).sort() as string[]).slice(-1)[0] || '')}
+                                  <p className="text-sm text-gray-900">
+                                    {formatDate(getLatestInvoiceDueDate(student))}
                                   </p>
                                 </div>
                               {student.last_suspended_date && (
@@ -1330,7 +1339,7 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
                         </TableCell>
                       </TableRow>
                     )}
-                  </>
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>
