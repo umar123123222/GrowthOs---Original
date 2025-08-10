@@ -67,6 +67,7 @@ const EnrollmentManagerDashboard = () => {
   });
   const [dateRangePending, setDateRangePending] = useState<DateRange | undefined>();
   const [showStudentDialog, setShowStudentDialog] = useState(false);
+  const [timeTick, setTimeTick] = useState(0);
 
   // Fetch real data from Supabase
   useEffect(() => {
