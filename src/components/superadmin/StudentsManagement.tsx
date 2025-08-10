@@ -1005,8 +1005,8 @@ export function StudentsManagement() {
           </CardTitle>
         </CardHeader>
         <CardContent className="w-full p-0">
-          <div className="w-full overflow-x-auto">
-            <Table className="w-full">
+          <div className="w-full">
+            <Table className="w-full table-auto">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
@@ -1028,10 +1028,10 @@ export function StudentsManagement() {
                       <TableCell>
                         <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
                       </TableCell>
-                      <TableCell className="font-medium">{student.student_id}</TableCell>
-                      <TableCell>{student.full_name}</TableCell>
-                      <TableCell>{student.email}</TableCell>
-                      <TableCell>{student.phone || 'N/A'}</TableCell>
+                      <TableCell className="font-medium whitespace-normal break-words">{student.student_id}</TableCell>
+                      <TableCell className="whitespace-normal break-words">{student.full_name}</TableCell>
+                      <TableCell className="whitespace-normal break-words">{student.email}</TableCell>
+                      <TableCell className="whitespace-normal break-words">{student.phone || 'N/A'}</TableCell>
                        <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
                         <TableCell>
                            <div className="flex flex-wrap gap-2">
