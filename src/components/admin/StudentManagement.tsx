@@ -171,27 +171,41 @@ const { createStudent: createEnhancedStudent, isLoading: creationLoading } = use
 
       const usersData = usersRes.data || [];
       const studentsTable = studentsRes.data || [];
-      const studentIdMap = new Map<string, { student_id: string | null; student_record_id: string | null }>(
+      const studentIdMap = new Map<string, { student_id: string | null; student_record_id: string | null; installment_count: number | null }>(
         studentsTable.map((s: any) => [
           s.user_id as string,
-          { student_id: s.student_id as string | null, student_record_id: s.id as string | null }
+          { student_id: s.student_id as string | null, student_record_id: s.id as string | null, installment_count: (s.installment_count as number | null) ?? null }
         ])
       );
 
       // Transform User data to Student data using real students.student_id
-      const studentsData: Student[] = usersData.map((user: any) => ({
-        ...user,
-        student_id: studentIdMap.get(user.id)?.student_id || '',
-        student_record_id: studentIdMap.get(user.id)?.student_record_id || null,
-        phone: user.phone || '',
-        password_display: user.password_display || '',
-        fees_structure: '',
-        fees_overdue: false,
-        last_invoice_date: '',
-        last_invoice_sent: false,
-        fees_due_date: '',
-        last_suspended_date: ''
-      }));
+      const studentsData: Student[] = usersData.map((user: any) => {
+        const mapEntry = studentIdMap.get(user.id);
+        const count = mapEntry?.installment_count ?? null;
+        const feesStructure = count === 1
+          ? '1_installment'
+          : count === 2
+          ? '2_installments'
+          : count === 3
+          ? '3_installments'
+          : count
+          ? `${count}_installments`
+          : '';
+
+        return {
+          ...user,
+          student_id: mapEntry?.student_id || '',
+          student_record_id: mapEntry?.student_record_id || null,
+          phone: user.phone || '',
+          password_display: user.password_display || '',
+          fees_structure: feesStructure,
+          fees_overdue: false,
+          last_invoice_date: '',
+          last_invoice_sent: false,
+          fees_due_date: '',
+          last_suspended_date: ''
+        } as Student;
+      });
       
       setStudents(studentsData);
       setTotalStudents(usersData.length || 0);
@@ -1173,7 +1187,8 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
-                                <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
+                                <p className="text-sm text-gray-900">{getDisplayFeesStructureLabel(student)}</p>
+                              </div>
                               </div>
                                 <div>
                                   <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
