@@ -592,6 +592,29 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
     }
   };
 
+  // Derive display label from real data (invoices) or fallback to structure string
+  const parseInstallmentCount = (structure?: string): number => {
+    if (!structure) return 0;
+    if (structure.startsWith('1_')) return 1;
+    if (structure.startsWith('2_')) return 2;
+    if (structure.startsWith('3_')) return 3;
+    const m = structure.match(/^(\d+)/);
+    return m ? parseInt(m[1], 10) : 0;
+  };
+
+  const getFeesStructureLabelFromCount = (count: number) =>
+    count ? `${count} ${count === 1 ? 'Installment' : 'Installments'}` : 'N/A';
+
+  const getDisplayFeesStructureLabel = (student: Student) => {
+    const payments = installmentPayments.get(student.id) || [];
+    const byInvoices = payments.length
+      ? Math.max(...payments.map((p) => p.installment_number))
+      : 0;
+    const byStructure = parseInstallmentCount(student.fees_structure);
+    const count = byInvoices || byStructure;
+    return getFeesStructureLabelFromCount(count);
+  };
+
   const getInvoiceStatus = (student: Student) => {
     if (student.fees_overdue) return 'Fees Overdue';
     if (student.last_invoice_sent && !student.fees_overdue) return 'Fees Due';
@@ -1019,7 +1042,7 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
                       <TableCell>{student.full_name}</TableCell>
                       <TableCell>{student.email}</TableCell>
                       <TableCell>{student.phone || 'N/A'}</TableCell>
-                       <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
+                       <TableCell>{getDisplayFeesStructureLabel(student)}</TableCell>
                         <TableCell>
                            <div className="flex flex-wrap gap-2">
                              <Badge className={getLMSStatusColor(student.lms_status)}>
