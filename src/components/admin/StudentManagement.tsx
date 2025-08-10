@@ -624,19 +624,32 @@ export const StudentManagement = () => {
   const getInstallmentStatus = (student: Student) => {
     const payments = installmentPayments.get(student.id) || [];
     const totalInstallments = student.fees_structure === '2_installments' ? 2 : student.fees_structure === '3_installments' ? 3 : 1;
+
+    // If we have no payments, color by overall invoice status
     if (payments.length === 0) {
-      return {
-        status: getInvoiceStatus(student),
-        color: 'bg-gray-100 text-gray-800'
-      };
+      const status = getInvoiceStatus(student);
+      const color =
+        status === 'Cleared'
+          ? 'bg-green-100 text-green-800'
+          : status === 'Overdue'
+          ? 'bg-red-100 text-red-800'
+          : status === 'Due'
+          ? 'bg-yellow-100 text-yellow-800'
+          : 'bg-gray-100 text-gray-800';
+
+      return { status, color };
     }
+
     const paidPayments = payments.filter(p => p.status === 'paid');
+
+    // All installments paid => Cleared (green)
     if (paidPayments.length === totalInstallments) {
       return {
         status: 'Fees Cleared',
         color: 'bg-green-100 text-green-800'
       };
     } else if (paidPayments.length > 0) {
+      // Partially paid – keep existing blue style
       const ordinalSuffix = (n: number) => {
         const j = n % 10;
         const k = n % 100;
@@ -650,10 +663,19 @@ export const StudentManagement = () => {
         color: 'bg-blue-100 text-blue-800'
       };
     }
-    return {
-      status: getInvoiceStatus(student),
-      color: 'bg-orange-100 text-orange-800'
-    };
+
+    // Unpaid – color by invoice status
+    const status = getInvoiceStatus(student);
+    const color =
+      status === 'Cleared'
+        ? 'bg-green-100 text-green-800'
+        : status === 'Overdue'
+        ? 'bg-red-100 text-red-800'
+        : status === 'Due'
+        ? 'bg-yellow-100 text-yellow-800'
+        : 'bg-orange-100 text-orange-800';
+
+    return { status, color };
   };
   const toggleRowExpansion = (studentId: string) => {
     const newExpanded = new Set(expandedRows);
