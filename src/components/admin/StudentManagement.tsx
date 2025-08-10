@@ -42,6 +42,7 @@ interface InstallmentPayment {
   amount: number;
   status: string;
   due_date?: string;
+  created_at?: string;
 }
 interface ActivityLog {
   id: string;
@@ -124,7 +125,8 @@ export const StudentManagement = () => {
           installment_number: invoice.installment_number,
           amount: invoice.amount,
           status: invoice.status,
-          due_date: invoice.due_date
+          due_date: invoice.due_date,
+          created_at: invoice.created_at
         };
         const userPayments = paymentsMap.get(invoice.student_id) || [];
         userPayments.push(payment);
@@ -521,6 +523,15 @@ export const StudentManagement = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+  const getLastInvoiceSentDate = (student: Student): string => {
+    const payments = installmentPayments.get(student.student_record_id || '') || [];
+    if (!payments.length) return student.last_invoice_date || '';
+    const dates = payments
+      .map(p => p.created_at || p.due_date || '')
+      .filter((d): d is string => typeof d === 'string' && d.length > 0)
+      .sort();
+    return dates.length ? dates[dates.length - 1] : (student.last_invoice_date || '');
   };
   const formatActivityType = (type: string) => {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -1014,7 +1025,7 @@ export const StudentManagement = () => {
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(student.last_invoice_date)}</p>
+                                <p className="text-sm text-gray-900">{formatDate(getLastInvoiceSentDate(student))}</p>
                               </div>
                             </div>
 
