@@ -3,14 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { RoleGuard } from "@/components/RoleGuard";
 import { EnhancedStudentCreationDialog } from "@/components/EnhancedStudentCreationDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, UserCheck, TrendingUp, Calendar, Filter, DollarSign, AlertTriangle, Clock, Plus } from "lucide-react";
+import { Users, UserCheck, Calendar as CalendarIcon, Filter, AlertTriangle, Plus } from "lucide-react";
 import { format, subDays, startOfDay, endOfDay, startOfMonth, subMonths } from 'date-fns';
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import type { DateRange } from "react-day-picker";
 interface EnrollmentRecord {
   id: string;
   student_name: string;
@@ -55,7 +59,11 @@ const EnrollmentManagerDashboard = () => {
   });
   const [enrollments, setEnrollments] = useState<EnrollmentRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState('30'); // days
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const defaultEnd = new Date();
+  const defaultStart = subDays(defaultEnd, 30);
+  const [dateRangeApplied, setDateRangeApplied] = useState<DateRange>({ from: startOfDay(defaultStart), to: endOfDay(defaultEnd) });
+  const [dateRangePending, setDateRangePending] = useState<DateRange | undefined>();
   const [showStudentDialog, setShowStudentDialog] = useState(false);
 
   // Fetch real data from Supabase
@@ -63,9 +71,10 @@ const EnrollmentManagerDashboard = () => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const periodDays = parseInt(selectedPeriod);
-        const endDate = new Date();
-        const startDate = subDays(endDate, periodDays);
+        const appliedTo = dateRangeApplied?.to ? endOfDay(dateRangeApplied.to) : new Date();
+        const appliedFrom = dateRangeApplied?.from ? startOfDay(dateRangeApplied.from) : subDays(appliedTo, 30);
+        const startDate = appliedFrom;
+        const endDate = appliedTo;
         const today = startOfDay(new Date());
         const weekStart = subDays(today, 7);
         const lastMonth = startOfMonth(subMonths(new Date(), 1));
@@ -169,7 +178,7 @@ const EnrollmentManagerDashboard = () => {
       }
     };
     fetchData();
-  }, [selectedPeriod, user?.id, toast]);
+  }, [dateRangeApplied?.from, dateRangeApplied?.to, user?.id, toast]);
 
   // Set up real-time subscriptions for live updates
   useEffect(() => {
@@ -181,9 +190,10 @@ const EnrollmentManagerDashboard = () => {
     }, () => {
       // Refetch data when students table changes
       const fetchData = async () => {
-        const periodDays = parseInt(selectedPeriod);
-        const endDate = new Date();
-        const startDate = subDays(endDate, periodDays);
+        const appliedTo = dateRangeApplied?.to ? endOfDay(dateRangeApplied.to) : new Date();
+        const appliedFrom = dateRangeApplied?.from ? startOfDay(dateRangeApplied.from) : subDays(appliedTo, 30);
+        const startDate = appliedFrom;
+        const endDate = appliedTo;
         const {
           data: enrollmentsData
         } = await supabase.from('students').select(`
@@ -225,9 +235,10 @@ const EnrollmentManagerDashboard = () => {
     }, () => {
       // Also listen for user status changes
       const fetchData = async () => {
-        const periodDays = parseInt(selectedPeriod);
-        const endDate = new Date();
-        const startDate = subDays(endDate, periodDays);
+        const appliedTo = dateRangeApplied?.to ? endOfDay(dateRangeApplied.to) : new Date();
+        const appliedFrom = dateRangeApplied?.from ? startOfDay(dateRangeApplied.from) : subDays(appliedTo, 30);
+        const startDate = appliedFrom;
+        const endDate = appliedTo;
         const {
           data: enrollmentsData
         } = await supabase.from('students').select(`
@@ -266,7 +277,7 @@ const EnrollmentManagerDashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedPeriod, user?.id]);
+  }, [dateRangeApplied?.from, dateRangeApplied?.to, user?.id]);
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'active':
@@ -314,23 +325,47 @@ const EnrollmentManagerDashboard = () => {
           </Button>
         </div>
 
-        {/* Period Filter */}
+        {/* Date Range Filter */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium">Period:</span>
+            <span className="text-sm font-medium">Date range:</span>
           </div>
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
-            <SelectTrigger className="w-[180px]" id="period-select">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="365">Last year</SelectItem>
-            </SelectContent>
-          </Select>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                className={cn("w-[280px] justify-start text-left font-normal", !dateRangeApplied && "text-muted-foreground")}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {dateRangeApplied?.from ? (
+                  dateRangeApplied.to ? (
+                    `${format(dateRangeApplied.from, 'MMM dd, yyyy')} - ${format(dateRangeApplied.to, 'MMM dd, yyyy')}`
+                  ) : (
+                    `${format(dateRangeApplied.from, 'MMM dd, yyyy')}`
+                  )
+                ) : (
+                  <span>Pick a date range</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <div className="p-3 pointer-events-auto">
+                <Calendar
+                  mode="range"
+                  numberOfMonths={2}
+                  selected={dateRangePending || dateRangeApplied}
+                  onSelect={setDateRangePending}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+                <div className="flex items-center justify-end gap-2 border-t p-2">
+                  <Button variant="ghost" onClick={() => setDateRangePending(undefined)}>Clear</Button>
+                  <Button onClick={() => { setDateRangeApplied(dateRangePending || dateRangeApplied); setCalendarOpen(false); }}>Confirm</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {/* Live Metrics - Quick Stats */}
@@ -367,7 +402,7 @@ const EnrollmentManagerDashboard = () => {
           <Card className="bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-orange-700">Inactive Students</CardTitle>
-              <Calendar className="h-4 w-4 text-orange-600" />
+              <CalendarIcon className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-orange-900">{stats.pendingEnrollments}</div>
@@ -450,9 +485,10 @@ const EnrollmentManagerDashboard = () => {
         <EnhancedStudentCreationDialog open={showStudentDialog} onOpenChange={setShowStudentDialog} onStudentCreated={() => {
         // Refetch data after student creation
         const fetchData = async () => {
-          const periodDays = parseInt(selectedPeriod);
-          const endDate = new Date();
-          const startDate = subDays(endDate, periodDays);
+          const appliedTo = dateRangeApplied?.to ? endOfDay(dateRangeApplied.to) : new Date();
+          const appliedFrom = dateRangeApplied?.from ? startOfDay(dateRangeApplied.from) : subDays(appliedTo, 30);
+          const startDate = appliedFrom;
+          const endDate = appliedTo;
           const {
             data: enrollmentsData
           } = await supabase.from('students').select(`
