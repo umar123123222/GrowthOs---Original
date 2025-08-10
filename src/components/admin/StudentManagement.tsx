@@ -406,13 +406,19 @@ export const StudentManagement = () => {
   };
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
-      const student = students.find(s => s.id === studentId);
+     const student = students.find(s => s.id === studentId);
       if (!student) return;
-      const totalInstallments = student.fees_structure === '1_installment' ? 1 : student.fees_structure === '2_installments' ? 2 : 3;
-      const {
-        error
-      } = await supabase.from('invoices').insert({
-        student_id: studentId,
+      // Invoices.student_id references students.id (student_record_id), not users.id
+      if (!student.student_record_id) {
+        toast({
+          title: 'Error',
+          description: 'Cannot record payment: missing student record',
+          variant: 'destructive'
+        });
+        return;
+      }
+      const { error } = await supabase.from('invoices').insert({
+        student_id: student.student_record_id,
         installment_number: installmentNumber,
         amount: 100,
         // You can calculate this based on fee structure
@@ -622,7 +628,7 @@ export const StudentManagement = () => {
     return 'Due';
   };
   const getInstallmentStatus = (student: Student) => {
-    const payments = installmentPayments.get(student.id) || [];
+    const payments = installmentPayments.get(student.student_record_id || '') || [];
     const totalInstallments = student.fees_structure === '2_installments' ? 2 : student.fees_structure === '3_installments' ? 3 : 1;
 
     // If we have no payments, color by overall invoice status
@@ -1156,8 +1162,8 @@ export const StudentManagement = () => {
                             length: student.fees_structure === '1_installment' ? 1 : student.fees_structure === '2_installments' ? 2 : 3
                           }, (_, index) => {
                             const installmentNumber = index + 1;
-                            const payments = installmentPayments.get(student.student_record_id || '') || [];
-                            const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
+                             const payments = installmentPayments.get(student.student_record_id || '') || [];
+                              const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
                             return <Button key={installmentNumber} variant={isPaid ? "default" : "outline"} size="sm" disabled={isPaid} onClick={() => handleMarkInstallmentPaid(student.id, installmentNumber)} className={`hover-scale ${isPaid ? "bg-green-500 hover:bg-green-600" : "hover:border-green-300 hover:text-green-600"}`}>
                                         {isPaid ? <CheckCircle className="w-4 h-4 mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
                                         {isPaid ? `${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid` : `Mark ${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid`}
