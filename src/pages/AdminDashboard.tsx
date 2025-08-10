@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,16 +13,13 @@ import { ActivityLogs } from '@/components/admin/ActivityLogs';
 import { StudentPerformance } from '@/components/admin/StudentPerformance';
 import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
-
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
 import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
-
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'dashboard';
-
   const renderContent = () => {
     switch (activeTab) {
       case 'modules':
@@ -34,10 +30,10 @@ export default function AdminDashboard() {
         return <SuccessSessionsManagement />;
       case 'students':
         return <StudentManagement />;
-        case 'assignments':
-          return <AssignmentManagement />;
-        case 'submissions':
-          return <SubmissionsManagement userRole="admin" />;
+      case 'assignments':
+        return <AssignmentManagement />;
+      case 'submissions':
+        return <SubmissionsManagement userRole="admin" />;
       case 'support':
         return <SupportManagement />;
       case 'content':
@@ -54,16 +50,12 @@ export default function AdminDashboard() {
         return <DashboardContent />;
     }
   };
-
-  return (
-    <RoleGuard allowedRoles={['admin', 'superadmin']}>
-      <div className="container mx-auto p-6 animate-fade-in">
+  return <RoleGuard allowedRoles={['admin', 'superadmin']}>
+      <div className="container mx-auto p-6 animate-fade-in px-0">
         {renderContent()}
       </div>
-    </RoleGuard>
-  );
+    </RoleGuard>;
 }
-
 function DashboardContent() {
   const [stats, setStats] = useState({
     totalUsers: 0,
@@ -74,56 +66,43 @@ function DashboardContent() {
     openTickets: 0
   });
   const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     fetchDashboardStats();
   }, []);
-
   const fetchDashboardStats = async () => {
     try {
       setLoading(true);
 
       // Fetch total users
-      const { data: users } = await supabase
-        .from('users')
-        .select('id, role, status');
+      const {
+        data: users
+      } = await supabase.from('users').select('id, role, status');
 
       // Fetch total modules
-      const { data: modules } = await supabase
-        .from('modules')
-        .select('id');
+      const {
+        data: modules
+      } = await supabase.from('modules').select('id');
 
       // Fetch active students
-      const activeStudents = users?.filter(user => 
-        user.role === 'student' && user.status === 'Active'
-      ).length || 0;
+      const activeStudents = users?.filter(user => user.role === 'student' && user.status === 'Active').length || 0;
 
       // Get course completion rate from activity logs
-      const { data: progressData } = await supabase
-        .from('user_activity_logs')
-        .select('*')
-        .eq('activity_type', 'module_completed');
-      
+      const {
+        data: progressData
+      } = await supabase.from('user_activity_logs').select('*').eq('activity_type', 'module_completed');
       const courseCompletion = progressData?.length || 0;
 
       // Fetch open support tickets
-      const { data: tickets } = await supabase
-        .from('support_tickets')
-        .select('id')
-        .eq('status', 'open');
+      const {
+        data: tickets
+      } = await supabase.from('support_tickets').select('id').eq('status', 'open');
 
       // Fetch monthly revenue from invoices (sum of payments this month)
       const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-      const { data: payments } = await supabase
-        .from('invoices')
-        .select('amount')
-        .gte('created_at', `${currentMonth}-01`)
-        .lt('created_at', `${currentMonth}-32`)
-        .eq('status', 'paid');
-
-      const monthlyRevenue = payments?.reduce((sum, payment) => 
-        sum + (Number(payment.amount) || 0), 0) || 0;
-
+      const {
+        data: payments
+      } = await supabase.from('invoices').select('amount').gte('created_at', `${currentMonth}-01`).lt('created_at', `${currentMonth}-32`).eq('status', 'paid');
+      const monthlyRevenue = payments?.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0) || 0;
       setStats({
         totalUsers: users?.length || 0,
         totalModules: modules?.length || 0,
@@ -132,24 +111,18 @@ function DashboardContent() {
         courseCompletion,
         openTickets: tickets?.length || 0
       });
-
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
       setLoading(false);
     }
   };
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
+    return <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg">Loading dashboard...</div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="space-y-8">
+  return <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div className="animate-fade-in">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
@@ -239,6 +212,5 @@ function DashboardContent() {
           </CardContent>
         </Card>
       </div>
-    </div>
-  );
+    </div>;
 }
