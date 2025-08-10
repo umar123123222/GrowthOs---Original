@@ -469,53 +469,53 @@ const EnrollmentManagerDashboard = () => {
 
         {/* Main KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
+          <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Enrollments</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-blue-700">Total Enrollments</CardTitle>
+              <Users className="h-4 w-4 text-blue-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalEnrollments}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-blue-900">{stats.totalEnrollments}</div>
+              <p className="text-xs text-blue-700/80">
                 In selected period
               </p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-green-700">Active Students</CardTitle>
+              <UserCheck className="h-4 w-4 text-green-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{stats.activeEnrollments}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-green-900">{stats.activeEnrollments}</div>
+              <p className="text-xs text-green-700/80">
                 Currently active in LMS
               </p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Inactive Students</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-orange-700">Inactive Students</CardTitle>
+              <Calendar className="h-4 w-4 text-orange-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{stats.pendingEnrollments}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-orange-900">{stats.pendingEnrollments}</div>
+              <p className="text-xs text-orange-700/80">
                 Awaiting activation
               </p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="bg-gradient-to-r from-red-50 to-red-100 border-red-200">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Suspended</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium text-red-700">Suspended</CardTitle>
+              <AlertTriangle className="h-4 w-4 text-red-600" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{stats.suspendedEnrollments}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="text-2xl font-bold text-red-900">{stats.suspendedEnrollments}</div>
+              <p className="text-xs text-red-700/80">
                 LMS access suspended
               </p>
             </CardContent>
