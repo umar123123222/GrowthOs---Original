@@ -1009,7 +1009,7 @@ const createStudent = async (fullName: string, email: string, phone: string, fee
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="w-full">
             <Table>
               <TableHeader>
                 <TableRow>
