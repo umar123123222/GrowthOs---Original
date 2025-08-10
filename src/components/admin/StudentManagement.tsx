@@ -43,6 +43,8 @@ interface InstallmentPayment {
   status: string;
   due_date?: string;
   created_at?: string;
+  first_reminder_sent_at?: string | null;
+  second_reminder_sent_at?: string | null;
 }
 interface ActivityLog {
   id: string;
@@ -126,7 +128,9 @@ export const StudentManagement = () => {
           amount: invoice.amount,
           status: invoice.status,
           due_date: invoice.due_date,
-          created_at: invoice.created_at
+          created_at: invoice.created_at,
+          first_reminder_sent_at: invoice.first_reminder_sent_at,
+          second_reminder_sent_at: invoice.second_reminder_sent_at,
         };
         const userPayments = paymentsMap.get(invoice.student_id) || [];
         userPayments.push(payment);
@@ -526,20 +530,55 @@ export const StudentManagement = () => {
   };
   const getLastInvoiceSentDate = (student: Student): string => {
     const payments = installmentPayments.get(student.student_record_id || '') || [];
-    if (!payments.length) return student.last_invoice_date || '';
-    const dates = payments
-      .map(p => p.created_at || p.due_date || '')
-      .filter((d): d is string => typeof d === 'string' && d.length > 0)
-      .sort();
-    return dates.length ? dates[dates.length - 1] : (student.last_invoice_date || '');
+    const now = Date.now();
+
+    const timestamps: number[] = [];
+    payments.forEach((p) => {
+      const c = p.created_at ? new Date(p.created_at).getTime() : NaN;
+      const r1 = p.first_reminder_sent_at ? new Date(p.first_reminder_sent_at).getTime() : NaN;
+      const r2 = p.second_reminder_sent_at ? new Date(p.second_reminder_sent_at).getTime() : NaN;
+      [c, r1, r2].forEach((t) => {
+        if (!Number.isNaN(t) && t <= now) timestamps.push(t);
+      });
+    });
+
+    if (timestamps.length) {
+      const latest = new Date(Math.max(...timestamps)).toISOString();
+      return latest;
+    }
+
+    // Fallback to student.last_invoice_date if present
+    return student.last_invoice_date || '';
   };
   const formatActivityType = (type: string) => {
     return type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
-  const getLatestInvoiceDueDate = (student: Student): string => {
-    const payments = installmentPayments.get(student.student_record_id || '') || [];
-    const dates = payments.map(p => p.due_date).filter((d): d is string => typeof d === 'string' && d.length > 0).sort();
-    return dates.length ? dates[dates.length - 1] : '';
+  const getStudentInvoices = (student: Student): InstallmentPayment[] =>
+    installmentPayments.get(student.student_record_id || '') || [];
+
+  const getNextInvoiceDueDate = (student: Student): string => {
+    const payments = getStudentInvoices(student);
+    const now = new Date().getTime();
+
+    // 1) Next upcoming unpaid invoice (earliest due_date in the future)
+    const upcoming = payments
+      .filter(p => p.status !== 'paid' && p.due_date)
+      .map(p => ({ p, t: new Date(p.due_date as string).getTime() }))
+      .filter(({ t }) => !Number.isNaN(t) && t >= now)
+      .sort((a, b) => a.t - b.t);
+    if (upcoming.length) return upcoming[0].p.due_date as string;
+
+    // 2) If none in the future, pick earliest unpaid (overdue)
+    const overdue = payments
+      .filter(p => p.status !== 'paid' && p.due_date)
+      .sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime());
+    if (overdue.length) return overdue[0].due_date as string;
+
+    // 3) Fallback: earliest due date
+    const any = payments
+      .filter(p => p.due_date)
+      .sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime());
+    return any[0]?.due_date || '';
   };
   const getFeesStructureLabel = (structure: string) => {
     switch (structure) {
@@ -1032,7 +1071,7 @@ export const StudentManagement = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(getLatestInvoiceDueDate(student))}</p>
+                                <p className="text-sm text-gray-900">{formatDate(getNextInvoiceDueDate(student))}</p>
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
