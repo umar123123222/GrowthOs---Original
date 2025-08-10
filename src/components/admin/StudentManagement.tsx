@@ -25,6 +25,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
+import { useEnhancedStudentCreation } from '@/hooks/useEnhancedStudentCreation';
 import jsPDF from 'jspdf';
 
 interface Student {
@@ -90,7 +91,8 @@ export const StudentManagement = () => {
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
   const { toast } = useToast();
-  const { options: installmentOptions } = useInstallmentOptions();
+const { options: installmentOptions } = useInstallmentOptions();
+const { createStudent: createEnhancedStudent, isLoading: creationLoading } = useEnhancedStudentCreation();
 
   const [formData, setFormData] = useState({
     full_name: '',
@@ -234,55 +236,49 @@ export const StudentManagement = () => {
     setFilteredStudents(filtered);
   };
 
-  const createStudent = async (fullName: string, email: string, phone: string, feesStructure: string) => {
-    try {
-      console.log('Creating student via edge function...');
-      
-      const { data, error } = await supabase.functions.invoke('create-student', {
-        body: {
-          fullName,
-          email,
-          phone,
-          feesStructure
-        }
-      });
+const createStudent = async (fullName: string, email: string, phone: string, feesStructure: string) => {
+  try {
+    console.log('Creating student via enhanced edge function...');
 
-      console.log('Edge function response:', data, error);
+    const count = parseInt(feesStructure?.split('_')[0] || '1', 10) || 1;
 
-      if (error) {
-        console.error('Edge function error:', error);
-        throw error;
-      }
+    const result = await createEnhancedStudent({
+      full_name: fullName,
+      email,
+      phone,
+      installment_count: count,
+    });
 
-      if (!data || !data.success) {
-        throw new Error(data?.error || 'Failed to create student');
-      }
-
-      toast({
-        title: 'Success',
-        description: `Student created successfully. Login Password: ${data.tempPassword}${data.lmsPassword ? ` | LMS Password: ${data.lmsPassword}` : ''}. LMS status is inactive until first payment.`
-      });
-
+    if (result.success) {
+      // Refresh students shortly after creation
       setTimeout(() => {
         fetchStudents();
-      }, 1000);
-      
+      }, 500);
+
       setIsDialogOpen(false);
       setFormData({
         full_name: '',
         email: '',
         phone: '',
-        fees_structure: '1_installment'
+        fees_structure: '1_installment',
       });
-    } catch (error) {
-      console.error('Error creating student:', error);
+    } else {
+      // Hook already shows a friendly toast; keep a fallback here
       toast({
         title: 'Error',
-        description: 'Failed to create student: ' + (error as any).message,
-        variant: 'destructive'
+        description: result.error || 'Failed to create student',
+        variant: 'destructive',
       });
     }
-  };
+  } catch (error: any) {
+    console.error('Error creating student:', error);
+    toast({
+      title: 'Error',
+      description: 'Failed to create student: ' + (error?.message || 'Unknown error'),
+      variant: 'destructive',
+    });
+  }
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
