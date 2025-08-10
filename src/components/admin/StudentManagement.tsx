@@ -880,7 +880,7 @@ export const StudentManagement = () => {
             <SelectValue placeholder="Invoice Status" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
-            <SelectItem value="all">All</SelectItem>
+            <SelectItem value="all">All Fees Status</SelectItem>
             <SelectItem value="fees_due">Fees Due</SelectItem>
             <SelectItem value="fees_overdue">Fees Overdue</SelectItem>
             <SelectItem value="fees_cleared">Fees Cleared</SelectItem>
