@@ -475,9 +475,9 @@ const EnrollmentManagerDashboard = () => {
                       <Badge
                         variant={getPaymentBadgeVariant(enrollment.first_payment_status)}
                         className={cn(
-                          enrollment.first_payment_status === 'cleared' && 'bg-green-600 text-white',
-                          enrollment.first_payment_status === 'due' && 'bg-yellow-500 text-black',
-                          enrollment.first_payment_status === 'overdue' && 'bg-red-600 text-white'
+                          enrollment.first_payment_status === 'cleared' && 'bg-green-600 text-white hover:bg-green-600',
+                          enrollment.first_payment_status === 'due' && 'bg-yellow-500 text-black hover:bg-yellow-500',
+                          enrollment.first_payment_status === 'overdue' && 'bg-red-600 text-white hover:bg-red-600'
                         )}
                       >
                         {enrollment.first_payment_status.charAt(0).toUpperCase() + enrollment.first_payment_status.slice(1)}
