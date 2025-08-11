@@ -118,7 +118,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         .from('users')
         .select('lms_status, created_at')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
       
       if (userError) throw userError;
       setUserLMSStatus(userData?.lms_status || 'active');

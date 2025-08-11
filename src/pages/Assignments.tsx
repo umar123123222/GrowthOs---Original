@@ -68,7 +68,7 @@ const Assignments = ({
       const {
         data: userData,
         error: userError
-      } = await supabase.from('users').select('lms_status').eq('id', user.id).single();
+      } = await supabase.from('users').select('lms_status').eq('id', user.id).maybeSingle();
       logger.performance('asmt.fetch_lms_status', performance.now() - tLmsStart, {
         corrId
       });

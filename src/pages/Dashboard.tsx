@@ -46,9 +46,9 @@ const Dashboard = ({ user }: { user?: any }) => {
           const result = await safeQuery(
             supabase
               .from('users')
-              .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
-              .eq('id', user.id)
-              .single() as any,
+            .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
+            .eq('id', user.id)
+            .maybeSingle() as any,
             `fetch connection status for user ${user.id}`
           );
 
@@ -78,7 +78,7 @@ const Dashboard = ({ user }: { user?: any }) => {
             .from('users')
             .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
             .eq('id', user.id)
-            .single();
+            .maybeSingle();
 
           if (error) throw error;
 
@@ -212,7 +212,7 @@ const Dashboard = ({ user }: { user?: any }) => {
         .from('users')
         .select('dream_goal_summary, shopify_credentials, meta_ads_credentials')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       // Check if watched any video (unique videos only)
       const { data: watchedVideos } = await supabase

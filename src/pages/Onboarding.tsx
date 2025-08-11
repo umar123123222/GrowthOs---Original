@@ -27,7 +27,7 @@ const Onboarding = ({
         const {
           data: settings,
           error
-        } = await supabase.from('company_settings').select('enable_student_signin, questionnaire').eq('id', 1).single();
+        } = await supabase.from('company_settings').select('enable_student_signin, questionnaire').eq('id', 1).maybeSingle();
         if (error) {
           console.error('Error fetching company settings:', error);
           // If no settings found, assume questionnaire is disabled
@@ -85,7 +85,7 @@ const Onboarding = ({
         .from('students')
         .select('id, user_id, onboarding_completed')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (checkError || !studentCheck) {
         console.error('Student record not found:', checkError);

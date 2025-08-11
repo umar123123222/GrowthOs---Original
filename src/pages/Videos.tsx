@@ -32,7 +32,7 @@ const Videos = () => {
         .from('users')
         .select('lms_status')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
       
       if (data) {
         setUserLMSStatus(data.lms_status || 'active');

@@ -74,7 +74,7 @@ export const ActivityLogs = () => {
             .from('users')
             .select('email, role')
             .eq('id', log.performed_by)
-            .single();
+            .maybeSingle();
           userData = user;
         }
         return { 
