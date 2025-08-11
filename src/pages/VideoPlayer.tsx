@@ -29,14 +29,14 @@ const VideoPlayer = () => {
   const [showRating, setShowRating] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
 
-  // Initialize video data from URL params or route params
-  useEffect(() => {
-    const videoUrl = searchParams.get('url');
-    const videoTitle = searchParams.get('title');
-    const videoId = searchParams.get('id');
-    
+// Initialize video data from URL params or by ID
+useEffect(() => {
+  const videoUrl = searchParams.get('url');
+  const videoTitle = searchParams.get('title');
+  const videoId = searchParams.get('id');
+
+  const setFromParams = () => {
     if (videoUrl && videoTitle) {
-      // From query parameters (new way)
       setCurrentVideo({
         id: videoId,
         title: decodeURIComponent(videoTitle),
@@ -51,25 +51,81 @@ const VideoPlayer = () => {
           "Mark lesson as complete"
         ]
       });
+      return true;
+    }
+    return false;
+  };
+
+  const loadById = async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('available_lessons')
+        .select('id, recording_title, recording_url, duration_min, module')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      if (data) {
+        setCurrentVideo({
+          id: data.id,
+          title: data.recording_title || 'Lesson',
+          description: 'Watch this lesson to continue your learning journey.',
+          videoUrl: data.recording_url || '',
+          duration: data.duration_min ? `${data.duration_min} min` : 'N/A',
+          module: data.module || 'Module',
+          checklist: [
+            'Watch the complete video',
+            'Take notes on key concepts',
+            'Complete any related assignments',
+            'Mark lesson as complete'
+          ]
+        });
+        return;
+      }
+    } catch (e) {
+      logger.error('VideoPlayer: failed to load by id', e);
+    }
+    // Fallback mock if not found
+    setCurrentVideo({
+      id: lessonId,
+      title: 'Market Research Basics',
+      description: 'Learn how to conduct effective market research to identify profitable niches and understand your target audience.',
+      videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+      duration: '18:20',
+      module: 'Introduction to E-commerce',
+      checklist: [
+        'Identify your target market',
+        'Analyze market size and potential', 
+        'Study competitor pricing strategies',
+        'Research customer pain points',
+        'Create buyer personas'
+      ]
+    });
+  };
+
+  // Prefer explicit params
+  if (!setFromParams()) {
+    if (videoId) {
+      loadById(videoId);
     } else {
-      // Mock data for old route structure
+      // Legacy route fallback
       setCurrentVideo({
         id: lessonId,
-        title: "Market Research Basics",
-        description: "Learn how to conduct effective market research to identify profitable niches and understand your target audience.",
-        videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-        duration: "18:20",
-        module: "Introduction to E-commerce",
+        title: 'Market Research Basics',
+        description: 'Learn how to conduct effective market research to identify profitable niches and understand your target audience.',
+        videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
+        duration: '18:20',
+        module: 'Introduction to E-commerce',
         checklist: [
-          "Identify your target market",
-          "Analyze market size and potential", 
-          "Study competitor pricing strategies",
-          "Research customer pain points",
-          "Create buyer personas"
+          'Identify your target market',
+          'Analyze market size and potential', 
+          'Study competitor pricing strategies',
+          'Research customer pain points',
+          'Create buyer personas'
         ]
       });
     }
-  }, [searchParams, lessonId]);
+  }
+}, [searchParams, lessonId]);
 
   const modules = [
     {

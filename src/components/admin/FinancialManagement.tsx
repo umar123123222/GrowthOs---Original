@@ -11,7 +11,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface Invoice {
   id: string;
-  user_id: string;
+  student_id: string | null;
   installment_number: number;
   amount: number;
   due_date: string;
@@ -40,82 +40,118 @@ export const FinancialManagement = () => {
     calculateStats();
   }, []);
 
-  const fetchInvoices = async () => {
-    try {
-      // Temporary mock data until types are regenerated
-      const mockInvoices: Invoice[] = [
-        {
-          id: '1',
-          user_id: 'user1',
-          installment_number: 1,
-          amount: 1000,
-          due_date: '2024-01-15',
-          status: 'paid',
-          payment_date: '2024-01-10',
-          users: { email: 'student1@example.com' }
-        }
-      ];
-      setInvoices(mockInvoices);
-    } catch (error) {
-      console.error('Error fetching invoices:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to fetch invoices',
-        variant: 'destructive'
-      });
-    } finally {
-      setLoading(false);
+const fetchInvoices = async () => {
+  setLoading(true);
+  try {
+    const { data: invData, error: invErr } = await supabase
+      .from('invoices')
+      .select('id, student_id, installment_number, amount, due_date, status, paid_at');
+    if (invErr) throw invErr;
+
+    const invoicesRaw = invData || [];
+    const studentIds = Array.from(new Set(invoicesRaw.map((i: any) => i.student_id).filter(Boolean)));
+
+    let studentMap = new Map<string, string>(); // student_id -> user_id
+    let emailMap = new Map<string, string>();   // user_id -> email
+
+    if (studentIds.length) {
+      const [{ data: students, error: sErr }, { data: users, error: uErr }] = await Promise.all([
+        supabase.from('students').select('id, user_id').in('id', studentIds),
+        supabase.from('users').select('id, email')
+      ]);
+      if (sErr) throw sErr;
+      if (uErr) throw uErr;
+
+      (students || []).forEach((s: any) => studentMap.set(s.id, s.user_id));
+      (users || []).forEach((u: any) => emailMap.set(u.id, u.email));
     }
-  };
 
-  const calculateStats = async () => {
-    try {
-      // Mock stats until types are regenerated
-      setStats({
-        totalRevenue: 45231,
-        pendingAmount: 12000,
-        overdueAmount: 3500,
-        collectionRate: 85.2
-      });
-    } catch (error) {
-      console.error('Error calculating stats:', error);
+    const mapped: Invoice[] = (invoicesRaw as any[]).map((row: any) => {
+      const userId = row.student_id ? (studentMap.get(row.student_id) || '') : '';
+      const email = userId ? (emailMap.get(userId) || '') : '';
+      return {
+        id: row.id,
+        student_id: row.student_id || null,
+        installment_number: row.installment_number,
+        amount: Number(row.amount || 0),
+        due_date: row.due_date,
+        status: row.status,
+        payment_date: row.paid_at,
+        users: { email }
+      };
+    });
+
+    setInvoices(mapped);
+  } catch (error) {
+    console.error('Error fetching invoices:', error);
+    toast({ title: 'Error', description: 'Failed to fetch invoices', variant: 'destructive' });
+  } finally {
+    setLoading(false);
+  }
+};
+
+const calculateStats = async () => {
+  try {
+    const now = new Date();
+    const totalRevenue = invoices
+      .filter(i => i.status === 'paid')
+      .reduce((sum, i) => sum + (i.amount || 0), 0);
+    const pendingAmount = invoices
+      .filter(i => i.status === 'pending' || i.status === 'issued')
+      .reduce((sum, i) => sum + (i.amount || 0), 0);
+    const overdueAmount = invoices
+      .filter(i => i.status === 'issued' && new Date(i.due_date) < now)
+      .reduce((sum, i) => sum + (i.amount || 0), 0);
+    const collectionRate = invoices.length
+      ? (totalRevenue / (totalRevenue + pendingAmount + overdueAmount)) * 100
+      : 0;
+
+    setStats({ totalRevenue, pendingAmount, overdueAmount, collectionRate });
+  } catch (error) {
+    console.error('Error calculating stats:', error);
+  }
+};
+
+const updateInvoiceStatus = async (invoiceId: string, status: string) => {
+  try {
+    const updates: any = { status };
+    if (status === 'paid') {
+      updates.paid_at = new Date().toISOString();
+    } else if (status !== 'paid') {
+      updates.paid_at = null;
     }
-  };
 
-  const updateInvoiceStatus = async (invoiceId: string, status: string) => {
-    try {
-      // Mock update until types are regenerated
-      toast({
-        title: 'Success',
-        description: 'Invoice status updated (demo mode)'
-      });
+    const { error } = await supabase
+      .from('invoices')
+      .update(updates)
+      .eq('id', invoiceId);
+    if (error) throw error;
 
-      fetchInvoices();
-      calculateStats();
-    } catch (error) {
-      console.error('Error updating invoice:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update invoice',
-        variant: 'destructive'
-      });
-    }
-  };
+    toast({ title: 'Success', description: 'Invoice status updated' });
 
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      paid: { color: 'bg-green-500', label: 'Paid' },
-      pending: { color: 'bg-yellow-500', label: 'Pending' },
-      overdue: { color: 'bg-red-500', label: 'Overdue' },
-      failed: { color: 'bg-gray-500', label: 'Failed' }
-    };
-    const config = statusConfig[status as keyof typeof statusConfig];
-    return (
-      <Badge className={config?.color || 'bg-gray-500'}>
-        {config?.label || status}
-      </Badge>
-    );
+    await fetchInvoices();
+    await calculateStats();
+  } catch (error) {
+    console.error('Error updating invoice:', error);
+    toast({ title: 'Error', description: 'Failed to update invoice', variant: 'destructive' });
+  }
+};
+
+const getStatusBadge = (status: string) => {
+  const statusConfig: any = {
+    paid: { color: 'bg-green-500', label: 'Paid' },
+    pending: { color: 'bg-yellow-500', label: 'Pending' },
+    issued: { color: 'bg-amber-500', label: 'Issued' },
+    overdue: { color: 'bg-red-500', label: 'Overdue' },
+    failed: { color: 'bg-gray-500', label: 'Failed' }
   };
+  const config = statusConfig[status] || { color: 'bg-gray-500', label: status };
+  return (
+    <Badge className={config.color}>
+      {config.label}
+    </Badge>
+  );
+};
 
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch = invoice.users?.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -205,6 +241,7 @@ export const FinancialManagement = () => {
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="issued">Issued</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
@@ -243,12 +280,13 @@ export const FinancialManagement = () => {
                       <SelectTrigger className="w-32">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="paid">Paid</SelectItem>
-                        <SelectItem value="overdue">Overdue</SelectItem>
-                        <SelectItem value="failed">Failed</SelectItem>
-                      </SelectContent>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="issued">Issued</SelectItem>
+                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="overdue">Overdue</SelectItem>
+                          <SelectItem value="failed">Failed</SelectItem>
+                        </SelectContent>
                     </Select>
                   </TableCell>
                 </TableRow>

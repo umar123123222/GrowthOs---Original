@@ -42,16 +42,13 @@ const Videos = () => {
     fetchUserLMSStatus();
   }, [user?.id]);
 
-  const handleWatchRecording = async (recording: any) => {
-    if (userLMSStatus !== 'active') return;
-    if (!recording.isUnlocked || !recording.recording_url) return;
+const handleWatchRecording = async (recording: any) => {
+  if (userLMSStatus !== 'active') return;
+  if (!recording.isUnlocked || !recording.recording_url) return;
 
-    // Mark as watched
-    await markRecordingWatched(recording.id);
-    
-    // Navigate to video player
-    navigate(`/video-player?id=${recording.id}`);
-  };
+  await markRecordingWatched(recording.id);
+  navigate(`/video-player?id=${recording.id}`);
+};
 
   const handleAssignmentClick = (recording: any) => {
     if (userLMSStatus !== 'active') return;
@@ -258,8 +255,8 @@ const Videos = () => {
               }
             }}
             assignment={{
-              id: selectedRecording.id,
-              name: `Assignment for ${selectedRecording.recording_title}`
+              id: selectedRecording.assignmentId,
+              name: selectedRecording.assignmentTitle || `Assignment for ${selectedRecording.recording_title}`
             }}
             userId={user?.id || ""}
             hasSubmitted={selectedRecording.assignmentSubmitted}

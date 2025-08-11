@@ -36,37 +36,46 @@ export const useAuth = () => {
     }
   };
 
-  // Set up activity tracking
-  useEffect(() => {
-    if (!user?.id) return;
+// Set up activity tracking (with throttling)
+useEffect(() => {
+  if (!user?.id) return;
 
-    // Update activity immediately
+  const lastActivityRef = { current: 0 } as { current: number };
+  const touch = () => { lastActivityRef.current = Date.now(); };
+
+  // Update activity immediately
+  updateLastActive(user.id);
+  touch();
+
+  // Update activity every 2 minutes while user is active
+  const activityInterval = setInterval(() => {
     updateLastActive(user.id);
+    touch();
+  }, 2 * 60 * 1000); // 2 minutes
 
-    // Update activity every 2 minutes while user is active
-    const activityInterval = setInterval(() => {
+  // Update activity on user interactions (throttled to 60s)
+  const handleUserActivity = () => {
+    const now = Date.now();
+    if (now - lastActivityRef.current > 60 * 1000) {
       updateLastActive(user.id);
-    }, 2 * 60 * 1000); // 2 minutes
+      touch();
+    }
+  };
 
-    // Update activity on user interactions
-    const handleUserActivity = () => {
-      updateLastActive(user.id);
-    };
+  // Listen for user activity
+  document.addEventListener('mousedown', handleUserActivity);
+  document.addEventListener('keydown', handleUserActivity);
+  document.addEventListener('scroll', handleUserActivity);
+  document.addEventListener('touchstart', handleUserActivity);
 
-    // Listen for user activity
-    document.addEventListener('mousedown', handleUserActivity);
-    document.addEventListener('keydown', handleUserActivity);
-    document.addEventListener('scroll', handleUserActivity);
-    document.addEventListener('touchstart', handleUserActivity);
-
-    return () => {
-      clearInterval(activityInterval);
-      document.removeEventListener('mousedown', handleUserActivity);
-      document.removeEventListener('keydown', handleUserActivity);
-      document.removeEventListener('scroll', handleUserActivity);
-      document.removeEventListener('touchstart', handleUserActivity);
-    };
-  }, [user?.id]);
+  return () => {
+    clearInterval(activityInterval);
+    document.removeEventListener('mousedown', handleUserActivity);
+    document.removeEventListener('keydown', handleUserActivity);
+    document.removeEventListener('scroll', handleUserActivity);
+    document.removeEventListener('touchstart', handleUserActivity);
+  };
+}, [user?.id]);
 
   useEffect(() => {
     logger.debug('useAuth: Starting authentication check');

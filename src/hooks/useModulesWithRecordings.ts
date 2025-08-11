@@ -15,6 +15,8 @@ interface Recording {
   isWatched: boolean;
   hasAssignment: boolean;
   assignmentSubmitted: boolean;
+  assignmentId?: string;
+  assignmentTitle?: string;
 }
 
 interface Module {
@@ -81,7 +83,7 @@ export const useModulesWithRecordings = () => {
       const tAssignStart = performance.now();
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('assignments')
-        .select('id, recording_id')
+        .select('id, recording_id, name')
         .not('recording_id', 'is', null);
       logger.performance('mods.fetch_assignments', performance.now() - tAssignStart, { corrId });
 
@@ -117,7 +119,9 @@ export const useModulesWithRecordings = () => {
               isUnlocked,
               isWatched: view?.watched || false,
               hasAssignment: !!assignment,
-              assignmentSubmitted: !!submission && submission.status !== 'declined'
+              assignmentSubmitted: !!submission && submission.status !== 'declined',
+              assignmentId: assignment?.id,
+              assignmentTitle: assignment?.name
             };
           })
           .sort((a, b) => a.sequence_order - b.sequence_order);
