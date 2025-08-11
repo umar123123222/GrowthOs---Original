@@ -47,6 +47,7 @@ interface InstallmentPayment {
   installment_number: number;
   amount: number;
   status: string;
+  created_at?: string;
 }
 interface ActivityLog {
   id: string;
@@ -152,7 +153,8 @@ export function StudentsManagement() {
           id: invoice.id,
           installment_number: invoice.installment_number,
           amount: invoice.amount,
-          status: invoice.status
+          status: invoice.status,
+          created_at: invoice.created_at
         };
         const userPayments = paymentsMap.get(invoice.student_id) || [];
         userPayments.push(payment);
@@ -625,6 +627,19 @@ export function StudentsManagement() {
       color: 'bg-orange-100 text-orange-800'
     };
   };
+
+  // Compute last invoice sent date from invoices map
+  const getLastInvoiceSentDate = (student: Student) => {
+    const key = student.student_record_id || '';
+    const payments = installmentPayments.get(key) || [];
+    const issued = payments
+      .filter(p => p.status === 'issued' && p.created_at)
+      .sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime());
+    if (issued.length > 0) {
+      return formatDate(issued[0].created_at as string);
+    }
+    return 'N/A';
+  };
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
       const student = students.find(s => s.id === studentId);
@@ -1081,7 +1096,7 @@ export function StudentsManagement() {
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(student.last_invoice_date)}</p>
+                                <p className="text-sm text-gray-900">{getLastInvoiceSentDate(student)}</p>
                               </div>
                               {student.fees_due_date && (
                                 <div>
