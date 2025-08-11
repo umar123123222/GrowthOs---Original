@@ -435,7 +435,7 @@ const EnrollmentManagerDashboard = () => {
                   <TableHead>Email</TableHead>
                   <TableHead>Enrollment Date</TableHead>
                   <TableHead>LMS Status</TableHead>
-                  <TableHead>Payment Status</TableHead>
+                  <TableHead>1st Payment Status</TableHead>
                   <TableHead>Onboarding</TableHead>
                 </TableRow>
               </TableHeader>
