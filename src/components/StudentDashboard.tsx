@@ -62,6 +62,7 @@ export function StudentDashboard() {
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [userLMSStatus, setUserLMSStatus] = useState<string>('active');
   const [firstOnboardingAnswer, setFirstOnboardingAnswer] = useState<string>('');
+  const [firstOnboardingRange, setFirstOnboardingRange] = useState<{ min: string; max: string } | null>(null);
   // Fetch all dashboard data
   useEffect(() => {
     if (user?.id) {
@@ -123,6 +124,51 @@ export function StudentDashboard() {
         }
         if (!firstAnswerText && studentData?.goal_brief) {
           firstAnswerText = String(studentData.goal_brief);
+        }
+        // Derive range (ans1 to ans2) from first question value when available
+        let rangeMin = '';
+        let rangeMax = '';
+        try {
+          if (answers) {
+            if (Array.isArray(answers)) {
+              const v: any = answers[0]?.value;
+              if (Array.isArray(v) && v.length >= 2) {
+                rangeMin = String(v[0]);
+                rangeMax = String(v[1]);
+              } else if (typeof v === 'string') {
+                const parts = v.split(/\s*(?:to|-)\s*/i).map(s => s.trim()).filter(Boolean);
+                if (parts.length >= 2) {
+                  rangeMin = parts[0];
+                  rangeMax = parts[1];
+                }
+              } else if (v && typeof v === 'object' && (v.min || v.max)) {
+                rangeMin = String(v.min ?? '');
+                rangeMax = String(v.max ?? '');
+              }
+            } else if (typeof answers === 'object') {
+              const entries = Object.values(answers as Record<string, any>) as any[];
+              const first = entries.sort((a, b) => (a?.order || 0) - (b?.order || 0))[0];
+              const v: any = first?.value;
+              if (Array.isArray(v) && v.length >= 2) {
+                rangeMin = String(v[0]);
+                rangeMax = String(v[1]);
+              } else if (typeof v === 'string') {
+                const parts = v.split(/\s*(?:to|-)\s*/i).map(s => s.trim()).filter(Boolean);
+                if (parts.length >= 2) {
+                  rangeMin = parts[0];
+                  rangeMax = parts[1];
+                }
+              } else if (v && typeof v === 'object' && (v.min || v.max)) {
+                rangeMin = String(v.min ?? '');
+                rangeMax = String(v.max ?? '');
+              }
+            }
+          }
+        } catch {}
+        if (rangeMin && rangeMax) {
+          setFirstOnboardingRange({ min: rangeMin, max: rangeMax });
+        } else {
+          setFirstOnboardingRange(null);
         }
         if (firstAnswerText) setFirstOnboardingAnswer(firstAnswerText);
       } catch (e) {
@@ -221,7 +267,12 @@ export function StudentDashboard() {
             
             <div className="bg-background/80 rounded-lg p-4 border border-primary/10">
               <p className="text-base font-normal text-foreground leading-relaxed">
-                {firstOnboardingAnswer || extractFinancialGoalForDisplay(dreamGoal)}
+                {firstOnboardingRange?.min && firstOnboardingRange?.max
+                  ? <>wants to earn {firstOnboardingRange.min} to {firstOnboardingRange.max}</>
+                  : firstOnboardingAnswer
+                  ? <>wants to earn {firstOnboardingAnswer}</>
+                  : extractFinancialGoalForDisplay(dreamGoal)
+                }
               </p>
             </div>
             
