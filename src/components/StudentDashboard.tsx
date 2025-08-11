@@ -268,9 +268,9 @@ export function StudentDashboard() {
             <div className="bg-background/80 rounded-lg p-4 border border-primary/10">
               <p className="text-base font-normal text-foreground leading-relaxed">
                 {firstOnboardingRange?.min && firstOnboardingRange?.max
-                  ? <>wants to earn {firstOnboardingRange.min} to {firstOnboardingRange.max}</>
+                  ? <>You want to earn between {firstOnboardingRange.min} and {firstOnboardingRange.max}.</>
                   : firstOnboardingAnswer
-                  ? <>wants to earn {firstOnboardingAnswer}</>
+                  ? <>You want to earn {firstOnboardingAnswer}.</>
                   : extractFinancialGoalForDisplay(dreamGoal)
                 }
               </p>
