@@ -627,14 +627,14 @@ export function StudentsManagement() {
     if (payments.length === 0) {
       return {
         status: 'No Invoice',
-        color: 'bg-gray-100 text-gray-800'
+        color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]'
       };
     }
     const paidPayments = payments.filter(p => p.status === 'paid');
     if (paidPayments.length >= totalInstallments) {
       return {
         status: 'Fees Cleared',
-        color: 'bg-green-100 text-green-800'
+        color: 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]'
       };
     }
     if (paidPayments.length > 0) {
@@ -648,27 +648,29 @@ export function StudentsManagement() {
       };
       return {
         status: `${ordinalSuffix(paidPayments.length)} Installment Paid`,
-        color: 'bg-blue-100 text-blue-800'
+        color: 'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:bg-[hsl(var(--primary))]'
       };
     }
     const openInvoices = payments.filter(p => p.status !== 'paid');
-    const latestOpen = openInvoices.sort((a, b) => new Date(a.due_date || a.created_at || '').getTime() - new Date(b.due_date || b.created_at || '').getTime()).pop();
+    const latestOpen = openInvoices
+      .sort((a, b) => new Date(a.due_date || a.created_at || '').getTime() - new Date(b.due_date || b.created_at || '').getTime())
+      .pop();
     if (latestOpen) {
       const due = latestOpen.due_date ? new Date(latestOpen.due_date) : null;
       if (due && due.getTime() < Date.now()) {
         return {
           status: 'Fees Overdue',
-          color: 'bg-red-100 text-red-800'
+          color: 'bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] hover:bg-[hsl(var(--destructive))]'
         };
       }
       return {
         status: 'Fees Due',
-        color: 'bg-orange-100 text-orange-800'
+        color: 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] hover:bg-[hsl(var(--warning))]'
       };
     }
     return {
       status: 'No Invoice',
-      color: 'bg-gray-100 text-gray-800'
+      color: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))]'
     };
   };
 
@@ -1117,10 +1119,11 @@ export function StudentsManagement() {
                                  <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
                                </div>
                              </Badge>
-                             {student.fees_overdue && <Badge variant="destructive">
-                                 <DollarSign className="w-3 h-3 mr-1" />
-                                 <span className="text-xs">Fees Due</span>
-                               </Badge>}
+                             {(() => { const inst = getInstallmentStatus(student); return (
+                               <Badge className={inst.color}>
+                                 <span className="text-xs font-medium">{inst.status}</span>
+                               </Badge>
+                             ); })()}
                            </div>
                          </TableCell>
                          <TableCell>{student.creator?.full_name || 'System'}</TableCell>
