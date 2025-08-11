@@ -121,7 +121,7 @@ export function StudentsManagement() {
   }, [students]);
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, installmentPayments]);
 
   // Re-render periodically so time-based invoice statuses update without refresh
   useEffect(() => {
@@ -260,13 +260,23 @@ export function StudentsManagement() {
       filtered = filtered.filter(student => student.fees_structure === feesStructureFilter);
     }
 
-    // Apply invoice filter
-    if (invoiceFilter === 'fees_due') {
-      filtered = filtered.filter(student => student.last_invoice_sent && !student.fees_overdue);
-    } else if (invoiceFilter === 'fees_overdue') {
-      filtered = filtered.filter(student => student.fees_overdue);
-    } else if (invoiceFilter === 'fees_cleared') {
-      filtered = filtered.filter(student => !student.fees_overdue && student.last_invoice_sent);
+    // Apply invoice filter via invoices map
+    const now = new Date();
+    if (invoiceFilter !== 'all') {
+      filtered = filtered.filter(student => {
+        const key = String(student.student_record_id || '');
+        const invs = installmentPayments.get(key) || [];
+        if (invoiceFilter === 'fees_due') {
+          return invs.some(inv => inv.status === 'issued' && inv.due_date && new Date(inv.due_date) >= now);
+        }
+        if (invoiceFilter === 'fees_overdue') {
+          return invs.some(inv => inv.status === 'issued' && inv.due_date && new Date(inv.due_date) < now);
+        }
+        if (invoiceFilter === 'fees_cleared') {
+          return invs.length > 0 && !invs.some(inv => inv.status === 'issued');
+        }
+        return true;
+      });
     }
     setFilteredStudents(filtered);
   };
@@ -905,7 +915,8 @@ export function StudentsManagement() {
         <span className="ml-2 text-muted-foreground">Loading students...</span>
       </div>;
   }
-  const displayStudents = filteredStudents.length > 0 ? filteredStudents : students;
+  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all';
+  const displayStudents = hasActiveFilters ? filteredStudents : students;
   return <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden bg-slate-50 px-0">
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div className="animate-fade-in">
