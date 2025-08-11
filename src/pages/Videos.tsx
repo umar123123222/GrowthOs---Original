@@ -170,7 +170,7 @@ const handleWatchRecording = async (recording: any) => {
                                     </span>
                                   )}
                                   {recording.hasAssignment && (
-                                    <Badge variant="outline" className="text-xs">
+                                    <Badge variant="outline" className="bg-warning text-warning-foreground border-warning text-xs">
                                       <BookOpen className="w-3 h-3 mr-1" />
                                       Assignment Required
                                     </Badge>
