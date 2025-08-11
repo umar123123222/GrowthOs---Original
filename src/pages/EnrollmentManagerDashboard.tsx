@@ -467,7 +467,14 @@ const EnrollmentManagerDashboard = () => {
                       <TableCell>{enrollment.student_email}</TableCell>
                       <TableCell>{format(new Date(enrollment.enrollment_date), 'MMM dd, yyyy')}</TableCell>
                       <TableCell>
-                        <Badge variant={getStatusBadgeVariant(enrollment.lms_status)} className="bg-red-600">
+                        <Badge
+                          variant={getStatusBadgeVariant(enrollment.lms_status)}
+                          className={cn(
+                            enrollment.lms_status === 'active' && 'bg-green-600 text-white hover:bg-green-600',
+                            enrollment.lms_status === 'inactive' && 'bg-yellow-500 text-black hover:bg-yellow-500',
+                            enrollment.lms_status === 'suspended' && 'bg-red-600 text-white hover:bg-red-600'
+                          )}
+                        >
                           {enrollment.lms_status.charAt(0).toUpperCase() + enrollment.lms_status.slice(1)}
                         </Badge>
                       </TableCell>
