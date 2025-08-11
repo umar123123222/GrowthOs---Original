@@ -21,6 +21,7 @@ interface EnrollmentRecord {
   enrollment_date: string;
   lms_status: 'active' | 'inactive' | 'suspended';
   payment_status: 'current' | 'overdue' | 'pending';
+  first_payment_status: 'due' | 'overdue' | 'cleared';
   onboarding_completed: boolean;
   created_by: string;
   enrollment_manager_name?: string;
@@ -113,7 +114,7 @@ const EnrollmentManagerDashboard = () => {
         const {
           data: invoicesData,
           error: invoicesError
-        } = await supabase.from('invoices').select('student_id, status, due_date').in('student_id', myEnrollments?.map(s => s.id) || []);
+        } = await supabase.from('invoices').select('student_id, status, due_date, installment_number, paid_at').in('student_id', myEnrollments?.map(s => s.id) || []);
         if (invoicesError) throw invoicesError;
 
         // Process enrollment records for my students only
@@ -122,6 +123,18 @@ const EnrollmentManagerDashboard = () => {
           const invoices = invoicesData?.filter(inv => inv.student_id === student.id) || [];
           const hasOverdue = invoices.some(inv => inv.status === 'pending' && new Date(inv.due_date) < new Date());
           const hasPending = invoices.some(inv => inv.status === 'pending');
+          // Determine 1st payment/invoice status
+          const firstInvoice = invoices.find(inv => inv.installment_number === 1);
+          let first_payment_status: 'due' | 'overdue' | 'cleared' = 'due';
+          if (firstInvoice) {
+            if (firstInvoice.status === 'paid' || firstInvoice.paid_at) {
+              first_payment_status = 'cleared';
+            } else if (firstInvoice.status === 'pending' && new Date(firstInvoice.due_date) < new Date()) {
+              first_payment_status = 'overdue';
+            } else {
+              first_payment_status = 'due';
+            }
+          }
           return {
             id: student.id,
             student_name: user.full_name,
@@ -129,6 +142,7 @@ const EnrollmentManagerDashboard = () => {
             enrollment_date: student.enrollment_date,
             lms_status: user.lms_status as 'active' | 'inactive' | 'suspended' || 'inactive',
             payment_status: hasOverdue ? 'overdue' as const : hasPending ? 'pending' as const : 'current' as const,
+            first_payment_status,
             onboarding_completed: student.onboarding_completed || false,
             created_by: user.created_by || '',
             enrollment_manager_name: user.created_by ? 'Current User' : 'Unknown'
@@ -224,6 +238,7 @@ const EnrollmentManagerDashboard = () => {
             enrollment_date: student.enrollment_date,
             lms_status: student.users.lms_status as 'active' | 'inactive' | 'suspended' || 'inactive',
             payment_status: 'current' as const,
+            first_payment_status: 'due' as const,
             onboarding_completed: student.onboarding_completed || false,
             created_by: student.users.created_by || ''
           }));
@@ -269,6 +284,7 @@ const EnrollmentManagerDashboard = () => {
             enrollment_date: student.enrollment_date,
             lms_status: student.users.lms_status as 'active' | 'inactive' | 'suspended' || 'inactive',
             payment_status: 'current' as const,
+            first_payment_status: 'due' as const,
             onboarding_completed: student.onboarding_completed || false,
             created_by: student.users.created_by || ''
           }));
@@ -296,8 +312,10 @@ const EnrollmentManagerDashboard = () => {
   const getPaymentBadgeVariant = (status: string) => {
     switch (status) {
       case 'current':
+      case 'cleared':
         return 'default';
       case 'pending':
+      case 'due':
         return 'secondary';
       case 'overdue':
         return 'destructive';
@@ -454,9 +472,9 @@ const EnrollmentManagerDashboard = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={getPaymentBadgeVariant(enrollment.payment_status)} className="bg-red-600">
-                          {enrollment.payment_status.charAt(0).toUpperCase() + enrollment.payment_status.slice(1)}
-                        </Badge>
+                      <Badge variant={getPaymentBadgeVariant(enrollment.first_payment_status)} className="bg-red-600">
+                        {enrollment.first_payment_status.charAt(0).toUpperCase() + enrollment.first_payment_status.slice(1)}
+                      </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge variant={enrollment.onboarding_completed ? 'default' : 'secondary'} className="bg-red-600">
@@ -503,6 +521,7 @@ const EnrollmentManagerDashboard = () => {
               enrollment_date: student.enrollment_date,
               lms_status: student.users.lms_status as 'active' | 'inactive' | 'suspended' || 'inactive',
               payment_status: 'current' as const,
+              first_payment_status: 'due' as const,
               onboarding_completed: student.onboarding_completed || false,
               created_by: student.users.created_by || ''
             }));
