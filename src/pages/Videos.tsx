@@ -157,10 +157,17 @@ const Videos = () => {
                                   Assignment Submitted
                                 </Badge>}
 
-                              {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && <Button variant="outline" size="sm" onClick={() => handleAssignmentClick(recording)} className="mr-2">
+                              {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => navigate(`/assignments?assignmentId=${recording.assignmentId}`)}
+                                  className="mr-2"
+                                >
                                   <BookOpen className="w-4 h-4 mr-1" />
                                   Assignment
-                                </Button>}
+                                </Button>
+                              )}
 
                               <Button variant={recording.isWatched ? "outline" : "default"} size="sm" disabled={userLMSStatus !== 'active' || !recording.isUnlocked || !recording.recording_url} onClick={() => handleWatchRecording(recording)} className={!(recording.isUnlocked && userLMSStatus === 'active') ? 'opacity-50' : ''}>
                                 <Play className="w-4 h-4 mr-1" />
