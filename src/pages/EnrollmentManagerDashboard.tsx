@@ -491,7 +491,12 @@ const EnrollmentManagerDashboard = () => {
                       </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={enrollment.onboarding_completed ? 'default' : 'secondary'} className="bg-red-600">
+                        <Badge
+                          variant={enrollment.onboarding_completed ? 'default' : 'secondary'}
+                          className={cn(
+                            enrollment.onboarding_completed ? 'bg-green-600 text-white hover:bg-green-600' : 'bg-yellow-500 text-black hover:bg-yellow-500'
+                          )}
+                        >
                           {enrollment.onboarding_completed ? 'Complete' : 'Pending'}
                         </Badge>
                       </TableCell>
