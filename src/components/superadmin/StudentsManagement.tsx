@@ -1110,7 +1110,7 @@ export function StudentsManagement() {
                               {/* Row 2: Invoice Status, LMS User ID, Password */}
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
-                                <p className="text-sm text-gray-900">{getInvoiceStatus(student)}</p>
+                                <p className="text-sm text-gray-900">{getLastInvoiceSentDate(student)}</p>
                               </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
