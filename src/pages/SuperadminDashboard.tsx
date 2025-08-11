@@ -54,7 +54,7 @@ export default function SuperadminDashboard() {
     }
   };
   return <RoleGuard allowedRoles={['superadmin']}>
-      <div className="w-full max-w-none p-6 animate-fade-in px-0">
+      <div className="w-full max-w-none p-6 animate-fade-in px-0 py-0">
         {renderContent()}
       </div>
     </RoleGuard>;
