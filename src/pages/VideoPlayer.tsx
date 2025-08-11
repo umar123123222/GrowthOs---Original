@@ -221,7 +221,7 @@ const VideoPlayer = () => {
               {/* Action Checklist */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Action Checklist</CardTitle>
+                  
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
