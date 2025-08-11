@@ -41,7 +41,7 @@ export function LectureRating({
 
     try {
       const { data, error } = await supabase
-        .from('lesson_ratings' as any)
+        .from('recording_ratings' as any)
         .select('*')
         .eq('user_id', user.id)
         .eq('recording_id', recordingId)
@@ -63,7 +63,7 @@ export function LectureRating({
     setLoading(true);
     try {
       const { error } = await supabase
-        .from('lesson_ratings' as any)
+        .from('recording_ratings' as any)
         .upsert({
           user_id: user.id,
           recording_id: recordingId,

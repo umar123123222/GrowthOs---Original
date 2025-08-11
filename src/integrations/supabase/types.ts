@@ -710,6 +710,54 @@ export type Database = {
           },
         ]
       }
+      recording_ratings: {
+        Row: {
+          created_at: string
+          feedback: string | null
+          id: string
+          lesson_title: string | null
+          rating: number
+          recording_id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          lesson_title?: string | null
+          rating: number
+          recording_id: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          lesson_title?: string | null
+          rating?: number
+          recording_id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_ratings_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "available_lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_ratings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recording_views: {
         Row: {
           created_at: string
@@ -1311,6 +1359,10 @@ export type Database = {
       get_users_by_role: {
         Args: { role_code: string }
         Returns: string[]
+      }
+      has_completed_all_modules: {
+        Args: { _user_id: string }
+        Returns: boolean
       }
       initialize_student_unlocks: {
         Args: { p_user_id: string }

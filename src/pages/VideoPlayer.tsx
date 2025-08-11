@@ -179,7 +179,7 @@ useEffect(() => {
 
       const ratingResult = await safeMaybeSingle(
         supabase
-          .from('lesson_ratings' as any)
+          .from('recording_ratings' as any)
           .select('id')
           .eq('user_id', user.id)
           .eq('recording_id', currentVideo.id)

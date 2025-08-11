@@ -45,7 +45,7 @@ export function RecordingAnalytics({ recordingId, recordingTitle }: RecordingAna
         {
           event: '*',
           schema: 'public',
-          table: 'lesson_ratings',
+          table: 'recording_ratings',
           filter: `recording_id=eq.${recordingId}`
         },
         () => {
@@ -62,7 +62,7 @@ export function RecordingAnalytics({ recordingId, recordingTitle }: RecordingAna
   const fetchRatingData = async () => {
     try {
       const { data: ratings, error } = await supabase
-        .from('lesson_ratings' as any)
+        .from('recording_ratings' as any)
         .select(`
           id,
           rating,

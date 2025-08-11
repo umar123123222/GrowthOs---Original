@@ -62,7 +62,7 @@ export function useRecordingRatings(recordingId: string | null) {
           rating,
           created_at,
           student_id,
-          profiles!recording_ratings_student_id_fkey(full_name)
+          users(full_name)
         `)
         .eq('recording_id', recordingId)
         .order('created_at', { ascending: false });
@@ -84,7 +84,7 @@ export function useRecordingRatings(recordingId: string | null) {
         rating: rating.rating,
         created_at: rating.created_at,
         student_id: rating.student_id,
-        student_name: rating.profiles?.full_name || 'Unknown Student'
+        student_name: rating.users?.full_name || 'Unknown Student'
       }));
 
       // Calculate summary statistics
