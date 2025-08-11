@@ -95,28 +95,38 @@ export function StudentDashboard() {
       const studentRes = await safeQuery(
         supabase
           .from('students')
-          .select('answers_json')
+          .select('answers_json, goal_brief')
           .eq('user_id', user.id)
           .maybeSingle() as any,
         `fetch student answers for ${user.id}`
       );
 
       const studentData = studentRes.data as any;
-      if (studentData?.answers_json) {
-        const answers = studentData.answers_json as any;
-        try {
-          const arr = Array.isArray(answers) ? answers : [];
-          if (arr.length > 0) {
-            const val: any = arr[0]?.value;
-            let text = '';
-            if (Array.isArray(val)) text = val.join(', ');
-            else if (val && typeof val === 'object') text = (val.name || val.url || '[file uploaded]');
-            else if (val !== null && val !== undefined) text = String(val);
-            setFirstOnboardingAnswer(text);
+      try {
+        let firstAnswerText = '';
+        const answers: any = studentData?.answers_json;
+        if (answers) {
+          if (Array.isArray(answers)) {
+            const val: any = answers[0]?.value;
+            if (Array.isArray(val)) firstAnswerText = val.join(', ');
+            else if (val && typeof val === 'object') firstAnswerText = (val.name || val.url || '[file uploaded]');
+            else if (val !== null && val !== undefined) firstAnswerText = String(val);
+          } else if (typeof answers === 'object') {
+            const entries = Object.values(answers as Record<string, any>) as any[];
+            const sorted = entries.sort((a, b) => (a?.order || 0) - (b?.order || 0));
+            const first = sorted[0];
+            const val: any = first?.value;
+            if (Array.isArray(val)) firstAnswerText = val.join(', ');
+            else if (val && typeof val === 'object') firstAnswerText = (val.name || val.url || '[file uploaded]');
+            else if (val !== null && val !== undefined) firstAnswerText = String(val);
           }
-        } catch (e) {
-          logger.warn('Failed to parse onboarding answers', e);
         }
+        if (!firstAnswerText && studentData?.goal_brief) {
+          firstAnswerText = String(studentData.goal_brief);
+        }
+        if (firstAnswerText) setFirstOnboardingAnswer(firstAnswerText);
+      } catch (e) {
+        logger.warn('Failed to parse onboarding answers', e);
       }
 
       // Calculate course progress
