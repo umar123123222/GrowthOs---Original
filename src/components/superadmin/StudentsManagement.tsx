@@ -1088,34 +1088,38 @@ export function StudentsManagement() {
                   rowElements.push(<TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
                          <TableCell colSpan={9} className="w-full bg-gradient-to-r from-slate-50 to-blue-50 p-0 border-l-4 border-l-blue-200">
                           <div className="w-full space-y-3 p-4 box-border">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                              {/* Row 1: Joining Date, Last Invoice Sent Date, Invoice Due Date */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                              {/* Row 1: Joining Date, Fees Structure, Last Invoice Sent Date */}
                               <div>
-                                <Label className="text-sm font-medium text-gray-700">Joining Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(student.created_at)}</p>
+                                <Label className="text-sm font-medium text-muted-foreground">Joining Date</Label>
+                                <p className="text-sm text-foreground">{formatDate(student.created_at)}</p>
                               </div>
                               <div>
-                                <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
-                                <p className="text-sm text-gray-900">{getLastInvoiceSentDate(student)}</p>
+                                <Label className="text-sm font-medium text-muted-foreground">Fees Structure</Label>
+                                <p className="text-sm text-foreground">{getFeesStructureLabel(student.fees_structure)}</p>
                               </div>
+                              <div>
+                                <Label className="text-sm font-medium text-muted-foreground">Last Invoice Sent Date</Label>
+                                <p className="text-sm text-foreground">{getLastInvoiceSentDate(student)}</p>
+                              </div>
+
+                              {/* Row 2: Invoice Due Date, Invoice Status, LMS User ID */}
                               {student.fees_due_date && (
                                 <div>
-                                  <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
-                                  <p className={`text-sm ${student.fees_overdue ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
+                                  <Label className="text-sm font-medium text-muted-foreground">Invoice Due Date</Label>
+                                  <p className={`text-sm ${student.fees_overdue ? 'text-destructive font-medium' : 'text-foreground'}`}>
                                     {formatDate(student.fees_due_date)}
                                   </p>
                                 </div>
                               )}
-
-                              {/* Row 2: Invoice Status, LMS User ID, Password */}
                               <div>
-                                <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
-                                <p className="text-sm text-gray-900">{getLastInvoiceSentDate(student)}</p>
+                                <Label className="text-sm font-medium text-muted-foreground">Invoice Status</Label>
+                                <p className="text-sm text-foreground">{getInvoiceStatus(student)}</p>
                               </div>
                               <div>
-                                <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">LMS User ID</Label>
                                 <div className="flex items-center space-x-2">
-                                  <p className="text-sm text-gray-900">{student.lms_user_id || 'Not set'}</p>
+                                  <p className="text-sm text-foreground">{student.lms_user_id || 'Not set'}</p>
                                   {student.lms_user_id && (
                                     <Button
                                       variant="ghost"
@@ -1128,10 +1132,12 @@ export function StudentsManagement() {
                                   )}
                                 </div>
                               </div>
+
+                              {/* Row 3: LMS Password */}
                               <div>
-                                <Label className="text-sm font-medium text-gray-700">LMS Password</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">LMS Password</Label>
                                 <div className="flex items-center space-x-2">
-                                  <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
+                                  <p className="text-sm text-foreground font-mono bg-muted px-3 py-2 rounded border">
                                     {student.password_display || 'Not set'}
                                   </p>
                                   {student.password_display && (
@@ -1147,15 +1153,11 @@ export function StudentsManagement() {
                                 </div>
                               </div>
 
-                              {/* Additional details (kept below as before) */}
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
-                                <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
-                              </div>
+                              {/* Optional: Last Suspended Date */}
                               {student.last_suspended_date && (
                                 <div>
-                                  <Label className="text-sm font-medium text-gray-700">Last Suspended Date</Label>
-                                  <p className="text-sm text-red-600">{formatDate(student.last_suspended_date)}</p>
+                                  <Label className="text-sm font-medium text-muted-foreground">Last Suspended Date</Label>
+                                  <p className="text-sm text-destructive">{formatDate(student.last_suspended_date)}</p>
                                 </div>
                               )}
                             </div>
