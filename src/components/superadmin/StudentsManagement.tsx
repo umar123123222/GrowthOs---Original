@@ -1074,39 +1074,43 @@ export function StudentsManagement() {
                          <TableCell colSpan={9} className="w-full bg-gradient-to-r from-slate-50 to-blue-50 p-0 border-l-4 border-l-blue-200">
                           <div className="w-full space-y-3 p-4 box-border">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(student.last_invoice_date)}</p>
-                              </div>
+                              {/* Row 1: Joining Date, Last Invoice Sent Date, Invoice Due Date */}
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">Joining Date</Label>
                                 <p className="text-sm text-gray-900">{formatDate(student.created_at)}</p>
                               </div>
                               <div>
-                                <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
-                                <p className="text-sm text-gray-900">{getInvoiceStatus(student)}</p>
+                                <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
+                                <p className="text-sm text-gray-900">{formatDate(student.last_invoice_date)}</p>
                               </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
-                                <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
-                              </div>
-                              {student.fees_due_date && <div>
+                              {student.fees_due_date && (
+                                <div>
                                   <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
                                   <p className={`text-sm ${student.fees_overdue ? 'text-red-600 font-medium' : 'text-gray-900'}`}>
                                     {formatDate(student.fees_due_date)}
                                   </p>
-                                </div>}
-                              {student.last_suspended_date && <div>
-                                  <Label className="text-sm font-medium text-gray-700">Last Suspended Date</Label>
-                                  <p className="text-sm text-red-600">{formatDate(student.last_suspended_date)}</p>
-                                </div>}
+                                </div>
+                              )}
+
+                              {/* Row 2: Invoice Status, LMS User ID, Password */}
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
+                                <p className="text-sm text-gray-900">{getInvoiceStatus(student)}</p>
+                              </div>
                               <div>
                                 <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
                                 <div className="flex items-center space-x-2">
                                   <p className="text-sm text-gray-900">{student.lms_user_id || 'Not set'}</p>
-                                  {student.lms_user_id && <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(student.lms_user_id)}>
+                                  {student.lms_user_id && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => navigator.clipboard.writeText(student.lms_user_id)}
+                                      title="Copy LMS User ID"
+                                    >
                                       <Key className="w-3 h-3" />
-                                    </Button>}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                               <div>
@@ -1115,11 +1119,30 @@ export function StudentsManagement() {
                                   <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
                                     {student.password_display || 'Not set'}
                                   </p>
-                                  {student.password_display && <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(student.password_display)} title="Copy password">
+                                  {student.password_display && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => navigator.clipboard.writeText(student.password_display)}
+                                      title="Copy password"
+                                    >
                                       <Key className="w-3 h-3" />
-                                    </Button>}
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
+
+                              {/* Additional details (kept below as before) */}
+                              <div>
+                                <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
+                                <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
+                              </div>
+                              {student.last_suspended_date && (
+                                <div>
+                                  <Label className="text-sm font-medium text-gray-700">Last Suspended Date</Label>
+                                  <p className="text-sm text-red-600">{formatDate(student.last_suspended_date)}</p>
+                                </div>
+                              )}
                             </div>
                             
                             {/* Installment Payment Buttons */}
