@@ -437,11 +437,11 @@ export function StudentsManagement() {
   const getLMSStatusColor = (lmsStatus: string) => {
     switch (lmsStatus) {
       case 'active':
-        return 'bg-green-100 text-green-800';
+        return 'bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] hover:bg-[hsl(var(--success))]';
       case 'inactive':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))] hover:bg-[hsl(var(--warning))]';
       case 'suspended':
-        return 'bg-red-100 text-red-800';
+        return 'bg-[hsl(var(--destructive))] text-[hsl(var(--destructive-foreground))] hover:bg-[hsl(var(--destructive))]';
       case 'dropout':
         return 'bg-orange-100 text-orange-800';
       case 'complete':
