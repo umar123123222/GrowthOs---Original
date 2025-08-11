@@ -191,7 +191,7 @@ const handleWatchRecording = async (recording: any) => {
 
                             <div className="flex items-center gap-2">
 {recording.isWatched && (
-  <Badge variant="outline" className="bg-success text-success-foreground border-success">
+  <Badge variant="outline" className="bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] border-[hsl(var(--success))]">
     <CheckCircle className="w-3 h-3 mr-1" />
     Completed
   </Badge>
