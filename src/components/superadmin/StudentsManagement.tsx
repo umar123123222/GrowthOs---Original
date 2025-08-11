@@ -48,6 +48,8 @@ interface InstallmentPayment {
   amount: number;
   status: string;
   created_at?: string;
+  due_date?: string;
+  paid_at?: string | null;
 }
 interface ActivityLog {
   id: string;
@@ -154,11 +156,14 @@ export function StudentsManagement() {
           installment_number: invoice.installment_number,
           amount: invoice.amount,
           status: invoice.status,
-          created_at: invoice.created_at
+          created_at: invoice.created_at,
+          due_date: invoice.due_date,
+          paid_at: invoice.paid_at
         };
-        const userPayments = paymentsMap.get(invoice.student_id) || [];
+        const key = String(invoice.student_id || '');
+        const userPayments = paymentsMap.get(key) || [];
         userPayments.push(payment);
-        paymentsMap.set(invoice.student_id, userPayments);
+        paymentsMap.set(key, userPayments);
       });
       setInstallmentPayments(paymentsMap);
     } catch (error) {
@@ -589,26 +594,49 @@ export function StudentsManagement() {
     });
   };
   const getInvoiceStatus = (student: Student) => {
-    if (student.fees_overdue) return 'Fees Overdue';
-    if (student.last_invoice_sent && !student.fees_overdue) return 'Fees Due';
+    const key = student.student_record_id || '';
+    const payments = installmentPayments.get(key) || [];
+    const totalInstallments = student.fees_structure === '2_installments' ? 2 : student.fees_structure === '3_installments' ? 3 : 1;
+
+    if (payments.length === 0) return 'No Invoice';
+
+    const paidCount = payments.filter(p => p.status === 'paid').length;
+    if (paidCount >= totalInstallments) return 'Fees Cleared';
+
+    const openInvoices = payments.filter(p => p.status !== 'paid');
+    const latestOpen = openInvoices
+      .sort((a, b) => new Date((a.due_date || a.created_at || '')).getTime() - new Date((b.due_date || b.created_at || '')).getTime())
+      .pop();
+
+    if (latestOpen) {
+      const due = latestOpen.due_date ? new Date(latestOpen.due_date) : null;
+      if (due && due.getTime() < Date.now()) return 'Fees Overdue';
+      return 'Fees Due';
+    }
+
     return 'No Invoice';
   };
   const getInstallmentStatus = (student: Student) => {
-    const payments = installmentPayments.get(student.id) || [];
+    const keyPrimary = student.student_record_id || '';
+    const payments = installmentPayments.get(keyPrimary) || installmentPayments.get(student.id) || [];
     const totalInstallments = student.fees_structure === '2_installments' ? 2 : student.fees_structure === '3_installments' ? 3 : 1;
+
     if (payments.length === 0) {
       return {
-        status: getInvoiceStatus(student),
+        status: 'No Invoice',
         color: 'bg-gray-100 text-gray-800'
       };
     }
+
     const paidPayments = payments.filter(p => p.status === 'paid');
-    if (paidPayments.length === totalInstallments) {
+    if (paidPayments.length >= totalInstallments) {
       return {
         status: 'Fees Cleared',
         color: 'bg-green-100 text-green-800'
       };
-    } else if (paidPayments.length > 0) {
+    }
+
+    if (paidPayments.length > 0) {
       const ordinalSuffix = (n: number) => {
         const j = n % 10;
         const k = n % 100;
@@ -622,9 +650,23 @@ export function StudentsManagement() {
         color: 'bg-blue-100 text-blue-800'
       };
     }
+
+    const openInvoices = payments.filter(p => p.status !== 'paid');
+    const latestOpen = openInvoices
+      .sort((a, b) => new Date((a.due_date || a.created_at || '')).getTime() - new Date((b.due_date || b.created_at || '')).getTime())
+      .pop();
+
+    if (latestOpen) {
+      const due = latestOpen.due_date ? new Date(latestOpen.due_date) : null;
+      if (due && due.getTime() < Date.now()) {
+        return { status: 'Fees Overdue', color: 'bg-red-100 text-red-800' };
+      }
+      return { status: 'Fees Due', color: 'bg-orange-100 text-orange-800' };
+    }
+
     return {
-      status: getInvoiceStatus(student),
-      color: 'bg-orange-100 text-orange-800'
+      status: 'No Invoice',
+      color: 'bg-gray-100 text-gray-800'
     };
   };
 
@@ -632,13 +674,38 @@ export function StudentsManagement() {
   const getLastInvoiceSentDate = (student: Student) => {
     const key = student.student_record_id || '';
     const payments = installmentPayments.get(key) || [];
-    const issued = payments
-      .filter(p => p.status === 'issued' && p.created_at)
+    const sorted = payments
+      .filter(p => (p.status === 'issued' || p.status === 'pending' || p.status === 'paid') && p.created_at)
       .sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime());
-    if (issued.length > 0) {
-      return formatDate(issued[0].created_at as string);
+    if (sorted.length > 0) {
+      return formatDate(sorted[0].created_at as string);
     }
     return 'N/A';
+  };
+
+  // Compute invoice due date from latest open invoice
+  const getInvoiceDueDate = (student: Student) => {
+    const key = student.student_record_id || '';
+    const payments = installmentPayments.get(key) || [];
+    const openInvoices = payments.filter(p => p.status !== 'paid' && (p.due_date || p.created_at));
+    if (openInvoices.length === 0) return 'N/A';
+    const latest = openInvoices
+      .sort((a, b) => new Date((a.due_date || a.created_at || '')).getTime() - new Date((b.due_date || b.created_at || '')).getTime())
+      .pop();
+    if (!latest) return 'N/A';
+    return latest.due_date ? formatDate(latest.due_date) : (latest.created_at ? formatDate(latest.created_at) : 'N/A');
+  };
+
+  const isInvoiceOverdue = (student: Student) => {
+    const key = student.student_record_id || '';
+    const payments = installmentPayments.get(key) || [];
+    const openInvoices = payments.filter(p => p.status !== 'paid' && p.due_date);
+    if (openInvoices.length === 0) return false;
+    const latest = openInvoices
+      .sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime())
+      .pop();
+    if (!latest || !latest.due_date) return false;
+    return new Date(latest.due_date).getTime() < Date.now();
   };
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
@@ -1104,14 +1171,12 @@ export function StudentsManagement() {
                               </div>
 
                               {/* Row 2: Invoice Due Date, Invoice Status, LMS User ID */}
-                              {student.fees_due_date && (
-                                <div>
-                                  <Label className="text-sm font-medium text-muted-foreground">Invoice Due Date</Label>
-                                  <p className={`text-sm ${student.fees_overdue ? 'text-destructive font-medium' : 'text-foreground'}`}>
-                                    {formatDate(student.fees_due_date)}
-                                  </p>
-                                </div>
-                              )}
+                              <div>
+                                <Label className="text-sm font-medium text-muted-foreground">Invoice Due Date</Label>
+                                <p className={`text-sm ${isInvoiceOverdue(student) ? 'text-destructive font-medium' : 'text-foreground'}`}>
+                                  {getInvoiceDueDate(student)}
+                                </p>
+                              </div>
                               <div>
                                 <Label className="text-sm font-medium text-muted-foreground">Invoice Status</Label>
                                 <p className="text-sm text-foreground">{getInvoiceStatus(student)}</p>
@@ -1170,8 +1235,8 @@ export function StudentsManagement() {
                               length: student.fees_structure === '1_installment' ? 1 : student.fees_structure === '2_installments' ? 2 : 3
                             }, (_, index) => {
                               const installmentNumber = index + 1;
-                              const payments = installmentPayments.get(student.id) || [];
-                              const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
+                               const payments = installmentPayments.get(student.student_record_id || '') || installmentPayments.get(student.id) || [];
+                               const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
                               return <Button key={installmentNumber} variant={isPaid ? "default" : "outline"} size="sm" disabled={isPaid} onClick={() => handleMarkInstallmentPaid(student.id, installmentNumber)} className={`hover-scale ${isPaid ? "bg-green-500 hover:bg-green-600" : "hover:border-green-300 hover:text-green-600"}`}>
                                         {isPaid ? <CheckCircle className="w-4 h-4 mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
                                         {isPaid ? `${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid` : `Mark ${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid`}
