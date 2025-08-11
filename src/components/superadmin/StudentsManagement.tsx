@@ -14,6 +14,7 @@ import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Downloa
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { useAuth } from '@/hooks/useAuth';
 import jsPDF from 'jspdf';
@@ -101,6 +102,7 @@ export function StudentsManagement() {
     lms_status: 'inactive'
   });
   const [timeTick, setTimeTick] = useState(0);
+  const { options: installmentOptions } = useInstallmentOptions();
 
   // Debug: Ensure statusFilter is completely removed
   console.log('StudentsManagement component loaded - statusFilter removed');
@@ -941,11 +943,12 @@ export function StudentsManagement() {
             <SelectValue placeholder="Fees Structure" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="1_installment">1 Installment</SelectItem>
-            <SelectItem value="3_installments">3 Installments</SelectItem>
-            <SelectItem value="6_installments">6 Installments</SelectItem>
-            <SelectItem value="12_installments">12 Installments</SelectItem>
+            <SelectItem value="all">All Installments</SelectItem>
+            {installmentOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
