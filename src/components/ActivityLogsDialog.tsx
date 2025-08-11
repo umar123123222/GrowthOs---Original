@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -64,8 +65,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         .order('created_at', { ascending: false });
 
       // Role-based filtering
-      if (user.role === 'admin') {
-        // Admins can see all activities except superadmin activities
+      if (user.role === 'admin' || user.role === 'enrollment_manager') {
+        // Admins and Enrollment Managers can see all activities except superadmin activities
         const { data: users } = await supabase
           .from('users')
           .select('id')
@@ -76,7 +77,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
           query = query.in('performed_by', allowedUserIds);
         }
       } else if (user.role !== 'superadmin') {
-        // Only superadmins and admins can access activity logs
+        // Only superadmins, admins, and enrollment managers can access activity logs
         setLogs([]);
         setLoading(false);
         return;
@@ -113,7 +114,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
             .from('users')
             .select('email, role, full_name')
             .eq('id', log.performed_by)
-            .single() as any,
+            .maybeSingle() as any,
           `fetch user for activity log ${log.performed_by}`
         );
         userData = userResult.data;
@@ -171,17 +172,22 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   };
 
   const getActivityBadge = (activity: string) => {
-    const activityColors = {
+    const activityColors: Record<string, string> = {
       login: 'bg-blue-100 text-blue-800',
       logout: 'bg-gray-100 text-gray-800',
+      page_visit: 'bg-cyan-100 text-cyan-800',
       video_watched: 'bg-green-100 text-green-800',
       assignment_submitted: 'bg-purple-100 text-purple-800',
       profile_updated: 'bg-yellow-100 text-yellow-800',
-      page_visit: 'bg-cyan-100 text-cyan-800',
       module_completed: 'bg-emerald-100 text-emerald-800',
-      quiz_attempted: 'bg-orange-100 text-orange-800'
+      quiz_attempted: 'bg-orange-100 text-orange-800',
+      // Invoice/payment related
+      payment_recorded: 'bg-emerald-100 text-emerald-800',
+      invoice_status_changed: 'bg-amber-100 text-amber-800',
+      invoice_created: 'bg-blue-100 text-blue-800',
+      invoice_updated: 'bg-sky-100 text-sky-800',
     };
-    return activityColors[activity as keyof typeof activityColors] || 'bg-gray-100 text-gray-800';
+    return activityColors[activity] || 'bg-gray-100 text-gray-800';
   };
 
   const getRoleBadge = (role: string) => {
@@ -189,21 +195,22 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       student: 'bg-blue-100 text-blue-800',
       mentor: 'bg-green-100 text-green-800',
       admin: 'bg-purple-100 text-purple-800',
-      superadmin: 'bg-red-100 text-red-800'
+      superadmin: 'bg-red-100 text-red-800',
+      enrollment_manager: 'bg-pink-100 text-pink-800'
     };
     return roleColors[role as keyof typeof roleColors] || 'bg-gray-100 text-gray-800';
   };
 
   const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.users?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (log.users?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          log.users?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.action.toLowerCase().includes(searchTerm.toLowerCase());
+                         log.action.toLowerCase().includes(searchTerm.toLowerCase()));
     const matchesRole = roleFilter === 'all' || log.users?.role === roleFilter;
     return matchesSearch && matchesRole;
   });
 
   return (
-    <RoleGuard allowedRoles={['admin', 'superadmin']}>
+    <RoleGuard allowedRoles={['admin', 'superadmin', 'enrollment_manager']}>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           {children}
@@ -255,6 +262,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     <SelectItem value="student">Students</SelectItem>
                     <SelectItem value="mentor">Mentors</SelectItem>
                     <SelectItem value="admin">Admins</SelectItem>
+                    <SelectItem value="enrollment_manager">Enrollment Managers</SelectItem>
                     {user?.role === 'superadmin' && (
                       <SelectItem value="superadmin">Superadmins</SelectItem>
                     )}
@@ -262,7 +270,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                 </Select>
 
                 <Select value={activityFilter} onValueChange={setActivityFilter}>
-                  <SelectTrigger className="w-48">
+                  <SelectTrigger className="w-56">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -275,6 +283,11 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     <SelectItem value="profile_updated">Profile Updated</SelectItem>
                     <SelectItem value="module_completed">Module Completed</SelectItem>
                     <SelectItem value="quiz_attempted">Quiz Attempted</SelectItem>
+                    {/* Invoice/Payments */}
+                    <SelectItem value="payment_recorded">Payment Recorded</SelectItem>
+                    <SelectItem value="invoice_status_changed">Invoice Status Changed</SelectItem>
+                    <SelectItem value="invoice_created">Invoice Created</SelectItem>
+                    <SelectItem value="invoice_updated">Invoice Updated</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
