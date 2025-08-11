@@ -29,6 +29,14 @@ const VideoPlayer = () => {
   const [showRating, setShowRating] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
 
+  // Helper to extract URLs from description for attachments (simple auto-link)
+  const extractLinks = (text: string): string[] => {
+    const urlRegex = /(https?:\/\/[^\s)]+|www\.[^\s)]+)/g;
+    return text ? (text.match(urlRegex) || []).map(u => u.startsWith('http') ? u : `http://${u}`) : [];
+  };
+
+  const attachmentLinks = currentVideo?.description ? extractLinks(currentVideo.description) : [];
+
   // Initialize video data from URL params or by ID
   useEffect(() => {
     const videoUrl = searchParams.get('url');
@@ -54,13 +62,13 @@ const VideoPlayer = () => {
         const {
           data,
           error
-        } = await supabase.from('available_lessons').select('id, recording_title, recording_url, duration_min, module').eq('id', id).maybeSingle();
+        } = await supabase.from('available_lessons').select('id, recording_title, recording_url, duration_min, module, notes').eq('id', id).maybeSingle();
         if (error) throw error;
         if (data) {
           setCurrentVideo({
             id: data.id,
             title: data.recording_title || 'Lesson',
-            description: 'Watch this lesson to continue your learning journey.',
+            description: data.notes || 'Watch this lesson to continue your learning journey.',
             videoUrl: data.recording_url || '',
             duration: data.duration_min ? `${data.duration_min} min` : 'N/A',
             module: data.module || 'Module',
@@ -208,6 +216,21 @@ const VideoPlayer = () => {
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
               <p className="text-muted-foreground mb-4">{currentVideo?.description}</p>
+
+              {attachmentLinks.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold mb-2">Attachments</h3>
+                  <ul className="list-disc list-inside space-y-1">
+                    {attachmentLinks.map((link, idx) => (
+                      <li key={idx}>
+                        <a href={link} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                          {link}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               
               <div className="flex items-center space-x-4 mb-6">
                 <Badge className="bg-blue-100 text-blue-800">{currentVideo?.module}</Badge>
