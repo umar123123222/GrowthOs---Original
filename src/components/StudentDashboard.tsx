@@ -61,7 +61,7 @@ export function StudentDashboard() {
   const [leaderboardPosition, setLeaderboardPosition] = useState<{ rank: number; total: number } | null>(null);
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [userLMSStatus, setUserLMSStatus] = useState<string>('active');
-
+  const [firstOnboardingAnswer, setFirstOnboardingAnswer] = useState<string>('');
   // Fetch all dashboard data
   useEffect(() => {
     if (user?.id) {
@@ -89,6 +89,34 @@ export function StudentDashboard() {
         setShopifyConnected(!!userData.shopify_credentials);
         setMetaConnected(!!userData.meta_ads_credentials);
         setUserLMSStatus(userData.lms_status || 'active');
+      }
+
+      // Fetch first onboarding answer
+      const studentRes = await safeQuery(
+        supabase
+          .from('students')
+          .select('answers_json')
+          .eq('user_id', user.id)
+          .maybeSingle() as any,
+        `fetch student answers for ${user.id}`
+      );
+
+      const studentData = studentRes.data as any;
+      if (studentData?.answers_json) {
+        const answers = studentData.answers_json as any;
+        try {
+          const arr = Array.isArray(answers) ? answers : [];
+          if (arr.length > 0) {
+            const val: any = arr[0]?.value;
+            let text = '';
+            if (Array.isArray(val)) text = val.join(', ');
+            else if (val && typeof val === 'object') text = (val.name || val.url || '[file uploaded]');
+            else if (val !== null && val !== undefined) text = String(val);
+            setFirstOnboardingAnswer(text);
+          }
+        } catch (e) {
+          logger.warn('Failed to parse onboarding answers', e);
+        }
       }
 
       // Calculate course progress
@@ -183,7 +211,7 @@ export function StudentDashboard() {
             
             <div className="bg-background/80 rounded-lg p-4 border border-primary/10">
               <p className="text-base font-normal text-foreground leading-relaxed">
-                {extractFinancialGoalForDisplay(dreamGoal)}
+                {firstOnboardingAnswer || extractFinancialGoalForDisplay(dreamGoal)}
               </p>
             </div>
             
