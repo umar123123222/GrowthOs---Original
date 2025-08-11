@@ -612,11 +612,10 @@ export function StudentsManagement() {
     if (payments.length === 0) return 'No Invoice';
     const paidCount = payments.filter(p => p.status === 'paid').length;
     if (paidCount >= totalInstallments) return 'Fees Cleared';
-    const openInvoices = payments.filter(p => p.status !== 'paid');
-    const latestOpen = openInvoices.sort((a, b) => new Date(a.due_date || a.created_at || '').getTime() - new Date(b.due_date || b.created_at || '').getTime()).pop();
-    if (latestOpen) {
-      const due = latestOpen.due_date ? new Date(latestOpen.due_date) : null;
-      if (due && due.getTime() < Date.now()) return 'Fees Overdue';
+    const openWithDue = payments.filter(p => p.status !== 'paid' && p.due_date);
+    if (openWithDue.length > 0) {
+      const nowTs = Date.now();
+      if (openWithDue.some(p => new Date(p.due_date as string).getTime() < nowTs)) return 'Fees Overdue';
       return 'Fees Due';
     }
     return 'No Invoice';
@@ -684,24 +683,25 @@ export function StudentsManagement() {
     return 'N/A';
   };
 
-  // Compute invoice due date from latest open invoice
+  // Compute next invoice due date from earliest outstanding invoice with a real due_date
   const getInvoiceDueDate = (student: Student) => {
     const key = student.student_record_id || '';
     const payments = installmentPayments.get(key) || [];
-    const openInvoices = payments.filter(p => p.status !== 'paid' && (p.due_date || p.created_at));
-    if (openInvoices.length === 0) return 'N/A';
-    const latest = openInvoices.sort((a, b) => new Date(a.due_date || a.created_at || '').getTime() - new Date(b.due_date || b.created_at || '').getTime()).pop();
-    if (!latest) return 'N/A';
-    return latest.due_date ? formatDate(latest.due_date) : latest.created_at ? formatDate(latest.created_at) : 'N/A';
+    const openWithDue = payments.filter(p => p.status !== 'paid' && p.due_date);
+    if (openWithDue.length === 0) return 'N/A';
+    const nowTs = Date.now();
+    const upcoming = openWithDue
+      .filter(p => new Date(p.due_date as string).getTime() >= nowTs)
+      .sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime());
+    const target = (upcoming[0]) || openWithDue.sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime())[0];
+    return target && target.due_date ? formatDate(target.due_date) : 'N/A';
   };
   const isInvoiceOverdue = (student: Student) => {
     const key = student.student_record_id || '';
     const payments = installmentPayments.get(key) || [];
-    const openInvoices = payments.filter(p => p.status !== 'paid' && p.due_date);
-    if (openInvoices.length === 0) return false;
-    const latest = openInvoices.sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime()).pop();
-    if (!latest || !latest.due_date) return false;
-    return new Date(latest.due_date).getTime() < Date.now();
+    const openWithDue = payments.filter(p => p.status !== 'paid' && p.due_date);
+    if (openWithDue.length === 0) return false;
+    return openWithDue.some(p => new Date(p.due_date as string).getTime() < Date.now());
   };
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
