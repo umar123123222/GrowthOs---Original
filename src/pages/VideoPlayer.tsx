@@ -234,6 +234,18 @@ const VideoPlayer = () => {
               {currentVideo && <iframe src={currentVideo.videoUrl} className="w-full h-full rounded-t-lg" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={currentVideo.title} />}
             </div>
             <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {currentVideo?.id && (
+                    <Badge variant="secondary">{currentVideo.id}</Badge>
+                  )}
+                  <Badge variant="outline">{currentVideo?.duration} duration</Badge>
+                </div>
+                <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {videoWatched ? 'Completed' : 'Mark Complete'}
+                </Button>
+              </div>
               <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
               <p className="text-muted-foreground mb-4">{currentVideo?.description}</p>
 
@@ -267,18 +279,6 @@ const VideoPlayer = () => {
                 </div>
               )}
               
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3 flex-wrap">
-                  {currentVideo?.id && (
-                    <Badge variant="secondary">{currentVideo.id}</Badge>
-                  )}
-                  <Badge variant="outline">{currentVideo?.duration} duration</Badge>
-                </div>
-                <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {videoWatched ? 'Completed' : 'Mark Complete'}
-                </Button>
-              </div>
 
               {/* Action Checklist */}
               <Card>
