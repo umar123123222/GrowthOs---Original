@@ -235,6 +235,7 @@ const VideoPlayer = () => {
             </div>
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
+              <h3 className="text-sm font-semibold mb-2">Description</h3>
               <p className="text-muted-foreground mb-4">{currentVideo?.description}</p>
 
               {attachments.length > 0 && (
