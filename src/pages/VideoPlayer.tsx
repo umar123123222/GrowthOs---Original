@@ -195,11 +195,11 @@ const VideoPlayer = () => {
             </div>
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
-              <h3 className="text-sm font-semibold mb-2">Description</h3>
-              <p className="text-muted-foreground mb-4">{currentVideo?.description}</p>
+              <h3 className="font-semibold mb-2 text-base">Description</h3>
+              <p className="mb-4 text-black text-left text-sm">{currentVideo?.description}</p>
 
               {attachments.length > 0 && <div className="mb-4">
-                  <h3 className="text-sm font-semibold mb-2">Attachments</h3>
+                  <h3 className="font-semibold mb-2 text-base">Attachments</h3>
                   <ul className="list-disc list-inside space-y-1">
                     {attachments.map(att => <li key={att.id}>
                         <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
