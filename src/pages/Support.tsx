@@ -375,29 +375,37 @@ const Support = () => {
                       </h4>
                       
                       <div className="space-y-3">
-                        {ticket.replies.map((reply) => (
-                          <div
-                            key={reply.id}
-                            className={`p-3 rounded-lg ${
-                              reply.is_internal 
-                                ? 'bg-blue-50 border-l-4 border-l-blue-500' 
-                                : 'bg-gray-50 border-l-4 border-l-gray-300'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <User className="w-3 h-3" />
-                                <span className="text-sm font-medium">
-                                  {reply.is_internal ? 'Support Team' : 'You'}
-                                </span>
+                        {ticket.replies
+                          ?.filter((r) => !r.is_internal)
+                          .map((reply) => {
+                            const isFromStudent = reply.user_id === ticket.user_id;
+                            const isCurrentUser = reply.user_id === user?.id;
+                            const authorLabel = isCurrentUser
+                              ? 'You'
+                              : isFromStudent
+                              ? 'Student'
+                              : 'Team Member';
+                            const bubbleClasses = isFromStudent
+                              ? 'bg-muted/30 border-l-4 border-l-border'
+                              : 'bg-primary/5 border-l-4 border-l-primary';
+                            return (
+                              <div
+                                key={reply.id}
+                                className={`p-3 rounded-lg ${bubbleClasses}`}
+                              >
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center gap-2">
+                                    <User className="w-3 h-3" />
+                                    <span className="text-sm font-medium">{authorLabel}</span>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(reply.created_at).toLocaleString()}
+                                  </span>
+                                </div>
+                                <p className="text-sm leading-relaxed">{reply.message}</p>
                               </div>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(reply.created_at).toLocaleString()}
-                              </span>
-                            </div>
-                            <p className="text-sm leading-relaxed">{reply.message}</p>
-                          </div>
-                        ))}
+                            );
+                          })}
                       </div>
                     </div>
                   </>
