@@ -11,6 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { safeMaybeSingle } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
+import CurrentModuleCard from "@/components/CurrentModuleCard";
 const VideoPlayer = () => {
   const {
     moduleId,
@@ -134,62 +135,16 @@ const VideoPlayer = () => {
     };
     loadAttachments();
   }, [currentVideo?.id]);
-  const modules = [{
-    id: 1,
-    title: "Introduction to E-commerce",
-    progress: 66,
-    lessons: [{
-      id: 1,
-      title: "Welcome to the Course",
-      duration: "5:30",
-      completed: true,
-      locked: false
-    }, {
-      id: 2,
-      title: "E-commerce Fundamentals",
-      duration: "12:45",
-      completed: true,
-      locked: false
-    }, {
-      id: 3,
-      title: "Market Research Basics",
-      duration: "18:20",
-      completed: false,
-      locked: false
-    }]
-  }, {
-    id: 2,
-    title: "Product Research & Selection",
-    progress: 0,
-    lessons: [{
-      id: 4,
-      title: "Finding Winning Products",
-      duration: "22:15",
-      completed: false,
-      locked: false
-    }, {
-      id: 5,
-      title: "Competitor Analysis",
-      duration: "16:30",
-      completed: false,
-      locked: false
-    }, {
-      id: 6,
-      title: "Trend Identification",
-      duration: "14:45",
-      completed: false,
-      locked: true
-    }]
-  }];
+  // modules list moved to CurrentModuleCard via useVideosData
+
   const handleChecklistToggle = (index: number) => {
     setCheckedItems(prev => ({
       ...prev,
       [index]: !prev[index]
     }));
   };
-  const handleVideoSelect = (moduleId: number, lessonId: number) => {
-    navigate(`/videos/${moduleId}/${lessonId}`);
-  };
+  // Video selection handled by CurrentModuleCard
+
   const checkVideoCompletion = async () => {
     if (!user?.id || !currentVideo?.id) return;
     try {
@@ -304,34 +259,7 @@ const VideoPlayer = () => {
         </Card>
 
         {/* Module Progress - current module only */}
-        {(() => {
-        const currentModule = (moduleId ? modules.find(m => m.id.toString() === moduleId) : undefined) || (currentVideo?.module ? modules.find(m => m.title === currentVideo.module) : undefined) || modules[0];
-        const lessons = [...currentModule.lessons]; // already in chronological order
-
-        return <Card key={currentModule.id}>
-              <CardHeader className="bg-stone-50">
-                <CardTitle className="text-lg">{currentModule.title}</CardTitle>
-                <Progress value={currentModule.progress} className="h-2" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {lessons.map(lesson => {
-                const isCurrent = lessonId && lesson.id.toString() === lessonId || currentVideo?.title && lesson.title === currentVideo.title;
-                return <div key={lesson.id} className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${lesson.locked ? "opacity-50 cursor-not-allowed" : isCurrent ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50"}`} onClick={() => !lesson.locked && handleVideoSelect(currentModule.id, lesson.id)}>
-                        <div className="flex-shrink-0">
-                          {lesson.locked ? <Lock className="w-4 h-4 text-gray-400" /> : lesson.completed ? <CheckCircle className="w-4 h-4 text-green-600" /> : isCurrent ? <Play className="w-4 h-4 text-blue-600" /> : <Play className="w-4 h-4 text-blue-600" />}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{lesson.title}</p>
-                          <p className="text-xs text-muted-foreground">{lesson.duration}</p>
-                        </div>
-                      </div>;
-              })}
-                </div>
-              </CardContent>
-            </Card>;
-      })()}
+        <CurrentModuleCard currentVideoId={currentVideo?.id} />
 
       </div>
 
