@@ -166,16 +166,7 @@ function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-purple-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-purple-50 to-white animate-fade-in">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-800">System Health</CardTitle>
-            <Activity className="h-5 w-5 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-900">99.2%</div>
-            <p className="text-xs text-muted-foreground">Platform uptime</p>
-          </CardContent>
-        </Card>
+        
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
