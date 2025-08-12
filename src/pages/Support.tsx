@@ -20,6 +20,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 
 interface SupportTicket {
   id: string;
@@ -332,35 +333,41 @@ const Support = () => {
       ) : (
         <div className="grid gap-6">
           {tickets.map((ticket) => (
-            <Card key={ticket.id} className="group hover:shadow-lg transition-all duration-300">
+            <Collapsible key={ticket.id} defaultOpen>
+              <Card className="group hover:shadow-lg transition-all duration-300">
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                      {ticket.title}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant="outline" className={getStatusColor(ticket.status)}>
-                        {ticket.status.replace('_', ' ')}
-                      </Badge>
-                      <Badge variant="outline" className={getPriorityColor(ticket.priority)}>
-                        {ticket.priority}
-                      </Badge>
-                       <Badge variant="outline">
-                         {ticket.category || 'General'}
-                       </Badge>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full text-left">
+                    <div className="flex items-start justify-between">
+                      <div className="space-y-2">
+                        <CardTitle className="text-xl group-hover:text-primary transition-colors">
+                          {ticket.title}
+                        </CardTitle>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className={getStatusColor(ticket.status)}>
+                            {ticket.status.replace('_', ' ')}
+                          </Badge>
+                          <Badge variant="outline" className={getPriorityColor(ticket.priority)}>
+                            {ticket.priority}
+                          </Badge>
+                           <Badge variant="outline">
+                             {ticket.category || 'General'}
+                           </Badge>
+                        </div>
+                      </div>
+                      <div className="text-right text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {new Date(ticket.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-right text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="w-4 h-4" />
-                      {new Date(ticket.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                </div>
+                  </button>
+                </CollapsibleTrigger>
               </CardHeader>
               
-              <CardContent className="space-y-4">
+              <CollapsibleContent>
+                <CardContent className="space-y-4">
                 <p className="text-muted-foreground leading-relaxed">
                   {ticket.description}
                 </p>
@@ -433,8 +440,10 @@ const Support = () => {
                     </div>
                   </>
                 )}
-              </CardContent>
+                </CardContent>
+              </CollapsibleContent>
             </Card>
+          </Collapsible>
           ))}
         </div>
       )}
