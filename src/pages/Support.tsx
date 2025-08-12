@@ -405,7 +405,7 @@ const Support = () => {
               </CardHeader>
               
               <CollapsibleContent>
-                <CardContent className="space-y-4 bg-indigo-50">
+                <CardContent className="space-y-4 bg-slate-50">
                 <p className="text-muted-foreground leading-relaxed">
                   {ticket.description}
                 </p>
