@@ -28,6 +28,8 @@ const VideoPlayer = () => {
   const [currentVideo, setCurrentVideo] = useState<any>(null);
   const [showRating, setShowRating] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
+  interface Attachment { id: string; file_name: string; file_url: string; uploaded_at: string; }
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   // Helper to extract URLs from description for attachments (simple auto-link)
   const extractLinks = (text: string): string[] => {
@@ -109,6 +111,24 @@ const VideoPlayer = () => {
       }
     }
   }, [searchParams, lessonId]);
+
+  // Load attachments for current video
+  useEffect(() => {
+    const loadAttachments = async () => {
+      if (!currentVideo?.id) return;
+      try {
+        const { data, error } = await supabase
+          .from('recording_attachments' as any)
+          .select('id, file_name, file_url, uploaded_at')
+          .eq('recording_id', currentVideo.id)
+          .order('uploaded_at', { ascending: false }) as any;
+        if (!error) setAttachments((data as Attachment[]) || []);
+      } catch (e) {
+        logger.error('Failed to load attachments', e);
+      }
+    };
+    loadAttachments();
+  }, [currentVideo?.id]);
   const modules = [{
     id: 1,
     title: "Introduction to E-commerce",
@@ -217,9 +237,24 @@ const VideoPlayer = () => {
               <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
               <p className="text-muted-foreground mb-4">{currentVideo?.description}</p>
 
-              {attachmentLinks.length > 0 && (
+              {attachments.length > 0 && (
                 <div className="mb-4">
                   <h3 className="text-sm font-semibold mb-2">Attachments</h3>
+                  <ul className="list-disc list-inside space-y-1">
+                    {attachments.map((att) => (
+                      <li key={att.id}>
+                        <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                          {att.file_name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {attachmentLinks.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold mb-2">Links mentioned</h3>
                   <ul className="list-disc list-inside space-y-1">
                     {attachmentLinks.map((link, idx) => (
                       <li key={idx}>

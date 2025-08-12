@@ -37,16 +37,16 @@ export function RecordingAttachmentsManager({ recordingId }: RecordingAttachment
 
   const fetchAttachments = async () => {
     const { data, error } = await supabase
-      .from('recording_attachments')
+      .from('recording_attachments' as any)
       .select('id, file_name, file_url, uploaded_at')
       .eq('recording_id', recordingId)
-      .order('uploaded_at', { ascending: false });
+      .order('uploaded_at', { ascending: false }) as any;
     if (error) {
       console.error('Failed to load attachments', error);
       toast({ title: 'Error', description: 'Failed to load attachments', variant: 'destructive' });
       return;
     }
-    setAttachments(data || []);
+    setAttachments((data as Attachment[]) || []);
   };
 
   useEffect(() => {
@@ -68,8 +68,8 @@ export function RecordingAttachmentsManager({ recordingId }: RecordingAttachment
         const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(path);
         const publicUrl = pub.publicUrl;
         const { error: insErr } = await supabase
-          .from('recording_attachments')
-          .insert({ recording_id: recordingId, file_name: file.name, file_url: publicUrl });
+          .from('recording_attachments' as any)
+          .insert({ recording_id: recordingId, file_name: file.name, file_url: publicUrl } as any);
         if (insErr) throw insErr;
       }
       toast({ title: 'Uploaded', description: 'Attachments uploaded successfully' });
@@ -92,7 +92,7 @@ export function RecordingAttachmentsManager({ recordingId }: RecordingAttachment
         const path = att.file_url.substring(idx + `${BUCKET}/`.length);
         await supabase.storage.from(BUCKET).remove([path]);
       }
-      const { error } = await supabase.from('recording_attachments').delete().eq('id', att.id);
+      const { error } = await supabase.from('recording_attachments' as any).delete().eq('id', att.id);
       if (error) throw error;
       setAttachments((prev) => prev.filter((a) => a.id !== att.id));
       toast({ title: 'Deleted', description: 'Attachment removed' });
