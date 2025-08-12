@@ -267,10 +267,14 @@ const VideoPlayer = () => {
                 </div>
               )}
               
-              <div className="flex items-center space-x-4 mb-6">
-                <Badge className="bg-blue-100 text-blue-800">{currentVideo?.module}</Badge>
-                <Badge variant="outline">{currentVideo?.duration} duration</Badge>
-                <Button size="sm" className="bg-green-600 hover:bg-green-700" onClick={handleMarkComplete} disabled={videoWatched}>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {currentVideo?.id && (
+                    <Badge variant="secondary">{currentVideo.id}</Badge>
+                  )}
+                  <Badge variant="outline">{currentVideo?.duration} duration</Badge>
+                </div>
+                <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   {videoWatched ? 'Completed' : 'Mark Complete'}
                 </Button>
