@@ -27,7 +27,7 @@ export function useVideoRating({ recordingId, lessonTitle }: UseVideoRatingProps
       const { data } = await supabase
         .from('recording_ratings' as any)
         .select('id')
-        .eq('user_id', user.id)
+        .eq('student_id', user.id)
         .eq('recording_id', recordingId)
         .maybeSingle();
 

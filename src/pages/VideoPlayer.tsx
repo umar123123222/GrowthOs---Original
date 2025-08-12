@@ -150,7 +150,7 @@ const VideoPlayer = () => {
     try {
       // Check if recording has been watched and no rating exists yet
       const watchedResult = await safeMaybeSingle(supabase.from('recording_views').select('watched').eq('user_id', user.id).eq('recording_id', currentVideo.id).eq('watched', true).maybeSingle() as any, `check if recording ${currentVideo.id} was watched by user ${user.id}`);
-      const ratingResult = await safeMaybeSingle(supabase.from('recording_ratings' as any).select('id').eq('user_id', user.id).eq('recording_id', currentVideo.id).maybeSingle() as any, `check if recording ${currentVideo.id} was rated by user ${user.id}`);
+      const ratingResult = await safeMaybeSingle(supabase.from('recording_ratings' as any).select('id').eq('student_id', user.id).eq('recording_id', currentVideo.id).maybeSingle() as any, `check if recording ${currentVideo.id} was rated by user ${user.id}`);
       if (watchedResult.data && !ratingResult.data) {
         setShowRating(true);
       }
