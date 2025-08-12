@@ -303,7 +303,7 @@ export function RecordingsManagement() {
               Add Recording
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="w-[95vw] sm:max-w-4xl h-[85vh] sm:h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold">
                 {editingRecording ? 'Edit Recording' : 'Add New Recording'}
