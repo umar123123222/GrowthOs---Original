@@ -12,7 +12,6 @@ import { InactiveLMSBanner } from "@/components/InactiveLMSBanner";
 import { Play, Lock, CheckCircle, Clock, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
-
 const Videos = () => {
   const navigate = useNavigate();
   const {
@@ -133,7 +132,7 @@ const Videos = () => {
                                       <Clock className="w-3 h-3" />
                                       {recording.duration_min} minutes
                                     </span>}
-                                  {recording.hasAssignment && <Badge variant="outline" className="bg-warning text-warning-foreground border-warning text-xs bg-yellow-300">
+                                  {recording.hasAssignment && <Badge variant="outline" className="bg-warning text-warning-foreground border-warning text-xs bg-yellow-200">
                                       <BookOpen className="w-3 h-3 mr-1" />
                                       Assignment Required
                                     </Badge>}
@@ -158,17 +157,10 @@ const Videos = () => {
                                   Assignment Submitted
                                 </Badge>}
 
-                              {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && recording.isWatched && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => navigate(`/assignments?assignmentId=${recording.assignmentId}`)}
-                                  className="mr-2"
-                                >
+                              {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && recording.isWatched && <Button variant="outline" size="sm" onClick={() => navigate(`/assignments?assignmentId=${recording.assignmentId}`)} className="mr-2">
                                   <BookOpen className="w-4 h-4 mr-1" />
                                   Assignment
-                                </Button>
-                              )}
+                                </Button>}
 
                               <Button variant={recording.isWatched ? "outline" : "default"} size="sm" disabled={userLMSStatus !== 'active' || !recording.isUnlocked || !recording.recording_url} onClick={() => handleWatchRecording(recording)} className={!(recording.isUnlocked && userLMSStatus === 'active') ? 'opacity-50' : ''}>
                                 <Play className="w-4 h-4 mr-1" />
