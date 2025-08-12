@@ -234,12 +234,6 @@ const VideoPlayer = () => {
               {currentVideo && <iframe src={currentVideo.videoUrl} className="w-full h-full rounded-t-lg" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={currentVideo.title} />}
             </div>
             <div className="p-6">
-              <div className="flex items-center justify-end mb-6">
-                <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {videoWatched ? 'Completed' : 'Mark Complete'}
-                </Button>
-              </div>
               <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
               <p className="text-muted-foreground mb-4">{currentVideo?.description}</p>
 
@@ -277,6 +271,13 @@ const VideoPlayer = () => {
 
               {/* Lecture Rating - Shows after video is marked complete */}
               {showRating && currentVideo && <LectureRating recordingId={currentVideo.id} lessonTitle={currentVideo.title} />}
+
+              <div className="mt-8 flex justify-center">
+                <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {videoWatched ? 'Completed' : 'Mark Complete'}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
