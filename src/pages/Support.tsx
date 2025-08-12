@@ -452,34 +452,33 @@ const Support = () => {
                         Conversation ({ticket.replies.length} {ticket.replies.length === 1 ? 'reply' : 'replies'})
                       </h4>
                       
-                      <div className="space-y-3">
-                        {ticket.replies
-                          ?.filter((r) => !r.is_internal)
-                          .map((reply) => {
-                            const isFromStudent = reply.user_id === ticket.user_id;
-                            const authorName = userNames[reply.user_id] || (isFromStudent ? 'Student' : 'Team Member');
-                            const bubbleClasses = isFromStudent
-                              ? 'bg-muted/30 border-l-4 border-l-border'
-                              : 'bg-primary/5 border-l-4 border-l-primary';
-                            return (
-                              <div
-                                key={reply.id}
-                                className={`p-3 rounded-lg ${bubbleClasses}`}
-                              >
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-2">
-                                    <User className="w-3 h-3" />
-                                    <span className="text-sm font-medium">{authorName}</span>
+                        <div className="space-y-3">
+                          {ticket.replies
+                            ?.filter((r) => !r.is_internal)
+                            .map((reply) => {
+                              const isFromLoggedInUser = reply.user_id === user?.id;
+                              const displayName = isFromLoggedInUser
+                                ? "You"
+                                : (userNames[reply.user_id] || "Team Member");
+                              const alignment = isFromLoggedInUser ? 'justify-end text-right' : 'justify-start text-left';
+                              const bubbleBg = isFromLoggedInUser ? 'bg-accent text-accent-foreground' : 'bg-muted';
+                              return (
+                                <div key={reply.id} className={`flex ${alignment}`}>
+                                  <div className="space-y-1 max-w-[85%] md:max-w-[70%]">
+                                    <div className={`text-xs text-muted-foreground ${isFromLoggedInUser ? 'text-right' : 'text-left'}`}>
+                                      {displayName}
+                                    </div>
+                                    <div className={`rounded-2xl px-4 py-3 shadow-sm ${bubbleBg}`}>
+                                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{reply.message}</p>
+                                    </div>
+                                    <div className={`text-[11px] text-muted-foreground ${isFromLoggedInUser ? 'text-right' : 'text-left'}`}>
+                                      {new Date(reply.created_at).toLocaleString()}
+                                    </div>
                                   </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    {new Date(reply.created_at).toLocaleString()}
-                                  </span>
                                 </div>
-                                <p className="text-sm leading-relaxed">{reply.message}</p>
-                              </div>
-                            );
-                          })}
-                      </div>
+                              );
+                            })}
+                        </div>
                     </div>
                   </>
                 )}
