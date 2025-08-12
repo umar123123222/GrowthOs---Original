@@ -1420,7 +1420,7 @@ export type Database = {
         Returns: string[]
       }
       unlock_next_recording: {
-        Args: { p_student_id: string; p_current_recording_id: string }
+        Args: { p_user_id: string; p_current_recording_id: string }
         Returns: undefined
       }
       update_company_branding: {
