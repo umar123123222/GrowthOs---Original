@@ -452,7 +452,7 @@ const Support = () => {
                         Conversation ({ticket.replies.length} {ticket.replies.length === 1 ? 'reply' : 'replies'})
                       </h4>
                       
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           {ticket.replies
                             ?.filter((r) => !r.is_internal)
                             .map((reply) => {
@@ -461,17 +461,25 @@ const Support = () => {
                                 ? "You"
                                 : (userNames[reply.user_id] || "Team Member");
                               const alignment = isFromLoggedInUser ? 'justify-end text-right' : 'justify-start text-left';
-                              const bubbleBg = isFromLoggedInUser ? 'bg-accent text-accent-foreground' : 'bg-muted';
+                              const bubbleClasses = isFromLoggedInUser
+                                ? 'bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20'
+                                : 'bg-muted border border-border';
+                              const nameAlign = isFromLoggedInUser ? 'text-right' : 'text-left';
+                              const timeAlign = nameAlign;
                               return (
-                                <div key={reply.id} className={`flex ${alignment}`}>
+                                <div key={reply.id} className={`flex ${alignment} animate-fade-in`}>
                                   <div className="space-y-1 max-w-[85%] md:max-w-[70%]">
-                                    <div className={`text-xs text-muted-foreground ${isFromLoggedInUser ? 'text-right' : 'text-left'}`}>
+                                    <div className={`text-xs text-muted-foreground font-medium ${nameAlign}`}>
                                       {displayName}
                                     </div>
-                                    <div className={`rounded-2xl px-4 py-3 shadow-sm ${bubbleBg}`}>
-                                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{reply.message}</p>
+                                    <div
+                                      className={`px-4 py-3 shadow-sm ${bubbleClasses} ${isFromLoggedInUser ? 'rounded-2xl rounded-tl-sm' : 'rounded-2xl rounded-tr-sm'}`}
+                                    >
+                                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                                        {reply.message}
+                                      </p>
                                     </div>
-                                    <div className={`text-[11px] text-muted-foreground ${isFromLoggedInUser ? 'text-right' : 'text-left'}`}>
+                                    <div className={`text-[11px] text-muted-foreground ${timeAlign}`}>
                                       {new Date(reply.created_at).toLocaleString()}
                                     </div>
                                   </div>
