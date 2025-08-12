@@ -55,6 +55,7 @@ const Support = () => {
   const [newReply, setNewReply] = useState("");
   const { toast } = useToast();
   const { user } = useAuth();
+  const [userNames, setUserNames] = useState<Record<string, string>>({});
 
   // Form state for creating tickets
   const [newTicket, setNewTicket] = useState({
@@ -98,6 +99,29 @@ const Support = () => {
       );
 
       setTickets(ticketsWithReplies);
+      // Fetch author names for replies and ticket owners (gracefully degrades with RLS)
+      try {
+        const allIds = Array.from(new Set(
+          ticketsWithReplies
+            .flatMap((t) => [t.user_id, ...(t.replies?.map((r) => r.user_id) || [])])
+            .filter((id): id is string => Boolean(id))
+        ));
+        if (allIds.length > 0) {
+          const { data: usersData, error: usersError } = await supabase
+            .from('users')
+            .select('id, full_name')
+            .in('id', allIds);
+          if (!usersError && usersData) {
+            const map: Record<string, string> = {};
+            for (const u of usersData) {
+              map[u.id] = u.full_name || '';
+            }
+            setUserNames(map);
+          }
+        }
+      } catch (e) {
+        console.warn('Could not fetch user names', e);
+      }
     } catch (error) {
       console.error('Error fetching tickets:', error);
       toast({
@@ -386,12 +410,7 @@ const Support = () => {
                           ?.filter((r) => !r.is_internal)
                           .map((reply) => {
                             const isFromStudent = reply.user_id === ticket.user_id;
-                            const isCurrentUser = reply.user_id === user?.id;
-                            const authorLabel = isCurrentUser
-                              ? 'You'
-                              : isFromStudent
-                              ? 'Student'
-                              : 'Team Member';
+                            const authorName = userNames[reply.user_id] || (isFromStudent ? 'Student' : 'Team Member');
                             const bubbleClasses = isFromStudent
                               ? 'bg-muted/30 border-l-4 border-l-border'
                               : 'bg-primary/5 border-l-4 border-l-primary';
@@ -403,7 +422,7 @@ const Support = () => {
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
                                     <User className="w-3 h-3" />
-                                    <span className="text-sm font-medium">{authorLabel}</span>
+                                    <span className="text-sm font-medium">{authorName}</span>
                                   </div>
                                   <span className="text-xs text-muted-foreground">
                                     {new Date(reply.created_at).toLocaleString()}
