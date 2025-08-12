@@ -28,7 +28,12 @@ const VideoPlayer = () => {
   const [currentVideo, setCurrentVideo] = useState<any>(null);
   const [showRating, setShowRating] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
-  interface Attachment { id: string; file_name: string; file_url: string; uploaded_at: string; }
+  interface Attachment {
+    id: string;
+    file_name: string;
+    file_url: string;
+    uploaded_at: string;
+  }
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   // Helper to extract URLs from description for attachments (simple auto-link)
@@ -36,7 +41,6 @@ const VideoPlayer = () => {
     const urlRegex = /(https?:\/\/[^\s)]+|www\.[^\s)]+)/g;
     return text ? (text.match(urlRegex) || []).map(u => u.startsWith('http') ? u : `http://${u}`) : [];
   };
-
   const attachmentLinks = currentVideo?.description ? extractLinks(currentVideo.description) : [];
 
   // Initialize video data from URL params or by ID
@@ -117,12 +121,13 @@ const VideoPlayer = () => {
     const loadAttachments = async () => {
       if (!currentVideo?.id) return;
       try {
-        const { data, error } = await supabase
-          .from('recording_attachments' as any)
-          .select('id, file_name, file_url, uploaded_at')
-          .eq('recording_id', currentVideo.id)
-          .order('uploaded_at', { ascending: false }) as any;
-        if (!error) setAttachments((data as Attachment[]) || []);
+        const {
+          data,
+          error
+        } = (await supabase.from('recording_attachments' as any).select('id, file_name, file_url, uploaded_at').eq('recording_id', currentVideo.id).order('uploaded_at', {
+          ascending: false
+        })) as any;
+        if (!error) setAttachments(data as Attachment[] || []);
       } catch (e) {
         logger.error('Failed to load attachments', e);
       }
@@ -238,35 +243,27 @@ const VideoPlayer = () => {
               <h3 className="text-sm font-semibold mb-2">Description</h3>
               <p className="text-muted-foreground mb-4">{currentVideo?.description}</p>
 
-              {attachments.length > 0 && (
-                <div className="mb-4">
+              {attachments.length > 0 && <div className="mb-4">
                   <h3 className="text-sm font-semibold mb-2">Attachments</h3>
                   <ul className="list-disc list-inside space-y-1">
-                    {attachments.map((att) => (
-                      <li key={att.id}>
+                    {attachments.map(att => <li key={att.id}>
                         <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
                           {att.file_name}
                         </a>
-                      </li>
-                    ))}
+                      </li>)}
                   </ul>
-                </div>
-              )}
+                </div>}
               
-              {attachmentLinks.length > 0 && (
-                <div className="mb-4">
+              {attachmentLinks.length > 0 && <div className="mb-4">
                   <h3 className="text-sm font-semibold mb-2">Links mentioned</h3>
                   <ul className="list-disc list-inside space-y-1">
-                    {attachmentLinks.map((link, idx) => (
-                      <li key={idx}>
+                    {attachmentLinks.map((link, idx) => <li key={idx}>
                         <a href={link} target="_blank" rel="noopener noreferrer" className="text-primary underline">
                           {link}
                         </a>
-                      </li>
-                    ))}
+                      </li>)}
                   </ul>
-                </div>
-              )}
+                </div>}
               
 
 
@@ -308,61 +305,33 @@ const VideoPlayer = () => {
 
         {/* Module Progress - current module only */}
         {(() => {
-          const currentModule =
-            (moduleId ? modules.find(m => m.id.toString() === moduleId) : undefined) ||
-            (currentVideo?.module ? modules.find(m => m.title === currentVideo.module) : undefined) ||
-            modules[0];
+        const currentModule = (moduleId ? modules.find(m => m.id.toString() === moduleId) : undefined) || (currentVideo?.module ? modules.find(m => m.title === currentVideo.module) : undefined) || modules[0];
+        const lessons = [...currentModule.lessons]; // already in chronological order
 
-          const lessons = [...currentModule.lessons]; // already in chronological order
-
-          return (
-            <Card key={currentModule.id}>
-              <CardHeader>
+        return <Card key={currentModule.id}>
+              <CardHeader className="bg-stone-50">
                 <CardTitle className="text-lg">{currentModule.title}</CardTitle>
                 <Progress value={currentModule.progress} className="h-2" />
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   {lessons.map(lesson => {
-                    const isCurrent =
-                      (lessonId && lesson.id.toString() === lessonId) ||
-                      (currentVideo?.title && lesson.title === currentVideo.title);
-                    return (
-                      <div
-                        key={lesson.id}
-                        className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                          lesson.locked
-                            ? "opacity-50 cursor-not-allowed"
-                            : isCurrent
-                            ? "bg-blue-50 border border-blue-200"
-                            : "hover:bg-gray-50"
-                        }`}
-                        onClick={() => !lesson.locked && handleVideoSelect(currentModule.id, lesson.id)}
-                      >
+                const isCurrent = lessonId && lesson.id.toString() === lessonId || currentVideo?.title && lesson.title === currentVideo.title;
+                return <div key={lesson.id} className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${lesson.locked ? "opacity-50 cursor-not-allowed" : isCurrent ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50"}`} onClick={() => !lesson.locked && handleVideoSelect(currentModule.id, lesson.id)}>
                         <div className="flex-shrink-0">
-                          {lesson.locked ? (
-                            <Lock className="w-4 h-4 text-gray-400" />
-                          ) : lesson.completed ? (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                          ) : isCurrent ? (
-                            <Play className="w-4 h-4 text-blue-600" />
-                          ) : (
-                            <Play className="w-4 h-4 text-blue-600" />
-                          )}
+                          {lesson.locked ? <Lock className="w-4 h-4 text-gray-400" /> : lesson.completed ? <CheckCircle className="w-4 h-4 text-green-600" /> : isCurrent ? <Play className="w-4 h-4 text-blue-600" /> : <Play className="w-4 h-4 text-blue-600" />}
                         </div>
 
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium truncate">{lesson.title}</p>
                           <p className="text-xs text-muted-foreground">{lesson.duration}</p>
                         </div>
-                      </div>
-                    );
-                  })}
+                      </div>;
+              })}
                 </div>
               </CardContent>
-            </Card>
-          );
-        })()}
+            </Card>;
+      })()}
 
       </div>
 
