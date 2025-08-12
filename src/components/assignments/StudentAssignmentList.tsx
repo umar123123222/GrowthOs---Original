@@ -27,7 +27,7 @@ interface Submission {
   notes?: string;
   created_at: string;
 }
-export function StudentAssignmentList() {
+export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?: 'unlocked' | 'submitted' }) {
   const {
     user
   } = useAuth();
@@ -153,22 +153,21 @@ export function StudentAssignmentList() {
     return <div className="flex justify-center items-center h-64">Loading assignments...</div>;
   }
 
-  // Only show assignments whose recordings are watched and unlocked,
-  // or those that the user has already submitted (so they can view/resubmit).
-  const availableAssignments = assignments.filter(assignment => {
-    const submission = getSubmissionStatus(assignment.id);
-
-    // If user has a submission, always show (to view status or resubmit when declined)
-    if (submission) return true;
-
-    // Must be linked to a recording to appear
+  // Build filtered lists based on selected tab
+  const isAssignmentUnlocked = (assignment: Assignment) => {
     if (!assignment.recording_id) return false;
-
-    // Only visible when the recording is watched and unlocked
     const watched = watchedRecordingIds.has(assignment.recording_id);
     const unlocked = isRecordingUnlocked(assignment.recording_id);
     return watched && unlocked;
-  });
+  };
+
+  let availableAssignments: Assignment[] = [];
+  if (filterMode === 'submitted') {
+    availableAssignments = assignments.filter(a => !!getSubmissionStatus(a.id));
+  } else {
+    // Unlocked
+    availableAssignments = assignments.filter(a => isAssignmentUnlocked(a));
+  }
   return <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">My Assignments</h1>

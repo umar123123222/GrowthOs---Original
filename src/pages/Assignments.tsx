@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { SubmissionsManagement } from "@/components/assignments/SubmissionsManagement";
 import { InactiveLMSBanner } from "@/components/InactiveLMSBanner";
 import { StudentAssignmentList } from "@/components/assignments/StudentAssignmentList";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AssignmentsProps {
   user?: any;
@@ -29,6 +30,8 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
     canonical.setAttribute('href', `${window.location.origin}/assignments`);
   }, []);
 
+  const [tab, setTab] = useState<'unlocked' | 'submitted'>('unlocked');
+
   // Keep staff/mentor view exactly as before
   if (user?.role === 'mentor' || user?.role === 'admin' || user?.role === 'superadmin') {
     return <SubmissionsManagement userRole={user.role} />;
@@ -37,12 +40,18 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
   // Student view uses the dedicated list with correct locking logic
   return (
     <main className="p-6 space-y-6">
-      <header>
+      <header className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Assignments</h1>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'unlocked' | 'submitted')}>
+          <TabsList>
+            <TabsTrigger value="unlocked">Unlocked</TabsTrigger>
+            <TabsTrigger value="submitted">Submitted</TabsTrigger>
+          </TabsList>
+        </Tabs>
       </header>
       <InactiveLMSBanner show={user?.role === 'student' && user?.lms_status === 'inactive'} />
       <section aria-label="Student assignments list">
-        <StudentAssignmentList />
+        <StudentAssignmentList filterMode={tab} />
       </section>
     </main>
   );
