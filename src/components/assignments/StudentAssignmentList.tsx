@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecordingUnlocks } from '@/hooks/useRecordingUnlocks';
 import { StudentSubmissionDialog } from './StudentSubmissionDialog';
+import { useSearchParams } from 'react-router-dom';
 
 interface Assignment {
   id: string;
@@ -35,15 +37,45 @@ export function StudentAssignmentList() {
   const { isRecordingUnlocked, loading: unlocksLoading } = useRecordingUnlocks();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [watchedRecordingIds, setWatchedRecordingIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     if (user) {
       fetchData();
     }
   }, [user]);
+
+  useEffect(() => {
+    // Handle deep-link to a specific assignmentId if present
+    if (!loading && !unlocksLoading && assignments.length > 0) {
+      const assignmentId = searchParams.get('assignmentId');
+      if (!assignmentId) return;
+
+      const target = assignments.find(a => a.id === assignmentId);
+      if (!target) return;
+
+      const submission = getSubmissionStatus(assignmentId);
+      const isWatched = target.recording_id ? watchedRecordingIds.has(target.recording_id) : false;
+      const isUnlocked = target.recording_id ? isRecordingUnlocked(target.recording_id) : false;
+
+      const eligible = submission ? true : (target.recording_id ? (isWatched && isUnlocked) : false);
+
+      if (eligible) {
+        setSelectedAssignment(target);
+        setIsDialogOpen(true);
+      } else {
+        toast({
+          title: 'Assignment Locked',
+          description: 'Watch the prerequisite recording to unlock this assignment.',
+          variant: 'destructive'
+        });
+      }
+    }
+  }, [loading, unlocksLoading, assignments, submissions, watchedRecordingIds, searchParams]);
 
   const fetchData = async () => {
     if (!user) return;
@@ -71,8 +103,21 @@ export function StudentAssignmentList() {
 
       if (submissionsError) throw submissionsError;
 
+      // Fetch recording views (watched status)
+      const { data: viewsData, error: viewsError } = await supabase
+        .from('recording_views')
+        .select('recording_id, watched')
+        .eq('user_id', user.id);
+
+      if (viewsError) throw viewsError;
+
+      const watchedIds = new Set<string>(
+        (viewsData || []).filter(v => v.watched).map(v => v.recording_id)
+      );
+
       setAssignments(assignmentsData || []);
       setSubmissions(submissionsData || []);
+      setWatchedRecordingIds(watchedIds);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -134,13 +179,21 @@ export function StudentAssignmentList() {
     return <div className="flex justify-center items-center h-64">Loading assignments...</div>;
   }
 
-  // Filter assignments to only show those whose recording is unlocked
+  // Only show assignments whose recordings are watched and unlocked,
+  // or those that the user has already submitted (so they can view/resubmit).
   const availableAssignments = assignments.filter(assignment => {
-    // If no recording is linked, assignment is always available
-    if (!assignment.recording_id) return true;
-    
-    // Check if the recording is unlocked
-    return isRecordingUnlocked(assignment.recording_id);
+    const submission = getSubmissionStatus(assignment.id);
+
+    // If user has a submission, always show (to view status or resubmit when declined)
+    if (submission) return true;
+
+    // Must be linked to a recording to appear
+    if (!assignment.recording_id) return false;
+
+    // Only visible when the recording is watched and unlocked
+    const watched = watchedRecordingIds.has(assignment.recording_id);
+    const unlocked = isRecordingUnlocked(assignment.recording_id);
+    return watched && unlocked;
   });
 
   return (
@@ -156,7 +209,7 @@ export function StudentAssignmentList() {
             <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium">No assignments available</h3>
             <p className="text-muted-foreground">
-              Complete more recordings to unlock assignments, or check back later for new assignments.
+              Complete the required recording to unlock assignments.
             </p>
           </CardContent>
         </Card>

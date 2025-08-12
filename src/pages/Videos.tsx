@@ -12,6 +12,7 @@ import { InactiveLMSBanner } from "@/components/InactiveLMSBanner";
 import { Play, Lock, CheckCircle, Clock, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
+
 const Videos = () => {
   const navigate = useNavigate();
   const {
@@ -157,7 +158,7 @@ const Videos = () => {
                                   Assignment Submitted
                                 </Badge>}
 
-                              {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && (
+                              {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && recording.isWatched && (
                                 <Button
                                   variant="outline"
                                   size="sm"
