@@ -371,7 +371,11 @@ const Notifications = () => {
           ) : (
             <div className="space-y-3">
               {notifications.map((n) => (
-                <Card key={n.id} className={`transition-all hover:shadow-md ${n.status === 'sent' ? 'bg-blue-50 border-blue-200' : 'bg-white'}`}>
+                <Card key={n.id} className={`transition-all hover:shadow-md ${
+                  n.status === 'sent' ? 'bg-blue-50 border-blue-200' :
+                  n.status === 'read' ? 'bg-green-50 border-green-200' :
+                  'bg-white'
+                }`}>
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
