@@ -21,6 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SupportTicket {
   id: string;
@@ -56,6 +57,9 @@ const Support = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [userNames, setUserNames] = useState<Record<string, string>>({});
+  const [statusTab, setStatusTab] = useState<'open' | 'closed'>('open');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high' | 'urgent'>('all');
 
   // Form state for creating tickets
   const [newTicket, setNewTicket] = useState({
@@ -245,6 +249,17 @@ const Support = () => {
     }
   };
 
+  const isClosedStatus = (s: string) => s === 'resolved' || s === 'closed';
+
+  const displayedTickets = tickets
+    .filter((t) => (statusTab === 'open' ? !isClosedStatus(t.status) : isClosedStatus(t.status)))
+    .filter((t) => (priorityFilter === 'all' ? true : t.priority === priorityFilter))
+    .sort((a, b) => {
+      const ta = new Date(a.created_at).getTime();
+      const tb = new Date(b.created_at).getTime();
+      return sortOrder === 'asc' ? ta - tb : tb - ta;
+    });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -340,7 +355,39 @@ const Support = () => {
         </Dialog>
       </div>
 
-      {tickets.length === 0 ? (
+      <div className="flex items-center justify-between gap-4">
+        <Tabs value={statusTab} onValueChange={(v) => setStatusTab(v as 'open' | 'closed')}>
+          <TabsList>
+            <TabsTrigger value="open">Open</TabsTrigger>
+            <TabsTrigger value="closed">Closed/Resolved</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <div className="flex items-center gap-3">
+          <Select value={sortOrder} onValueChange={(v) => setSortOrder(v as 'asc' | 'desc')}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Sort by time" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="desc">Newest first</SelectItem>
+              <SelectItem value="asc">Oldest first</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as any)}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All priorities</SelectItem>
+              <SelectItem value="urgent">Urgent</SelectItem>
+              <SelectItem value="high">High</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="low">Low</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {displayedTickets.length === 0 ? (
         <Card>
           <CardContent className="text-center py-12">
             <MessageSquare className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
@@ -356,7 +403,7 @@ const Support = () => {
         </Card>
       ) : (
         <div className="grid gap-6">
-          {tickets.map((ticket) => (
+          {displayedTickets.map((ticket) => (
             <Collapsible key={ticket.id} defaultOpen>
               <Card className="group hover:shadow-lg transition-all duration-300">
               <CardHeader>
