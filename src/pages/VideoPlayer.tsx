@@ -234,13 +234,7 @@ const VideoPlayer = () => {
               {currentVideo && <iframe src={currentVideo.videoUrl} className="w-full h-full rounded-t-lg" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={currentVideo.title} />}
             </div>
             <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3 flex-wrap">
-                  {currentVideo?.id && (
-                    <Badge variant="secondary">{currentVideo.id}</Badge>
-                  )}
-                  <Badge variant="outline">{currentVideo?.duration} duration</Badge>
-                </div>
+              <div className="flex items-center justify-end mb-6">
                 <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
                   <CheckCircle className="w-4 h-4 mr-2" />
                   {videoWatched ? 'Completed' : 'Mark Complete'}
@@ -280,22 +274,6 @@ const VideoPlayer = () => {
               )}
               
 
-              {/* Action Checklist */}
-              <Card>
-                <CardHeader>
-                  <CardTitle>Checklist</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {currentVideo?.checklist?.map((item, index) => <div key={index} className="flex items-center space-x-3">
-                        <input type="checkbox" className="rounded" checked={checkedItems[index] || false} onChange={() => handleChecklistToggle(index)} />
-                        <span className={checkedItems[index] ? "line-through text-muted-foreground" : ""}>
-                          {item}
-                        </span>
-                      </div>)}
-                  </div>
-                </CardContent>
-              </Card>
 
               {/* Lecture Rating - Shows after video is marked complete */}
               {showRating && currentVideo && <LectureRating recordingId={currentVideo.id} lessonTitle={currentVideo.title} />}
