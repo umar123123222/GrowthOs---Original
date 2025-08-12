@@ -412,7 +412,7 @@ const Notifications = () => {
                       </div>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(n.status)}
-                        <Button size="sm" variant="outline" onClick={() => openNotification(n)} className="bg-blue-500 hover:bg-blue-400">
+                        <Button size="sm" variant="outline" onClick={() => openNotification(n)} className="bg-blue-500 hover:bg-blue-400 text-white">
                           Open
                         </Button>
                         <Button size="icon" variant="ghost" onClick={() => dismissNotification(n.id)} title="Dismiss">
