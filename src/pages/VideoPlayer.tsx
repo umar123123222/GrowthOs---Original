@@ -178,92 +178,93 @@ const VideoPlayer = () => {
       console.error('Error marking video complete:', error);
     }
   };
-  return <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-      {/* Video Player Section */}
-      <div className="lg:col-span-3 space-y-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Button variant="outline" size="sm" onClick={() => navigate('/videos')} className="flex items-center gap-2">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Videos
-          </Button>
-        </div>
-
-        <Card>
-          <CardContent className="p-0">
-            <div className="aspect-video bg-gray-900 rounded-t-lg">
-              {currentVideo && <iframe src={currentVideo.videoUrl} className="w-full h-full rounded-t-lg" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={currentVideo.title} />}
-            </div>
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
-              <h3 className="font-semibold mb-2 text-base">Description</h3>
-              <p className="mb-4 text-black text-left text-sm">{currentVideo?.description}</p>
-
-              {attachments.length > 0 && <div className="mb-4">
-                  <h3 className="font-semibold mb-2 text-base">Attachments</h3>
-                  <ul className="list-disc list-inside space-y-1">
-                    {attachments.map(att => <li key={att.id}>
-                        <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                          {att.file_name}
-                        </a>
-                      </li>)}
-                  </ul>
-                </div>}
-              
-              {attachmentLinks.length > 0 && <div className="mb-4">
-                  <h3 className="text-sm font-semibold mb-2">Links mentioned</h3>
-                  <ul className="list-disc list-inside space-y-1">
-                    {attachmentLinks.map((link, idx) => <li key={idx}>
-                        <a href={link} target="_blank" rel="noopener noreferrer" className="text-primary underline">
-                          {link}
-                        </a>
-                      </li>)}
-                  </ul>
-                </div>}
-              
-
-
-              {/* Lecture Rating - Shows after video is marked complete */}
-              {showRating && currentVideo && <LectureRating recordingId={currentVideo.id} lessonTitle={currentVideo.title} />}
-
-              <div className="mt-8 flex justify-center">
-                <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  {videoWatched ? 'Completed' : 'Mark Complete'}
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+  return <div>
+      <div className="flex items-center gap-3 mb-4">
+        <Button variant="outline" size="sm" onClick={() => navigate('/videos')} className="flex items-center gap-2">
+          <ArrowLeft className="w-4 h-4" />
+          Back to Videos
+        </Button>
       </div>
 
-      {/* Sidebar */}
-      <div className="space-y-6">
-        {/* ShoaibGPT Assistant */}
-        <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-full mr-2 flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-white" />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* Video Player Section */}
+        <div className="lg:col-span-3 space-y-6">
+          <Card>
+            <CardContent className="p-0">
+              <div className="aspect-video bg-gray-900 rounded-t-lg">
+                {currentVideo && <iframe src={currentVideo.videoUrl} className="w-full h-full rounded-t-lg" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={currentVideo.title} />}
               </div>
-              ShoaibGPT
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-3">
-              I'm here to help! Ask me anything about this video or your learning journey.
-            </p>
-            <Button size="sm" className="w-full" onClick={() => setShowShoaibGPT(true)}>
-              Ask ShoaibGPT
-            </Button>
-          </CardContent>
-        </Card>
+              <div className="p-6">
+                <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
+                <h3 className="font-semibold mb-2 text-base">Description</h3>
+                <p className="mb-4 text-black text-left text-sm">{currentVideo?.description}</p>
 
-        {/* Module Progress - current module only */}
-        <CurrentModuleCard currentVideoId={currentVideo?.id} />
+                {attachments.length > 0 && <div className="mb-4">
+                    <h3 className="font-semibold mb-2 text-base">Attachments</h3>
+                    <ul className="list-disc list-inside space-y-1">
+                      {attachments.map(att => <li key={att.id}>
+                          <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                            {att.file_name}
+                          </a>
+                        </li>)}
+                    </ul>
+                  </div>}
+                
+                {attachmentLinks.length > 0 && <div className="mb-4">
+                    <h3 className="text-sm font-semibold mb-2">Links mentioned</h3>
+                    <ul className="list-disc list-inside space-y-1">
+                      {attachmentLinks.map((link, idx) => <li key={idx}>
+                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                            {link}
+                          </a>
+                        </li>)}
+                    </ul>
+                  </div>}
+                
 
+                {/* Lecture Rating - Shows after video is marked complete */}
+                {showRating && currentVideo && <LectureRating recordingId={currentVideo.id} lessonTitle={currentVideo.title} />}
+
+                <div className="mt-8 flex justify-center">
+                  <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    {videoWatched ? 'Completed' : 'Mark Complete'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* ShoaibGPT Assistant */}
+          <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center">
+                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-full mr-2 flex items-center justify-center">
+                  <MessageCircle className="w-4 h-4 text-white" />
+                </div>
+                ShoaibGPT
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-3">
+                I'm here to help! Ask me anything about this video or your learning journey.
+              </p>
+              <Button size="sm" className="w-full" onClick={() => setShowShoaibGPT(true)}>
+                Ask ShoaibGPT
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Module Progress - current module only */}
+          <CurrentModuleCard currentVideoId={currentVideo?.id} />
+
+        </div>
       </div>
 
       {showShoaibGPT && <ShoaibGPT onClose={() => setShowShoaibGPT(false)} />}
     </div>;
-};
+  };
 export default VideoPlayer;
