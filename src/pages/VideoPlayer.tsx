@@ -28,12 +28,15 @@ const VideoPlayer = () => {
   const [currentVideo, setCurrentVideo] = useState<any>(null);
   const [showRating, setShowRating] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
+  interface Attachment { id: string; file_name: string; file_url: string; uploaded_at: string; }
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   // Helper to extract URLs from description for attachments (simple auto-link)
   const extractLinks = (text: string): string[] => {
     const urlRegex = /(https?:\/\/[^\s)]+|www\.[^\s)]+)/g;
     return text ? (text.match(urlRegex) || []).map(u => u.startsWith('http') ? u : `http://${u}`) : [];
   };
+
   const attachmentLinks = currentVideo?.description ? extractLinks(currentVideo.description) : [];
 
   // Initialize video data from URL params or by ID
@@ -108,6 +111,24 @@ const VideoPlayer = () => {
       }
     }
   }, [searchParams, lessonId]);
+
+  // Load attachments for current video
+  useEffect(() => {
+    const loadAttachments = async () => {
+      if (!currentVideo?.id) return;
+      try {
+        const { data, error } = await supabase
+          .from('recording_attachments' as any)
+          .select('id, file_name, file_url, uploaded_at')
+          .eq('recording_id', currentVideo.id)
+          .order('uploaded_at', { ascending: false }) as any;
+        if (!error) setAttachments((data as Attachment[]) || []);
+      } catch (e) {
+        logger.error('Failed to load attachments', e);
+      }
+    };
+    loadAttachments();
+  }, [currentVideo?.id]);
   const modules = [{
     id: 1,
     title: "Introduction to E-commerce",
@@ -213,25 +234,51 @@ const VideoPlayer = () => {
               {currentVideo && <iframe src={currentVideo.videoUrl} className="w-full h-full rounded-t-lg" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={currentVideo.title} />}
             </div>
             <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3 flex-wrap">
+                  {currentVideo?.id && (
+                    <Badge variant="secondary">{currentVideo.id}</Badge>
+                  )}
+                  <Badge variant="outline">{currentVideo?.duration} duration</Badge>
+                </div>
+                <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
+                  <CheckCircle className="w-4 h-4 mr-2" />
+                  {videoWatched ? 'Completed' : 'Mark Complete'}
+                </Button>
+              </div>
               <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
               <p className="text-muted-foreground mb-4">{currentVideo?.description}</p>
 
-              {attachmentLinks.length > 0 && <div className="mb-4">
+              {attachments.length > 0 && (
+                <div className="mb-4">
                   <h3 className="text-sm font-semibold mb-2">Attachments</h3>
                   <ul className="list-disc list-inside space-y-1">
-                    {attachmentLinks.map((link, idx) => <li key={idx}>
+                    {attachments.map((att) => (
+                      <li key={att.id}>
+                        <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                          {att.file_name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {attachmentLinks.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="text-sm font-semibold mb-2">Links mentioned</h3>
+                  <ul className="list-disc list-inside space-y-1">
+                    {attachmentLinks.map((link, idx) => (
+                      <li key={idx}>
                         <a href={link} target="_blank" rel="noopener noreferrer" className="text-primary underline">
                           {link}
                         </a>
-                      </li>)}
+                      </li>
+                    ))}
                   </ul>
-                </div>}
+                </div>
+              )}
               
-              <div className="flex items-center space-x-4 mb-6">
-                <Badge className="bg-blue-100 text-blue-800">{currentVideo?.module}</Badge>
-                <Badge variant="outline">{currentVideo?.duration} duration</Badge>
-                
-              </div>
 
               {/* Action Checklist */}
               <Card>
@@ -261,8 +308,22 @@ const VideoPlayer = () => {
       <div className="space-y-6">
         {/* ShoaibGPT Assistant */}
         <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
-          
-          
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center">
+              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-full mr-2 flex items-center justify-center">
+                <MessageCircle className="w-4 h-4 text-white" />
+              </div>
+              ShoaibGPT
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-3">
+              I'm here to help! Ask me anything about this video or your learning journey.
+            </p>
+            <Button size="sm" className="w-full" onClick={() => setShowShoaibGPT(true)}>
+              Ask ShoaibGPT
+            </Button>
+          </CardContent>
         </Card>
 
         {/* Module Progress */}
