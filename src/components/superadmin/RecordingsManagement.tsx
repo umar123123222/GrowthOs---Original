@@ -12,6 +12,7 @@ import { Plus, Edit, Trash2, Video, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from './RecordingRatingDetails';
+import { RecordingAttachmentsManager } from './RecordingAttachmentsManager';
 
 interface Recording {
   id: string;
@@ -20,6 +21,7 @@ interface Recording {
   duration_min: number;
   sequence_order: number;
   notes: string;
+  description?: string | null;
   assignment_id: string | null;
   module: {
     id: string;
@@ -51,6 +53,7 @@ export function RecordingsManagement() {
     duration_min: 0,
     sequence_order: 0,
     notes: '',
+    description: '',
     module_id: '',
     assignment_id: ''
   });
@@ -132,6 +135,7 @@ export function RecordingsManagement() {
         duration_min: formData.duration_min || null,
         sequence_order: formData.sequence_order || null,
         notes: formData.notes || null,
+        description: formData.description || null,
         module: formData.module_id || null,
         assignment_id: formData.assignment_id || null
       };
@@ -179,6 +183,7 @@ export function RecordingsManagement() {
         duration_min: 0,
         sequence_order: 0,
         notes: '',
+        description: '',
         module_id: '',
         assignment_id: ''
       });
@@ -203,6 +208,7 @@ export function RecordingsManagement() {
       duration_min: recording.duration_min,
       sequence_order: recording.sequence_order,
       notes: recording.notes,
+      description: recording.description || '',
       module_id: recording.module?.id || '',
       assignment_id: recording.assignment_id || ''
     });
@@ -293,6 +299,7 @@ export function RecordingsManagement() {
                   duration_min: 0,
                   sequence_order: 0,
                   notes: '',
+                  description: '',
                   module_id: '',
                   assignment_id: ''
                 });
@@ -395,13 +402,32 @@ export function RecordingsManagement() {
               </div>
               
               <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Description</label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Detailed description of this recording (visible to students)"
+                  className="transition-all duration-200 focus:scale-[1.02] min-h-[160px]"
+                />
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Notes</label>
                 <Textarea
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Additional notes or instructions"
+                  placeholder="Internal notes or instructions (optional)"
                   className="transition-all duration-200 focus:scale-[1.02] min-h-[100px]"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Attachments</label>
+                {editingRecording?.id ? (
+                  <RecordingAttachmentsManager recordingId={editingRecording.id} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">Save the recording first to upload attachments.</p>
+                )}
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">
