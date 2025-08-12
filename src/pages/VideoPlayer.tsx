@@ -305,27 +305,64 @@ const VideoPlayer = () => {
           </CardContent>
         </Card>
 
-        {/* Module Progress */}
-        {modules.map(module => <Card key={module.id}>
-            <CardHeader>
-              <CardTitle className="text-lg">{module.title}</CardTitle>
-              <Progress value={module.progress} className="h-2" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {module.lessons.map(lesson => <div key={lesson.id} className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${lesson.locked ? "opacity-50 cursor-not-allowed" : lesson.id.toString() === lessonId ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50"}`} onClick={() => !lesson.locked && handleVideoSelect(module.id, lesson.id)}>
-                    <div className="flex-shrink-0">
-                      {lesson.locked ? <Lock className="w-4 h-4 text-gray-400" /> : lesson.completed ? <CheckCircle className="w-4 h-4 text-green-600" /> : <Play className="w-4 h-4 text-blue-600" />}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{lesson.title}</p>
-                      <p className="text-xs text-muted-foreground">{lesson.duration}</p>
-                    </div>
-                  </div>)}
-              </div>
-            </CardContent>
-          </Card>)}
+        {/* Module Progress - current module only */}
+        {(() => {
+          const currentModule =
+            (moduleId ? modules.find(m => m.id.toString() === moduleId) : undefined) ||
+            (currentVideo?.module ? modules.find(m => m.title === currentVideo.module) : undefined) ||
+            modules[0];
+
+          const lessons = [...currentModule.lessons]; // already in chronological order
+
+          return (
+            <Card key={currentModule.id}>
+              <CardHeader>
+                <CardTitle className="text-lg">{currentModule.title}</CardTitle>
+                <Progress value={currentModule.progress} className="h-2" />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {lessons.map(lesson => {
+                    const isCurrent =
+                      (lessonId && lesson.id.toString() === lessonId) ||
+                      (currentVideo?.title && lesson.title === currentVideo.title);
+                    return (
+                      <div
+                        key={lesson.id}
+                        className={`flex items-center space-x-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                          lesson.locked
+                            ? "opacity-50 cursor-not-allowed"
+                            : isCurrent
+                            ? "bg-blue-50 border border-blue-200"
+                            : "hover:bg-gray-50"
+                        }`}
+                        onClick={() => !lesson.locked && handleVideoSelect(currentModule.id, lesson.id)}
+                      >
+                        <div className="flex-shrink-0">
+                          {lesson.locked ? (
+                            <Lock className="w-4 h-4 text-gray-400" />
+                          ) : lesson.completed ? (
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          ) : isCurrent ? (
+                            <Play className="w-4 h-4 text-blue-600" />
+                          ) : (
+                            <Play className="w-4 h-4 text-blue-600" />
+                          )}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{lesson.title}</p>
+                          <p className="text-xs text-muted-foreground">{lesson.duration}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
+
       </div>
 
       {showShoaibGPT && <ShoaibGPT onClose={() => setShowShoaibGPT(false)} />}
