@@ -18,12 +18,75 @@ interface Notification {
   error_message?: string;
 }
 const NotificationDropdown = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<(Notification & { displayTitle?: string; displayMessage?: string })[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+
+  const getKeyAndData = (n: Notification) => {
+    const key = (n as any).template_key || n.type;
+    const data = n.payload?.data || n.payload?.metadata || n.payload || {};
+    return { key, data } as { key: string; data: any };
+  };
+
+  const enrichNotifications = async (items: Notification[]) => {
+    const ticketIds = new Set<string>();
+    const recordingIds = new Set<string>();
+    const assignmentIds = new Set<string>();
+    const sessionIds = new Set<string>();
+
+    // Collect IDs
+    items.forEach((n) => {
+      const { key, data } = getKeyAndData(n);
+      if (key === 'ticket_updated' && data.ticket_id) ticketIds.add(data.ticket_id);
+      if ((key === 'recording' || (key === 'learning_item_changed' && data.item_type === 'recording')) && (data.recording_id || data.item_id)) {
+        recordingIds.add(data.recording_id || data.item_id);
+      }
+      if ((key === 'assignment' || (key === 'learning_item_changed' && data.item_type === 'assignment')) && (data.assignment_id || data.item_id)) {
+        assignmentIds.add(data.assignment_id || data.item_id);
+      }
+      if ((key === 'success_session' || (key === 'learning_item_changed' && data.item_type === 'success_session')) && (data.session_id || data.item_id)) {
+        sessionIds.add(data.session_id || data.item_id);
+      }
+    });
+
+    // Batch fetch titles
+    const [ticketsRes, recsRes, assignsRes, sessRes] = await Promise.all([
+      ticketIds.size ? supabase.from('support_tickets').select('id, title').in('id', Array.from(ticketIds)) : Promise.resolve({ data: [] as any[] }),
+      recordingIds.size ? supabase.from('available_lessons').select('id, recording_title').in('id', Array.from(recordingIds)) : Promise.resolve({ data: [] as any[] }),
+      assignmentIds.size ? supabase.from('assignments').select('id, name').in('id', Array.from(assignmentIds)) : Promise.resolve({ data: [] as any[] }),
+      sessionIds.size ? supabase.from('success_sessions').select('id, title').in('id', Array.from(sessionIds)) : Promise.resolve({ data: [] as any[] }),
+    ]);
+
+    const ticketMap = Object.fromEntries((ticketsRes as any).data?.map((r: any) => [r.id, r.title]) || []);
+    const recMap = Object.fromEntries((recsRes as any).data?.map((r: any) => [r.id, r.recording_title]) || []);
+    const assignMap = Object.fromEntries((assignsRes as any).data?.map((r: any) => [r.id, r.name]) || []);
+    const sessMap = Object.fromEntries((sessRes as any).data?.map((r: any) => [r.id, r.title]) || []);
+
+    return items.map((n) => {
+      const { key, data } = getKeyAndData(n);
+      let displayTitle = n.payload?.title as string | undefined;
+      let displayMessage = n.payload?.message as string | undefined || n.payload?.description;
+
+      if (key === 'ticket_updated' && data.ticket_id && ticketMap[data.ticket_id]) {
+        displayTitle = `Support Ticket: ${ticketMap[data.ticket_id]}`;
+      }
+      if ((key === 'recording' || (key === 'learning_item_changed' && data.item_type === 'recording'))) {
+        const rid = data.recording_id || data.item_id;
+        if (rid && recMap[rid]) displayTitle = `Recording: ${recMap[rid]}`;
+      }
+      if ((key === 'assignment' || (key === 'learning_item_changed' && data.item_type === 'assignment'))) {
+        const aid = data.assignment_id || data.item_id;
+        if (aid && assignMap[aid]) displayTitle = `Assignment: ${assignMap[aid]}`;
+      }
+      if ((key === 'success_session' || (key === 'learning_item_changed' && data.item_type === 'success_session'))) {
+        const sid = data.session_id || data.item_id;
+        if (sid && sessMap[sid]) displayTitle = `Success Session: ${sessMap[sid]}`;
+      }
+
+      return { ...n, displayTitle, displayMessage };
+    });
+  };
   useEffect(() => {
     fetchNotifications();
 
@@ -46,7 +109,9 @@ const NotificationDropdown = () => {
         // Only count unread (status 'sent')
         if (newNotif.status === 'sent') {
           setUnreadCount(prev => prev >= 9 ? prev : prev + 1);
-          setNotifications(prev => [newNotif, ...prev].slice(0, 5));
+          enrichNotifications([newNotif]).then(enriched => {
+            setNotifications(prev => [enriched[0], ...prev].slice(0, 5));
+          });
         }
       }).subscribe();
     })();
@@ -71,8 +136,9 @@ const NotificationDropdown = () => {
         ascending: false
       }).limit(5);
       if (error) throw error;
-      setNotifications(data || []);
-      setUnreadCount(data?.length || 0);
+      const enriched = await enrichNotifications(data || []);
+      setNotifications(enriched);
+      setUnreadCount(enriched?.length || 0);
     } catch (error) {
       console.error('Error fetching notifications:', error);
     } finally {
@@ -207,10 +273,10 @@ const NotificationDropdown = () => {
                       
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-foreground truncate">
-                          {notification.payload?.title || `${notification.type} notification`}
+                          {notification.displayTitle || notification.payload?.title || `${notification.type} notification`}
                         </p>
                         <p className="text-xs text-muted-foreground truncate mt-1">
-                          {notification.payload?.message || notification.payload?.description || 'No message content'}
+                          {notification.displayMessage || notification.payload?.message || notification.payload?.description || 'No message content'}
                         </p>
                         <p className="text-xs text-muted-foreground/70 mt-1">
                           {formatDate(notification.sent_at)}

@@ -19,13 +19,77 @@ interface Notification {
   error_message?: string;
 }
 
+
 const Notifications = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<(Notification & { displayTitle?: string; displayMessage?: string })[]>([]);
   const [loading, setLoading] = useState(true);
   const [templateKeys, setTemplateKeys] = useState<string[]>([]);
   const [mutes, setMutes] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const getKeyAndData = (n: Notification) => {
+    const key = (n as any).template_key || n.type;
+    const data = n.payload?.data || n.payload?.metadata || n.payload || {};
+    return { key, data } as { key: string; data: any };
+  };
+
+  const enrichNotifications = async (items: Notification[]) => {
+    const ticketIds = new Set<string>();
+    const recordingIds = new Set<string>();
+    const assignmentIds = new Set<string>();
+    const sessionIds = new Set<string>();
+
+    items.forEach((n) => {
+      const { key, data } = getKeyAndData(n);
+      if (key === 'ticket_updated' && data.ticket_id) ticketIds.add(data.ticket_id);
+      if ((key === 'recording' || (key === 'learning_item_changed' && data.item_type === 'recording')) && (data.recording_id || data.item_id)) {
+        recordingIds.add(data.recording_id || data.item_id);
+      }
+      if ((key === 'assignment' || (key === 'learning_item_changed' && data.item_type === 'assignment')) && (data.assignment_id || data.item_id)) {
+        assignmentIds.add(data.assignment_id || data.item_id);
+      }
+      if ((key === 'success_session' || (key === 'learning_item_changed' && data.item_type === 'success_session')) && (data.session_id || data.item_id)) {
+        sessionIds.add(data.session_id || data.item_id);
+      }
+    });
+
+    const [ticketsRes, recsRes, assignsRes, sessRes] = await Promise.all([
+      ticketIds.size ? supabase.from('support_tickets').select('id, title').in('id', Array.from(ticketIds)) : Promise.resolve({ data: [] as any[] }),
+      recordingIds.size ? supabase.from('available_lessons').select('id, recording_title').in('id', Array.from(recordingIds)) : Promise.resolve({ data: [] as any[] }),
+      assignmentIds.size ? supabase.from('assignments').select('id, name').in('id', Array.from(assignmentIds)) : Promise.resolve({ data: [] as any[] }),
+      sessionIds.size ? supabase.from('success_sessions').select('id, title').in('id', Array.from(sessionIds)) : Promise.resolve({ data: [] as any[] }),
+    ]);
+
+    const ticketMap = Object.fromEntries((ticketsRes as any).data?.map((r: any) => [r.id, r.title]) || []);
+    const recMap = Object.fromEntries((recsRes as any).data?.map((r: any) => [r.id, r.recording_title]) || []);
+    const assignMap = Object.fromEntries((assignsRes as any).data?.map((r: any) => [r.id, r.name]) || []);
+    const sessMap = Object.fromEntries((sessRes as any).data?.map((r: any) => [r.id, r.title]) || []);
+
+    return items.map((n) => {
+      const { key, data } = getKeyAndData(n);
+      let displayTitle = n.payload?.title as string | undefined;
+      let displayMessage = n.payload?.message as string | undefined || n.payload?.description;
+
+      if (key === 'ticket_updated' && data.ticket_id && ticketMap[data.ticket_id]) {
+        displayTitle = `Support Ticket: ${ticketMap[data.ticket_id]}`;
+      }
+      if ((key === 'recording' || (key === 'learning_item_changed' && data.item_type === 'recording'))) {
+        const rid = data.recording_id || data.item_id;
+        if (rid && recMap[rid]) displayTitle = `Recording: ${recMap[rid]}`;
+      }
+      if ((key === 'assignment' || (key === 'learning_item_changed' && data.item_type === 'assignment'))) {
+        const aid = data.assignment_id || data.item_id;
+        if (aid && assignMap[aid]) displayTitle = `Assignment: ${assignMap[aid]}`;
+      }
+      if ((key === 'success_session' || (key === 'learning_item_changed' && data.item_type === 'success_session'))) {
+        const sid = data.session_id || data.item_id;
+        if (sid && sessMap[sid]) displayTitle = `Success Session: ${sessMap[sid]}`;
+      }
+
+      return { ...n, displayTitle, displayMessage };
+    });
+  };
 
   const unreadCount = useMemo(() => notifications.filter(n => n.status === 'sent').length, [notifications]);
 
@@ -47,7 +111,9 @@ const Notifications = () => {
           filter: `user_id=eq.${user.id}`
         }, (payload: any) => {
           const n = payload.new as Notification;
-          setNotifications(prev => [n, ...prev]);
+          enrichNotifications([n]).then((enriched) => {
+            setNotifications(prev => [enriched[0], ...prev]);
+          });
         })
         .subscribe();
     })();
@@ -67,8 +133,8 @@ const Notifications = () => {
         .order('sent_at', { ascending: false });
 
       if (error) throw error;
-
-      setNotifications(data || []);
+      const enriched = await enrichNotifications(data || []);
+      setNotifications(enriched);
     } catch (error) {
       console.error('Error fetching notifications:', error);
       toast({
@@ -312,7 +378,7 @@ const Notifications = () => {
                         {getNotificationIcon(n.type, n.status)}
                         <div>
                           <CardTitle className="text-lg flex items-center gap-2">
-                            {n.payload?.title || `${n.type} notification`}
+                            {n.displayTitle || n.payload?.title || `${n.type} notification`}
                             <Badge variant="secondary" className="capitalize">{(n as any).template_key || n.type}</Badge>
                           </CardTitle>
                           <CardDescription className="flex items-center gap-2 mt-1">
@@ -335,7 +401,7 @@ const Notifications = () => {
                   </CardHeader>
                   <CardContent className="pt-0">
                     <p className="text-gray-700">
-                      {n.payload?.message || n.payload?.description || 'No message content'}
+                      {n.displayMessage || n.payload?.message || n.payload?.description || 'No message content'}
                     </p>
                   </CardContent>
                 </Card>
@@ -353,7 +419,7 @@ const Notifications = () => {
                 <Card key={n.id}>
                   <CardHeader className="pb-2">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base">{n.payload?.title || `${n.type} notification`}</CardTitle>
+                      <CardTitle className="text-base">{n.displayTitle || n.payload?.title || `${n.type} notification`}</CardTitle>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="capitalize">{(n as any).template_key || n.type}</Badge>
                         <Button size="sm" variant="outline" onClick={() => openNotification(n)}>
@@ -363,7 +429,7 @@ const Notifications = () => {
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0 flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground truncate">{n.payload?.message}</p>
+                    <p className="text-sm text-muted-foreground truncate">{n.displayMessage || n.payload?.message}</p>
                     <div className="flex items-center gap-2">
                       <Button size="sm" variant="ghost" onClick={() => markAsRead(n.id)}><Check className="h-4 w-4 mr-1"/>Read</Button>
                       <Button size="icon" variant="ghost" onClick={() => dismissNotification(n.id)} title="Dismiss"><X className="h-4 w-4"/></Button>
