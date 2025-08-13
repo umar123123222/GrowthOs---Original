@@ -542,7 +542,7 @@ const ShopifyDashboard = () => {
               <DollarSign className="metric-icon h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-extrabold">{formatCurrency(shopifyData.totalSales)}</div>
+              <div className="text-2xl font-extrabold">{formatCurrency(shopifyData.totalSales)}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
@@ -560,7 +560,7 @@ const ShopifyDashboard = () => {
               <ShoppingBag className="metric-icon h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-extrabold">{shopifyData.orderCount.toLocaleString()}</div>
+              <div className="text-2xl font-extrabold">{shopifyData.orderCount.toLocaleString()}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
@@ -578,7 +578,7 @@ const ShopifyDashboard = () => {
               <TrendingUp className="metric-icon h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-extrabold">{formatCurrency(shopifyData.averageOrderValue)}</div>
+              <div className="text-2xl font-extrabold">{formatCurrency(shopifyData.averageOrderValue)}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
@@ -596,7 +596,7 @@ const ShopifyDashboard = () => {
               <Package className="metric-icon h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-extrabold">{ordersPerDay.toFixed(1)}</div>
+              <div className="text-2xl font-extrabold">{ordersPerDay.toFixed(1)}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
