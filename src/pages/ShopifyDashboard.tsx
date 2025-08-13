@@ -369,10 +369,14 @@ const ShopifyDashboard = () => {
         const tops = (result.metrics.bestSellers || result.metrics.topProducts || []).slice(0, 5);
         setLastMonthTop(tops);
       } else {
-        setLastMonthTop([]);
+        // Fallback: use current period top products if last month has no data
+        const currentTops = (shopifyData.topProducts || []).slice(0, 5);
+        setLastMonthTop(currentTops);
       }
     } catch {
-      setLastMonthTop([]);
+      // Fallback: use current period top products if last month fetch fails
+      const currentTops = (shopifyData.topProducts || []).slice(0, 5);
+      setLastMonthTop(currentTops);
     }
   };
   const getCurrencyIcon = (currency: string) => {
