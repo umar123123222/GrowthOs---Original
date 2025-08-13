@@ -662,7 +662,7 @@ const ShopifyDashboard = () => {
               <ChartContainer config={{
               visitors: {
                 label: "Visitors",
-                color: "hsl(var(--chart-2))"
+                color: "hsl(142, 76%, 36%)"
               }
             }} className="h-[200px]">
                 <LineChart data={shopifyData.visitorTrend}>
@@ -670,7 +670,7 @@ const ShopifyDashboard = () => {
                   <XAxis dataKey="date" />
                   <YAxis />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Line type="monotone" dataKey="visitors" stroke="var(--color-visitors)" strokeWidth={2} />
+                  <Line type="monotone" dataKey="visitors" stroke="hsl(142, 76%, 36%)" strokeWidth={2} />
                 </LineChart>
               </ChartContainer>
             </CardContent>
