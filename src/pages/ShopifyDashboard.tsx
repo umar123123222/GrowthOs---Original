@@ -444,71 +444,93 @@ const ShopifyDashboard = () => {
   return <TooltipProvider>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between rounded-xl p-6 gradient-primary shadow-medium animate-fade-in bg-indigo-600">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Shopify Dashboard</h1>
-            <p className="text-muted-foreground">Real-time store performance and analytics</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+        <header className="rounded-2xl p-6 gradient-hero shadow-elevated animate-fade-in text-primary-foreground">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">Shopify Dashboard</h1>
+              <p className="mt-1 text-sm text-primary-foreground/80">Real-time store performance and analytics</p>
+            </div>
+            <div className="flex items-center gap-2">
               {getStatusIcon()}
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-primary-foreground/80">
                 {connectionStatus === 'connected' ? 'Connected' : 'Connection Issue'}
               </span>
             </div>
-            <Popover open={calendarOpen} onOpenChange={(v) => { setCalendarOpen(v); if (v) setPendingDateRange(dateRange); }}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-          className={cn(
-            "justify-start gap-2 w-[220px] sm:w-[260px] md:w-[320px] text-left font-normal",
-            !(dateRange.from && dateRange.to) && "text-muted-foreground"
-          )}
-                >
-                  <CalendarIcon className="h-4 w-4" />
-          {dateRange.from && dateRange.to ? (
-            <span className="min-w-0 flex-1 truncate">{format(dateRange.from, 'PPP')} - {format(dateRange.to, 'PPP')}</span>
-          ) : (
-            <span className="min-w-0 flex-1 truncate">Pick date range</span>
-          )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <div className="space-y-2">
-                  <Calendar mode="range" selected={pendingDateRange as any} onSelect={(range: any) => setPendingDateRange(range)} numberOfMonths={2} className={cn("p-3 pointer-events-auto")} initialFocus />
-                  <div className="flex justify-end gap-2 px-3 pb-3">
-                    <Button variant="ghost" size="sm" onClick={() => { setCalendarOpen(false); setPendingDateRange(dateRange); }}>Cancel</Button>
-                    <Button size="sm" onClick={() => { setDateRange(pendingDateRange); setCalendarOpen(false); }}>Confirm</Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <Select value={timezone} onValueChange={setTimezone}>
-              <SelectTrigger className="min-w-[200px]" aria-label="Timezone">
-                <SelectValue placeholder="Timezone (store default)" />
-              </SelectTrigger>
-              <SelectContent className="max-h-64 overflow-auto">
-                {(timezones || []).map((tz) => (
-                  <SelectItem key={tz} value={tz}>{tz}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={timeBasis} onValueChange={(v) => setTimeBasis(v as 'created' | 'processed')}>
-              <SelectTrigger className="min-w-[180px]" aria-label="Date basis">
-                <SelectValue placeholder="Date basis" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="created">Created date</SelectItem>
-                <SelectItem value="processed">Processed date</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button onClick={fetchShopifyData} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
           </div>
-        </div>
+        </header>
+
+        {/* Filters */}
+        <Card className="shadow-medium animate-fade-in">
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-wrap items-center gap-3">
+                <Popover open={calendarOpen} onOpenChange={(v) => { setCalendarOpen(v); if (v) setPendingDateRange(dateRange); }}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "justify-start gap-2 w-[220px] sm:w-[260px] md:w-[320px] text-left font-normal",
+                        !(dateRange.from && dateRange.to) && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="h-4 w-4" />
+                      {dateRange.from && dateRange.to ? (
+                        <span className="min-w-0 flex-1 truncate">{format(dateRange.from, 'PPP')} - {format(dateRange.to, 'PPP')}</span>
+                      ) : (
+                        <span className="min-w-0 flex-1 truncate">Pick date range</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <div className="space-y-2">
+                      <Calendar
+                        mode="range"
+                        selected={pendingDateRange as any}
+                        onSelect={(range: any) => setPendingDateRange(range)}
+                        numberOfMonths={2}
+                        className={cn("p-3 pointer-events-auto")}
+                        initialFocus
+                      />
+                      <div className="flex justify-end gap-2 px-3 pb-3">
+                        <Button variant="ghost" size="sm" onClick={() => { setCalendarOpen(false); setPendingDateRange(dateRange); }}>Cancel</Button>
+                        <Button size="sm" onClick={() => { setDateRange(pendingDateRange); setCalendarOpen(false); }}>Confirm</Button>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+
+                <Select value={timezone} onValueChange={setTimezone}>
+                  <SelectTrigger className="min-w-[200px]" aria-label="Timezone">
+                    <SelectValue placeholder="Timezone (store default)" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64 overflow-auto">
+                    {(timezones || []).map((tz) => (
+                      <SelectItem key={tz} value={tz}>{tz}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select value={timeBasis} onValueChange={(v) => setTimeBasis(v as 'created' | 'processed')}>
+                  <SelectTrigger className="min-w-[180px]" aria-label="Date basis">
+                    <SelectValue placeholder="Date basis" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="created">Created date</SelectItem>
+                    <SelectItem value="processed">Processed date</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button onClick={fetchShopifyData} variant="outline" size="sm">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Refresh
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
