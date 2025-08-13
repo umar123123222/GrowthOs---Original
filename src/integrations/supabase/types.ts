@@ -98,6 +98,7 @@ export type Database = {
         Row: {
           assignment_id: string | null
           batch_id: string | null
+          description: string | null
           duration_min: number | null
           id: string
           last_assignment_completed: string | null
@@ -112,6 +113,7 @@ export type Database = {
         Insert: {
           assignment_id?: string | null
           batch_id?: string | null
+          description?: string | null
           duration_min?: number | null
           id?: string
           last_assignment_completed?: string | null
@@ -126,6 +128,7 @@ export type Database = {
         Update: {
           assignment_id?: string | null
           batch_id?: string | null
+          description?: string | null
           duration_min?: number | null
           id?: string
           last_assignment_completed?: string | null
@@ -706,6 +709,38 @@ export type Database = {
             columns: ["module_id"]
             isOneToOne: false
             referencedRelation: "modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recording_attachments: {
+        Row: {
+          file_name: string
+          file_url: string
+          id: string
+          recording_id: string
+          uploaded_at: string
+        }
+        Insert: {
+          file_name: string
+          file_url: string
+          id?: string
+          recording_id: string
+          uploaded_at?: string
+        }
+        Update: {
+          file_name?: string
+          file_url?: string
+          id?: string
+          recording_id?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recording_attachments_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "available_lessons"
             referencedColumns: ["id"]
           },
         ]
