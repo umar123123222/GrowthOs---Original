@@ -275,7 +275,7 @@ export function AssignmentManagement() {
                   ...formData,
                   submission_type: value
                 })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="justify-between text-left">
                       <SelectValue placeholder="Select submission type..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -292,7 +292,7 @@ export function AssignmentManagement() {
                   ...formData,
                   mentor_id: value
                 })}>
-                    <SelectTrigger>
+                    <SelectTrigger className="justify-between text-left">
                       <SelectValue placeholder="Select a mentor..." />
                     </SelectTrigger>
                     <SelectContent>
