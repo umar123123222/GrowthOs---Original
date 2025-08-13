@@ -472,7 +472,7 @@ const ShopifyDashboard = () => {
 
         {/* Filters */}
         <Card className="shadow-medium animate-fade-in">
-          <CardContent className="p-4">
+          <CardContent className="p-4 bg-stone-50">
             <div className="overflow-x-auto custom-scrollbar">
               <div className="flex items-center gap-3 min-w-max">
                 {/* Date Range */}
