@@ -685,21 +685,21 @@ const ShopifyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {lastMonthTop.length > 0 ? lastMonthTop.slice(0, 5).map((product, index) => <div key={product.id ?? index} className="flex items-center justify-between p-4 border rounded-lg">
+              {(lastMonthTop.length > 0 || shopifyData.topProducts.length > 0) ? (lastMonthTop.length > 0 ? lastMonthTop : shopifyData.topProducts).slice(0, 5).map((product, index) => <div key={product.id ?? index} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
                       <Badge variant="secondary" className="min-w-[24px] h-6 flex items-center justify-center">
                         {index + 1}
                       </Badge>
                       <div>
                         <h4 className="font-medium">{product.name}</h4>
-                        <p className="text-sm text-muted-foreground">{product.sales} sold</p>
+                        <p className="text-sm text-muted-foreground">{product.sales || 0} sold</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">{formatCurrency(product.revenue)}</p>
+                      <p className="font-medium">{formatCurrency(product.revenue || 0)}</p>
                       <p className="text-sm text-muted-foreground">Revenue</p>
                     </div>
-                  </div>) : <p className="text-sm text-muted-foreground">No data for last month.</p>}
+                  </div>) : <p className="text-sm text-muted-foreground">No product data available.</p>}
             </div>
           </CardContent>
         </Card>
@@ -712,19 +712,21 @@ const ShopifyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {paginatedProducts.map((p: any) => <div key={p.id} className="border rounded-lg p-4 flex items-start gap-4">
+              {paginatedProducts.length > 0 ? paginatedProducts.map((p: any) => <div key={p.id} className="border rounded-lg p-4 flex items-start gap-4">
                   {p.image &&
               // eslint-disable-next-line @next/next/no-img-element
               <img src={p.image} alt={`${p.name} product image`} className="w-16 h-16 rounded object-cover" loading="lazy" />}
                   <div className="flex-1">
-                    <h4 className="font-medium">{p.name}</h4>
+                    <h4 className="font-medium">{p.name || 'Unknown Product'}</h4>
                     <p className="text-sm text-muted-foreground">{p.type || 'Product'}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-medium">{formatCurrency(p.price || 0)}</p>
                   </div>
-                </div>)}
-              {shopifyData.products.length === 0 && <p className="text-sm text-muted-foreground">No products found.</p>}
+                </div>) : <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">No products available in current view.</p>
+                <p className="text-xs text-muted-foreground mt-1">Try refreshing or adjusting date range.</p>
+              </div>}
             </div>
             {shopifyData.products.length > pageSize && <Pagination className="mt-6">
                 <PaginationContent>
