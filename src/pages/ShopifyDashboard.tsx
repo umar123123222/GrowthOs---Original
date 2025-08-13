@@ -542,7 +542,7 @@ const ShopifyDashboard = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(shopifyData.totalSales)}</div>
+              <div className="text-xl font-bold">{formatCurrency(shopifyData.totalSales)}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
@@ -560,7 +560,7 @@ const ShopifyDashboard = () => {
               <ShoppingBag className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{shopifyData.orderCount.toLocaleString()}</div>
+              <div className="text-xl font-bold">{shopifyData.orderCount.toLocaleString()}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
@@ -578,7 +578,7 @@ const ShopifyDashboard = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(shopifyData.averageOrderValue)}</div>
+              <div className="text-xl font-bold">{formatCurrency(shopifyData.averageOrderValue)}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
@@ -596,7 +596,7 @@ const ShopifyDashboard = () => {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{ordersPerDay.toFixed(1)}</div>
+              <div className="text-xl font-bold">{ordersPerDay.toFixed(1)}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
