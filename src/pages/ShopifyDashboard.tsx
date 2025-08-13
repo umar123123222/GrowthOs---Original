@@ -461,17 +461,17 @@ const ShopifyDashboard = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className={cn(
-                    "justify-start gap-2 min-w-[240px]",
-                    !(dateRange.from && dateRange.to) && "text-muted-foreground"
-                  )}
+          className={cn(
+            "justify-start gap-2 w-[220px] sm:w-[260px] md:w-[320px] text-left font-normal",
+            !(dateRange.from && dateRange.to) && "text-muted-foreground"
+          )}
                 >
                   <CalendarIcon className="h-4 w-4" />
-                  {dateRange.from && dateRange.to ? (
-                    <span>{format(dateRange.from, 'PPP')} - {format(dateRange.to, 'PPP')}</span>
-                  ) : (
-                    <span>Pick date range</span>
-                  )}
+          {dateRange.from && dateRange.to ? (
+            <span className="min-w-0 flex-1 truncate">{format(dateRange.from, 'PPP')} - {format(dateRange.to, 'PPP')}</span>
+          ) : (
+            <span className="min-w-0 flex-1 truncate">Pick date range</span>
+          )}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="end">
