@@ -59,7 +59,6 @@ export function AssignmentManagement() {
     mentor_id: '',
     due_days: 7,
     submission_type: 'text' as 'text' | 'file' | 'link',
-    instructions: ''
   });
   useEffect(() => {
     fetchData();
@@ -123,8 +122,7 @@ export function AssignmentManagement() {
         description: formData.description.trim() || null,
         mentor_id: formData.mentor_id || null,
         due_days: formData.due_days,
-        submission_type: formData.submission_type,
-        instructions: formData.instructions.trim() || null
+        submission_type: formData.submission_type
       };
       if (editingAssignment) {
         // Update existing assignment
@@ -167,8 +165,7 @@ export function AssignmentManagement() {
       description: assignment.description || '',
       mentor_id: assignment.mentor_id || '',
       due_days: assignment.due_days || 7,
-      submission_type: assignment.submission_type || 'text',
-      instructions: assignment.instructions || ''
+      submission_type: assignment.submission_type || 'text'
     });
     setIsDialogOpen(true);
   };
@@ -201,8 +198,7 @@ export function AssignmentManagement() {
       description: '',
       mentor_id: '',
       due_days: 7,
-      submission_type: 'text',
-      instructions: ''
+      submission_type: 'text'
     });
   };
   const openCreateDialog = () => {
@@ -304,13 +300,6 @@ export function AssignmentManagement() {
                   </Select>
                 </div>
 
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium mb-2">Instructions</label>
-                  <Textarea value={formData.instructions} onChange={e => setFormData({
-                  ...formData,
-                  instructions: e.target.value
-                })} placeholder="Enter detailed instructions for students..." rows={4} />
-                </div>
               </div>
 
               <div className="flex gap-4 pt-6">
