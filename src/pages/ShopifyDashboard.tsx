@@ -462,24 +462,24 @@ const ShopifyDashboard = () => {
         {/* Filters */}
         <Card className="shadow-medium animate-fade-in">
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 gap-3">
-              {/* Date Range */}
-              <div>
+            <div className="overflow-x-auto custom-scrollbar">
+              <div className="flex items-center gap-3 min-w-max">
+                {/* Date Range */}
                 <Popover open={calendarOpen} onOpenChange={(v) => { setCalendarOpen(v); if (v) setPendingDateRange(dateRange); }}>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"
                       size="sm"
                       className={cn(
-                        "w-full h-auto min-h-10 items-start justify-start gap-2 text-left font-normal",
+                        "min-w-[260px] sm:min-w-[300px] justify-start gap-2 text-left font-normal",
                         !(dateRange.from && dateRange.to) && "text-muted-foreground"
                       )}
                     >
-                      <CalendarIcon className="h-4 w-4 mt-0.5" />
+                      <CalendarIcon className="h-4 w-4" />
                       {dateRange.from && dateRange.to ? (
-                        <span className="whitespace-normal break-words">{format(dateRange.from, 'PPP')} - {format(dateRange.to, 'PPP')}</span>
+                        <span className="truncate max-w-[360px]">{format(dateRange.from, 'PPP')} - {format(dateRange.to, 'PPP')}</span>
                       ) : (
-                        <span className="whitespace-normal break-words">Pick date range</span>
+                        <span className="truncate max-w-[360px]">Pick date range</span>
                       )}
                     </Button>
                   </PopoverTrigger>
@@ -500,12 +500,10 @@ const ShopifyDashboard = () => {
                     </div>
                   </PopoverContent>
                 </Popover>
-              </div>
 
-              {/* Timezone */}
-              <div>
+                {/* Timezone */}
                 <Select value={timezone} onValueChange={setTimezone}>
-                  <SelectTrigger className="w-full" aria-label="Timezone">
+                  <SelectTrigger className="min-w-[220px]" aria-label="Timezone">
                     <SelectValue placeholder="Timezone (store default)" />
                   </SelectTrigger>
                   <SelectContent className="max-h-64 overflow-auto">
@@ -514,12 +512,10 @@ const ShopifyDashboard = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
 
-              {/* Date basis */}
-              <div>
+                {/* Date basis */}
                 <Select value={timeBasis} onValueChange={(v) => setTimeBasis(v as 'created' | 'processed')}>
-                  <SelectTrigger className="w-full" aria-label="Date basis">
+                  <SelectTrigger className="min-w-[180px]" aria-label="Date basis">
                     <SelectValue placeholder="Date basis" />
                   </SelectTrigger>
                   <SelectContent>
@@ -527,11 +523,9 @@ const ShopifyDashboard = () => {
                     <SelectItem value="processed">Processed date</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
 
-              {/* Refresh */}
-              <div>
-                <Button onClick={fetchShopifyData} variant="outline" size="sm" className="w-full">
+                {/* Refresh */}
+                <Button onClick={fetchShopifyData} variant="outline" size="sm" className="min-w-[112px]">
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh
                 </Button>
