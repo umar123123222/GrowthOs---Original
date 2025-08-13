@@ -73,7 +73,10 @@ const ShopifyDashboard = () => {
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - 6);
-    return { from: start, to: end };
+    return {
+      from: start,
+      to: end
+    };
   });
   const [calendarOpen, setCalendarOpen] = useState(false);
   const lastMonthInfo = useMemo(() => {
@@ -81,7 +84,11 @@ const ShopifyDashboard = () => {
     const firstThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const lastMonthEnd = new Date(firstThisMonth.getTime() - 1);
     const lastMonthStart = new Date(lastMonthEnd.getFullYear(), lastMonthEnd.getMonth(), 1);
-    return { from: lastMonthStart, to: lastMonthEnd, label: format(lastMonthStart, 'MMM yyyy') };
+    return {
+      from: lastMonthStart,
+      to: lastMonthEnd,
+      label: format(lastMonthStart, 'MMM yyyy')
+    };
   }, []);
 
   // Timezone selection
@@ -93,9 +100,8 @@ const ShopifyDashboard = () => {
       const supported = (Intl as any).supportedValuesOf?.('timeZone') as string[] | undefined;
       if (supported?.length) return supported;
     } catch {}
-    return ['UTC','America/New_York','Europe/London','Europe/Berlin','Asia/Karachi','Asia/Kolkata','Asia/Singapore','Australia/Sydney'];
+    return ['UTC', 'America/New_York', 'Europe/London', 'Europe/Berlin', 'Asia/Karachi', 'Asia/Kolkata', 'Asia/Singapore', 'Australia/Sydney'];
   }, []);
-
   useEffect(() => {
     if (authLoading) return;
     if (!user?.id) {
@@ -151,7 +157,6 @@ const ShopifyDashboard = () => {
       document.head.appendChild(link);
     }
   }, []);
-
   useEffect(() => {
     if (!authLoading && user?.id) {
       fetchLastMonthTopProducts();
@@ -315,9 +320,11 @@ const ShopifyDashboard = () => {
         const updated = {
           storeUrl: integ?.external_id || 'your-store.myshopify.com',
           totalSales: metrics.totalSales ?? metrics.gmv,
-          visitors: 0, // not available accurately from Shopify Admin API
+          visitors: 0,
+          // not available accurately from Shopify Admin API
           averageOrderValue: metrics.aov,
-          conversionRate: 0, // placeholder removed from UI
+          conversionRate: 0,
+          // placeholder removed from UI
           orderCount: metrics.orders,
           topProducts: metrics.bestSellers || metrics.topProducts || [],
           products: metrics.products || [],
@@ -347,13 +354,17 @@ const ShopifyDashboard = () => {
       setLoading(false);
     }
   };
-
   const fetchLastMonthTopProducts = async () => {
     try {
       if (authLoading || !user?.id) return;
       const startISO = lastMonthInfo.from.toISOString();
       const endISO = lastMonthInfo.to.toISOString();
-      const result = await fetchShopifyMetrics(user.id, { startDate: startISO, endDate: endISO, timezone, timeBasis });
+      const result = await fetchShopifyMetrics(user.id, {
+        startDate: startISO,
+        endDate: endISO,
+        timezone,
+        timeBasis
+      });
       if (result?.connected && result.metrics) {
         const tops = (result.metrics.bestSellers || result.metrics.topProducts || []).slice(0, 5);
         setLastMonthTop(tops);
@@ -380,7 +391,7 @@ const ShopifyDashboard = () => {
   const getStatusIcon = () => {
     switch (connectionStatus) {
       case 'connected':
-        return <CheckCircle2 className="h-4 w-4 text-primary" />;
+        return <CheckCircle2 className="h-4 w-4 text-primary bg-transparent" />;
       case 'error':
         return <AlertCircle className="h-4 w-4 text-destructive" />;
       default:
@@ -447,12 +458,12 @@ const ShopifyDashboard = () => {
         <header className="rounded-2xl p-6 gradient-hero shadow-elevated animate-fade-in text-primary-foreground">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold">Shopify Dashboard</h1>
-              <p className="mt-1 text-sm text-primary-foreground/80">Real-time store performance and analytics</p>
+              <h1 className="text-3xl font-bold text-white">Shopify Dashboard</h1>
+              <p className="mt-1 text-sm text-white">Real-time store performance and analytics</p>
             </div>
             <div className="flex items-center gap-2">
               {getStatusIcon()}
-              <span className="text-sm text-primary-foreground/80">
+              <span className="text-sm text-white">
                 {connectionStatus === 'connected' ? 'Connected' : 'Connection Issue'}
               </span>
             </div>
@@ -465,37 +476,28 @@ const ShopifyDashboard = () => {
             <div className="overflow-x-auto custom-scrollbar">
               <div className="flex items-center gap-3 min-w-max">
                 {/* Date Range */}
-                <Popover open={calendarOpen} onOpenChange={(v) => { setCalendarOpen(v); if (v) setPendingDateRange(dateRange); }}>
+                <Popover open={calendarOpen} onOpenChange={v => {
+                setCalendarOpen(v);
+                if (v) setPendingDateRange(dateRange);
+              }}>
                   <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className={cn(
-                        "min-w-[260px] sm:min-w-[300px] justify-start gap-2 text-left font-normal",
-                        !(dateRange.from && dateRange.to) && "text-muted-foreground"
-                      )}
-                    >
+                    <Button variant="outline" size="sm" className={cn("min-w-[260px] sm:min-w-[300px] justify-start gap-2 text-left font-normal", !(dateRange.from && dateRange.to) && "text-muted-foreground")}>
                       <CalendarIcon className="h-4 w-4" />
-                      {dateRange.from && dateRange.to ? (
-                        <span className="truncate max-w-[360px]">{format(dateRange.from, 'PPP')} - {format(dateRange.to, 'PPP')}</span>
-                      ) : (
-                        <span className="truncate max-w-[360px]">Pick date range</span>
-                      )}
+                      {dateRange.from && dateRange.to ? <span className="truncate max-w-[360px]">{format(dateRange.from, 'PPP')} - {format(dateRange.to, 'PPP')}</span> : <span className="truncate max-w-[360px]">Pick date range</span>}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
                     <div className="space-y-2">
-                      <Calendar
-                        mode="range"
-                        selected={pendingDateRange as any}
-                        onSelect={(range: any) => setPendingDateRange(range)}
-                        numberOfMonths={2}
-                        className={cn("p-3 pointer-events-auto")}
-                        initialFocus
-                      />
+                      <Calendar mode="range" selected={pendingDateRange as any} onSelect={(range: any) => setPendingDateRange(range)} numberOfMonths={2} className={cn("p-3 pointer-events-auto")} initialFocus />
                       <div className="flex justify-end gap-2 px-3 pb-3">
-                        <Button variant="ghost" size="sm" onClick={() => { setCalendarOpen(false); setPendingDateRange(dateRange); }}>Cancel</Button>
-                        <Button size="sm" onClick={() => { setDateRange(pendingDateRange); setCalendarOpen(false); }}>Confirm</Button>
+                        <Button variant="ghost" size="sm" onClick={() => {
+                        setCalendarOpen(false);
+                        setPendingDateRange(dateRange);
+                      }}>Cancel</Button>
+                        <Button size="sm" onClick={() => {
+                        setDateRange(pendingDateRange);
+                        setCalendarOpen(false);
+                      }}>Confirm</Button>
                       </div>
                     </div>
                   </PopoverContent>
@@ -507,14 +509,12 @@ const ShopifyDashboard = () => {
                     <SelectValue placeholder="Timezone (store default)" />
                   </SelectTrigger>
                   <SelectContent className="max-h-64 overflow-auto">
-                    {(timezones || []).map((tz) => (
-                      <SelectItem key={tz} value={tz}>{tz}</SelectItem>
-                    ))}
+                    {(timezones || []).map(tz => <SelectItem key={tz} value={tz}>{tz}</SelectItem>)}
                   </SelectContent>
                 </Select>
 
                 {/* Date basis */}
-                <Select value={timeBasis} onValueChange={(v) => setTimeBasis(v as 'created' | 'processed')}>
+                <Select value={timeBasis} onValueChange={v => setTimeBasis(v as 'created' | 'processed')}>
                   <SelectTrigger className="min-w-[180px]" aria-label="Date basis">
                     <SelectValue placeholder="Date basis" />
                   </SelectTrigger>
@@ -644,9 +644,7 @@ const ShopifyDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {lastMonthTop.length > 0 ? (
-                lastMonthTop.slice(0, 5).map((product, index) => (
-                  <div key={product.id ?? index} className="flex items-center justify-between p-4 border rounded-lg">
+              {lastMonthTop.length > 0 ? lastMonthTop.slice(0, 5).map((product, index) => <div key={product.id ?? index} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
                       <Badge variant="secondary" className="min-w-[24px] h-6 flex items-center justify-center">
                         {index + 1}
@@ -660,11 +658,7 @@ const ShopifyDashboard = () => {
                       <p className="font-medium">{formatCurrency(product.revenue)}</p>
                       <p className="text-sm text-muted-foreground">Revenue</p>
                     </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">No data for last month.</p>
-              )}
+                  </div>) : <p className="text-sm text-muted-foreground">No data for last month.</p>}
             </div>
           </CardContent>
         </Card>
