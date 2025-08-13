@@ -208,6 +208,18 @@ const ShopifyDashboard = () => {
         });
       }
       const aov = totalOrders > 0 ? Number((totalGmv / totalOrders).toFixed(2)) : 0;
+      const salesTrendData = [];
+      for (let i = 7; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const key = toDateStr(d);
+        const gmv = gmvByDate.get(key) ?? 0;
+        salesTrendData.push({
+          date: key,
+          sales: gmv
+        });
+      }
+      
       setShopifyData(prev => ({
         storeUrl: prev.storeUrl || 'your-store.myshopify.com',
         totalSales: totalGmv,
@@ -217,32 +229,8 @@ const ShopifyDashboard = () => {
         orderCount: totalOrders,
         topProducts: [],
         products: [],
-        salesTrend,
-        visitorTrend: prev.visitorTrend?.length ? prev.visitorTrend : [{
-          date: '2025-07-17',
-          visitors: 245
-        }, {
-          date: '2025-07-18',
-          visitors: 312
-        }, {
-          date: '2025-07-19',
-          visitors: 398
-        }, {
-          date: '2025-07-20',
-          visitors: 356
-        }, {
-          date: '2025-07-21',
-          visitors: 445
-        }, {
-          date: '2025-07-22',
-          visitors: 502
-        }, {
-          date: '2025-07-23',
-          visitors: 589
-        }, {
-          date: '2025-07-24',
-          visitors: 467
-        }],
+        salesTrend: salesTrendData,
+        visitorTrend: generateVisitorTrend(salesTrendData),
         lastUpdated: new Date().toISOString(),
         currency: cachedCurrency || (prev as any).currency || 'USD'
       }));
