@@ -487,8 +487,8 @@ const ShopifyDashboard = () => {
         </header>
 
         {/* Filters */}
-        <Card className="shadow-medium animate-fade-in">
-          <CardContent className="p-4 bg-stone-50">
+        <Card className="shadow-medium animate-fade-in bg-gradient-to-r from-blue-50/30 to-indigo-50/30">
+          <CardContent className="p-4 bg-gradient-to-r from-slate-50/50 to-gray-50/50">
             <div className="overflow-x-auto custom-scrollbar">
               <div className="flex items-center gap-3 min-w-max">
                 {/* Date Range */}
@@ -630,7 +630,7 @@ const ShopifyDashboard = () => {
 
         {/* Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="hover-lift animate-fade-in">
+          <Card className="hover-lift animate-fade-in bg-gradient-to-br from-blue-50/40 to-cyan-50/40">
             <CardHeader>
               <CardTitle>Sales Trend ({periodLabel})</CardTitle>
               <CardDescription>Daily sales performance</CardDescription>
@@ -653,7 +653,7 @@ const ShopifyDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift animate-fade-in">
+          <Card className="hover-lift animate-fade-in bg-gradient-to-br from-emerald-50/40 to-teal-50/40">
             <CardHeader>
               <CardTitle>Visitors Trend ({periodLabel})</CardTitle>
               <CardDescription>Daily website visitors</CardDescription>
@@ -678,7 +678,7 @@ const ShopifyDashboard = () => {
         </div>
 
         {/* Top Products */}
-        <Card className="hover-lift animate-fade-in">
+        <Card className="hover-lift animate-fade-in bg-gradient-to-br from-purple-50/30 to-pink-50/30">
           <CardHeader>
             <CardTitle>Top Performing Products (Last Month)</CardTitle>
             <CardDescription>Top 5 in {lastMonthInfo.label}: units sold and revenue</CardDescription>
@@ -705,7 +705,7 @@ const ShopifyDashboard = () => {
         </Card>
 
         {/* All Products */}
-        <Card className="hover-lift animate-fade-in">
+        <Card className="hover-lift animate-fade-in bg-gradient-to-br from-orange-50/30 to-amber-50/30">
           <CardHeader>
             <CardTitle>All Products</CardTitle>
             <CardDescription>Products fetched from your store</CardDescription>
