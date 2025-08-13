@@ -635,14 +635,14 @@ const ShopifyDashboard = () => {
               <CardTitle>Sales Trend ({periodLabel})</CardTitle>
               <CardDescription>Daily sales performance</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="w-full">
               <ChartContainer config={{
               sales: {
                 label: "Sales",
                 color: "hsl(var(--primary))"
               }
-            }} className="h-[200px]">
-                <LineChart data={shopifyData.salesTrend}>
+            }} className="h-[200px] w-full">
+                <LineChart data={shopifyData.salesTrend} width={400} height={200}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
@@ -658,14 +658,14 @@ const ShopifyDashboard = () => {
               <CardTitle>Visitors Trend ({periodLabel})</CardTitle>
               <CardDescription>Daily website visitors</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="w-full">
               <ChartContainer config={{
               visitors: {
                 label: "Visitors",
                 color: "hsl(221, 83%, 53%)"
               }
-            }} className="h-[200px]">
-                <LineChart data={shopifyData.visitorTrend}>
+            }} className="h-[200px] w-full">
+                <LineChart data={shopifyData.visitorTrend} width={400} height={200}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="date" />
                   <YAxis />
