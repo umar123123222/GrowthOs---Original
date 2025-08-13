@@ -641,7 +641,7 @@ const ShopifyDashboard = () => {
             <CardContent>
               <ChartContainer config={{
               sales: {
-                label: "Sales ($)",
+                label: "Sales",
                 color: "hsl(var(--primary))"
               }
             }} className="h-[200px]">
@@ -656,6 +656,28 @@ const ShopifyDashboard = () => {
             </CardContent>
           </Card>
 
+          <Card className="hover-lift animate-fade-in">
+            <CardHeader>
+              <CardTitle>Visitors Trend ({periodLabel})</CardTitle>
+              <CardDescription>Daily website visitors</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={{
+              visitors: {
+                label: "Visitors",
+                color: "hsl(var(--chart-2))"
+              }
+            }} className="h-[200px]">
+                <LineChart data={shopifyData.visitorTrend}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" />
+                  <YAxis />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Line type="monotone" dataKey="visitors" stroke="var(--color-visitors)" strokeWidth={2} />
+                </LineChart>
+              </ChartContainer>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Top Products */}
