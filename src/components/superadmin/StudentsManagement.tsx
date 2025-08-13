@@ -1121,7 +1121,7 @@ export function StudentsManagement() {
                              </Badge>
                              {(() => { const inst = getInstallmentStatus(student); return (
                                <Badge className={inst.color}>
-                                 <span className="block w-28 text-[10px] leading-tight font-medium whitespace-normal break-words text-center">{inst.status}</span>
+                                 <span className="text-xs font-medium whitespace-normal break-words text-center">{inst.status}</span>
                                </Badge>
                              ); })()}
                            </div>
