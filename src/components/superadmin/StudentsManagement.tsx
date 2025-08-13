@@ -710,11 +710,16 @@ export function StudentsManagement() {
       const student = students.find(s => s.id === studentId);
       if (!student) return;
 
-      // Check if this installment payment already exists
-      const {
-        data: existingPayment
-      } = await supabase.from('invoices').select('id').eq('student_id', studentId).eq('installment_number', installmentNumber).eq('status', 'paid').single();
-      if (existingPayment) {
+      // Check for existing invoice for this student record and installment
+      const { data: invoiceRow, error: fetchInvErr } = await supabase
+        .from('invoices')
+        .select('id, status')
+        .eq('student_id', student.student_record_id)
+        .eq('installment_number', installmentNumber)
+        .maybeSingle();
+      if (fetchInvErr) throw fetchInvErr;
+
+      if (invoiceRow && invoiceRow.status === 'paid') {
         toast({
           title: "Already Paid",
           description: "This installment has already been marked as paid",
@@ -722,18 +727,29 @@ export function StudentsManagement() {
         });
         return;
       }
+
+      // Update existing invoice to paid, or insert a new paid invoice if missing
+      if (invoiceRow) {
+        const { error: updateErr } = await supabase
+          .from('invoices')
+          .update({ status: 'paid', paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('id', invoiceRow.id);
+        if (updateErr) throw updateErr;
+      } else {
+        const { error: insertErr } = await supabase
+          .from('invoices')
+          .insert({
+            student_id: student.student_record_id,
+            installment_number: installmentNumber,
+            amount: 0,
+            status: 'paid',
+            due_date: new Date().toISOString(),
+            paid_at: new Date().toISOString()
+          });
+        if (insertErr) throw insertErr;
+      }
+      // Determine total installments for this student
       const totalInstallments = student.fees_structure === '2_installments' ? 2 : student.fees_structure === '3_installments' ? 3 : 1;
-      const {
-        error
-      } = await supabase.from('invoices').insert({
-        student_id: studentId,
-        installment_number: installmentNumber,
-        amount: 0,
-        // You can set actual amount based on your business logic
-        status: 'paid',
-        due_date: new Date().toISOString()
-      });
-      if (error) throw error;
 
       // If this is the first installment, activate LMS status
       if (installmentNumber === 1) {
