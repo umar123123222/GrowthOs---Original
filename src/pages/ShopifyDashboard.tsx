@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ShoppingBag, TrendingUp, Users, DollarSign, Package, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, Calendar as CalendarIcon } from 'lucide-react';
+import { ShoppingBag, TrendingUp, Users, DollarSign, Package, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, Calendar as CalendarIcon, Euro, PoundSterling, Banknote } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -375,6 +375,21 @@ const ShopifyDashboard = () => {
       setLastMonthTop([]);
     }
   };
+  const getCurrencyIcon = (currency: string) => {
+    switch (currency?.toUpperCase()) {
+      case 'EUR':
+        return Euro;
+      case 'GBP':
+        return PoundSterling;
+      case 'USD':
+      case 'CAD':
+      case 'AUD':
+        return DollarSign;
+      default:
+        return Banknote;
+    }
+  };
+
   const formatCurrency = (amount: number, currency: string = shopifyData.currency || 'USD') => {
     try {
       return new Intl.NumberFormat(undefined, {
@@ -539,7 +554,10 @@ const ShopifyDashboard = () => {
           <Card className="metric-card metric-amber hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-              <DollarSign className="metric-icon h-4 w-4" />
+              {(() => {
+                const CurrencyIcon = getCurrencyIcon(shopifyData.currency);
+                return <CurrencyIcon className="metric-icon h-4 w-4" />;
+              })()}
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-extrabold">{formatCurrency(shopifyData.totalSales)}</div>
