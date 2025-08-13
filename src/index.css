@@ -138,6 +138,17 @@ All colors MUST be HSL.
   --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(224 71% 52%), hsl(142 76% 36%));
   --gradient-card: linear-gradient(135deg, hsl(var(--background)), hsl(var(--muted)));
   
+  /* Metric gradients and tints */
+  --gradient-metric-blue: linear-gradient(135deg, hsl(var(--primary)), hsl(224 71% 52%));
+  --gradient-metric-green: linear-gradient(135deg, hsl(var(--success)), hsl(162 72% 44%));
+  --gradient-metric-amber: linear-gradient(135deg, hsl(var(--warning)), hsl(35 92% 60%));
+  --gradient-metric-pink: linear-gradient(135deg, hsl(330 81% 60%), hsl(281 77% 60%));
+
+  --metric-fill-blue: linear-gradient(180deg, hsl(217 91% 60% / 0.08), transparent);
+  --metric-fill-green: linear-gradient(180deg, hsl(142 76% 36% / 0.08), transparent);
+  --metric-fill-amber: linear-gradient(180deg, hsl(45 93% 47% / 0.08), transparent);
+  --metric-fill-pink: linear-gradient(180deg, hsl(330 81% 60% / 0.08), transparent);
+  
   /* Enhanced shadow tokens */
   --shadow-soft: 0 2px 10px -3px hsl(var(--foreground) / 0.1);
   --shadow-medium: 0 4px 20px -6px hsl(var(--foreground) / 0.15);
@@ -153,6 +164,17 @@ All colors MUST be HSL.
   --gradient-success: linear-gradient(135deg, hsl(217 91% 60%), hsl(142 76% 36%));
   --gradient-hero: linear-gradient(135deg, hsl(var(--primary)), hsl(224 71% 52%), hsl(142 76% 36%));
   --gradient-card: linear-gradient(135deg, hsl(var(--card)), hsl(var(--muted)));
+
+  /* Metric gradients (dark) */
+  --gradient-metric-blue: linear-gradient(135deg, hsl(var(--primary)), hsl(224 71% 52%));
+  --gradient-metric-green: linear-gradient(135deg, hsl(var(--success)), hsl(162 72% 44%));
+  --gradient-metric-amber: linear-gradient(135deg, hsl(var(--warning)), hsl(35 92% 60%));
+  --gradient-metric-pink: linear-gradient(135deg, hsl(330 81% 60%), hsl(281 77% 60%));
+
+  --metric-fill-blue: linear-gradient(180deg, hsl(217 91% 60% / 0.12), transparent);
+  --metric-fill-green: linear-gradient(180deg, hsl(142 76% 36% / 0.12), transparent);
+  --metric-fill-amber: linear-gradient(180deg, hsl(45 93% 47% / 0.12), transparent);
+  --metric-fill-pink: linear-gradient(180deg, hsl(330 81% 60% / 0.12), transparent);
 }
 
 /* Enhanced scrollbar using semantic tokens */
@@ -279,6 +301,36 @@ All colors MUST be HSL.
   box-shadow: var(--shadow-elevated);
 }
 
+/* Metric card utility (eye-friendly pastel gradients) */
+.metric-card {
+  position: relative;
+  overflow: hidden;
+}
+.metric-card::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  background: var(--metric-gradient, var(--gradient-primary));
+  border-top-left-radius: var(--radius);
+  border-bottom-left-radius: var(--radius);
+}
+.metric-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--metric-fill, var(--gradient-card));
+  pointer-events: none;
+}
+.metric-card .metric-icon {
+  color: hsl(var(--foreground) / 0.7);
+}
+.metric-blue { --metric-gradient: var(--gradient-metric-blue); --metric-fill: var(--metric-fill-blue); }
+.metric-green { --metric-gradient: var(--gradient-metric-green); --metric-fill: var(--metric-fill-green); }
+.metric-amber { --metric-gradient: var(--gradient-metric-amber); --metric-fill: var(--metric-fill-amber); }
+.metric-pink { --metric-gradient: var(--gradient-metric-pink); --metric-fill: var(--metric-fill-pink); }
 /* Wizard specific styles */
 .wizard-card {
   @apply w-full mx-auto shadow-lg border;

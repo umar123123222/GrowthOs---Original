@@ -536,13 +536,13 @@ const ShopifyDashboard = () => {
 
         {/* KPI Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card className="hover-lift animate-fade-in">
+          <Card className="metric-card metric-amber hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <DollarSign className="metric-icon h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{formatCurrency(shopifyData.totalSales)}</div>
+              <div className="text-3xl font-extrabold">{formatCurrency(shopifyData.totalSales)}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
@@ -554,13 +554,13 @@ const ShopifyDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift animate-fade-in">
+          <Card className="metric-card metric-blue hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Orders</CardTitle>
-              <ShoppingBag className="h-4 w-4 text-muted-foreground" />
+              <ShoppingBag className="metric-icon h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{shopifyData.orderCount.toLocaleString()}</div>
+              <div className="text-3xl font-extrabold">{shopifyData.orderCount.toLocaleString()}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
@@ -572,13 +572,13 @@ const ShopifyDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift animate-fade-in">
+          <Card className="metric-card metric-green hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              <TrendingUp className="metric-icon h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{formatCurrency(shopifyData.averageOrderValue)}</div>
+              <div className="text-3xl font-extrabold">{formatCurrency(shopifyData.averageOrderValue)}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
@@ -590,13 +590,13 @@ const ShopifyDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift animate-fade-in">
+          <Card className="metric-card metric-pink hover-lift animate-fade-in">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Orders per Day</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
+              <Package className="metric-icon h-4 w-4" />
             </CardHeader>
             <CardContent>
-              <div className="text-xl font-bold">{ordersPerDay.toFixed(1)}</div>
+              <div className="text-3xl font-extrabold">{ordersPerDay.toFixed(1)}</div>
               <Tooltip>
                 <TooltipTrigger>
                   <p className="text-xs text-muted-foreground">Period: {periodLabel}</p>
