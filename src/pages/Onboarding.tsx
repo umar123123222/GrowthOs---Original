@@ -67,17 +67,22 @@ const Onboarding = ({
   const handleQuestionnaireComplete = async (responses: QuestionnaireResponse[]) => {
     setSubmitting(true);
     
-    // Add timeout to prevent getting stuck
-    const timeoutId = setTimeout(() => {
-      setSubmitting(false);
-      toast({
-        variant: "destructive",
-        title: "Request timed out",
-        description: "Please try again. If the problem persists, refresh the page."
-      });
-    }, 30000); // 30 second timeout
+    let timeoutId: NodeJS.Timeout | null = null;
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    const executeWithRetry = async (): Promise<void> => {
+      // Add timeout to prevent getting stuck
+      timeoutId = setTimeout(() => {
+        setSubmitting(false);
+        toast({
+          variant: "destructive",
+          title: "Request timed out",
+          description: "Please try again. If the problem persists, refresh the page."
+        });
+      }, 30000); // 30 second timeout
 
-    try {
+      try {
       console.log('Starting onboarding completion for user:', user.id);
       
       // First, verify student record exists
@@ -214,6 +219,9 @@ const Onboarding = ({
 
       console.log('Onboarding completed successfully, calling onComplete...');
       
+      // Clear timeout since we succeeded
+      if (timeoutId) clearTimeout(timeoutId);
+      
       // 7. Complete onboarding with a small delay to ensure UI updates
       setTimeout(() => {
         onComplete();
@@ -221,17 +229,40 @@ const Onboarding = ({
 
     } catch (error: any) {
       // Clear timeout
-      clearTimeout(timeoutId);
+      if (timeoutId) clearTimeout(timeoutId);
       
       console.error('Onboarding completion error:', error);
+      
+      // Retry logic for transient failures
+      if (retryCount < maxRetries && (
+        error.message?.includes('timeout') || 
+        error.message?.includes('network') ||
+        error.message?.includes('connection')
+      )) {
+        retryCount++;
+        console.log(`Retrying onboarding completion (attempt ${retryCount}/${maxRetries})...`);
+        
+        toast({
+          title: "Retrying...",
+          description: `Attempt ${retryCount} of ${maxRetries + 1}. Please wait.`
+        });
+        
+        // Wait a bit before retrying
+        setTimeout(() => executeWithRetry(), 2000);
+        return;
+      }
+      
       toast({
         variant: "destructive",
         title: "Could not save your answers",
         description: error.message || "Please try again. If the problem persists, refresh the page."
       });
-    } finally {
       setSubmitting(false);
     }
+    };
+    
+    // Start the execution with retry logic
+    await executeWithRetry();
   };
 
   // If loading, show loading state

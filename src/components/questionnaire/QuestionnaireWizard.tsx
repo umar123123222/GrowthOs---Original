@@ -192,11 +192,11 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   // Initialize form with comprehensive error handling
   const form = useForm({
     resolver: zodResolver(schema),
-    mode: 'onSubmit',
-    reValidateMode: 'onChange',
+    mode: 'onBlur', // Changed from onSubmit to onBlur
+    reValidateMode: 'onBlur', // Changed from onChange to onBlur
     defaultValues: getDefaultValues,
     shouldFocusError: true,
-    criteriaMode: 'all'
+    criteriaMode: 'firstError' // Changed from 'all' to 'firstError'
   });
 
   // Reset form when questions change
@@ -292,7 +292,10 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   // Check if current step is valid - only validate current question
   const isCurrentStepValid = async () => {
     try {
-      if (!currentQuestion || !currentQuestion.required) return true;
+      if (!currentQuestion) return false;
+      
+      // Only validate if required
+      if (!currentQuestion.required) return true;
       
       // Get current value
       const currentValue = form.getValues(currentQuestion.id);
@@ -317,15 +320,19 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   };
   const handleNext = async () => {
     try {
+      // Validate current step only when trying to proceed
       const stepValid = await isCurrentStepValid();
-      if (!stepValid) {
-        // Announce error for screen readers
-        const errorElement = document.querySelector(`[data-error="${currentQuestion.id}"]`);
-        if (errorElement) {
-          errorElement.setAttribute('aria-live', 'assertive');
-        }
+      if (!stepValid && currentQuestion.required) {
+        // Trigger validation to show error
+        await form.trigger(currentQuestion.id);
+        toast({
+          title: 'Please complete this field',
+          description: 'This question is required to continue.',
+          variant: 'destructive'
+        });
         return;
       }
+      
       if (isLastStep) {
         await handleSubmit();
       } else {
@@ -342,20 +349,22 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
     }
   };
   const handleSubmit = async () => {
-    const isFormValid = await trigger();
-    if (!isFormValid) {
-      toast({
-        title: 'Please complete all required fields',
-        description: 'Some questions still need to be answered.',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
     setIsSubmitting(true);
     console.log('QuestionnaireWizard: Starting submission...');
     
     try {
+      // Validate all required fields before submission
+      const isFormValid = await form.trigger();
+      if (!isFormValid) {
+        toast({
+          title: 'Please complete all required fields',
+          description: 'Some questions still need to be answered.',
+          variant: 'destructive'
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
       const formData = form.getValues();
       console.log('QuestionnaireWizard: Form data:', formData);
       
@@ -365,6 +374,13 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
       }));
       
       console.log('QuestionnaireWizard: Calling onComplete with responses:', responses);
+      
+      // Show loading toast
+      toast({
+        title: 'Saving your answers...',
+        description: 'Please wait while we process your responses.'
+      });
+      
       await onComplete(responses);
 
       // Clear saved data on successful submission
@@ -378,7 +394,6 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
         description: 'Please try again. If the problem persists, refresh the page.',
         variant: 'destructive'
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
