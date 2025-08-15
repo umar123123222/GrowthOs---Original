@@ -25,6 +25,39 @@ const Onboarding = ({
   useEffect(() => {
     const fetchQuestions = async () => {
       safeLogger.info('Onboarding: Starting to fetch questionnaire', { userId: user?.id });
+      
+      // Prevent any automatic redirects during onboarding
+      const preventRedirects = () => {
+        safeLogger.warn('Onboarding: Blocked redirect attempt during onboarding');
+        return false;
+      };
+      
+      // Override window.location methods temporarily
+      const originalAssign = window.location.assign;
+      const originalReplace = window.location.replace;
+      let currentHref = window.location.href;
+      
+      window.location.assign = preventRedirects as any;
+      window.location.replace = preventRedirects as any;
+      
+      // Prevent setting window.location.href to external URLs
+      Object.defineProperty(window.location, 'href', {
+        set: function(url: string) {
+          if (url.includes('growthos.core47.ai') || url.includes('core47.ai')) {
+            safeLogger.warn('Onboarding: Blocked external redirect to:', { blockedUrl: url });
+            return;
+          }
+          // Allow same-domain navigation
+          if (url.startsWith(window.location.origin) || url.startsWith('/') || url.startsWith('#')) {
+            currentHref = url;
+          }
+        },
+        get: function() {
+          return currentHref;
+        },
+        configurable: true
+      });
+
       try {
         safeLogger.info('Onboarding: About to fetch company settings');
         const {
@@ -77,8 +110,16 @@ const Onboarding = ({
         setQuestions([]);
       } finally {
         setLoading(false);
+        
+        // Restore original window.location methods after a delay
+        setTimeout(() => {
+          window.location.assign = originalAssign;
+          window.location.replace = originalReplace;
+          safeLogger.info('Onboarding: Restored window.location methods');
+        }, 5000); // Keep protection for 5 seconds
       }
     };
+    
     fetchQuestions();
   }, []);
   const handleQuestionnaireComplete = async (responses: QuestionnaireResponse[]) => {
@@ -242,22 +283,19 @@ const Onboarding = ({
       }
 
       // Clear timeout since we succeeded
-      clearTimeout(timeoutId);
-
-      // 6. Show success message
-      toast({
-        title: "Welcome to your learning journey!",
-        description: "Your ultimate goal has been set. Let's achieve it together!"
-      });
-
-      safeLogger.info('Onboarding completed successfully, calling onComplete');
-      
-      // Clear timeout since we succeeded
       if (timeoutId) clearTimeout(timeoutId);
       
-      // 7. Complete onboarding with a small delay to ensure UI updates
+      // 7. Complete onboarding with enhanced navigation protection
       setTimeout(() => {
-        onComplete();
+        safeLogger.info('Onboarding: Completing onboarding and calling onComplete');
+        
+        // Double-check we're still on the same domain before completing
+        if (window.location.hostname === window.location.hostname) {
+          onComplete();
+        } else {
+          safeLogger.error('Onboarding: Domain changed during completion, reloading page');
+          window.location.reload();
+        }
       }, 100);
 
     } catch (error: any) {
@@ -372,8 +410,31 @@ const Onboarding = ({
           </CardContent>
         </Card>
       </div>
-    );
+  );
   }
+  
+  // Clear any potential redirect caches before rendering
+  useEffect(() => {
+    // Clear any cached redirects or navigation state
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => {
+          registration.unregister();
+        });
+      });
+    }
+    
+    // Clear session storage for any redirect data
+    try {
+      sessionStorage.removeItem('redirect_url');
+      sessionStorage.removeItem('lms_redirect');
+      localStorage.removeItem('redirect_url');
+      localStorage.removeItem('lms_redirect');
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }, []);
+
   safeLogger.info('Onboarding: Rendering questionnaire form', { 
     questionCount: questions.length, 
     submitting, 

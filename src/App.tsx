@@ -20,6 +20,21 @@ const OnboardingWrapper = ({ user }: { user: any }) => {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
   
+  // Prevent external redirects during onboarding
+  useEffect(() => {
+    const preventExternalRedirects = (event: BeforeUnloadEvent) => {
+      const target = (event.target as Window)?.location?.href;
+      if (target && (target.includes('growthos.core47.ai') || target.includes('core47.ai'))) {
+        event.preventDefault();
+        event.returnValue = 'Are you sure you want to leave the onboarding process?';
+        logger.warn('OnboardingWrapper: Prevented external redirect during onboarding', { target });
+      }
+    };
+    
+    window.addEventListener('beforeunload', preventExternalRedirects);
+    return () => window.removeEventListener('beforeunload', preventExternalRedirects);
+  }, []);
+  
   const handleOnboardingComplete = async () => {
     logger.info('Onboarding completed, navigating to dashboard');
     // Refresh user data to get updated onboarding status
@@ -97,6 +112,34 @@ const App = () => {
   const { user, loading, refreshUser } = useAuth();
   const [showPaywall, setShowPaywall] = useState(false);
   const [pendingInvoice, setPendingInvoice] = useState<PendingInvoice | null>(null);
+
+  // Global protection against external redirects
+  useEffect(() => {
+    const preventExternalRedirects = () => {
+      const originalAssign = window.location.assign;
+      const originalReplace = window.location.replace;
+      
+      window.location.assign = function(url: string | URL) {
+        const targetUrl = typeof url === 'string' ? url : url.toString();
+        if (targetUrl.includes('growthos.core47.ai') || targetUrl.includes('core47.ai')) {
+          logger.warn('App: Blocked external redirect attempt to:', { url: targetUrl });
+          return;
+        }
+        originalAssign.call(this, url);
+      };
+      
+      window.location.replace = function(url: string | URL) {
+        const targetUrl = typeof url === 'string' ? url : url.toString();
+        if (targetUrl.includes('growthos.core47.ai') || targetUrl.includes('core47.ai')) {
+          logger.warn('App: Blocked external redirect attempt to:', { url: targetUrl });
+          return;
+        }
+        originalReplace.call(this, url);
+      };
+    };
+    
+    preventExternalRedirects();
+  }, []);
 
   // Initialize global integrations and performance monitoring when user is loaded
   useEffect(() => {
