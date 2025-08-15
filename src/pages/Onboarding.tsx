@@ -22,6 +22,8 @@ const Onboarding = ({
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isEnabled, setIsEnabled] = useState(false);
+  const [autoCompleted, setAutoCompleted] = useState(false);
+  
   useEffect(() => {
     const fetchQuestions = async () => {
       safeLogger.info('Onboarding: Starting to fetch questionnaire', { userId: user?.id });
@@ -93,6 +95,63 @@ const Onboarding = ({
     
     fetchQuestions();
   }, []);
+
+  // Handle auto-completion when questionnaire is disabled
+  useEffect(() => {
+    if (!loading && !isEnabled && !autoCompleted) {
+      safeLogger.info('Onboarding: Auto-completing due to disabled questionnaire', { 
+        isEnabled, 
+        questionCount: questions.length 
+      });
+      
+      setAutoCompleted(true);
+      
+      // Auto-complete onboarding since questionnaire is disabled
+      const completeOnboarding = async () => {
+        try {
+          // Mark student onboarding as completed with proper data to satisfy constraint
+          const { error } = await supabase
+            .from('students')
+            .update({ 
+              onboarding_completed: true,
+              answers_json: {},
+              goal_brief: 'Questionnaire was disabled - onboarding auto-completed',
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+            
+          if (error) {
+            safeLogger.error('Onboarding: Error auto-completing onboarding', error);
+            // Show error message and allow retry
+            toast({
+              variant: "destructive",
+              title: "Auto-completion failed",
+              description: "Please refresh the page to try again."
+            });
+            setAutoCompleted(false); // Allow retry
+            return;
+          } else {
+            safeLogger.info('Onboarding: Auto-completion successful');
+            // Wait a moment then complete
+            setTimeout(() => {
+              onComplete();
+            }, 500);
+          }
+        } catch (error) {
+          safeLogger.error('Onboarding: Error in auto-completion', error);
+          toast({
+            variant: "destructive",
+            title: "Auto-completion failed",
+            description: "Please refresh the page to try again."
+          });
+          setAutoCompleted(false); // Allow retry
+        }
+      };
+
+      // Auto-complete after a brief delay
+      setTimeout(completeOnboarding, 100);
+    }
+  }, [loading, isEnabled, autoCompleted, onComplete, user.id, toast, questions.length]);
   const handleQuestionnaireComplete = async (responses: QuestionnaireResponse[]) => {
     setSubmitting(true);
     
@@ -319,64 +378,8 @@ const Onboarding = ({
       </div>;
   }
 
-  // If questionnaire is disabled, skip onboarding
+  // If questionnaire is disabled, show auto-completion loading
   if (!isEnabled) {
-    const [autoCompleted, setAutoCompleted] = useState(false);
-    
-    useEffect(() => {
-      if (!autoCompleted) {
-        safeLogger.info('Onboarding: Auto-completing due to disabled questionnaire', { 
-          isEnabled, 
-          questionCount: questions.length 
-        });
-        
-        setAutoCompleted(true);
-        
-        // Auto-complete onboarding since questionnaire is disabled
-        const completeOnboarding = async () => {
-          try {
-            // Mark student onboarding as completed with proper data to satisfy constraint
-            const { error } = await supabase
-              .from('students')
-              .update({ 
-                onboarding_completed: true,
-                answers_json: {},
-                goal_brief: 'Questionnaire was disabled - onboarding auto-completed',
-                updated_at: new Date().toISOString()
-              })
-              .eq('user_id', user.id);
-              
-            if (error) {
-              safeLogger.error('Onboarding: Error auto-completing onboarding', error);
-              // Show error message and allow retry
-              toast({
-                variant: "destructive",
-                title: "Auto-completion failed",
-                description: "Please refresh the page to try again."
-              });
-              return;
-            } else {
-              safeLogger.info('Onboarding: Auto-completion successful');
-              // Wait a moment then complete
-              setTimeout(() => {
-                onComplete();
-              }, 500);
-            }
-          } catch (error) {
-            safeLogger.error('Onboarding: Error in auto-completion', error);
-            toast({
-              variant: "destructive",
-              title: "Auto-completion failed",
-              description: "Please refresh the page to try again."
-            });
-          }
-        };
-
-        // Auto-complete after a brief delay
-        setTimeout(completeOnboarding, 100);
-      }
-    }, [autoCompleted, onComplete, user.id, toast]);
-
     return (
       <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
         <Card className="w-full max-w-2xl shadow-elevated border-0">
