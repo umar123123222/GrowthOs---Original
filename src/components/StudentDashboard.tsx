@@ -51,6 +51,13 @@ export function StudentDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Add debug logging and error state
+  console.log('StudentDashboard: Rendering with user:', user?.id, 'role:', user?.role);
+  
+  // Add error boundary state
+  const [hasError, setHasError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
   // State
   const [dreamGoal, setDreamGoal] = useState<string>('');
   const [courseProgress, setCourseProgress] = useState(0);
@@ -72,7 +79,12 @@ export function StudentDashboard() {
   }, [user?.id, recordings]);
 
   const fetchDashboardData = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.warn('StudentDashboard: No user ID available');
+      return;
+    }
+
+    console.log('StudentDashboard: Fetching dashboard data for user:', user.id);
 
     try {
       // Fetch user data including dream goal and connections
@@ -229,6 +241,14 @@ export function StudentDashboard() {
 
     } catch (error) {
       logger.error('Error fetching dashboard data:', error);
+      console.error('StudentDashboard: Dashboard data fetch failed:', error);
+      setHasError(true);
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to load dashboard data');
+      toast({
+        title: "Dashboard Loading Error",
+        description: "Some dashboard features may not work properly. Please refresh the page.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -240,13 +260,50 @@ export function StudentDashboard() {
 
   const completedMilestones = milestones.filter(m => m.completed).length;
 
+  // Early returns with defensive checks
+  if (!user) {
+    console.warn('StudentDashboard: No user available, showing loading state');
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="text-lg">Loading user data...</div>
+      </div>
+    );
+  }
+
   if (loading) {
+    console.log('StudentDashboard: Loading recordings');
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-lg">Loading your dashboard...</div>
       </div>
     );
   }
+
+  // Error state
+  if (hasError) {
+    console.error('StudentDashboard: Rendering error state');
+    return (
+      <div className="flex flex-col justify-center items-center h-64 space-y-4">
+        <AlertCircle className="w-12 h-12 text-destructive" />
+        <div className="text-lg text-destructive">Dashboard Error</div>
+        <div className="text-sm text-muted-foreground max-w-md text-center">
+          {errorMessage || 'Something went wrong loading your dashboard.'}
+        </div>
+        <Button 
+          onClick={() => {
+            setHasError(false);
+            setErrorMessage('');
+            fetchDashboardData();
+          }}
+          variant="outline"
+        >
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
+  console.log('StudentDashboard: Rendering main dashboard content');
 
   return (
     <div className="space-y-6">
