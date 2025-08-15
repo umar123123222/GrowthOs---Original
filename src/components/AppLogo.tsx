@@ -13,30 +13,36 @@ export function AppLogo({ variant = 'header', className = "h-10 w-auto max-w-[20
   const logoUrl = useCompanyLogo();
   const [companyName, setCompanyName] = useState<string>('GrowthOS');
   const [isLoading, setIsLoading] = useState(true);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   useEffect(() => {
-    const fetchCompanyName = async () => {
+    const fetchCompanyData = async () => {
       try {
         const { data, error } = await supabase
           .from('company_settings')
-          .select('company_name')
+          .select('company_name, branding')
           .eq('id', 1)
           .maybeSingle();
 
-        if (!error && data?.company_name) {
-          setCompanyName(data.company_name);
+        console.log('AppLogo - Company settings data:', data);
+        setDebugInfo(data);
+
+        if (!error && data) {
+          if (data.company_name) {
+            setCompanyName(data.company_name);
+          }
         }
       } catch (error) {
-        console.error('Error fetching company name:', error);
+        console.error('Error fetching company data:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchCompanyName();
+    fetchCompanyData();
   }, []);
 
-  safeLogger.info('AppLogo - logoUrl:', { logoUrl });
+  safeLogger.info('AppLogo - logoUrl and debug:', { logoUrl, debugInfo });
 
   // Show loading state only while fetching company data
   if (isLoading) {
