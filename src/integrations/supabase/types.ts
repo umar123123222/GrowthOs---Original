@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -1347,21 +1347,21 @@ export type Database = {
     Functions: {
       create_notification: {
         Args: {
-          p_user_id: string
-          p_type: string
-          p_title: string
           p_message: string
           p_metadata?: Json
+          p_title: string
+          p_type: string
+          p_user_id: string
         }
         Returns: string
       }
       create_user_with_role: {
         Args: {
           target_email: string
-          target_password: string
-          target_role: string
           target_full_name?: string
           target_metadata?: Json
+          target_password: string
+          target_role: string
         }
         Returns: Json
       }
@@ -1372,9 +1372,9 @@ export type Database = {
       get_student_unlock_sequence: {
         Args: { p_user_id: string }
         Returns: {
+          is_unlocked: boolean
           recording_id: string
           sequence_order: number
-          is_unlocked: boolean
           unlock_reason: string
         }[]
       }
@@ -1385,10 +1385,10 @@ export type Database = {
       get_user_unlock_status: {
         Args: { _user_id: string }
         Returns: {
-          module_id: string
-          recording_id: string
           is_module_unlocked: boolean
           is_recording_unlocked: boolean
+          module_id: string
+          recording_id: string
         }[]
       }
       get_users_by_role: {
@@ -1408,15 +1408,15 @@ export type Database = {
         Returns: string
       }
       is_assignment_passed: {
-        Args: { _user_id: string; _assignment_id: string }
+        Args: { _assignment_id: string; _user_id: string }
         Returns: boolean
       }
       is_module_completed: {
-        Args: { _user_id: string; _module_id: string }
+        Args: { _module_id: string; _user_id: string }
         Returns: boolean
       }
       is_recording_watched: {
-        Args: { _user_id: string; _recording_id: string }
+        Args: { _recording_id: string; _user_id: string }
         Returns: boolean
       }
       mark_all_notifications_read: {
@@ -1425,37 +1425,37 @@ export type Database = {
       }
       notify_all_students: {
         Args: {
-          p_type: string
-          p_title: string
           p_message: string
           p_metadata?: Json
+          p_title: string
+          p_type: string
         }
         Returns: number
       }
       notify_mentor_students: {
         Args: {
           p_mentor_id: string
-          p_type: string
-          p_title: string
           p_message: string
           p_metadata?: Json
+          p_title: string
+          p_type: string
         }
         Returns: number
       }
       notify_roles: {
-        Args: { role_codes: string[]; template_key: string; payload: Json }
+        Args: { payload: Json; role_codes: string[]; template_key: string }
         Returns: string[]
       }
       notify_users: {
-        Args: { user_ids: string[]; template_key: string; payload: Json }
+        Args: { payload: Json; template_key: string; user_ids: string[] }
         Returns: string[]
       }
       send_test_notification: {
-        Args: { template_key: string; payload: Json }
+        Args: { payload: Json; template_key: string }
         Returns: string[]
       }
       unlock_next_recording: {
-        Args: { p_user_id: string; p_current_recording_id: string }
+        Args: { p_current_recording_id: string; p_user_id: string }
         Returns: undefined
       }
       update_company_branding: {
