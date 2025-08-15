@@ -206,6 +206,7 @@ export type Database = {
           invoice_notes: string | null
           invoice_overdue_days: number
           invoice_send_gap_days: number
+          lms_sequential_unlock: boolean | null
           lms_url: string | null
           maximum_installment_count: number
           original_fee_amount: number
@@ -231,6 +232,7 @@ export type Database = {
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
+          lms_sequential_unlock?: boolean | null
           lms_url?: string | null
           maximum_installment_count?: number
           original_fee_amount?: number
@@ -256,6 +258,7 @@ export type Database = {
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
+          lms_sequential_unlock?: boolean | null
           lms_url?: string | null
           maximum_installment_count?: number
           original_fee_amount?: number
@@ -887,6 +890,7 @@ export type Database = {
           answers_json: Json | null
           created_at: string | null
           enrollment_date: string | null
+          fees_cleared: boolean | null
           goal_brief: string | null
           id: string
           installment_count: number | null
@@ -901,6 +905,7 @@ export type Database = {
           answers_json?: Json | null
           created_at?: string | null
           enrollment_date?: string | null
+          fees_cleared?: boolean | null
           goal_brief?: string | null
           id?: string
           installment_count?: number | null
@@ -915,6 +920,7 @@ export type Database = {
           answers_json?: Json | null
           created_at?: string | null
           enrollment_date?: string | null
+          fees_cleared?: boolean | null
           goal_brief?: string | null
           id?: string
           installment_count?: number | null
@@ -963,6 +969,7 @@ export type Database = {
           student_id: string
           submitted_at: string
           updated_at: string
+          version: number | null
         }
         Insert: {
           assignment_id: string
@@ -977,6 +984,7 @@ export type Database = {
           student_id: string
           submitted_at?: string
           updated_at?: string
+          version?: number | null
         }
         Update: {
           assignment_id?: string
@@ -991,6 +999,7 @@ export type Database = {
           student_id?: string
           submitted_at?: string
           updated_at?: string
+          version?: number | null
         }
         Relationships: [
           {

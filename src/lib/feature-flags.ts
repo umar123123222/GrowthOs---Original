@@ -15,6 +15,9 @@ export const FEATURE_FLAGS = {
   
   // Issue 2: Type safety improvements (ON by default, compile-time only)
   TYPE_SAFETY_IMPROVEMENTS: true,
+  
+  // Sequential unlock system (OFF by default, zero regression)
+  LMS_SEQUENTIAL_UNLOCK: false,
 } as const;
 
 export type FeatureFlag = keyof typeof FEATURE_FLAGS;
