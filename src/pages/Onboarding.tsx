@@ -24,17 +24,23 @@ const Onboarding = ({
   const [isEnabled, setIsEnabled] = useState(false);
   useEffect(() => {
     const fetchQuestions = async () => {
+      safeLogger.info('Onboarding: Starting to fetch questionnaire', { userId: user?.id });
       try {
         const {
           data: settings,
           error
         } = await supabase.from('company_settings').select('enable_student_signin, questionnaire').eq('id', 1).maybeSingle();
         if (error) {
-          console.error('Error fetching company settings:', error);
+          safeLogger.error('Onboarding: Error fetching company settings', error);
           // If no settings found, assume questionnaire is disabled
           setIsEnabled(false);
           setQuestions([]);
         } else {
+          safeLogger.info('Onboarding: Company settings fetched', { 
+            enable_student_signin: settings?.enable_student_signin, 
+            hasQuestionnaire: !!settings?.questionnaire,
+            questionnaireLength: Array.isArray(settings?.questionnaire) ? settings.questionnaire.length : 'not-array'
+          });
           setIsEnabled(settings?.enable_student_signin || false);
           if (settings?.enable_student_signin && settings?.questionnaire) {
             try {
@@ -43,8 +49,16 @@ const Onboarding = ({
               if (Array.isArray(questionnaireData)) {
                 // Sort questions by order
                 const sortedQuestions = questionnaireData.sort((a, b) => a.order - b.order);
+                safeLogger.info('Onboarding: Questions loaded successfully', { 
+                  questionCount: sortedQuestions.length,
+                  firstQuestion: sortedQuestions[0]?.text?.substring(0, 50) 
+                });
                 setQuestions(sortedQuestions);
               } else {
+                safeLogger.warn('Onboarding: Questionnaire data is not an array', { 
+                  type: typeof questionnaireData, 
+                  value: questionnaireData 
+                });
                 setQuestions([]);
               }
             } catch (parseError) {
@@ -280,16 +294,27 @@ const Onboarding = ({
 
   // If questionnaire is disabled or no questions, skip onboarding
   if (!isEnabled || questions.length === 0) {
+    safeLogger.info('Onboarding: Auto-completing due to disabled questionnaire or no questions', { 
+      isEnabled, 
+      questionCount: questions.length 
+    });
+    
     // Auto-complete onboarding since there are no questions
     const completeOnboarding = async () => {
       try {
-        // users table doesn't have onboarding_done field, skip update
-        const error = null;
+        // Mark student onboarding as completed in database
+        const { error } = await supabase
+          .from('students')
+          .update({ onboarding_completed: true })
+          .eq('user_id', user.id);
+          
         if (error) {
-          console.error('Error completing onboarding:', error);
+          safeLogger.error('Onboarding: Error auto-completing onboarding', error);
+        } else {
+          safeLogger.info('Onboarding: Auto-completion successful');
         }
       } catch (error) {
-        console.error('Error completing onboarding:', error);
+        safeLogger.error('Onboarding: Error in auto-completion', error);
       } finally {
         onComplete();
       }
@@ -299,9 +324,18 @@ const Onboarding = ({
     completeOnboarding();
     return null;
   }
+  safeLogger.info('Onboarding: Rendering questionnaire form', { 
+    questionCount: questions.length, 
+    submitting, 
+    userId: user?.id 
+  });
+
   return <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl shadow-elevated border-0">
-        
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-semibold text-gray-900">Welcome! Let's Get Started</CardTitle>
+          <p className="text-gray-600 mt-2">Help us understand your goals so we can personalize your learning experience.</p>
+        </CardHeader>
         
         <CardContent className="bg-slate-50">
           <StudentQuestionnaireForm questions={questions} onComplete={handleQuestionnaireComplete} isLoading={submitting} />

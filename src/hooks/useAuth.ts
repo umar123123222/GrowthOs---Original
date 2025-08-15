@@ -178,12 +178,25 @@ useEffect(() => {
             logger.warn('fetchUserProfile: Error fetching student onboarding status', studentErr);
           }
           onboardingDone = !!studentRow?.onboarding_completed;
+          logger.debug('fetchUserProfile: Student onboarding status', { 
+            userId, 
+            studentExists: !!studentRow, 
+            onboardingCompleted: studentRow?.onboarding_completed,
+            onboardingDone,
+            studentErr: studentErr?.message 
+          });
         }
 
         const userData = {
           ...data,
           onboarding_done: onboardingDone,
         };
+        logger.debug('fetchUserProfile: Setting user data with onboarding status', { 
+          userId: userData.id, 
+          role: userData.role, 
+          email: userData.email,
+          onboarding_done: userData.onboarding_done 
+        });
         setUser(userData as User);
       } else {
         logger.warn('fetchUserProfile: No data returned but session exists');

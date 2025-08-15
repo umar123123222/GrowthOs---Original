@@ -130,7 +130,9 @@ const App = () => {
     hasUser: !!user, 
     loading, 
     userRole: user?.role, 
-    userEmail: user?.email 
+    userEmail: user?.email,
+    onboarding_done: user?.onboarding_done,
+    shouldShowOnboarding: user?.role === 'student' && !user?.onboarding_done
   });
 
   if (loading) {
@@ -157,9 +159,12 @@ const App = () => {
                 {!user ? (
                   <Route path="*" element={<Login />} />
                 ) : user?.role === 'student' && !user?.onboarding_done ? (
-                  <Route path="*" element={
-                    <OnboardingWrapper user={user} />
-                  } />
+                  (() => {
+                    logger.debug('App: Showing onboarding for student', { userId: user.id, onboarding_done: user.onboarding_done });
+                    return <Route path="*" element={
+                      <OnboardingWrapper user={user} />
+                    } />;
+                  })()
                 ) : (
                   <Route path="/" element={<Layout user={user} />}>
                     {/* Role-based dashboard routing */}
