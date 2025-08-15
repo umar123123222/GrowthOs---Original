@@ -1631,6 +1631,10 @@ export type Database = {
         Args: { payload: Json; template_key: string }
         Returns: string[]
       }
+      sync_all_users_unlock_progress: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       sync_user_unlock_progress: {
         Args: { p_user_id: string }
         Returns: undefined

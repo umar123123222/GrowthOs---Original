@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Edit, Trash2, Video, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Video, ChevronDown, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from './RecordingRatingDetails';
@@ -45,6 +45,7 @@ export function RecordingsManagement() {
   const [modules, setModules] = useState<Module[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncingUnlocks, setSyncingUnlocks] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecording, setEditingRecording] = useState<Recording | null>(null);
   const [expandedRecordings, setExpandedRecordings] = useState<Set<string>>(new Set());
@@ -268,6 +269,29 @@ export function RecordingsManagement() {
     }
   };
 
+  const handleSyncAllUsersUnlocks = async () => {
+    setSyncingUnlocks(true);
+    try {
+      const { data, error } = await supabase.rpc('sync_all_users_unlock_progress');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: data || "Synced unlock progress for all users"
+      });
+    } catch (error) {
+      safeLogger.error('Error syncing user unlocks:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sync user unlock progress",
+        variant: "destructive"
+      });
+    } finally {
+      setSyncingUnlocks(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -288,29 +312,39 @@ export function RecordingsManagement() {
           </h2>
           <p className="text-muted-foreground mt-1 text-lg">Manage video recordings and their assignments</p>
         </div>
-        
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={() => {
-                setEditingRecording(null);
-                setFormData({
-                  recording_title: '',
-                  recording_url: '',
-                  duration_min: 0,
-                  sequence_order: 0,
-                  notes: '',
-                  description: '',
-                  module_id: '',
-                  assignment_id: ''
-                });
-              }}
-              className="hover-scale bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Recording
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-3">
+          <Button 
+            onClick={handleSyncAllUsersUnlocks}
+            disabled={syncingUnlocks}
+            variant="outline"
+            className="hover-scale bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${syncingUnlocks ? 'animate-spin' : ''}`} />
+            {syncingUnlocks ? 'Syncing...' : 'Sync All User Unlocks'}
+          </Button>
+          
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button 
+                onClick={() => {
+                  setEditingRecording(null);
+                  setFormData({
+                    recording_title: '',
+                    recording_url: '',
+                    duration_min: 0,
+                    sequence_order: 0,
+                    notes: '',
+                    description: '',
+                    module_id: '',
+                    assignment_id: ''
+                  });
+                }}
+                className="hover-scale bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Recording
+              </Button>
+            </DialogTrigger>
           <DialogContent className="w-[95vw] sm:max-w-4xl h-[85vh] sm:h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold">
@@ -449,7 +483,8 @@ export function RecordingsManagement() {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
