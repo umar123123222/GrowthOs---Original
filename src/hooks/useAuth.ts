@@ -161,23 +161,35 @@ useEffect(() => {
             id: session.user.id,
             email: session.user.email || '',
             role: 'student', // default role
-            full_name: session.user.user_metadata?.full_name || session.user.email
+            full_name: session.user.user_metadata?.full_name || session.user.email,
+            onboarding_done: false // Assume onboarding needed on error
           });
         }
       } else if (data) {
         logger.debug('fetchUserProfile: Setting user data', { role: data.role, email: data.email });
-        // Determine onboarding status directly from students table for reliability
-        let onboardingDone = true;
+        // Determine onboarding status - default to needing onboarding for students
+        let onboardingDone = data.role !== 'student'; // Non-students don't need onboarding
+        
         if (data.role === 'student') {
           const { data: studentRow, error: studentErr } = await supabase
             .from('students')
             .select('onboarding_completed')
             .eq('user_id', userId)
             .maybeSingle();
+          
           if (studentErr) {
             logger.warn('fetchUserProfile: Error fetching student onboarding status', studentErr);
+            // If error fetching student record, assume onboarding needed
+            onboardingDone = false;
+          } else if (!studentRow) {
+            logger.warn('fetchUserProfile: No student record found for user, assuming onboarding needed', { userId });
+            // If no student record exists, they definitely need onboarding
+            onboardingDone = false;
+          } else {
+            // Student record exists, check completion status
+            onboardingDone = !!studentRow.onboarding_completed;
           }
-          onboardingDone = !!studentRow?.onboarding_completed;
+          
           logger.debug('fetchUserProfile: Student onboarding status', { 
             userId, 
             studentExists: !!studentRow, 
@@ -202,11 +214,13 @@ useEffect(() => {
         logger.warn('fetchUserProfile: No data returned but session exists');
         // User record doesn't exist but session is valid - use session data
         if (session?.user) {
+          logger.warn('fetchUserProfile: Creating fallback user data for session without user record');
           setUser({
             id: session.user.id,
             email: session.user.email || '',
             role: 'student', // default role
-            full_name: session.user.user_metadata?.full_name || session.user.email
+            full_name: session.user.user_metadata?.full_name || session.user.email,
+            onboarding_done: false // New users need onboarding
           });
         }
       }
@@ -219,7 +233,8 @@ useEffect(() => {
           id: session.user.id,
           email: session.user.email || '',
           role: 'student', // default role
-          full_name: session.user.user_metadata?.full_name || session.user.email
+          full_name: session.user.user_metadata?.full_name || session.user.email,
+          onboarding_done: false // Assume onboarding needed on error
         });
       }
     } finally {
