@@ -22,17 +22,20 @@ export const useOnboardingSubmission = () => {
   ): Promise<boolean> => {
     setLoading(true);
     try {
-      // Store onboarding data in user's dream_goal_summary field for now
-      // TODO: Create proper onboarding_responses table in migration
-      const { error: userError } = await supabase
-        .from('users')
-        .update({
-          dream_goal_summary: JSON.stringify(data)
-        })
-        .eq('id', userId);
+      // Store onboarding responses in the proper table
+      const responses = Object.entries(data).map(([questionId, answer]) => ({
+        user_id: userId,
+        question_id: questionId,
+        answer: String(answer),
+        answer_type: typeof answer === 'string' ? 'text' : 'json'
+      }));
 
-      if (userError) {
-        throw new Error(`Failed to update user profile: ${userError.message}`);
+      const { error: responseError } = await supabase
+        .from('onboarding_responses')
+        .insert(responses);
+
+      if (responseError) {
+        throw responseError;
       }
 
       toast({

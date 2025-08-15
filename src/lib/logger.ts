@@ -80,18 +80,37 @@ class Logger {
   }
 
   private sendToMonitoring(level: string, message: string, error?: any, data?: LogData): void {
-    // TODO: Implement monitoring service integration
-    // Example: Sentry.captureException(error, { extra: data, level });
+    // Production monitoring integration
+    import('./production-monitoring').then(({ monitoring }) => {
+      if (error) {
+        monitoring.captureError(error, { message, level, ...data });
+      } else {
+        monitoring.captureMessage(message, level as 'info' | 'warning' | 'error');
+      }
+    }).catch(() => {
+      // Silently fail if monitoring is not available
+    });
   }
 
   private sendPerformanceMetric(operation: string, duration: number, data?: LogData): void {
-    // TODO: Implement performance monitoring
-    // Example: analytics.track('performance', { operation, duration, ...data });
+    // Performance monitoring integration
+    import('./production-monitoring').then(({ monitoring }) => {
+      monitoring.captureMessage(
+        `Performance: ${operation} took ${duration}ms`,
+        duration > 1000 ? 'warning' : 'info'
+      );
+    }).catch(() => {
+      // Silently fail if monitoring is not available
+    });
   }
 
   private sendActivityMetric(action: string, data?: LogData): void {
-    // TODO: Implement user activity tracking
-    // Example: analytics.track(action, data);
+    // User activity tracking integration
+    import('./production-monitoring').then(({ monitoring }) => {
+      monitoring.captureMessage(`User Activity: ${action}`, 'info');
+    }).catch(() => {
+      // Silently fail if monitoring is not available
+    });
   }
 }
 

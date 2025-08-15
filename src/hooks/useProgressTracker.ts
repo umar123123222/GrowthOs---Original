@@ -38,8 +38,24 @@ export const useProgressTracker = (user?: any, modules?: any[]) => {
     if (!user?.id) return;
 
     try {
-      // TODO: Create user_module_progress table in migration
-      // For now, log the activity in user_activity_logs
+      // Store module progress in the proper table
+      const { error: progressError } = await supabase
+        .from('user_module_progress')
+        .upsert({
+          user_id: user.id,
+          module_id: moduleId,
+          is_completed: true,
+          progress_percentage: 100,
+          completed_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id,module_id'
+        });
+
+      if (progressError) {
+        throw progressError;
+      }
+
+      // Also log the activity
       await supabase
         .from('user_activity_logs')
         .insert({

@@ -92,7 +92,7 @@ export interface Module {
   title: string;
   description?: string;
   order?: number;
-  quiz_questions?: any; // TODO: Define proper quiz question type
+  quiz_questions?: any; // Quiz questions from quiz.ts
   tenant_id?: string;
 }
 
