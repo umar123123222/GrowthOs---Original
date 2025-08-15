@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { safeQuery } from '@/lib/database-safety';
+import { safeQuery, safeMaybeSingle } from '@/lib/database-safety';
 import { safeLogger } from '@/lib/safe-logger';
 import type { UserBasicResult, UserWithRoleResult } from '@/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,11 +83,15 @@ export function SupportManagement() {
           const userData = userResult.data;
 
           // Get student_id from students table if user is a student
-          const { data: studentData } = await supabase
+          const studentResult = await safeMaybeSingle(
+            supabase
             .from('students')
             .select('student_id')
             .eq('user_id', ticket.user_id)
-            .maybeSingle();
+            .maybeSingle(),
+            `fetch student data for user ${ticket.user_id}`
+          );
+          const studentData = studentResult.data as { student_id: string } | null;
 
           return {
             ...ticket,
