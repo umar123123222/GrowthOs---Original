@@ -1,8 +1,9 @@
 import { supabase } from '@/integrations/supabase/client';
+import { safeLogger } from '@/lib/safe-logger';
 
 export async function triggerOnboardingProcessor() {
   try {
-    console.log('Triggering onboarding processor...');
+    safeLogger.info('Triggering onboarding processor');
     const { data, error } = await supabase.functions.invoke('process-onboarding-jobs', {
       body: {}
     });
@@ -12,7 +13,7 @@ export async function triggerOnboardingProcessor() {
       return { success: false, error };
     }
     
-    console.log('Onboarding processor response:', data);
+    safeLogger.info('Onboarding processor response', { success: true });
     return { success: true, data };
   } catch (error) {
     console.error('Failed to trigger onboarding processor:', error);

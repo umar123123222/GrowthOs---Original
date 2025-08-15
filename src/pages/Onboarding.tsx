@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { safeLogger } from '@/lib/safe-logger';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
@@ -83,7 +84,7 @@ const Onboarding = ({
       }, 30000); // 30 second timeout
 
       try {
-      console.log('Starting onboarding completion for user:', user.id);
+      safeLogger.info('Starting onboarding completion', { userId: user.id });
       
       // First, verify student record exists
       const { data: studentCheck, error: checkError } = await supabase
@@ -97,7 +98,7 @@ const Onboarding = ({
         throw new Error('Student record not found. Please contact support.');
       }
 
-      console.log('Student record found:', studentCheck);
+      safeLogger.info('Student record found', { studentId: studentCheck?.id });
 
       // 1. Save responses to user_activity_logs for audit trail
       const responsePromises = responses.map(response => {
@@ -131,7 +132,7 @@ const Onboarding = ({
         });
       });
 
-      console.log('Saving activity logs...');
+      safeLogger.info('Saving activity logs');
       const results = await Promise.all(responsePromises);
       const hasErrors = results.some(result => result.error);
 
@@ -174,7 +175,7 @@ const Onboarding = ({
         return acc;
       }, {} as Record<string, any>);
 
-      console.log('Updating student record with onboarding completion...');
+      safeLogger.info('Updating student record with onboarding completion');
       
       // 4. Update students table with completion data
       const { data: updateData, error: studentError } = await supabase
@@ -193,7 +194,7 @@ const Onboarding = ({
         throw new Error(`Failed to update student record: ${studentError.message}`);
       }
 
-      console.log('Student record updated successfully:', updateData);
+      safeLogger.info('Student record updated successfully', { studentId: updateData?.[0]?.id });
 
       // 5. Also update user profile with dream goal summary for backward compatibility
       const { error: userError } = await supabase
@@ -217,7 +218,7 @@ const Onboarding = ({
         description: "Your ultimate goal has been set. Let's achieve it together!"
       });
 
-      console.log('Onboarding completed successfully, calling onComplete...');
+      safeLogger.info('Onboarding completed successfully, calling onComplete');
       
       // Clear timeout since we succeeded
       if (timeoutId) clearTimeout(timeoutId);
@@ -240,7 +241,7 @@ const Onboarding = ({
         error.message?.includes('connection')
       )) {
         retryCount++;
-        console.log(`Retrying onboarding completion (attempt ${retryCount}/${maxRetries})...`);
+        safeLogger.warn('Retrying onboarding completion', { attempt: retryCount, maxRetries });
         
         toast({
           title: "Retrying...",

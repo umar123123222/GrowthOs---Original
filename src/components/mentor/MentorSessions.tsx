@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { safeLogger } from '@/lib/safe-logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -153,9 +154,12 @@ export function MentorSessions() {
       });
 
       // Log the session start
-      console.log('Session started:', session.title, 'by mentor:', user?.id);
+      safeLogger.activity('Session started', { 
+        sessionTitle: session.title, 
+        mentorId: user?.id 
+      });
     } catch (error) {
-      console.error('Error starting session:', error);
+      safeLogger.error('Error starting session', error);
       toast({
         title: "Error",
         description: "Failed to start session",

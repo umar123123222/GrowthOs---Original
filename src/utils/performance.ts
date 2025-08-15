@@ -1,4 +1,5 @@
 // Performance monitoring and optimization utilities
+import { safeLogger } from '@/lib/safe-logger';
 
 // Debounce function for search inputs and rapid events
 export function debounce<T extends (...args: any[]) => any>(
@@ -91,7 +92,7 @@ export class PerformanceTracker {
     }
     
     const duration = performance.now() - start;
-    console.log(`Performance: ${name} took ${duration.toFixed(2)}ms`);
+    safeLogger.performance(name, duration);
     return duration;
   }
   

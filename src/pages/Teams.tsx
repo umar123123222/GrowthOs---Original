@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { safeLogger } from '@/lib/safe-logger';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -171,9 +172,9 @@ const Teams = () => {
 
       // Trigger email processing instead of direct email sending
       try {
-        console.log('Triggering email queue processing for new team member...');
+        safeLogger.info('Triggering email queue processing for new team member');
         const processResult = await supabase.functions.invoke('process-email-queue');
-        console.log('Email processing result:', processResult);
+        safeLogger.info('Email processing result', { success: !processResult.error });
         const successMessage = `${newMember.role} account created and credential email sent to ${newMember.email}`;
         toast({
           title: "Success",

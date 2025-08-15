@@ -85,7 +85,7 @@ const handleSubmit = async (e: React.FormEvent) => {
       logger.performance('db.users.fetch_by_id', performance.now() - tUserFetchStart, { id: authData.user.id });
         
       if (userError || !userData) {
-        console.log('User not found in users table, creating...', { userError });
+        safeLogger.info('User not found in users table, creating...', { userError });
 
         // Default role for new users
         const userRole = 'student';
@@ -124,11 +124,11 @@ const handleSubmit = async (e: React.FormEvent) => {
           description: `Hello ${newUser?.full_name || newUser?.email || email}, you've successfully logged in.`
         });
       } else {
-        console.log('User found:', userData);
+        safeLogger.info('User found', { userId: userData.id, role: userData.role });
         
         // Only block suspended students from signing in
         if (userData.role === 'student' && userData.lms_status === 'suspended') {
-          console.log('Student LMS access is suspended');
+          safeLogger.warn('Student LMS access is suspended', { userId: userData.id });
           
           // Fetch company settings to get contact email
           const { data: companySettings } = await supabase
