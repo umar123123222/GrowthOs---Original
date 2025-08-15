@@ -19,6 +19,7 @@ export const StudentQuestionnaireForm: React.FC<StudentQuestionnaireFormProps> =
     isLoading,
     firstQuestion: questions?.[0]?.text
   });
+  console.log('StudentQuestionnaireForm: Full questions array:', questions);
 
   return (
     <QuestionnaireWizard
