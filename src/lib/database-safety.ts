@@ -13,9 +13,10 @@ interface SafeQueryResult<T> {
  * Always use this instead of .single() to handle missing data gracefully
  */
 export function safeQuery<T>(
-  promise: Promise<PostgrestSingleResponse<T>>,
+  queryBuilder: any,
   context?: string
 ): Promise<SafeQueryResult<T>> {
+  const promise = queryBuilder as Promise<PostgrestSingleResponse<T>>;
   return promise
     .then(({ data, error }) => {
       if (error) {
@@ -40,9 +41,10 @@ export function safeQuery<T>(
  * Safe wrapper for .maybeSingle() queries with enhanced error handling
  */
 export function safeMaybeSingle<T>(
-  promise: Promise<PostgrestSingleResponse<T>>,
+  queryBuilder: any,
   context?: string
 ): Promise<SafeQueryResult<T>> {
+  const promise = queryBuilder as Promise<PostgrestSingleResponse<T>>;
   return promise
     .then(({ data, error }) => {
       if (error) {

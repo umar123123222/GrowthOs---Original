@@ -8,6 +8,8 @@ import { Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
+import { safeQuery } from '@/lib/database-safety';
+import type { RecordingRatingResult } from '@/types/database';
 
 interface LectureRatingProps {
   recordingId: string;
@@ -40,17 +42,20 @@ export function LectureRating({
     if (!user?.id) return;
 
     try {
-      const { data, error } = await supabase
-        .from('recording_ratings' as any)
-        .select('*')
-        .eq('student_id', user.id)
-        .eq('recording_id', recordingId)
-        .single();
+      const result = await safeQuery<RecordingRatingResult>(
+        supabase
+          .from('recording_ratings')
+          .select('*')
+          .eq('student_id', user.id)
+          .eq('recording_id', recordingId)
+          .single(),
+        `check existing rating for recording ${recordingId}`
+      );
 
-      if (data) {
+      if (result.success && result.data) {
         setHasRated(true);
-        setRating((data as any).rating);
-        setFeedback((data as any).feedback || '');
+        setRating(result.data.rating);
+        setFeedback(result.data.feedback || '');
       }
     } catch (error) {
       // No existing rating found, which is fine
@@ -63,7 +68,7 @@ export function LectureRating({
     setLoading(true);
     try {
       const { error } = await supabase
-        .from('recording_ratings' as any)
+        .from('recording_ratings')
         .upsert({
           student_id: user.id,
           recording_id: recordingId,

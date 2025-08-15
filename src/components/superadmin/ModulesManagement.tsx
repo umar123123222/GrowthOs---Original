@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash2, BookOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { safeQuery } from '@/lib/database-safety';
+import type { ModuleResult } from '@/types/database';
 
 interface Module {
   id: string;
@@ -136,17 +138,23 @@ export function ModulesManagement() {
         });
       } else {
         // Create new module
-        const { data: newModule, error: insertError } = await supabase
-          .from('modules')
-          .insert({
-            title: formData.title.trim(),
-            description: formData.description.trim(),
-            order: formData.order
-          })
-          .select()
-          .single();
+        const result = await safeQuery<ModuleResult>(
+          supabase
+            .from('modules')
+            .insert({
+              title: formData.title.trim(),
+              description: formData.description.trim(),
+              order: formData.order
+            })
+            .select()
+            .single(),
+          'create new module'
+        );
 
-        if (insertError) throw insertError;
+        if (!result.success) throw result.error;
+        const newModule = result.data;
+
+        
 
         // Assign selected recordings to new module
         if (formData.selectedRecordings.length > 0 && newModule) {

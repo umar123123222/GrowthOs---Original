@@ -12,6 +12,8 @@ import { ErrorMessage, FieldError } from "@/components/ui/error-message";
 import { errorHandler, handleApiError } from "@/lib/error-handler";
 import { useNavigate } from "react-router-dom";
 import { logger } from "@/lib/logger";
+import { safeQuery } from '@/lib/database-safety';
+import type { CreatedUserResult } from '@/types/database';
  
  const Login = () => {
   const [email, setEmail] = useState("");
@@ -90,31 +92,35 @@ const handleSubmit = async (e: React.FormEvent) => {
 
 // Create user if they don't exist
         const tInsertStart = performance.now();
-        const { data: newUser, error: createError } = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: authData.user.email || email,
-            role: userRole,
-            full_name: fullName,
-            password_display: 'temp_password',
-            password_hash: 'temp_hash',
-            created_at: new Date().toISOString()
-          })
-          .select()
-          .single();
+        const result = await safeQuery<CreatedUserResult>(
+          supabase
+            .from('users')
+            .insert({
+              id: authData.user.id,
+              email: authData.user.email || email,
+              role: userRole,
+              full_name: fullName,
+              password_display: 'temp_password',
+              password_hash: 'temp_hash',
+              created_at: new Date().toISOString()
+            })
+            .select()
+            .single(),
+          'create user profile'
+        );
         logger.performance('db.users.insert_profile', performance.now() - tInsertStart, { id: authData.user.id, role: userRole });
           
-        if (createError) {
-          console.error('Error creating user:', createError);
-          const userError = handleApiError(createError, 'user_creation');
+        if (!result.success) {
+          console.error('Error creating user:', result.error);
+          const userError = handleApiError(result.error, 'user_creation');
           setLoginError(`Failed to set up your account. ${userError.message}`);
           return;
         }
         
+        const newUser = result.data;
         toast({
           title: "Welcome!",
-          description: `Hello ${newUser.full_name || newUser.email}, you've successfully logged in.`
+          description: `Hello ${newUser?.full_name || newUser?.email || email}, you've successfully logged in.`
         });
       } else {
         console.log('User found:', userData);

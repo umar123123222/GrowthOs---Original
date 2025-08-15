@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Calendar, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { safeQuery } from '@/lib/database-safety';
+import type { SuccessSessionResult } from '@/types/database';
 import { format } from 'date-fns';
 import { notifyMentorOfSuccessSessionScheduled } from '@/lib/notification-service';
 
@@ -250,13 +252,18 @@ export function SuccessSessionsManagement() {
           description: "Session updated successfully",
         });
       } else {
-        const { data: newSession, error } = await supabase
-          .from('success_sessions')
-          .insert([sessionData])
-          .select()
-          .single();
+        const result = await safeQuery<SuccessSessionResult>(
+          supabase
+            .from('success_sessions')
+            .insert([sessionData])
+            .select()
+            .single(),
+          'create new success session'
+        );
 
-        if (error) throw error;
+        if (!result.success) throw result.error;
+        const newSession = result.data;
+
 
         // Notify the assigned mentor about the new session
         if (formData.mentor_id && newSession) {

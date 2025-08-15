@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { safeQuery } from '@/lib/database-safety';
+import type { UserBasicResult, UserWithRoleResult } from '@/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -69,11 +71,15 @@ export function SupportManagement() {
       // Then get user data for each ticket
       const ticketsWithUsers = await Promise.all(
         (ticketsData || []).map(async (ticket) => {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('full_name, email')
-            .eq('id', ticket.user_id)
-            .single();
+          const userResult = await safeQuery<UserBasicResult>(
+            supabase
+              .from('users')
+              .select('full_name, email')
+              .eq('id', ticket.user_id)
+              .single(),
+            `fetch user data for ticket ${ticket.id}`
+          );
+          const userData = userResult.data;
 
           // Get student_id from students table if user is a student
           const { data: studentData } = await supabase
@@ -120,11 +126,15 @@ export function SupportManagement() {
       // Then get user data for each reply
       const repliesWithUsers = await Promise.all(
         (repliesData || []).map(async (reply) => {
-          const { data: userData, error: userError } = await supabase
-            .from('users')
-            .select('full_name, role')
-            .eq('id', reply.user_id)
-            .single();
+          const userResult = await safeQuery<UserWithRoleResult>(
+            supabase
+              .from('users')
+              .select('full_name, role')
+              .eq('id', reply.user_id)
+              .single(),
+            `fetch user data for reply ${reply.id}`
+          );
+          const userData = userResult.data;
 
           return {
             ...reply,
