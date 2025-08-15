@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { safeQuery } from '@/lib/database-safety';
+import { safeLogger } from '@/lib/safe-logger';
 import type { UserBasicResult, UserWithRoleResult } from '@/types/database';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
