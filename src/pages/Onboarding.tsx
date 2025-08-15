@@ -24,6 +24,28 @@ const Onboarding = ({
   const [isEnabled, setIsEnabled] = useState(false);
   const [autoCompleted, setAutoCompleted] = useState(false);
   
+  // Clear any potential redirect caches before rendering
+  useEffect(() => {
+    // Clear any cached redirects or navigation state
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(registrations => {
+        registrations.forEach(registration => {
+          registration.unregister();
+        });
+      });
+    }
+    
+    // Clear session storage for any redirect data
+    try {
+      sessionStorage.removeItem('redirect_url');
+      sessionStorage.removeItem('lms_redirect');
+      localStorage.removeItem('redirect_url');
+      localStorage.removeItem('lms_redirect');
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }, []);
+  
   useEffect(() => {
     const fetchQuestions = async () => {
       safeLogger.info('Onboarding: Starting to fetch questionnaire', { userId: user?.id });
@@ -421,32 +443,10 @@ const Onboarding = ({
           </CardContent>
         </Card>
       </div>
-  );
+    );
   }
   
-  // Clear any potential redirect caches before rendering
-  useEffect(() => {
-    // Clear any cached redirects or navigation state
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(registrations => {
-        registrations.forEach(registration => {
-          registration.unregister();
-        });
-      });
-    }
-    
-    // Clear session storage for any redirect data
-    try {
-      sessionStorage.removeItem('redirect_url');
-      sessionStorage.removeItem('lms_redirect');
-      localStorage.removeItem('redirect_url');
-      localStorage.removeItem('lms_redirect');
-    } catch (e) {
-      // Ignore storage errors
-    }
-  }, []);
-
-  console.log('Onboarding: About to render questionnaire', { 
+  console.log('Onboarding: About to render questionnaire', {
     questionCount: questions.length, 
     submitting, 
     userId: user?.id,
