@@ -26,10 +26,12 @@ const Onboarding = ({
     const fetchQuestions = async () => {
       safeLogger.info('Onboarding: Starting to fetch questionnaire', { userId: user?.id });
       try {
+        safeLogger.info('Onboarding: About to fetch company settings');
         const {
           data: settings,
           error
         } = await supabase.from('company_settings').select('enable_student_signin, questionnaire').eq('id', 1).maybeSingle();
+        safeLogger.info('Onboarding: Raw response from company_settings', { settings, error });
         if (error) {
           safeLogger.error('Onboarding: Error fetching company settings', error);
           // If no settings found, assume questionnaire is disabled

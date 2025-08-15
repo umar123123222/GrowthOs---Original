@@ -99,6 +99,13 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   onComplete,
   isLoading = false
 }) => {
+  safeLogger.info('QuestionnaireWizard: Component initialized', { 
+    questionCount: questions?.length || 0, 
+    hasQuestions: !!questions,
+    isArray: Array.isArray(questions),
+    isLoading 
+  });
+
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [initializationError, setInitializationError] = useState<string | null>(null);
@@ -106,6 +113,11 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
 
   // Early return for invalid questions
   if (!questions || !Array.isArray(questions) || questions.length === 0) {
+    safeLogger.warn('QuestionnaireWizard: Returning loading state', { 
+      questions: questions,
+      isArray: Array.isArray(questions),
+      length: questions?.length 
+    });
     return (
       <div className="min-h-[50vh] flex items-center justify-center p-4">
         <Card className="w-full max-w-md mx-auto">

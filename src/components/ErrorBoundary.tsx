@@ -24,6 +24,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    // Log to console for immediate debugging
+    console.error('ErrorBoundary caught an error:', error);
+    console.error('Component stack:', errorInfo.componentStack);
+    
     // Use centralized logging instead of console.error
     if (typeof window !== 'undefined') {
       const errorData = {

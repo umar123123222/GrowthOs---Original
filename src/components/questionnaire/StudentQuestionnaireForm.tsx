@@ -13,6 +13,13 @@ export const StudentQuestionnaireForm: React.FC<StudentQuestionnaireFormProps> =
   onComplete,
   isLoading = false
 }) => {
+  console.log('StudentQuestionnaireForm: Rendering with', { 
+    questionCount: questions?.length || 0, 
+    hasQuestions: !!questions,
+    isLoading,
+    firstQuestion: questions?.[0]?.text
+  });
+
   return (
     <QuestionnaireWizard
       questions={questions}
