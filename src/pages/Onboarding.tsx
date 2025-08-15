@@ -337,19 +337,32 @@ const Onboarding = ({
       // Clear timeout since we succeeded
       if (timeoutId) clearTimeout(timeoutId);
       
-      // 7. Complete onboarding with enhanced navigation protection
+      // 7. Complete onboarding with automatic page refresh after 5 seconds
       setTimeout(() => {
         safeLogger.info('Onboarding: Completing onboarding and calling onComplete');
         
         // Reset submitting state first
         setSubmitting(false);
         
-        // Double-check we're still on the same domain before completing
+        // Show success message
+        toast({
+          title: "Onboarding Complete!",
+          description: "Page will refresh in 5 seconds...",
+          duration: 5000
+        });
+        
+        // Set up automatic page refresh after 5 seconds
+        setTimeout(() => {
+          safeLogger.info('Onboarding: Auto-refreshing page after 5 seconds');
+          window.location.reload();
+        }, 5000);
+        
+        // Still call onComplete for immediate navigation if needed
         if (window.location.hostname === window.location.hostname) {
-          safeLogger.info('Onboarding completed, navigating to dashboard');
+          safeLogger.info('Onboarding completed, will refresh shortly');
           onComplete();
         } else {
-          safeLogger.error('Onboarding: Domain changed during completion, reloading page');
+          safeLogger.error('Onboarding: Domain changed during completion, reloading page immediately');
           window.location.reload();
         }
       }, 100);
