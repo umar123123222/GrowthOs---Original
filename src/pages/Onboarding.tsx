@@ -321,35 +321,72 @@ const Onboarding = ({
 
   // If questionnaire is disabled, skip onboarding
   if (!isEnabled) {
-    safeLogger.info('Onboarding: Auto-completing due to disabled questionnaire', { 
-      isEnabled, 
-      questionCount: questions.length 
-    });
+    const [autoCompleted, setAutoCompleted] = useState(false);
     
-    // Auto-complete onboarding since questionnaire is disabled
-    const completeOnboarding = async () => {
-      try {
-        // Mark student onboarding as completed in database
-        const { error } = await supabase
-          .from('students')
-          .update({ onboarding_completed: true })
-          .eq('user_id', user.id);
-          
-        if (error) {
-          safeLogger.error('Onboarding: Error auto-completing onboarding', error);
-        } else {
-          safeLogger.info('Onboarding: Auto-completion successful');
-        }
-      } catch (error) {
-        safeLogger.error('Onboarding: Error in auto-completion', error);
-      } finally {
-        onComplete();
-      }
-    };
+    useEffect(() => {
+      if (!autoCompleted) {
+        safeLogger.info('Onboarding: Auto-completing due to disabled questionnaire', { 
+          isEnabled, 
+          questionCount: questions.length 
+        });
+        
+        setAutoCompleted(true);
+        
+        // Auto-complete onboarding since questionnaire is disabled
+        const completeOnboarding = async () => {
+          try {
+            // Mark student onboarding as completed with proper data to satisfy constraint
+            const { error } = await supabase
+              .from('students')
+              .update({ 
+                onboarding_completed: true,
+                answers_json: {},
+                goal_brief: 'Questionnaire was disabled - onboarding auto-completed',
+                updated_at: new Date().toISOString()
+              })
+              .eq('user_id', user.id);
+              
+            if (error) {
+              safeLogger.error('Onboarding: Error auto-completing onboarding', error);
+              // Show error message and allow retry
+              toast({
+                variant: "destructive",
+                title: "Auto-completion failed",
+                description: "Please refresh the page to try again."
+              });
+              return;
+            } else {
+              safeLogger.info('Onboarding: Auto-completion successful');
+              // Wait a moment then complete
+              setTimeout(() => {
+                onComplete();
+              }, 500);
+            }
+          } catch (error) {
+            safeLogger.error('Onboarding: Error in auto-completion', error);
+            toast({
+              variant: "destructive",
+              title: "Auto-completion failed",
+              description: "Please refresh the page to try again."
+            });
+          }
+        };
 
-    // Auto-complete immediately
-    completeOnboarding();
-    return null;
+        // Auto-complete after a brief delay
+        setTimeout(completeOnboarding, 100);
+      }
+    }, [autoCompleted, onComplete, user.id, toast]);
+
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl shadow-elevated border-0">
+          <CardContent className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Completing onboarding...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // If questionnaire is enabled but no questions available, show error
