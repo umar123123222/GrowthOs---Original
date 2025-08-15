@@ -4,66 +4,59 @@ import './index.css'
 import './styles/app.css'
 import { setupGlobalErrorHandling } from './lib/error-handler'
 
-// Immediate protection against external redirects - must be first
+// Immediate protection against external redirects - safer approach
 (function blockExternalRedirects() {
-  const originalAssign = window.location.assign;
-  const originalReplace = window.location.replace;
-  const originalHref = Object.getOwnPropertyDescriptor(window.location, 'href') || 
-    Object.getOwnPropertyDescriptor(Location.prototype, 'href');
-  
-  // Block location.assign
-  window.location.assign = function(url: string | URL) {
-    const targetUrl = typeof url === 'string' ? url : url.toString();
-    if (targetUrl.includes('growthos.core47.ai') || targetUrl.includes('core47.ai')) {
-      console.warn('BLOCKED: External redirect attempt to:', targetUrl);
-      return;
+  // Block beforeunload events that might trigger redirects
+  window.addEventListener('beforeunload', function(e) {
+    const target = (e.target as Window)?.location?.href;
+    if (target && (target.includes('growthos.core47.ai') || target.includes('core47.ai'))) {
+      e.preventDefault();
+      e.returnValue = '';
+      console.warn('BLOCKED: External redirect attempt to:', target);
     }
-    return originalAssign.call(this, url);
-  };
-  
-  // Block location.replace  
-  window.location.replace = function(url: string | URL) {
-    const targetUrl = typeof url === 'string' ? url : url.toString();
-    if (targetUrl.includes('growthos.core47.ai') || targetUrl.includes('core47.ai')) {
-      console.warn('BLOCKED: External redirect attempt to:', targetUrl);
-      return;
-    }
-    return originalReplace.call(this, url);
-  };
-  
-  // Block location.href setter
-  Object.defineProperty(window.location, 'href', {
-    set: function(url: string) {
-      if (typeof url === 'string' && (url.includes('growthos.core47.ai') || url.includes('core47.ai'))) {
-        console.warn('BLOCKED: External redirect via href to:', url);
-        return;
-      }
-      if (originalHref && originalHref.set) {
-        originalHref.set.call(this, url);
-      }
-    },
-    get: originalHref ? originalHref.get : function() { return document.URL; },
-    configurable: true
   });
-  
-  // Block pushState/replaceState that might trigger redirects
-  const originalPushState = history.pushState;
-  const originalReplaceState = history.replaceState;
-  
-  history.pushState = function(state, title, url) {
-    if (url && typeof url === 'string' && (url.includes('growthos.core47.ai') || url.includes('core47.ai'))) {
-      console.warn('BLOCKED: External redirect via pushState to:', url);
-      return;
+
+  // Block navigation events
+  window.addEventListener('popstate', function(e) {
+    if (window.location.href.includes('growthos.core47.ai') || window.location.href.includes('core47.ai')) {
+      e.preventDefault();
+      history.pushState(null, '', '/');
+      console.warn('BLOCKED: External navigation to:', window.location.href);
     }
-    return originalPushState.call(this, state, title, url);
+  });
+
+  // Intercept any script injections that might cause redirects
+  const originalCreateElement = document.createElement;
+  document.createElement = function(tagName) {
+    const element = originalCreateElement.call(this, tagName);
+    if (tagName.toLowerCase() === 'script') {
+      const originalSrc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
+      Object.defineProperty(element, 'src', {
+        set: function(value) {
+          if (typeof value === 'string' && (value.includes('growthos.core47.ai') || value.includes('core47.ai'))) {
+            console.warn('BLOCKED: Script redirect attempt to:', value);
+            return;
+          }
+          if (originalSrc && originalSrc.set) {
+            originalSrc.set.call(this, value);
+          }
+        },
+        get: originalSrc ? originalSrc.get : function() { return ''; },
+        configurable: true
+      });
+    }
+    return element;
   };
-  
-  history.replaceState = function(state, title, url) {
-    if (url && typeof url === 'string' && (url.includes('growthos.core47.ai') || url.includes('core47.ai'))) {
-      console.warn('BLOCKED: External redirect via replaceState to:', url);
-      return;
+
+  // Monitor for any window.open attempts
+  const originalOpen = window.open;
+  window.open = function(url, target, features) {
+    const urlString = typeof url === 'string' ? url : url?.toString() || '';
+    if (urlString && (urlString.includes('growthos.core47.ai') || urlString.includes('core47.ai'))) {
+      console.warn('BLOCKED: Window.open redirect attempt to:', url);
+      return null;
     }
-    return originalReplaceState.call(this, state, title, url);
+    return originalOpen.call(this, url, target, features);
   };
 })();
 
