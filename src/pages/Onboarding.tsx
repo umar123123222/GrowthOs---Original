@@ -341,8 +341,12 @@ const Onboarding = ({
       setTimeout(() => {
         safeLogger.info('Onboarding: Completing onboarding and calling onComplete');
         
+        // Reset submitting state first
+        setSubmitting(false);
+        
         // Double-check we're still on the same domain before completing
         if (window.location.hostname === window.location.hostname) {
+          safeLogger.info('Onboarding completed, navigating to dashboard');
           onComplete();
         } else {
           safeLogger.error('Onboarding: Domain changed during completion, reloading page');
