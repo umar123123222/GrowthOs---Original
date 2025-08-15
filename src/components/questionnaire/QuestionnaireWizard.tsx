@@ -12,6 +12,7 @@ import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { errorHandler } from '@/lib/error-handler';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { safeLogger } from '@/lib/safe-logger';
 interface QuestionnaireWizardProps {
   questions: QuestionItem[];
   onComplete: (responses: QuestionnaireResponse[]) => void;
@@ -23,7 +24,7 @@ const createQuestionnaireSchema = (questions: QuestionItem[]) => {
   try {
     // Defensive check for questions array
     if (!questions || !Array.isArray(questions) || questions.length === 0) {
-      console.warn('QuestionnaireWizard: Creating empty schema - questions array is empty or invalid');
+      safeLogger.warn('QuestionnaireWizard: Creating empty schema - questions array is empty or invalid');
       return z.object({});
     }
 
@@ -33,7 +34,7 @@ const createQuestionnaireSchema = (questions: QuestionItem[]) => {
       try {
         // Defensive checks for question structure
         if (!question || !question.id || !question.answerType) {
-          console.warn(`QuestionnaireWizard: Skipping invalid question at index ${index}:`, question);
+          safeLogger.warn(`QuestionnaireWizard: Skipping invalid question at index ${index}:`, { question });
           return;
         }
 
@@ -58,7 +59,7 @@ const createQuestionnaireSchema = (questions: QuestionItem[]) => {
             }).nullable();
             break;
           default:
-            console.warn(`QuestionnaireWizard: Unknown answer type "${question.answerType}" for question ${question.id}`);
+            safeLogger.warn(`QuestionnaireWizard: Unknown answer type "${question.answerType}" for question ${question.id}`);
             fieldSchema = z.any();
         }
 
@@ -77,14 +78,14 @@ const createQuestionnaireSchema = (questions: QuestionItem[]) => {
 
         schemaObject[question.id] = fieldSchema;
       } catch (error) {
-        console.error(`QuestionnaireWizard: Error processing question ${question?.id || index}:`, error);
+        safeLogger.error(`QuestionnaireWizard: Error processing question ${question?.id || index}:`, error);
         // Continue with other questions instead of failing completely
       }
     });
 
     return z.object(schemaObject);
   } catch (error) {
-    console.error('QuestionnaireWizard: Critical error creating schema:', error);
+    safeLogger.error('QuestionnaireWizard: Critical error creating schema:', error);
     errorHandler.handleError(error, 'questionnaire_schema_creation', false);
     // Return empty schema as fallback
     return z.object({});
@@ -128,7 +129,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
         return parsed.answers || {};
       }
     } catch (error) {
-      console.warn('Failed to load saved questionnaire data:', error);
+      safeLogger.warn('Failed to load saved questionnaire data:', error);
     }
     return {};
   };
@@ -146,7 +147,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
       questions.forEach(question => {
         try {
           if (!question || !question.id) {
-            console.warn('QuestionnaireWizard: Skipping invalid question in defaults:', question);
+            safeLogger.warn('QuestionnaireWizard: Skipping invalid question in defaults:', { question });
             return;
           }
 
@@ -166,13 +167,13 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
             }
           }
         } catch (error) {
-          console.error(`QuestionnaireWizard: Error setting default for question ${question?.id}:`, error);
+          safeLogger.error(`QuestionnaireWizard: Error setting default for question ${question?.id}:`, error);
         }
       });
       
       return defaults;
     } catch (error) {
-      console.error('QuestionnaireWizard: Error creating default values:', error);
+      safeLogger.error('QuestionnaireWizard: Error creating default values:', error);
       setInitializationError('Failed to initialize form');
       return {};
     }
@@ -183,7 +184,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
     try {
       return createQuestionnaireSchema(questions);
     } catch (error) {
-      console.error('QuestionnaireWizard: Schema creation failed:', error);
+      safeLogger.error('QuestionnaireWizard: Schema creation failed:', error);
       setInitializationError('Failed to initialize questionnaire');
       return z.object({});
     }
@@ -208,7 +209,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
         setInitializationError(null);
       }
     } catch (error) {
-      console.error('QuestionnaireWizard: Error resetting form:', error);
+      safeLogger.error('QuestionnaireWizard: Error resetting form:', error);
       setInitializationError('Failed to reset form');
     }
   }, [questions, form, getDefaultValues]);
@@ -252,7 +253,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
 
   // Defensive check for current question
   if (!currentQuestion) {
-    console.error('QuestionnaireWizard: Current question is undefined', { currentStep: validCurrentStep, totalQuestions: questions.length });
+    safeLogger.error('QuestionnaireWizard: Current question is undefined', { currentStep: validCurrentStep, totalQuestions: questions.length });
     return (
       <div className="min-h-[50vh] flex items-center justify-center p-4">
         <Card className="w-full max-w-md mx-auto">
@@ -314,7 +315,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
           return true;
       }
     } catch (error) {
-      console.error('Error validating current step:', error);
+      safeLogger.error('Error validating current step:', error);
       return false;
     }
   };
@@ -339,7 +340,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
         setCurrentStep(prev => Math.min(prev + 1, questions.length - 1));
       }
     } catch (error) {
-      console.error('QuestionnaireWizard: Error in handleNext:', error);
+      safeLogger.error('QuestionnaireWizard: Error in handleNext:', error);
       errorHandler.handleError(error, 'questionnaire_navigation', false);
     }
   };
@@ -350,7 +351,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   };
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    console.log('QuestionnaireWizard: Starting submission...');
+    safeLogger.info('QuestionnaireWizard: Starting submission...');
     
     try {
       // Validate all required fields before submission
@@ -366,14 +367,14 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
       }
       
       const formData = form.getValues();
-      console.log('QuestionnaireWizard: Form data:', formData);
+      safeLogger.info('QuestionnaireWizard: Form data:', { formData });
       
       const responses: QuestionnaireResponse[] = questions.map(question => ({
         questionId: question.id,
         value: formData[question.id] || null
       }));
       
-      console.log('QuestionnaireWizard: Calling onComplete with responses:', responses);
+      safeLogger.info('QuestionnaireWizard: Calling onComplete with responses:', { responses });
       
       // Show loading toast
       toast({
@@ -385,10 +386,10 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
 
       // Clear saved data on successful submission
       localStorage.removeItem(STORAGE_KEY);
-      console.log('QuestionnaireWizard: Submission completed successfully');
+      safeLogger.info('QuestionnaireWizard: Submission completed successfully');
       
     } catch (error) {
-      console.error('QuestionnaireWizard: Submission error:', error);
+      safeLogger.error('QuestionnaireWizard: Submission error:', error);
       toast({
         title: 'Submission failed',
         description: 'Please try again. If the problem persists, refresh the page.',

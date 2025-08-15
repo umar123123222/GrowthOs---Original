@@ -263,7 +263,7 @@ export const StudentManagement = () => {
   };
   const createStudent = async (fullName: string, email: string, phone: string, feesStructure: string) => {
     try {
-      console.log('Creating student via enhanced edge function...');
+      safeLogger.info('Creating student via enhanced edge function...');
       const count = parseInt(feesStructure?.split('_')[0] || '1', 10) || 1;
       const result = await createEnhancedStudent({
         full_name: fullName,

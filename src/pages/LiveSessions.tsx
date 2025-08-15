@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { RoleGuard } from "@/components/RoleGuard";
+import { safeLogger } from '@/lib/safe-logger';
 import { 
   Video, 
   Calendar, 
@@ -49,7 +50,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('LiveSessions useEffect triggered, user:', user);
+    safeLogger.info('LiveSessions useEffect triggered, user:', { user });
     if (user?.id) {
       fetchAttendance();
     } else {
@@ -59,18 +60,18 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   }, [user?.id]);
 
   const fetchSessions = async () => {
-    console.log('fetchSessions called');
+    safeLogger.info('fetchSessions called');
     try {
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
         .order('start_time', { ascending: true });
 
-      console.log('All sessions found:', data);
-      console.log('Query error:', error);
+      safeLogger.info('All sessions found:', { data });
+      safeLogger.info('Query error:', { error });
       
       if (error) {
-        console.error('Supabase error:', error);
+        safeLogger.error('Supabase error:', error);
         throw error;
       }
       
@@ -86,8 +87,8 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         return sessionEnd < now;
       });
       
-      console.log('Upcoming sessions after filtering:', upcoming);
-      console.log('Past sessions after filtering:', pastSessions);
+      safeLogger.info('Upcoming sessions after filtering:', { upcoming });
+      safeLogger.info('Past sessions after filtering:', { pastSessions });
       
       // Set only the most upcoming session (first one)
       setNextUpcomingSession(upcoming.length > 0 ? upcoming[0] : null);
@@ -95,7 +96,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       // Set all past sessions as recorded sessions
       setRecordedSessions(pastSessions);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      safeLogger.error('Error fetching sessions:', error);
       toast({
         title: "Error",
         description: "Failed to load success sessions",
@@ -105,10 +106,10 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   };
 
   const fetchAttendance = async () => {
-    console.log('fetchAttendance called, user:', user);
+    safeLogger.info('fetchAttendance called, user:', { user });
     try {
       if (!user?.id) {
-        console.log('No user ID in fetchAttendance, returning');
+        safeLogger.info('No user ID in fetchAttendance, returning');
         setLoading(false);
         return;
       }
@@ -129,25 +130,25 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       // Fetch sessions and filter based on user join date
       await fetchSessionsForStudent(userData?.created_at);
     } catch (error) {
-      console.error('Error fetching attendance:', error);
+      safeLogger.error('Error fetching attendance:', error);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchSessionsForStudent = async (userJoinDate: string) => {
-    console.log('fetchSessionsForStudent called, userJoinDate:', userJoinDate);
+    safeLogger.info('fetchSessionsForStudent called, userJoinDate:', { userJoinDate });
     try {
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
         .order('start_time', { ascending: true });
 
-      console.log('All sessions found:', data);
-      console.log('Query error:', error);
+      safeLogger.info('All sessions found:', { data });
+      safeLogger.info('Query error:', { error });
       
       if (error) {
-        console.error('Supabase error:', error);
+        safeLogger.error('Supabase error:', error);
         throw error;
       }
       
@@ -167,8 +168,8 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         return sessionEnd < now && sessionStart >= userJoinDateTime;
       });
       
-      console.log('Upcoming sessions after filtering:', upcoming);
-      console.log('Past sessions after user join date:', pastSessionsAfterJoin);
+      safeLogger.info('Upcoming sessions after filtering:', { upcoming });
+      safeLogger.info('Past sessions after user join date:', { pastSessionsAfterJoin });
       
       // Set only the most upcoming session (first one)
       setNextUpcomingSession(upcoming.length > 0 ? upcoming[0] : null);
@@ -176,7 +177,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       // Set filtered past sessions as recorded sessions
       setRecordedSessions(pastSessionsAfterJoin);
     } catch (error) {
-      console.error('Error fetching sessions:', error);
+      safeLogger.error('Error fetching sessions:', error);
       toast({
         title: "Error",
         description: "Failed to load success sessions",
@@ -210,7 +211,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         description: "Attendance recorded successfully",
       });
     } catch (error) {
-      console.error('Error joining session:', error);
+      safeLogger.error('Error joining session:', error);
       toast({
         title: "Error",
         description: "Failed to join session",

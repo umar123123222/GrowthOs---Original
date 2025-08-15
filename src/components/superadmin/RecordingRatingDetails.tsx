@@ -7,6 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useRecordingRatings } from '@/hooks/useRecordingRatings';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { safeLogger } from '@/lib/safe-logger';
 
 interface RecordingRatingDetailsProps {
   recordingId: string;
@@ -27,7 +28,7 @@ export function RecordingRatingDetails({ recordingId, recordingTitle, onDelete }
           .delete()
           .eq('recording_id', recordingId);
       } catch (ratingsError) {
-        console.log('No ratings to delete or table not found:', ratingsError);
+        safeLogger.info('No ratings to delete or table not found:', { ratingsError });
       }
 
       const { error } = await supabase

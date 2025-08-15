@@ -110,7 +110,7 @@ export function StudentsManagement() {
   } = useInstallmentOptions();
 
   // Debug: Ensure statusFilter is completely removed
-  console.log('StudentsManagement component loaded - statusFilter removed');
+  safeLogger.info('StudentsManagement component loaded - statusFilter removed');
   useEffect(() => {
     fetchStudents();
   }, []);

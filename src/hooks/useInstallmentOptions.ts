@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { safeLogger } from '@/lib/safe-logger';
 import { useToast } from '@/hooks/use-toast';
 
 interface CompanySettings {
@@ -29,13 +30,13 @@ export const useInstallmentOptions = () => {
 
   const fetchCompanySettings = async () => {
     try {
-      console.log('Fetching company settings for installments...');
+      safeLogger.info('Fetching company settings for installments...');
       const { data, error } = await supabase
         .from('company_settings')
         .select('maximum_installment_count')
         .maybeSingle();
 
-      console.log('Company settings response:', { data, error });
+      safeLogger.info('Company settings response:', { data, error });
 
       if (error) {
         console.error('Error fetching company settings:', error);
@@ -43,7 +44,7 @@ export const useInstallmentOptions = () => {
       }
 
       const count = data?.maximum_installment_count || 3;
-      console.log('Setting installment count to:', count);
+      safeLogger.info('Setting installment count to:', { count });
       setMaxCount(count);
       setOptions(generateOptions(count));
     } catch (error) {

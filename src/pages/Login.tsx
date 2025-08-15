@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react";
+import { safeLogger } from '@/lib/safe-logger';
 
 import { ErrorMessage, FieldError } from "@/components/ui/error-message";
 import { errorHandler, handleApiError } from "@/lib/error-handler";
@@ -48,7 +49,7 @@ const handleSubmit = async (e: React.FormEvent) => {
     setIsLoading(true);
     
     try {
-      console.log('Login attempt for:', email);
+      safeLogger.info('Login attempt for:', { email });
 
 // First authenticate with Supabase Auth
       const tAuthStart = performance.now();
@@ -72,7 +73,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         return;
       }
       
-      console.log('Auth successful, checking user data...');
+      safeLogger.info('Auth successful, checking user data...');
 
 // Check if user exists in our users table
       const tUserFetchStart = performance.now();

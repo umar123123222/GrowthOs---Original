@@ -1,4 +1,5 @@
 // Performance monitoring utilities
+import { safeLogger } from './safe-logger';
 export const measurePageLoad = () => {
   if (typeof window !== 'undefined' && window.performance) {
     const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
@@ -12,7 +13,7 @@ export const measurePageLoad = () => {
       load: navigation.loadEventEnd - navigation.fetchStart,
     };
     
-    console.log('Performance Metrics:', metrics);
+    safeLogger.performance('Performance Metrics', 0, metrics);
     return metrics;
   }
   return null;
@@ -24,7 +25,7 @@ export const measureLCP = () => {
       const observer = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1];
-        console.log('Largest Contentful Paint:', lastEntry.startTime);
+        safeLogger.performance('Largest Contentful Paint', lastEntry.startTime);
       });
       
       observer.observe({ type: 'largest-contentful-paint', buffered: true });
@@ -44,7 +45,7 @@ export const measureFID = () => {
         const entries = list.getEntries();
         entries.forEach((entry: any) => {
           if (entry.processingStart && entry.startTime) {
-            console.log('First Input Delay:', entry.processingStart - entry.startTime);
+            safeLogger.performance('First Input Delay', entry.processingStart - entry.startTime);
           }
         });
       });
@@ -71,7 +72,7 @@ export const measureCLS = () => {
             clsValue += entry.value;
           }
         });
-        console.log('Cumulative Layout Shift:', clsValue);
+        safeLogger.performance('Cumulative Layout Shift', clsValue);
       });
       
       observer.observe({ type: 'layout-shift', buffered: true });

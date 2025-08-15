@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecordingUnlocks } from '@/hooks/useRecordingUnlocks';
+import { safeLogger } from '@/lib/safe-logger';
 
 interface Recording {
   id: string;
@@ -32,8 +33,8 @@ export const useStudentRecordings = () => {
     if (!user?.id) return;
 
     try {
-      console.log('StudentRecordings: Fetching recordings for user:', user.id);
-      console.log('StudentRecordings: User role:', user.role);
+      safeLogger.info('StudentRecordings: Fetching recordings for user:', { userId: user.id });
+      safeLogger.info('StudentRecordings: User role:', { role: user.role });
       
       // Fetch all recordings with their modules
       const { data: recordingsData, error: recordingsError } = await supabase
@@ -50,7 +51,7 @@ export const useStudentRecordings = () => {
         .order('sequence_order');
 
       if (recordingsError) throw recordingsError;
-      console.log('StudentRecordings: Found recordings:', recordingsData?.length || 0);
+      safeLogger.info('StudentRecordings: Found recordings:', { count: recordingsData?.length || 0 });
 
       // Fetch recording views for this user
       const { data: viewsData, error: viewsError } = await supabase
@@ -83,7 +84,7 @@ export const useStudentRecordings = () => {
         const assignment = assignmentsData?.find(a => a.recording_id === recording.id);
         const submission = assignment ? submissionsData?.find(s => s.assignment_id === assignment.id) : null;
 
-        console.log(`Recording ${recording.recording_title}: unlocked=${isUnlocked}, watched=${view?.watched || false}`);
+        safeLogger.info(`Recording ${recording.recording_title}: unlocked=${isUnlocked}, watched=${view?.watched || false}`);
 
         return {
           id: recording.id,
@@ -99,7 +100,7 @@ export const useStudentRecordings = () => {
         };
       });
 
-      console.log('StudentRecordings: Processed recordings:', processedRecordings.length);
+      safeLogger.info('StudentRecordings: Processed recordings:', { count: processedRecordings.length });
       setRecordings(processedRecordings);
     } catch (error) {
       console.error('Error fetching student recordings:', error);

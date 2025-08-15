@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { safeLogger } from '@/lib/safe-logger';
 
 export const useProgressTracker = (user?: any, modules?: any[]) => {
   useEffect(() => {
@@ -20,13 +21,13 @@ export const useProgressTracker = (user?: any, modules?: any[]) => {
             .eq('id', user.id);
 
           if (error) {
-            console.error('Error updating user status:', error);
+            safeLogger.error('Error updating user status:', error);
           } else {
-            console.log('User status updated to Completed');
+            safeLogger.info('User status updated to Completed');
           }
         }
       } catch (error) {
-        console.error('Error checking module completion:', error);
+        safeLogger.error('Error checking module completion:', error);
       }
     };
 
@@ -47,7 +48,7 @@ export const useProgressTracker = (user?: any, modules?: any[]) => {
           metadata: { module_id: moduleId }
         });
     } catch (error) {
-      console.error('Error marking module as complete:', error);
+      safeLogger.error('Error marking module as complete:', error);
     }
   };
 
@@ -63,7 +64,7 @@ export const useProgressTracker = (user?: any, modules?: any[]) => {
           watched: true
         });
     } catch (error) {
-      console.error('Error marking recording as watched:', error);
+      safeLogger.error('Error marking recording as watched:', error);
     }
   };
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { safeLogger } from '@/lib/safe-logger';
 import { useToast } from './use-toast';
 
 interface StudentRating {
@@ -69,7 +70,7 @@ export function useRecordingRatings(recordingId: string | null) {
 
       if (error) {
         // Table doesn't exist yet, return empty data
-        console.log('Recording ratings table not found:', error);
+        safeLogger.info('Recording ratings table not found:', { error });
         setData({
           average: 0,
           total: 0,

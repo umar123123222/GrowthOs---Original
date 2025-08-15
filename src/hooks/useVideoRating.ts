@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { logger } from '@/lib/logger';
+import { safeLogger } from '@/lib/safe-logger';
 
 interface UseVideoRatingProps {
   recordingId: string;
@@ -25,7 +25,7 @@ export function useVideoRating({ recordingId, lessonTitle }: UseVideoRatingProps
 
     try {
       const { data } = await supabase
-        .from('recording_ratings' as any)
+        .from('recording_ratings')
         .select('id')
         .eq('student_id', user.id)
         .eq('recording_id', recordingId)

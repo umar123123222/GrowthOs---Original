@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { safeLogger } from '@/lib/safe-logger';
 
 // Legacy interface - kept for backward compatibility but no longer used
 export interface OnboardingData {
@@ -40,12 +41,12 @@ export const useOnboardingSubmission = () => {
       });
 
       return true;
-    } catch (error: any) {
-      console.error('Onboarding submission error:', error);
+    } catch (error) {
+      safeLogger.error('Onboarding submission error:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to save onboarding information"
+        description: error instanceof Error ? error.message : "Failed to save onboarding information"
       });
       return false;
     } finally {

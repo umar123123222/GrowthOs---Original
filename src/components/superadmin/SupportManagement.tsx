@@ -201,7 +201,7 @@ export function SupportManagement() {
 
   const updateTicketStatus = async (ticketId: string, status: string) => {
     try {
-      console.log('Updating ticket status:', { ticketId, status });
+      safeLogger.info('Updating ticket status:', { ticketId, status });
       
       const { data, error } = await supabase
         .from('support_tickets')
@@ -213,7 +213,7 @@ export function SupportManagement() {
         throw error;
       }
 
-      console.log('Update result:', data);
+      safeLogger.info('Update result:', { data });
 
       toast({
         title: 'Success',

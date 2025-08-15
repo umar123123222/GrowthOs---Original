@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { safeQuery } from '@/lib/database-safety';
 import type { ModuleResult } from '@/types/database';
+import { safeLogger } from '@/lib/safe-logger';
 
 interface Module {
   id: string;
@@ -48,7 +49,7 @@ export function ModulesManagement() {
 
   const fetchModules = async () => {
     try {
-      console.log('Fetching modules...');
+      safeLogger.info('Fetching modules...');
       const { data, error } = await supabase
         .from('modules')
         .select(`
@@ -58,11 +59,11 @@ export function ModulesManagement() {
         .order('order');
 
       if (error) {
-        console.error('Error fetching modules:', error);
+        safeLogger.error('Error fetching modules:', error);
         throw error;
       }
 
-      console.log('Modules fetched:', data);
+      safeLogger.info('Modules fetched:', { data });
 
       const modulesWithCount = data?.map(module => ({
         ...module,
@@ -71,7 +72,7 @@ export function ModulesManagement() {
 
       setModules(modulesWithCount);
     } catch (error) {
-      console.error('Error fetching modules:', error);
+      safeLogger.error('Error fetching modules:', error);
       toast({
         title: "Error",
         description: "Failed to fetch modules",
@@ -92,7 +93,7 @@ export function ModulesManagement() {
       if (error) throw error;
       setRecordings(data || []);
     } catch (error) {
-      console.error('Error fetching recordings:', error);
+      safeLogger.error('Error fetching recordings:', error);
     }
   };
 
@@ -181,7 +182,7 @@ export function ModulesManagement() {
       await fetchModules();
       await fetchRecordings();
     } catch (error) {
-      console.error('Error saving module:', error);
+      safeLogger.error('Error saving module:', error);
       toast({
         title: "Error",
         description: "Failed to save module. Please try again.",
@@ -209,7 +210,7 @@ export function ModulesManagement() {
         selectedRecordings: assignedRecordings?.map(r => r.id) || []
       });
     } catch (error) {
-      console.error('Error fetching assigned recordings:', error);
+      safeLogger.error('Error fetching assigned recordings:', error);
       setFormData({
         title: module.title,
         description: module.description || '',
@@ -227,33 +228,33 @@ export function ModulesManagement() {
     }
 
     try {
-      console.log('Starting module deletion for ID:', moduleId);
+      safeLogger.info('Starting module deletion for ID:', { moduleId });
       
       // First, unassign all recordings from this module
-      console.log('Unassigning recordings from module...');
+      safeLogger.info('Unassigning recordings from module...');
       const { error: unassignError } = await supabase
         .from('available_lessons')
         .update({ module: null })
         .eq('module', moduleId);
 
       if (unassignError) {
-        console.error('Error unassigning recordings:', unassignError);
+        safeLogger.error('Error unassigning recordings:', unassignError);
         throw unassignError;
       }
-      console.log('Successfully unassigned recordings');
+      safeLogger.info('Successfully unassigned recordings');
 
       // Then delete the module
-      console.log('Deleting module...');
+      safeLogger.info('Deleting module...');
       const { error: deleteError } = await supabase
         .from('modules')
         .delete()
         .eq('id', moduleId);
 
       if (deleteError) {
-        console.error('Error deleting module:', deleteError);
+        safeLogger.error('Error deleting module:', deleteError);
         throw deleteError;
       }
-      console.log('Successfully deleted module');
+      safeLogger.info('Successfully deleted module');
 
       toast({
         title: "Success",
@@ -261,12 +262,12 @@ export function ModulesManagement() {
       });
       
       // Refresh data immediately and force UI update
-      console.log('Refreshing data after deletion...');
+      safeLogger.info('Refreshing data after deletion...');
       setModules(prevModules => prevModules.filter(module => module.id !== moduleId));
       await Promise.all([fetchModules(), fetchRecordings()]);
       
     } catch (error) {
-      console.error('Error deleting module:', error);
+      safeLogger.error('Error deleting module:', error);
       toast({
         title: "Error",
         description: "Failed to delete module. Please try again.",

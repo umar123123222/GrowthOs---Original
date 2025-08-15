@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from './RecordingRatingDetails';
 import { RecordingAttachmentsManager } from './RecordingAttachmentsManager';
+import { safeLogger } from '@/lib/safe-logger';
 
 interface Recording {
   id: string;
@@ -67,7 +68,7 @@ export function RecordingsManagement() {
 
   const fetchRecordings = async () => {
     try {
-      console.log('Fetching recordings...');
+      safeLogger.info('Fetching recordings...');
       const { data, error } = await supabase
         .from('available_lessons')
         .select(`
@@ -77,14 +78,14 @@ export function RecordingsManagement() {
         .order('sequence_order');
 
       if (error) {
-        console.error('Error fetching recordings:', error);
+        safeLogger.error('Error fetching recordings:', error);
         throw error;
       }
       
-      console.log('Recordings fetched:', data);
+      safeLogger.info('Recordings fetched:', { data });
       setRecordings(data || []);
     } catch (error) {
-      console.error('Failed to fetch recordings:', error);
+      safeLogger.error('Failed to fetch recordings:', error);
       toast({
         title: "Error",
         description: "Failed to fetch recordings",
@@ -105,7 +106,7 @@ export function RecordingsManagement() {
       if (error) throw error;
       setModules(data || []);
     } catch (error) {
-      console.error('Error fetching modules:', error);
+      safeLogger.error('Error fetching modules:', error);
     }
   };
 
@@ -119,14 +120,14 @@ export function RecordingsManagement() {
       if (error) throw error;
       setAssignments(data || []);
     } catch (error) {
-      console.error('Error fetching assignments:', error);
+      safeLogger.error('Error fetching assignments:', error);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Form submission started with data:', formData);
+    safeLogger.info('Form submission started with data:', { formData });
     
     try {
       const recordingData = {
@@ -140,17 +141,17 @@ export function RecordingsManagement() {
         assignment_id: formData.assignment_id || null
       };
 
-      console.log('Prepared recording data:', recordingData);
+      safeLogger.info('Prepared recording data:', { recordingData });
 
       if (editingRecording) {
-        console.log('Updating recording with ID:', editingRecording.id);
+        safeLogger.info('Updating recording with ID:', { recordingId: editingRecording.id });
         const { error } = await supabase
           .from('available_lessons')
           .update(recordingData)
           .eq('id', editingRecording.id);
 
         if (error) {
-          console.error('Update error:', error);
+          safeLogger.error('Update error:', error);
           throw error;
         }
 
@@ -159,13 +160,13 @@ export function RecordingsManagement() {
           description: "Recording updated successfully"
         });
       } else {
-        console.log('Creating new recording...');
+        safeLogger.info('Creating new recording...');
         const { error } = await supabase
           .from('available_lessons')
           .insert(recordingData);
 
         if (error) {
-          console.error('Insert error:', error);
+          safeLogger.error('Insert error:', error);
           throw error;
         }
 
@@ -191,7 +192,7 @@ export function RecordingsManagement() {
       // Refresh recordings
       await fetchRecordings();
     } catch (error) {
-      console.error('Error saving recording:', error);
+      safeLogger.error('Error saving recording:', error);
       toast({
         title: "Error",
         description: "Failed to save recording",
@@ -240,14 +241,14 @@ export function RecordingsManagement() {
     if (!confirm('Are you sure you want to delete this recording?')) return;
 
     try {
-      console.log('Deleting recording with ID:', recordingId);
+      safeLogger.info('Deleting recording with ID:', { recordingId });
       const { error } = await supabase
         .from('available_lessons')
         .delete()
         .eq('id', recordingId);
 
       if (error) {
-        console.error('Delete error:', error);
+        safeLogger.error('Delete error:', error);
         throw error;
       }
 
@@ -258,7 +259,7 @@ export function RecordingsManagement() {
       
       await fetchRecordings();
     } catch (error) {
-      console.error('Error deleting recording:', error);
+      safeLogger.error('Error deleting recording:', error);
       toast({
         title: "Error",
         description: "Failed to delete recording",
