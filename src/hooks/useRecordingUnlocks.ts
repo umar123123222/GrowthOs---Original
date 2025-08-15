@@ -26,10 +26,16 @@ export const useRecordingUnlocks = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    const channel = supabase.channel('submission-approvals');
+    // Listen for PostgreSQL notifications
+    const channel = supabase.channel('submission_notifications');
     
-    channel.on('broadcast', { event: 'submission_approved' }, (payload) => {
-      logger.debug('Received submission approval broadcast, refreshing unlocks');
+    channel.on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'submissions',
+      filter: `student_id=eq.${user.id}`
+    }, (payload) => {
+      logger.debug('Received submission change, refreshing unlocks', payload);
       fetchUnlocks();
     });
 
