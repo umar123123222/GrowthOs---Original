@@ -42,6 +42,45 @@ const VideoPlayer = () => {
     const urlRegex = /(https?:\/\/[^\s)]+|www\.[^\s)]+)/g;
     return text ? (text.match(urlRegex) || []).map(u => u.startsWith('http') ? u : `http://${u}`) : [];
   };
+
+  // Helper to convert YouTube URLs to embed format
+  const convertToEmbedUrl = (url: string): string => {
+    if (!url) return '';
+    
+    // If already an embed URL, return as is
+    if (url.includes('youtube.com/embed/') || url.includes('youtu.be/embed/')) {
+      return url;
+    }
+    
+    // Extract video ID from various YouTube URL formats
+    let videoId = '';
+    
+    // Standard YouTube URL: https://www.youtube.com/watch?v=VIDEO_ID
+    if (url.includes('youtube.com/watch?v=')) {
+      const match = url.match(/[?&]v=([^&]+)/);
+      if (match) videoId = match[1];
+    }
+    // Short YouTube URL: https://youtu.be/VIDEO_ID
+    else if (url.includes('youtu.be/')) {
+      const match = url.match(/youtu\.be\/([^?&]+)/);
+      if (match) videoId = match[1];
+    }
+    // YouTube URL with additional parameters
+    else if (url.includes('youtube.com') && url.includes('v=')) {
+      const match = url.match(/[?&]v=([^&]+)/);
+      if (match) videoId = match[1];
+    }
+    
+    // Clean video ID (remove any additional parameters)
+    if (videoId) {
+      videoId = videoId.split('&')[0].split('?')[0];
+      return `https://www.youtube.com/embed/${videoId}`;
+    }
+    
+    // If not a YouTube URL, return as is (for other video platforms)
+    return url;
+  };
+
   const attachmentLinks = currentVideo?.description ? extractLinks(currentVideo.description) : [];
 
   // Initialize video data from URL params or by ID
@@ -192,7 +231,17 @@ const VideoPlayer = () => {
           <Card>
             <CardContent className="p-0">
               <div className="aspect-video bg-gray-900 rounded-t-lg">
-                {currentVideo && <iframe src={currentVideo.videoUrl} className="w-full h-full rounded-t-lg" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen title={currentVideo.title} />}
+                {currentVideo && (
+                  <iframe 
+                    src={convertToEmbedUrl(currentVideo.videoUrl)} 
+                    className="w-full h-full rounded-t-lg" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    allowFullScreen 
+                    title={currentVideo.title}
+                    frameBorder="0"
+                    loading="lazy"
+                  />
+                )}
               </div>
               <div className="p-6">
                 <h2 className="text-2xl font-bold mb-2">{currentVideo?.title}</h2>
