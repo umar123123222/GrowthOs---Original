@@ -12,6 +12,7 @@ import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessio
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { CompanySettings } from '@/components/superadmin/CompanySettings';
+import { SequentialUnlockAdmin } from '@/components/admin/SequentialUnlockAdmin';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ENV_CONFIG } from '@/lib/env-config';
@@ -50,6 +51,8 @@ export default function SuperadminDashboard() {
         return <SupportManagement />;
       case 'company-settings':
         return <CompanySettings />;
+      case 'sequential-unlock':
+        return <SequentialUnlockAdmin />;
       default:
         return <DashboardContent />;
     }

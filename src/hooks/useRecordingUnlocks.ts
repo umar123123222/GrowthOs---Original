@@ -50,20 +50,52 @@ export const useRecordingUnlocks = () => {
     if (!user?.id) return;
 
     try {
-      logger.debug('Fetching sequential unlock status for user:', { userId: user.id });
+      logger.debug('Fetching unlock status for user:', { userId: user.id });
       
-      // Use the new sequential unlock function
-      const { data, error } = await supabase.rpc('get_student_unlock_sequence', {
-        p_user_id: user.id
-      });
+      // Check if sequential unlock is enabled first
+      const { data: companySettings } = await supabase
+        .from('company_settings')
+        .select('lms_sequential_unlock')
+        .eq('id', 1)
+        .single();
 
-      if (error) {
-        logger.error('Error fetching unlock sequence:', error);
-        throw error;
+      const sequentialEnabled = companySettings?.lms_sequential_unlock || false;
+      
+      if (sequentialEnabled) {
+        // Use new sequential unlock function
+        const { data, error } = await supabase.rpc('get_sequential_unlock_status', {
+          p_user_id: user.id
+        });
+
+        if (error) {
+          logger.error('Error fetching sequential unlock status:', error);
+          throw error;
+        }
+
+        // Transform to match existing interface
+        const transformedData = (data || []).map(item => ({
+          recording_id: item.recording_id,
+          sequence_order: item.sequence_order,
+          is_unlocked: item.is_unlocked,
+          unlock_reason: item.unlock_reason
+        }));
+
+        logger.debug('Sequential unlock data:', { data: transformedData });
+        setUnlocks(transformedData);
+      } else {
+        // Use existing unlock function for backward compatibility
+        const { data, error } = await supabase.rpc('get_student_unlock_sequence', {
+          p_user_id: user.id
+        });
+
+        if (error) {
+          logger.error('Error fetching unlock sequence:', error);
+          throw error;
+        }
+
+        logger.debug('Legacy unlock data:', { data });
+        setUnlocks(data || []);
       }
-
-      logger.debug('Sequential unlock data:', { data });
-      setUnlocks(data || []);
     } catch (error) {
       logger.error('Error fetching recording unlocks:', error);
       // Fallback: unlock only first recording

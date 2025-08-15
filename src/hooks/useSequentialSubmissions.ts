@@ -68,14 +68,35 @@ export const useSequentialSubmissions = (assignmentId?: string) => {
 
       const processedAssignments: AssignmentWithHistory[] = (assignmentData || []).map(assignment => {
         const submissions = assignment.submissions || [];
-        const sortedSubmissions = submissions.sort((a, b) => b.version - a.version);
+        
+        // Type-safe status mapping function
+        const getValidStatus = (status: string): 'pending' | 'approved' | 'declined' => {
+          if (status === 'pending' || status === 'approved' || status === 'declined') {
+            return status;
+          }
+          return 'pending'; // Default fallback
+        };
+        
+        // Transform submissions with proper typing
+        const typedSubmissions: SubmissionHistory[] = submissions.map(sub => ({
+          id: sub.id,
+          version: sub.version,
+          content: sub.content,
+          status: getValidStatus(sub.status),
+          created_at: sub.created_at,
+          reviewed_at: sub.reviewed_at || undefined,
+          reviewed_by: sub.reviewed_by || undefined,
+          notes: sub.notes || undefined
+        }));
+        
+        const sortedSubmissions = typedSubmissions.sort((a, b) => b.version - a.version);
         const latestSubmission = sortedSubmissions[0];
         
         return {
           assignment_id: assignment.id,
           assignment_name: assignment.name,
           recording_id: assignment.recording_id,
-          current_status: latestSubmission?.status || 'not_submitted',
+          current_status: latestSubmission ? latestSubmission.status : 'not_submitted',
           latest_version: latestSubmission?.version || 0,
           submissions: sortedSubmissions,
           can_resubmit: latestSubmission?.status === 'declined' || !latestSubmission

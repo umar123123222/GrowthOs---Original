@@ -7,24 +7,19 @@ import { StudentSubmissionDialog } from "@/components/assignments/StudentSubmiss
 import { useModulesWithRecordings } from "@/hooks/useModulesWithRecordings";
 import { useAuth } from "@/hooks/useAuth";
 import { useProgressTracker } from "@/hooks/useProgressTracker";
+import { useSequentialUnlock } from "@/hooks/useSequentialUnlock";
 import { RoleGuard } from "@/components/RoleGuard";
 import { InactiveLMSBanner } from "@/components/InactiveLMSBanner";
+import { SequentialLockIndicator } from "@/components/SequentialUnlockComponents";
 import { Play, Lock, CheckCircle, Clock, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 const Videos = () => {
   const navigate = useNavigate();
-  const {
-    user
-  } = useAuth();
-  const {
-    modules,
-    loading,
-    refreshData
-  } = useModulesWithRecordings();
-  const {
-    markRecordingWatched
-  } = useProgressTracker(user);
+  const { user } = useAuth();
+  const { modules, loading, refreshData } = useModulesWithRecordings();
+  const { markRecordingWatched } = useProgressTracker(user);
+  const { status: sequentialStatus, loading: sequentialLoading } = useSequentialUnlock();
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedRecording, setSelectedRecording] = useState<any>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
@@ -65,7 +60,7 @@ const Videos = () => {
       return newSet;
     });
   };
-  if (loading) {
+  if (loading || sequentialLoading) {
     return <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>;
@@ -74,6 +69,26 @@ const Videos = () => {
   return <RoleGuard allowedRoles={['student', 'admin', 'mentor', 'superadmin']}>
       <div className="space-y-6 animate-fade-in">
         <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
+        
+        {/* Sequential unlock status banner */}
+        {sequentialStatus.isEnabled && (
+          <Card className="border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2">
+                <Lock className="w-4 h-4 text-blue-600" />
+                <span className="text-sm font-medium text-blue-800">
+                  Sequential Unlock Active
+                </span>
+                <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                  {sequentialStatus.feesCleared ? 'Fees Cleared' : 'Fees Pending'}
+                </Badge>
+              </div>
+              <p className="text-xs text-blue-600 mt-1">
+                Complete recordings and assignments in order to unlock new content.
+              </p>
+            </CardContent>
+          </Card>
+        )}
         
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground">Available Lessons</h1>
