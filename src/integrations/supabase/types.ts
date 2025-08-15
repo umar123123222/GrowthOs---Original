@@ -1510,6 +1510,19 @@ export type Database = {
         }
         Returns: string
       }
+      create_student_complete: {
+        Args: {
+          p_address?: string
+          p_batch_id?: string
+          p_email: string
+          p_full_name: string
+          p_mentor_id?: string
+          p_password: string
+          p_phone?: string
+          p_pod_id?: string
+        }
+        Returns: Json
+      }
       create_user_with_role: {
         Args: {
           target_email: string
