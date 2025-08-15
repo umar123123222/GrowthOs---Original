@@ -50,6 +50,29 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       fetchData();
     }
   }, [user]);
+
+  // Listen for real-time submission updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase.channel('assignment-submissions');
+    
+    channel
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'submissions',
+        filter: `student_id=eq.${user.id}`
+      }, (payload) => {
+        console.log('Submission change detected:', payload);
+        fetchData(); // Refetch all data when submission changes
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
   useEffect(() => {
     // Handle deep-link to a specific assignmentId if present
     if (!loading && !unlocksLoading && assignments.length > 0) {
