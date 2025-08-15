@@ -98,12 +98,17 @@ const Onboarding = ({
       }, 30000); // 30 second timeout
 
       try {
-      safeLogger.info('Starting onboarding completion', { userId: user.id });
+      safeLogger.info('Starting onboarding completion', { 
+        userId: user.id,
+        userEmail: user?.email,
+        responseCount: responses.length,
+        timestamp: new Date().toISOString()
+      });
       
       // First, verify student record exists
       const { data: studentCheck, error: checkError } = await supabase
         .from('students')
-        .select('id, user_id, onboarding_completed')
+        .select('id, user_id, onboarding_completed, answers_json, goal_brief')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -112,7 +117,12 @@ const Onboarding = ({
         throw new Error('Student record not found. Please contact support.');
       }
 
-      safeLogger.info('Student record found', { studentId: studentCheck?.id });
+      safeLogger.info('Student record found', { 
+        studentId: studentCheck?.id,
+        currentOnboardingStatus: studentCheck?.onboarding_completed,
+        hasExistingAnswers: !!studentCheck?.answers_json,
+        hasExistingGoalBrief: !!studentCheck?.goal_brief
+      });
 
       // 1. Save responses to user_activity_logs for audit trail
       const responsePromises = responses.map(response => {
@@ -208,7 +218,13 @@ const Onboarding = ({
         throw new Error(`Failed to update student record: ${studentError.message}`);
       }
 
-      safeLogger.info('Student record updated successfully', { studentId: updateData?.[0]?.id });
+      safeLogger.info('Student record updated successfully', { 
+        studentId: updateData?.[0]?.id,
+        onboardingCompleted: updateData?.[0]?.onboarding_completed,
+        hasAnswers: !!updateData?.[0]?.answers_json,
+        hasGoalBrief: !!updateData?.[0]?.goal_brief,
+        updateCount: updateData?.length
+      });
 
       // 5. Also update user profile with dream goal summary for backward compatibility
       const { error: userError } = await supabase
