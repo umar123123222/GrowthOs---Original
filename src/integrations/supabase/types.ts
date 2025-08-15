@@ -336,6 +336,13 @@ export type Database = {
             foreignKeyName: "email_queue_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -406,6 +413,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "integrations_user_id_fkey"
             columns: ["user_id"]
@@ -818,6 +832,13 @@ export type Database = {
             foreignKeyName: "recording_ratings_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_ratings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -910,6 +931,13 @@ export type Database = {
             columns: ["installment_plan_id"]
             isOneToOne: false
             referencedRelation: "installment_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_security_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1218,6 +1246,13 @@ export type Database = {
             foreignKeyName: "user_metrics_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -1368,6 +1403,13 @@ export type Database = {
             foreignKeyName: "users_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -1414,6 +1456,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_security_summary: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string | null
+          is_temp_password: boolean | null
+          last_active_at: string | null
+          last_login_at: string | null
+          lms_status: string | null
+          password_status: string | null
+          phone_status: string | null
+          role: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          is_temp_password?: boolean | null
+          last_active_at?: string | null
+          last_login_at?: string | null
+          lms_status?: string | null
+          password_status?: never
+          phone_status?: never
+          role?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          is_temp_password?: boolean | null
+          last_active_at?: string | null
+          last_login_at?: string | null
+          lms_status?: string | null
+          password_status?: never
+          phone_status?: never
+          role?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       create_notification: {
@@ -1452,22 +1536,6 @@ export type Database = {
       get_user_lms_status: {
         Args: { user_id: string }
         Returns: string
-      }
-      get_user_security_summary: {
-        Args: { target_user_id?: string }
-        Returns: {
-          created_at: string
-          email: string
-          id: string
-          is_temp_password: boolean
-          last_active_at: string
-          last_login_at: string
-          lms_status: string
-          password_status: string
-          phone_status: string
-          role: string
-          status: string
-        }[]
       }
       get_user_unlock_status: {
         Args: { _user_id: string }
