@@ -14,6 +14,7 @@ import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { CompanySettings } from '@/components/superadmin/CompanySettings';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { ENV_CONFIG } from '@/lib/env-config';
 interface DashboardStats {
   totalAdmins: number;
   totalSuperadmins: number;
@@ -116,8 +117,8 @@ function DashboardContent() {
         courseCompletionRate = Math.round(watchedRecordings / recordingViews.length * 100);
       }
 
-      // Use hardcoded recovery rate since performance_record table doesn't exist
-      let recoveryRate = 85; // Default placeholder value
+      // Use configurable recovery rate since performance_record table doesn't exist
+      let recoveryRate = ENV_CONFIG.DEFAULT_RECOVERY_RATE;
 
       setStats({
         totalAdmins,

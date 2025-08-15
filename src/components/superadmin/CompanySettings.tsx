@@ -16,6 +16,7 @@ import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
 import { getLogoUrl } from '@/utils/logoUtils';
 import { InvoiceTemplate } from '@/components/InvoiceTemplate';
 import PaymentMethodEditor from '@/components/PaymentMethodEditor';
+import { ENV_CONFIG } from '@/lib/env-config';
 
 // Import types from the new questionnaire module
 import { QuestionItem, validateQuestionnaireStructure } from '@/types/questionnaire';
@@ -79,20 +80,20 @@ export function CompanySettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState<CompanySettingsData>({
-    company_name: '',
+    company_name: ENV_CONFIG.DEFAULT_COMPANY_NAME,
     company_logo: '',
     primary_phone: '',
     secondary_phone: '',
     address: '',
     contact_email: '',
-    currency: 'USD',
-    original_fee_amount: 3000,
-    maximum_installment_count: 3,
+    currency: ENV_CONFIG.DEFAULT_CURRENCY,
+    original_fee_amount: ENV_CONFIG.DEFAULT_FEE_AMOUNT,
+    maximum_installment_count: ENV_CONFIG.DEFAULT_MAX_INSTALLMENTS,
     invoice_notes: '',
-    invoice_overdue_days: 30,
-    invoice_send_gap_days: 7,
+    invoice_overdue_days: ENV_CONFIG.DEFAULT_INVOICE_OVERDUE_DAYS,
+    invoice_send_gap_days: ENV_CONFIG.DEFAULT_INVOICE_SEND_GAP_DAYS,
     payment_methods: [],
-    lms_url: 'https://growthos.core47.ai',
+    lms_url: ENV_CONFIG.DEFAULT_LMS_URL,
     // Student Sign-in & Questionnaire
     enable_student_signin: false,
     questionnaire: []
@@ -605,7 +606,7 @@ export function CompanySettings() {
                     step="0.01"
                     value={settings.original_fee_amount}
                     onChange={(e) => handleInputChange('original_fee_amount', parseFloat(e.target.value))}
-                    placeholder="3000.00"
+                    placeholder={ENV_CONFIG.DEFAULT_FEE_AMOUNT.toString()}
                     className="pl-8"
                   />
                 </div>

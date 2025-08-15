@@ -1,1 +1,1 @@
-project_id = "majqoqagohicjigmsilu"
+project_id = "${VITE_SUPABASE_PROJECT_ID:-majqoqagohicjigmsilu}"
