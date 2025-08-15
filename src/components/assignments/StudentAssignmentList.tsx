@@ -151,7 +151,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     }
     switch (submission.status) {
       case 'approved':
-        return <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
             <CheckCircle className="w-3 h-3 mr-1" />
             Approved
           </Badge>;
