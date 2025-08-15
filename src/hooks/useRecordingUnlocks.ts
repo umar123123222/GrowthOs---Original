@@ -22,6 +22,24 @@ export const useRecordingUnlocks = () => {
     }
   }, [user?.id]);
 
+  // Listen for submission approvals to refresh unlock status
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase.channel('submission-approvals');
+    
+    channel.on('broadcast', { event: 'submission_approved' }, (payload) => {
+      logger.debug('Received submission approval broadcast, refreshing unlocks');
+      fetchUnlocks();
+    });
+
+    channel.subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   const fetchUnlocks = async () => {
     if (!user?.id) return;
 
@@ -73,6 +91,7 @@ export const useRecordingUnlocks = () => {
   };
 
   const refreshUnlocks = () => {
+    setLoading(true);
     fetchUnlocks();
   };
 

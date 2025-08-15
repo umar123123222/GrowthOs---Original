@@ -122,10 +122,22 @@ export function SubmissionsManagement({
         updated_at: new Date().toISOString()
       }).eq('id', submissionId);
       if (error) throw error;
+      
       toast({
         title: 'Success',
         description: `Submission ${status} successfully`
       });
+      
+      // If approved, trigger a real-time update to refresh unlock status for all students
+      if (status === 'approved') {
+        // Notify all connected clients about the approval
+        await supabase.channel('submission-approvals').send({
+          type: 'broadcast',
+          event: 'submission_approved',
+          payload: { submissionId, timestamp: Date.now() }
+        });
+      }
+      
       setSelectedSubmission(null);
       setReviewNotes('');
       fetchSubmissions();
