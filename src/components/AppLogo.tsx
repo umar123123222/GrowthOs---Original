@@ -1,5 +1,7 @@
 import { useCompanyLogo } from "@/hooks/useCompanyBranding";
 import { safeLogger } from '@/lib/safe-logger';
+import { useState, useEffect } from 'react';
+import { supabase } from "@/integrations/supabase/client";
 
 interface AppLogoProps {
   variant?: 'header' | 'favicon' | 'original';
@@ -9,16 +11,48 @@ interface AppLogoProps {
 
 export function AppLogo({ variant = 'header', className = "h-10 w-auto max-w-[200px]", alt = "Company Logo" }: AppLogoProps) {
   const logoUrl = useCompanyLogo();
+  const [companyName, setCompanyName] = useState<string>('GrowthOS');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchCompanyName = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('company_settings')
+          .select('company_name')
+          .eq('id', 1)
+          .maybeSingle();
+
+        if (!error && data?.company_name) {
+          setCompanyName(data.company_name);
+        }
+      } catch (error) {
+        console.error('Error fetching company name:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCompanyName();
+  }, []);
 
   safeLogger.info('AppLogo - logoUrl:', { logoUrl });
 
-  // Only show logo if one is set in company settings
+  // Show loading state only while fetching company data
+  if (isLoading) {
+    return (
+      <div className={`${className} flex items-center justify-center bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-lg font-semibold text-sm animate-pulse`}>
+        Loading...
+      </div>
+    );
+  }
+
+  // If no logo is set, show company name as fallback
   if (!logoUrl) {
-    safeLogger.info('AppLogo - No logo URL found, showing fallback');
-    // Show a placeholder while loading or if no logo is set
+    safeLogger.info('AppLogo - No logo URL found, showing company name fallback');
     return (
       <div className={`${className} flex items-center justify-center bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-lg font-semibold text-sm`}>
-        Loading...
+        {companyName}
       </div>
     );
   }
