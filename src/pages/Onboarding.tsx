@@ -32,31 +32,7 @@ const Onboarding = ({
         return false;
       };
       
-      // Override window.location methods temporarily
-      const originalAssign = window.location.assign;
-      const originalReplace = window.location.replace;
-      let currentHref = window.location.href;
-      
-      window.location.assign = preventRedirects as any;
-      window.location.replace = preventRedirects as any;
-      
-      // Prevent setting window.location.href to external URLs
-      Object.defineProperty(window.location, 'href', {
-        set: function(url: string) {
-          if (url.includes('growthos.core47.ai') || url.includes('core47.ai')) {
-            safeLogger.warn('Onboarding: Blocked external redirect to:', { blockedUrl: url });
-            return;
-          }
-          // Allow same-domain navigation
-          if (url.startsWith(window.location.origin) || url.startsWith('/') || url.startsWith('#')) {
-            currentHref = url;
-          }
-        },
-        get: function() {
-          return currentHref;
-        },
-        configurable: true
-      });
+      // Note: Redirect protection is handled globally in main.tsx
 
       try {
         safeLogger.info('Onboarding: About to fetch company settings');
@@ -111,12 +87,7 @@ const Onboarding = ({
       } finally {
         setLoading(false);
         
-        // Restore original window.location methods after a delay
-        setTimeout(() => {
-          window.location.assign = originalAssign;
-          window.location.replace = originalReplace;
-          safeLogger.info('Onboarding: Restored window.location methods');
-        }, 5000); // Keep protection for 5 seconds
+        // Redirect protection is handled globally in main.tsx
       }
     };
     
