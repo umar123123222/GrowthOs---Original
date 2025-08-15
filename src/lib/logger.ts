@@ -15,6 +15,7 @@ class Logger {
    */
   info(message: string, data?: LogData): void {
     if (this.isDevelopment) {
+      // Using console.log directly here as this is the logger implementation
       console.log(`[INFO] ${message}`, data || '');
     }
   }
@@ -23,6 +24,7 @@ class Logger {
    * Log warning messages (always logged)
    */
   warn(message: string, data?: LogData): void {
+    // Using console.warn directly here as this is the logger implementation
     console.warn(`[WARN] ${message}`, data || '');
   }
 
@@ -44,6 +46,7 @@ class Logger {
    */
   debug(message: string, data?: LogData): void {
     if (this.isDevelopment) {
+      // Using console.debug directly here as this is the logger implementation
       console.debug(`[DEBUG] ${message}`, data || '');
     }
   }
@@ -53,6 +56,7 @@ class Logger {
    */
   performance(operation: string, duration: number, data?: LogData): void {
     if (this.isDevelopment) {
+      // Using console.log directly here as this is the logger implementation
       console.log(`[PERF] ${operation}: ${duration}ms`, data || '');
     }
     
@@ -67,6 +71,7 @@ class Logger {
    */
   activity(action: string, data?: LogData): void {
     if (this.isDevelopment) {
+      // Using console.log directly here as this is the logger implementation
       console.log(`[ACTIVITY] ${action}`, data || '');
     }
     
