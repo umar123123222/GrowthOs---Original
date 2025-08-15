@@ -317,7 +317,7 @@ export function RecordingsManagement() {
             onClick={handleSyncAllUsersUnlocks}
             disabled={syncingUnlocks}
             variant="outline"
-            className="hover-scale bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white border-0"
+            className="hover-scale bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white hover:text-white border-0"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${syncingUnlocks ? 'animate-spin' : ''}`} />
             {syncingUnlocks ? 'Syncing...' : 'Sync All User Unlocks'}
