@@ -292,14 +292,14 @@ const Onboarding = ({
       </div>;
   }
 
-  // If questionnaire is disabled or no questions, skip onboarding
-  if (!isEnabled || questions.length === 0) {
-    safeLogger.info('Onboarding: Auto-completing due to disabled questionnaire or no questions', { 
+  // If questionnaire is disabled, skip onboarding
+  if (!isEnabled) {
+    safeLogger.info('Onboarding: Auto-completing due to disabled questionnaire', { 
       isEnabled, 
       questionCount: questions.length 
     });
     
-    // Auto-complete onboarding since there are no questions
+    // Auto-complete onboarding since questionnaire is disabled
     const completeOnboarding = async () => {
       try {
         // Mark student onboarding as completed in database
@@ -323,6 +323,38 @@ const Onboarding = ({
     // Auto-complete immediately
     completeOnboarding();
     return null;
+  }
+
+  // If questionnaire is enabled but no questions available, show error
+  if (isEnabled && questions.length === 0) {
+    safeLogger.error('Onboarding: Questionnaire enabled but no questions found', { 
+      isEnabled, 
+      questionCount: questions.length 
+    });
+    
+    return (
+      <div className="min-h-screen bg-muted/30 flex items-center justify-center p-4">
+        <Card className="w-full max-w-2xl shadow-elevated border-0">
+          <CardContent className="p-8 text-center">
+            <div className="text-destructive mb-4">
+              <svg className="h-12 w-12 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-destructive mb-2">Questionnaire Not Available</h3>
+            <p className="text-muted-foreground mb-4">
+              The onboarding questionnaire is enabled but no questions are configured. Please contact support.
+            </p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90"
+            >
+              Refresh Page
+            </button>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
   safeLogger.info('Onboarding: Rendering questionnaire form', { 
     questionCount: questions.length, 
