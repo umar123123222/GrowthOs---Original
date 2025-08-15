@@ -43,39 +43,28 @@ const createQuestionnaireSchema = (questions: QuestionItem[]) => {
         switch (question.answerType) {
           case 'singleLine':
           case 'multiLine':
-            fieldSchema = z.string();
+            fieldSchema = z.string().optional();
             break;
           case 'singleSelect':
-            fieldSchema = z.string();
+            fieldSchema = z.string().optional();
             break;
           case 'multiSelect':
-            fieldSchema = z.array(z.string()).min(0);
+            fieldSchema = z.array(z.string()).optional();
             break;
           case 'file':
             fieldSchema = z.object({
               fileName: z.string(),
               fileUrl: z.string(),
               fileSize: z.number()
-            }).nullable();
+            }).nullable().optional();
             break;
           default:
             safeLogger.warn(`QuestionnaireWizard: Unknown answer type "${question.answerType}" for question ${question.id}`);
-            fieldSchema = z.any();
+            fieldSchema = z.any().optional();
         }
 
-        // Apply required validation
-        if (question.required) {
-          if (question.answerType === 'multiSelect') {
-            fieldSchema = (fieldSchema as z.ZodArray<any>).min(1, 'Please select at least one option');
-          } else if (question.answerType === 'file') {
-            fieldSchema = fieldSchema.refine(val => val !== null, 'File is required');
-          } else {
-            fieldSchema = (fieldSchema as z.ZodString).min(1, 'This field is required');
-          }
-        } else {
-          fieldSchema = fieldSchema.optional();
-        }
-
+        // All fields start as optional to prevent validation errors during initialization
+        // Required validation will be handled manually during step navigation
         schemaObject[question.id] = fieldSchema;
       } catch (error) {
         safeLogger.error(`QuestionnaireWizard: Error processing question ${question?.id || index}:`, error);
@@ -216,11 +205,11 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
   // Initialize form with comprehensive error handling
   const form = useForm({
     resolver: zodResolver(schema),
-    mode: 'onBlur', // Changed from onSubmit to onBlur
-    reValidateMode: 'onBlur', // Changed from onChange to onBlur
+    mode: 'onSubmit', // Changed to onSubmit to prevent premature validation
+    reValidateMode: 'onSubmit', // Changed to onSubmit
     defaultValues: getDefaultValues,
     shouldFocusError: true,
-    criteriaMode: 'firstError' // Changed from 'all' to 'firstError'
+    criteriaMode: 'firstError'
   });
 
   // Reset form when questions change
@@ -347,8 +336,7 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
       // Validate current step only when trying to proceed
       const stepValid = await isCurrentStepValid();
       if (!stepValid && currentQuestion.required) {
-        // Trigger validation to show error
-        await form.trigger(currentQuestion.id);
+        // Show error message without triggering Zod validation
         toast({
           title: 'Please complete this field',
           description: 'This question is required to continue.',
@@ -364,7 +352,11 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
       }
     } catch (error) {
       safeLogger.error('QuestionnaireWizard: Error in handleNext:', error);
-      errorHandler.handleError(error, 'questionnaire_navigation', false);
+      toast({
+        title: 'Navigation Error',
+        description: 'Unable to proceed to next question. Please try again.',
+        variant: 'destructive'
+      });
     }
   };
   const handlePrevious = () => {
@@ -377,19 +369,47 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
     safeLogger.info('QuestionnaireWizard: Starting submission...');
     
     try {
-      // Validate all required fields before submission
-      const isFormValid = await form.trigger();
-      if (!isFormValid) {
+      // Manual validation of required fields
+      const formData = form.getValues();
+      const missingFields: string[] = [];
+      
+      questions.forEach(question => {
+        if (question.required) {
+          const value = formData[question.id];
+          let isValid = false;
+          
+          switch (question.answerType) {
+            case 'singleLine':
+            case 'multiLine':
+            case 'singleSelect':
+              isValid = value && typeof value === 'string' && value.trim().length > 0;
+              break;
+            case 'multiSelect':
+              isValid = Array.isArray(value) && value.length > 0;
+              break;
+            case 'file':
+              isValid = value !== null && value !== undefined;
+              break;
+            default:
+              isValid = true;
+          }
+          
+          if (!isValid) {
+            missingFields.push(question.text);
+          }
+        }
+      });
+      
+      if (missingFields.length > 0) {
         toast({
           title: 'Please complete all required fields',
-          description: 'Some questions still need to be answered.',
+          description: `Missing: ${missingFields.slice(0, 2).join(', ')}${missingFields.length > 2 ? ` and ${missingFields.length - 2} more` : ''}`,
           variant: 'destructive'
         });
         setIsSubmitting(false);
         return;
       }
       
-      const formData = form.getValues();
       safeLogger.info('QuestionnaireWizard: Form data:', { formData });
       
       const responses: QuestionnaireResponse[] = questions.map(question => ({
