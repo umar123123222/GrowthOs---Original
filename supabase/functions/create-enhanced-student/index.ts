@@ -319,7 +319,7 @@ const handler = async (req: Request): Promise<Response> => {
     try {
       const { data: companySettings } = await supabaseAdmin
         .from('company_settings')
-        .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days')
+        .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days, payment_methods, currency')
         .single();
 
       if (companySettings) {
