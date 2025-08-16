@@ -15,6 +15,7 @@ interface Assignment {
   description?: string;
   created_at: string;
   recording?: {
+    id: string;
     recording_title: string;
     sequence_order: number;
   };
@@ -80,8 +81,8 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       const target = assignments.find(a => a.id === assignmentId);
       if (!target) return;
       const submission = getSubmissionStatus(assignmentId);
-      // For now, assignments without recordings are always available
-      const eligible = submission ? true : !target.recording; // If no recording, assignment is always available
+      // Check if assignment is unlocked (recording watched or no recording required)
+      const eligible = submission ? true : isAssignmentUnlocked(target);
       if (eligible) {
         setSelectedAssignment(target);
         setIsDialogOpen(true);
@@ -133,6 +134,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
         return {
           ...assignment,
           recording: recording ? {
+            id: recording.id,
             recording_title: recording.recording_title,
             sequence_order: recording.sequence_order
           } : null
@@ -192,12 +194,11 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     // If assignment has no linked recording, it's always available
     if (!assignment.recording) return true;
     
-    // Find the recording that links to this assignment
-    const recordingId = assignments.find(a => a.id === assignment.id)?.recording;
-    if (!recordingId) return true;
+    // Check if the linked recording has been watched
+    const linkedRecordingId = assignment.recording.id;
     
-    // For now, return true since we're still working on proper recording-assignment linking
-    return true;
+    // Check if the recording has been watched
+    return watchedRecordingIds.has(linkedRecordingId);
   };
 
   let availableAssignments: Assignment[] = [];
@@ -218,7 +219,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
             <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium">No assignments available</h3>
             <p className="text-muted-foreground">
-              Complete the required recording to unlock assignments.
+              Watch the prerequisite recordings to unlock assignments.
             </p>
           </CardContent>
         </Card> : <div className="grid gap-6">
