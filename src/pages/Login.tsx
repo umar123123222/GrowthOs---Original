@@ -8,15 +8,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { Eye, EyeOff, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react";
 import { safeLogger } from '@/lib/safe-logger';
-
 import { ErrorMessage, FieldError } from "@/components/ui/error-message";
 import { errorHandler, handleApiError } from "@/lib/error-handler";
 import { useNavigate } from "react-router-dom";
 import { logger } from "@/lib/logger";
 import { safeQuery } from '@/lib/database-safety';
 import type { CreatedUserResult } from '@/types/database';
- 
- const Login = () => {
+const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -24,18 +22,22 @@ import type { CreatedUserResult } from '@/types/database';
   const [loginError, setLoginError] = useState<string>("");
   const [emailError, setEmailError] = useState<string>("");
   const [passwordError, setPasswordError] = useState<string>("");
-  const { toast } = useToast();
-  const { refreshUser } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    refreshUser
+  } = useAuth();
   const navigate = useNavigate();
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const startAll = performance.now();
-    
+
     // Clear previous errors
     setLoginError("");
     setEmailError("");
     setPasswordError("");
-    
+
     // Basic validation
     if (!email) {
       setEmailError("Email is required");
@@ -45,19 +47,24 @@ const handleSubmit = async (e: React.FormEvent) => {
       setPasswordError("Password is required");
       return;
     }
-    
     setIsLoading(true);
-    
     try {
-      safeLogger.info('Login attempt for:', { email });
+      safeLogger.info('Login attempt for:', {
+        email
+      });
 
-// First authenticate with Supabase Auth
+      // First authenticate with Supabase Auth
       const tAuthStart = performance.now();
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      const {
+        data: authData,
+        error: authError
+      } = await supabase.auth.signInWithPassword({
         email,
         password
       });
-      logger.performance('auth.signInWithPassword', performance.now() - tAuthStart, { email });
+      logger.performance('auth.signInWithPassword', performance.now() - tAuthStart, {
+        email
+      });
       if (authError) {
         console.error('Auth error:', authError);
 
@@ -66,96 +73,95 @@ const handleSubmit = async (e: React.FormEvent) => {
           setLoginError("Invalid email or password. Please check your credentials and try again.");
           return;
         }
-        
+
         // Use centralized error handling for auth errors
         const userError = handleApiError(authError, 'login');
         setLoginError(userError.message);
         return;
       }
-      
       safeLogger.info('Auth successful, checking user data...');
 
-// Check if user exists in our users table
+      // Check if user exists in our users table
       const tUserFetchStart = performance.now();
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .maybeSingle();
-      logger.performance('db.users.fetch_by_id', performance.now() - tUserFetchStart, { id: authData.user.id });
-        
+      const {
+        data: userData,
+        error: userError
+      } = await supabase.from('users').select('*').eq('id', authData.user.id).maybeSingle();
+      logger.performance('db.users.fetch_by_id', performance.now() - tUserFetchStart, {
+        id: authData.user.id
+      });
       if (userError || !userData) {
-        safeLogger.info('User not found in users table, creating...', { userError });
+        safeLogger.info('User not found in users table, creating...', {
+          userError
+        });
 
         // Default role for new users
         const userRole = 'student';
         const fullName = authData.user.user_metadata?.full_name || null;
 
-// Create user if they don't exist
+        // Create user if they don't exist
         const tInsertStart = performance.now();
-        const result = await safeQuery<CreatedUserResult>(
-          supabase
-            .from('users')
-            .insert({
-              id: authData.user.id,
-              email: authData.user.email || email,
-              role: userRole,
-              full_name: fullName,
-              password_display: 'temp_password',
-              password_hash: 'temp_hash',
-              created_at: new Date().toISOString()
-            })
-            .select()
-            .single(),
-          'create user profile'
-        );
-        logger.performance('db.users.insert_profile', performance.now() - tInsertStart, { id: authData.user.id, role: userRole });
-          
+        const result = await safeQuery<CreatedUserResult>(supabase.from('users').insert({
+          id: authData.user.id,
+          email: authData.user.email || email,
+          role: userRole,
+          full_name: fullName,
+          password_display: 'temp_password',
+          password_hash: 'temp_hash',
+          created_at: new Date().toISOString()
+        }).select().single(), 'create user profile');
+        logger.performance('db.users.insert_profile', performance.now() - tInsertStart, {
+          id: authData.user.id,
+          role: userRole
+        });
         if (!result.success) {
           console.error('Error creating user:', result.error);
           const userError = handleApiError(result.error, 'user_creation');
           setLoginError(`Failed to set up your account. ${userError.message}`);
           return;
         }
-        
         const newUser = result.data;
         toast({
           title: "Welcome!",
           description: `Hello ${newUser?.full_name || newUser?.email || email}, you've successfully logged in.`
         });
       } else {
-        safeLogger.info('User found', { userId: userData.id, role: userData.role });
-        
+        safeLogger.info('User found', {
+          userId: userData.id,
+          role: userData.role
+        });
+
         // Only block suspended students from signing in
         if (userData.role === 'student' && userData.lms_status === 'suspended') {
-          safeLogger.warn('Student LMS access is suspended', { userId: userData.id });
-          
+          safeLogger.warn('Student LMS access is suspended', {
+            userId: userData.id
+          });
+
           // Fetch company settings to get contact email
-          const { data: companySettings } = await supabase
-            .from('company_settings')
-            .select('contact_email')
-            .eq('id', 1)
-            .maybeSingle();
-          
+          const {
+            data: companySettings
+          } = await supabase.from('company_settings').select('contact_email').eq('id', 1).maybeSingle();
           const contactEmail = companySettings?.contact_email || 'support@growthos.com';
-          
+
           // Sign out the user immediately
           await supabase.auth.signOut();
           setLoginError(`Your LMS access is currently suspended. Please contact support at ${contactEmail} for assistance.`);
           return;
         }
-        
         toast({
           title: "Welcome!",
           description: `Hello ${userData.full_name || userData.email}, you've successfully logged in.`
         });
       }
 
-// Refresh the user data in our auth hook and navigate to dashboard
+      // Refresh the user data in our auth hook and navigate to dashboard
       const tRefreshStart = performance.now();
       await refreshUser();
       logger.performance('auth.refresh_user', performance.now() - tRefreshStart);
-      logger.performance('auth.login_total', performance.now() - startAll, { email, result: 'success' });
+      logger.performance('auth.login_total', performance.now() - startAll, {
+        email,
+        result: 'success'
+      });
       navigate('/dashboard');
     } catch (error) {
       console.error('Login error:', error);
@@ -194,13 +200,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         </CardHeader>
         
         <CardContent className="px-8 pb-8">
-          {loginError && (
-            <ErrorMessage 
-              error={loginError} 
-              className="mb-6"
-              onDismiss={() => setLoginError("")}
-            />
-          )}
+          {loginError && <ErrorMessage error={loginError} className="mb-6" onDismiss={() => setLoginError("")} />}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -208,22 +208,10 @@ const handleSubmit = async (e: React.FormEvent) => {
                 Email Address
               </Label>
               <div className="relative">
-                <Input 
-                  id="email" 
-                  type="email" 
-                  value={email} 
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    if (emailError) setEmailError("");
-                  }}
-                  className={`h-12 pl-4 pr-4 border-2 transition-all duration-200 rounded-lg ${
-                    emailError 
-                      ? 'border-destructive focus:border-destructive' 
-                      : 'border-gray-200 focus:border-blue-500'
-                  }`}
-                  placeholder="your@email.com" 
-                  required 
-                />
+                <Input id="email" type="email" value={email} onChange={e => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError("");
+              }} className={`h-12 pl-4 pr-4 border-2 transition-all duration-200 rounded-lg ${emailError ? 'border-destructive focus:border-destructive' : 'border-gray-200 focus:border-blue-500'}`} placeholder="your@email.com" required />
               </div>
               <FieldError error={emailError} />
             </div>
@@ -233,52 +221,26 @@ const handleSubmit = async (e: React.FormEvent) => {
                 Password
               </Label>
               <div className="relative">
-                <Input 
-                  id="password" 
-                  type={showPassword ? "text" : "password"} 
-                  value={password} 
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    if (passwordError) setPasswordError("");
-                  }}
-                  className={`h-12 pl-4 pr-12 border-2 transition-all duration-200 rounded-lg ${
-                    passwordError 
-                      ? 'border-destructive focus:border-destructive' 
-                      : 'border-gray-200 focus:border-blue-500'
-                  }`}
-                  placeholder="••••••••" 
-                  required 
-                />
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm" 
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100" 
-                  onClick={() => setShowPassword(!showPassword)}
-                >
+                <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={e => {
+                setPassword(e.target.value);
+                if (passwordError) setPasswordError("");
+              }} className={`h-12 pl-4 pr-12 border-2 transition-all duration-200 rounded-lg ${passwordError ? 'border-destructive focus:border-destructive' : 'border-gray-200 focus:border-blue-500'}`} placeholder="••••••••" required />
+                <Button type="button" variant="ghost" size="sm" className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100" onClick={() => setShowPassword(!showPassword)}>
                   {showPassword ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-gray-500" />}
                 </Button>
               </div>
               <FieldError error={passwordError} />
             </div>
             
-            <Button 
-              type="submit" 
-              className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group" 
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <div className="flex items-center gap-2">
+            <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group" disabled={isLoading}>
+              {isLoading ? <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Signing In...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
+                </div> : <div className="flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
                   <Shield className="w-4 h-4" />
                   <span>Sign In to Growth OS</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                </div>
-              )}
+                </div>}
             </Button>
           </form>
           
@@ -288,11 +250,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                 <div className="w-full border-t border-gray-200"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="">
-                  <a href="https://enrollment.growthOS.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-700 transition-colors duration-200 font-medium underline">
-                    Enroll Now
-                  </a>
-                </span>
+                
               </div>
             </div>
           </div>
