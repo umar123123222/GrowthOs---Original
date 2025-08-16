@@ -56,7 +56,6 @@ export type Database = {
           instructions: string | null
           mentor_id: string | null
           name: string
-          recording_id: string | null
           submission_type: string | null
           updated_at: string | null
         }
@@ -68,7 +67,6 @@ export type Database = {
           instructions?: string | null
           mentor_id?: string | null
           name: string
-          recording_id?: string | null
           submission_type?: string | null
           updated_at?: string | null
         }
@@ -80,19 +78,10 @@ export type Database = {
           instructions?: string | null
           mentor_id?: string | null
           name?: string
-          recording_id?: string | null
           submission_type?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "assignments_recording_id_fkey"
-            columns: ["recording_id"]
-            isOneToOne: false
-            referencedRelation: "available_lessons"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       available_lessons: {
         Row: {
