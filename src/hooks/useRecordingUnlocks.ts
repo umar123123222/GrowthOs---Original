@@ -52,72 +52,30 @@ export const useRecordingUnlocks = () => {
     try {
       logger.debug('Fetching unlock status for user:', { userId: user.id });
       
-      // Check if sequential unlock is enabled first
-      const { data: companySettings } = await supabase
-        .from('company_settings')
-        .select('lms_sequential_unlock')
-        .eq('id', 1)
-        .single();
+      // Always use sequential unlock logic (hardcoded behavior)
+      const { data, error } = await supabase.rpc('get_sequential_unlock_status', {
+        p_user_id: user.id
+      });
 
-      const sequentialEnabled = companySettings?.lms_sequential_unlock || false;
-      
-      if (sequentialEnabled) {
-        // Use new sequential unlock function
-        const { data, error } = await supabase.rpc('get_sequential_unlock_status', {
-          p_user_id: user.id
-        });
-
-        if (error) {
-          logger.error('Error fetching sequential unlock status:', error);
-          throw error;
-        }
-
-        // Transform to match existing interface
-        const transformedData = (data || []).map(item => ({
-          recording_id: item.recording_id,
-          sequence_order: item.sequence_order,
-          is_unlocked: item.is_unlocked,
-          unlock_reason: item.unlock_reason
-        }));
-
-        logger.debug('Sequential unlock data:', { data: transformedData });
-        setUnlocks(transformedData);
-      } else {
-        // Use existing unlock function for backward compatibility
-        const { data, error } = await supabase.rpc('get_student_unlock_sequence', {
-          p_user_id: user.id
-        });
-
-        if (error) {
-          logger.error('Error fetching unlock sequence:', error);
-          throw error;
-        }
-
-        logger.debug('Legacy unlock data:', { data });
-        setUnlocks(data || []);
+      if (error) {
+        logger.error('Error fetching sequential unlock status:', error);
+        throw error;
       }
+
+      // Transform to match existing interface
+      const transformedData = (data || []).map(item => ({
+        recording_id: item.recording_id,
+        sequence_order: item.sequence_order,
+        is_unlocked: item.is_unlocked,
+        unlock_reason: item.unlock_reason
+      }));
+
+      logger.debug('Sequential unlock data:', { data: transformedData });
+      setUnlocks(transformedData);
     } catch (error) {
       logger.error('Error fetching recording unlocks:', error);
-      // Fallback: unlock only first recording
-      try {
-        const { data: firstRecording } = await supabase
-          .from('available_lessons')
-          .select('id, sequence_order')
-          .order('sequence_order')
-          .limit(1)
-          .maybeSingle();
-
-        if (firstRecording) {
-          setUnlocks([{
-            recording_id: firstRecording.id,
-            sequence_order: firstRecording.sequence_order || 1,
-            is_unlocked: true,
-            unlock_reason: 'First recording - fallback unlock'
-          }]);
-        }
-      } catch (fallbackError) {
-        logger.error('Fallback unlock failed:', fallbackError);
-      }
+      // No fallback - maintain strict sequential behavior
+      setUnlocks([]);
     } finally {
       setLoading(false);
     }

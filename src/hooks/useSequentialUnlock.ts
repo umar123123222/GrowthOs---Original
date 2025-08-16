@@ -28,27 +28,15 @@ export const useSequentialUnlock = () => {
     if (!user?.id) return;
 
     try {
-      // Check if sequential unlock is enabled
-      const { data: companySettings } = await supabase
-        .from('company_settings')
-        .select('lms_sequential_unlock')
-        .eq('id', 1)
-        .single();
-
-      const isEnabled = companySettings?.lms_sequential_unlock || false;
-
-      if (!isEnabled) {
-        setStatus({ isEnabled: false, firstRecordingUnlocked: false, feesCleared: false });
-        setLoading(false);
-        return;
-      }
+      // Sequential unlock is always enabled (hardcoded behavior)
+      const isEnabled = true;
 
       // Get student fees status
       const { data: studentData } = await supabase
         .from('students')
         .select('fees_cleared')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       const feesCleared = studentData?.fees_cleared || false;
 
@@ -58,7 +46,7 @@ export const useSequentialUnlock = () => {
         .select('id')
         .order('sequence_order', { ascending: true })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       let firstRecordingUnlocked = false;
       if (firstRecording && feesCleared) {
@@ -67,7 +55,7 @@ export const useSequentialUnlock = () => {
           .select('is_unlocked')
           .eq('user_id', user.id)
           .eq('recording_id', firstRecording.id)
-          .single();
+          .maybeSingle();
 
         firstRecordingUnlocked = unlockData?.is_unlocked || false;
       }
@@ -86,28 +74,13 @@ export const useSequentialUnlock = () => {
   };
 
   const initializeFirstRecordingUnlock = async () => {
-    if (!user?.id || !status.isEnabled || !status.feesCleared) return;
+    if (!user?.id || !status.feesCleared) return;
 
     try {
-      // Get first recording
-      const { data: firstRecording } = await supabase
-        .from('available_lessons')
-        .select('id')
-        .order('sequence_order', { ascending: true })
-        .limit(1)
-        .single();
-
-      if (!firstRecording) return;
-
-      // Unlock first recording
-      await supabase
-        .from('user_unlocks')
-        .upsert({
-          user_id: user.id,
-          recording_id: firstRecording.id,
-          is_unlocked: true,
-          unlocked_at: new Date().toISOString()
-        });
+      // Use the database function to properly initialize first recording unlock
+      await supabase.rpc('initialize_first_recording_unlock', {
+        p_user_id: user.id
+      });
 
       setStatus(prev => ({ ...prev, firstRecordingUnlocked: true }));
       

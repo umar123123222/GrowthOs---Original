@@ -23,11 +23,16 @@ export const SequentialLockIndicator: React.FC<SequentialLockIndicatorProps> = (
   // Determine the primary status
   const getStatusInfo = () => {
     if (isLocked) {
+      // Check if it's a payment-related lock
+      const isPaymentRequired = unlockReason?.includes('Payment required') || unlockReason?.includes('fees');
+      
       return {
         icon: Lock,
-        text: 'Locked',
-        variant: 'secondary' as const,
-        description: 'Complete previous requirements to unlock'
+        text: isPaymentRequired ? 'Payment Required' : 'Locked',
+        variant: isPaymentRequired ? 'destructive' as const : 'secondary' as const,
+        description: isPaymentRequired 
+          ? 'Clear fees to unlock first recording' 
+          : 'Complete previous requirements to unlock'
       };
     }
     

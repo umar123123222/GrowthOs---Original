@@ -1587,6 +1587,10 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      initialize_first_recording_unlock: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       initialize_student_unlocks: {
         Args: { p_user_id: string }
         Returns: undefined
