@@ -71,6 +71,32 @@ export const useRecordingUnlocks = () => {
           fetchUnlocks();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'user_unlocks',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          logger.debug('New recording unlocked, refreshing unlocks...');
+          fetchUnlocks();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'user_unlocks',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          logger.debug('Recording unlock status updated, refreshing unlocks...');
+          fetchUnlocks();
+        }
+      )
       .subscribe();
 
     return () => {
