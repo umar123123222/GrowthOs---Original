@@ -9,6 +9,9 @@ interface RecordingUnlock {
   sequence_order: number;
   is_unlocked: boolean;
   unlock_reason: string;
+  assignment_required: boolean;
+  assignment_completed: boolean;
+  recording_watched: boolean;
 }
 
 export const useRecordingUnlocks = () => {
@@ -22,24 +25,53 @@ export const useRecordingUnlocks = () => {
     }
   }, [user?.id]);
 
-  // Listen for submission approvals to refresh unlock status
+  // Listen for submission approvals and other status changes to refresh unlock status
   useEffect(() => {
     if (!user?.id) return;
 
-    // Listen for PostgreSQL notifications
-    const channel = supabase.channel('submission_notifications');
-    
-    channel.on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'submissions',
-      filter: `student_id=eq.${user.id}`
-    }, (payload) => {
-      logger.debug('Received submission change, refreshing unlocks', payload);
-      fetchUnlocks();
-    });
-
-    channel.subscribe();
+    // Set up real-time listener for changes that affect unlock status
+    const channel = supabase
+      .channel('unlock-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'submissions',
+          filter: `student_id=eq.${user.id}`
+        },
+        () => {
+          logger.debug('Submission status changed, refreshing unlocks...');
+          fetchUnlocks();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'recording_views',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          logger.debug('Recording view status changed, refreshing unlocks...');
+          fetchUnlocks();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'students',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          logger.debug('Student fees status changed, refreshing unlocks...');
+          fetchUnlocks();
+        }
+      )
+      .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
@@ -62,12 +94,15 @@ export const useRecordingUnlocks = () => {
         throw error;
       }
 
-      // Transform to match existing interface
+      // Transform to match existing interface with new fields
       const transformedData = (data || []).map(item => ({
         recording_id: item.recording_id,
         sequence_order: item.sequence_order,
         is_unlocked: item.is_unlocked,
-        unlock_reason: item.unlock_reason
+        unlock_reason: item.unlock_reason,
+        assignment_required: item.assignment_required,
+        assignment_completed: item.assignment_completed,
+        recording_watched: item.recording_watched
       }));
 
       logger.debug('Sequential unlock data:', { data: transformedData });
@@ -86,6 +121,10 @@ export const useRecordingUnlocks = () => {
     return unlock?.is_unlocked || false;
   };
 
+  const getRecordingStatus = (recordingId: string) => {
+    return unlocks.find(unlock => unlock.recording_id === recordingId);
+  };
+
   const refreshUnlocks = () => {
     setLoading(true);
     fetchUnlocks();
@@ -95,6 +134,7 @@ export const useRecordingUnlocks = () => {
     unlocks,
     loading,
     isRecordingUnlocked,
+    getRecordingStatus,
     refreshUnlocks
   };
 };
