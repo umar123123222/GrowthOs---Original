@@ -1542,6 +1542,7 @@ export type Database = {
           assignment_required: boolean
           is_unlocked: boolean
           recording_id: string
+          recording_watched: boolean
           sequence_order: number
           unlock_reason: string
         }[]
