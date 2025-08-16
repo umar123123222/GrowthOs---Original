@@ -950,7 +950,9 @@ export type Database = {
           content: string | null
           created_at: string
           file_url: string | null
+          file_urls: Json | null
           id: string
+          links: Json | null
           notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -965,7 +967,9 @@ export type Database = {
           content?: string | null
           created_at?: string
           file_url?: string | null
+          file_urls?: Json | null
           id?: string
+          links?: Json | null
           notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -980,7 +984,9 @@ export type Database = {
           content?: string | null
           created_at?: string
           file_url?: string | null
+          file_urls?: Json | null
           id?: string
+          links?: Json | null
           notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null

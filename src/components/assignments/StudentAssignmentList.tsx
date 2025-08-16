@@ -7,13 +7,14 @@ import { BookOpen, Clock, CheckCircle, XCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecordingUnlocks } from '@/hooks/useRecordingUnlocks';
-import { StudentSubmissionDialog } from './StudentSubmissionDialog';
+import { EnhancedStudentSubmissionDialog } from './EnhancedStudentSubmissionDialog';
 import { useSearchParams } from 'react-router-dom';
 interface Assignment {
   id: string;
   name: string;
   description?: string;
   created_at: string;
+  submission_type: 'text' | 'links' | 'attachments';
   recording?: {
     id: string;
     recording_title: string;
@@ -102,7 +103,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       const {
         data: assignmentsData,
         error: assignmentsError
-      } = await supabase.from('assignments').select('*').order('created_at', {
+      } = await supabase.from('assignments').select('*, submission_type').order('created_at', {
         ascending: false
       });
       if (assignmentsError) throw assignmentsError;
@@ -133,6 +134,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
         const recording = recordingsData?.find(r => r.assignment_id === assignment.id);
         return {
           ...assignment,
+          submission_type: assignment.submission_type as 'text' | 'links' | 'attachments',
           recording: recording ? {
             id: recording.id,
             recording_title: recording.recording_title,
@@ -263,6 +265,6 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       })}
         </div>}
 
-      {selectedAssignment && <StudentSubmissionDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} assignment={selectedAssignment} userId={user?.id || ''} hasSubmitted={!!getSubmissionStatus(selectedAssignment.id) && getSubmissionStatus(selectedAssignment.id)?.status !== 'declined'} onSubmissionComplete={handleSubmissionComplete} />}
+      {selectedAssignment && <EnhancedStudentSubmissionDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} assignment={selectedAssignment} userId={user?.id || ''} hasSubmitted={!!getSubmissionStatus(selectedAssignment.id) && getSubmissionStatus(selectedAssignment.id)?.status !== 'declined'} onSubmissionComplete={handleSubmissionComplete} />}
     </div>;
 }
