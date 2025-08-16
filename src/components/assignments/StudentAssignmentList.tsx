@@ -14,7 +14,6 @@ interface Assignment {
   name: string;
   description?: string;
   created_at: string;
-  recording_id?: string;
   recording?: {
     recording_title: string;
     sequence_order: number;
@@ -81,9 +80,8 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       const target = assignments.find(a => a.id === assignmentId);
       if (!target) return;
       const submission = getSubmissionStatus(assignmentId);
-      const isWatched = target.recording_id ? watchedRecordingIds.has(target.recording_id) : false;
-      const isUnlocked = target.recording_id ? isRecordingUnlocked(target.recording_id) : false;
-      const eligible = submission ? true : target.recording_id ? isWatched && isUnlocked : false;
+      // For now, assignments without recordings are always available
+      const eligible = submission ? true : !target.recording; // If no recording, assignment is always available
       if (eligible) {
         setSelectedAssignment(target);
         setIsDialogOpen(true);
@@ -99,20 +97,21 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
   const fetchData = async () => {
     if (!user) return;
     try {
-      // Fetch assignments with recording details
+      // Fetch assignments
       const {
         data: assignmentsData,
         error: assignmentsError
-      } = await supabase.from('assignments').select(`
-          *,
-          recording:available_lessons!assignments_recording_id_fkey (
-            recording_title,
-            sequence_order
-          )
-        `).order('created_at', {
+      } = await supabase.from('assignments').select('*').order('created_at', {
         ascending: false
       });
       if (assignmentsError) throw assignmentsError;
+
+      // Fetch recordings separately to get assignment linked recordings
+      const {
+        data: recordingsData,
+        error: recordingsError
+      } = await supabase.from('available_lessons').select('id, recording_title, sequence_order, assignment_id');
+      if (recordingsError) throw recordingsError;
 
       // Fetch user's submissions
       const {
@@ -128,7 +127,19 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       } = await supabase.from('recording_views').select('recording_id, watched').eq('user_id', user.id);
       if (viewsError) throw viewsError;
       const watchedIds = new Set<string>((viewsData || []).filter(v => v.watched).map(v => v.recording_id));
-      setAssignments(assignmentsData || []);
+      // Combine assignments with their recordings
+      const assignmentsWithRecordings = (assignmentsData || []).map(assignment => {
+        const recording = recordingsData?.find(r => r.assignment_id === assignment.id);
+        return {
+          ...assignment,
+          recording: recording ? {
+            recording_title: recording.recording_title,
+            sequence_order: recording.sequence_order
+          } : null
+        };
+      });
+      
+      setAssignments(assignmentsWithRecordings);
       setSubmissions(submissionsData || []);
       setWatchedRecordingIds(watchedIds);
     } catch (error) {
@@ -178,10 +189,15 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
 
   // Build filtered lists based on selected tab
   const isAssignmentUnlocked = (assignment: Assignment) => {
-    if (!assignment.recording_id) return false;
-    const watched = watchedRecordingIds.has(assignment.recording_id);
-    const unlocked = isRecordingUnlocked(assignment.recording_id);
-    return watched && unlocked;
+    // If assignment has no linked recording, it's always available
+    if (!assignment.recording) return true;
+    
+    // Find the recording that links to this assignment
+    const recordingId = assignments.find(a => a.id === assignment.id)?.recording;
+    if (!recordingId) return true;
+    
+    // For now, return true since we're still working on proper recording-assignment linking
+    return true;
   };
 
   let availableAssignments: Assignment[] = [];

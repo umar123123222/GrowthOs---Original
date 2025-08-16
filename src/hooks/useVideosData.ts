@@ -78,13 +78,15 @@ export const useVideosData = (user?: any) => {
         .select('*')
         .order('sequence_order');
 
-      // Fetch assignments
+      // Fetch assignments separately 
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('assignments')
         .select('*');
 
-      if (recordingsError) throw recordingsError;
       if (assignmentsError) throw assignmentsError;
+
+      if (recordingsError) throw recordingsError;
+
 
       // Fetch user's assignment submissions (if user is logged in)
       let submissions = [];
@@ -136,24 +138,26 @@ export const useVideosData = (user?: any) => {
         const isModuleUnlocked = user?.id ? (moduleUnlockStatus?.is_module_unlocked ?? false) && userLMSStatus === 'active' : true;
         
         const lessons = moduleRecordings.map(recording => {
-          // For now, we'll keep the basic lesson structure without assignment linking
-          // since the new assignment system doesn't use sequence_order
           const recordingView = recordingViews?.find(rv => rv.recording_id === recording.id);
           
           // Check if this recording is unlocked (also check LMS status)
           const recordingUnlockStatus = unlockStatus.find(u => u.recording_id === recording.id);
           const isRecordingUnlocked = user?.id ? (recordingUnlockStatus?.is_recording_unlocked ?? false) && userLMSStatus === 'active' : true;
           
+          // Get assignment info from the recording
+          const assignment = assignmentsData?.find(a => a.id === recording.assignment_id);
+          const assignmentSubmission = assignment ? submissions.find(s => s.assignment_id === assignment.id) : null;
+          
           return {
             id: recording.id,
             title: recording.recording_title || 'Untitled Recording',
             duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
-            completed: false, // Will be determined by assignment submissions separately
+            completed: assignmentSubmission?.status === 'approved',
             watched: recordingView?.watched ?? false,
             locked: !isRecordingUnlocked,
-            assignmentTitle: 'Assignment', // Generic title for now
-            assignmentSubmitted: false, // Will be determined separately
-            assignmentId: null, // No direct assignment linking via sequence_order
+            assignmentTitle: assignment ? assignment.name : 'No Assignment',
+            assignmentSubmitted: !!assignmentSubmission,
+            assignmentId: assignment?.id || null,
             recording_url: recording.recording_url,
             sequence_order: recording.sequence_order
           };
@@ -186,17 +190,19 @@ export const useVideosData = (user?: any) => {
           locked: false,
           lessons: unassignedRecordings.map(recording => {
             const recordingView = recordingViews?.find(rv => rv.recording_id === recording.id);
+            const assignment = assignmentsData?.find(a => a.id === recording.assignment_id);
+            const assignmentSubmission = assignment ? submissions.find(s => s.assignment_id === assignment.id) : null;
             
             return {
               id: recording.id,
               title: recording.recording_title || 'Untitled Recording',
               duration: recording.duration_min ? `${recording.duration_min} min` : 'N/A',
-              completed: false, // Will be determined by assignment submissions separately
+              completed: assignmentSubmission?.status === 'approved',
               watched: recordingView?.watched ?? false,
               locked: userLMSStatus !== 'active', // Lock if LMS status is not active
-              assignmentTitle: 'Assignment', // Generic title for now
-              assignmentSubmitted: false, // Will be determined separately
-              assignmentId: null, // No direct assignment linking
+              assignmentTitle: assignment ? assignment.name : 'No Assignment',
+              assignmentSubmitted: !!assignmentSubmission,
+              assignmentId: assignment?.id || null,
               recording_url: recording.recording_url,
               sequence_order: recording.sequence_order
             };

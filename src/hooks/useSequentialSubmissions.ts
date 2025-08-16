@@ -44,7 +44,6 @@ export const useSequentialSubmissions = (assignmentId?: string) => {
         .select(`
           id,
           name,
-          recording_id,
           submissions!inner(
             id,
             version,
@@ -95,7 +94,7 @@ export const useSequentialSubmissions = (assignmentId?: string) => {
         return {
           assignment_id: assignment.id,
           assignment_name: assignment.name,
-          recording_id: assignment.recording_id,
+          recording_id: null, // No longer directly linked to recordings
           current_status: latestSubmission ? latestSubmission.status : 'not_submitted',
           latest_version: latestSubmission?.version || 0,
           submissions: sortedSubmissions,

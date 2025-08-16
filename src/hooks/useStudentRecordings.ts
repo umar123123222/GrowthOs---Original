@@ -46,12 +46,20 @@ export const useStudentRecordings = () => {
           sequence_order,
           duration_min,
           module,
+          assignment_id,
           modules!inner(id, title, order)
         `)
         .order('sequence_order');
 
       if (recordingsError) throw recordingsError;
       safeLogger.info('StudentRecordings: Found recordings:', { count: recordingsData?.length || 0 });
+
+      // Fetch assignments separately
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('assignments')
+        .select('id, name, description, submission_type, instructions, due_days');
+
+      if (assignmentsError) throw assignmentsError;
 
       // Fetch recording views for this user
       const { data: viewsData, error: viewsError } = await supabase
@@ -60,14 +68,6 @@ export const useStudentRecordings = () => {
         .eq('user_id', user.id);
 
       if (viewsError) throw viewsError;
-
-      // Fetch assignments linked to recordings
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('assignments')
-        .select('id, recording_id')
-        .not('recording_id', 'is', null);
-
-      if (assignmentsError) throw assignmentsError;
 
       // Fetch user's submissions
       const { data: submissionsData, error: submissionsError } = await supabase
@@ -81,7 +81,7 @@ export const useStudentRecordings = () => {
       const processedRecordings = (recordingsData || []).map(recording => {
         const isUnlocked = isRecordingUnlocked(recording.id);
         const view = viewsData?.find(v => v.recording_id === recording.id);
-        const assignment = assignmentsData?.find(a => a.recording_id === recording.id);
+        const assignment = assignmentsData?.find(a => a.id === recording.assignment_id);
         const submission = assignment ? submissionsData?.find(s => s.assignment_id === assignment.id) : null;
 
         safeLogger.info(`Recording ${recording.recording_title}: unlocked=${isUnlocked}, watched=${view?.watched || false}`);

@@ -64,7 +64,8 @@ export const useModulesWithRecordings = () => {
           recording_url,
           sequence_order,
           duration_min,
-          module
+          module,
+          assignment_id
         `)
         .order('sequence_order');
       logger.performance('mods.fetch_recordings', performance.now() - tRecordingsStart, { corrId });
@@ -83,8 +84,7 @@ export const useModulesWithRecordings = () => {
       const tAssignStart = performance.now();
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('assignments')
-        .select('id, recording_id, name')
-        .not('recording_id', 'is', null);
+        .select('id, name');
       logger.performance('mods.fetch_assignments', performance.now() - tAssignStart, { corrId });
 
       if (assignmentsError) throw assignmentsError;
@@ -106,7 +106,7 @@ export const useModulesWithRecordings = () => {
           .map(recording => {
             const isUnlocked = isRecordingUnlocked(recording.id);
             const view = viewsData?.find(v => v.recording_id === recording.id);
-            const assignment = assignmentsData?.find(a => a.recording_id === recording.id);
+            const assignment = assignmentsData?.find(a => a.id === recording.assignment_id);
             const submission = assignment ? submissionsData?.find(s => s.assignment_id === assignment.id) : null;
 
             return {
