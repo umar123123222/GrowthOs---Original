@@ -16,10 +16,21 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 const Videos = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const { modules, loading, refreshData } = useModulesWithRecordings();
-  const { markRecordingWatched } = useProgressTracker(user);
-  const { status: sequentialStatus, loading: sequentialLoading } = useSequentialUnlock();
+  const {
+    user
+  } = useAuth();
+  const {
+    modules,
+    loading,
+    refreshData
+  } = useModulesWithRecordings();
+  const {
+    markRecordingWatched
+  } = useProgressTracker(user);
+  const {
+    status: sequentialStatus,
+    loading: sequentialLoading
+  } = useSequentialUnlock();
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedRecording, setSelectedRecording] = useState<any>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
@@ -71,25 +82,7 @@ const Videos = () => {
         <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
         
         {/* Sequential unlock status banner */}
-        <Card className="border-blue-200 bg-blue-50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800">
-                Sequential Learning System
-              </span>
-              <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
-                {sequentialStatus.feesCleared ? 'Fees Cleared' : 'Payment Required'}
-              </Badge>
-            </div>
-            <p className="text-xs text-blue-600 mt-1">
-              {sequentialStatus.feesCleared 
-                ? 'Complete recordings and assignments in order to unlock new content.'
-                : 'Clear your fees to unlock the first recording and begin your learning journey.'
-              }
-            </p>
-          </CardContent>
-        </Card>
+        
         
         <div className="mb-6">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground">Available Lessons</h1>
