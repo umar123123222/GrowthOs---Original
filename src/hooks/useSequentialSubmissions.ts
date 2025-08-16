@@ -115,11 +115,20 @@ export const useSequentialSubmissions = (assignmentId?: string) => {
     if (!user?.id) return { success: false, error: 'User not found' };
 
     try {
-      // Get current assignment data
-      const currentAssignment = assignments.find(a => a.assignment_id === assignmentId);
-      const nextVersion = (currentAssignment?.latest_version || 0) + 1;
+      // Query database for the actual latest version to prevent conflicts
+      const { data: existingSubmissions, error: queryError } = await supabase
+        .from('submissions')
+        .select('version')
+        .eq('student_id', user.id)
+        .eq('assignment_id', assignmentId)
+        .order('version', { ascending: false })
+        .limit(1);
 
-      // Insert new submission
+      if (queryError) throw queryError;
+
+      const nextVersion = (existingSubmissions?.[0]?.version || 0) + 1;
+
+      // Insert new submission with correct version
       const { error } = await supabase
         .from('submissions')
         .insert({

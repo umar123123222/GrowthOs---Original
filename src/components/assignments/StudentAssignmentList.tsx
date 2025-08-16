@@ -27,6 +27,7 @@ interface Submission {
   status: string;
   notes?: string;
   created_at: string;
+  version: number;
 }
 export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?: 'unlocked' | 'submitted' }) {
   const {
@@ -115,11 +116,16 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       } = await supabase.from('available_lessons').select('id, recording_title, sequence_order, assignment_id');
       if (recordingsError) throw recordingsError;
 
-      // Fetch user's submissions
+      // Fetch user's submissions with proper ordering
       const {
         data: submissionsData,
         error: submissionsError
-      } = await supabase.from('submissions').select('*').eq('student_id', user.id);
+      } = await supabase
+        .from('submissions')
+        .select('*')
+        .eq('student_id', user.id)
+        .order('version', { ascending: false })
+        .order('created_at', { ascending: false });
       if (submissionsError) throw submissionsError;
 
       // Fetch recording views (watched status)
@@ -158,7 +164,17 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     }
   };
   const getSubmissionStatus = (assignmentId: string) => {
-    return submissions.find(s => s.assignment_id === assignmentId);
+    // Get the latest submission for this assignment (highest version or most recent)
+    const assignmentSubmissions = submissions.filter(s => s.assignment_id === assignmentId);
+    if (assignmentSubmissions.length === 0) return undefined;
+    
+    // Sort by version descending, then by created_at descending
+    return assignmentSubmissions.sort((a, b) => {
+      if (a.version !== b.version) {
+        return b.version - a.version;
+      }
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    })[0];
   };
   const getStatusBadge = (submission?: Submission) => {
     if (!submission) {
