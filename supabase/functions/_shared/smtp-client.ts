@@ -1,3 +1,6 @@
+// This file defines an SMTPClient class for sending emails using the SMTP protocol. 
+// It uses environment variables for configuration and handles the SMTP conversation, including TLS and authentication.
+
 interface SMTPConfig {
   host: string;
   port: number;
@@ -28,50 +31,6 @@ export class SMTPClient {
     this.config = config;
   }
 
-  static async fromDatabase(): Promise<SMTPClient> {
-    try {
-      // Import Supabase client with service role
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-      
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-      
-      if (!supabaseUrl || !supabaseServiceKey) {
-        console.warn('Missing Supabase configuration, falling back to environment variables');
-        return SMTPClient.fromEnv();
-      }
-      
-      const supabase = createClient(supabaseUrl, supabaseServiceKey);
-      
-      // Fetch active SMTP configuration from database
-      const { data, error } = await supabase
-        .from('smtp_configs')
-        .select('*')
-        .eq('is_active', true)
-        .single();
-      
-      if (error || !data) {
-        console.warn('No active SMTP configuration found in database, falling back to environment variables');
-        return SMTPClient.fromEnv();
-      }
-      
-      console.log('Using SMTP configuration from database');
-      return new SMTPClient({
-        host: data.host,
-        port: data.port,
-        username: data.username,
-        password: data.password.replace(/\s/g, ''), // Remove all spaces for Gmail app passwords
-        fromEmail: data.from_email,
-        fromName: data.from_name,
-      });
-      
-    } catch (error) {
-      console.warn('Failed to load SMTP config from database:', error.message);
-      console.warn('Falling back to environment variables');
-      return SMTPClient.fromEnv();
-    }
-  }
-
   static fromEnv(): SMTPClient {
     const host = Deno.env.get('SMTP_HOST');
     const port = parseInt(Deno.env.get('SMTP_PORT') || '587');
@@ -88,7 +47,7 @@ export class SMTPClient {
       host,
       port,
       username,
-      password,
+      password: password.replace(/\s/g, ''), // Remove spaces for Gmail app passwords
       fromEmail,
       fromName,
     });
@@ -161,7 +120,9 @@ export class SMTPClient {
         throw new Error(`SMTP server rejected connection: ${welcomeResponse}`);
       }
 
-      await sendCommand(`EHLO ${this.config.host}`);
+      // Extract domain from fromEmail or use localhost as fallback
+      const domain = this.config.fromEmail.split('@')[1] || 'localhost';
+      await sendCommand(`EHLO ${domain}`);
       const ehloResponse = await readResponse();
       if (!ehloResponse.startsWith('250')) {
         throw new Error(`EHLO failed: ${ehloResponse}`);

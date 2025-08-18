@@ -257,7 +257,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send welcome email with credentials via SMTP
     try {
-      const smtpClient = await SMTPClient.fromDatabase();
+      const smtpClient = SMTPClient.fromEnv();
       
       await smtpClient.sendEmail({
         to: email,
@@ -442,7 +442,7 @@ const handler = async (req: Request): Promise<Response> => {
 
 async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
-    const smtpClient = await SMTPClient.fromDatabase();
+    const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.student_email;
     const studentName = invoice.student_name;
     const dueDate = new Date(invoice.due_date).toLocaleDateString();
