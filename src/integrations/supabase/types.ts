@@ -874,6 +874,48 @@ export type Database = {
           },
         ]
       }
+      smtp_configs: {
+        Row: {
+          config_type: string
+          created_at: string
+          from_email: string
+          from_name: string
+          host: string
+          id: string
+          is_active: boolean
+          password: string
+          port: number
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          config_type?: string
+          created_at?: string
+          from_email: string
+          from_name: string
+          host: string
+          id?: string
+          is_active?: boolean
+          password: string
+          port?: number
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          config_type?: string
+          created_at?: string
+          from_email?: string
+          from_name?: string
+          host?: string
+          id?: string
+          is_active?: boolean
+          password?: string
+          port?: number
+          updated_at?: string
+          username?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           answers_json: Json | null

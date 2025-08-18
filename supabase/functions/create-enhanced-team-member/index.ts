@@ -189,7 +189,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send welcome email with credentials via SMTP
     try {
-      const smtpClient = SMTPClient.fromEnv();
+      const smtpClient = await SMTPClient.fromDatabase();
       
       await smtpClient.sendEmail({
         to: email,

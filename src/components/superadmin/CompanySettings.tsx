@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye } from 'lucide-react';
+import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
@@ -31,6 +31,17 @@ interface PaymentMethod {
 }
 
 // SMTP Config interface removed - using Supabase built-in email
+
+interface SMTPConfig {
+  id?: string;
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  from_email: string;
+  from_name: string;
+  is_active: boolean;
+}
 
 interface CompanySettingsData {
   id?: string;
@@ -105,9 +116,25 @@ export function CompanySettings() {
   
   // State for invoice preview
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
+  
+  // SMTP Configuration state
+  const [smtpConfig, setSmtpConfig] = useState<SMTPConfig>({
+    host: '',
+    port: 587,
+    username: '',
+    password: '',
+    from_email: '',
+    from_name: '',
+    is_active: true
+  });
+  const [loadingSmtp, setLoadingSmtp] = useState(true);
+  const [savingSmtp, setSavingSmtp] = useState(false);
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     fetchCompanySettings();
+    fetchSMTPConfig();
   }, []);
 
   const fetchCompanySettings = async () => {
@@ -295,7 +322,108 @@ export function CompanySettings() {
     };
   };
 
-  // SMTP Configuration functions removed - using Supabase built-in email
+  // SMTP Configuration functions
+  const fetchSMTPConfig = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('smtp_configs')
+        .select('*')
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      if (data) {
+        setSmtpConfig(data);
+      }
+    } catch (error) {
+      console.error('Error fetching SMTP config:', error);
+      toast({
+        title: 'Warning',
+        description: 'Could not load SMTP configuration',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoadingSmtp(false);
+    }
+  };
+
+  const handleSMTPChange = (field: keyof SMTPConfig, value: string | number | boolean) => {
+    setSmtpConfig(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const saveSMTPConfig = async () => {
+    setSavingSmtp(true);
+    try {
+      const { error } = await supabase
+        .from('smtp_configs')
+        .upsert({
+          ...smtpConfig,
+          config_type: 'all',
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'SMTP configuration saved successfully'
+      });
+
+      await fetchSMTPConfig();
+    } catch (error) {
+      console.error('Error saving SMTP config:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to save SMTP configuration',
+        variant: 'destructive'
+      });
+    } finally {
+      setSavingSmtp(false);
+    }
+  };
+
+  const testSMTPConfig = async () => {
+    if (!smtpConfig.host || !smtpConfig.username || !smtpConfig.from_email) {
+      toast({
+        title: 'Error',
+        description: 'Please fill in all required SMTP fields before testing',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setTestingEmail(true);
+    try {
+      const { error } = await supabase.functions.invoke('test-smtp-config', {
+        body: { 
+          smtp_config: smtpConfig,
+          test_email: settings.contact_email || 'test@example.com'
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Test email sent successfully to ${settings.contact_email || 'test@example.com'}`
+      });
+    } catch (error) {
+      console.error('Error testing SMTP:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to send test email. Please check your SMTP configuration.',
+        variant: 'destructive'
+      });
+    } finally {
+      setTestingEmail(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -784,8 +912,167 @@ export function CompanySettings() {
           </CardContent>
         </Card>
 
-        {/* Email Configuration section removed - using Supabase built-in email */}
-        
+        {/* SMTP Email Configuration */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              SMTP Email Configuration
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="smtp_active"
+                checked={smtpConfig.is_active}
+                onCheckedChange={(checked) => handleSMTPChange('is_active', checked)}
+              />
+              <Label htmlFor="smtp_active" className="font-medium">
+                Enable SMTP Email Configuration
+              </Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Configure SMTP settings for sending user credentials, billing emails, and notifications
+            </p>
+
+            {smtpConfig.is_active && (
+              <>
+                <Separator className="my-4" />
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* SMTP Server Settings */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium">SMTP Server Settings</h4>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_host">SMTP Host</Label>
+                      <Input
+                        id="smtp_host"
+                        value={smtpConfig.host}
+                        onChange={(e) => handleSMTPChange('host', e.target.value)}
+                        placeholder="smtp.gmail.com"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_port">SMTP Port</Label>
+                      <Input
+                        id="smtp_port"
+                        type="number"
+                        value={smtpConfig.port}
+                        onChange={(e) => handleSMTPChange('port', parseInt(e.target.value))}
+                        placeholder="587"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Common ports: 587 (TLS), 465 (SSL), 25 (unsecured)
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_username">SMTP Username</Label>
+                      <Input
+                        id="smtp_username"
+                        value={smtpConfig.username}
+                        onChange={(e) => handleSMTPChange('username', e.target.value)}
+                        placeholder="your-email@gmail.com"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_password">SMTP Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="smtp_password"
+                          type={showPassword ? "text" : "password"}
+                          value={smtpConfig.password}
+                          onChange={(e) => handleSMTPChange('password', e.target.value)}
+                          placeholder="Enter SMTP password"
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Use app-specific passwords for Gmail/Google Workspace
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Sender Information */}
+                  <div className="space-y-4">
+                    <h4 className="font-medium">Sender Information</h4>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_from_email">From Email</Label>
+                      <Input
+                        id="smtp_from_email"
+                        type="email"
+                        value={smtpConfig.from_email}
+                        onChange={(e) => handleSMTPChange('from_email', e.target.value)}
+                        placeholder="noreply@yourcompany.com"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="smtp_from_name">From Name</Label>
+                      <Input
+                        id="smtp_from_name"
+                        value={smtpConfig.from_name}
+                        onChange={(e) => handleSMTPChange('from_name', e.target.value)}
+                        placeholder="Your Company Name"
+                      />
+                    </div>
+
+                    {/* Test Email Section */}
+                    <div className="space-y-4 pt-4">
+                      <div className="bg-muted p-4 rounded-lg">
+                        <h5 className="font-medium mb-2">Test Configuration</h5>
+                        <p className="text-sm text-muted-foreground mb-3">
+                          Send a test email to verify your SMTP configuration
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={testSMTPConfig}
+                            disabled={testingEmail || !smtpConfig.host}
+                            className="flex items-center gap-2"
+                          >
+                            <Send className="h-4 w-4" />
+                            {testingEmail ? 'Sending...' : 'Send Test Email'}
+                          </Button>
+                          <Button
+                            type="button"
+                            onClick={saveSMTPConfig}
+                            disabled={savingSmtp}
+                          >
+                            {savingSmtp ? 'Saving...' : 'Save SMTP Config'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                  <h5 className="font-medium text-amber-800 mb-2">Important Notes</h5>
+                  <ul className="text-sm text-amber-700 space-y-1">
+                    <li>• This SMTP configuration will be used for all system emails</li>
+                    <li>• Student credential emails, billing notifications, and system alerts</li>
+                    <li>• Make sure to use app-specific passwords for better security</li>
+                    <li>• Test the configuration before saving to ensure emails can be sent</li>
+                  </ul>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Save Button */}
         <div className="lg:col-span-2 flex justify-end">

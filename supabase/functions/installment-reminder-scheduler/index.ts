@@ -188,7 +188,7 @@ serve(async (req) => {
 
 async function sendInstallmentIssueEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
-    const smtpClient = SMTPClient.fromEnv();
+    const smtpClient = await SMTPClient.fromDatabase();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
     const dueDate = new Date(invoice.due_date).toLocaleDateString();
@@ -267,7 +267,7 @@ async function sendInstallmentIssueEmail(invoice: any, loginUrl: string, currenc
 
 async function sendFirstReminderEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
-    const smtpClient = SMTPClient.fromEnv();
+    const smtpClient = await SMTPClient.fromDatabase();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
     const dueDate = new Date(invoice.due_date).toLocaleDateString();
@@ -346,7 +346,7 @@ async function sendFirstReminderEmail(invoice: any, loginUrl: string, currency: 
 
 async function sendSecondReminderEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
-    const smtpClient = SMTPClient.fromEnv();
+    const smtpClient = await SMTPClient.fromDatabase();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
     const dueDate = new Date(invoice.due_date).toLocaleDateString();
@@ -417,7 +417,7 @@ async function sendSecondReminderEmail(invoice: any, loginUrl: string, currency:
 
 async function sendDueEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
-    const smtpClient = SMTPClient.fromEnv();
+    const smtpClient = await SMTPClient.fromDatabase();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
     
