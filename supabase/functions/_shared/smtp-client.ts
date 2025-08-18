@@ -60,7 +60,7 @@ export class SMTPClient {
         host: data.host,
         port: data.port,
         username: data.username,
-        password: data.password, // Note: In production, this should be decrypted
+        password: data.password.replace(/\s/g, ''), // Remove all spaces for Gmail app passwords
         fromEmail: data.from_email,
         fromName: data.from_name,
       });
