@@ -13,6 +13,7 @@ import { SubmissionsManagement } from '@/components/assignments/SubmissionsManag
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { CompanySettings } from '@/components/superadmin/CompanySettings';
 import { SequentialUnlockAdmin } from '@/components/admin/SequentialUnlockAdmin';
+import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAnalytics';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ENV_CONFIG } from '@/lib/env-config';
@@ -53,6 +54,8 @@ export default function SuperadminDashboard() {
         return <CompanySettings />;
       case 'sequential-unlock':
         return <SequentialUnlockAdmin />;
+      case 'course-completion':
+        return <CourseCompletionAnalytics />;
       default:
         return <DashboardContent />;
     }
@@ -104,21 +107,14 @@ function DashboardContent() {
       // Count students using LMS (lms_status = 'active')
       const studentsUsingLMS = userData?.filter(user => user.role === 'student' && user.lms_status === 'active').length || 0;
 
-      // Calculate course completion using recording views
-      const {
-        data: recordingViews,
-        error: progressError
-      } = await supabase.from('recording_views').select('user_id, watched');
-      if (progressError) {
-        console.error('Error fetching progress data:', progressError);
-      }
-
-      // Calculate completion rate based on recording views
-      let courseCompletionRate = 0;
-      if (recordingViews && recordingViews.length > 0) {
-        const watchedRecordings = recordingViews.filter(rv => rv.watched).length;
-        courseCompletionRate = Math.round(watchedRecordings / recordingViews.length * 100);
-      }
+      // Calculate actual course completion rate (students who completed the course)
+      const completedStudents = userData?.filter(user => 
+        user.role === 'student' && user.status === 'Passed out / Completed'
+      ).length || 0;
+      
+      const courseCompletionRate = activeStudents > 0 
+        ? Math.round((completedStudents / activeStudents) * 100)
+        : 0;
 
       // Use configurable recovery rate since performance_record table doesn't exist
       let recoveryRate = ENV_CONFIG.DEFAULT_RECOVERY_RATE;
@@ -230,7 +226,7 @@ function DashboardContent() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-cyan-900">{stats.courseCompletionRate}%</div>
-            <p className="text-xs text-muted-foreground">Students completing courses</p>
+            <p className="text-xs text-muted-foreground">Active students who completed the course</p>
           </CardContent>
         </Card>
 
