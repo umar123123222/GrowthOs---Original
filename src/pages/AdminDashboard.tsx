@@ -18,6 +18,7 @@ import { AssignmentManagement } from '@/components/assignments/AssignmentManagem
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAnalytics';
+import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'dashboard';

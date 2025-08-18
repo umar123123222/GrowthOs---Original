@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Video, FileText, GraduationCap } from 'lucide-react';
 import { RoleGuard } from '@/components/RoleGuard';
+import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
 import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
@@ -67,6 +68,7 @@ export default function SuperadminDashboard() {
     </RoleGuard>;
 }
 function DashboardContent() {
+  const { data: recoveryStats, isLoading: recoveryLoading } = useRecoveryRate();
   const [stats, setStats] = useState<DashboardStats>({
     totalAdmins: 0,
     totalSuperadmins: 0,
@@ -236,8 +238,19 @@ function DashboardContent() {
             <Activity className="h-5 w-5 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-900">{stats.recoveryRate}%</div>
-            <p className="text-xs text-muted-foreground">Student recovery rate</p>
+            {recoveryLoading ? (
+              <div className="animate-pulse">
+                <div className="h-8 bg-muted rounded w-16 mb-2"></div>
+                <div className="h-3 bg-muted rounded w-32"></div>
+              </div>
+            ) : (
+              <>
+                <div className="text-3xl font-bold text-yellow-900">{recoveryStats?.recovery_rate || 0}%</div>
+                <p className="text-xs text-muted-foreground">
+                  {recoveryStats?.successful_recoveries || 0} of {recoveryStats?.total_messages_sent || 0} messages
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

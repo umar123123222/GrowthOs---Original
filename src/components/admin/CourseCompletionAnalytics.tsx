@@ -1,47 +1,20 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Users, 
-  TrendingUp, 
-  Clock, 
-  CheckCircle2, 
-  AlertCircle,
-  PlayCircle 
-} from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-
-interface CompletionAnalytics {
-  totalStudents: number;
-  completedStudents: number;
-  inProgressStudents: number;
-  notStartedStudents: number;
-  averageCompletionTime: number;
-  studentsNearCompletion: number;
-  completionRate: number;
-}
+import { BookOpen, Users, TrendingUp, Award } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { RecoveryManagement } from './RecoveryManagement';
+import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 
 export const CourseCompletionAnalytics = () => {
-  const [analytics, setAnalytics] = useState<CompletionAnalytics>({
-    totalStudents: 0,
-    completedStudents: 0,
-    inProgressStudents: 0,
-    notStartedStudents: 0,
-    averageCompletionTime: 0,
-    studentsNearCompletion: 0,
-    completionRate: 0
-  });
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchCompletionAnalytics();
-  }, []);
-
-  const fetchCompletionAnalytics = async () => {
-    try {
-      setLoading(true);
-
+  const { data: recoveryStats, isLoading: recoveryLoading } = useRecoveryRate();
+  const { data: completionData, isLoading } = useQuery({
+    queryKey: ['course-completion-analytics'],
+    queryFn: async () => {
       // Get all active students
       const { data: students, error: studentsError } = await supabase
         .from('users')
@@ -51,7 +24,7 @@ export const CourseCompletionAnalytics = () => {
 
       if (studentsError) {
         console.error('Error fetching students:', studentsError);
-        return;
+        throw studentsError;
       }
 
       const totalStudents = students?.length || 0;
@@ -64,6 +37,7 @@ export const CourseCompletionAnalytics = () => {
 
       if (viewsError) {
         console.error('Error fetching recording views:', viewsError);
+        throw viewsError;
       }
 
       // Get total number of available lessons
@@ -73,6 +47,7 @@ export const CourseCompletionAnalytics = () => {
 
       if (lessonsError) {
         console.error('Error fetching lessons:', lessonsError);
+        throw lessonsError;
       }
 
       const totalLessons = lessons?.length || 0;
@@ -110,7 +85,7 @@ export const CourseCompletionAnalytics = () => {
 
       const completionRate = totalStudents > 0 ? (completedStudents / totalStudents) * 100 : 0;
 
-      setAnalytics({
+      return {
         totalStudents,
         completedStudents,
         inProgressStudents,
@@ -118,16 +93,12 @@ export const CourseCompletionAnalytics = () => {
         averageCompletionTime,
         studentsNearCompletion,
         completionRate
-      });
+      };
+    },
+    refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+  });
 
-    } catch (error) {
-      console.error('Error fetching completion analytics:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -149,154 +120,188 @@ export const CourseCompletionAnalytics = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Course Completion Analytics</h2>
+      <div className="flex items-center gap-2">
+        <BookOpen className="h-6 w-6 text-primary" />
+        <h2 className="text-2xl font-bold">Course Completion & Recovery Analytics</h2>
       </div>
 
-      {/* Main Completion Rate Card */}
-      <Card className="border-l-4 border-l-primary">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-primary" />
-            Overall Course Completion Rate
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-4xl font-bold text-primary mb-2">
-            {analytics.completionRate.toFixed(1)}%
+      <Tabs defaultValue="completion" className="w-full">
+        <TabsList>
+          <TabsTrigger value="completion">Course Completion</TabsTrigger>
+          <TabsTrigger value="recovery">Student Recovery</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="completion" className="space-y-6">
+          {/* Main Completion Rate Card */}
+          <Card className="border-l-4 border-l-primary">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Overall Course Completion Rate
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-4xl font-bold text-primary mb-2">
+                {completionData?.completionRate?.toFixed(1) || 0}%
+              </div>
+              <div className="text-sm text-muted-foreground mb-4">
+                {completionData?.completedStudents || 0} out of {completionData?.totalStudents || 0} students completed the course
+              </div>
+              <Progress value={completionData?.completionRate || 0} className="h-3" />
+            </CardContent>
+          </Card>
+
+          {/* Performance Indicators */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completion Rate</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{completionData?.completionRate?.toFixed(1) || 0}%</div>
+                <p className="text-xs text-muted-foreground">
+                  Students who completed the course
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Recovery Rate</CardTitle>
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                {recoveryLoading ? (
+                  <Skeleton className="h-8 w-16" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{recoveryStats?.recovery_rate || 0}%</div>
+                    <p className="text-xs text-muted-foreground">
+                      {recoveryStats?.successful_recoveries || 0} of {recoveryStats?.total_messages_sent || 0} messages
+                    </p>
+                  </>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Near Completion</CardTitle>
+                <Award className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{completionData?.studentsNearCompletion || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  Students at 80%+ progress
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{completionData?.totalStudents || 0}</div>
+                <p className="text-xs text-muted-foreground">
+                  Currently enrolled students
+                </p>
+              </CardContent>
+            </Card>
           </div>
-          <div className="text-sm text-muted-foreground mb-4">
-            {analytics.completedStudents} out of {analytics.totalStudents} students completed the course
+
+          {/* Progress Distribution */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="border-l-4 border-l-green-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Completed</CardTitle>
+                <TrendingUp className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-700">{completionData?.completedStudents || 0}</div>
+                <p className="text-xs text-muted-foreground">Students finished course</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">In Progress</CardTitle>
+                <Users className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-700">{completionData?.inProgressStudents || 0}</div>
+                <p className="text-xs text-muted-foreground">Students actively learning</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-gray-500">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Not Started</CardTitle>
+                <Users className="h-4 w-4 text-gray-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-gray-700">{completionData?.notStartedStudents || 0}</div>
+                <p className="text-xs text-muted-foreground">Haven't begun course</p>
+              </CardContent>
+            </Card>
           </div>
-          <Progress value={analytics.completionRate} className="h-3" />
-        </CardContent>
-      </Card>
 
-      {/* Progress Distribution */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="border-l-4 border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-700">{analytics.completedStudents}</div>
-            <p className="text-xs text-muted-foreground">Students finished course</p>
-          </CardContent>
-        </Card>
+          {/* Progress Funnel */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Course Progress Funnel</CardTitle>
+              <CardDescription>Track students through their learning journey</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Enrolled Students</span>
+                  <Badge variant="outline">{completionData?.totalStudents || 0}</Badge>
+                </div>
+                <Progress value={100} className="h-2" />
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Started Course</span>
+                  <Badge variant="outline">
+                    {(completionData?.inProgressStudents || 0) + (completionData?.completedStudents || 0)}
+                  </Badge>
+                </div>
+                <Progress 
+                  value={completionData?.totalStudents ? 
+                    (((completionData.inProgressStudents + completionData.completedStudents) / completionData.totalStudents) * 100) : 0
+                  } 
+                  className="h-2" 
+                />
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Near Completion (80%+)</span>
+                  <Badge variant="outline">
+                    {(completionData?.studentsNearCompletion || 0) + (completionData?.completedStudents || 0)}
+                  </Badge>
+                </div>
+                <Progress 
+                  value={completionData?.totalStudents ? 
+                    (((completionData.studentsNearCompletion + completionData.completedStudents) / completionData.totalStudents) * 100) : 0
+                  } 
+                  className="h-2" 
+                />
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">Completed Course</span>
+                  <Badge variant="outline">{completionData?.completedStudents || 0}</Badge>
+                </div>
+                <Progress value={completionData?.completionRate || 0} className="h-2" />
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <PlayCircle className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-700">{analytics.inProgressStudents}</div>
-            <p className="text-xs text-muted-foreground">Students actively learning</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Near Completion</CardTitle>
-            <TrendingUp className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-700">{analytics.studentsNearCompletion}</div>
-            <p className="text-xs text-muted-foreground">80%+ progress</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-gray-500">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Not Started</CardTitle>
-            <AlertCircle className="h-4 w-4 text-gray-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-700">{analytics.notStartedStudents}</div>
-            <p className="text-xs text-muted-foreground">Haven't begun course</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Progress Funnel Visualization */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Course Progress Funnel</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Enrolled Students</span>
-              <Badge variant="outline">{analytics.totalStudents}</Badge>
-            </div>
-            <Progress value={100} className="h-2" />
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Started Course</span>
-              <Badge variant="outline">
-                {analytics.inProgressStudents + analytics.completedStudents}
-              </Badge>
-            </div>
-            <Progress 
-              value={analytics.totalStudents > 0 
-                ? ((analytics.inProgressStudents + analytics.completedStudents) / analytics.totalStudents) * 100 
-                : 0
-              } 
-              className="h-2" 
-            />
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Near Completion (80%+)</span>
-              <Badge variant="outline">
-                {analytics.studentsNearCompletion + analytics.completedStudents}
-              </Badge>
-            </div>
-            <Progress 
-              value={analytics.totalStudents > 0 
-                ? ((analytics.studentsNearCompletion + analytics.completedStudents) / analytics.totalStudents) * 100 
-                : 0
-              } 
-              className="h-2" 
-            />
-            
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Completed Course</span>
-              <Badge variant="outline">{analytics.completedStudents}</Badge>
-            </div>
-            <Progress value={analytics.completionRate} className="h-2" />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Additional Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5" />
-              Average Completion Time
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{analytics.averageCompletionTime}</div>
-            <p className="text-sm text-muted-foreground">Days from enrollment to completion</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Students at Risk
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{analytics.notStartedStudents}</div>
-            <p className="text-sm text-muted-foreground">Students who haven't started yet</p>
-          </CardContent>
-        </Card>
-      </div>
+        <TabsContent value="recovery">
+          <RecoveryManagement />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
