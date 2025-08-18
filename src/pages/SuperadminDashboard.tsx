@@ -27,6 +27,8 @@ interface DashboardStats {
   studentsUsingLMS: number;
   courseCompletionRate: number;
   recoveryRate: number;
+  totalRevenue: number;
+  totalPaidInvoices: number;
 }
 export default function SuperadminDashboard() {
   const [searchParams] = useSearchParams();
@@ -77,7 +79,9 @@ function DashboardContent() {
     activeStudents: 0,
     studentsUsingLMS: 0,
     courseCompletionRate: 0,
-    recoveryRate: 0
+    recoveryRate: 0,
+    totalRevenue: 0,
+    totalPaidInvoices: 0
   });
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -121,6 +125,19 @@ function DashboardContent() {
       // Use configurable recovery rate since performance_record table doesn't exist
       let recoveryRate = ENV_CONFIG.DEFAULT_RECOVERY_RATE;
 
+      // Fetch revenue data from paid invoices
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('amount')
+        .eq('status', 'paid');
+
+      if (invoiceError) {
+        console.error('Error fetching invoice data:', invoiceError);
+      }
+
+      const totalRevenue = invoiceData?.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0) || 0;
+      const totalPaidInvoices = invoiceData?.length || 0;
+
       setStats({
         totalAdmins,
         totalSuperadmins,
@@ -129,7 +146,9 @@ function DashboardContent() {
         activeStudents,
         studentsUsingLMS,
         courseCompletionRate,
-        recoveryRate
+        recoveryRate,
+        totalRevenue,
+        totalPaidInvoices
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -251,6 +270,17 @@ function DashboardContent() {
                 </p>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-emerald-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-emerald-50 to-white animate-fade-in">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-emerald-800">Revenue Till Now</CardTitle>
+            <DollarSign className="h-5 w-5 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-emerald-900">PKR {stats.totalRevenue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">{stats.totalPaidInvoices} paid invoices</p>
           </CardContent>
         </Card>
       </div>
