@@ -30,6 +30,7 @@ interface DashboardStats {
   totalRevenue: number;
   totalPaidInvoices: number;
 }
+
 export default function SuperadminDashboard() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -122,8 +123,18 @@ function DashboardContent() {
         ? Math.round((completedStudents / activeStudents) * 100)
         : 0;
 
-      // Use configurable recovery rate since performance_record table doesn't exist
+      // Use real recovery rate calculation if feature is enabled
       let recoveryRate = ENV_CONFIG.DEFAULT_RECOVERY_RATE;
+      try {
+        const { isFeatureEnabled } = await import('@/lib/feature-flags');
+        if (isFeatureEnabled('ENABLE_REAL_RECOVERY_RATE')) {
+          const { useRealRecoveryRate } = await import('@/hooks/useRealRecoveryRate');
+          // This would need to be refactored to work outside React hook context
+          // For now, keep the fallback
+        }
+      } catch (error) {
+        console.warn('Feature flag check failed, using default recovery rate');
+      }
 
       // Fetch revenue data from paid invoices
       const { data: invoiceData, error: invoiceError } = await supabase

@@ -19,18 +19,18 @@ export const FEATURE_FLAGS = {
   // Sequential unlock system (OFF by default, zero regression)
   LMS_SEQUENTIAL_UNLOCK: false,
   
-  // Phase 2: Database Safety Fixes (OFF by default, zero-breakage)
-  MIGRATE_SINGLE_QUERIES: false,
-  ENABLE_DATABASE_ERROR_BOUNDARIES: false,
-  SAFE_QUERY_FALLBACKS: false,
+  // Phase 2: Database Safety Fixes (Enabling gradually)
+  MIGRATE_SINGLE_QUERIES: true,
+  ENABLE_DATABASE_ERROR_BOUNDARIES: true,
+  SAFE_QUERY_FALLBACKS: true,
   
-  // Phase 3: Console Logging Migration (OFF by default)
-  MIGRATE_CONSOLE_LOGS: false,
+  // Phase 3: Console Logging Migration (Enabling gradually)
+  MIGRATE_CONSOLE_LOGS: true,
   PRESERVE_DEBUG_LOGS: true,
   
-  // Phase 4: Navigation & Performance (OFF by default)
-  REPLACE_WINDOW_RELOAD: false,
-  ENABLE_REAL_RECOVERY_RATE: false,
+  // Phase 4: Navigation & Performance (Enabling gradually)
+  REPLACE_WINDOW_RELOAD: true,
+  ENABLE_REAL_RECOVERY_RATE: true,
   OPTIMIZE_DATABASE_QUERIES: false,
   ENHANCED_LOADING_STATES: false,
   

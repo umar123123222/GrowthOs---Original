@@ -11,19 +11,24 @@ export const useCompanyLogo = () => {
   useEffect(() => {
     const fetchLogo = async () => {
       try {
-        const { data, error } = await supabase
-          .from('company_settings')
-          .select('branding')
-          .eq('id', 1)
-          .maybeSingle();
+        const result = await safeMaybeSingle(
+          supabase
+            .from('company_settings')
+            .select('branding')
+            .eq('id', 1),
+          'company-logo-fetch'
+        );
 
-        if (error) {
+        const { data, error, success } = result;
+
+        if (error || !success) {
           logger.error('Failed to fetch company branding', error);
           return;
         }
 
-        if (data?.branding) {
-          const headerLogo = getLogoUrl(data.branding, 'header');
+        if ((data as any)?.branding) {
+          const brandingData = (data as any).branding;
+          const headerLogo = getLogoUrl(brandingData, 'header');
           setLogoUrl(headerLogo);
         }
       } catch (error) {
@@ -54,24 +59,28 @@ export const updateFavicon = (faviconUrl: string) => {
 // Get all logo variants for a context
 export const getLogoVariants = async () => {
   try {
-    const { data, error } = await supabase
-      .from('company_settings')
-      .select('branding')
-      .eq('id', 1)
-      .maybeSingle();
+    const result = await safeMaybeSingle(
+      supabase
+        .from('company_settings')
+        .select('branding')
+        .eq('id', 1),
+      'logo-variants-fetch'
+    );
 
-    if (error) {
+    const { data, error, success } = result;
+
+    if (error || !success) {
       logger.error('Failed to fetch company logo variants', error);
       return [];
     }
 
-    if (data?.branding && typeof data.branding === 'object' && data.branding !== null) {
-      const branding = data.branding as any;
-      if (branding.logo) {
+    const brandingData = (data as any)?.branding;
+    if (brandingData && typeof brandingData === 'object' && brandingData !== null) {
+      if (brandingData.logo) {
         return {
-          original: branding.logo.original,
-          favicon: branding.logo.favicon,
-          header: branding.logo.header
+          original: brandingData.logo.original,
+          favicon: brandingData.logo.favicon,
+          header: brandingData.logo.header
         };
       }
     }

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types/common';
 import { logger } from '@/lib/logger';
+import { safeQuery, safeMaybeSingle } from '@/lib/database-safety';
 
 // Re-export User type for backwards compatibility
 export type { User };
@@ -136,20 +137,24 @@ useEffect(() => {
     logger.debug('fetchUserProfile: Starting for user', { userId });
     
     try {
-      const { data, error } = await supabase
-        .from('users')
-        .select(`
-          id, email, role, full_name, created_at, last_login_at, status, 
-          password_display, is_temp_password, updated_at, created_by,
-          students(onboarding_completed)
-        `)
-        .eq('id', userId)
-        .maybeSingle();
+      const result = await safeMaybeSingle(
+        supabase
+          .from('users')
+          .select(`
+            id, email, role, full_name, created_at, last_login_at, status, 
+            password_display, is_temp_password, updated_at, created_by,
+            students(onboarding_completed)
+          `)
+          .eq('id', userId),
+        'fetchUserProfile-main'
+      );
+      const { data, error, success } = result;
       
       logger.debug('fetchUserProfile: Database query completed', { 
         hasData: !!data, 
-        userRole: data?.role,
-        error: error?.message
+        userRole: (data as any)?.role,
+        error: error?.message,
+        success
       });
 
       if (error) {
@@ -166,21 +171,25 @@ useEffect(() => {
           });
         }
       } else if (data) {
-        logger.debug('fetchUserProfile: Setting user data', { role: data.role, email: data.email });
+        const userData = data as any; // Cast to any for migration phase
+        logger.debug('fetchUserProfile: Setting user data', { role: userData.role, email: userData.email });
         // Determine onboarding status - default to needing onboarding for students
-        let onboardingDone = data.role !== 'student'; // Non-students don't need onboarding
+        let onboardingDone = userData.role !== 'student'; // Non-students don't need onboarding
         
-        if (data.role === 'student') {
+        if (userData.role === 'student') {
           console.log('fetchUserProfile: Checking student onboarding status for user:', userId);
-          const { data: studentRow, error: studentErr } = await supabase
-            .from('students')
-            .select('onboarding_completed')
-            .eq('user_id', userId)
-            .maybeSingle();
+          const studentResult = await safeMaybeSingle(
+            supabase
+              .from('students')
+              .select('onboarding_completed')
+              .eq('user_id', userId),
+            'fetchUserProfile-student'
+          );
+          const { data: studentRow, error: studentErr, success: studentSuccess } = studentResult;
           
-          if (studentErr) {
+          if (studentErr || !studentSuccess) {
             logger.warn('fetchUserProfile: Error fetching student onboarding status', studentErr);
-            console.warn('fetchUserProfile: Student query error, defaulting to onboarding needed:', studentErr.message);
+            console.warn('fetchUserProfile: Student query error, defaulting to onboarding needed:', studentErr?.message);
             // If error fetching student record, assume onboarding needed
             onboardingDone = false;
           } else if (!studentRow) {
@@ -190,30 +199,31 @@ useEffect(() => {
             onboardingDone = false;
           } else {
             // Student record exists, check completion status
-            onboardingDone = !!studentRow.onboarding_completed;
-            console.log('fetchUserProfile: Student record found, onboarding_completed:', studentRow.onboarding_completed, 'onboardingDone:', onboardingDone);
+            const studentData = studentRow as any; // Cast for migration phase
+            onboardingDone = !!studentData.onboarding_completed;
+            console.log('fetchUserProfile: Student record found, onboarding_completed:', studentData.onboarding_completed, 'onboardingDone:', onboardingDone);
           }
           
           logger.debug('fetchUserProfile: Student onboarding status', { 
             userId, 
             studentExists: !!studentRow, 
-            onboardingCompleted: studentRow?.onboarding_completed,
+            onboardingCompleted: (studentRow as any)?.onboarding_completed,
             onboardingDone,
             studentErr: studentErr?.message 
           });
         }
 
-        const userData = {
-          ...data,
+        const finalUserData = {
+          ...userData,
           onboarding_done: onboardingDone,
         };
         logger.debug('fetchUserProfile: Setting user data with onboarding status', { 
-          userId: userData.id, 
-          role: userData.role, 
-          email: userData.email,
-          onboarding_done: userData.onboarding_done 
+          userId: finalUserData.id, 
+          role: finalUserData.role, 
+          email: finalUserData.email,
+          onboarding_done: finalUserData.onboarding_done 
         });
-        setUser(userData as User);
+        setUser(finalUserData as User);
       } else {
         logger.warn('fetchUserProfile: No data returned but session exists');
         // User record doesn't exist but session is valid - use session data
