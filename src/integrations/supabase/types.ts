@@ -1592,41 +1592,32 @@ export type Database = {
         Row: {
           created_at: string | null
           email: string | null
+          full_name: string | null
           id: string | null
-          is_temp_password: boolean | null
-          last_active_at: string | null
-          last_login_at: string | null
           lms_status: string | null
-          password_status: string | null
-          phone_status: string | null
           role: string | null
           status: string | null
+          updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           email?: string | null
+          full_name?: string | null
           id?: string | null
-          is_temp_password?: boolean | null
-          last_active_at?: string | null
-          last_login_at?: string | null
           lms_status?: string | null
-          password_status?: never
-          phone_status?: never
           role?: string | null
           status?: string | null
+          updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           email?: string | null
+          full_name?: string | null
           id?: string | null
-          is_temp_password?: boolean | null
-          last_active_at?: string | null
-          last_login_at?: string | null
           lms_status?: string | null
-          password_status?: never
-          phone_status?: never
           role?: string | null
           status?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
