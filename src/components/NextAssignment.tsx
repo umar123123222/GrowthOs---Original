@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Clock, FileText } from "lucide-react";
-import { safeMaybeSingle } from '@/lib/database-safety';
+import { safeQuery } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 import type { UserStatusResult } from '@/types/database';
 
@@ -41,18 +41,19 @@ export const NextAssignment = ({ userId }: NextAssignmentProps) => {
       if (!userId) return;
 
       // Check user's status
-      const userResult = await safeMaybeSingle(
+      const userResult = await safeQuery<UserStatusResult>(
         supabase
           .from('users')
           .select('status')
-          .eq('id', userId),
+          .eq('id', userId)
+          .single(),
         `fetch user status for ${userId}`
       );
       
       if (!userResult.success) throw userResult.error;
       
       // If user is inactive, don't show any assignments
-      if ((userResult.data as any)?.status !== 'active') {
+      if (userResult.data?.status !== 'active') {
         setNextAssignment(null);
         setLoading(false);
         return;

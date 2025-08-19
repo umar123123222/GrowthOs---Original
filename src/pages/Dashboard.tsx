@@ -26,8 +26,10 @@ import { safeQuery } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 
 const Dashboard = ({ user }: { user?: any }) => {
-  // This Dashboard component is only for students now
-  // All other roles should go to their specific dashboards via App.tsx routing
+  // For students, show the specialized student dashboard
+  if (user?.role === 'student') {
+    return <StudentDashboard />;
+  }
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [shopifyConnected, setShopifyConnected] = useState(false);
   const [metaConnected, setMetaConnected] = useState(false);

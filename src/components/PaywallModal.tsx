@@ -7,7 +7,6 @@ import { Separator } from '@/components/ui/separator';
 import { Mail, CreditCard, Clock, Phone, Banknote, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { safeMaybeSingle } from '@/lib/database-safety';
 interface PaymentMethod {
   type: 'bank_transfer' | 'cod' | 'stripe' | 'custom';
   name: string;
@@ -42,19 +41,17 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
   }, [isOpen]);
   const fetchCompanySettings = async () => {
     try {
-      const result = await safeMaybeSingle(
-        supabase.from('company_settings').select('payment_methods, currency, company_name, contact_email, primary_phone'),
-        'fetch company payment settings'
-      );
-      
-      if (!result.success) throw result.error;
-      const data = result.data;
+      const {
+        data,
+        error
+      } = await supabase.from('company_settings').select('payment_methods, currency, company_name, contact_email, primary_phone').single();
+      if (error) throw error;
       if (data) {
-        const methods = (data as any).payment_methods;
+        const methods = data.payment_methods;
         if (Array.isArray(methods)) {
           setPaymentMethods(methods as unknown as PaymentMethod[]);
         }
-        setCurrency((data as any).currency || 'USD');
+        setCurrency(data.currency || 'USD');
         setCompanyDetails(data);
       }
     } catch (error) {

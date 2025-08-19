@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send } from 'lucide-react';
+import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
@@ -30,7 +30,7 @@ interface PaymentMethod {
   };
 }
 
-// Using environment variables for SMTP configuration only
+// SMTP Config interface removed - using Supabase built-in email
 
 interface CompanySettingsData {
   id?: string;
@@ -105,7 +105,7 @@ export function CompanySettings() {
   
   // State for invoice preview
   const [showInvoicePreview, setShowInvoicePreview] = useState(false);
-  
+
   useEffect(() => {
     fetchCompanySettings();
   }, []);
@@ -295,6 +295,7 @@ export function CompanySettings() {
     };
   };
 
+  // SMTP Configuration functions removed - using Supabase built-in email
 
   if (loading) {
     return (
@@ -783,6 +784,8 @@ export function CompanySettings() {
           </CardContent>
         </Card>
 
+        {/* Email Configuration section removed - using Supabase built-in email */}
+        
 
         {/* Save Button */}
         <div className="lg:col-span-2 flex justify-end">

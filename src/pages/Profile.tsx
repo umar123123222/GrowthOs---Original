@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
-import { migratedConsole } from "@/utils/migrated-console";
 
 interface UserProfile {
   id: string;
@@ -70,7 +69,7 @@ const Profile = () => {
         description: "Profile updated successfully",
       });
     } catch (error) {
-      migratedConsole.error('Error updating profile:', error);
+      console.error('Error updating profile:', error);
       toast({
         title: "Error",
         description: "Failed to update profile",
@@ -150,7 +149,7 @@ const Profile = () => {
         });
       }
     } catch (error: any) {
-      migratedConsole.error('Error updating password:', error);
+      console.error('Error updating password:', error);
       
       let errorMessage = "Failed to update password. Please try again.";
       

@@ -7,16 +7,14 @@ import { BookOpen, Clock, CheckCircle, XCircle, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecordingUnlocks } from '@/hooks/useRecordingUnlocks';
-import { EnhancedStudentSubmissionDialog } from './EnhancedStudentSubmissionDialog';
+import { StudentSubmissionDialog } from './StudentSubmissionDialog';
 import { useSearchParams } from 'react-router-dom';
 interface Assignment {
   id: string;
   name: string;
   description?: string;
   created_at: string;
-  submission_type: 'text' | 'links' | 'attachments';
   recording?: {
-    id: string;
     recording_title: string;
     sequence_order: number;
   };
@@ -27,7 +25,6 @@ interface Submission {
   status: string;
   notes?: string;
   created_at: string;
-  version: number;
 }
 export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?: 'unlocked' | 'submitted' }) {
   const {
@@ -83,8 +80,8 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       const target = assignments.find(a => a.id === assignmentId);
       if (!target) return;
       const submission = getSubmissionStatus(assignmentId);
-      // Check if assignment is unlocked (recording watched or no recording required)
-      const eligible = submission ? true : isAssignmentUnlocked(target);
+      // For now, assignments without recordings are always available
+      const eligible = submission ? true : !target.recording; // If no recording, assignment is always available
       if (eligible) {
         setSelectedAssignment(target);
         setIsDialogOpen(true);
@@ -104,7 +101,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       const {
         data: assignmentsData,
         error: assignmentsError
-      } = await supabase.from('assignments').select('*, submission_type').order('created_at', {
+      } = await supabase.from('assignments').select('*').order('created_at', {
         ascending: false
       });
       if (assignmentsError) throw assignmentsError;
@@ -116,16 +113,11 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       } = await supabase.from('available_lessons').select('id, recording_title, sequence_order, assignment_id');
       if (recordingsError) throw recordingsError;
 
-      // Fetch user's submissions with proper ordering
+      // Fetch user's submissions
       const {
         data: submissionsData,
         error: submissionsError
-      } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('student_id', user.id)
-        .order('version', { ascending: false })
-        .order('created_at', { ascending: false });
+      } = await supabase.from('submissions').select('*').eq('student_id', user.id);
       if (submissionsError) throw submissionsError;
 
       // Fetch recording views (watched status)
@@ -140,9 +132,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
         const recording = recordingsData?.find(r => r.assignment_id === assignment.id);
         return {
           ...assignment,
-          submission_type: assignment.submission_type as 'text' | 'links' | 'attachments',
           recording: recording ? {
-            id: recording.id,
             recording_title: recording.recording_title,
             sequence_order: recording.sequence_order
           } : null
@@ -164,17 +154,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     }
   };
   const getSubmissionStatus = (assignmentId: string) => {
-    // Get the latest submission for this assignment (highest version or most recent)
-    const assignmentSubmissions = submissions.filter(s => s.assignment_id === assignmentId);
-    if (assignmentSubmissions.length === 0) return undefined;
-    
-    // Sort by version descending, then by created_at descending
-    return assignmentSubmissions.sort((a, b) => {
-      if (a.version !== b.version) {
-        return b.version - a.version;
-      }
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-    })[0];
+    return submissions.find(s => s.assignment_id === assignmentId);
   };
   const getStatusBadge = (submission?: Submission) => {
     if (!submission) {
@@ -212,11 +192,12 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     // If assignment has no linked recording, it's always available
     if (!assignment.recording) return true;
     
-    // Check if the linked recording has been watched
-    const linkedRecordingId = assignment.recording.id;
+    // Find the recording that links to this assignment
+    const recordingId = assignments.find(a => a.id === assignment.id)?.recording;
+    if (!recordingId) return true;
     
-    // Check if the recording has been watched
-    return watchedRecordingIds.has(linkedRecordingId);
+    // For now, return true since we're still working on proper recording-assignment linking
+    return true;
   };
 
   let availableAssignments: Assignment[] = [];
@@ -237,7 +218,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
             <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium">No assignments available</h3>
             <p className="text-muted-foreground">
-              Watch the prerequisite recordings to unlock assignments.
+              Complete the required recording to unlock assignments.
             </p>
           </CardContent>
         </Card> : <div className="grid gap-6">
@@ -281,6 +262,6 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       })}
         </div>}
 
-      {selectedAssignment && <EnhancedStudentSubmissionDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} assignment={selectedAssignment} userId={user?.id || ''} hasSubmitted={!!getSubmissionStatus(selectedAssignment.id) && getSubmissionStatus(selectedAssignment.id)?.status !== 'declined'} onSubmissionComplete={handleSubmissionComplete} />}
+      {selectedAssignment && <StudentSubmissionDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} assignment={selectedAssignment} userId={user?.id || ''} hasSubmitted={!!getSubmissionStatus(selectedAssignment.id) && getSubmissionStatus(selectedAssignment.id)?.status !== 'declined'} onSubmissionComplete={handleSubmissionComplete} />}
     </div>;
 }

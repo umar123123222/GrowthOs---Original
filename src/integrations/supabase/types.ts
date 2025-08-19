@@ -328,6 +328,13 @@ export type Database = {
             foreignKeyName: "email_queue_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -398,6 +405,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "integrations_user_id_fkey"
             columns: ["user_id"]
@@ -810,6 +824,13 @@ export type Database = {
             foreignKeyName: "recording_ratings_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_ratings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -852,131 +873,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      segmented_weekly_success_sessions: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          end_time: string | null
-          id: string
-          mentor_id: string | null
-          mentor_name: string | null
-          segment: string | null
-          start_time: string | null
-          status: string | null
-          title: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          end_time?: string | null
-          id: string
-          mentor_id?: string | null
-          mentor_name?: string | null
-          segment?: string | null
-          start_time?: string | null
-          status?: string | null
-          title?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          end_time?: string | null
-          id?: string
-          mentor_id?: string | null
-          mentor_name?: string | null
-          segment?: string | null
-          start_time?: string | null
-          status?: string | null
-          title?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "segmented_weekly_success_sessions_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
-            referencedRelation: "success_sessions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      segmented_weekly_success_sessions_backup: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          end_time: string | null
-          id: string | null
-          mentor_id: string | null
-          mentor_name: string | null
-          segment: string | null
-          start_time: string | null
-          status: string | null
-          title: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          end_time?: string | null
-          id?: string | null
-          mentor_id?: string | null
-          mentor_name?: string | null
-          segment?: string | null
-          start_time?: string | null
-          status?: string | null
-          title?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          end_time?: string | null
-          id?: string | null
-          mentor_id?: string | null
-          mentor_name?: string | null
-          segment?: string | null
-          start_time?: string | null
-          status?: string | null
-          title?: string | null
-        }
-        Relationships: []
-      }
-      student_recovery_messages: {
-        Row: {
-          created_at: string
-          days_inactive: number
-          id: string
-          message_content: string | null
-          message_sent_at: string
-          message_type: string
-          recovered_at: string | null
-          recovery_successful: boolean | null
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          days_inactive: number
-          id?: string
-          message_content?: string | null
-          message_sent_at?: string
-          message_type?: string
-          recovered_at?: string | null
-          recovery_successful?: boolean | null
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          days_inactive?: number
-          id?: string
-          message_content?: string | null
-          message_sent_at?: string
-          message_type?: string
-          recovered_at?: string | null
-          recovery_successful?: boolean | null
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: []
       }
       students: {
         Row: {
@@ -1036,6 +932,13 @@ export type Database = {
             foreignKeyName: "students_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -1047,9 +950,7 @@ export type Database = {
           content: string | null
           created_at: string
           file_url: string | null
-          file_urls: Json | null
           id: string
-          links: Json | null
           notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -1064,9 +965,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           file_url?: string | null
-          file_urls?: Json | null
           id?: string
-          links?: Json | null
           notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1081,9 +980,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           file_url?: string | null
-          file_urls?: Json | null
           id?: string
-          links?: Json | null
           notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1347,6 +1244,13 @@ export type Database = {
             foreignKeyName: "user_metrics_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -1392,90 +1296,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      user_security_summary: {
-        Row: {
-          created_at: string | null
-          email: string | null
-          id: string
-          is_temp_password: boolean | null
-          last_active_at: string | null
-          last_login_at: string | null
-          lms_status: string | null
-          password_status: string | null
-          phone_status: string | null
-          role: string | null
-          status: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          email?: string | null
-          id: string
-          is_temp_password?: boolean | null
-          last_active_at?: string | null
-          last_login_at?: string | null
-          lms_status?: string | null
-          password_status?: string | null
-          phone_status?: string | null
-          role?: string | null
-          status?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: string | null
-          id?: string
-          is_temp_password?: boolean | null
-          last_active_at?: string | null
-          last_login_at?: string | null
-          lms_status?: string | null
-          password_status?: string | null
-          phone_status?: string | null
-          role?: string | null
-          status?: string | null
-        }
-        Relationships: []
-      }
-      user_security_summary_backup: {
-        Row: {
-          created_at: string | null
-          email: string | null
-          id: string | null
-          is_temp_password: boolean | null
-          last_active_at: string | null
-          last_login_at: string | null
-          lms_status: string | null
-          password_status: string | null
-          phone_status: string | null
-          role: string | null
-          status: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          email?: string | null
-          id?: string | null
-          is_temp_password?: boolean | null
-          last_active_at?: string | null
-          last_login_at?: string | null
-          lms_status?: string | null
-          password_status?: string | null
-          phone_status?: string | null
-          role?: string | null
-          status?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          email?: string | null
-          id?: string | null
-          is_temp_password?: boolean | null
-          last_active_at?: string | null
-          last_login_at?: string | null
-          lms_status?: string | null
-          password_status?: string | null
-          phone_status?: string | null
-          role?: string | null
-          status?: string | null
-        }
-        Relationships: []
       }
       user_unlocks: {
         Row: {
@@ -1581,6 +1401,13 @@ export type Database = {
             foreignKeyName: "users_created_by_fkey"
             columns: ["created_by"]
             isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
@@ -1588,7 +1415,87 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      segmented_weekly_success_sessions: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          end_time: string | null
+          id: string | null
+          mentor_id: string | null
+          mentor_name: string | null
+          segment: string | null
+          start_time: string | null
+          status: string | null
+          title: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string | null
+          mentor_id?: string | null
+          mentor_name?: string | null
+          segment?: never
+          start_time?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          id?: string | null
+          mentor_id?: string | null
+          mentor_name?: string | null
+          segment?: never
+          start_time?: string | null
+          status?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
+      user_security_summary: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          id: string | null
+          is_temp_password: boolean | null
+          last_active_at: string | null
+          last_login_at: string | null
+          lms_status: string | null
+          password_status: string | null
+          phone_status: string | null
+          role: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          is_temp_password?: boolean | null
+          last_active_at?: string | null
+          last_login_at?: string | null
+          lms_status?: string | null
+          password_status?: never
+          phone_status?: never
+          role?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          id?: string | null
+          is_temp_password?: boolean | null
+          last_active_at?: string | null
+          last_login_at?: string | null
+          lms_status?: string | null
+          password_status?: never
+          phone_status?: never
+          role?: string | null
+          status?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       create_notification: {
@@ -1628,27 +1535,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
-      get_inactive_students: {
-        Args: { days_threshold?: number }
-        Returns: {
-          days_inactive: number
-          email: string
-          full_name: string
-          last_active_at: string
-          phone: string
-          user_id: string
-        }[]
-      }
-      get_recovery_statistics: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          failed_recoveries: number
-          pending_recoveries: number
-          recovery_rate: number
-          successful_recoveries: number
-          total_messages_sent: number
-        }[]
-      }
       get_sequential_unlock_status: {
         Args: { p_user_id: string }
         Returns: {
@@ -1656,7 +1542,6 @@ export type Database = {
           assignment_required: boolean
           is_unlocked: boolean
           recording_id: string
-          recording_watched: boolean
           sequence_order: number
           unlock_reason: string
         }[]
@@ -1728,10 +1613,6 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
-      mark_recovery_successful: {
-        Args: { p_user_id: string }
-        Returns: boolean
-      }
       notify_all_students: {
         Args: {
           p_message: string
@@ -1758,15 +1639,6 @@ export type Database = {
       notify_users: {
         Args: { payload: Json; template_key: string; user_ids: string[] }
         Returns: string[]
-      }
-      record_recovery_message: {
-        Args: {
-          p_days_inactive?: number
-          p_message_content?: string
-          p_message_type?: string
-          p_user_id: string
-        }
-        Returns: string
       }
       send_test_notification: {
         Args: { payload: Json; template_key: string }
