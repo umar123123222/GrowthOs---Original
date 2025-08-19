@@ -1,5 +1,6 @@
 import React, { Suspense, useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import ShoaibGPT from "@/components/ShoaibGPT";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -187,6 +188,7 @@ const Layout = memo(({
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [showShoaibGPT, setShowShoaibGPT] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState({
     shopify: false,
     meta: false
@@ -524,7 +526,12 @@ const Layout = memo(({
               <NotificationDropdown />
               
               {/* Success Partner Button */}
-              <Button variant="outline" size="sm" className="text-gray-700 hover:text-blue-600 hover:border-blue-200">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="text-gray-700 hover:text-blue-600 hover:border-blue-200"
+                onClick={() => setShowShoaibGPT(true)}
+              >
                 <MessageCircle className="w-4 h-4 mr-2" />
                 Success Partner
               </Button>
@@ -609,6 +616,9 @@ const Layout = memo(({
       
       {/* Motivational Notifications for Students */}
       {user?.role === 'student' && <MotivationalNotifications />}
+      
+      {/* Success Partner Dialog */}
+      {showShoaibGPT && <ShoaibGPT onClose={() => setShowShoaibGPT(false)} />}
     </div>;
 });
 Layout.displayName = 'Layout';
