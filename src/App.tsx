@@ -182,22 +182,32 @@ const App = () => {
                 ) : (
                   <Route path="/" element={<Layout user={user} />}>
                     {/* Role-based dashboard routing */}
-                    <Route index element={
-                      user.role === 'admin' ? <AdminDashboard /> :
-                      user.role === 'mentor' ? <MentorDashboard /> :
-                      user.role === 'superadmin' ? <SuperadminDashboard /> :
-                      user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
-                      <Dashboard user={user} />
-                    } />
+                    <Route index element={(() => {
+                      console.log('App routing: User role check', { userRole: user?.role, userEmail: user?.email });
+                      if (user.role === 'superadmin') {
+                        console.log('Rendering SuperadminDashboard');
+                        return <SuperadminDashboard />;
+                      }
+                      if (user.role === 'admin') return <AdminDashboard />;
+                      if (user.role === 'mentor') return <MentorDashboard />;
+                      if (user.role === 'enrollment_manager') return <EnrollmentManagerDashboard />;
+                      console.log('Rendering fallback Dashboard');
+                      return <Dashboard user={user} />;
+                    })()} />
                     
                     {/* Dashboard route */}
-                    <Route path="dashboard" element={
-                      user.role === 'admin' ? <AdminDashboard /> :
-                      user.role === 'mentor' ? <MentorDashboard /> :
-                      user.role === 'superadmin' ? <SuperadminDashboard /> :
-                      user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
-                      <Dashboard user={user} />
-                    } />
+                    <Route path="dashboard" element={(() => {
+                      console.log('App dashboard routing: User role check', { userRole: user?.role, userEmail: user?.email });
+                      if (user.role === 'superadmin') {
+                        console.log('Rendering SuperadminDashboard for /dashboard');
+                        return <SuperadminDashboard />;
+                      }
+                      if (user.role === 'admin') return <AdminDashboard />;
+                      if (user.role === 'mentor') return <MentorDashboard />;
+                      if (user.role === 'enrollment_manager') return <EnrollmentManagerDashboard />;
+                      console.log('Rendering fallback Dashboard for /dashboard');
+                      return <Dashboard user={user} />;
+                    })()} />
                     
                     {/* Shared routes */}
                     <Route path="videos" element={<Videos />} />
