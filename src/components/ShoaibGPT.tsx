@@ -57,7 +57,7 @@ const ShoaibGPT = ({ onClose }: ShoaibGPTProps) => {
                 SG
               </div>
               <div>
-                <CardTitle className="text-lg">ShoaibGPT</CardTitle>
+                <CardTitle className="text-lg">Success Partner</CardTitle>
                 <p className="text-sm text-gray-600">Your AI Success Mentor</p>
               </div>
             </div>
