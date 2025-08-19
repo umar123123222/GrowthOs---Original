@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target } from "lucide-react";
+import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -522,6 +522,12 @@ const Layout = memo(({
             
             <div className="flex items-center space-x-4">
               <NotificationDropdown />
+              
+              {/* Success Partner Button */}
+              <Button variant="outline" size="sm" className="text-gray-700 hover:text-blue-600 hover:border-blue-200">
+                <MessageCircle className="w-4 h-4 mr-2" />
+                Success Partner
+              </Button>
               
               {/* Activity Logs Button for authorized users - Only admins and superadmins */}
               {(isUserSuperadmin || isUserAdmin) && <ActivityLogsDialog>
