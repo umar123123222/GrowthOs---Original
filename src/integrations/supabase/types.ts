@@ -874,6 +874,45 @@ export type Database = {
           },
         ]
       }
+      student_recovery_messages: {
+        Row: {
+          created_at: string
+          days_inactive: number
+          id: string
+          message_content: string | null
+          message_sent_at: string
+          message_type: string
+          recovered_at: string | null
+          recovery_successful: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_inactive: number
+          id?: string
+          message_content?: string | null
+          message_sent_at?: string
+          message_type?: string
+          recovered_at?: string | null
+          recovery_successful?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days_inactive?: number
+          id?: string
+          message_content?: string | null
+          message_sent_at?: string
+          message_type?: string
+          recovered_at?: string | null
+          recovery_successful?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           answers_json: Json | null
@@ -950,7 +989,9 @@ export type Database = {
           content: string | null
           created_at: string
           file_url: string | null
+          file_urls: Json | null
           id: string
+          links: Json | null
           notes: string | null
           reviewed_at: string | null
           reviewed_by: string | null
@@ -965,7 +1006,9 @@ export type Database = {
           content?: string | null
           created_at?: string
           file_url?: string | null
+          file_urls?: Json | null
           id?: string
+          links?: Json | null
           notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -980,7 +1023,9 @@ export type Database = {
           content?: string | null
           created_at?: string
           file_url?: string | null
+          file_urls?: Json | null
           id?: string
+          links?: Json | null
           notes?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
@@ -1535,6 +1580,27 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_inactive_students: {
+        Args: { days_threshold?: number }
+        Returns: {
+          days_inactive: number
+          email: string
+          full_name: string
+          last_active_at: string
+          phone: string
+          user_id: string
+        }[]
+      }
+      get_recovery_statistics: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          failed_recoveries: number
+          pending_recoveries: number
+          recovery_rate: number
+          successful_recoveries: number
+          total_messages_sent: number
+        }[]
+      }
       get_sequential_unlock_status: {
         Args: { p_user_id: string }
         Returns: {
@@ -1542,6 +1608,7 @@ export type Database = {
           assignment_required: boolean
           is_unlocked: boolean
           recording_id: string
+          recording_watched: boolean
           sequence_order: number
           unlock_reason: string
         }[]
@@ -1613,6 +1680,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      mark_recovery_successful: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       notify_all_students: {
         Args: {
           p_message: string
@@ -1639,6 +1710,15 @@ export type Database = {
       notify_users: {
         Args: { payload: Json; template_key: string; user_ids: string[] }
         Returns: string[]
+      }
+      record_recovery_message: {
+        Args: {
+          p_days_inactive?: number
+          p_message_content?: string
+          p_message_type?: string
+          p_user_id: string
+        }
+        Returns: string
       }
       send_test_notification: {
         Args: { payload: Json; template_key: string }

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Video, FileText, GraduationCap } from 'lucide-react';
 import { RoleGuard } from '@/components/RoleGuard';
+import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
 import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
@@ -13,6 +14,7 @@ import { SubmissionsManagement } from '@/components/assignments/SubmissionsManag
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { CompanySettings } from '@/components/superadmin/CompanySettings';
 import { SequentialUnlockAdmin } from '@/components/admin/SequentialUnlockAdmin';
+import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAnalytics';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ENV_CONFIG } from '@/lib/env-config';
@@ -25,6 +27,8 @@ interface DashboardStats {
   studentsUsingLMS: number;
   courseCompletionRate: number;
   recoveryRate: number;
+  totalRevenue: number;
+  totalPaidInvoices: number;
 }
 export default function SuperadminDashboard() {
   const [searchParams] = useSearchParams();
@@ -53,6 +57,8 @@ export default function SuperadminDashboard() {
         return <CompanySettings />;
       case 'sequential-unlock':
         return <SequentialUnlockAdmin />;
+      case 'course-completion':
+        return <CourseCompletionAnalytics />;
       default:
         return <DashboardContent />;
     }
@@ -64,6 +70,7 @@ export default function SuperadminDashboard() {
     </RoleGuard>;
 }
 function DashboardContent() {
+  const { data: recoveryStats, isLoading: recoveryLoading } = useRecoveryRate();
   const [stats, setStats] = useState<DashboardStats>({
     totalAdmins: 0,
     totalSuperadmins: 0,
@@ -72,7 +79,9 @@ function DashboardContent() {
     activeStudents: 0,
     studentsUsingLMS: 0,
     courseCompletionRate: 0,
-    recoveryRate: 0
+    recoveryRate: 0,
+    totalRevenue: 0,
+    totalPaidInvoices: 0
   });
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -104,24 +113,30 @@ function DashboardContent() {
       // Count students using LMS (lms_status = 'active')
       const studentsUsingLMS = userData?.filter(user => user.role === 'student' && user.lms_status === 'active').length || 0;
 
-      // Calculate course completion using recording views
-      const {
-        data: recordingViews,
-        error: progressError
-      } = await supabase.from('recording_views').select('user_id, watched');
-      if (progressError) {
-        console.error('Error fetching progress data:', progressError);
-      }
-
-      // Calculate completion rate based on recording views
-      let courseCompletionRate = 0;
-      if (recordingViews && recordingViews.length > 0) {
-        const watchedRecordings = recordingViews.filter(rv => rv.watched).length;
-        courseCompletionRate = Math.round(watchedRecordings / recordingViews.length * 100);
-      }
+      // Calculate actual course completion rate (students who completed the course)
+      const completedStudents = userData?.filter(user => 
+        user.role === 'student' && user.status === 'Passed out / Completed'
+      ).length || 0;
+      
+      const courseCompletionRate = activeStudents > 0 
+        ? Math.round((completedStudents / activeStudents) * 100)
+        : 0;
 
       // Use configurable recovery rate since performance_record table doesn't exist
       let recoveryRate = ENV_CONFIG.DEFAULT_RECOVERY_RATE;
+
+      // Fetch revenue data from paid invoices
+      const { data: invoiceData, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('amount')
+        .eq('status', 'paid');
+
+      if (invoiceError) {
+        console.error('Error fetching invoice data:', invoiceError);
+      }
+
+      const totalRevenue = invoiceData?.reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0) || 0;
+      const totalPaidInvoices = invoiceData?.length || 0;
 
       setStats({
         totalAdmins,
@@ -131,7 +146,9 @@ function DashboardContent() {
         activeStudents,
         studentsUsingLMS,
         courseCompletionRate,
-        recoveryRate
+        recoveryRate,
+        totalRevenue,
+        totalPaidInvoices
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -230,7 +247,7 @@ function DashboardContent() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-cyan-900">{stats.courseCompletionRate}%</div>
-            <p className="text-xs text-muted-foreground">Students completing courses</p>
+            <p className="text-xs text-muted-foreground">Active students who completed the course</p>
           </CardContent>
         </Card>
 
@@ -240,8 +257,30 @@ function DashboardContent() {
             <Activity className="h-5 w-5 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-900">{stats.recoveryRate}%</div>
-            <p className="text-xs text-muted-foreground">Student recovery rate</p>
+            {recoveryLoading ? (
+              <div className="animate-pulse">
+                <div className="h-8 bg-muted rounded w-16 mb-2"></div>
+                <div className="h-3 bg-muted rounded w-32"></div>
+              </div>
+            ) : (
+              <>
+                <div className="text-3xl font-bold text-yellow-900">{recoveryStats?.recovery_rate || 0}%</div>
+                <p className="text-xs text-muted-foreground">
+                  {recoveryStats?.successful_recoveries || 0} of {recoveryStats?.total_messages_sent || 0} messages
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-emerald-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-emerald-50 to-white animate-fade-in">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-emerald-800">Revenue Till Now</CardTitle>
+            <DollarSign className="h-5 w-5 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-emerald-900">PKR {stats.totalRevenue.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">{stats.totalPaidInvoices} paid invoices</p>
           </CardContent>
         </Card>
       </div>

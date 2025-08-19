@@ -17,6 +17,8 @@ import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessio
 import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
+import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAnalytics';
+import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'dashboard';
@@ -46,6 +48,8 @@ export default function AdminDashboard() {
         return <ActivityLogs />;
       case 'performance':
         return <StudentPerformance />;
+      case 'completion':
+        return <CourseCompletionAnalytics />;
       default:
         return <DashboardContent />;
     }

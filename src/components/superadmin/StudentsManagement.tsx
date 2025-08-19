@@ -653,9 +653,7 @@ export function StudentsManagement() {
       };
     }
     const openInvoices = payments.filter(p => p.status !== 'paid');
-    const latestOpen = openInvoices
-      .sort((a, b) => new Date(a.due_date || a.created_at || '').getTime() - new Date(b.due_date || b.created_at || '').getTime())
-      .pop();
+    const latestOpen = openInvoices.sort((a, b) => new Date(a.due_date || a.created_at || '').getTime() - new Date(b.due_date || b.created_at || '').getTime()).pop();
     if (latestOpen) {
       const due = latestOpen.due_date ? new Date(latestOpen.due_date) : null;
       if (due && due.getTime() < Date.now()) {
@@ -693,10 +691,8 @@ export function StudentsManagement() {
     const openWithDue = payments.filter(p => p.status !== 'paid' && p.due_date);
     if (openWithDue.length === 0) return 'N/A';
     const nowTs = Date.now();
-    const upcoming = openWithDue
-      .filter(p => new Date(p.due_date as string).getTime() >= nowTs)
-      .sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime());
-    const target = (upcoming[0]) || openWithDue.sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime())[0];
+    const upcoming = openWithDue.filter(p => new Date(p.due_date as string).getTime() >= nowTs).sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime());
+    const target = upcoming[0] || openWithDue.sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime())[0];
     return target && target.due_date ? formatDate(target.due_date) : 'N/A';
   };
   const isInvoiceOverdue = (student: Student) => {
@@ -712,14 +708,11 @@ export function StudentsManagement() {
       if (!student) return;
 
       // Check for existing invoice for this student record and installment
-      const { data: invoiceRow, error: fetchInvErr } = await supabase
-        .from('invoices')
-        .select('id, status')
-        .eq('student_id', student.student_record_id)
-        .eq('installment_number', installmentNumber)
-        .maybeSingle();
+      const {
+        data: invoiceRow,
+        error: fetchInvErr
+      } = await supabase.from('invoices').select('id, status').eq('student_id', student.student_record_id).eq('installment_number', installmentNumber).maybeSingle();
       if (fetchInvErr) throw fetchInvErr;
-
       if (invoiceRow && invoiceRow.status === 'paid') {
         toast({
           title: "Already Paid",
@@ -731,22 +724,25 @@ export function StudentsManagement() {
 
       // Update existing invoice to paid, or insert a new paid invoice if missing
       if (invoiceRow) {
-        const { error: updateErr } = await supabase
-          .from('invoices')
-          .update({ status: 'paid', paid_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-          .eq('id', invoiceRow.id);
+        const {
+          error: updateErr
+        } = await supabase.from('invoices').update({
+          status: 'paid',
+          paid_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }).eq('id', invoiceRow.id);
         if (updateErr) throw updateErr;
       } else {
-        const { error: insertErr } = await supabase
-          .from('invoices')
-          .insert({
-            student_id: student.student_record_id,
-            installment_number: installmentNumber,
-            amount: 0,
-            status: 'paid',
-            due_date: new Date().toISOString(),
-            paid_at: new Date().toISOString()
-          });
+        const {
+          error: insertErr
+        } = await supabase.from('invoices').insert({
+          student_id: student.student_record_id,
+          installment_number: installmentNumber,
+          amount: 0,
+          status: 'paid',
+          due_date: new Date().toISOString(),
+          paid_at: new Date().toISOString()
+        });
         if (insertErr) throw insertErr;
       }
       // Determine total installments for this student
@@ -936,7 +932,7 @@ export function StudentsManagement() {
   }
   const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all';
   const displayStudents = hasActiveFilters ? filteredStudents : students;
-  return <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden bg-slate-50 px-0">
+  return <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden px-0 bg-transparent">
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div className="animate-fade-in">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
@@ -1136,11 +1132,12 @@ export function StudentsManagement() {
                                  <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
                                </div>
                              </Badge>
-                             {(() => { const inst = getInstallmentStatus(student); return (
-                               <Badge className={inst.color}>
+                             {(() => {
+                        const inst = getInstallmentStatus(student);
+                        return <Badge className={inst.color}>
                                  <span className="text-xs font-medium whitespace-normal break-words text-center">{inst.status}</span>
-                               </Badge>
-                             ); })()}
+                               </Badge>;
+                      })()}
                            </div>
                          </TableCell>
                          <TableCell>{student.creator?.full_name || 'System'}</TableCell>

@@ -1,6 +1,8 @@
 // Database safety utilities to prevent crashes from .single() calls
 import { PostgrestSingleResponse } from '@supabase/supabase-js';
 import { logger } from './logger';
+import { isFeatureEnabled } from './feature-flags';
+import { MigrationMonitor } from './migration-utilities';
 
 interface SafeQueryResult<T> {
   data: T | null;
@@ -16,23 +18,40 @@ export function safeQuery<T>(
   queryBuilder: any,
   context?: string
 ): Promise<SafeQueryResult<T>> {
+  // Track migration usage
+  if (isFeatureEnabled('MIGRATE_SINGLE_QUERIES')) {
+    MigrationMonitor.trackMetric('database', 'safe_query_used', { context });
+  }
+  
   const promise = queryBuilder as Promise<PostgrestSingleResponse<T>>;
   return promise
     .then(({ data, error }) => {
       if (error) {
         logger.error(`Database query failed: ${context}`, { error });
+        if (isFeatureEnabled('MIGRATE_SINGLE_QUERIES')) {
+          MigrationMonitor.trackMetric('database', 'query_error', { context, error });
+        }
         return { data: null, error, success: false };
       }
       
       if (!data) {
         logger.info(`No data found for query: ${context}`);
+        if (isFeatureEnabled('MIGRATE_SINGLE_QUERIES')) {
+          MigrationMonitor.trackMetric('database', 'no_data_found', { context });
+        }
         return { data: null, error: null, success: true };
       }
       
+      if (isFeatureEnabled('MIGRATE_SINGLE_QUERIES')) {
+        MigrationMonitor.trackMetric('database', 'query_success', { context });
+      }
       return { data, error: null, success: true };
     })
     .catch(error => {
       logger.error(`Database query exception: ${context}`, { error });
+      if (isFeatureEnabled('MIGRATE_SINGLE_QUERIES')) {
+        MigrationMonitor.trackMetric('database', 'query_exception', { context, error });
+      }
       return { data: null, error, success: false };
     });
 }

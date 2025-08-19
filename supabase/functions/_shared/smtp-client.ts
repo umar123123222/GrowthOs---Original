@@ -1,3 +1,6 @@
+// This file defines an SMTPClient class for sending emails using the SMTP protocol. 
+// It uses environment variables for configuration and handles the SMTP conversation, including TLS and authentication.
+
 interface SMTPConfig {
   host: string;
   port: number;
@@ -44,7 +47,7 @@ export class SMTPClient {
       host,
       port,
       username,
-      password,
+      password: password.replace(/\s/g, ''), // Remove spaces for Gmail app passwords
       fromEmail,
       fromName,
     });
@@ -117,7 +120,9 @@ export class SMTPClient {
         throw new Error(`SMTP server rejected connection: ${welcomeResponse}`);
       }
 
-      await sendCommand(`EHLO ${this.config.host}`);
+      // Extract domain from fromEmail or use localhost as fallback
+      const domain = this.config.fromEmail.split('@')[1] || 'localhost';
+      await sendCommand(`EHLO ${domain}`);
       const ehloResponse = await readResponse();
       if (!ehloResponse.startsWith('250')) {
         throw new Error(`EHLO failed: ${ehloResponse}`);

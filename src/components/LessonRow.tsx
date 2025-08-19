@@ -114,7 +114,9 @@ export const LessonRow = React.memo(({
               lesson.assignmentSubmitted ? 'bg-green-50 text-green-700 border-green-200' : ''
             }`}
           >
-            {isLocked ? 'Locked' : lesson.assignmentSubmitted ? 'View Submission' : 'Submit Assignment'}
+            {isLocked ? 'Locked' : 
+             !lesson.watched ? 'Watch First' :
+             lesson.assignmentSubmitted ? 'View Submission' : 'Submit Assignment'}
           </Button>
         )}
         
