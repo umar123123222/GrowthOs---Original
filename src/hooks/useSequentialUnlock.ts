@@ -74,7 +74,7 @@ export const useSequentialUnlock = () => {
   };
 
   const initializeFirstRecordingUnlock = async () => {
-    if (!user?.id || !status.feesCleared) return;
+    if (!user?.id) return;
 
     try {
       // Use the database function to properly initialize first recording unlock
@@ -82,7 +82,8 @@ export const useSequentialUnlock = () => {
         p_user_id: user.id
       });
 
-      setStatus(prev => ({ ...prev, firstRecordingUnlocked: true }));
+      // Refresh the status after initializing
+      await fetchSequentialUnlockStatus();
       
     } catch (error) {
       logger.error('Error initializing first recording unlock:', error);

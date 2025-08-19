@@ -8,6 +8,7 @@ import { useModulesWithRecordings } from "@/hooks/useModulesWithRecordings";
 import { useAuth } from "@/hooks/useAuth";
 import { useProgressTracker } from "@/hooks/useProgressTracker";
 import { useSequentialUnlock } from "@/hooks/useSequentialUnlock";
+import { useRecordingUnlocks } from "@/hooks/useRecordingUnlocks";
 import { RoleGuard } from "@/components/RoleGuard";
 import { InactiveLMSBanner } from "@/components/InactiveLMSBanner";
 import { SequentialLockIndicator } from "@/components/SequentialUnlockComponents";
@@ -31,6 +32,7 @@ const Videos = () => {
     status: sequentialStatus,
     loading: sequentialLoading
   } = useSequentialUnlock();
+  const { unlocks, loading: unlocksLoading, isRecordingUnlocked, getRecordingStatus } = useRecordingUnlocks();
   const [assignmentDialogOpen, setAssignmentDialogOpen] = useState(false);
   const [selectedRecording, setSelectedRecording] = useState<any>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
@@ -71,7 +73,7 @@ const Videos = () => {
       return newSet;
     });
   };
-  if (loading || sequentialLoading) {
+  if (loading || sequentialLoading || unlocksLoading) {
     return <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>;
@@ -148,9 +150,23 @@ const Videos = () => {
                                   {userLMSStatus !== 'active' && <span className="text-orange-600 font-medium text-xs">
                                       Please clear your fees to access content
                                     </span>}
-                                  {userLMSStatus === 'active' && !recording.isUnlocked && <span className="text-orange-600 font-medium text-xs">
-                                      Complete previous assignment to unlock
-                                    </span>}
+                                   {userLMSStatus === 'active' && !recording.isUnlocked && (() => {
+                                     const recordingStatus = getRecordingStatus(recording.id);
+                                     const unlockReason = recordingStatus?.unlock_reason || "Locked";
+                                     
+                                     let message = "Complete previous assignment to unlock";
+                                     if (unlockReason.includes("Payment required")) {
+                                       message = "Clear fees to unlock this recording";
+                                     } else if (unlockReason.includes("Previous recording not watched")) {
+                                       message = "Watch the previous recording to unlock";
+                                     } else if (unlockReason.includes("Previous assignment not approved")) {
+                                       message = "Complete and get approval for the previous assignment";
+                                     }
+                                     
+                                     return <span className="text-orange-600 font-medium text-xs">
+                                       {message}
+                                     </span>;
+                                   })()}
                                 </div>
                               </div>
                             </div>
