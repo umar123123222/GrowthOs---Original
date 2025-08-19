@@ -310,7 +310,7 @@ export function StudentDashboard() {
       <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
       
       {/* Refined Financial Goal Banner */}
-      <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
+      <Card className="card-friendly border-t-3 border-t-primary-100">
         <CardContent className="p-6">
           <div className="space-y-5">
             <div className="flex items-center gap-3 mb-4">
@@ -318,13 +318,13 @@ export function StudentDashboard() {
                 <span className="text-xl">🎯</span>
               </div>
               <div>
-                <h2 className="text-xl font-medium text-primary mb-1">Your Financial Goal</h2>
-                <p className="text-xs text-muted-foreground">Track your progress towards financial freedom</p>
+                <h2 className="text-xl font-medium text-primary-600 mb-1">Your Financial Goal</h2>
+                <p className="text-xs text-muted">Track your progress towards financial freedom</p>
               </div>
             </div>
             
-            <div className="bg-background/80 rounded-lg p-4 border border-primary/10">
-              <p className="text-base font-normal text-foreground leading-relaxed">
+            <div className="bg-surface rounded-lg p-4 border border-border">
+              <p className="text-base font-normal text-primary leading-relaxed">
                 {firstOnboardingRange?.min && firstOnboardingRange?.max
                   ? <>You want to earn between {firstOnboardingRange.min} and {firstOnboardingRange.max}.</>
                   : firstOnboardingAnswer
@@ -336,13 +336,13 @@ export function StudentDashboard() {
             
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-normal text-muted-foreground">Progress toward your goal</span>
-                <span className="text-sm font-medium text-primary">{courseProgress}% complete</span>
+                <span className="text-xs font-normal text-muted">Progress toward your goal</span>
+                <span className="text-sm font-medium text-primary-600">{courseProgress}% complete</span>
               </div>
               <div className="relative">
                 <Progress 
                   value={courseProgress} 
-                  className="h-1.5 transition-all duration-1000 ease-out"
+                  className="progress-friendly"
                 />
               </div>
             </div>
@@ -353,50 +353,44 @@ export function StudentDashboard() {
       {/* Interactive Three-Card Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Course Progress Card */}
-        <Card className="hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 border-l-blue-400 animate-fade-in group cursor-pointer relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 via-blue-50/50 to-blue-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="flex items-center gap-2 text-blue-600 text-base font-medium">
-              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                <BarChart3 className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+        <Card className="card-friendly border-l-3 border-l-primary-100 group cursor-pointer">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-accent-indigo text-base font-medium">
+              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center group-hover:bg-primary-100 group-hover:scale-110 transition-all duration-300">
+                <BarChart3 className="w-4 h-4 text-primary-600" />
               </div>
-              <span className="group-hover:translate-x-1 transition-transform duration-300">Course Progress</span>
+              <span>Course Progress</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent>
             <div className="space-y-3">
               <div className="text-center">
-                <div className="text-3xl font-medium text-blue-600 mb-1 group-hover:scale-110 group-hover:text-blue-700 transition-all duration-300 relative">
+                <div className="text-3xl font-medium text-primary-600 mb-1">
                   {courseProgress}%
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-200 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping transition-all duration-300"></div>
                 </div>
-                <p className="text-xs text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">Complete</p>
+                <p className="text-xs text-muted">Complete</p>
               </div>
-              <div className="relative group/bar">
-                <Progress value={courseProgress} className="h-1.5 group-hover/bar:h-2 transition-all duration-300" />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-300/30 to-blue-500/30 rounded-full opacity-0 group-hover/bar:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+              <div className="relative">
+                <Progress value={courseProgress} className="progress-friendly" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Next Assignment Card */}
-        <Card className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
-          assignmentDueStatus === 'overdue' ? 'border-l-red-400' : 'border-l-orange-400'
-        }`} style={{ animationDelay: '150ms' }}>
-          <div className={`absolute inset-0 bg-gradient-to-r transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
-            assignmentDueStatus === 'overdue' ? 'from-red-50/0 via-red-50/50 to-red-50/0' : 'from-orange-50/0 via-orange-50/50 to-orange-50/0'
-          }`}></div>
-          <CardHeader className="pb-3 relative z-10">
+        <Card className={`card-friendly border-l-3 group cursor-pointer ${
+          assignmentDueStatus === 'overdue' ? 'border-l-error-600' : 'border-l-warning-600'
+        }`}>
+          <CardHeader className="pb-3">
             <CardTitle className={`flex items-center gap-2 text-base font-medium ${
-              assignmentDueStatus === 'overdue' ? 'text-red-600' : 'text-orange-600'
+              assignmentDueStatus === 'overdue' ? 'text-error-600' : 'text-warning-600'
             }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 ${
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
                 assignmentDueStatus === 'overdue' 
-                  ? 'bg-red-50 group-hover:bg-red-100 group-hover:animate-pulse' 
-                  : 'bg-orange-50 group-hover:bg-orange-100 group-hover:rotate-12'
+                  ? 'bg-error-50' 
+                  : 'bg-warning-50'
               }`}>
-                <Upload className="w-4 h-4 group-hover:scale-110 group-hover:-translate-y-0.5 transition-all duration-300" />
+                <Upload className="w-4 h-4" />
               </div>
               <span className="group-hover:translate-x-1 transition-transform duration-300">Next Assignment</span>
             </CardTitle>
@@ -441,60 +435,56 @@ export function StudentDashboard() {
         </Card>
 
         {/* Integrations Card */}
-        <Card className="hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 border-l-purple-400 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '300ms' }}>
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-50/0 via-purple-50/50 to-purple-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="flex items-center gap-2 text-purple-600 text-base font-medium">
-              <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                <Zap className="w-4 h-4 group-hover:scale-110 group-hover:text-yellow-500 transition-all duration-300" />
+        <Card className="card-friendly border-l-3 border-l-accent-cyan group cursor-pointer">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-accent-indigo text-base font-medium">
+              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-accent-cyan" />
               </div>
-              <span className="group-hover:translate-x-1 transition-transform duration-300">Integrations</span>
+              <span>Integrations</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md group-hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+              <div className="flex items-center justify-between p-2 bg-surface rounded-md border border-border transition-all duration-300 hover:bg-info-50">
                 <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-green-600 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
-                  <span className="font-normal text-sm group-hover:translate-x-0.5 transition-transform duration-300">Shopify</span>
+                  <ShoppingBag className="w-4 h-4 text-success-600" />
+                  <span className="font-normal text-sm text-primary">Shopify</span>
                 </div>
                 {shopifyConnected ? (
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-green-600">Connected</span>
-                  </div>
+                  <Badge variant="secondary" className="text-xs bg-success-50 text-success-600 border-success-600/20">
+                    Connected
+                  </Badge>
                 ) : (
-                  <Button variant="outline" size="sm" className="text-xs h-6 px-2 hover:scale-105 transition-transform duration-200">
-                    Connect
-                  </Button>
+                  <Badge variant="secondary" className="text-xs bg-warning-50 text-warning-600 border-warning-600/20">
+                    Not connected
+                  </Badge>
                 )}
               </div>
               
-              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md group-hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+              <div className="flex items-center justify-between p-2 bg-surface rounded-md border border-border transition-all duration-300 hover:bg-info-50">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-blue-600 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
-                  <span className="font-normal text-sm group-hover:translate-x-0.5 transition-transform duration-300">Meta Ads</span>
+                  <TrendingUp className="w-4 h-4 text-primary-600" />
+                  <span className="font-normal text-sm text-primary">Meta Ads</span>
                 </div>
                 {metaConnected ? (
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                    <span className="text-xs text-green-600">Connected</span>
-                  </div>
+                  <Badge variant="secondary" className="text-xs bg-success-50 text-success-600 border-success-600/20">
+                    Connected
+                  </Badge>
                 ) : (
-                  <Button variant="outline" size="sm" className="text-xs h-6 px-2 hover:scale-105 transition-transform duration-200">
-                    Connect
-                  </Button>
+                  <Badge variant="secondary" className="text-xs bg-warning-50 text-warning-600 border-warning-600/20">
+                    Not connected
+                  </Badge>
                 )}
               </div>
               
               <Button 
-                variant="outline" 
+                variant="secondary" 
                 size="sm"
-                className="w-full text-xs font-normal group-hover:scale-105 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300 relative overflow-hidden"
+                className="w-full text-xs font-normal"
                 onClick={() => setConnectDialogOpen(true)}
               >
-                <span className="relative z-10">Manage Connections</span>
-                <div className="absolute inset-0 bg-purple-100/50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                Manage Connections
               </Button>
             </div>
           </CardContent>
@@ -504,63 +494,55 @@ export function StudentDashboard() {
       {/* Interactive Milestones & Leaderboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Milestones Card */}
-        <Card className="hover:shadow-xl hover:scale-[1.02] transition-all duration-500 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '450ms' }}>
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-50/0 via-orange-50/30 to-orange-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <CardHeader className="pb-3 relative z-10">
+        <Card className="card-friendly border-l-3 border-l-primary-100 group cursor-pointer">
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-100 to-orange-100 flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                <Award className="w-4 h-4 text-orange-600 group-hover:scale-110 transition-transform duration-300" />
+              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
+                <Award className="w-4 h-4 text-accent-indigo" />
               </div>
-              <span className="text-base font-medium text-orange-600 group-hover:translate-x-1 transition-transform duration-300">
+              <span className="text-base font-medium text-accent-indigo">
                 Milestones
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent>
             <div className="space-y-3">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-normal text-muted-foreground">Progress</span>
-                <span className="text-xs font-medium text-orange-600 group-hover:scale-105 transition-transform duration-300">
+                <span className="text-xs font-normal text-muted">Progress</span>
+                <span className="text-xs font-medium text-accent-indigo">
                   {completedMilestones} of {milestones.length} completed
                 </span>
               </div>
-              <div className="relative group/progress">
-                <Progress value={(completedMilestones / milestones.length) * 100} className="h-1.5 group-hover/progress:h-2 transition-all duration-300" />
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-300/30 to-yellow-300/30 rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+              <div className="relative">
+                <Progress value={(completedMilestones / milestones.length) * 100} className="progress-friendly" />
               </div>
               
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {milestones.map((milestone, index) => (
                   <div 
                     key={milestone.id} 
-                    className={`flex items-center gap-2 p-2 rounded-md transition-all duration-300 hover:scale-[1.02] cursor-pointer ${
+                    className={`flex items-center gap-2 p-2 rounded-md transition-all duration-300 cursor-pointer ${
                       milestone.completed 
-                        ? 'bg-green-50/50 border border-green-100 hover:bg-green-50 hover:shadow-sm' 
-                        : 'bg-muted/20 hover:bg-muted/40'
+                        ? 'bg-success-50 border border-success-600/20 hover:bg-info-50' 
+                        : 'bg-surface border border-border hover:bg-info-50'
                     }`}
-                    style={{ animationDelay: `${index * 100}ms` }}
                   >
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
                       milestone.completed 
-                        ? 'bg-green-500 hover:scale-110 hover:rotate-12' 
-                        : 'bg-muted border border-muted-foreground/20 hover:scale-105'
+                        ? 'bg-success-600' 
+                        : 'bg-surface border border-border'
                     }`}>
                       {milestone.completed ? (
                         <CheckCircle className="w-3 h-3 text-white" />
                       ) : (
-                        <span className="text-sm hover:scale-110 transition-transform duration-300">{milestone.icon}</span>
+                        <span className="text-sm">{milestone.icon}</span>
                       )}
                     </div>
-                    <span className={`font-normal text-sm transition-colors duration-300 hover:translate-x-1 ${
-                      milestone.completed ? 'text-green-700' : 'text-foreground'
+                    <span className={`font-normal text-sm transition-colors duration-300 ${
+                      milestone.completed ? 'text-success-600' : 'text-primary'
                     }`}>
                       {milestone.title}
                     </span>
-                    {milestone.completed && (
-                      <div className="ml-auto">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse hover:scale-110 transition-transform duration-200"></div>
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
@@ -569,78 +551,60 @@ export function StudentDashboard() {
         </Card>
 
         {/* Your Rank Card */}
-        <Card className="hover:shadow-xl hover:scale-[1.02] transition-all duration-500 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '600ms' }}>
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-50/0 via-purple-50/30 to-purple-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <CardHeader className="pb-3 relative z-10">
+        <Card className="card-friendly border-l-3 border-l-accent-violet group cursor-pointer">
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                <Trophy className="w-4 h-4 text-purple-600 group-hover:scale-110 group-hover:text-yellow-500 transition-all duration-300" />
+              <div className="w-8 h-8 rounded-full bg-accent-violet/10 flex items-center justify-center">
+                <Trophy className="w-4 h-4 text-accent-violet" />
               </div>
-              <span className="text-base font-medium text-purple-600 group-hover:translate-x-1 transition-transform duration-300">
+              <span className="text-base font-medium text-accent-violet">
                 Your Rank
               </span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent>
             {leaderboardPosition ? (
               <div className="text-center space-y-3">
                 <div className="relative">
-                  <div className="text-4xl font-medium text-purple-600 group-hover:scale-110 group-hover:text-purple-700 transition-all duration-300">
+                  <div className="text-4xl font-medium text-accent-violet">
                     #{leaderboardPosition.rank}
                   </div>
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-200 rounded-full flex items-center justify-center group-hover:animate-bounce">
-                    <span className="text-xs group-hover:scale-110 transition-transform duration-300">⭐</span>
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-300/30 rounded-full opacity-0 group-hover:opacity-100 animate-ping"></div>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-base font-medium text-foreground group-hover:text-purple-600 transition-colors duration-300">Great progress!</p>
-                  <p className="text-xs text-muted-foreground group-hover:text-purple-500 transition-colors duration-300">
+                  <p className="text-base font-medium text-primary">Great progress!</p>
+                  <p className="text-xs text-muted">
                     You're {leaderboardPosition.rank === 1 ? 'leading the pack' : `${leaderboardPosition.rank} of ${leaderboardPosition.total}`}
                   </p>
                 </div>
-                <div className="flex items-center justify-center space-x-1 mb-3">
-                  {[1, 2, 3].map(pos => (
-                    <Star 
-                      key={pos} 
-                      className={`w-4 h-4 transition-all duration-300 hover:scale-125 cursor-pointer ${
-                        pos <= 3 && leaderboardPosition.rank <= 3 
-                          ? 'text-yellow-500 fill-current hover:rotate-12' 
-                          : 'text-muted hover:text-yellow-400'
-                      }`} 
-                    />
-                  ))}
-                </div>
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-3 rounded-md border border-purple-100 group-hover:border-purple-200 group-hover:shadow-sm transition-all duration-300">
-                  <div className="flex items-center justify-center gap-1 text-xs font-normal text-purple-700">
-                    <Star className="w-3 h-3 fill-current group-hover:animate-spin" />
-                    <span className="group-hover:scale-105 transition-transform duration-300">Keep up the great work!</span>
-                    <Star className="w-3 h-3 fill-current group-hover:animate-spin" />
+                <div className="bg-accent-violet/8 p-3 rounded-md border border-accent-violet/20">
+                  <div className="flex items-center justify-center gap-1 text-xs font-normal text-accent-violet">
+                    <Star className="w-3 h-3 fill-current" />
+                    <span>Keep up the great work!</span>
+                    <Star className="w-3 h-3 fill-current" />
                   </div>
                 </div>
                 <Button 
-                  variant="outline" 
+                  variant="secondary" 
                   size="sm" 
                   onClick={() => navigate('/leaderboard')}
-                  className="w-full text-xs font-normal group-hover:scale-105 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300 relative overflow-hidden"
+                  className="w-full text-xs font-normal"
                 >
-                  <span className="relative z-10">View Full Leaderboard</span>
-                  <div className="absolute inset-0 bg-purple-100/50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  View Full Leaderboard
                 </Button>
               </div>
             ) : (
               <div className="text-center py-6 space-y-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-50 to-pink-50 rounded-full mx-auto flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                  <Target className="w-6 h-6 text-purple-500 group-hover:scale-110 transition-transform duration-300" />
+                <div className="w-12 h-12 bg-accent-violet/10 rounded-full mx-auto flex items-center justify-center">
+                  <Target className="w-6 h-6 text-accent-violet" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground mb-1 group-hover:text-purple-600 transition-colors duration-300">Start Your Journey</p>
-                  <p className="text-xs text-muted-foreground group-hover:text-purple-500 transition-colors duration-300">
+                  <p className="font-medium text-primary mb-1">Start Your Journey</p>
+                  <p className="text-xs text-muted">
                     Complete activities to see your ranking
                   </p>
                 </div>
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-2 rounded-md border border-purple-100 group-hover:border-purple-200 group-hover:shadow-sm transition-all duration-300">
-                  <p className="text-xs text-purple-700 font-normal group-hover:scale-105 transition-transform duration-300">Ready to climb the leaderboard? 🚀</p>
+                <div className="bg-accent-violet/8 p-2 rounded-md border border-accent-violet/20">
+                  <p className="text-xs text-accent-violet font-normal">Ready to climb the leaderboard? 🚀</p>
                 </div>
               </div>
             )}
