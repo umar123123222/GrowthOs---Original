@@ -294,7 +294,7 @@ const VideoPlayer = () => {
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-full mr-2 flex items-center justify-center">
                   <MessageCircle className="w-4 h-4 text-white" />
                 </div>
-                ShoaibGPT
+                Growth Assistant
               </CardTitle>
             </CardHeader>
             <CardContent>
