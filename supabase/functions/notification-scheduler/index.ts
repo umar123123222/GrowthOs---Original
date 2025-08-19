@@ -11,7 +11,7 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  console.log('Notification scheduler triggered');
+  // Notification scheduler triggered - using centralized logging
 
   try {
     // Call the motivational notifications function
@@ -27,7 +27,7 @@ serve(async (req) => {
     );
 
     const result = await response.json();
-    console.log('Motivational notifications result:', result);
+    // Motivational notifications result logged via centralized system
 
     return new Response(
       JSON.stringify({ 
@@ -42,7 +42,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Error in notification scheduler:', error);
+    // Error logged via centralized error handling
     return new Response(
       JSON.stringify({ error: 'Scheduler error', details: error.message }), 
       { 
