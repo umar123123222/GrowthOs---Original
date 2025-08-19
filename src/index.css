@@ -370,7 +370,12 @@ All colors MUST be HSL.
 
 /* Enhanced card styles with friendly shadows */
 .card-friendly {
-  @apply bg-surface border border-border rounded-2xl shadow-[var(--shadow-card)] hover:shadow-medium transition-all duration-200;
+  @apply bg-surface border border-border rounded-2xl transition-all duration-200;
+  box-shadow: var(--shadow-card);
+}
+
+.card-friendly:hover {
+  box-shadow: var(--shadow-medium);
 }
 
 /* Progress bar with friendly gradient */
