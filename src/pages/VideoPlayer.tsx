@@ -302,7 +302,7 @@ const VideoPlayer = () => {
                 I'm here to help! Ask me anything about this video or your learning journey.
               </p>
               <Button size="sm" className="w-full" onClick={() => setShowShoaibGPT(true)}>
-                Ask ShoaibGPT
+                Ask Partner
               </Button>
             </CardContent>
           </Card>
