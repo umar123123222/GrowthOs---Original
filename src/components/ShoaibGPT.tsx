@@ -12,7 +12,6 @@ interface ShoaibGPTProps {
 
 const ShoaibGPT = ({ onClose }: ShoaibGPTProps) => {
   const [message, setMessage] = useState("");
-  const [mode, setMode] = useState<"course" | "life">("course");
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -37,9 +36,7 @@ const ShoaibGPT = ({ onClose }: ShoaibGPTProps) => {
     const aiResponse = {
       id: messages.length + 2,
       type: "ai",
-      content: mode === "course" 
-        ? `Great question about the course! Based on your progress, I see you're on Module 3. ${message.includes("video") ? "You can rewatch the video at timestamp 5:30 for that specific concept." : "Keep up the good work! You're doing better than 70% of your cohort."}`
-        : `I understand this can be challenging. Remember your goal - you want to achieve PKR 100,000 monthly income to support your family. Every small step counts. You've got this! 💪`,
+      content: `Great question about the course! Based on your progress, I see you're on Module 3. ${message.includes("video") ? "You can rewatch the video at timestamp 5:30 for that specific concept." : "Keep up the good work! You're doing better than 70% of your cohort."}`,
       timestamp: new Date()
     };
 
@@ -66,27 +63,6 @@ const ShoaibGPT = ({ onClose }: ShoaibGPTProps) => {
             </Button>
           </div>
           
-          {/* Mode Toggle */}
-          <div className="flex space-x-2 mt-4">
-            <Button
-              variant={mode === "course" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setMode("course")}
-              className="flex items-center space-x-2"
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>Course Help</span>
-            </Button>
-            <Button
-              variant={mode === "life" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setMode("life")}
-              className="flex items-center space-x-2"
-            >
-              <Heart className="w-4 h-4" />
-              <span>Life Advice</span>
-            </Button>
-          </div>
         </CardHeader>
 
         {/* Messages */}
@@ -116,11 +92,7 @@ const ShoaibGPT = ({ onClose }: ShoaibGPTProps) => {
         <div className="flex-shrink-0 p-4 border-t">
           <div className="flex space-x-2">
             <Input
-              placeholder={
-                mode === "course"
-                  ? "Ask about videos, assignments, or course content..."
-                  : "Share what's on your mind or ask for motivation..."
-              }
+              placeholder="Ask about videos, assignments, or course content..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
