@@ -8,7 +8,7 @@ import { Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
-import { safeQuery } from '@/lib/database-safety';
+import { safeMaybeSingle } from '@/lib/database-safety';
 import type { RecordingRatingResult } from '@/types/database';
 
 interface LectureRatingProps {
@@ -42,20 +42,19 @@ export function LectureRating({
     if (!user?.id) return;
 
     try {
-      const result = await safeQuery<RecordingRatingResult>(
+      const result = await safeMaybeSingle(
         supabase
           .from('recording_ratings')
           .select('*')
           .eq('student_id', user.id)
-          .eq('recording_id', recordingId)
-          .single(),
+          .eq('recording_id', recordingId),
         `check existing rating for recording ${recordingId}`
       );
 
       if (result.success && result.data) {
         setHasRated(true);
-        setRating(result.data.rating);
-        setFeedback(result.data.feedback || '');
+        setRating((result.data as any).rating);
+        setFeedback((result.data as any).feedback || '');
       }
     } catch (error) {
       // No existing rating found, which is fine

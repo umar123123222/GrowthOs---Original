@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { safeMaybeSingle } from '@/lib/database-safety';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -32,11 +33,14 @@ export const SequentialUnlockAdmin: React.FC = () => {
   const fetchSettings = async () => {
     try {
       // Get current flag status
-      const { data: companyData } = await supabase
-        .from('company_settings')
-        .select('lms_sequential_unlock')
-        .eq('id', 1)
-        .single();
+      const companyResult = await safeMaybeSingle(
+        supabase
+          .from('company_settings')
+          .select('lms_sequential_unlock')
+          .eq('id', 1),
+        'fetch sequential unlock settings'
+      );
+      const companyData = companyResult.data;
 
       // Get student statistics
       const { data: studentStats } = await supabase
@@ -44,14 +48,17 @@ export const SequentialUnlockAdmin: React.FC = () => {
         .select('fees_cleared, user_id');
 
       // Get first recording info
-      const { data: firstRecording } = await supabase
-        .from('available_lessons')
-        .select('id, recording_title')
-        .order('sequence_order', { ascending: true })
-        .limit(1)
-        .single();
+      const firstLessonResult = await safeMaybeSingle(
+        supabase
+          .from('available_lessons')
+          .select('id, recording_title')
+          .order('sequence_order', { ascending: true })
+          .limit(1),
+        'fetch first lesson for sequential unlock'
+      );
+      const firstRecording = firstLessonResult.data;
 
-      const isEnabled = companyData?.lms_sequential_unlock || false;
+      const isEnabled = (companyData as any)?.lms_sequential_unlock || false;
       const totalStudents = studentStats?.length || 0;
       const studentsWithFeesCleared = studentStats?.filter(s => s.fees_cleared).length || 0;
 
@@ -59,8 +66,8 @@ export const SequentialUnlockAdmin: React.FC = () => {
         isEnabled,
         totalStudents,
         studentsWithFeesCleared,
-        firstRecordingId: firstRecording?.id,
-        firstRecordingTitle: firstRecording?.recording_title
+        firstRecordingId: (firstRecording as any)?.id,
+        firstRecordingTitle: (firstRecording as any)?.recording_title
       });
 
     } catch (error) {

@@ -109,7 +109,9 @@ const Login = () => {
           password_display: 'temp_password',
           password_hash: 'temp_hash',
           created_at: new Date().toISOString()
-        }).select().single(), 'create user profile');
+        }).select(), 'create user profile');
+        
+        if (!result.success) throw result.error;
         logger.performance('db.users.insert_profile', performance.now() - tInsertStart, {
           id: authData.user.id,
           role: userRole
