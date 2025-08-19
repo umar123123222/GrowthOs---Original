@@ -16,7 +16,7 @@ const ShoaibGPT = ({ onClose }: ShoaibGPTProps) => {
     {
       id: 1,
       type: "ai",
-      content: "Assalam-o-Alaikum! I'm ShoaibGPT, your AI mentor. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
+      content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
       timestamp: new Date()
     }
   ]);
