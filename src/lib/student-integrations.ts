@@ -79,7 +79,7 @@ export const StudentIntegrations = {
 
 // Encryption helpers (call server functions)
 export async function encryptToken(token: string): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('encrypt-token', {
+  const { data, error } = await supabase.functions.invoke('secure-encrypt-token', {
     body: { action: 'encrypt', data: token }
   });
 

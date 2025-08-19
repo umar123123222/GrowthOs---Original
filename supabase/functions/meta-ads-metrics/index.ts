@@ -6,8 +6,26 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function decrypt(encryptedText: string): string {
-  return atob(encryptedText);
+async function decrypt(encryptedText: string): Promise<string> {
+  const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/secure-encrypt-token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+    },
+    body: JSON.stringify({ action: 'decrypt', data: encryptedText })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Decryption failed: ${response.status}`);
+  }
+  
+  const result = await response.json();
+  if (result.error) {
+    throw new Error(`Decryption error: ${result.error}`);
+  }
+  
+  return result.decrypted;
 }
 
 serve(async (req) => {
@@ -50,7 +68,7 @@ serve(async (req) => {
       )
     }
 
-    const accessToken = decrypt(integ.access_token)
+    const accessToken = await decrypt(integ.access_token)
     const accountIdRaw = String(integ.external_id)
     const accountId = accountIdRaw.startsWith('act_') ? accountIdRaw : `act_${accountIdRaw}`
 
