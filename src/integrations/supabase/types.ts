@@ -528,6 +528,104 @@ export type Database = {
         }
         Relationships: []
       }
+      milestone_categories: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          description: string | null
+          display_order: number | null
+          icon: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      milestones: {
+        Row: {
+          badge_url: string | null
+          category_id: string | null
+          celebration_config: Json | null
+          celebration_message: string | null
+          created_at: string | null
+          description: string
+          display_order: number | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          points: number | null
+          show_celebration: boolean | null
+          trigger_config: Json | null
+          trigger_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          badge_url?: string | null
+          category_id?: string | null
+          celebration_config?: Json | null
+          celebration_message?: string | null
+          created_at?: string | null
+          description: string
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          points?: number | null
+          show_celebration?: boolean | null
+          trigger_config?: Json | null
+          trigger_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          badge_url?: string | null
+          category_id?: string | null
+          celebration_config?: Json | null
+          celebration_message?: string | null
+          created_at?: string | null
+          description?: string
+          display_order?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          points?: number | null
+          show_celebration?: boolean | null
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "milestones_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "milestone_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       modules: {
         Row: {
           description: string | null
@@ -1387,6 +1485,47 @@ export type Database = {
           },
         ]
       }
+      user_milestones: {
+        Row: {
+          awarded_by: string | null
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          milestone_id: string | null
+          notes: string | null
+          progress_data: Json | null
+          user_id: string
+        }
+        Insert: {
+          awarded_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          milestone_id?: string | null
+          notes?: string | null
+          progress_data?: Json | null
+          user_id: string
+        }
+        Update: {
+          awarded_by?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          milestone_id?: string | null
+          notes?: string | null
+          progress_data?: Json | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_milestones_milestone_id_fkey"
+            columns: ["milestone_id"]
+            isOneToOne: false
+            referencedRelation: "milestones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_module_progress: {
         Row: {
           completed_at: string | null
@@ -1623,6 +1762,10 @@ export type Database = {
       }
     }
     Functions: {
+      check_and_award_milestone: {
+        Args: { p_context?: Json; p_milestone_type: string; p_user_id: string }
+        Returns: boolean
+      }
       create_notification: {
         Args: {
           p_message: string
