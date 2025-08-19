@@ -357,7 +357,7 @@ const UserMilestonesTab: React.FC = () => {
                     </div>
                     <Badge variant="secondary">{um.milestone?.points} pts</Badge>
                   </div>
-                )))}
+                ))}
               </div>
             </CardContent>
           </Card>
@@ -389,7 +389,7 @@ const UserMilestonesTab: React.FC = () => {
                       Award
                     </Button>
                   </div>
-                )))}
+                ))}
                 {availableToAward.length === 0 && (
                   <p className="text-muted-foreground text-center py-4">
                     This student has completed all available milestones!
@@ -467,14 +467,13 @@ export const MilestoneManagement: React.FC = () => {
       <Tabs defaultValue="milestones" className="space-y-4">
         <TabsList>
           <TabsTrigger value="milestones">
-                            <Trophy className="w-4 h-4 mr-2" />
-                            Milestones
-                          </TabsTrigger>
+            <Trophy className="w-4 h-4 mr-2" />
+            Milestones
+          </TabsTrigger>
           <TabsTrigger value="user-milestones">
-                          <TabsTrigger value="user-milestones">
-                            <Users className="w-4 h-4 mr-2" />
-                            Student Progress
-                          </TabsTrigger>
+            <Users className="w-4 h-4 mr-2" />
+            Student Progress
+          </TabsTrigger>
           <TabsTrigger value="analytics">
             <BarChart3 className="w-4 h-4 mr-2" />
             Analytics
