@@ -72,6 +72,7 @@ serve(async (req) => {
     const endDateInput = payload?.endDate ? new Date(payload.endDate) : null;
     const timeBasis: 'created' | 'processed' = (payload?.timeBasis === 'processed') ? 'processed' : 'created';
 
+    // Try to get Shopify integration from integrations table
     const { data: integ, error: integErr } = await supabaseClient
       .from('integrations')
       .select('access_token, external_id')
@@ -80,12 +81,38 @@ serve(async (req) => {
       .maybeSingle();
 
     if (integErr) throw integErr;
-    if (!integ?.access_token || !integ.external_id) {
-      return new Response(JSON.stringify({ connected: false }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+    let apiToken: string | null = null;
+    let domain: string | null = null;
+
+    if (integ?.access_token && integ.external_id) {
+      // Use data from integrations table
+      apiToken = await decrypt(integ.access_token);
+      domain = integ.external_id;
+    } else {
+      // Fallback: check users table for legacy credentials
+      const { data: userData, error: userErr } = await supabaseClient
+        .from('users')
+        .select('shopify_credentials')
+        .eq('id', user.user.id)
+        .maybeSingle();
+
+      if (!userErr && userData?.shopify_credentials) {
+        try {
+          const creds = JSON.parse(userData.shopify_credentials);
+          if (creds.accessToken && creds.storeDomain) {
+            apiToken = creds.accessToken;
+            domain = creds.storeDomain;
+          }
+        } catch (e) {
+          console.error('Failed to parse legacy Shopify credentials:', e);
+        }
+      }
     }
 
-    const apiToken = await decrypt(integ.access_token);
-    const domain = integ.external_id;
+    if (!apiToken || !domain) {
+      return new Response(JSON.stringify({ connected: false }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     // Fetch shop details: currency and timezone
     const shopResp = await fetch(`https://${domain}/admin/api/2024-07/shop.json?fields=currency,iana_timezone`, {

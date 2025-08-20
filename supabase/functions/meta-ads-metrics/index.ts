@@ -51,7 +51,7 @@ serve(async (req) => {
       )
     }
 
-    // Read Meta Ads integration
+    // Try to get Meta Ads integration from integrations table
     const { data: integ, error: integErr } = await supabaseClient
       .from('integrations')
       .select('access_token, external_id')
@@ -61,15 +61,42 @@ serve(async (req) => {
 
     if (integErr) throw integErr
 
-    if (!integ?.access_token || !integ.external_id) {
+    let accessToken: string | null = null;
+    let externalId: string | null = null;
+
+    if (integ?.access_token && integ.external_id) {
+      // Use data from integrations table
+      accessToken = await decrypt(integ.access_token)
+      externalId = String(integ.external_id)
+    } else {
+      // Fallback: check users table for legacy credentials
+      const { data: userData, error: userErr } = await supabaseClient
+        .from('users')
+        .select('meta_ads_credentials')
+        .eq('id', user.user.id)
+        .maybeSingle()
+
+      if (!userErr && userData?.meta_ads_credentials) {
+        try {
+          const creds = JSON.parse(userData.meta_ads_credentials)
+          if (creds.accessToken && creds.accountId) {
+            accessToken = creds.accessToken
+            externalId = String(creds.accountId)
+          }
+        } catch (e) {
+          console.error('Failed to parse legacy Meta Ads credentials:', e)
+        }
+      }
+    }
+
+    if (!accessToken || !externalId) {
       return new Response(
         JSON.stringify({ connected: false }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const accessToken = await decrypt(integ.access_token)
-    const accountIdRaw = String(integ.external_id)
+    const accountIdRaw = externalId
     const accountId = accountIdRaw.startsWith('act_') ? accountIdRaw : `act_${accountIdRaw}`
 
     // Query Meta Marketing API for last 7 days insights
