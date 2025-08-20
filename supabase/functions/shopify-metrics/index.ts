@@ -99,13 +99,23 @@ serve(async (req) => {
 
       if (!userErr && userData?.shopify_credentials) {
         try {
+          // Try to parse as JSON first (structured format)
           const creds = JSON.parse(userData.shopify_credentials);
           if (creds.accessToken && creds.storeDomain) {
             apiToken = creds.accessToken;
             domain = creds.storeDomain;
           }
         } catch (e) {
-          console.error('Failed to parse legacy Shopify credentials:', e);
+          console.log('Legacy credentials not in JSON format, treating as encrypted token');
+          // If it's not JSON, it might be just an encrypted token
+          // We need domain from elsewhere in this case
+          try {
+            apiToken = await decrypt(userData.shopify_credentials);
+            console.log('Successfully decrypted legacy token, but missing domain');
+            // Domain would need to come from integrations table or other source
+          } catch (decryptError) {
+            console.error('Failed to decrypt legacy Shopify credentials:', decryptError);
+          }
         }
       }
     }

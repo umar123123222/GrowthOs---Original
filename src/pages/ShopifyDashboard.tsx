@@ -262,25 +262,48 @@ const ShopifyDashboard = () => {
       } = await supabase.from('integrations').select('access_token, external_id').eq('user_id', user.id).eq('source', 'shopify').maybeSingle();
       let hasToken = !!integ?.access_token;
       let hasDomain = !!integ?.external_id;
+      
       if (!hasToken) {
         const {
           data: legacy
         } = await supabase.from('users').select('shopify_credentials').eq('id', user.id).maybeSingle();
         if (legacy?.shopify_credentials) {
+          console.log('Migrating legacy Shopify credentials...');
+          
+          // Try to preserve any existing domain that might be stored elsewhere
+          let existingDomain = null;
+          try {
+            // Check if domain was previously saved in any other way
+            const storedDomain = localStorage.getItem(`shopify_domain_${user.id}`);
+            if (storedDomain) {
+              existingDomain = storedDomain;
+              console.log('Found stored domain from localStorage:', existingDomain);
+            }
+          } catch (e) {
+            console.warn('Could not check localStorage for domain:', e);
+          }
+          
           await supabase.from('integrations').insert({
             user_id: user.id,
             source: 'shopify',
             access_token: legacy.shopify_credentials,
-            external_id: null
+            external_id: existingDomain // Preserve existing domain if found
           });
-          setConnectionStatus('needs_domain');
-          return;
+          
+          if (!existingDomain) {
+            setConnectionStatus('needs_domain');
+            return;
+          } else {
+            // Continue with connection check since we have both token and domain
+            hasDomain = true;
+          }
         } else {
           setConnectionStatus('disconnected');
           await fetchCachedMetrics(user.id);
           return;
         }
       }
+      
       if (hasToken && !hasDomain) {
         setConnectionStatus('needs_domain');
         return;

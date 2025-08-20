@@ -124,6 +124,8 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   };
 
   const handleShopDomainSave = async (domain: string) => {
+    console.log('Saving Shopify domain:', domain, 'for user:', userId);
+    
     // If we have a token in memory (user just entered it), complete full connection
     if (currentToken) {
       await completeShopifyConnection(currentToken, domain);
@@ -135,46 +137,108 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
     try {
       if (!userId) return;
 
+      // Store domain in localStorage as backup
+      try {
+        localStorage.setItem(`shopify_domain_${userId}`, domain);
+        console.log('Domain stored in localStorage as backup');
+      } catch (e) {
+        console.warn('Could not store domain in localStorage:', e);
+      }
+
       // Try to find existing integrations row
       const { data: existing } = await supabase
         .from('integrations')
-        .select('id')
+        .select('id, access_token')
         .eq('user_id', userId)
         .eq('source', 'shopify')
         .maybeSingle();
 
       if (existing?.id) {
-        await supabase
+        console.log('Updating existing integrations row with domain');
+        const { error: updateError } = await supabase
           .from('integrations')
           .update({ external_id: domain, updated_at: new Date().toISOString() })
           .eq('id', existing.id);
+          
+        if (updateError) {
+          console.error('Failed to update integrations row:', updateError);
+          throw updateError;
+        }
       } else {
         // Fall back to legacy saved token on users table via StudentIntegrations.get()
+        console.log('No existing integrations row, creating new one with legacy token');
         const token = integration?.shopify_api_token;
         if (!token) {
-          toast({
-            title: 'Missing token',
-            description: 'We could not find your saved Shopify token. Please re-enter it.',
-            variant: 'destructive',
+          // Try to get from users table directly
+          const { data: userData } = await supabase
+            .from('users')
+            .select('shopify_credentials')
+            .eq('id', userId)
+            .maybeSingle();
+            
+          if (!userData?.shopify_credentials) {
+            toast({
+              title: 'Missing token',
+              description: 'We could not find your saved Shopify token. Please re-enter it.',
+              variant: 'destructive',
+            });
+            return;
+          }
+          
+          console.log('Creating integrations row with legacy credentials from users table');
+          const { error: insertError } = await supabase.from('integrations').insert({
+            user_id: userId,
+            source: 'shopify',
+            access_token: userData.shopify_credentials,
+            external_id: domain,
           });
-          return;
+          
+          if (insertError) {
+            console.error('Failed to create integrations row:', insertError);
+            throw insertError;
+          }
+        } else {
+          console.log('Creating integrations row with token from StudentIntegrations');
+          const { error: insertError } = await supabase.from('integrations').insert({
+            user_id: userId,
+            source: 'shopify',
+            access_token: token,
+            external_id: domain,
+          });
+          
+          if (insertError) {
+            console.error('Failed to create integrations row:', insertError);
+            throw insertError;
+          }
         }
-        await supabase.from('integrations').insert({
-          user_id: userId,
-          source: 'shopify',
-          access_token: token,
-          external_id: domain,
-        });
       }
 
+      // Verify the save worked
+      const { data: verification } = await supabase
+        .from('integrations')
+        .select('external_id')
+        .eq('user_id', userId)
+        .eq('source', 'shopify')
+        .maybeSingle();
+        
+      if (verification?.external_id !== domain) {
+        console.error('Domain verification failed:', verification);
+        throw new Error('Domain was not saved properly');
+      }
+
+      console.log('Domain successfully saved and verified');
       setShopDomain(domain);
       setShopifyConnected(true);
       if (onConnectionUpdate) onConnectionUpdate();
       if ((window as any).checkIntegrations) (window as any).checkIntegrations();
-      toast({ title: 'Domain saved', description: 'Your Shopify domain has been added.' });
+      toast({ title: 'Domain saved', description: 'Your Shopify domain has been added successfully.' });
     } catch (e) {
       console.error('Failed to save Shopify domain:', e);
-      toast({ title: 'Error', description: 'Could not save domain. Please try again.', variant: 'destructive' });
+      toast({ 
+        title: 'Error', 
+        description: `Could not save domain: ${e.message}. Please try again.`, 
+        variant: 'destructive' 
+      });
     }
   };
   const completeShopifyConnection = async (token: string, domain: string) => {
