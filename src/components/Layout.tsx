@@ -215,6 +215,7 @@ const Layout = memo(({
         if (!isMounted) return;
         const hasShopify = !!data?.some((r: any) => r.source === 'shopify' && r.access_token);
         const hasMeta = !!data?.some((r: any) => r.source === 'meta_ads' && r.access_token);
+        console.log('Connection check - data:', data, 'hasShopify:', hasShopify, 'hasMeta:', hasMeta);
         setConnectionStatus({
           shopify: hasShopify,
           meta: hasMeta
