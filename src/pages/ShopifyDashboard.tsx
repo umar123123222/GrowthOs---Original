@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ShoppingBag, TrendingUp, Users, DollarSign, Package, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, Calendar as CalendarIcon, Euro, PoundSterling, Banknote } from 'lucide-react';
+import { ShoppingBag, TrendingUp, Users, DollarSign, Package, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, Calendar as CalendarIcon, Euro, PoundSterling, Banknote, Settings } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -325,11 +325,30 @@ const ShopifyDashboard = () => {
           const usedCache = await fetchCachedMetrics(user.id);
           if (!usedCache) {
             setConnectionStatus('error');
-            toast({
-              title: 'Shopify connection issue',
-              description: 'We could not fetch live data. Please try again.',
-              variant: 'destructive'
-            });
+            
+            // Check if it's an authentication error
+            const isAuthError = result?.error?.includes('401') || 
+                               result?.error?.includes('Invalid Shopify access token') ||
+                               result?.error?.includes('access token');
+            
+            if (isAuthError) {
+              toast({
+                title: 'Shopify Token Expired',
+                description: 'Your Shopify access token has expired. Please reconnect your store.',
+                variant: 'destructive',
+                action: (
+                  <Button variant="outline" size="sm" onClick={() => navigate('/connect')}>
+                    Reconnect Store
+                  </Button>
+                )
+              });
+            } else {
+              toast({
+                title: 'Shopify connection issue',
+                description: result?.error || 'We could not fetch live data. Please try again.',
+                variant: 'destructive'
+              });
+            }
           }
           return;
         }
@@ -491,6 +510,35 @@ const ShopifyDashboard = () => {
         </div>
       </div>;
   }
+  
+  if (connectionStatus === 'error') {
+    return <div className="max-w-4xl mx-auto">
+        <div className="text-center py-12">
+          <AlertCircle className="h-16 w-16 mx-auto mb-6 text-destructive" />
+          <h2 className="text-2xl font-bold mb-4">Shopify Token Expired</h2>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Your Shopify access token has expired or been revoked. You'll need to reconnect your store with a fresh API token to view your data.
+          </p>
+          <div className="space-x-3">
+            <Button onClick={() => navigate('/connect')} className="bg-green-600 hover:bg-green-700">
+              <ShoppingBag className="h-4 w-4 mr-2" />
+              Reconnect Shopify Store
+            </Button>
+            <Button onClick={fetchShopifyData} variant="outline">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+          </div>
+          <div className="mt-6 p-4 bg-muted rounded-lg max-w-lg mx-auto">
+            <h3 className="font-medium mb-2">Need help getting a new token?</h3>
+            <p className="text-sm text-muted-foreground">
+              Go to your Shopify admin → Apps → Develop apps → Create app → Configure Admin API scopes → Generate access token
+            </p>
+          </div>
+        </div>
+      </div>;
+  }
+  
   return <TooltipProvider>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
