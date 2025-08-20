@@ -207,24 +207,52 @@ const Layout = memo(({
     const checkConnections = async () => {
       if (!user?.id) return;
       try {
+        // First try to get connections from integrations table
         const {
           data,
           error
         } = await supabase.from('integrations').select('source, access_token').eq('user_id', user.id);
-        if (error) throw error;
-        if (!isMounted) return;
-        const hasShopify = !!data?.some((r: any) => r.source === 'shopify' && r.access_token);
-        const hasMeta = !!data?.some((r: any) => r.source === 'meta_ads' && r.access_token);
-        console.log('Connection check - data:', data, 'hasShopify:', hasShopify, 'hasMeta:', hasMeta);
-        setConnectionStatus({
-          shopify: hasShopify,
-          meta: hasMeta
-        });
+        
+        if (!error && data && data.length > 0) {
+          if (!isMounted) return;
+          const hasShopify = !!data.some((r: any) => r.source === 'shopify' && r.access_token);
+          const hasMeta = !!data.some((r: any) => r.source === 'meta_ads' && r.access_token);
+          console.log('Connection check - integrations data:', data, 'hasShopify:', hasShopify, 'hasMeta:', hasMeta);
+          setConnectionStatus({
+            shopify: hasShopify,
+            meta: hasMeta
+          });
+          return;
+        }
+        
+        // Fallback: Check users table for credential fields
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('shopify_credentials, meta_ads_credentials')
+          .eq('id', user.id)
+          .single();
+          
+        if (!userError && userData) {
+          if (!isMounted) return;
+          const hasShopify = !!(userData.shopify_credentials);
+          const hasMeta = !!(userData.meta_ads_credentials);
+          console.log('Connection check - user credentials:', userData, 'hasShopify:', hasShopify, 'hasMeta:', hasMeta);
+          setConnectionStatus({
+            shopify: hasShopify,
+            meta: hasMeta
+          });
+        } else {
+          console.log('No connections found in either table');
+          setConnectionStatus({
+            shopify: false,
+            meta: false
+          });
+        }
       } catch (e) {
-        // Fallback to legacy user columns if present
+        console.error('Error checking connections:', e);
         setConnectionStatus({
-          shopify: !!(user as any)?.shopify_credentials,
-          meta: !!(user as any)?.meta_ads_credentials
+          shopify: false,
+          meta: false
         });
       }
     };
