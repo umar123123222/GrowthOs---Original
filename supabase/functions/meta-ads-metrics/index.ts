@@ -98,9 +98,8 @@ serve(async (req) => {
               // If it's not JSON, it might be a plain access token
               if (decryptedCreds.startsWith('EAA') || decryptedCreds.startsWith('CAA')) {
                 console.log('Decrypted credential appears to be a plain access token')
-                // For plain tokens, we need to check if there's an account ID elsewhere
-                // For now, we'll need the user to reconnect with proper format
-                console.log('Plain access token found but no account ID available in legacy format')
+                accessToken = decryptedCreds
+                console.log('Plain access token extracted from decrypted credential')
               }
             }
           } catch (decryptError) {
@@ -131,11 +130,83 @@ serve(async (req) => {
       }
     }
 
-    if (!accessToken || !externalId) {
+    // If we have access token but no account ID, try to auto-detect accounts
+    if (accessToken && !externalId) {
+      console.log('Access token found but no account ID, attempting auto-detection...')
+      try {
+        // Query Meta API to get available ad accounts
+        const accountsUrl = new URL('https://graph.facebook.com/v19.0/me/adaccounts')
+        accountsUrl.searchParams.set('fields', 'id,name,account_status')
+        accountsUrl.searchParams.set('limit', '5')
+        accountsUrl.searchParams.set('access_token', accessToken)
+
+        const accountsResp = await fetch(accountsUrl.toString())
+        if (accountsResp.ok) {
+          const accountsData = await accountsResp.json()
+          if (accountsData.data && accountsData.data.length > 0) {
+            // Use the first active account
+            const activeAccount = accountsData.data.find((acc: any) => acc.account_status === 1) || accountsData.data[0]
+            externalId = activeAccount.id
+            console.log(`Auto-detected account ID: ${externalId} (${activeAccount.name || 'Unknown'})`)
+          }
+        }
+      } catch (autoDetectError) {
+        console.log('Auto-detection failed, but continuing with validation:', autoDetectError.message)
+      }
+    }
+
+    if (!accessToken) {
       return new Response(
         JSON.stringify({ connected: false }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // If still no account ID after auto-detection, try to validate token with basic user info call
+    if (!externalId) {
+      console.log('No account ID found, validating token with basic API call...')
+      try {
+        const validateUrl = new URL('https://graph.facebook.com/v19.0/me')
+        validateUrl.searchParams.set('fields', 'id,name')
+        validateUrl.searchParams.set('access_token', accessToken)
+
+        const validateResp = await fetch(validateUrl.toString())
+        if (validateResp.ok) {
+          const userData = await validateResp.json()
+          console.log(`Token validated for user: ${userData.name || userData.id}`)
+          // Return connected with minimal metrics since we can't get ad insights without account ID
+          return new Response(
+            JSON.stringify({ 
+              connected: true, 
+              metrics: {
+                totalSpend: 0,
+                totalImpressions: 0,
+                totalClicks: 0,
+                totalConversions: 0,
+                averageCTR: 0,
+                averageCPC: 0,
+                campaigns: [],
+                adSets: [],
+                ads: [],
+              },
+              note: 'Connected but no ad account access. Please reconnect with proper permissions.'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        } else {
+          // Token is invalid
+          return new Response(
+            JSON.stringify({ connected: false }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          )
+        }
+      } catch (validateError) {
+        console.log('Token validation failed:', validateError.message)
+        return new Response(
+          JSON.stringify({ connected: false }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
     }
 
     const accountIdRaw = externalId
