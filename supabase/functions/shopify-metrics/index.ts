@@ -121,16 +121,52 @@ serve(async (req) => {
     }
 
     if (!apiToken || !domain) {
-      return new Response(JSON.stringify({ connected: false }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      console.log(`Missing credentials - Token: ${!!apiToken}, Domain: ${!!domain}`);
+      return new Response(
+        JSON.stringify({ 
+          connected: false, 
+          error: !apiToken ? 'Missing Shopify access token' : 'Missing Shopify store domain',
+          details: 'Please reconnect your Shopify store in the Connect page.'
+        }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Fetch shop details: currency and timezone
+    console.log(`Attempting to connect to shop: ${domain}`);
+    console.log(`Token length: ${apiToken.length}`);
+    
     const shopResp = await fetch(`https://${domain}/admin/api/2024-07/shop.json?fields=currency,iana_timezone`, {
-      headers: { 'X-Shopify-Access-Token': apiToken }
+      headers: { 
+        'X-Shopify-Access-Token': apiToken,
+        'Content-Type': 'application/json'
+      }
     });
-    const shopJson = shopResp.ok ? await shopResp.json() : { shop: null };
+    
+    if (!shopResp.ok) {
+      const errorText = await shopResp.text();
+      console.error(`Shop API error: ${shopResp.status} - ${errorText}`);
+      
+      // Return specific error for 401
+      if (shopResp.status === 401) {
+        return new Response(
+          JSON.stringify({ 
+            connected: false, 
+            error: 'Invalid Shopify access token. Please reconnect your store.',
+            details: 'The access token may have expired or been revoked.'
+          }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      throw new Error(`Shopify shop API error: ${shopResp.status}`);
+    }
+    
+    const shopJson = await shopResp.json();
     const currency = shopJson?.shop?.currency || 'USD';
     const shopTz = shopJson?.shop?.iana_timezone || 'UTC';
+    
+    console.log(`Connected to shop. Currency: ${currency}, Timezone: ${shopTz}`);
 
     // Determine timezone to use
     const tz: string = (payload?.timezone && typeof payload.timezone === 'string') ? payload.timezone : shopTz;
@@ -164,8 +200,32 @@ serve(async (req) => {
     const allOrders: any[] = [];
 
     while (url) {
-      const resp = await fetch(url, { headers: { 'X-Shopify-Access-Token': apiToken } });
-      if (!resp.ok) throw new Error(`Shopify API error: ${resp.status}`);
+      const resp = await fetch(url, { 
+        headers: { 
+          'X-Shopify-Access-Token': apiToken,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!resp.ok) {
+        const errorText = await resp.text();
+        console.error(`Orders API error: ${resp.status} - ${errorText}`);
+        
+        // Return specific error for 401
+        if (resp.status === 401) {
+          return new Response(
+            JSON.stringify({ 
+              connected: false, 
+              error: 'Invalid Shopify access token. Please reconnect your store.',
+              details: 'The access token may have expired or been revoked.'
+            }),
+            { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
+        throw new Error(`Shopify orders API error: ${resp.status}`);
+      }
+      
       const json = await resp.json();
       const pageOrders = Array.isArray(json?.orders) ? json.orders : [];
       allOrders.push(...pageOrders);
@@ -232,8 +292,17 @@ serve(async (req) => {
 
     // Fetch products (basic info)
     const productsResp = await fetch(`https://${domain}/admin/api/2024-07/products.json?limit=250&fields=id,title,handle,product_type,images,variants,created_at,status,vendor`, {
-      headers: { 'X-Shopify-Access-Token': apiToken }
+      headers: { 
+        'X-Shopify-Access-Token': apiToken,
+        'Content-Type': 'application/json'
+      }
     });
+    
+    if (!productsResp.ok) {
+      console.error(`Products API error: ${productsResp.status}`);
+      // Don't fail the entire request for products, just return empty array
+    }
+    
     const productsJson = productsResp.ok ? await productsResp.json() : { products: [] };
     const products = (productsJson.products || []).map((p: any) => ({
       id: String(p.id),
