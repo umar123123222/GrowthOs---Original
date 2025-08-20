@@ -78,13 +78,24 @@ serve(async (req) => {
 
       if (!userErr && userData?.meta_ads_credentials) {
         try {
-          const creds = JSON.parse(userData.meta_ads_credentials)
+          // Try to decrypt first (for encrypted credentials)
+          const decryptedCreds = await decrypt(userData.meta_ads_credentials)
+          const creds = JSON.parse(decryptedCreds)
           if (creds.accessToken && creds.accountId) {
             accessToken = creds.accessToken
             externalId = String(creds.accountId)
           }
         } catch (e) {
-          console.error('Failed to parse legacy Meta Ads credentials:', e)
+          // If decryption fails, try parsing as plain JSON
+          try {
+            const creds = JSON.parse(userData.meta_ads_credentials)
+            if (creds.accessToken && creds.accountId) {
+              accessToken = creds.accessToken
+              externalId = String(creds.accountId)
+            }
+          } catch (parseError) {
+            console.error('Failed to parse legacy Meta Ads credentials:', e, parseError)
+          }
         }
       }
     }
