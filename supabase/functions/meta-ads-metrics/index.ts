@@ -78,24 +78,51 @@ serve(async (req) => {
 
       if (!userErr && userData?.meta_ads_credentials) {
         try {
-          // Try to decrypt first (for encrypted credentials)
-          const decryptedCreds = await decrypt(userData.meta_ads_credentials)
-          const creds = JSON.parse(decryptedCreds)
-          if (creds.accessToken && creds.accountId) {
-            accessToken = creds.accessToken
-            externalId = String(creds.accountId)
+          // Check if it's already a plain access token string
+          const rawCredential = userData.meta_ads_credentials.trim()
+          
+          // If it starts with EAA or similar, it's likely a plain access token
+          if (rawCredential.startsWith('EAA') || rawCredential.startsWith('CAA')) {
+            // It's a plain access token, we need account ID from elsewhere
+            console.log('Found plain access token, checking for account ID in other fields')
+            
+            // Check if there's an account ID in another field
+            const { data: userProfile, error: profileErr } = await supabaseClient
+              .from('users')
+              .select('meta_account_id')
+              .eq('id', user.user.id)
+              .maybeSingle()
+            
+            if (!profileErr && userProfile?.meta_account_id) {
+              accessToken = rawCredential
+              externalId = String(userProfile.meta_account_id)
+            } else {
+              console.log('Plain access token found but no account ID available')
+            }
+          } else {
+            // Try to decrypt first (for encrypted credentials)
+            try {
+              const decryptedCreds = await decrypt(rawCredential)
+              const creds = JSON.parse(decryptedCreds)
+              if (creds.accessToken && creds.accountId) {
+                accessToken = creds.accessToken
+                externalId = String(creds.accountId)
+              }
+            } catch (decryptError) {
+              // If decryption fails, try parsing as plain JSON
+              try {
+                const creds = JSON.parse(rawCredential)
+                if (creds.accessToken && creds.accountId) {
+                  accessToken = creds.accessToken
+                  externalId = String(creds.accountId)
+                }
+              } catch (parseError) {
+                console.error('Failed to parse legacy Meta Ads credentials:', decryptError, parseError)
+              }
+            }
           }
         } catch (e) {
-          // If decryption fails, try parsing as plain JSON
-          try {
-            const creds = JSON.parse(userData.meta_ads_credentials)
-            if (creds.accessToken && creds.accountId) {
-              accessToken = creds.accessToken
-              externalId = String(creds.accountId)
-            }
-          } catch (parseError) {
-            console.error('Failed to parse legacy Meta Ads credentials:', e, parseError)
-          }
+          console.error('Error processing legacy Meta Ads credentials:', e)
         }
       }
     }
