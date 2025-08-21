@@ -72,7 +72,22 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
   }, [user]);
 
   const handleSendMessage = useCallback(async () => {
-    if (!message.trim() || isLoading || !user?.id) return;
+    console.log('HandleSendMessage called with:', { message: message.trim(), isLoading, userId: user?.id, user });
+    
+    if (!message.trim() || isLoading) {
+      console.log('Message sending blocked:', { messageEmpty: !message.trim(), isLoading });
+      return;
+    }
+
+    if (!user?.id) {
+      console.log('User ID missing:', user);
+      toast({
+        title: "User Error",
+        description: "User information not available. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now(),
