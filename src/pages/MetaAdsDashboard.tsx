@@ -31,8 +31,7 @@ const MetaAdsDashboard = () => {
     averageCTR: 0,
     averageCPC: 0,
     averageROAS: 0,
-    lastUpdated: null,
-    currency: 'USD' // Default to USD
+    lastUpdated: null
   });
   const [connectionStatus, setConnectionStatus] = useState('checking');
   const [currentPage, setCurrentPage] = useState(1);
@@ -66,7 +65,6 @@ const MetaAdsDashboard = () => {
         averageCTR: m.averageCTR ?? m.ctr ?? 0,
         averageCPC: m.averageCPC ?? m.cpc ?? 0,
         averageROAS: m.averageROAS ?? 0,
-        currency: m.currency || data.currency || 'USD', // Get currency from API response
         lastUpdated: new Date().toISOString()
       });
       setConnectionStatus('connected');
@@ -85,7 +83,7 @@ const MetaAdsDashboard = () => {
   const formatCurrency = amount => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: metaData.currency || 'USD'
+      currency: 'USD'
     }).format(amount);
   };
   const formatNumber = num => {
@@ -181,7 +179,7 @@ const MetaAdsDashboard = () => {
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3 px-4 py-2 rounded-full border shadow-soft">
               {getStatusIcon()}
               <span className="text-sm font-medium">
                 {connectionStatus === 'connected' ? 'Live Connected' : 'Connection Issue'}
@@ -321,7 +319,7 @@ const MetaAdsDashboard = () => {
                         <div>
                           <h4 className="font-semibold text-xl text-foreground mb-1">{campaign.name}</h4>
                           <div className="flex items-center space-x-3">
-                            <Badge className="bg-success/10 text-success border-success/20 px-3 py-1 flex items-center justify-center min-w-[60px]">
+                            <Badge className="bg-success/10 text-success border-success/20 px-3 py-1 flex items-center justify-start">
                               <span className="inline-block w-2 h-2 bg-success rounded-full mr-2 animate-pulse"></span>
                               Active
                             </Badge>
@@ -515,7 +513,7 @@ const MetaAdsDashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
-                <div>
+                <div className="py-[10px]">
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium">Excellent Performance</span>
                     <span className="text-sm text-muted-foreground">
