@@ -217,42 +217,140 @@ serve(async (req) => {
       totalImpressions: 0,
       totalClicks: 0,
       totalConversions: 0,
+      totalConversionValue: 0,
       averageCTR: 0,
       averageCPC: 0,
+      averageROAS: 0,
       campaigns: [] as any[],
       adSets: [] as any[],
       ads: [] as any[],
     }
 
     try {
-      // Helper function to categorize performance
-      const categorizePerformance = (ctr: number, cpc: number): string => {
-        if (ctr >= 2.0 && cpc <= 1.0) return 'excellent'
-        if (ctr >= 1.5 && cpc <= 2.0) return 'good'
-        if (ctr >= 1.0 && cpc <= 3.0) return 'average'
-        return 'poor'
+      // Enhanced performance categorization function
+      const categorizePerformance = (
+        ctr: number, 
+        cpc: number, 
+        roas: number, 
+        objective: string = 'UNKNOWN',
+        spend: number = 0
+      ): string => {
+        // Primary score based on objective
+        let primaryScore = 0;
+        let secondaryScore = 0;
+        
+        switch (objective.toUpperCase()) {
+          case 'CONVERSIONS':
+          case 'PURCHASE':
+          case 'CATALOG_SALES':
+            // For conversion objectives, prioritize ROAS
+            if (roas >= 400) primaryScore = 100;
+            else if (roas >= 250) primaryScore = 80;
+            else if (roas >= 150) primaryScore = 60;
+            else if (roas >= 100) primaryScore = 40;
+            else primaryScore = 20;
+            
+            // Secondary: CTR for conversion campaigns
+            if (ctr >= 1.5) secondaryScore = 20;
+            else if (ctr >= 1.0) secondaryScore = 15;
+            else if (ctr >= 0.5) secondaryScore = 10;
+            else secondaryScore = 5;
+            break;
+            
+          case 'TRAFFIC':
+          case 'LINK_CLICKS':
+            // For traffic objectives, prioritize CTR and CPC
+            if (ctr >= 2.5) primaryScore = 100;
+            else if (ctr >= 2.0) primaryScore = 80;
+            else if (ctr >= 1.5) primaryScore = 60;
+            else if (ctr >= 1.0) primaryScore = 40;
+            else primaryScore = 20;
+            
+            // Dynamic CPC threshold based on spend
+            const cpcThreshold = spend > 500 ? 2.0 : spend > 100 ? 1.5 : 1.0;
+            if (cpc <= cpcThreshold * 0.5) secondaryScore = 20;
+            else if (cpc <= cpcThreshold) secondaryScore = 15;
+            else if (cpc <= cpcThreshold * 1.5) secondaryScore = 10;
+            else secondaryScore = 5;
+            break;
+            
+          case 'BRAND_AWARENESS':
+          case 'REACH':
+          case 'IMPRESSIONS':
+            // For awareness objectives, focus on reach efficiency
+            // Use CTR as engagement proxy and CPC for cost efficiency
+            if (ctr >= 1.0) primaryScore = 100;
+            else if (ctr >= 0.75) primaryScore = 80;
+            else if (ctr >= 0.5) primaryScore = 60;
+            else if (ctr >= 0.25) primaryScore = 40;
+            else primaryScore = 20;
+            
+            if (cpc <= 0.5) secondaryScore = 20;
+            else if (cpc <= 1.0) secondaryScore = 15;
+            else if (cpc <= 2.0) secondaryScore = 10;
+            else secondaryScore = 5;
+            break;
+            
+          case 'LEAD_GENERATION':
+            // For lead gen, balance between ROAS and CTR
+            if (roas >= 300) primaryScore = 100;
+            else if (roas >= 200) primaryScore = 80;
+            else if (roas >= 120) primaryScore = 60;
+            else if (roas >= 80) primaryScore = 40;
+            else primaryScore = 20;
+            
+            if (ctr >= 2.0) secondaryScore = 20;
+            else if (ctr >= 1.5) secondaryScore = 15;
+            else if (ctr >= 1.0) secondaryScore = 10;
+            else secondaryScore = 5;
+            break;
+            
+          default:
+            // Fallback: balanced approach
+            const ctrScore = ctr >= 2.0 ? 50 : ctr >= 1.5 ? 40 : ctr >= 1.0 ? 30 : 20;
+            const cpcScore = cpc <= 1.0 ? 30 : cpc <= 2.0 ? 25 : cpc <= 3.0 ? 20 : 10;
+            const roasScore = roas >= 200 ? 20 : roas >= 100 ? 15 : roas >= 50 ? 10 : 5;
+            primaryScore = ctrScore + cpcScore;
+            secondaryScore = roasScore;
+        }
+        
+        const totalScore = primaryScore + secondaryScore;
+        
+        if (totalScore >= 90) return 'excellent';
+        if (totalScore >= 70) return 'good';
+        if (totalScore >= 50) return 'average';
+        return 'poor';
       }
 
-      // Fetch account-level insights
+      // Fetch account-level insights with enhanced metrics
       const accountUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`)
       accountUrl.searchParams.set('date_preset', 'last_7d')
-      accountUrl.searchParams.set('fields', 'spend,impressions,clicks,actions,cpc,ctr')
+      accountUrl.searchParams.set('fields', 'spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach')
       accountUrl.searchParams.set('access_token', accessToken)
 
       const accountResp = await fetch(accountUrl.toString())
       if (accountResp.ok) {
         const accountJson = await accountResp.json()
         const accountRows = accountJson.data || []
-        let spendSum = 0, impSum = 0, clickSum = 0, convSum = 0, ctrSum = 0, cpcSum = 0
+        let spendSum = 0, impSum = 0, clickSum = 0, convSum = 0, convValueSum = 0, ctrSum = 0, cpcSum = 0
         let ctrCount = 0, cpcCount = 0
         for (const r of accountRows) {
           spendSum += Number(r.spend || 0)
           impSum += Number(r.impressions || 0)
           clickSum += Number(r.clicks || 0)
+          
+          // Count conversions and calculate conversion values
           if (Array.isArray(r.actions)) {
             const purchase = r.actions.find((a: any) => a.action_type?.includes('purchase'))
             if (purchase) convSum += Number(purchase.value || 0)
           }
+          
+          // Calculate conversion values for ROAS
+          if (Array.isArray(r.action_values)) {
+            const purchaseValue = r.action_values.find((av: any) => av.action_type?.includes('purchase'))
+            if (purchaseValue) convValueSum += Number(purchaseValue.value || 0)
+          }
+          
           if (r.ctr != null) { ctrSum += Number(r.ctr); ctrCount++ }
           if (r.cpc != null) { cpcSum += Number(r.cpc); cpcCount++ }
         }
@@ -262,11 +360,13 @@ serve(async (req) => {
         metrics.totalConversions = convSum
         metrics.averageCTR = ctrCount ? (ctrSum / ctrCount) : 0
         metrics.averageCPC = cpcCount ? (cpcSum / cpcCount) : 0
+        metrics.totalConversionValue = convValueSum
+        metrics.averageROAS = spendSum > 0 ? (convValueSum / spendSum) * 100 : 0
       }
 
-      // Fetch campaigns with insights
+      // Fetch campaigns with enhanced insights
       const campaignsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`)
-      campaignsUrl.searchParams.set('fields', 'id,name,status,objective,insights{spend,impressions,clicks,actions,cpc,ctr}')
+      campaignsUrl.searchParams.set('fields', 'id,name,status,objective,insights{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}')
       campaignsUrl.searchParams.set('date_preset', 'last_7d')
       campaignsUrl.searchParams.set('limit', '50')
       campaignsUrl.searchParams.set('access_token', accessToken)
@@ -283,32 +383,58 @@ serve(async (req) => {
           const clicks = Number(insights.clicks || 0)
           const ctr = Number(insights.ctr || 0)
           const cpc = Number(insights.cpc || 0)
+          const frequency = Number(insights.frequency || 0)
+          const reach = Number(insights.reach || 0)
           
           let conversions = 0
+          let conversionValue = 0
+          let costPerPurchase = 0
+          
+          // Count conversions
           if (Array.isArray(insights.actions)) {
             const purchase = insights.actions.find((a: any) => a.action_type?.includes('purchase'))
             if (purchase) conversions = Number(purchase.value || 0)
           }
+          
+          // Calculate conversion values for ROAS
+          if (Array.isArray(insights.action_values)) {
+            const purchaseValue = insights.action_values.find((av: any) => av.action_type?.includes('purchase'))
+            if (purchaseValue) conversionValue = Number(purchaseValue.value || 0)
+          }
+          
+          // Get cost per purchase
+          if (Array.isArray(insights.cost_per_action_type)) {
+            const purchaseCost = insights.cost_per_action_type.find((cpa: any) => cpa.action_type?.includes('purchase'))
+            if (purchaseCost) costPerPurchase = Number(purchaseCost.value || 0)
+          }
+          
+          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0
+          const objective = campaign.objective || 'UNKNOWN'
 
           metrics.campaigns.push({
             id: campaign.id,
             name: campaign.name || 'Untitled Campaign',
             status: campaign.status === 'ACTIVE' ? 'Active' : campaign.status || 'Unknown',
-            objective: campaign.objective || 'Unknown',
-            performance: categorizePerformance(ctr, cpc),
+            objective,
+            performance: categorizePerformance(ctr, cpc, roas, objective, spend),
             spend,
             impressions,
             clicks,
             conversions,
+            conversionValue,
+            roas,
+            costPerPurchase,
             ctr,
-            cpc
+            cpc,
+            frequency,
+            reach
           })
         }
       }
 
-      // Fetch ads with insights
+      // Fetch ads with enhanced insights
       const adsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/ads`)
-      adsUrl.searchParams.set('fields', 'id,name,status,insights{spend,impressions,clicks,actions,cpc,ctr}')
+      adsUrl.searchParams.set('fields', 'id,name,status,creative{object_story_spec},insights{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}')
       adsUrl.searchParams.set('date_preset', 'last_7d')
       adsUrl.searchParams.set('limit', '100')
       adsUrl.searchParams.set('access_token', accessToken)
@@ -325,24 +451,52 @@ serve(async (req) => {
           const clicks = Number(insights.clicks || 0)
           const ctr = Number(insights.ctr || 0)
           const cpc = Number(insights.cpc || 0)
+          const frequency = Number(insights.frequency || 0)
+          const reach = Number(insights.reach || 0)
           
           let conversions = 0
+          let conversionValue = 0
+          let costPerPurchase = 0
+          
+          // Count conversions
           if (Array.isArray(insights.actions)) {
             const purchase = insights.actions.find((a: any) => a.action_type?.includes('purchase'))
             if (purchase) conversions = Number(purchase.value || 0)
           }
+          
+          // Calculate conversion values for ROAS
+          if (Array.isArray(insights.action_values)) {
+            const purchaseValue = insights.action_values.find((av: any) => av.action_type?.includes('purchase'))
+            if (purchaseValue) conversionValue = Number(purchaseValue.value || 0)
+          }
+          
+          // Get cost per purchase
+          if (Array.isArray(insights.cost_per_action_type)) {
+            const purchaseCost = insights.cost_per_action_type.find((cpa: any) => cpa.action_type?.includes('purchase'))
+            if (purchaseCost) costPerPurchase = Number(purchaseCost.value || 0)
+          }
+          
+          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0
+          
+          // Infer objective from parent campaign or use default
+          const objective = 'CONVERSIONS' // Default assumption for ads
 
           metrics.ads.push({
             id: ad.id,
             name: ad.name || 'Untitled Ad',
             status: ad.status === 'ACTIVE' ? 'Active' : ad.status || 'Unknown',
-            performance: categorizePerformance(ctr, cpc),
+            performance: categorizePerformance(ctr, cpc, roas, objective, spend),
             spend,
             impressions,
             clicks,
             conversions,
+            conversionValue,
+            roas,
+            costPerPurchase,
             ctr,
-            cpc
+            cpc,
+            frequency,
+            reach
           })
         }
       }
