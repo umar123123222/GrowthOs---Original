@@ -4,39 +4,19 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Pagination, 
-  PaginationContent, 
-  PaginationEllipsis, 
-  PaginationItem, 
-  PaginationLink, 
-  PaginationNext, 
-  PaginationPrevious 
-} from '@/components/ui/pagination';
-import { 
-  Target, 
-  TrendingUp, 
-  Eye, 
-  MousePointer,
-  DollarSign,
-  RefreshCw,
-  ExternalLink,
-  AlertCircle,
-  CheckCircle2,
-  ArrowUp,
-  ArrowDown,
-  Minus,
-  Sparkles,
-  Activity
-} from 'lucide-react';
+import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
+import { Target, TrendingUp, Eye, MousePointer, DollarSign, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Minus, Sparkles, Activity } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-
 const MetaAdsDashboard = () => {
-  const { toast } = useToast();
-  const { user } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    user
+  } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [metaData, setMetaData] = useState({
@@ -56,23 +36,22 @@ const MetaAdsDashboard = () => {
   const [connectionStatus, setConnectionStatus] = useState('checking');
   const [currentPage, setCurrentPage] = useState(1);
   const adsPerPage = 3;
-
   useEffect(() => {
     fetchMetaAdsData();
   }, []);
-
   const fetchMetaAdsData = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('meta-ads-metrics');
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('meta-ads-metrics');
       if (error) throw error;
-
       if (!data?.connected) {
         setConnectionStatus('disconnected');
         setLoading(false);
         return;
       }
-
       const m = data.metrics || {};
       setMetaData({
         campaigns: m.campaigns || [],
@@ -89,32 +68,28 @@ const MetaAdsDashboard = () => {
         lastUpdated: new Date().toISOString()
       });
       setConnectionStatus('connected');
-      
     } catch (error) {
       console.error('Error fetching Meta Ads data:', error);
       setConnectionStatus('error');
       toast({
         title: "Connection Error",
         description: "Failed to fetch Meta Ads data. Please check your API connection.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
-  const formatCurrency = (amount) => {
+  const formatCurrency = amount => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(amount);
   };
-
-  const formatNumber = (num) => {
+  const formatNumber = num => {
     return new Intl.NumberFormat('en-US').format(num);
   };
-
-  const getPerformanceIcon = (performance) => {
+  const getPerformanceIcon = performance => {
     switch (performance) {
       case 'excellent':
         return <ArrowUp className="h-4 w-4 text-green-600" />;
@@ -126,22 +101,17 @@ const MetaAdsDashboard = () => {
         return <Minus className="h-4 w-4 text-yellow-600" />;
     }
   };
-
-  const getPerformanceBadge = (performance) => {
+  const getPerformanceBadge = performance => {
     const variants = {
       excellent: 'bg-green-100 text-green-800',
       good: 'bg-blue-100 text-blue-800',
       average: 'bg-yellow-100 text-yellow-800',
       poor: 'bg-red-100 text-red-800'
     };
-    
-    return (
-      <Badge className={variants[performance] || variants.average}>
+    return <Badge className={variants[performance] || variants.average}>
         {performance.charAt(0).toUpperCase() + performance.slice(1)}
-      </Badge>
-    );
+      </Badge>;
   };
-
   const getStatusIcon = () => {
     switch (connectionStatus) {
       case 'connected':
@@ -152,32 +122,33 @@ const MetaAdsDashboard = () => {
         return <RefreshCw className="h-4 w-4 text-yellow-600 animate-spin" />;
     }
   };
-
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-96 animate-fade-in">
+    return <div className="flex items-center justify-center min-h-96 animate-fade-in">
         <div className="text-center">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-success/20 rounded-full blur-lg opacity-50"></div>
-            <RefreshCw className="h-12 w-12 animate-spin mx-auto mb-6 relative z-10" style={{color: 'hsl(var(--primary))'}} />
+            <RefreshCw className="h-12 w-12 animate-spin mx-auto mb-6 relative z-10" style={{
+            color: 'hsl(var(--primary))'
+          }} />
           </div>
           <p className="text-muted-foreground font-medium">Loading your Meta Ads insights...</p>
           <div className="flex items-center justify-center mt-4 space-x-2">
-            <Sparkles className="h-4 w-4 animate-pulse" style={{color: 'hsl(var(--primary))'}} />
+            <Sparkles className="h-4 w-4 animate-pulse" style={{
+            color: 'hsl(var(--primary))'
+          }} />
             <span className="text-sm text-muted-foreground">Fetching campaign data</span>
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
   if (connectionStatus === 'disconnected') {
-    return (
-      <div className="max-w-4xl mx-auto animate-fade-in">
+    return <div className="max-w-4xl mx-auto animate-fade-in">
         <Card className="text-center p-12 shadow-elevated">
           <div className="relative mb-8">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-warning/10 rounded-full blur-2xl"></div>
-            <Target className="h-20 w-20 mx-auto relative z-10" style={{color: 'hsl(var(--primary))'}} />
+            <Target className="h-20 w-20 mx-auto relative z-10" style={{
+            color: 'hsl(var(--primary))'
+          }} />
           </div>
           <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-success bg-clip-text text-transparent">
             Connect Your Meta Ads Account
@@ -185,21 +156,14 @@ const MetaAdsDashboard = () => {
           <p className="text-muted-foreground mb-8 max-w-md mx-auto text-lg">
             Unlock powerful insights and analytics for your advertising campaigns.
           </p>
-          <Button 
-            onClick={() => navigate('/connect')} 
-            size="lg" 
-            className="gradient-primary hover-lift shadow-medium px-8 py-3"
-          >
+          <Button onClick={() => navigate('/connect')} size="lg" className="gradient-primary hover-lift shadow-medium px-8 py-3">
             <ExternalLink className="h-5 w-5 mr-2" />
             Connect Meta Ads Account
           </Button>
         </Card>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <TooltipProvider>
+  return <TooltipProvider>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-8 animate-slide-up">
@@ -208,7 +172,9 @@ const MetaAdsDashboard = () => {
               Meta Ads Dashboard
             </h1>
             <p className="text-muted-foreground text-lg mt-2 flex items-center">
-              <Activity className="h-5 w-5 mr-2" style={{color: 'hsl(var(--primary))'}} />
+              <Activity className="h-5 w-5 mr-2" style={{
+              color: 'hsl(var(--primary))'
+            }} />
               Real-time campaign performance and advertising analytics
             </p>
           </div>
@@ -219,12 +185,7 @@ const MetaAdsDashboard = () => {
                 {connectionStatus === 'connected' ? 'Live Connected' : 'Connection Issue'}
               </span>
             </div>
-            <Button 
-              onClick={fetchMetaAdsData} 
-              variant="outline" 
-              size="sm" 
-              className="hover-lift shadow-soft"
-            >
+            <Button onClick={fetchMetaAdsData} variant="outline" size="sm" className="hover-lift shadow-soft">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh Data
             </Button>
@@ -237,7 +198,9 @@ const MetaAdsDashboard = () => {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
               <CardTitle className="text-sm font-medium text-foreground">Total Spend</CardTitle>
               <div className="p-2 rounded-lg bg-primary/10">
-                <DollarSign className="h-5 w-5 metric-icon" style={{color: 'hsl(var(--primary))'}} />
+                <DollarSign className="h-5 w-5 metric-icon" style={{
+                color: 'hsl(var(--primary))'
+              }} />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
@@ -255,7 +218,9 @@ const MetaAdsDashboard = () => {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
               <CardTitle className="text-sm font-medium text-foreground">Impressions</CardTitle>
               <div className="p-2 rounded-lg bg-success/10">
-                <Eye className="h-5 w-5 metric-icon" style={{color: 'hsl(var(--success))'}} />
+                <Eye className="h-5 w-5 metric-icon" style={{
+                color: 'hsl(var(--success))'
+              }} />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
@@ -273,7 +238,9 @@ const MetaAdsDashboard = () => {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
               <CardTitle className="text-sm font-medium text-foreground">Conversions</CardTitle>
               <div className="p-2 rounded-lg bg-warning/10">
-                <TrendingUp className="h-5 w-5 metric-icon" style={{color: 'hsl(var(--warning))'}} />
+                <TrendingUp className="h-5 w-5 metric-icon" style={{
+                color: 'hsl(var(--warning))'
+              }} />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
@@ -290,8 +257,12 @@ const MetaAdsDashboard = () => {
           <Card className="metric-card metric-pink hover-lift shadow-soft border-0">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
               <CardTitle className="text-sm font-medium text-foreground">ROAS</CardTitle>
-              <div className="p-2 rounded-lg" style={{backgroundColor: 'hsl(330 81% 60% / 0.1)'}}>
-                <MousePointer className="h-5 w-5 metric-icon" style={{color: 'hsl(330 81% 60%)'}} />
+              <div className="p-2 rounded-lg" style={{
+              backgroundColor: 'hsl(330 81% 60% / 0.1)'
+            }}>
+                <MousePointer className="h-5 w-5 metric-icon" style={{
+                color: 'hsl(330 81% 60%)'
+              }} />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
@@ -299,7 +270,9 @@ const MetaAdsDashboard = () => {
                 {metaData.averageROAS ? `${metaData.averageROAS.toFixed(1)}%` : 'N/A'}
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
-                <span className="inline-block w-2 h-2 rounded-full mr-2" style={{backgroundColor: 'hsl(330 81% 60%)'}}></span>
+                <span className="inline-block w-2 h-2 rounded-full mr-2" style={{
+                backgroundColor: 'hsl(330 81% 60%)'
+              }}></span>
                 {formatCurrency(metaData.totalConversionValue || 0)} revenue
               </p>
             </CardContent>
@@ -317,37 +290,31 @@ const MetaAdsDashboard = () => {
               All currently active advertising campaigns with real-time metrics
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="py-[15px]">
             <div className="space-y-4">
               {(() => {
-                const activeCampaigns = metaData.campaigns.filter(campaign => 
-                  campaign.status === 'Active' || campaign.status === 'active' || campaign.status === 'ACTIVE'
-                );
-                
-                if (activeCampaigns.length === 0) {
-                  return (
-                    <div className="text-center py-12">
+              const activeCampaigns = metaData.campaigns.filter(campaign => campaign.status === 'Active' || campaign.status === 'active' || campaign.status === 'ACTIVE');
+              if (activeCampaigns.length === 0) {
+                return <div className="text-center py-12">
                       <Target className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                       <h3 className="text-lg font-medium mb-2">No Active Campaigns Found</h3>
                       <p className="text-muted-foreground mb-4">
-                        {metaData.campaigns.length === 0 
-                          ? "No campaigns have been created yet or the API couldn't fetch campaign details."
-                          : `You have ${metaData.campaigns.length} total campaigns, but none are currently active.`
-                        }
+                        {metaData.campaigns.length === 0 ? "No campaigns have been created yet or the API couldn't fetch campaign details." : `You have ${metaData.campaigns.length} total campaigns, but none are currently active.`}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Total account metrics: {formatCurrency(metaData.totalSpend)} spent, {formatNumber(metaData.totalImpressions)} impressions
                       </p>
-                    </div>
-                  );
-                }
-
-                return activeCampaigns.map((campaign, index) => (
-                  <div key={campaign.id} className="border rounded-xl p-6 hover-lift shadow-soft hover:shadow-medium transition-all duration-300 bg-gradient-to-r from-card to-muted/20" style={{animationDelay: `${index * 100}ms`}}>
+                    </div>;
+              }
+              return activeCampaigns.map((campaign, index) => <div key={campaign.id} className="border rounded-xl p-6 hover-lift shadow-soft hover:shadow-medium transition-all duration-300 bg-gradient-to-r from-card to-muted/20" style={{
+                animationDelay: `${index * 100}ms`
+              }}>
                     <div className="flex items-center justify-between mb-6">
                       <div className="flex items-center space-x-4">
                         <div className="p-3 rounded-full bg-gradient-to-r from-primary/20 to-success/20">
-                          <Activity className="h-6 w-6" style={{color: 'hsl(var(--primary))'}} />
+                          <Activity className="h-6 w-6" style={{
+                        color: 'hsl(var(--primary))'
+                      }} />
                         </div>
                         <div>
                           <h4 className="font-semibold text-xl text-foreground mb-1">{campaign.name}</h4>
@@ -371,21 +338,27 @@ const MetaAdsDashboard = () => {
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
                       <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/10">
                         <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <DollarSign className="h-3 w-3 mr-1" style={{color: 'hsl(var(--primary))'}} />
+                          <DollarSign className="h-3 w-3 mr-1" style={{
+                        color: 'hsl(var(--primary))'
+                      }} />
                           Daily Spend
                         </p>
                         <p className="font-bold text-lg text-foreground">{formatCurrency(campaign.spend || 0)}</p>
                       </div>
                       <div className="bg-gradient-to-br from-success/5 to-success/10 rounded-lg p-4 border border-success/10">
                         <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <TrendingUp className="h-3 w-3 mr-1" style={{color: 'hsl(var(--success))'}} />
+                          <TrendingUp className="h-3 w-3 mr-1" style={{
+                        color: 'hsl(var(--success))'
+                      }} />
                           ROAS
                         </p>
                         <p className="font-bold text-lg text-foreground">{campaign.roas ? `${campaign.roas.toFixed(2)}x` : 'N/A'}</p>
                       </div>
                       <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 border border-warning/10">
                         <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <Target className="h-3 w-3 mr-1" style={{color: 'hsl(var(--warning))'}} />
+                          <Target className="h-3 w-3 mr-1" style={{
+                        color: 'hsl(var(--warning))'
+                      }} />
                           Results
                         </p>
                         <p className="font-bold text-lg text-foreground">{formatNumber(campaign.results || 0)}</p>
@@ -420,23 +393,17 @@ const MetaAdsDashboard = () => {
                       </div>
                     </div>
                     
-                    {campaign.budget && campaign.spend && (
-                      <div className="space-y-2">
+                    {campaign.budget && campaign.spend && <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span>Budget Utilization</span>
                           <span className="font-medium">
-                            {((campaign.spend / campaign.budget) * 100).toFixed(1)}%
+                            {(campaign.spend / campaign.budget * 100).toFixed(1)}%
                           </span>
                         </div>
-                        <Progress 
-                          value={(campaign.spend / campaign.budget) * 100} 
-                          className="h-3"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ));
-              })()}
+                        <Progress value={campaign.spend / campaign.budget * 100} className="h-3" />
+                      </div>}
+                  </div>);
+            })()}
             </div>
           </CardContent>
         </Card>
@@ -445,7 +412,9 @@ const MetaAdsDashboard = () => {
         <Card className="lg:col-span-2 shadow-medium hover-lift border-0 animate-fade-in">
           <CardHeader className="bg-gradient-to-r from-secondary to-accent text-foreground rounded-t-lg">
             <CardTitle className="flex items-center text-xl">
-              <Sparkles className="h-6 w-6 mr-3" style={{color: 'hsl(var(--primary))'}} />
+              <Sparkles className="h-6 w-6 mr-3" style={{
+              color: 'hsl(var(--primary))'
+            }} />
               All Active Ads
             </CardTitle>
             <CardDescription className="text-muted-foreground">
@@ -455,17 +424,13 @@ const MetaAdsDashboard = () => {
           <CardContent>
             <div className="space-y-4">
               {(() => {
-                const activeAds = metaData.ads.filter(ad => ad.status === 'Active' || ad.status === 'active');
-                const totalPages = Math.ceil(activeAds.length / adsPerPage);
-                const startIndex = (currentPage - 1) * adsPerPage;
-                const endIndex = startIndex + adsPerPage;
-                const currentAds = activeAds.slice(startIndex, endIndex);
-
-                return (
-                  <>
-                    {currentAds.length > 0 ? (
-                      currentAds.map((ad, index) => (
-                        <div key={ad.id} className="flex items-center justify-between p-4 border rounded-lg">
+              const activeAds = metaData.ads.filter(ad => ad.status === 'Active' || ad.status === 'active');
+              const totalPages = Math.ceil(activeAds.length / adsPerPage);
+              const startIndex = (currentPage - 1) * adsPerPage;
+              const endIndex = startIndex + adsPerPage;
+              const currentAds = activeAds.slice(startIndex, endIndex);
+              return <>
+                    {currentAds.length > 0 ? currentAds.map((ad, index) => <div key={ad.id} className="flex items-center justify-between p-4 border rounded-lg">
                           <div className="flex items-center space-x-3">
                             <Badge variant="secondary" className="min-w-[32px] h-8 flex items-center justify-center">
                               {startIndex + index + 1}
@@ -498,55 +463,36 @@ const MetaAdsDashboard = () => {
                             <p className="text-xs text-muted-foreground">{formatNumber(ad.clicks)} clicks</p>
                             <p className="text-xs text-muted-foreground">{formatNumber(ad.impressions)} impressions</p>
                           </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="text-center py-8">
+                        </div>) : <div className="text-center py-8">
                         <p className="text-muted-foreground">No active ads found</p>
-                      </div>
-                    )}
+                      </div>}
                     
                     {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                      <div className="flex justify-center mt-6">
+                    {totalPages > 1 && <div className="flex justify-center mt-6">
                         <Pagination>
                           <PaginationContent>
                             <PaginationItem>
-                              <PaginationPrevious 
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
+                              <PaginationPrevious onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
                             </PaginationItem>
                             
-                            {[...Array(totalPages)].map((_, i) => (
-                              <PaginationItem key={i + 1}>
-                                <PaginationLink
-                                  onClick={() => setCurrentPage(i + 1)}
-                                  isActive={currentPage === i + 1}
-                                  className="cursor-pointer"
-                                >
+                            {[...Array(totalPages)].map((_, i) => <PaginationItem key={i + 1}>
+                                <PaginationLink onClick={() => setCurrentPage(i + 1)} isActive={currentPage === i + 1} className="cursor-pointer">
                                   {i + 1}
                                 </PaginationLink>
-                              </PaginationItem>
-                            ))}
+                              </PaginationItem>)}
                             
                             <PaginationItem>
-                              <PaginationNext
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
-                              />
+                              <PaginationNext onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
                             </PaginationItem>
                           </PaginationContent>
                         </Pagination>
-                      </div>
-                    )}
+                      </div>}
                     
                     <div className="text-center text-sm text-muted-foreground mt-4">
                       Showing {currentAds.length} of {activeAds.length} active ads
                     </div>
-                  </>
-                );
-              })()}
+                  </>;
+            })()}
             </div>
           </CardContent>
         </Card>
@@ -556,7 +502,9 @@ const MetaAdsDashboard = () => {
           <Card className="shadow-medium hover-lift border-0 animate-fade-in">
             <CardHeader className="bg-gradient-to-r from-muted to-accent/20 rounded-t-lg">
               <CardTitle className="flex items-center text-xl">
-                <Activity className="h-6 w-6 mr-3" style={{color: 'hsl(var(--success))'}} />
+                <Activity className="h-6 w-6 mr-3" style={{
+                color: 'hsl(var(--success))'
+              }} />
                 Performance Health
               </CardTitle>
               <CardDescription>
@@ -572,10 +520,7 @@ const MetaAdsDashboard = () => {
                       {metaData.campaigns.filter(c => c.performance === 'excellent').length} campaigns
                     </span>
                   </div>
-                  <Progress 
-                    value={(metaData.campaigns.filter(c => c.performance === 'excellent').length / metaData.campaigns.length) * 100} 
-                    className="h-2"
-                  />
+                  <Progress value={metaData.campaigns.filter(c => c.performance === 'excellent').length / metaData.campaigns.length * 100} className="h-2" />
                 </div>
                 
                 <div>
@@ -585,10 +530,7 @@ const MetaAdsDashboard = () => {
                       {metaData.campaigns.filter(c => c.performance === 'good').length} campaigns
                     </span>
                   </div>
-                  <Progress 
-                    value={(metaData.campaigns.filter(c => c.performance === 'good').length / metaData.campaigns.length) * 100} 
-                    className="h-2"
-                  />
+                  <Progress value={metaData.campaigns.filter(c => c.performance === 'good').length / metaData.campaigns.length * 100} className="h-2" />
                 </div>
                 
                 <div>
@@ -598,10 +540,7 @@ const MetaAdsDashboard = () => {
                       {metaData.campaigns.filter(c => c.performance === 'poor').length} campaigns
                     </span>
                   </div>
-                  <Progress 
-                    value={(metaData.campaigns.filter(c => c.performance === 'poor').length / metaData.campaigns.length) * 100} 
-                    className="h-2"
-                  />
+                  <Progress value={metaData.campaigns.filter(c => c.performance === 'poor').length / metaData.campaigns.length * 100} className="h-2" />
                 </div>
 
                 <div className="pt-4 border-t">
@@ -619,8 +558,6 @@ const MetaAdsDashboard = () => {
           Last updated: {metaData.lastUpdated ? new Date(metaData.lastUpdated).toLocaleString() : 'Never'}
         </div>
       </div>
-    </TooltipProvider>
-  );
+    </TooltipProvider>;
 };
-
 export default MetaAdsDashboard;
