@@ -31,7 +31,8 @@ const MetaAdsDashboard = () => {
     averageCTR: 0,
     averageCPC: 0,
     averageROAS: 0,
-    lastUpdated: null
+    lastUpdated: null,
+    currency: 'USD' // Default to USD
   });
   const [connectionStatus, setConnectionStatus] = useState('checking');
   const [currentPage, setCurrentPage] = useState(1);
@@ -65,6 +66,7 @@ const MetaAdsDashboard = () => {
         averageCTR: m.averageCTR ?? m.ctr ?? 0,
         averageCPC: m.averageCPC ?? m.cpc ?? 0,
         averageROAS: m.averageROAS ?? 0,
+        currency: m.currency || data.currency || 'USD', // Get currency from API response
         lastUpdated: new Date().toISOString()
       });
       setConnectionStatus('connected');
@@ -83,7 +85,7 @@ const MetaAdsDashboard = () => {
   const formatCurrency = amount => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: metaData.currency || 'USD'
     }).format(amount);
   };
   const formatNumber = num => {
