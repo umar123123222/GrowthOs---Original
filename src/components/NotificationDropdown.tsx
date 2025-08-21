@@ -18,17 +18,26 @@ interface Notification {
   error_message?: string;
 }
 const NotificationDropdown = () => {
-  const [notifications, setNotifications] = useState<(Notification & { displayTitle?: string; displayMessage?: string })[]>([]);
+  const [notifications, setNotifications] = useState<(Notification & {
+    displayTitle?: string;
+    displayMessage?: string;
+  })[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const getKeyAndData = (n: Notification) => {
     const key = (n as any).template_key || n.type;
     const data = n.payload?.data || n.payload?.metadata || n.payload || {};
-    return { key, data } as { key: string; data: any };
+    return {
+      key,
+      data
+    } as {
+      key: string;
+      data: any;
+    };
   };
-
   const enrichNotifications = async (items: Notification[]) => {
     const ticketIds = new Set<string>();
     const recordingIds = new Set<string>();
@@ -36,55 +45,64 @@ const NotificationDropdown = () => {
     const sessionIds = new Set<string>();
 
     // Collect IDs
-    items.forEach((n) => {
-      const { key, data } = getKeyAndData(n);
+    items.forEach(n => {
+      const {
+        key,
+        data
+      } = getKeyAndData(n);
       if (key === 'ticket_updated' && data.ticket_id) ticketIds.add(data.ticket_id);
-      if ((key === 'recording' || (key === 'learning_item_changed' && data.item_type === 'recording')) && (data.recording_id || data.item_id)) {
+      if ((key === 'recording' || key === 'learning_item_changed' && data.item_type === 'recording') && (data.recording_id || data.item_id)) {
         recordingIds.add(data.recording_id || data.item_id);
       }
-      if ((key === 'assignment' || (key === 'learning_item_changed' && data.item_type === 'assignment')) && (data.assignment_id || data.item_id)) {
+      if ((key === 'assignment' || key === 'learning_item_changed' && data.item_type === 'assignment') && (data.assignment_id || data.item_id)) {
         assignmentIds.add(data.assignment_id || data.item_id);
       }
-      if ((key === 'success_session' || (key === 'learning_item_changed' && data.item_type === 'success_session')) && (data.session_id || data.item_id)) {
+      if ((key === 'success_session' || key === 'learning_item_changed' && data.item_type === 'success_session') && (data.session_id || data.item_id)) {
         sessionIds.add(data.session_id || data.item_id);
       }
     });
 
     // Batch fetch titles
-    const [ticketsRes, recsRes, assignsRes, sessRes] = await Promise.all([
-      ticketIds.size ? supabase.from('support_tickets').select('id, title').in('id', Array.from(ticketIds)) : Promise.resolve({ data: [] as any[] }),
-      recordingIds.size ? supabase.from('available_lessons').select('id, recording_title').in('id', Array.from(recordingIds)) : Promise.resolve({ data: [] as any[] }),
-      assignmentIds.size ? supabase.from('assignments').select('id, name').in('id', Array.from(assignmentIds)) : Promise.resolve({ data: [] as any[] }),
-      sessionIds.size ? supabase.from('success_sessions').select('id, title').in('id', Array.from(sessionIds)) : Promise.resolve({ data: [] as any[] }),
-    ]);
-
+    const [ticketsRes, recsRes, assignsRes, sessRes] = await Promise.all([ticketIds.size ? supabase.from('support_tickets').select('id, title').in('id', Array.from(ticketIds)) : Promise.resolve({
+      data: [] as any[]
+    }), recordingIds.size ? supabase.from('available_lessons').select('id, recording_title').in('id', Array.from(recordingIds)) : Promise.resolve({
+      data: [] as any[]
+    }), assignmentIds.size ? supabase.from('assignments').select('id, name').in('id', Array.from(assignmentIds)) : Promise.resolve({
+      data: [] as any[]
+    }), sessionIds.size ? supabase.from('success_sessions').select('id, title').in('id', Array.from(sessionIds)) : Promise.resolve({
+      data: [] as any[]
+    })]);
     const ticketMap = Object.fromEntries((ticketsRes as any).data?.map((r: any) => [r.id, r.title]) || []);
     const recMap = Object.fromEntries((recsRes as any).data?.map((r: any) => [r.id, r.recording_title]) || []);
     const assignMap = Object.fromEntries((assignsRes as any).data?.map((r: any) => [r.id, r.name]) || []);
     const sessMap = Object.fromEntries((sessRes as any).data?.map((r: any) => [r.id, r.title]) || []);
-
-    return items.map((n) => {
-      const { key, data } = getKeyAndData(n);
+    return items.map(n => {
+      const {
+        key,
+        data
+      } = getKeyAndData(n);
       let displayTitle = n.payload?.title as string | undefined;
       let displayMessage = n.payload?.message as string | undefined || n.payload?.description;
-
       if (key === 'ticket_updated' && data.ticket_id && ticketMap[data.ticket_id]) {
         displayTitle = `Support Ticket: ${ticketMap[data.ticket_id]}`;
       }
-      if ((key === 'recording' || (key === 'learning_item_changed' && data.item_type === 'recording'))) {
+      if (key === 'recording' || key === 'learning_item_changed' && data.item_type === 'recording') {
         const rid = data.recording_id || data.item_id;
         if (rid && recMap[rid]) displayTitle = `Recording: ${recMap[rid]}`;
       }
-      if ((key === 'assignment' || (key === 'learning_item_changed' && data.item_type === 'assignment'))) {
+      if (key === 'assignment' || key === 'learning_item_changed' && data.item_type === 'assignment') {
         const aid = data.assignment_id || data.item_id;
         if (aid && assignMap[aid]) displayTitle = `Assignment: ${assignMap[aid]}`;
       }
-      if ((key === 'success_session' || (key === 'learning_item_changed' && data.item_type === 'success_session'))) {
+      if (key === 'success_session' || key === 'learning_item_changed' && data.item_type === 'success_session') {
         const sid = data.session_id || data.item_id;
         if (sid && sessMap[sid]) displayTitle = `Success Session: ${sessMap[sid]}`;
       }
-
-      return { ...n, displayTitle, displayMessage };
+      return {
+        ...n,
+        displayTitle,
+        displayMessage
+      };
     });
   };
   useEffect(() => {
@@ -239,7 +257,7 @@ const NotificationDropdown = () => {
       </PopoverTrigger>
       <PopoverContent className="w-[26rem] sm:w-[28rem] p-0 bg-transparent border-0 shadow-none" align="end">
         <div className="section-surface overflow-hidden">
-          <div className="section-header p-4">
+          <div className="section-header p-4 bg-slate-50">
             <div className="flex items-center justify-between">
               <h4 className="font-medium text-foreground">Notifications</h4>
               <div className="flex items-center gap-1">
