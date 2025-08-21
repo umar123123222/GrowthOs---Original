@@ -168,7 +168,7 @@ const MetaAdsDashboard = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-8 animate-slide-up">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-success to-warning bg-clip-text text-transparent">
+            <h1 className="text-4xl font-bold text-foreground">
               Meta Ads Dashboard
             </h1>
             <p className="text-muted-foreground text-lg mt-2 flex items-center">
