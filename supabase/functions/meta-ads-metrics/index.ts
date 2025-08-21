@@ -212,12 +212,6 @@ serve(async (req) => {
     const accountIdRaw = externalId
     const accountId = accountIdRaw.startsWith('act_') ? accountIdRaw : `act_${accountIdRaw}`
 
-    // Query Meta Marketing API for last 7 days insights
-    const url = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`)
-    url.searchParams.set('date_preset', 'last_7d')
-    url.searchParams.set('fields', 'spend,impressions,clicks,actions,cpc,ctr')
-    url.searchParams.set('access_token', accessToken)
-
     let metrics = {
       totalSpend: 0,
       totalImpressions: 0,
@@ -231,13 +225,27 @@ serve(async (req) => {
     }
 
     try {
-      const resp = await fetch(url.toString())
-      if (resp.ok) {
-        const json = await resp.json()
-        const rows = json.data || []
+      // Helper function to categorize performance
+      const categorizePerformance = (ctr: number, cpc: number): string => {
+        if (ctr >= 2.0 && cpc <= 1.0) return 'excellent'
+        if (ctr >= 1.5 && cpc <= 2.0) return 'good'
+        if (ctr >= 1.0 && cpc <= 3.0) return 'average'
+        return 'poor'
+      }
+
+      // Fetch account-level insights
+      const accountUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`)
+      accountUrl.searchParams.set('date_preset', 'last_7d')
+      accountUrl.searchParams.set('fields', 'spend,impressions,clicks,actions,cpc,ctr')
+      accountUrl.searchParams.set('access_token', accessToken)
+
+      const accountResp = await fetch(accountUrl.toString())
+      if (accountResp.ok) {
+        const accountJson = await accountResp.json()
+        const accountRows = accountJson.data || []
         let spendSum = 0, impSum = 0, clickSum = 0, convSum = 0, ctrSum = 0, cpcSum = 0
         let ctrCount = 0, cpcCount = 0
-        for (const r of rows) {
+        for (const r of accountRows) {
           spendSum += Number(r.spend || 0)
           impSum += Number(r.impressions || 0)
           clickSum += Number(r.clicks || 0)
@@ -255,6 +263,92 @@ serve(async (req) => {
         metrics.averageCTR = ctrCount ? (ctrSum / ctrCount) : 0
         metrics.averageCPC = cpcCount ? (cpcSum / cpcCount) : 0
       }
+
+      // Fetch campaigns with insights
+      const campaignsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`)
+      campaignsUrl.searchParams.set('fields', 'id,name,status,objective,insights{spend,impressions,clicks,actions,cpc,ctr}')
+      campaignsUrl.searchParams.set('date_preset', 'last_7d')
+      campaignsUrl.searchParams.set('limit', '50')
+      campaignsUrl.searchParams.set('access_token', accessToken)
+
+      const campaignsResp = await fetch(campaignsUrl.toString())
+      if (campaignsResp.ok) {
+        const campaignsJson = await campaignsResp.json()
+        const campaignData = campaignsJson.data || []
+        
+        for (const campaign of campaignData) {
+          const insights = campaign.insights?.data?.[0] || {}
+          const spend = Number(insights.spend || 0)
+          const impressions = Number(insights.impressions || 0)
+          const clicks = Number(insights.clicks || 0)
+          const ctr = Number(insights.ctr || 0)
+          const cpc = Number(insights.cpc || 0)
+          
+          let conversions = 0
+          if (Array.isArray(insights.actions)) {
+            const purchase = insights.actions.find((a: any) => a.action_type?.includes('purchase'))
+            if (purchase) conversions = Number(purchase.value || 0)
+          }
+
+          metrics.campaigns.push({
+            id: campaign.id,
+            name: campaign.name || 'Untitled Campaign',
+            status: campaign.status === 'ACTIVE' ? 'Active' : campaign.status || 'Unknown',
+            objective: campaign.objective || 'Unknown',
+            performance: categorizePerformance(ctr, cpc),
+            spend,
+            impressions,
+            clicks,
+            conversions,
+            ctr,
+            cpc
+          })
+        }
+      }
+
+      // Fetch ads with insights
+      const adsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/ads`)
+      adsUrl.searchParams.set('fields', 'id,name,status,insights{spend,impressions,clicks,actions,cpc,ctr}')
+      adsUrl.searchParams.set('date_preset', 'last_7d')
+      adsUrl.searchParams.set('limit', '100')
+      adsUrl.searchParams.set('access_token', accessToken)
+
+      const adsResp = await fetch(adsUrl.toString())
+      if (adsResp.ok) {
+        const adsJson = await adsResp.json()
+        const adsData = adsJson.data || []
+        
+        for (const ad of adsData) {
+          const insights = ad.insights?.data?.[0] || {}
+          const spend = Number(insights.spend || 0)
+          const impressions = Number(insights.impressions || 0)
+          const clicks = Number(insights.clicks || 0)
+          const ctr = Number(insights.ctr || 0)
+          const cpc = Number(insights.cpc || 0)
+          
+          let conversions = 0
+          if (Array.isArray(insights.actions)) {
+            const purchase = insights.actions.find((a: any) => a.action_type?.includes('purchase'))
+            if (purchase) conversions = Number(purchase.value || 0)
+          }
+
+          metrics.ads.push({
+            id: ad.id,
+            name: ad.name || 'Untitled Ad',
+            status: ad.status === 'ACTIVE' ? 'Active' : ad.status || 'Unknown',
+            performance: categorizePerformance(ctr, cpc),
+            spend,
+            impressions,
+            clicks,
+            conversions,
+            ctr,
+            cpc
+          })
+        }
+      }
+
+      console.log(`Fetched ${metrics.campaigns.length} campaigns and ${metrics.ads.length} ads`)
+      
     } catch (e) {
       // Swallow network errors and return minimal metrics
       console.warn('Meta API fetch failed:', e)
