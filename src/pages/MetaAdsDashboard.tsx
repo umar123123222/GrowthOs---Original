@@ -38,6 +38,7 @@ const MetaAdsDashboard = () => {
   });
   const [connectionStatus, setConnectionStatus] = useState('checking');
   const [currentPage, setCurrentPage] = useState(1);
+  const [currentCampaignPage, setCampaignCurrentPage] = useState(1);
   const [dateRange, setDateRange] = useState({
     from: undefined,
     to: undefined
@@ -48,6 +49,7 @@ const MetaAdsDashboard = () => {
   });
   const [hasDateChanges, setHasDateChanges] = useState(false);
   const adsPerPage = 3;
+  const campaignsPerPage = 2;
   useEffect(() => {
     fetchMetaAdsData();
   }, []);
@@ -390,6 +392,7 @@ const MetaAdsDashboard = () => {
             <div className="space-y-4">
               {(() => {
               const activeCampaigns = metaData.campaigns.filter(campaign => campaign.status === 'Active' || campaign.status === 'active' || campaign.status === 'ACTIVE');
+              
               if (activeCampaigns.length === 0) {
                 return <div className="text-center py-12">
                       <Target className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
@@ -402,103 +405,147 @@ const MetaAdsDashboard = () => {
                       </p>
                     </div>;
               }
-              return activeCampaigns.map((campaign, index) => <div key={campaign.id} className="border rounded-xl p-6 hover-lift shadow-soft hover:shadow-medium transition-all duration-300 bg-gradient-to-r from-card to-muted/20" style={{
-                animationDelay: `${index * 100}ms`
-              }}>
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center space-x-4">
-                        <div className="p-3 rounded-full bg-gradient-to-r from-primary/20 to-success/20">
-                          <Activity className="h-6 w-6" style={{
-                        color: 'hsl(var(--primary))'
-                      }} />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-xl text-foreground mb-1">{campaign.name}</h4>
-                          <div className="flex items-center space-x-3">
-                            <Badge className="bg-success/10 text-success border-success/20 px-3 py-1 flex items-center justify-start">
-                              <span className="inline-block w-2 h-2 bg-success rounded-full mr-2 animate-pulse"></span>
-                              Active
-                            </Badge>
-                            {getPerformanceBadge(campaign.performance)}
+
+              // Pagination logic for campaigns
+              const totalCampaignPages = Math.ceil(activeCampaigns.length / campaignsPerPage);
+              const campaignStartIndex = (currentCampaignPage - 1) * campaignsPerPage;
+              const campaignEndIndex = campaignStartIndex + campaignsPerPage;
+              const currentCampaigns = activeCampaigns.slice(campaignStartIndex, campaignEndIndex);
+              
+              return <>
+                {currentCampaigns.map((campaign, index) => <div key={campaign.id} className="border rounded-xl p-6 hover-lift shadow-soft hover:shadow-medium transition-all duration-300 bg-gradient-to-r from-card to-muted/20" style={{
+                  animationDelay: `${index * 100}ms`
+                }}>
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center space-x-4">
+                          <div className="p-3 rounded-full bg-gradient-to-r from-primary/20 to-success/20">
+                            <Activity className="h-6 w-6" style={{
+                          color: 'hsl(var(--primary))'
+                        }} />
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-xl text-foreground mb-1">{campaign.name}</h4>
+                            <div className="flex items-center space-x-3">
+                              <Badge className="bg-success/10 text-success border-success/20 px-3 py-1 flex items-center justify-start">
+                                <span className="inline-block w-2 h-2 bg-success rounded-full mr-2 animate-pulse"></span>
+                                Active
+                              </Badge>
+                              {getPerformanceBadge(campaign.performance)}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center space-x-3 bg-muted/50 rounded-lg px-4 py-2">
-                        {getPerformanceIcon(campaign.performance)}
-                        <span className="text-sm font-semibold text-foreground">
-                          {campaign.clicks > 0 ? ((campaign.conversions || 0) / campaign.clicks * 100).toFixed(2) : '0.00'}% Conv. Rate
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
-                      <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <DollarSign className="h-3 w-3 mr-1" style={{
-                        color: 'hsl(var(--primary))'
-                      }} />
-                          Daily Spend
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{formatCurrency(campaign.spend || 0)}</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-success/5 to-success/10 rounded-lg p-4 border border-success/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <TrendingUp className="h-3 w-3 mr-1" style={{
-                        color: 'hsl(var(--success))'
-                      }} />
-                          ROAS
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{campaign.roas ? `${campaign.roas.toFixed(2)}x` : 'N/A'}</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 border border-warning/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <Target className="h-3 w-3 mr-1" style={{
-                        color: 'hsl(var(--warning))'
-                      }} />
-                          Results
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{formatNumber(campaign.results || 0)}</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-blue-500/5 to-blue-500/10 rounded-lg p-4 border border-blue-500/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <Eye className="h-3 w-3 mr-1 text-blue-500" />
-                          Impressions
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{formatNumber(campaign.impressions || 0)}</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-purple-500/5 to-purple-500/10 rounded-lg p-4 border border-purple-500/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <MousePointer className="h-3 w-3 mr-1 text-purple-500" />
-                          Clicks
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{formatNumber(campaign.clicks || 0)}</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 rounded-lg p-4 border border-emerald-500/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <Activity className="h-3 w-3 mr-1 text-emerald-500" />
-                          CTR
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{campaign.ctr || 0}%</p>
-                      </div>
-                      <div className="bg-gradient-to-br from-pink-500/5 to-pink-500/10 rounded-lg p-4 border border-pink-500/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <DollarSign className="h-3 w-3 mr-1 text-pink-500" />
-                          Avg CPC
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{formatCurrency(campaign.cpc || 0)}</p>
-                      </div>
-                    </div>
-                    
-                    {campaign.budget && campaign.spend && <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span>Budget Utilization</span>
-                          <span className="font-medium">
-                            {(campaign.spend / campaign.budget * 100).toFixed(1)}%
+                        <div className="flex items-center space-x-3 bg-muted/50 rounded-lg px-4 py-2">
+                          {getPerformanceIcon(campaign.performance)}
+                          <span className="text-sm font-semibold text-foreground">
+                            {campaign.clicks > 0 ? ((campaign.conversions || 0) / campaign.clicks * 100).toFixed(2) : '0.00'}% Conv. Rate
                           </span>
                         </div>
-                        <Progress value={campaign.spend / campaign.budget * 100} className="h-3" />
-                      </div>}
-                  </div>);
+                      </div>
+                      
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+                        <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/10">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                            <DollarSign className="h-3 w-3 mr-1" style={{
+                          color: 'hsl(var(--primary))'
+                        }} />
+                            Daily Spend
+                          </p>
+                          <p className="font-bold text-lg text-foreground">{formatCurrency(campaign.spend || 0)}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-success/5 to-success/10 rounded-lg p-4 border border-success/10">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                            <TrendingUp className="h-3 w-3 mr-1" style={{
+                          color: 'hsl(var(--success))'
+                        }} />
+                            ROAS
+                          </p>
+                          <p className="font-bold text-lg text-foreground">{campaign.roas ? `${campaign.roas.toFixed(2)}x` : 'N/A'}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 border border-warning/10">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                            <Target className="h-3 w-3 mr-1" style={{
+                          color: 'hsl(var(--warning))'
+                        }} />
+                            Results
+                          </p>
+                          <p className="font-bold text-lg text-foreground">{formatNumber(campaign.results || 0)}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-blue-500/5 to-blue-500/10 rounded-lg p-4 border border-blue-500/10">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                            <Eye className="h-3 w-3 mr-1 text-blue-500" />
+                            Impressions
+                          </p>
+                          <p className="font-bold text-lg text-foreground">{formatNumber(campaign.impressions || 0)}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-purple-500/5 to-purple-500/10 rounded-lg p-4 border border-purple-500/10">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                            <MousePointer className="h-3 w-3 mr-1 text-purple-500" />
+                            Clicks
+                          </p>
+                          <p className="font-bold text-lg text-foreground">{formatNumber(campaign.clicks || 0)}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 rounded-lg p-4 border border-emerald-500/10">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                            <Activity className="h-3 w-3 mr-1 text-emerald-500" />
+                            CTR
+                          </p>
+                          <p className="font-bold text-lg text-foreground">{campaign.ctr || 0}%</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-pink-500/5 to-pink-500/10 rounded-lg p-4 border border-pink-500/10">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                            <DollarSign className="h-3 w-3 mr-1 text-pink-500" />
+                            Avg CPC
+                          </p>
+                          <p className="font-bold text-lg text-foreground">{formatCurrency(campaign.cpc || 0)}</p>
+                        </div>
+                      </div>
+                      
+                      {campaign.budget && campaign.spend && <div className="space-y-2">
+                          <div className="flex justify-between text-sm">
+                            <span>Budget Utilization</span>
+                            <span className="font-medium">
+                              {(campaign.spend / campaign.budget * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <Progress value={campaign.spend / campaign.budget * 100} className="h-3" />
+                        </div>}
+                    </div>)}
+
+                {/* Campaign Pagination Controls */}
+                {totalCampaignPages > 1 && <div className="flex justify-center mt-6">
+                    <Pagination>
+                      <PaginationContent>
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => setCampaignCurrentPage(prev => Math.max(prev - 1, 1))} 
+                            className={currentCampaignPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
+                          />
+                        </PaginationItem>
+                        
+                        {[...Array(totalCampaignPages)].map((_, i) => <PaginationItem key={i + 1}>
+                            <PaginationLink 
+                              onClick={() => setCampaignCurrentPage(i + 1)} 
+                              isActive={currentCampaignPage === i + 1} 
+                              className="cursor-pointer"
+                            >
+                              {i + 1}
+                            </PaginationLink>
+                          </PaginationItem>)}
+                        
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => setCampaignCurrentPage(prev => Math.min(prev + 1, totalCampaignPages))} 
+                            className={currentCampaignPage === totalCampaignPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  </div>}
+                
+                <div className="text-center text-sm text-muted-foreground mt-4">
+                  Showing {currentCampaigns.length} of {activeCampaigns.length} active campaigns
+                </div>
+              </>;
             })()}
             </div>
           </CardContent>
