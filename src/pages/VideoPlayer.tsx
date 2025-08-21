@@ -306,7 +306,7 @@ const VideoPlayer = () => {
                 size="sm" 
                 className="w-full" 
                 onClick={() => setShowShoaibGPT(true)}
-                disabled={authLoading || !user?.id}
+                disabled={authLoading || !user?.id || !user?.email}
               >
                 {authLoading ? 'Loading...' : 'Ask Partner'}
               </Button>
@@ -319,12 +319,12 @@ const VideoPlayer = () => {
         </div>
       </div>
 
-      {showShoaibGPT && !authLoading && user?.id && (
+      {showShoaibGPT && !authLoading && user?.id && user?.email && (
         <ShoaibGPT 
           onClose={() => setShowShoaibGPT(false)} 
           user={{
             id: user.id,
-            full_name: user.full_name || user.email?.split('@')[0] || 'Student',
+            full_name: user.full_name || user.email.split('@')[0] || 'Student',
             email: user.email
           }}
         />

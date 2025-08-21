@@ -36,36 +36,36 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  // Early return if user data is not available
-  if (!user?.id) {
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <Card className="w-full max-w-md p-6 text-center">
-          <CardContent>
-            <p className="text-lg mb-4">Loading user information...</p>
-            <Button onClick={onClose} variant="outline">
-              Close
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
+  // Validate user data - show error if incomplete
+  if (!user?.id || !user?.email) {
+    console.error('ShoaibGPT: Incomplete user data provided', { user });
+    toast({
+      title: "User Error",
+      description: "Unable to initialize chat. Please refresh the page and try again.",
+      variant: "destructive",
+    });
+    onClose();
+    return null;
   }
 
   const sendToWebhook = useCallback(async (userMessage: string): Promise<string> => {
     try {
-      // Ensure we have proper user data
-      const studentId = user?.id || 'unknown';
-      const studentName = user?.full_name || user?.email?.split('@')[0] || 'Student';
+      // Use validated user data (already checked above)
+      const studentId = user.id;
+      const studentName = user.full_name || user.email.split('@')[0] || 'Student';
       
       const payload = {
         message: userMessage,
         studentId: studentId,
-        studentName: studentName
+        studentName: studentName,
+        timestamp: new Date().toISOString()
       };
       
-      console.log('User object:', user);
-      console.log('Sending webhook payload:', payload);
+      console.log('Success Partner: Sending message', { 
+        studentId, 
+        studentName, 
+        messageLength: userMessage.length 
+      });
       
       const response = await fetch('https://n8n.core47.ai/webhook/SuccessPartner', {
         method: 'POST',
@@ -88,19 +88,10 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
   }, [user]);
 
   const handleSendMessage = useCallback(async () => {
-    console.log('HandleSendMessage called with:', { message: message.trim(), isLoading, userId: user?.id, user });
-    
     if (!message.trim() || isLoading) {
-      console.log('Message sending blocked:', { messageEmpty: !message.trim(), isLoading });
-      return;
-    }
-
-    if (!user?.id) {
-      console.log('User ID missing:', user);
-      toast({
-        title: "User Error",
-        description: "User information not available. Please refresh the page.",
-        variant: "destructive",
+      console.log('Success Partner: Message sending blocked', { 
+        messageEmpty: !message.trim(), 
+        isLoading 
       });
       return;
     }
