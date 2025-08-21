@@ -432,9 +432,9 @@ serve(async (req) => {
         }
       }
 
-      // Fetch ads with enhanced insights
+      // Fetch ads with enhanced insights including parent campaign and adset names
       const adsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/ads`)
-      adsUrl.searchParams.set('fields', 'id,name,status,creative{object_story_spec},insights{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}')
+      adsUrl.searchParams.set('fields', 'id,name,status,campaign{id,name},adset{id,name},creative{object_story_spec},insights{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}')
       adsUrl.searchParams.set('date_preset', 'last_7d')
       adsUrl.searchParams.set('limit', '100')
       adsUrl.searchParams.set('access_token', accessToken)
@@ -496,7 +496,9 @@ serve(async (req) => {
             ctr,
             cpc,
             frequency,
-            reach
+            reach,
+            campaign_name: ad.campaign?.name || 'Unknown Campaign',
+            adset_name: ad.adset?.name || 'Unknown Ad Set'
           })
         }
       }
