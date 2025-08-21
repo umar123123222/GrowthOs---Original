@@ -385,9 +385,9 @@ const MetaAdsDashboard = () => {
                             <Badge variant="secondary" className="min-w-[32px] h-8 flex items-center justify-center">
                               {startIndex + index + 1}
                             </Badge>
-                            <div>
+                            <div className="flex-1">
                               <h4 className="font-medium text-sm">{ad.name}</h4>
-                              <div className="flex items-center space-x-2 mt-1">
+                              <div className="flex items-center space-x-2 mt-1 mb-2">
                                 {getPerformanceIcon(ad.performance)}
                                 <span className="text-xs text-muted-foreground">
                                   {ad.ctr}% CTR • {formatCurrency(ad.cpc)} CPC
@@ -395,6 +395,16 @@ const MetaAdsDashboard = () => {
                                 <Badge variant={ad.status === 'Active' || ad.status === 'active' ? 'default' : 'secondary'} className="text-xs">
                                   {ad.status}
                                 </Badge>
+                              </div>
+                              <div className="text-xs text-muted-foreground space-y-1">
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-medium">Campaign:</span>
+                                  <span>{ad.campaign_name || ad.campaignName || 'N/A'}</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-medium">Ad Set:</span>
+                                  <span>{ad.adset_name || ad.adSetName || 'N/A'}</span>
+                                </div>
                               </div>
                             </div>
                           </div>
