@@ -204,7 +204,7 @@ const MetaAdsDashboard = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="hover-lift shadow-soft flex items-center space-x-2"
+                    className="hover-lift shadow-soft flex items-center space-x-2 ml-4"
                   >
                     <CalendarIcon className="h-4 w-4" />
                     <span>
