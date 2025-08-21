@@ -299,7 +299,7 @@ const MetaAdsDashboard = () => {
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+                    <div className="flex flex-wrap gap-4 mb-4">
                       <div className="bg-muted/50 rounded-lg p-3">
                         <p className="text-xs text-muted-foreground mb-1">Daily Spend</p>
                         <p className="font-medium text-lg">{formatCurrency(campaign.spend || 0)}</p>
