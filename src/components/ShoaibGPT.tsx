@@ -36,6 +36,22 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  // Early return if user data is not available
+  if (!user?.id) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md p-6 text-center">
+          <CardContent>
+            <p className="text-lg mb-4">Loading user information...</p>
+            <Button onClick={onClose} variant="outline">
+              Close
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const sendToWebhook = useCallback(async (userMessage: string): Promise<string> => {
     try {
       // Ensure we have proper user data
