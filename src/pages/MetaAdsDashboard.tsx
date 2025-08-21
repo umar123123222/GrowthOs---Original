@@ -42,6 +42,11 @@ const MetaAdsDashboard = () => {
     from: undefined,
     to: undefined
   });
+  const [pendingDateRange, setPendingDateRange] = useState({
+    from: undefined,
+    to: undefined
+  });
+  const [hasDateChanges, setHasDateChanges] = useState(false);
   const adsPerPage = 3;
   useEffect(() => {
     fetchMetaAdsData();
@@ -141,6 +146,15 @@ const MetaAdsDashboard = () => {
         return <RefreshCw className="h-4 w-4 text-yellow-600 animate-spin" />;
     }
   };
+
+  const updateDateRange = () => {
+    setDateRange({
+      from: pendingDateRange.from,
+      to: pendingDateRange.to
+    });
+    setHasDateChanges(false);
+    fetchMetaAdsData(pendingDateRange.from && pendingDateRange.to ? pendingDateRange : null);
+  };
   if (loading) {
     return <div className="flex items-center justify-center min-h-96 animate-fade-in">
         <div className="text-center">
@@ -224,16 +238,14 @@ const MetaAdsDashboard = () => {
                 <PopoverContent className="w-auto p-0" align="start">
                   <Calendar
                     mode="range"
-                    defaultMonth={dateRange.from}
-                    selected={dateRange}
+                    defaultMonth={pendingDateRange.from || dateRange.from}
+                    selected={pendingDateRange}
                     onSelect={(range) => {
-                      setDateRange({
+                      setPendingDateRange({
                         from: range?.from,
                         to: range?.to
                       });
-                      if (range?.from && range?.to) {
-                        fetchMetaAdsData(range);
-                      }
+                      setHasDateChanges(true);
                     }}
                     numberOfMonths={2}
                     className="p-3 pointer-events-auto"
@@ -241,12 +253,25 @@ const MetaAdsDashboard = () => {
                 </PopoverContent>
               </Popover>
               
+              {hasDateChanges && (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={updateDateRange}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Update
+                </Button>
+              )}
+              
               {(dateRange.from || dateRange.to) && (
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => {
                     setDateRange({ from: undefined, to: undefined });
+                    setPendingDateRange({ from: undefined, to: undefined });
+                    setHasDateChanges(false);
                     fetchMetaAdsData();
                   }}
                   className="text-muted-foreground hover:text-foreground"
