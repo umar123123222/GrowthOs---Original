@@ -45,8 +45,10 @@ const MetaAdsDashboard = () => {
     totalImpressions: 0,
     totalClicks: 0,
     totalConversions: 0,
+    totalConversionValue: 0,
     averageCTR: 0,
     averageCPC: 0,
+    averageROAS: 0,
     lastUpdated: null
   });
   const [connectionStatus, setConnectionStatus] = useState('checking');
@@ -78,8 +80,10 @@ const MetaAdsDashboard = () => {
         totalImpressions: m.totalImpressions ?? m.impressions ?? 0,
         totalClicks: m.totalClicks ?? m.clicks ?? 0,
         totalConversions: m.totalConversions ?? m.conversions ?? 0,
+        totalConversionValue: m.totalConversionValue ?? 0,
         averageCTR: m.averageCTR ?? m.ctr ?? 0,
         averageCPC: m.averageCPC ?? m.cpc ?? 0,
+        averageROAS: m.averageROAS ?? 0,
         lastUpdated: new Date().toISOString()
       });
       setConnectionStatus('connected');
@@ -207,8 +211,10 @@ const MetaAdsDashboard = () => {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(metaData.totalSpend)}</div>
-              <p className="text-xs text-muted-foreground">Across all campaigns</p>
+              <div className="text-2xl font-bold">{formatCurrency(metaData.totalSpend || 0)}</div>
+              <p className="text-xs text-muted-foreground">
+                Last 7 days • {metaData.campaigns?.length || 0} campaigns
+              </p>
             </CardContent>
           </Card>
 
@@ -218,20 +224,9 @@ const MetaAdsDashboard = () => {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(metaData.totalImpressions)}</div>
-              <p className="text-xs text-muted-foreground">Total ad views</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Clicks</CardTitle>
-              <MousePointer className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(metaData.totalClicks)}</div>
+              <div className="text-2xl font-bold">{formatNumber(metaData.totalImpressions || 0)}</div>
               <p className="text-xs text-muted-foreground">
-                {metaData.averageCTR}% CTR
+                {(metaData.averageCTR || 0).toFixed(2)}% CTR • {formatNumber(metaData.totalClicks || 0)} clicks
               </p>
             </CardContent>
           </Card>
@@ -242,9 +237,24 @@ const MetaAdsDashboard = () => {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatNumber(metaData.totalConversions)}</div>
+              <div className="text-2xl font-bold">{formatNumber(metaData.totalConversions || 0)}</div>
               <p className="text-xs text-muted-foreground">
-                {formatCurrency(metaData.averageCPC)} avg CPC
+                {formatCurrency(metaData.averageCPC || 0)} avg CPC
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">ROAS</CardTitle>
+              <MousePointer className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {metaData.averageROAS ? `${metaData.averageROAS.toFixed(1)}%` : 'N/A'}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {formatCurrency(metaData.totalConversionValue || 0)} revenue
               </p>
             </CardContent>
           </Card>
