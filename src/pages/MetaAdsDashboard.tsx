@@ -330,7 +330,9 @@ const MetaAdsDashboard = () => {
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-success rounded-full mr-2"></span>
-                {(metaData.averageCTR || 0).toFixed(2)}% CTR • {formatNumber(metaData.totalClicks || 0)} clicks
+                {(metaData.averageCTR || 0).toFixed(2)}% CTR • {formatNumber(metaData.totalClicks || 0)} clicks • {dateRange.from && dateRange.to 
+                  ? `${Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days`
+                  : '7 days'}
               </p>
             </CardContent>
           </Card>
@@ -350,7 +352,9 @@ const MetaAdsDashboard = () => {
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-warning rounded-full mr-2"></span>
-                {formatCurrency(metaData.averageCPC || 0)} avg CPC
+                {formatCurrency(metaData.averageCPC || 0)} avg CPC • {dateRange.from && dateRange.to 
+                  ? `${Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days period`
+                  : '7 days'} • {(metaData.totalClicks || 0) > 0 ? ((metaData.totalConversions || 0) / (metaData.totalClicks || 0) * 100).toFixed(2) + '% conv rate' : '0% conv rate'}
               </p>
             </CardContent>
           </Card>
@@ -374,7 +378,9 @@ const MetaAdsDashboard = () => {
                 <span className="inline-block w-2 h-2 rounded-full mr-2" style={{
                 backgroundColor: 'hsl(330 81% 60%)'
               }}></span>
-                {formatCurrency(metaData.totalConversionValue || 0)} revenue
+                {formatCurrency(metaData.totalConversionValue || 0)} revenue • {dateRange.from && dateRange.to 
+                  ? `${Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days period`
+                  : '7 days'} • {formatCurrency(metaData.totalSpend || 0)} spent
               </p>
             </CardContent>
           </Card>
