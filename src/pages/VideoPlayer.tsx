@@ -313,7 +313,16 @@ const VideoPlayer = () => {
         </div>
       </div>
 
-      {showShoaibGPT && <ShoaibGPT onClose={() => setShowShoaibGPT(false)} />}
+      {showShoaibGPT && (
+        <ShoaibGPT 
+          onClose={() => setShowShoaibGPT(false)} 
+          user={{
+            id: user?.id || '',
+            name: user?.full_name,
+            email: user?.email
+          }}
+        />
+      )}
     </div>;
   };
 export default VideoPlayer;

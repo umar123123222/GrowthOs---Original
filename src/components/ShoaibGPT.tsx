@@ -1,48 +1,125 @@
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { X, Send, MessageSquare, BookOpen, Heart, Brain } from "lucide-react";
+import { X, Send, MessageSquare, BookOpen, Heart, Brain, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
+interface Message {
+  id: number;
+  sender: "user" | "ai" | "loading";
+  content: string;
+  timestamp: Date;
+}
 
 interface ShoaibGPTProps {
   onClose: () => void;
+  user?: {
+    id: string;
+    name?: string;
+    email?: string;
+  };
 }
 
-const ShoaibGPT = ({ onClose }: ShoaibGPTProps) => {
+const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      type: "ai",
+      sender: "ai",
       content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
       timestamp: new Date()
     }
   ]);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSendMessage = () => {
-    if (!message.trim()) return;
+  const sendToWebhook = useCallback(async (userMessage: string): Promise<string> => {
+    try {
+      const response = await fetch('https://n8n.core47.ai/webhook/Success%20Partner', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          studentId: user?.id || 'unknown',
+          studentName: user?.name || user?.email || 'Student'
+        }),
+      });
 
-    // Add user message
-    const userMessage = {
-      id: messages.length + 1,
-      type: "user",
-      content: message,
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.reply || "Sorry, I couldn't process your request right now.";
+    } catch (error) {
+      console.error('Webhook error:', error);
+      throw error;
+    }
+  }, [user]);
+
+  const handleSendMessage = useCallback(async () => {
+    if (!message.trim() || isLoading) return;
+
+    const userMessage: Message = {
+      id: Date.now(),
+      sender: "user",
+      content: message.trim(),
       timestamp: new Date()
     };
 
-    // Simulate AI response
-    const aiResponse = {
-      id: messages.length + 2,
-      type: "ai",
-      content: `Great question about the course! Based on your progress, I see you're on Module 3. ${message.includes("video") ? "You can rewatch the video at timestamp 5:30 for that specific concept." : "Keep up the good work! You're doing better than 70% of your cohort."}`,
+    const loadingMessage: Message = {
+      id: Date.now() + 1,
+      sender: "loading",
+      content: "AI Assistant is thinking...",
       timestamp: new Date()
     };
 
-    setMessages([...messages, userMessage, aiResponse]);
+    // Add user message and loading indicator
+    setMessages(prev => [...prev, userMessage, loadingMessage]);
     setMessage("");
-  };
+    setIsLoading(true);
+
+    try {
+      const aiReply = await sendToWebhook(userMessage.content);
+      
+      // Remove loading message and add AI response
+      setMessages(prev => {
+        const withoutLoading = prev.filter(msg => msg.sender !== "loading");
+        const aiMessage: Message = {
+          id: Date.now() + 2,
+          sender: "ai",
+          content: aiReply,
+          timestamp: new Date()
+        };
+        return [...withoutLoading, aiMessage];
+      });
+    } catch (error) {
+      // Remove loading message and add fallback
+      setMessages(prev => {
+        const withoutLoading = prev.filter(msg => msg.sender !== "loading");
+        const fallbackMessage: Message = {
+          id: Date.now() + 2,
+          sender: "ai",
+          content: "Sorry, the assistant is not available right now.",
+          timestamp: new Date()
+        };
+        return [...withoutLoading, fallbackMessage];
+      });
+      
+      toast({
+        title: "Connection Error",
+        description: "Unable to reach the AI assistant. Please try again later.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [message, isLoading, sendToWebhook, toast]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -70,19 +147,32 @@ const ShoaibGPT = ({ onClose }: ShoaibGPTProps) => {
           {messages.map((msg) => (
             <div
               key={msg.id}
-              className={`flex ${msg.type === "user" ? "justify-end" : "justify-start"}`}
+              className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
             >
-              <div
-                className={`max-w-[80%] p-3 rounded-lg ${
-                  msg.type === "user"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-900"
-                }`}
-              >
-                <p className="text-sm">{msg.content}</p>
-                <p className="text-xs opacity-70 mt-1">
-                  {msg.timestamp.toLocaleTimeString()}
-                </p>
+              <div className={`max-w-[80%] p-3 rounded-lg ${
+                msg.sender === "user" 
+                  ? "bg-primary text-primary-foreground" 
+                  : msg.sender === "loading"
+                  ? "bg-muted text-muted-foreground animate-pulse"
+                  : "bg-muted/50 text-foreground italic"
+              }`}>
+                {msg.sender === "loading" && (
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span className="text-sm">AI Assistant is thinking...</span>
+                  </div>
+                )}
+                {msg.sender !== "loading" && (
+                  <>
+                    {msg.sender === "ai" && (
+                      <p className="text-xs font-medium mb-1 opacity-70">AI Assistant</p>
+                    )}
+                    <p className="text-sm">{msg.content}</p>
+                    <p className="text-xs opacity-70 mt-1">
+                      {msg.timestamp.toLocaleTimeString()}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
           ))}
@@ -97,8 +187,12 @@ const ShoaibGPT = ({ onClose }: ShoaibGPTProps) => {
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
             />
-            <Button onClick={handleSendMessage}>
-              <Send className="w-4 h-4" />
+            <Button onClick={handleSendMessage} disabled={isLoading}>
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </Button>
           </div>
           
