@@ -5,7 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Target, TrendingUp, Eye, MousePointer, DollarSign, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Minus, Sparkles, Activity } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Target, TrendingUp, Eye, MousePointer, DollarSign, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Minus, Sparkles, Activity, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
@@ -35,17 +38,33 @@ const MetaAdsDashboard = () => {
   });
   const [connectionStatus, setConnectionStatus] = useState('checking');
   const [currentPage, setCurrentPage] = useState(1);
+  const [dateRange, setDateRange] = useState({
+    from: undefined,
+    to: undefined
+  });
   const adsPerPage = 3;
   useEffect(() => {
     fetchMetaAdsData();
   }, []);
-  const fetchMetaAdsData = async () => {
+  const fetchMetaAdsData = async (customDateRange = null) => {
     setLoading(true);
     try {
+      const requestBody: any = {};
+      
+      // Add date range if specified
+      if (customDateRange?.from) {
+        requestBody.dateFrom = customDateRange.from.toISOString();
+      }
+      if (customDateRange?.to) {
+        requestBody.dateTo = customDateRange.to.toISOString();
+      }
+
       const {
         data,
         error
-      } = await supabase.functions.invoke('meta-ads-metrics');
+      } = await supabase.functions.invoke('meta-ads-metrics', {
+        body: requestBody
+      });
       if (error) throw error;
       if (!data?.connected) {
         setConnectionStatus('disconnected');
@@ -179,11 +198,63 @@ const MetaAdsDashboard = () => {
             </p>
           </div>
           <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-3">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="hover-lift shadow-soft flex items-center space-x-2"
+                  >
+                    <CalendarIcon className="h-4 w-4" />
+                    <span>
+                      {dateRange.from && dateRange.to
+                        ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
+                        : 'Select date range'}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={dateRange.from}
+                    selected={dateRange}
+                    onSelect={(range) => {
+                      setDateRange({
+                        from: range?.from,
+                        to: range?.to
+                      });
+                      if (range?.from && range?.to) {
+                        fetchMetaAdsData(range);
+                      }
+                    }}
+                    numberOfMonths={2}
+                    className="p-3 pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              
+              {(dateRange.from || dateRange.to) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setDateRange({ from: undefined, to: undefined });
+                    fetchMetaAdsData();
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+            
             {getStatusIcon()}
             <span className="text-sm font-medium">
               {connectionStatus === 'connected' ? 'Live Connected' : 'Connection Issue'}
             </span>
-            <Button onClick={fetchMetaAdsData} variant="outline" size="sm" className="hover-lift shadow-soft">
+            
+            <Button onClick={() => fetchMetaAdsData(dateRange.from ? dateRange : null)} variant="outline" size="sm" className="hover-lift shadow-soft">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh Data
             </Button>
