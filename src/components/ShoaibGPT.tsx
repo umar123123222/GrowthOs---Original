@@ -38,12 +38,17 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
 
   const sendToWebhook = useCallback(async (userMessage: string): Promise<string> => {
     try {
+      // Ensure we have proper user data
+      const studentId = user?.id || 'unknown';
+      const studentName = user?.name || user?.email?.split('@')[0] || 'Student';
+      
       const payload = {
         message: userMessage,
-        studentId: user?.id || 'unknown',
-        studentName: user?.name || user?.email || 'Student'
+        studentId: studentId,
+        studentName: studentName
       };
       
+      console.log('User object:', user);
       console.log('Sending webhook payload:', payload);
       
       const response = await fetch('https://n8n.core47.ai/webhook/SuccessPartner', {
@@ -68,6 +73,16 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
 
   const handleSendMessage = useCallback(async () => {
     if (!message.trim() || isLoading) return;
+    
+    // Check if we have valid user data
+    if (!user?.id) {
+      toast({
+        title: "User Error",
+        description: "User information not available. Please refresh the page.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const userMessage: Message = {
       id: Date.now(),
@@ -184,14 +199,20 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
 
         {/* Input */}
         <div className="flex-shrink-0 p-4 border-t">
+          {!user?.id && (
+            <div className="mb-3 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm text-yellow-800">
+              Loading user information... Please wait.
+            </div>
+          )}
           <div className="flex space-x-2">
             <Input
               placeholder="Ask about videos, assignments, or course content..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
+              disabled={!user?.id}
             />
-            <Button onClick={handleSendMessage} disabled={isLoading}>
+            <Button onClick={handleSendMessage} disabled={isLoading || !user?.id}>
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (

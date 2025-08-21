@@ -301,7 +301,15 @@ const VideoPlayer = () => {
               <p className="text-sm text-muted-foreground mb-3">
                 I'm here to help! Ask me anything about this video or your learning journey.
               </p>
-              <Button size="sm" className="w-full" onClick={() => setShowShoaibGPT(true)}>
+              <Button size="sm" className="w-full" onClick={() => {
+                console.log('Opening ShoaibGPT with user:', user);
+                console.log('User data for ShoaibGPT:', {
+                  id: user?.id || '',
+                  name: user?.full_name || user?.email?.split('@')[0] || 'Student',
+                  email: user?.email
+                });
+                setShowShoaibGPT(true);
+              }}>
                 Ask Partner
               </Button>
             </CardContent>
