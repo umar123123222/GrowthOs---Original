@@ -305,8 +305,12 @@ const MetaAdsDashboard = () => {
                         <p className="font-medium text-lg">{formatCurrency(campaign.spend || 0)}</p>
                       </div>
                       <div className="bg-muted/50 rounded-lg p-3">
-                        <p className="text-xs text-muted-foreground mb-1">Daily Budget</p>
-                        <p className="font-medium text-lg">{formatCurrency(campaign.budget || 0)}</p>
+                        <p className="text-xs text-muted-foreground mb-1">ROAS</p>
+                        <p className="font-medium text-lg">{campaign.roas ? `${campaign.roas.toFixed(2)}x` : 'N/A'}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Results</p>
+                        <p className="font-medium text-lg">{formatNumber(campaign.results || 0)}</p>
                       </div>
                       <div className="bg-muted/50 rounded-lg p-3">
                         <p className="text-xs text-muted-foreground mb-1">Impressions</p>
