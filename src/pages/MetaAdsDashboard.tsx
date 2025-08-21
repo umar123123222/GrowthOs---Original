@@ -155,17 +155,10 @@ const MetaAdsDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96 animate-fade-in">
+      <div className="flex items-center justify-center min-h-96">
         <div className="text-center">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-success/20 rounded-full blur-lg opacity-50"></div>
-            <RefreshCw className="h-12 w-12 animate-spin mx-auto mb-6 relative z-10" style={{color: 'hsl(var(--primary))'}} />
-          </div>
-          <p className="text-muted-foreground font-medium">Loading your Meta Ads insights...</p>
-          <div className="flex items-center justify-center mt-4 space-x-2">
-            <Sparkles className="h-4 w-4 animate-pulse" style={{color: 'hsl(var(--primary))'}} />
-            <span className="text-sm text-muted-foreground">Fetching campaign data</span>
-          </div>
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading Meta Ads data...</p>
         </div>
       </div>
     );
@@ -173,27 +166,18 @@ const MetaAdsDashboard = () => {
 
   if (connectionStatus === 'disconnected') {
     return (
-      <div className="max-w-4xl mx-auto animate-fade-in">
-        <Card className="text-center p-12 shadow-elevated">
-          <div className="relative mb-8">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-warning/10 rounded-full blur-2xl"></div>
-            <Target className="h-20 w-20 mx-auto relative z-10" style={{color: 'hsl(var(--primary))'}} />
-          </div>
-          <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-success bg-clip-text text-transparent">
-            Connect Your Meta Ads Account
-          </h2>
-          <p className="text-muted-foreground mb-8 max-w-md mx-auto text-lg">
-            Unlock powerful insights and analytics for your advertising campaigns.
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center py-12">
+          <Target className="h-16 w-16 mx-auto mb-6 text-primary" />
+          <h2 className="text-2xl font-bold mb-4">Connect Your Meta Ads Account</h2>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Connect your Meta Ads account to view campaign performance and analytics.
           </p>
-          <Button 
-            onClick={() => navigate('/connect')} 
-            size="lg" 
-            className="gradient-primary hover-lift shadow-medium px-8 py-3"
-          >
-            <ExternalLink className="h-5 w-5 mr-2" />
-            Connect Meta Ads Account
+          <Button onClick={() => navigate('/connect')}>
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Connect Meta Ads
           </Button>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -202,104 +186,78 @@ const MetaAdsDashboard = () => {
     <TooltipProvider>
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 animate-slide-up">
+        <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-success to-warning bg-clip-text text-transparent">
-              Meta Ads Dashboard
-            </h1>
-            <p className="text-muted-foreground text-lg mt-2 flex items-center">
-              <Activity className="h-5 w-5 mr-2" style={{color: 'hsl(var(--primary))'}} />
-              Real-time campaign performance and advertising analytics
+            <h1 className="text-3xl font-bold text-foreground">Meta Ads Dashboard</h1>
+            <p className="text-muted-foreground mt-1">
+              Campaign performance and advertising analytics
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-3 px-4 py-2 rounded-full border shadow-soft">
+            <div className="flex items-center space-x-2">
               {getStatusIcon()}
-              <span className="text-sm font-medium">
-                {connectionStatus === 'connected' ? 'Live Connected' : 'Connection Issue'}
+              <span className="text-sm text-muted-foreground">
+                {connectionStatus === 'connected' ? 'Connected' : 'Connection Issue'}
               </span>
             </div>
-            <Button 
-              onClick={fetchMetaAdsData} 
-              variant="outline" 
-              size="sm" 
-              className="hover-lift shadow-soft"
-            >
+            <Button onClick={fetchMetaAdsData} variant="outline" size="sm">
               <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh Data
+              Refresh
             </Button>
           </div>
         </div>
 
         {/* Overall KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-scale-in">
-          <Card className="metric-card metric-blue hover-lift shadow-soft border-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-foreground">Total Spend</CardTitle>
-              <div className="p-2 rounded-lg bg-primary/10">
-                <DollarSign className="h-5 w-5 metric-icon" style={{color: 'hsl(var(--primary))'}} />
-              </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="border-l-4 border-l-primary">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Spend</CardTitle>
+              <DollarSign className="h-4 w-4 text-primary" />
             </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold text-foreground mb-1">
-                {formatCurrency(metaData.totalSpend || 0)}
-              </div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                <span className="inline-block w-2 h-2 bg-primary rounded-full mr-2"></span>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatCurrency(metaData.totalSpend || 0)}</div>
+              <p className="text-xs text-muted-foreground">
                 Last 7 days • {metaData.campaigns?.length || 0} campaigns
               </p>
             </CardContent>
           </Card>
 
-          <Card className="metric-card metric-green hover-lift shadow-soft border-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-foreground">Impressions</CardTitle>
-              <div className="p-2 rounded-lg bg-success/10">
-                <Eye className="h-5 w-5 metric-icon" style={{color: 'hsl(var(--success))'}} />
-              </div>
+          <Card className="border-l-4 border-l-success">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Impressions</CardTitle>
+              <Eye className="h-4 w-4 text-success" />
             </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold text-foreground mb-1">
-                {formatNumber(metaData.totalImpressions || 0)}
-              </div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                <span className="inline-block w-2 h-2 bg-success rounded-full mr-2"></span>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatNumber(metaData.totalImpressions || 0)}</div>
+              <p className="text-xs text-muted-foreground">
                 {(metaData.averageCTR || 0).toFixed(2)}% CTR • {formatNumber(metaData.totalClicks || 0)} clicks
               </p>
             </CardContent>
           </Card>
 
-          <Card className="metric-card metric-amber hover-lift shadow-soft border-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-foreground">Conversions</CardTitle>
-              <div className="p-2 rounded-lg bg-warning/10">
-                <TrendingUp className="h-5 w-5 metric-icon" style={{color: 'hsl(var(--warning))'}} />
-              </div>
+          <Card className="border-l-4 border-l-warning">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Conversions</CardTitle>
+              <TrendingUp className="h-4 w-4 text-warning" />
             </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold text-foreground mb-1">
-                {formatNumber(metaData.totalConversions || 0)}
-              </div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                <span className="inline-block w-2 h-2 bg-warning rounded-full mr-2"></span>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatNumber(metaData.totalConversions || 0)}</div>
+              <p className="text-xs text-muted-foreground">
                 {formatCurrency(metaData.averageCPC || 0)} avg CPC
               </p>
             </CardContent>
           </Card>
 
-          <Card className="metric-card metric-pink hover-lift shadow-soft border-0">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-              <CardTitle className="text-sm font-medium text-foreground">ROAS</CardTitle>
-              <div className="p-2 rounded-lg" style={{backgroundColor: 'hsl(330 81% 60% / 0.1)'}}>
-                <MousePointer className="h-5 w-5 metric-icon" style={{color: 'hsl(330 81% 60%)'}} />
-              </div>
+          <Card className="border-l-4" style={{borderLeftColor: 'hsl(330 81% 60%)'}}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">ROAS</CardTitle>
+              <MousePointer className="h-4 w-4" style={{color: 'hsl(330 81% 60%)'}} />
             </CardHeader>
-            <CardContent className="relative z-10">
-              <div className="text-3xl font-bold text-foreground mb-1">
+            <CardContent>
+              <div className="text-2xl font-bold">
                 {metaData.averageROAS ? `${metaData.averageROAS.toFixed(1)}%` : 'N/A'}
               </div>
-              <p className="text-xs text-muted-foreground flex items-center">
-                <span className="inline-block w-2 h-2 rounded-full mr-2" style={{backgroundColor: 'hsl(330 81% 60%)'}}></span>
+              <p className="text-xs text-muted-foreground">
                 {formatCurrency(metaData.totalConversionValue || 0)} revenue
               </p>
             </CardContent>
@@ -307,15 +265,10 @@ const MetaAdsDashboard = () => {
         </div>
 
         {/* Active Campaigns */}
-        <Card className="shadow-medium hover-lift border-0 animate-fade-in">
-          <CardHeader className="gradient-hero text-white rounded-t-lg">
-            <CardTitle className="text-white flex items-center text-xl">
-              <Target className="h-6 w-6 mr-3" />
-              Active Campaigns
-            </CardTitle>
-            <CardDescription className="text-white/80">
-              All currently active advertising campaigns with real-time metrics
-            </CardDescription>
+        <Card>
+          <CardHeader>
+            <CardTitle>Active Campaigns</CardTitle>
+            <CardDescription>All currently active advertising campaigns</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -342,81 +295,52 @@ const MetaAdsDashboard = () => {
                   );
                 }
 
-                return activeCampaigns.map((campaign, index) => (
-                  <div key={campaign.id} className="border rounded-xl p-6 hover-lift shadow-soft hover:shadow-medium transition-all duration-300 bg-gradient-to-r from-card to-muted/20" style={{animationDelay: `${index * 100}ms`}}>
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center space-x-4">
-                        <div className="p-3 rounded-full bg-gradient-to-r from-primary/20 to-success/20">
-                          <Activity className="h-6 w-6" style={{color: 'hsl(var(--primary))'}} />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold text-xl text-foreground mb-1">{campaign.name}</h4>
-                          <div className="flex items-center space-x-3">
-                            <Badge className="bg-success/10 text-success border-success/20 px-3 py-1">
-                              <span className="inline-block w-2 h-2 bg-success rounded-full mr-2 animate-pulse"></span>
-                              Active
-                            </Badge>
-                            {getPerformanceBadge(campaign.performance)}
-                          </div>
-                        </div>
+                return activeCampaigns.map((campaign) => (
+                  <div key={campaign.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <h4 className="font-medium text-lg">{campaign.name}</h4>
+                        <Badge variant="default" className="bg-success/10 text-success">
+                          ● Active
+                        </Badge>
+                        {getPerformanceBadge(campaign.performance)}
                       </div>
-                      <div className="flex items-center space-x-3 bg-muted/50 rounded-lg px-4 py-2">
+                      <div className="flex items-center space-x-2">
                         {getPerformanceIcon(campaign.performance)}
-                        <span className="text-sm font-semibold text-foreground">
+                        <span className="text-sm font-medium">
                           {campaign.conversionRate || 0}% Conv. Rate
                         </span>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
-                      <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <DollarSign className="h-3 w-3 mr-1" style={{color: 'hsl(var(--primary))'}} />
-                          Daily Spend
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{formatCurrency(campaign.spend || 0)}</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 mb-4">
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Daily Spend</p>
+                        <p className="font-medium text-lg">{formatCurrency(campaign.spend || 0)}</p>
                       </div>
-                      <div className="bg-gradient-to-br from-success/5 to-success/10 rounded-lg p-4 border border-success/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <TrendingUp className="h-3 w-3 mr-1" style={{color: 'hsl(var(--success))'}} />
-                          ROAS
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{campaign.roas ? `${campaign.roas.toFixed(2)}x` : 'N/A'}</p>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">ROAS</p>
+                        <p className="font-medium text-lg">{campaign.roas ? `${campaign.roas.toFixed(2)}x` : 'N/A'}</p>
                       </div>
-                      <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 border border-warning/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <Target className="h-3 w-3 mr-1" style={{color: 'hsl(var(--warning))'}} />
-                          Results
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{formatNumber(campaign.results || 0)}</p>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Results</p>
+                        <p className="font-medium text-lg">{formatNumber(campaign.results || 0)}</p>
                       </div>
-                      <div className="bg-gradient-to-br from-blue-500/5 to-blue-500/10 rounded-lg p-4 border border-blue-500/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <Eye className="h-3 w-3 mr-1 text-blue-500" />
-                          Impressions
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{formatNumber(campaign.impressions || 0)}</p>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Impressions</p>
+                        <p className="font-medium text-lg">{formatNumber(campaign.impressions || 0)}</p>
                       </div>
-                      <div className="bg-gradient-to-br from-purple-500/5 to-purple-500/10 rounded-lg p-4 border border-purple-500/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <MousePointer className="h-3 w-3 mr-1 text-purple-500" />
-                          Clicks
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{formatNumber(campaign.clicks || 0)}</p>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Clicks</p>
+                        <p className="font-medium text-lg">{formatNumber(campaign.clicks || 0)}</p>
                       </div>
-                      <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 rounded-lg p-4 border border-emerald-500/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <Activity className="h-3 w-3 mr-1 text-emerald-500" />
-                          CTR
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{campaign.ctr || 0}%</p>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">CTR</p>
+                        <p className="font-medium text-lg">{campaign.ctr || 0}%</p>
                       </div>
-                      <div className="bg-gradient-to-br from-pink-500/5 to-pink-500/10 rounded-lg p-4 border border-pink-500/10">
-                        <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                          <DollarSign className="h-3 w-3 mr-1 text-pink-500" />
-                          Avg CPC
-                        </p>
-                        <p className="font-bold text-lg text-foreground">{formatCurrency(campaign.cpc || 0)}</p>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Avg CPC</p>
+                        <p className="font-medium text-lg">{formatCurrency(campaign.cpc || 0)}</p>
                       </div>
                     </div>
                     
@@ -442,15 +366,10 @@ const MetaAdsDashboard = () => {
         </Card>
 
         {/* Active Ads with Pagination */}
-        <Card className="lg:col-span-2 shadow-medium hover-lift border-0 animate-fade-in">
-          <CardHeader className="bg-gradient-to-r from-secondary to-accent text-foreground rounded-t-lg">
-            <CardTitle className="flex items-center text-xl">
-              <Sparkles className="h-6 w-6 mr-3" style={{color: 'hsl(var(--primary))'}} />
-              All Active Ads
-            </CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Complete list of all active ads with detailed performance metrics
-            </CardDescription>
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>All Active Ads</CardTitle>
+            <CardDescription>Complete list of all active ads with pagination</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -553,15 +472,10 @@ const MetaAdsDashboard = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
 
-          <Card className="shadow-medium hover-lift border-0 animate-fade-in">
-            <CardHeader className="bg-gradient-to-r from-muted to-accent/20 rounded-t-lg">
-              <CardTitle className="flex items-center text-xl">
-                <Activity className="h-6 w-6 mr-3" style={{color: 'hsl(var(--success))'}} />
-                Performance Health
-              </CardTitle>
-              <CardDescription>
-                Real-time campaign health indicators and performance distribution
-              </CardDescription>
+          <Card>
+            <CardHeader>
+              <CardTitle>Performance Health</CardTitle>
+              <CardDescription>Campaign performance indicators</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
