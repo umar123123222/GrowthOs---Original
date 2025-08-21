@@ -649,7 +649,16 @@ const Layout = memo(({
       {user?.role === 'student' && <MotivationalNotifications />}
       
       {/* Success Partner Dialog */}
-      {showShoaibGPT && <ShoaibGPT onClose={() => setShowShoaibGPT(false)} />}
+      {showShoaibGPT && user?.id && user?.email && (
+        <ShoaibGPT 
+          onClose={() => setShowShoaibGPT(false)} 
+          user={{
+            id: user.id,
+            full_name: user.full_name || user.email.split('@')[0] || 'Student',
+            email: user.email
+          }}
+        />
+      )}
     </div>;
 });
 Layout.displayName = 'Layout';
