@@ -198,13 +198,20 @@ const MetaAdsDashboard = () => {
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-3 ml-auto">
+            <div className="flex items-center space-x-3">
+              {getStatusIcon()}
+              <span className="text-sm font-medium">
+                {connectionStatus === 'connected' ? 'Live Connected' : 'Connection Issue'}
+              </span>
+            </div>
+            
+            <div className="flex items-center space-x-3">
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="hover-lift shadow-soft flex items-center space-x-2 ml-4"
+                    className="hover-lift shadow-soft flex items-center space-x-2"
                   >
                     <CalendarIcon className="h-4 w-4" />
                     <span>
@@ -248,11 +255,6 @@ const MetaAdsDashboard = () => {
                 </Button>
               )}
             </div>
-            
-            {getStatusIcon()}
-            <span className="text-sm font-medium">
-              {connectionStatus === 'connected' ? 'Live Connected' : 'Connection Issue'}
-            </span>
             
             <Button onClick={() => fetchMetaAdsData(dateRange.from ? dateRange : null)} variant="outline" size="sm" className="hover-lift shadow-soft">
               <RefreshCw className="h-4 w-4 mr-2" />
