@@ -307,7 +307,10 @@ const MetaAdsDashboard = () => {
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-primary rounded-full mr-2"></span>
-                Last 7 days • {metaData.campaigns?.length || 0} campaigns
+                {dateRange.from && dateRange.to 
+                  ? `${Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days selected`
+                  : 'Last 7 days'
+                } • {metaData.campaigns?.length || 0} campaigns
               </p>
             </CardContent>
           </Card>
