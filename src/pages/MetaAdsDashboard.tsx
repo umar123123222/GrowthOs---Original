@@ -319,7 +319,7 @@ const MetaAdsDashboard = () => {
                         <div>
                           <h4 className="font-semibold text-xl text-foreground mb-1">{campaign.name}</h4>
                           <div className="flex items-center space-x-3">
-                            <Badge className="bg-success/10 text-success border-success/20 pl-1 pr-2 py-1 flex items-center justify-start">
+                            <Badge className="bg-success/10 text-success border-success/20 px-3 py-1 flex items-center justify-center min-w-[60px]">
                               <span className="inline-block w-2 h-2 bg-success rounded-full mr-2 animate-pulse"></span>
                               Active
                             </Badge>
