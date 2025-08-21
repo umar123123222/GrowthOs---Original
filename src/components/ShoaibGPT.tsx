@@ -75,7 +75,7 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
     if (!message.trim() || isLoading) return;
     
     // Check if we have valid user data
-    if (!user?.id) {
+    if (!user?.id || user.id.trim() === '') {
       toast({
         title: "User Error",
         description: "User information not available. Please refresh the page.",
@@ -199,7 +199,7 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
 
         {/* Input */}
         <div className="flex-shrink-0 p-4 border-t">
-          {!user?.id && (
+          {(!user?.id || user.id.trim() === '') && (
             <div className="mb-3 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm text-yellow-800">
               Loading user information... Please wait.
             </div>
@@ -210,9 +210,9 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-              disabled={!user?.id}
+              disabled={!user?.id || user.id.trim() === ''}
             />
-            <Button onClick={handleSendMessage} disabled={isLoading || !user?.id}>
+            <Button onClick={handleSendMessage} disabled={isLoading || !user?.id || user.id.trim() === ''}>
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (

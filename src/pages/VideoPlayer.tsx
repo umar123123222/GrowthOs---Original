@@ -321,13 +321,13 @@ const VideoPlayer = () => {
         </div>
       </div>
 
-      {showShoaibGPT && (
+      {showShoaibGPT && user?.id && user.id.trim() !== '' && (
         <ShoaibGPT 
           onClose={() => setShowShoaibGPT(false)} 
           user={{
-            id: user?.id || '',
-            full_name: user?.full_name || user?.email?.split('@')[0] || 'Student',
-            email: user?.email
+            id: user.id,
+            full_name: user.full_name || user.email?.split('@')[0] || 'Student',
+            email: user.email
           }}
         />
       )}
