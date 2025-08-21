@@ -179,7 +179,7 @@ const MetaAdsDashboard = () => {
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-3 px-4 py-2 rounded-full border shadow-soft">
+            <div className="flex items-center space-x-2">
               {getStatusIcon()}
               <span className="text-sm font-medium">
                 {connectionStatus === 'connected' ? 'Live Connected' : 'Connection Issue'}
