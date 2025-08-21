@@ -318,7 +318,7 @@ const VideoPlayer = () => {
           onClose={() => setShowShoaibGPT(false)} 
           user={{
             id: user?.id || '',
-            name: user?.full_name,
+            name: user?.full_name || user?.email?.split('@')[0] || 'Student',
             email: user?.email
           }}
         />

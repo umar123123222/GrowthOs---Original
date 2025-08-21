@@ -38,16 +38,20 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
 
   const sendToWebhook = useCallback(async (userMessage: string): Promise<string> => {
     try {
+      const payload = {
+        message: userMessage,
+        studentId: user?.id || 'unknown',
+        studentName: user?.name || user?.email || 'Student'
+      };
+      
+      console.log('Sending webhook payload:', payload);
+      
       const response = await fetch('https://n8n.core47.ai/webhook/SuccessPartner', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          message: userMessage,
-          studentId: user?.id || 'unknown',
-          studentName: user?.name || user?.email || 'Student'
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
