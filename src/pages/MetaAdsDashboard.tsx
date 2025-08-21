@@ -421,7 +421,7 @@ const MetaAdsDashboard = () => {
               Complete list of all active ads with detailed performance metrics
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="py-[10px]">
             <div className="space-y-4">
               {(() => {
               const activeAds = metaData.ads.filter(ad => ad.status === 'Active' || ad.status === 'active');
