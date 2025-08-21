@@ -18,7 +18,7 @@ interface ShoaibGPTProps {
   onClose: () => void;
   user?: {
     id: string;
-    name?: string;
+    full_name?: string;
     email?: string;
   };
 }
@@ -40,7 +40,7 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
     try {
       // Ensure we have proper user data
       const studentId = user?.id || 'unknown';
-      const studentName = user?.name || user?.email?.split('@')[0] || 'Student';
+      const studentName = user?.full_name || user?.email?.split('@')[0] || 'Student';
       
       const payload = {
         message: userMessage,
