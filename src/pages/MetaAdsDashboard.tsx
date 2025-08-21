@@ -5,6 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
 import { 
+  Pagination, 
+  PaginationContent, 
+  PaginationEllipsis, 
+  PaginationItem, 
+  PaginationLink, 
+  PaginationNext, 
+  PaginationPrevious 
+} from '@/components/ui/pagination';
+import { 
   Target, 
   TrendingUp, 
   Eye, 
@@ -41,6 +50,8 @@ const MetaAdsDashboard = () => {
     lastUpdated: null
   });
   const [connectionStatus, setConnectionStatus] = useState('checking');
+  const [currentPage, setCurrentPage] = useState(1);
+  const adsPerPage = 3;
 
   useEffect(() => {
     fetchMetaAdsData();
@@ -305,40 +316,102 @@ const MetaAdsDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Ad Performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Top Performing Ads</CardTitle>
-              <CardDescription>Best performing individual ads</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {metaData.ads.map((ad, index) => (
-                  <div key={ad.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <Badge variant="secondary" className="min-w-[24px] h-6 flex items-center justify-center">
-                        {index + 1}
-                      </Badge>
-                      <div>
-                        <h4 className="font-medium text-sm">{ad.name}</h4>
-                        <div className="flex items-center space-x-2">
-                          {getPerformanceIcon(ad.performance)}
-                          <span className="text-xs text-muted-foreground">
-                            {ad.ctr}% CTR • {formatCurrency(ad.cpc)} CPC
-                          </span>
+        {/* Active Ads with Pagination */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>All Active Ads</CardTitle>
+            <CardDescription>Complete list of all active ads with pagination</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {(() => {
+                const activeAds = metaData.ads.filter(ad => ad.status === 'Active' || ad.status === 'active');
+                const totalPages = Math.ceil(activeAds.length / adsPerPage);
+                const startIndex = (currentPage - 1) * adsPerPage;
+                const endIndex = startIndex + adsPerPage;
+                const currentAds = activeAds.slice(startIndex, endIndex);
+
+                return (
+                  <>
+                    {currentAds.length > 0 ? (
+                      currentAds.map((ad, index) => (
+                        <div key={ad.id} className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <Badge variant="secondary" className="min-w-[32px] h-8 flex items-center justify-center">
+                              {startIndex + index + 1}
+                            </Badge>
+                            <div>
+                              <h4 className="font-medium text-sm">{ad.name}</h4>
+                              <div className="flex items-center space-x-2 mt-1">
+                                {getPerformanceIcon(ad.performance)}
+                                <span className="text-xs text-muted-foreground">
+                                  {ad.ctr}% CTR • {formatCurrency(ad.cpc)} CPC
+                                </span>
+                                <Badge variant={ad.status === 'Active' || ad.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                                  {ad.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-sm">{formatCurrency(ad.spend)}</p>
+                            <p className="text-xs text-muted-foreground">{formatNumber(ad.clicks)} clicks</p>
+                            <p className="text-xs text-muted-foreground">{formatNumber(ad.impressions)} impressions</p>
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8">
+                        <p className="text-muted-foreground">No active ads found</p>
                       </div>
+                    )}
+                    
+                    {/* Pagination Controls */}
+                    {totalPages > 1 && (
+                      <div className="flex justify-center mt-6">
+                        <Pagination>
+                          <PaginationContent>
+                            <PaginationItem>
+                              <PaginationPrevious 
+                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                              />
+                            </PaginationItem>
+                            
+                            {[...Array(totalPages)].map((_, i) => (
+                              <PaginationItem key={i + 1}>
+                                <PaginationLink
+                                  onClick={() => setCurrentPage(i + 1)}
+                                  isActive={currentPage === i + 1}
+                                  className="cursor-pointer"
+                                >
+                                  {i + 1}
+                                </PaginationLink>
+                              </PaginationItem>
+                            ))}
+                            
+                            <PaginationItem>
+                              <PaginationNext
+                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                              />
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
+                      </div>
+                    )}
+                    
+                    <div className="text-center text-sm text-muted-foreground mt-4">
+                      Showing {currentAds.length} of {activeAds.length} active ads
                     </div>
-                    <div className="text-right">
-                      <p className="font-medium text-sm">{formatCurrency(ad.spend)}</p>
-                      <p className="text-xs text-muted-foreground">{formatNumber(ad.clicks)} clicks</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  </>
+                );
+              })()}
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
 
           <Card>
             <CardHeader>
