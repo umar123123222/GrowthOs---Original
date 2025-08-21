@@ -401,7 +401,7 @@ const MetaAdsDashboard = () => {
                       <div className="flex items-center space-x-3 bg-muted/50 rounded-lg px-4 py-2">
                         {getPerformanceIcon(campaign.performance)}
                         <span className="text-sm font-semibold text-foreground">
-                          {campaign.clicks > 0 ? ((campaign.results || 0) / campaign.clicks * 100).toFixed(2) : '0.00'}% Conv. Rate
+                          {campaign.clicks > 0 ? ((campaign.conversions || 0) / campaign.clicks * 100).toFixed(2) : '0.00'}% Conv. Rate
                         </span>
                       </div>
                     </div>
