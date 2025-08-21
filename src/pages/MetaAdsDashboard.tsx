@@ -179,12 +179,10 @@ const MetaAdsDashboard = () => {
             </p>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-3 px-4 py-2 rounded-full border shadow-soft">
-              {getStatusIcon()}
-              <span className="text-sm font-medium">
-                {connectionStatus === 'connected' ? 'Live Connected' : 'Connection Issue'}
-              </span>
-            </div>
+            {getStatusIcon()}
+            <span className="text-sm font-medium">
+              {connectionStatus === 'connected' ? 'Live Connected' : 'Connection Issue'}
+            </span>
             <Button onClick={fetchMetaAdsData} variant="outline" size="sm" className="hover-lift shadow-soft">
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh Data
