@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,16 +13,38 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-const MetaAdsDashboard = () => {
-  const {
-    toast
-  } = useToast();
-  const {
-    user
-  } = useAuth();
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { handleApplicationError } from '@/utils/errorHandling';
+import { ErrorMessage } from '@/components/ui/error-message';
+import { SafeErrorBoundary } from '@/components/SafeErrorBoundary';
+interface MetaData {
+  campaigns: Array<any>;
+  adSets: Array<any>;
+  ads: Array<any>;
+  totalSpend: number;
+  totalImpressions: number;
+  totalClicks: number;
+  totalConversions: number;
+  totalConversionValue: number;
+  averageCTR: number;
+  averageCPC: number;
+  averageROAS: number;
+  lastUpdated: string | null;
+}
+
+interface DateRange {
+  from: Date | undefined;
+  to: Date | undefined;
+}
+
+const MetaAdsDashboard: React.FC = () => {
+  const { toast } = useToast();
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
-  const [metaData, setMetaData] = useState({
+  const { error, handleError, clearError } = useErrorHandler();
+  
+  const [loading, setLoading] = useState<boolean>(true);
+  const [metaData, setMetaData] = useState<MetaData>({
     campaigns: [],
     adSets: [],
     ads: [],
@@ -36,27 +58,32 @@ const MetaAdsDashboard = () => {
     averageROAS: 0,
     lastUpdated: null
   });
-  const [connectionStatus, setConnectionStatus] = useState('checking');
-  const [currentPage, setCurrentPage] = useState(1);
-  const [currentCampaignPage, setCampaignCurrentPage] = useState(1);
-  const [dateRange, setDateRange] = useState({
+  const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | 'error'>('checking');
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [currentCampaignPage, setCampaignCurrentPage] = useState<number>(1);
+  const [dateRange, setDateRange] = useState<DateRange>({
     from: undefined,
     to: undefined
   });
-  const [pendingDateRange, setPendingDateRange] = useState({
+  const [pendingDateRange, setPendingDateRange] = useState<DateRange>({
     from: undefined,
     to: undefined
   });
-  const [hasDateChanges, setHasDateChanges] = useState(false);
+  const [hasDateChanges, setHasDateChanges] = useState<boolean>(false);
   const adsPerPage = 3;
   const campaignsPerPage = 2;
   useEffect(() => {
     fetchMetaAdsData();
   }, []);
-  const fetchMetaAdsData = async (customDateRange = null) => {
+  /**
+   * Fetches Meta Ads data from the API with proper error handling
+   */
+  const fetchMetaAdsData = useCallback(async (customDateRange: DateRange | null = null): Promise<void> => {
     setLoading(true);
+    clearError();
+    
     try {
-      const requestBody: any = {};
+      const requestBody: Record<string, any> = {};
       
       // Add date range if specified
       if (customDateRange?.from) {
@@ -66,18 +93,18 @@ const MetaAdsDashboard = () => {
         requestBody.dateTo = customDateRange.to.toISOString();
       }
 
-      const {
-        data,
-        error
-      } = await supabase.functions.invoke('meta-ads-metrics', {
+      const { data, error } = await supabase.functions.invoke('meta-ads-metrics', {
         body: requestBody
       });
+      
       if (error) throw error;
+      
       if (!data?.connected) {
         setConnectionStatus('disconnected');
         setLoading(false);
         return;
       }
+      
       const m = data.metrics || {};
       setMetaData({
         campaigns: m.campaigns || [],
@@ -94,69 +121,86 @@ const MetaAdsDashboard = () => {
         lastUpdated: new Date().toISOString()
       });
       setConnectionStatus('connected');
-    } catch (error) {
-      console.error('Error fetching Meta Ads data:', error);
+    } catch (error: any) {
+      handleApplicationError(error, 'Meta Ads data fetch', false);
+      handleError(error, 'Meta Ads Dashboard');
       setConnectionStatus('error');
-      toast({
-        title: "Connection Error",
-        description: "Failed to fetch Meta Ads data. Please check your API connection.",
-        variant: "destructive"
-      });
     } finally {
       setLoading(false);
     }
-  };
-  const formatCurrency = amount => {
+  }, [clearError, handleError]);
+  /**
+   * Formats a number value as currency (USD)
+   */
+  const formatCurrency = useCallback((amount: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD'
     }).format(amount);
-  };
-  const formatNumber = num => {
+  }, []);
+
+  /**
+   * Formats a number with locale-specific formatting
+   */
+  const formatNumber = useCallback((num: number): string => {
     return new Intl.NumberFormat('en-US').format(num);
-  };
-  const getPerformanceIcon = performance => {
+  }, []);
+
+  /**
+   * Returns appropriate performance icon based on performance level
+   */
+  const getPerformanceIcon = useCallback((performance: string): JSX.Element => {
     switch (performance) {
       case 'excellent':
-        return <ArrowUp className="h-4 w-4 text-green-600" />;
+        return <ArrowUp className="h-4 w-4 text-success" />;
       case 'good':
-        return <ArrowUp className="h-4 w-4 text-blue-600" />;
+        return <ArrowUp className="h-4 w-4 text-primary" />;
       case 'poor':
-        return <ArrowDown className="h-4 w-4 text-red-600" />;
+        return <ArrowDown className="h-4 w-4 text-destructive" />;
       default:
-        return <Minus className="h-4 w-4 text-yellow-600" />;
+        return <Minus className="h-4 w-4 text-warning" />;
     }
-  };
-  const getPerformanceBadge = performance => {
+  }, []);
+
+  /**
+   * Returns performance badge with appropriate styling
+   */
+  const getPerformanceBadge = useCallback((performance: string): JSX.Element => {
     const variants = {
-      excellent: 'bg-green-100 text-green-800',
-      good: 'bg-blue-100 text-blue-800',
-      average: 'bg-yellow-100 text-yellow-800',
-      poor: 'bg-red-100 text-red-800'
+      excellent: 'bg-success/10 text-success border-success/20',
+      good: 'bg-primary/10 text-primary border-primary/20',
+      average: 'bg-warning/10 text-warning border-warning/20',
+      poor: 'bg-destructive/10 text-destructive border-destructive/20'
     };
-    return <Badge className={variants[performance] || variants.average}>
+    return <Badge className={variants[performance as keyof typeof variants] || variants.average}>
         {performance.charAt(0).toUpperCase() + performance.slice(1)}
       </Badge>;
-  };
-  const getStatusIcon = () => {
+  }, []);
+  /**
+   * Returns appropriate status icon based on connection status
+   */
+  const getStatusIcon = useCallback((): JSX.Element => {
     switch (connectionStatus) {
       case 'connected':
-        return <CheckCircle2 className="h-4 w-4 text-green-600" />;
+        return <CheckCircle2 className="h-4 w-4 text-success" />;
       case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
+        return <AlertCircle className="h-4 w-4 text-destructive" />;
       default:
-        return <RefreshCw className="h-4 w-4 text-yellow-600 animate-spin" />;
+        return <RefreshCw className="h-4 w-4 text-warning animate-spin" />;
     }
-  };
+  }, [connectionStatus]);
 
-  const updateDateRange = () => {
+  /**
+   * Updates the active date range and refetches data
+   */
+  const updateDateRange = useCallback((): void => {
     setDateRange({
       from: pendingDateRange.from,
       to: pendingDateRange.to
     });
     setHasDateChanges(false);
     fetchMetaAdsData(pendingDateRange.from && pendingDateRange.to ? pendingDateRange : null);
-  };
+  }, [pendingDateRange.from, pendingDateRange.to, fetchMetaAdsData]);
   if (loading) {
     return <div className="flex items-center justify-center min-h-96 animate-fade-in">
         <div className="text-center">
@@ -198,8 +242,17 @@ const MetaAdsDashboard = () => {
         </Card>
       </div>;
   }
-  return <TooltipProvider>
-      <div className="max-w-7xl mx-auto space-y-6">
+  return (
+    <SafeErrorBoundary>
+      <TooltipProvider>
+        <div className="max-w-7xl mx-auto space-y-6">
+          {error && (
+            <ErrorMessage 
+              error={error} 
+              onDismiss={clearError}
+              className="mb-4"
+            />
+          )}
         {/* Header */}
         <div className="flex items-center justify-between mb-8 animate-slide-up">
           <div>
@@ -308,7 +361,7 @@ const MetaAdsDashboard = () => {
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-primary rounded-full mr-2"></span>
                 {dateRange.from && dateRange.to 
-                  ? `${Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days selected`
+                  ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days selected`
                   : 'Last 7 days'
                 } • {metaData.campaigns?.length || 0} campaigns
               </p>
@@ -331,7 +384,7 @@ const MetaAdsDashboard = () => {
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-success rounded-full mr-2"></span>
                 {(metaData.averageCTR || 0).toFixed(2)}% CTR • {formatNumber(metaData.totalClicks || 0)} clicks • {dateRange.from && dateRange.to 
-                  ? `${Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days`
+                  ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days`
                   : '7 days'}
               </p>
             </CardContent>
@@ -353,7 +406,7 @@ const MetaAdsDashboard = () => {
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-warning rounded-full mr-2"></span>
                 {formatCurrency(metaData.averageCPC || 0)} avg CPC • {dateRange.from && dateRange.to 
-                  ? `${Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days period`
+                  ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days period`
                   : '7 days'} • {(metaData.totalClicks || 0) > 0 ? ((metaData.totalConversions || 0) / (metaData.totalClicks || 0) * 100).toFixed(2) + '% conv rate' : '0% conv rate'}
               </p>
             </CardContent>
@@ -379,7 +432,7 @@ const MetaAdsDashboard = () => {
                 backgroundColor: 'hsl(330 81% 60%)'
               }}></span>
                 {formatCurrency(metaData.totalConversionValue || 0)} revenue • {dateRange.from && dateRange.to 
-                  ? `${Math.ceil((dateRange.to - dateRange.from) / (1000 * 60 * 60 * 24))} days period`
+                  ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days period`
                   : '7 days'} • {formatCurrency(metaData.totalSpend || 0)} spent
               </p>
             </CardContent>
@@ -705,11 +758,13 @@ const MetaAdsDashboard = () => {
           </Card>
         </div>
 
-        {/* Last Updated */}
-        <div className="text-center text-sm text-muted-foreground">
-          Last updated: {metaData.lastUpdated ? new Date(metaData.lastUpdated).toLocaleString() : 'Never'}
+          {/* Last Updated */}
+          <div className="text-center text-sm text-muted-foreground">
+            Last updated: {metaData.lastUpdated ? new Date(metaData.lastUpdated).toLocaleString() : 'Never'}
+          </div>
         </div>
-      </div>
-    </TooltipProvider>;
+      </TooltipProvider>
+    </SafeErrorBoundary>
+  );
 };
 export default MetaAdsDashboard;
