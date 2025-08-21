@@ -250,68 +250,99 @@ const MetaAdsDashboard = () => {
           </Card>
         </div>
 
-        {/* Campaign Performance */}
+        {/* Active Campaigns */}
         <Card>
           <CardHeader>
-            <CardTitle>Campaign Performance</CardTitle>
-            <CardDescription>Overview of all active and paused campaigns</CardDescription>
+            <CardTitle>Active Campaigns</CardTitle>
+            <CardDescription>All currently active advertising campaigns</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {metaData.campaigns.map((campaign) => (
-                <div key={campaign.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <h4 className="font-medium">{campaign.name}</h4>
-                      <Badge variant={campaign.status === 'Active' ? 'default' : 'secondary'}>
-                        {campaign.status}
-                      </Badge>
-                      {getPerformanceBadge(campaign.performance)}
+              {(() => {
+                const activeCampaigns = metaData.campaigns.filter(campaign => 
+                  campaign.status === 'Active' || campaign.status === 'active' || campaign.status === 'ACTIVE'
+                );
+                
+                if (activeCampaigns.length === 0) {
+                  return (
+                    <div className="text-center py-12">
+                      <Target className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="text-lg font-medium mb-2">No Active Campaigns Found</h3>
+                      <p className="text-muted-foreground mb-4">
+                        {metaData.campaigns.length === 0 
+                          ? "No campaigns have been created yet or the API couldn't fetch campaign details."
+                          : `You have ${metaData.campaigns.length} total campaigns, but none are currently active.`
+                        }
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Total account metrics: {formatCurrency(metaData.totalSpend)} spent, {formatNumber(metaData.totalImpressions)} impressions
+                      </p>
                     </div>
-                    <div className="flex items-center space-x-2">
-                      {getPerformanceIcon(campaign.performance)}
-                      <span className="text-sm font-medium">
-                        {campaign.conversionRate}% Conv. Rate
-                      </span>
+                  );
+                }
+
+                return activeCampaigns.map((campaign) => (
+                  <div key={campaign.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center space-x-3">
+                        <h4 className="font-medium text-lg">{campaign.name}</h4>
+                        <Badge variant="default" className="bg-green-100 text-green-800">
+                          ● Active
+                        </Badge>
+                        {getPerformanceBadge(campaign.performance)}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {getPerformanceIcon(campaign.performance)}
+                        <span className="text-sm font-medium">
+                          {campaign.conversionRate || 0}% Conv. Rate
+                        </span>
+                      </div>
                     </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-4">
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Daily Spend</p>
+                        <p className="font-medium text-lg">{formatCurrency(campaign.spend || 0)}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Daily Budget</p>
+                        <p className="font-medium text-lg">{formatCurrency(campaign.budget || 0)}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Impressions</p>
+                        <p className="font-medium text-lg">{formatNumber(campaign.impressions || 0)}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Clicks</p>
+                        <p className="font-medium text-lg">{formatNumber(campaign.clicks || 0)}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">CTR</p>
+                        <p className="font-medium text-lg">{campaign.ctr || 0}%</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">Avg CPC</p>
+                        <p className="font-medium text-lg">{formatCurrency(campaign.cpc || 0)}</p>
+                      </div>
+                    </div>
+                    
+                    {campaign.budget && campaign.spend && (
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Budget Utilization</span>
+                          <span className="font-medium">
+                            {((campaign.spend / campaign.budget) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <Progress 
+                          value={(campaign.spend / campaign.budget) * 100} 
+                          className="h-3"
+                        />
+                      </div>
+                    )}
                   </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Spend</p>
-                      <p className="font-medium">{formatCurrency(campaign.spend)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Budget</p>
-                      <p className="font-medium">{formatCurrency(campaign.budget)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Impressions</p>
-                      <p className="font-medium">{formatNumber(campaign.impressions)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Clicks</p>
-                      <p className="font-medium">{formatNumber(campaign.clicks)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">CTR</p>
-                      <p className="font-medium">{campaign.ctr}%</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">CPC</p>
-                      <p className="font-medium">{formatCurrency(campaign.cpc)}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Budget Used</span>
-                      <span>{((campaign.spend / campaign.budget) * 100).toFixed(1)}%</span>
-                    </div>
-                    <Progress value={(campaign.spend / campaign.budget) * 100} className="h-2" />
-                  </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </CardContent>
         </Card>
