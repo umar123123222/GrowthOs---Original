@@ -554,16 +554,18 @@ const Layout = memo(({
             <div className="flex items-center space-x-4">
               <NotificationDropdown />
               
-              {/* Success Partner Button */}
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="text-gray-700 hover:text-blue-600 hover:border-blue-200"
-                onClick={() => setShowShoaibGPT(true)}
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Success Partner
-              </Button>
+              {/* Success Partner Button - Only for students */}
+              {user?.role === 'student' && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-gray-700 hover:text-blue-600 hover:border-blue-200"
+                  onClick={() => setShowShoaibGPT(true)}
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Success Partner
+                </Button>
+              )}
               
               {/* Activity Logs Button for authorized users - Only admins and superadmins */}
               {(isUserSuperadmin || isUserAdmin) && <ActivityLogsDialog>
