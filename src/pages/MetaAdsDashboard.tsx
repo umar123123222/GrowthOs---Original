@@ -515,7 +515,7 @@ const MetaAdsDashboard: React.FC = () => {
                         }} />
                             Total Amount Spent
                           </p>
-                          <p className="font-bold text-lg text-foreground truncate whitespace-nowrap">{formatCurrency(campaign.spend || 0)}</p>
+                          <p className="font-bold text-sm text-foreground whitespace-nowrap overflow-x-auto">{formatCurrency(campaign.spend || 0)}</p>
                         </div>
                         <div className="bg-gradient-to-br from-success/5 to-success/10 rounded-lg p-4 border border-success/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
