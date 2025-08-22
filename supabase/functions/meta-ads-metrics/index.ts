@@ -417,7 +417,7 @@ serve(async (req) => {
         metrics.averageCTR = ctrCount ? (ctrSum / ctrCount) : 0
         metrics.averageCPC = cpcCount ? (cpcSum / cpcCount) : 0
         metrics.totalConversionValue = convValueSum
-        metrics.averageROAS = spendSum > 0 ? (convValueSum / spendSum) * 100 : 0
+        metrics.averageROAS = spendSum > 0 ? (convValueSum / spendSum) : 0
       }
 
       // Fetch campaigns with enhanced insights
@@ -466,7 +466,7 @@ serve(async (req) => {
             if (purchaseCost) costPerPurchase = Number(purchaseCost.value || 0)
           }
           
-          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0
+          const roas = spend > 0 ? (conversionValue / spend) : 0
           const objective = campaign.objective || 'UNKNOWN'
 
           metrics.campaigns.push({
@@ -536,7 +536,7 @@ serve(async (req) => {
             if (purchaseCost) costPerPurchase = Number(purchaseCost.value || 0)
           }
           
-          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0
+          const roas = spend > 0 ? (conversionValue / spend) : 0
           
           // Infer objective from parent campaign or use default
           const objective = 'CONVERSIONS' // Default assumption for ads
