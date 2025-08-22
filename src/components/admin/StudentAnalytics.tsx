@@ -4,8 +4,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { Play, CheckCircle, Clock, FileText, Target, TrendingUp, Users, Video } from 'lucide-react';
+import { Play, CheckCircle, Clock, FileText, Target, TrendingUp, Users, Video, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 interface StudentAnalytics {
   id: string;
@@ -31,6 +32,7 @@ interface OverviewStats {
 }
 export const StudentAnalytics = () => {
   const [students, setStudents] = useState<StudentAnalytics[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [overviewStats, setOverviewStats] = useState<OverviewStats>({
     total_students: 0,
     active_students: 0,
@@ -40,6 +42,11 @@ export const StudentAnalytics = () => {
     assignments_submitted_today: 0
   });
   const [loading, setLoading] = useState(true);
+  const studentsPerPage = 12;
+  const totalPages = Math.ceil(students.length / studentsPerPage);
+  const startIndex = (currentPage - 1) * studentsPerPage;
+  const endIndex = startIndex + studentsPerPage;
+  const currentStudents = students.slice(startIndex, endIndex);
   const {
     toast
   } = useToast();
