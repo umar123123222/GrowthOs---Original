@@ -28,9 +28,9 @@ interface MetaData {
   totalConversionValue: number;
   averageCTR: number;
   averageCPC: number;
-  averageROAS: number;
-  lastUpdated: string | null;
-  currency?: string;
+    averageROAS: number;
+    lastUpdated: string | null;
+    currency?: string;
 }
 
 interface DateRange {
@@ -57,7 +57,8 @@ const MetaAdsDashboard: React.FC = () => {
     averageCTR: 0,
     averageCPC: 0,
     averageROAS: 0,
-    lastUpdated: null
+    lastUpdated: null,
+    currency: 'USD'
   });
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | 'error'>('checking');
   const [currentPage, setCurrentPage] = useState<number>(1);

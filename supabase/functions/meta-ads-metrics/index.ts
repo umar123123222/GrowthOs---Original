@@ -337,9 +337,9 @@ serve(async (req) => {
         return 'poor';
       }
 
-      // Fetch account currency first
+      // Fetch account currency and basic info first
       const accountInfoUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}`)
-      accountInfoUrl.searchParams.set('fields', 'currency')
+      accountInfoUrl.searchParams.set('fields', 'currency,name')
       accountInfoUrl.searchParams.set('access_token', accessToken)
       
       try {
@@ -350,9 +350,11 @@ serve(async (req) => {
             metrics.currency = accountInfo.currency
             console.log(`Account currency: ${metrics.currency}`)
           }
+        } else {
+          console.log('Failed to fetch account info:', accountInfoResp.status)
         }
       } catch (e) {
-        console.log('Failed to fetch account currency, using default USD')
+        console.log('Failed to fetch account currency, using default USD:', e.message)
       }
 
       // Prepare date parameters for API calls
