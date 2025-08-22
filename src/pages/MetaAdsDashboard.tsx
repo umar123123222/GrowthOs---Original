@@ -633,8 +633,8 @@ const MetaAdsDashboard: React.FC = () => {
             <div className="space-y-4">
               {(() => {
               const activeAds = metaData.ads.filter(ad => 
-                (ad.status === 'Active' || ad.status === 'active' || ad.status === 'ACTIVE') && 
-                (ad.effective_status === 'ACTIVE' || ad.effective_status === 'active' || !ad.effective_status)
+                ad.delivery === 'active' || ad.delivery === 'ACTIVE' || 
+                (ad.delivery_info && (ad.delivery_info.delivery_status === 'active' || ad.delivery_info.delivery_status === 'ACTIVE'))
               );
               const totalPages = Math.ceil(activeAds.length / adsPerPage);
               const startIndex = (currentPage - 1) * adsPerPage;
