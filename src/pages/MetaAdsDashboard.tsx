@@ -524,7 +524,7 @@ const MetaAdsDashboard: React.FC = () => {
                         }} />
                             ROAS
                           </p>
-                           <p className="font-bold text-lg text-foreground">{campaign.roas ? `${campaign.roas.toFixed(2)}x` : 'N/A'}</p>
+                           <p className="font-bold text-lg text-foreground">{campaign.roas ? `${campaign.roas.toFixed(2)}x` : '—'}</p>
                         </div>
                         <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 border border-warning/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
