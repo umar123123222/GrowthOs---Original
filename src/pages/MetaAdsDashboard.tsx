@@ -356,7 +356,7 @@ const MetaAdsDashboard: React.FC = () => {
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-bold text-foreground mb-1">
-                {formatCurrency(metaData.totalSpend || 0)}
+                {formatNumber(metaData.totalSpend || 0)}
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-primary rounded-full mr-2"></span>
