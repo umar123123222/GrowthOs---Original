@@ -4,7 +4,7 @@ import ShoaibGPT from "@/components/ShoaibGPT";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle } from "lucide-react";
+import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -291,7 +291,7 @@ const Layout = memo(({
   }, []);
 
   // Check if any course submenu is active to keep it expanded
-  const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=submissions') || location.search.includes('tab=success-sessions');
+  const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=submissions') || location.search.includes('tab=success-sessions') || location.search.includes('tab=milestones');
 
   // Memoize navigation to prevent unnecessary re-renders
   const navigation = useMemo(() => {
@@ -324,6 +324,10 @@ const Layout = memo(({
           name: "Success Sessions",
           href: "/superadmin?tab=success-sessions",
           icon: Calendar
+        }, {
+          name: "Milestones",
+          href: "/superadmin?tab=milestones",
+          icon: Trophy
         }]
       }, {
         name: "Students",
@@ -375,6 +379,10 @@ const Layout = memo(({
           name: "Success Sessions",
           href: "/admin?tab=success-sessions",
           icon: Calendar
+        }, {
+          name: "Milestones",
+          href: "/admin?tab=milestones",
+          icon: Trophy
         }]
       }, {
         name: "Students",
