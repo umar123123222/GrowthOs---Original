@@ -358,7 +358,7 @@ const MetaAdsDashboard: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-3xl font-bold text-foreground mb-1">
+              <div className="text-2xl lg:text-3xl font-bold text-foreground mb-1 break-words overflow-hidden">
                 {formatCurrency(metaData.totalSpend || 0)}
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
@@ -381,7 +381,7 @@ const MetaAdsDashboard: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-3xl font-bold text-foreground mb-1">
+              <div className="text-2xl lg:text-3xl font-bold text-foreground mb-1 break-words overflow-hidden">
                 {formatNumber(metaData.totalImpressions || 0)}
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
@@ -403,7 +403,7 @@ const MetaAdsDashboard: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-3xl font-bold text-foreground mb-1">
+              <div className="text-2xl lg:text-3xl font-bold text-foreground mb-1 break-words overflow-hidden">
                 {formatNumber(metaData.totalConversions || 0)}
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
@@ -427,7 +427,7 @@ const MetaAdsDashboard: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
-              <div className="text-3xl font-bold text-foreground mb-1">
+              <div className="text-2xl lg:text-3xl font-bold text-foreground mb-1 break-words overflow-hidden">
                 {metaData.averageROAS ? `${(metaData.averageROAS * 100).toFixed(1)}%` : 'N/A'}
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
@@ -515,7 +515,7 @@ const MetaAdsDashboard: React.FC = () => {
                         }} />
                             Total Amount Spent
                           </p>
-                          <p className="font-bold text-lg text-foreground">{formatCurrency(campaign.spend || 0)}</p>
+                          <p className="font-bold text-lg text-foreground break-words overflow-hidden">{formatCurrency(campaign.spend || 0)}</p>
                         </div>
                         <div className="bg-gradient-to-br from-success/5 to-success/10 rounded-lg p-4 border border-success/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
@@ -524,7 +524,7 @@ const MetaAdsDashboard: React.FC = () => {
                         }} />
                             ROAS
                           </p>
-                           <p className="font-bold text-lg text-foreground">{campaign.roas ? `${(campaign.roas).toFixed(2)}x` : '—'}</p>
+                           <p className="font-bold text-lg text-foreground break-words overflow-hidden">{campaign.roas ? `${(campaign.roas).toFixed(2)}x` : '—'}</p>
                         </div>
                         <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 border border-warning/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
@@ -533,35 +533,35 @@ const MetaAdsDashboard: React.FC = () => {
                         }} />
                             Results
                           </p>
-                          <p className="font-bold text-lg text-foreground">{formatNumber(campaign.results || 0)}</p>
+                          <p className="font-bold text-lg text-foreground break-words overflow-hidden">{formatNumber(campaign.results || 0)}</p>
                         </div>
                         <div className="bg-gradient-to-br from-blue-500/5 to-blue-500/10 rounded-lg p-4 border border-blue-500/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
                             <Eye className="h-3 w-3 mr-1 text-blue-500" />
                             Impressions
                           </p>
-                          <p className="font-bold text-lg text-foreground">{formatNumber(campaign.impressions || 0)}</p>
+                          <p className="font-bold text-lg text-foreground break-words overflow-hidden">{formatNumber(campaign.impressions || 0)}</p>
                         </div>
                         <div className="bg-gradient-to-br from-purple-500/5 to-purple-500/10 rounded-lg p-4 border border-purple-500/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
                             <MousePointer className="h-3 w-3 mr-1 text-purple-500" />
                             Clicks
                           </p>
-                          <p className="font-bold text-lg text-foreground">{formatNumber(campaign.clicks || 0)}</p>
+                          <p className="font-bold text-lg text-foreground break-words overflow-hidden">{formatNumber(campaign.clicks || 0)}</p>
                         </div>
                         <div className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 rounded-lg p-4 border border-emerald-500/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
                             <Activity className="h-3 w-3 mr-1 text-emerald-500" />
                             CTR
                           </p>
-                          <p className="font-bold text-lg text-foreground">{(campaign.ctr || 0).toFixed(2)}%</p>
+                          <p className="font-bold text-lg text-foreground break-words overflow-hidden">{(campaign.ctr || 0).toFixed(2)}%</p>
                         </div>
                         <div className="bg-gradient-to-br from-pink-500/5 to-pink-500/10 rounded-lg p-4 border border-pink-500/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
                             <DollarSign className="h-3 w-3 mr-1 text-pink-500" />
                             Avg CPC
                           </p>
-                          <p className="font-bold text-lg text-foreground">{formatCurrency(campaign.cpc || 0)}</p>
+                          <p className="font-bold text-lg text-foreground break-words overflow-hidden">{formatCurrency(campaign.cpc || 0)}</p>
                         </div>
                       </div>
                       
