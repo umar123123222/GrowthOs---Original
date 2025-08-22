@@ -5,8 +5,9 @@ import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
-import { Play, CheckCircle, Clock, FileText, Target, TrendingUp, Users, Video, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, CheckCircle, Clock, FileText, Target, TrendingUp, Users, Video, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 interface StudentAnalytics {
   id: string;
@@ -33,6 +34,7 @@ interface OverviewStats {
 export const StudentAnalytics = () => {
   const [students, setStudents] = useState<StudentAnalytics[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
   const [overviewStats, setOverviewStats] = useState<OverviewStats>({
     total_students: 0,
     active_students: 0,
@@ -42,17 +44,29 @@ export const StudentAnalytics = () => {
     assignments_submitted_today: 0
   });
   const [loading, setLoading] = useState(true);
+  
+  // Filter students based on search term
+  const filteredStudents = students.filter(student => 
+    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
   const studentsPerPage = 12;
-  const totalPages = Math.ceil(students.length / studentsPerPage);
+  const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
   const startIndex = (currentPage - 1) * studentsPerPage;
   const endIndex = startIndex + studentsPerPage;
-  const currentStudents = students.slice(startIndex, endIndex);
+  const currentStudents = filteredStudents.slice(startIndex, endIndex);
   const {
     toast
   } = useToast();
   useEffect(() => {
     fetchAnalyticsData();
   }, []);
+  
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
@@ -176,6 +190,17 @@ export const StudentAnalytics = () => {
         <p className="text-gray-600 mt-2">Comprehensive overview of student progress and engagement</p>
       </div>
 
+      {/* Search Filter */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <Input
+          placeholder="Search students by name or email..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
+      </div>
+
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 via-blue-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
@@ -277,8 +302,15 @@ export const StudentAnalytics = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-gray-600">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredStudents.length)} of {filteredStudents.length} students
+              {searchTerm && ` (filtered from ${students.length} total)`}
+            </p>
+          </div>
+          
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {students.slice(0, 10).map(student => <Card key={student.id} className="shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 bg-gradient-to-br from-white to-gray-50">
+            {currentStudents.map(student => <Card key={student.id} className="shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader className="pb-4">
                   <div className="flex items-center space-x-4">
                     <Avatar className="w-12 h-12 ring-2 ring-blue-100">
@@ -343,6 +375,45 @@ export const StudentAnalytics = () => {
                 </CardContent>
               </Card>)}
           </div>
+          
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center space-x-2 pt-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                  <Button
+                    key={page}
+                    variant={currentPage === page ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setCurrentPage(page)}
+                    className="w-8 h-8 p-0"
+                  >
+                    {page}
+                  </Button>
+                ))}
+              </div>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="progress" className="space-y-4">
