@@ -632,7 +632,10 @@ const MetaAdsDashboard: React.FC = () => {
           <CardContent className="py-[10px]">
             <div className="space-y-4">
               {(() => {
-              const activeAds = metaData.ads.filter(ad => ad.status === 'Active' || ad.status === 'active');
+              const activeAds = metaData.ads.filter(ad => 
+                (ad.status === 'Active' || ad.status === 'active' || ad.status === 'ACTIVE') && 
+                (ad.effective_status === 'ACTIVE' || ad.effective_status === 'active' || !ad.effective_status)
+              );
               const totalPages = Math.ceil(activeAds.length / adsPerPage);
               const startIndex = (currentPage - 1) * adsPerPage;
               const endIndex = startIndex + adsPerPage;
