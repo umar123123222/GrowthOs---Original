@@ -238,6 +238,7 @@ serve(async (req) => {
       campaigns: [] as any[],
       adSets: [] as any[],
       ads: [] as any[],
+      currency: 'USD', // Default to USD
     }
 
     try {
@@ -334,6 +335,24 @@ serve(async (req) => {
         if (totalScore >= 70) return 'good';
         if (totalScore >= 50) return 'average';
         return 'poor';
+      }
+
+      // Fetch account currency first
+      const accountInfoUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}`)
+      accountInfoUrl.searchParams.set('fields', 'currency')
+      accountInfoUrl.searchParams.set('access_token', accessToken)
+      
+      try {
+        const accountInfoResp = await fetch(accountInfoUrl.toString())
+        if (accountInfoResp.ok) {
+          const accountInfo = await accountInfoResp.json()
+          if (accountInfo.currency) {
+            metrics.currency = accountInfo.currency
+            console.log(`Account currency: ${metrics.currency}`)
+          }
+        }
+      } catch (e) {
+        console.log('Failed to fetch account currency, using default USD')
       }
 
       // Prepare date parameters for API calls

@@ -30,6 +30,7 @@ interface MetaData {
   averageCPC: number;
   averageROAS: number;
   lastUpdated: string | null;
+  currency?: string;
 }
 
 interface DateRange {
@@ -118,7 +119,8 @@ const MetaAdsDashboard: React.FC = () => {
         averageCTR: m.averageCTR ?? m.ctr ?? 0,
         averageCPC: m.averageCPC ?? m.cpc ?? 0,
         averageROAS: m.averageROAS ?? 0,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
+        currency: m.currency || 'USD'
       });
       setConnectionStatus('connected');
     } catch (error: any) {
@@ -130,14 +132,14 @@ const MetaAdsDashboard: React.FC = () => {
     }
   }, [clearError, handleError]);
   /**
-   * Formats a number value as currency (USD)
+   * Formats a number value as currency using account currency
    */
   const formatCurrency = useCallback((amount: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD'
+      currency: metaData.currency || 'USD'
     }).format(amount);
-  }, []);
+  }, [metaData.currency]);
 
   /**
    * Formats a number with locale-specific formatting
@@ -356,7 +358,7 @@ const MetaAdsDashboard: React.FC = () => {
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-bold text-foreground mb-1">
-                {formatNumber(metaData.totalSpend || 0)}
+                {formatCurrency(metaData.totalSpend || 0)}
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-primary rounded-full mr-2"></span>
