@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Edit, Trash2, Trophy, Users, Award, BarChart3, Settings } from 'lucide-react';
+import { Plus, Edit, Trash2, Trophy, Users, Award, BarChart3, Settings, TrendingUp } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useMilestones, type Milestone, type MilestoneCategory } from '@/hooks/useMilestones';
@@ -404,6 +404,253 @@ const UserMilestonesTab: React.FC = () => {
   );
 };
 
+const MilestoneAnalytics: React.FC = () => {
+  const [analytics, setAnalytics] = useState({
+    totalMilestones: 0,
+    activeMilestones: 0,
+    totalAchievements: 0,
+    uniqueAchievers: 0,
+    recentAchievements: [] as any[],
+    topMilestones: [] as any[],
+    categoryStats: [] as any[]
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchAnalytics();
+  }, []);
+
+  const fetchAnalytics = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch milestone counts
+      const { data: milestones } = await supabase
+        .from('milestones')
+        .select('id, name, is_active, category_id');
+
+      const totalMilestones = milestones?.length || 0;
+      const activeMilestones = milestones?.filter(m => m.is_active).length || 0;
+
+      // Fetch user milestone achievements
+      const { data: achievements } = await supabase
+        .from('user_milestones')
+        .select(`
+          id,
+          milestone_id,
+          user_id,
+          completed_at,
+          milestones!inner(name, category_id),
+          users!inner(full_name)
+        `)
+        .order('completed_at', { ascending: false });
+
+      const totalAchievements = achievements?.length || 0;
+      const uniqueAchievers = new Set(achievements?.map(a => a.user_id)).size;
+
+      // Recent achievements (last 10)
+      const recentAchievements = achievements?.slice(0, 10) || [];
+
+      // Top milestones by achievement count
+      const milestoneAchievementCounts = milestones?.map(milestone => {
+        const count = achievements?.filter(a => a.milestone_id === milestone.id).length || 0;
+        return {
+          name: milestone.name,
+          achievements: count
+        };
+      }).sort((a, b) => b.achievements - a.achievements).slice(0, 5) || [];
+
+      // Category statistics
+      const { data: categories } = await supabase
+        .from('milestone_categories')
+        .select('id, name');
+
+      const categoryStats = categories?.map(category => {
+        const categoryMilestones = milestones?.filter(m => m.category_id === category.id) || [];
+        const categoryAchievements = achievements?.filter(a => 
+          categoryMilestones.some(m => m.id === a.milestone_id)
+        ) || [];
+        
+        return {
+          name: category.name,
+          milestones: categoryMilestones.length,
+          achievements: categoryAchievements.length
+        };
+      }) || [];
+
+      setAnalytics({
+        totalMilestones,
+        activeMilestones,
+        totalAchievements,
+        uniqueAchievers,
+        recentAchievements,
+        topMilestones: milestoneAchievementCounts,
+        categoryStats
+      });
+    } catch (error) {
+      console.error('Error fetching milestone analytics:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-lg">Loading analytics...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Milestones</CardTitle>
+            <Trophy className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.totalMilestones}</div>
+            <p className="text-xs text-muted-foreground">
+              {analytics.activeMilestones} active
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Achievements</CardTitle>
+            <Award className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.totalAchievements}</div>
+            <p className="text-xs text-muted-foreground">
+              Across all milestones
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Achievers</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{analytics.uniqueAchievers}</div>
+            <p className="text-xs text-muted-foreground">
+              Unique users
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg per User</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {analytics.uniqueAchievers > 0 ? Math.round(analytics.totalAchievements / analytics.uniqueAchievers * 10) / 10 : 0}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Achievements per user
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Achievements */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Achievements</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {analytics.recentAchievements.length > 0 ? (
+                analytics.recentAchievements.map((achievement, index) => (
+                  <div key={achievement.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Trophy className="w-4 h-4 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{achievement.users?.full_name}</p>
+                      <p className="text-xs text-muted-foreground">{achievement.milestones?.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(achievement.completed_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-4">No achievements yet</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Top Milestones */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Most Achieved Milestones</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {analytics.topMilestones.length > 0 ? (
+                analytics.topMilestones.map((milestone, index) => (
+                  <div key={milestone.name} className="flex items-center gap-3">
+                    <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{milestone.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {milestone.achievements} achievements
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-4">No data available</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Category Statistics */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Category Breakdown</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {analytics.categoryStats.length > 0 ? (
+                analytics.categoryStats.map((category) => (
+                  <div key={category.name} className="p-4 rounded-lg border">
+                    <h4 className="font-medium">{category.name}</h4>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-sm text-muted-foreground">
+                        {category.milestones} milestones
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {category.achievements} achievements
+                      </p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-center text-muted-foreground py-4 col-span-full">No categories available</p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
 export const MilestoneManagement: React.FC = () => {
   const { categories, milestones, loading, refreshMilestones } = useMilestones();
   const [editingMilestone, setEditingMilestone] = useState<Milestone | null>(null);
@@ -561,20 +808,8 @@ export const MilestoneManagement: React.FC = () => {
           <UserMilestonesTab />
         </TabsContent>
 
-        <TabsContent value="analytics">
-          <Card>
-            <CardHeader>
-              <CardTitle>Milestone Analytics</CardTitle>
-              <CardDescription>
-                Coming soon - comprehensive milestone completion statistics
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Analytics dashboard will be available in the next update
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="analytics" className="space-y-6">
+          <MilestoneAnalytics />
         </TabsContent>
       </Tabs>
 
