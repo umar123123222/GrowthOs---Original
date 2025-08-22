@@ -541,25 +541,28 @@ serve(async (req) => {
           // Infer objective from parent campaign or use default
           const objective = 'CONVERSIONS' // Default assumption for ads
 
-          metrics.ads.push({
-            id: ad.id,
-            name: ad.name || 'Untitled Ad',
-            status: ad.status === 'ACTIVE' ? 'Active' : ad.status || 'Unknown',
-            performance: categorizePerformance(ctr, cpc, roas, objective, spend),
-            spend,
-            impressions,
-            clicks,
-            conversions,
-            conversionValue,
-            roas,
-            costPerPurchase,
-            ctr,
-            cpc,
-            frequency,
-            reach,
-            campaign_name: ad.campaign?.name || 'Unknown Campaign',
-            adset_name: ad.adset?.name || 'Unknown Ad Set'
-          })
+          // Only include ads that have activity in the selected date range
+          if (spend > 0 || impressions > 0 || clicks > 0) {
+            metrics.ads.push({
+              id: ad.id,
+              name: ad.name || 'Untitled Ad',
+              status: ad.status === 'ACTIVE' ? 'Active' : ad.status || 'Unknown',
+              performance: categorizePerformance(ctr, cpc, roas, objective, spend),
+              spend,
+              impressions,
+              clicks,
+              conversions,
+              conversionValue,
+              roas,
+              costPerPurchase,
+              ctr,
+              cpc,
+              frequency,
+              reach,
+              campaign_name: ad.campaign?.name || 'Unknown Campaign',
+              adset_name: ad.adset?.name || 'Unknown Ad Set'
+            })
+          }
         }
       }
 
