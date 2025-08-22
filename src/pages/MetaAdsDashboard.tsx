@@ -428,7 +428,7 @@ const MetaAdsDashboard: React.FC = () => {
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-3xl font-bold text-foreground mb-1">
-                {metaData.averageROAS ? `${(metaData.averageROAS).toFixed(1)}%` : 'N/A'}
+                {metaData.averageROAS ? `${(metaData.averageROAS * 100).toFixed(1)}%` : 'N/A'}
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 rounded-full mr-2" style={{
@@ -524,7 +524,7 @@ const MetaAdsDashboard: React.FC = () => {
                         }} />
                             ROAS
                           </p>
-                           <p className="font-bold text-lg text-foreground">{campaign.roas ? `${(campaign.roas / 100).toFixed(2)}x` : '—'}</p>
+                           <p className="font-bold text-lg text-foreground">{campaign.roas ? `${(campaign.roas).toFixed(2)}x` : '—'}</p>
                         </div>
                         <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 border border-warning/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
@@ -554,7 +554,7 @@ const MetaAdsDashboard: React.FC = () => {
                             <Activity className="h-3 w-3 mr-1 text-emerald-500" />
                             CTR
                           </p>
-                          <p className="font-bold text-lg text-foreground">{campaign.ctr || 0}%</p>
+                          <p className="font-bold text-lg text-foreground">{(campaign.ctr || 0).toFixed(2)}%</p>
                         </div>
                         <div className="bg-gradient-to-br from-pink-500/5 to-pink-500/10 rounded-lg p-4 border border-pink-500/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
