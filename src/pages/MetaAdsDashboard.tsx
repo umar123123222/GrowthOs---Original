@@ -533,7 +533,7 @@ const MetaAdsDashboard: React.FC = () => {
                         }} />
                             Results
                           </p>
-                          <p className="font-bold text-lg text-foreground break-words overflow-hidden">{formatNumber(campaign.results || 0)}</p>
+                          <p className="font-bold text-lg text-foreground break-words overflow-hidden">{formatNumber(campaign.conversions || campaign.results || 0)}</p>
                         </div>
                         <div className="bg-gradient-to-br from-blue-500/5 to-blue-500/10 rounded-lg p-4 border border-blue-500/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
