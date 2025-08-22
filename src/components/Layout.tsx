@@ -4,7 +4,7 @@ import ShoaibGPT from "@/components/ShoaibGPT";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy } from "lucide-react";
+import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3 } from "lucide-react";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -334,6 +334,10 @@ const Layout = memo(({
         href: "/superadmin?tab=students",
         icon: Users
       }, {
+        name: "Analytics",
+        href: "/superadmin?tab=analytics",
+        icon: BarChart3
+      }, {
         name: "Support",
         href: "/superadmin?tab=support",
         icon: MessageSquare
@@ -388,6 +392,10 @@ const Layout = memo(({
         name: "Students",
         href: "/admin?tab=students",
         icon: Users
+      }, {
+        name: "Analytics",
+        href: "/admin?tab=analytics",
+        icon: BarChart3
       }, {
         name: "Support",
         href: "/admin?tab=support",

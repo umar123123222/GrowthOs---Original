@@ -16,6 +16,7 @@ import { CompanySettings } from '@/components/superadmin/CompanySettings';
 import { SequentialUnlockAdmin } from '@/components/admin/SequentialUnlockAdmin';
 import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAnalytics';
 import { MilestoneManagement } from '@/components/admin/MilestoneManagement';
+import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ENV_CONFIG } from '@/lib/env-config';
@@ -62,6 +63,8 @@ export default function SuperadminDashboard() {
         return <CourseCompletionAnalytics />;
       case 'milestones':
         return <MilestoneManagement />;
+      case 'analytics':
+        return <StudentAnalytics />;
       default:
         return <DashboardContent />;
     }
