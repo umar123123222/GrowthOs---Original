@@ -18,6 +18,7 @@ import { AssignmentManagement } from '@/components/assignments/AssignmentManagem
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAnalytics';
+import { MilestoneManagement } from '@/components/admin/MilestoneManagement';
 import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
@@ -50,6 +51,8 @@ export default function AdminDashboard() {
         return <StudentPerformance />;
       case 'completion':
         return <CourseCompletionAnalytics />;
+      case 'milestones':
+        return <MilestoneManagement />;
       default:
         return <DashboardContent />;
     }
