@@ -632,10 +632,11 @@ const MetaAdsDashboard: React.FC = () => {
           <CardContent className="py-[10px]">
             <div className="space-y-4">
               {(() => {
-              const activeAds = metaData.ads.filter(ad => 
-                ad.delivery === 'active' || ad.delivery === 'ACTIVE' || 
-                (ad.delivery_info && (ad.delivery_info.delivery_status === 'active' || ad.delivery_info.delivery_status === 'ACTIVE'))
-              );
+              const activeAds = metaData.ads.filter(ad => {
+                // Check multiple possible field names for delivery status
+                const deliveryStatus = ad.delivery_info?.status || ad.configured_status || ad.effective_status || ad.delivery || ad.status;
+                return deliveryStatus === 'ACTIVE' || deliveryStatus === 'Active' || deliveryStatus === 'active';
+              });
               const totalPages = Math.ceil(activeAds.length / adsPerPage);
               const startIndex = (currentPage - 1) * adsPerPage;
               const endIndex = startIndex + adsPerPage;
