@@ -195,75 +195,81 @@ export const StudentAnalytics = () => {
 
       {/* Overview Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
-        <Card>
+        <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <Users className="w-4 h-4 mr-2" />
+            <CardTitle className="text-sm font-medium text-blue-700 flex items-center">
+              <Users className="w-5 h-5 mr-2 text-blue-600" />
               Total Students
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{overviewStats.total_students}</div>
+            <div className="text-3xl font-bold text-blue-600">{overviewStats.total_students}</div>
+            <p className="text-xs text-blue-500 mt-1">All enrolled</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-50 to-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <TrendingUp className="w-4 h-4 mr-2" />
+            <CardTitle className="text-sm font-medium text-green-700 flex items-center">
+              <TrendingUp className="w-5 h-5 mr-2 text-green-600" />
               Active Students
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{overviewStats.active_students}</div>
+            <div className="text-3xl font-bold text-green-600">{overviewStats.active_students}</div>
+            <p className="text-xs text-green-500 mt-1">Last 30 days</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50 to-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <Target className="w-4 h-4 mr-2" />
+            <CardTitle className="text-sm font-medium text-purple-700 flex items-center">
+              <Target className="w-5 h-5 mr-2 text-purple-600" />
               Avg Progress
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{overviewStats.avg_progress}%</div>
+            <div className="text-3xl font-bold text-purple-600">{overviewStats.avg_progress}%</div>
+            <p className="text-xs text-purple-500 mt-1">Overall completion</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-r from-emerald-50 to-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <CheckCircle className="w-4 h-4 mr-2" />
+            <CardTitle className="text-sm font-medium text-emerald-700 flex items-center">
+              <CheckCircle className="w-5 h-5 mr-2 text-emerald-600" />
               Completions
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{overviewStats.total_completions}</div>
+            <div className="text-3xl font-bold text-emerald-600">{overviewStats.total_completions}</div>
+            <p className="text-xs text-emerald-500 mt-1">Finished courses</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-orange-500 bg-gradient-to-r from-orange-50 to-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <Video className="w-4 h-4 mr-2" />
+            <CardTitle className="text-sm font-medium text-orange-700 flex items-center">
+              <Video className="w-5 h-5 mr-2 text-orange-600" />
               Videos Today
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{overviewStats.videos_watched_today}</div>
+            <div className="text-3xl font-bold text-orange-600">{overviewStats.videos_watched_today}</div>
+            <p className="text-xs text-orange-500 mt-1">Views today</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-r from-indigo-50 to-white">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600 flex items-center">
-              <FileText className="w-4 h-4 mr-2" />
+            <CardTitle className="text-sm font-medium text-indigo-700 flex items-center">
+              <FileText className="w-5 h-5 mr-2 text-indigo-600" />
               Submissions Today
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-indigo-600">{overviewStats.assignments_submitted_today}</div>
+            <div className="text-3xl font-bold text-indigo-600">{overviewStats.assignments_submitted_today}</div>
+            <p className="text-xs text-indigo-500 mt-1">New submissions</p>
           </CardContent>
         </Card>
       </div>
