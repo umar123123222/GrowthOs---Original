@@ -84,6 +84,16 @@ useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       logger.debug('useAuth: Initial session check', { session: !!session, error });
+      
+      // Handle auth errors gracefully
+      if (error) {
+        logger.warn('useAuth: Session error, clearing state', error);
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      
       setSession(session as AuthSession);
       if (session?.user) {
         fetchUserProfile(session.user.id);
@@ -93,15 +103,37 @@ useEffect(() => {
       }
     }).catch(err => {
       logger.error('useAuth: Error getting initial session', err);
+      // Clear state on initialization errors
+      setSession(null);
+      setUser(null);
       setLoading(false);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       logger.debug('useAuth: Auth state changed', { event, session: !!session });
+      
+      // Handle token refresh errors gracefully
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        logger.warn('useAuth: Token refresh failed, signing out gracefully');
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      
       setSession(session as AuthSession);
       
       if (event === 'SIGNED_OUT') {
+        logger.debug('useAuth: User signed out');
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      
+      // Handle session expiry errors without auto-signout  
+      if (!session && event !== 'INITIAL_SESSION') {
+        logger.warn('useAuth: Session lost unexpectedly, clearing state but not forcing signout');
         setUser(null);
         setLoading(false);
         return;
