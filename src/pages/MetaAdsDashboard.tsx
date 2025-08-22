@@ -510,7 +510,7 @@ const MetaAdsDashboard: React.FC = () => {
                             <DollarSign className="h-3 w-3 mr-1" style={{
                           color: 'hsl(var(--primary))'
                         }} />
-                            Daily Spend
+                            Total Amount Spent
                           </p>
                           <p className="font-bold text-lg text-foreground">{formatCurrency(campaign.spend || 0)}</p>
                         </div>
