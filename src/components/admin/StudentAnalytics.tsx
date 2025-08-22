@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { Play, CheckCircle, Clock, FileText, Target, TrendingUp, Users, Video } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
 interface StudentAnalytics {
   id: string;
   full_name: string;
@@ -22,7 +21,6 @@ interface StudentAnalytics {
   progress_percentage: number;
   current_module?: string;
 }
-
 interface OverviewStats {
   total_students: number;
   active_students: number;
@@ -31,7 +29,6 @@ interface OverviewStats {
   videos_watched_today: number;
   assignments_submitted_today: number;
 }
-
 export const StudentAnalytics = () => {
   const [students, setStudents] = useState<StudentAnalytics[]>([]);
   const [overviewStats, setOverviewStats] = useState<OverviewStats>({
@@ -43,20 +40,21 @@ export const StudentAnalytics = () => {
     assignments_submitted_today: 0
   });
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     fetchAnalyticsData();
   }, []);
-
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch students with their progress data
-      const { data: studentsData, error: studentsError } = await supabase
-        .from('users')
-        .select(`
+      const {
+        data: studentsData,
+        error: studentsError
+      } = await supabase.from('users').select(`
           id,
           full_name,
           email,
@@ -66,62 +64,54 @@ export const StudentAnalytics = () => {
             enrollment_date,
             onboarding_completed
           )
-        `)
-        .eq('role', 'student');
-
+        `).eq('role', 'student');
       if (studentsError) throw studentsError;
 
       // Fetch recording views for each student
-      const { data: recordingViews, error: viewsError } = await supabase
-        .from('recording_views')
-        .select('user_id, recording_id, watched, watched_at');
-
+      const {
+        data: recordingViews,
+        error: viewsError
+      } = await supabase.from('recording_views').select('user_id, recording_id, watched, watched_at');
       if (viewsError) throw viewsError;
 
       // Fetch total available recordings
-      const { data: totalRecordings, error: recordingsError } = await supabase
-        .from('available_lessons')
-        .select('id');
-
+      const {
+        data: totalRecordings,
+        error: recordingsError
+      } = await supabase.from('available_lessons').select('id');
       if (recordingsError) throw recordingsError;
 
       // Fetch assignments data
-      const { data: assignments, error: assignmentsError } = await supabase
-        .from('assignments')
-        .select('id');
-
+      const {
+        data: assignments,
+        error: assignmentsError
+      } = await supabase.from('assignments').select('id');
       if (assignmentsError) throw assignmentsError;
 
       // Fetch submissions for each student
-      const { data: submissions, error: submissionsError } = await supabase
-        .from('submissions')
-        .select('student_id, assignment_id, status, submitted_at');
-
+      const {
+        data: submissions,
+        error: submissionsError
+      } = await supabase.from('submissions').select('student_id, assignment_id, status, submitted_at');
       if (submissionsError) throw submissionsError;
 
       // Fetch recent activity
-      const { data: recentActivity, error: activityError } = await supabase
-        .from('user_activity_logs')
-        .select('user_id, created_at')
-        .order('created_at', { ascending: false });
-
+      const {
+        data: recentActivity,
+        error: activityError
+      } = await supabase.from('user_activity_logs').select('user_id, created_at').order('created_at', {
+        ascending: false
+      });
       if (activityError) throw activityError;
 
       // Process student analytics
       const processedStudents = studentsData?.map(student => {
         const studentViews = recordingViews?.filter(view => view.user_id === student.id) || [];
         const watchedVideos = studentViews.filter(view => view.watched).length;
-        
         const studentSubmissions = submissions?.filter(sub => sub.student_id === student.id) || [];
         const completedAssignments = studentSubmissions.filter(sub => sub.status === 'approved').length;
-        
         const lastActivity = recentActivity?.find(activity => activity.user_id === student.id);
-        
-        const progress = Math.round(
-          ((watchedVideos / (totalRecordings?.length || 1)) * 0.6 + 
-           (completedAssignments / (assignments?.length || 1)) * 0.4) * 100
-        );
-
+        const progress = Math.round((watchedVideos / (totalRecordings?.length || 1) * 0.6 + completedAssignments / (assignments?.length || 1) * 0.4) * 100);
         return {
           id: student.id,
           full_name: student.full_name || 'Unknown',
@@ -140,14 +130,8 @@ export const StudentAnalytics = () => {
 
       // Calculate overview stats
       const today = new Date().toISOString().split('T')[0];
-      const todayViews = recordingViews?.filter(view => 
-        view.watched_at && view.watched_at.startsWith(today)
-      ).length || 0;
-      
-      const todaySubmissions = submissions?.filter(sub => 
-        sub.submitted_at && sub.submitted_at.startsWith(today)
-      ).length || 0;
-
+      const todayViews = recordingViews?.filter(view => view.watched_at && view.watched_at.startsWith(today)).length || 0;
+      const todaySubmissions = submissions?.filter(sub => sub.submitted_at && sub.submitted_at.startsWith(today)).length || 0;
       const stats: OverviewStats = {
         total_students: processedStudents.length,
         active_students: processedStudents.filter(s => s.status === 'active').length,
@@ -156,7 +140,6 @@ export const StudentAnalytics = () => {
         videos_watched_today: todayViews,
         assignments_submitted_today: todaySubmissions
       };
-
       setStudents(processedStudents);
       setOverviewStats(stats);
     } catch (error) {
@@ -164,30 +147,23 @@ export const StudentAnalytics = () => {
       toast({
         title: "Error",
         description: "Failed to load student analytics",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-
   if (loading) {
-    return (
-      <div className="p-6">
+    return <div className="p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>
-            ))}
+            {[...Array(6)].map((_, i) => <div key={i} className="h-32 bg-gray-200 rounded-lg"></div>)}
           </div>
         </div>
-      </div>
-    );
+      </div>;
   }
-
-  return (
-    <div className="p-6 space-y-6">
+  return <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Student Analytics</h1>
         <p className="text-gray-600 mt-2">Comprehensive overview of student progress and engagement</p>
@@ -289,14 +265,13 @@ export const StudentAnalytics = () => {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="progress">Progress Details</TabsTrigger>
+          
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {students.slice(0, 10).map((student) => (
-              <Card key={student.id} className="shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 bg-gradient-to-br from-white to-gray-50">
+            {students.slice(0, 10).map(student => <Card key={student.id} className="shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 bg-gradient-to-br from-white to-gray-50">
                 <CardHeader className="pb-4">
                   <div className="flex items-center space-x-4">
                     <Avatar className="w-12 h-12 ring-2 ring-blue-100">
@@ -310,13 +285,7 @@ export const StudentAnalytics = () => {
                       </CardTitle>
                       <p className="text-sm text-gray-500 truncate">{student.email}</p>
                     </div>
-                    <Badge 
-                      variant={student.status === 'active' ? 'default' : 'secondary'}
-                      className={student.status === 'active' 
-                        ? 'bg-green-100 text-green-700 hover:bg-green-200' 
-                        : 'bg-gray-100 text-gray-600'
-                      }
-                    >
+                    <Badge variant={student.status === 'active' ? 'default' : 'secondary'} className={student.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-600'}>
                       {student.status}
                     </Badge>
                   </div>
@@ -327,10 +296,7 @@ export const StudentAnalytics = () => {
                       <span className="text-sm font-medium text-gray-700">Overall Progress</span>
                       <span className="text-sm font-bold text-gray-900">{student.progress_percentage}%</span>
                     </div>
-                    <Progress 
-                      value={student.progress_percentage} 
-                      className="h-3 bg-gray-200" 
-                    />
+                    <Progress value={student.progress_percentage} className="h-3 bg-gray-200" />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
@@ -368,8 +334,7 @@ export const StudentAnalytics = () => {
                     </span>
                   </div>
                 </CardContent>
-              </Card>
-            ))}
+              </Card>)}
           </div>
         </TabsContent>
 
@@ -380,8 +345,7 @@ export const StudentAnalytics = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {students.map((student) => (
-                  <div key={student.id} className="flex items-center space-x-4 p-3 border rounded-lg">
+                {students.map(student => <div key={student.id} className="flex items-center space-x-4 p-3 border rounded-lg">
                     <Avatar className="w-10 h-10">
                       <AvatarFallback>{student.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
@@ -396,8 +360,7 @@ export const StudentAnalytics = () => {
                       <div className="font-bold text-lg">{student.progress_percentage}%</div>
                       <Progress value={student.progress_percentage} className="w-20 h-2" />
                     </div>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </CardContent>
           </Card>
@@ -411,11 +374,7 @@ export const StudentAnalytics = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {students
-                    .sort((a, b) => new Date(b.last_activity).getTime() - new Date(a.last_activity).getTime())
-                    .slice(0, 5)
-                    .map((student, index) => (
-                      <div key={student.id} className="flex items-center space-x-3">
+                  {students.sort((a, b) => new Date(b.last_activity).getTime() - new Date(a.last_activity).getTime()).slice(0, 5).map((student, index) => <div key={student.id} className="flex items-center space-x-3">
                         <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
                           {index + 1}
                         </div>
@@ -429,8 +388,7 @@ export const StudentAnalytics = () => {
                           </div>
                         </div>
                         <Badge variant="outline">{student.progress_percentage}%</Badge>
-                      </div>
-                    ))}
+                      </div>)}
                 </div>
               </CardContent>
             </Card>
@@ -441,11 +399,7 @@ export const StudentAnalytics = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {students
-                    .sort((a, b) => b.progress_percentage - a.progress_percentage)
-                    .slice(0, 5)
-                    .map((student, index) => (
-                      <div key={student.id} className="flex items-center space-x-3">
+                  {students.sort((a, b) => b.progress_percentage - a.progress_percentage).slice(0, 5).map((student, index) => <div key={student.id} className="flex items-center space-x-3">
                         <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-bold">
                           {index + 1}
                         </div>
@@ -461,14 +415,12 @@ export const StudentAnalytics = () => {
                         <Badge variant={student.progress_percentage >= 100 ? "default" : "secondary"}>
                           {student.progress_percentage}%
                         </Badge>
-                      </div>
-                    ))}
+                      </div>)}
                 </div>
               </CardContent>
             </Card>
           </div>
         </TabsContent>
       </Tabs>
-    </div>
-  );
+    </div>;
 };
