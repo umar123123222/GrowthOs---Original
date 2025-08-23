@@ -31,6 +31,16 @@ interface MetaData {
     averageROAS: number;
     lastUpdated: string | null;
     currency?: string;
+    dailyMetrics?: Array<{
+      date: string;
+      spend: number;
+      impressions: number;
+      clicks: number;
+      conversions: number;
+      conversionValue: number;
+      roas: number;
+      ctr: number;
+    }>;
 }
 
 interface DateRange {
@@ -507,6 +517,40 @@ const MetaAdsDashboard: React.FC = () => {
                         </div>
                       </div>
                       
+                      {/* Daily Metrics Grid for Selected Date Range */}
+                      {metaData.dailyMetrics && metaData.dailyMetrics.length > 0 && (
+                        <div className="mb-6">
+                          <h4 className="text-lg font-semibold text-foreground mb-4">Daily Performance ({dateRange.from ? format(dateRange.from, 'MMM d') : 'Last 7 days'} - {dateRange.to ? format(dateRange.to, 'MMM d') : 'Today'})</h4>
+                          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+                            {metaData.dailyMetrics.map((daily, index) => (
+                              <div key={daily.date} className="bg-gradient-to-br from-accent/5 to-accent/10 rounded-lg p-4 border border-accent/10">
+                                <p className="text-xs font-medium text-muted-foreground mb-2">
+                                  {format(new Date(daily.date), 'MMM d')}
+                                </p>
+                                <div className="space-y-1">
+                                  <div className="text-xs">
+                                    <span className="text-muted-foreground">Spend:</span>
+                                    <span className="font-semibold ml-1">{formatCurrency(daily.spend)}</span>
+                                  </div>
+                                  <div className="text-xs">
+                                    <span className="text-muted-foreground">Clicks:</span>
+                                    <span className="font-semibold ml-1">{formatNumber(daily.clicks)}</span>
+                                  </div>
+                                  <div className="text-xs">
+                                    <span className="text-muted-foreground">CTR:</span>
+                                    <span className="font-semibold ml-1">{daily.ctr.toFixed(1)}%</span>
+                                  </div>
+                                  <div className="text-xs">
+                                    <span className="text-muted-foreground">ROAS:</span>
+                                    <span className="font-semibold ml-1">{daily.roas.toFixed(1)}x</span>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
                         <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">

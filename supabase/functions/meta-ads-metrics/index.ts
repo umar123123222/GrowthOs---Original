@@ -238,6 +238,7 @@ serve(async (req) => {
       campaigns: [] as any[],
       adSets: [] as any[],
       ads: [] as any[],
+      dailyMetrics: [] as any[],
       currency: 'USD', // Default to USD
     }
 
@@ -385,8 +386,66 @@ serve(async (req) => {
       accountUrl.searchParams.set('access_token', accessToken)
 
       const accountResp = await fetch(accountUrl.toString())
+      
+      // Fetch daily breakdown insights
+      const dailyUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`)
+      Object.entries(dateParams).forEach(([key, value]) => {
+        dailyUrl.searchParams.set(key, value)
+      })
+      dailyUrl.searchParams.set('fields', 'spend,impressions,clicks,actions,action_values,date_start')
+      dailyUrl.searchParams.set('time_increment', '1')
+      dailyUrl.searchParams.set('access_token', accessToken)
+      
+      const dailyResp = await fetch(dailyUrl.toString())
+      
       if (accountResp.ok) {
         const accountJson = await accountResp.json()
+        
+        // Process daily metrics
+        let dailyMetrics = []
+        if (dailyResp.ok) {
+          const dailyJson = await dailyResp.json()
+          if (dailyJson.data && Array.isArray(dailyJson.data)) {
+            dailyMetrics = dailyJson.data.map((dayData: any) => {
+              const daySpend = parseFloat(dayData.spend || '0')
+              const dayImpressions = parseInt(dayData.impressions || '0')
+              const dayClicks = parseInt(dayData.clicks || '0')
+              
+              let dayConversions = 0
+              let dayConversionValue = 0
+              
+              if (dayData.actions && Array.isArray(dayData.actions)) {
+                const purchaseAction = dayData.actions.find((action: any) => action.action_type === 'purchase')
+                if (purchaseAction) {
+                  dayConversions = parseInt(purchaseAction.value || '0')
+                }
+              }
+              
+              if (dayData.action_values && Array.isArray(dayData.action_values)) {
+                const purchaseValue = dayData.action_values.find((value: any) => value.action_type === 'purchase')
+                if (purchaseValue) {
+                  dayConversionValue = parseFloat(purchaseValue.value || '0')
+                }
+              }
+              
+              const dayROAS = daySpend > 0 ? dayConversionValue / daySpend : 0
+              const dayCTR = dayImpressions > 0 ? (dayClicks / dayImpressions) * 100 : 0
+              
+              return {
+                date: dayData.date_start,
+                spend: daySpend,
+                impressions: dayImpressions,
+                clicks: dayClicks,
+                conversions: dayConversions,
+                conversionValue: dayConversionValue,
+                roas: dayROAS,
+                ctr: dayCTR
+              }
+            })
+          }
+        }
+        
+        metrics.dailyMetrics = dailyMetrics
         const accountRows = accountJson.data || []
         let spendSum = 0, impSum = 0, clickSum = 0, convSum = 0, convValueSum = 0, ctrSum = 0, cpcSum = 0
         let ctrCount = 0, cpcCount = 0
