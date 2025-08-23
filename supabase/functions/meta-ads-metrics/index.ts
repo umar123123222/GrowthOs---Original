@@ -446,6 +446,7 @@ serve(async (req) => {
         }
         
         metrics.dailyMetrics = dailyMetrics
+        console.log(`Daily metrics processed: ${dailyMetrics.length} days`)
         const accountRows = accountJson.data || []
         let spendSum = 0, impSum = 0, clickSum = 0, convSum = 0, convValueSum = 0, ctrSum = 0, cpcSum = 0
         let ctrCount = 0, cpcCount = 0
