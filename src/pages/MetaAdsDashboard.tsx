@@ -466,7 +466,13 @@ const MetaAdsDashboard: React.FC = () => {
           <CardContent className="py-[15px]">
             <div className="space-y-4">
               {(() => {
-              const activeCampaigns = metaData.campaigns.filter(campaign => campaign.status === 'Active' || campaign.status === 'active' || campaign.status === 'ACTIVE');
+              const activeCampaigns = metaData.campaigns.filter(campaign => {
+                const status = campaign.status || '';
+                const isActive = status === 'Active' || status === 'ACTIVE' || status === 'active';
+                const hasActivity = (campaign.spendForPeriod || campaign.spend || 0) > 0 || 
+                                  (campaign.impressionsForPeriod || campaign.impressions || 0) > 0;
+                return isActive && hasActivity;
+              });
               
               if (activeCampaigns.length === 0) {
                 return <div className="text-center py-12">

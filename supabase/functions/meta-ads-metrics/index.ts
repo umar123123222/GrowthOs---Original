@@ -530,29 +530,13 @@ serve(async (req) => {
           const roas = spend > 0 ? (conversionValue / spend) : 0
           const objective = campaign.objective || 'UNKNOWN'
 
-          // Calculate period-specific metrics from daily breakdown
-          let periodSpend = 0, periodImpressions = 0, periodClicks = 0, periodConversions = 0, periodConversionValue = 0
-          
-          if (dailyMetrics && dailyMetrics.length > 0) {
-            // Sum up metrics for this campaign from the daily breakdown
-            for (const daily of dailyMetrics) {
-              // For now, we'll use proportional allocation based on the campaign's share of total spend
-              // In a more sophisticated implementation, we'd fetch campaign-specific daily insights
-              const campaignShare = spend / (spend + 1) // Avoid division by zero
-              periodSpend += daily.spend * campaignShare
-              periodImpressions += daily.impressions * campaignShare
-              periodClicks += daily.clicks * campaignShare
-              periodConversions += daily.conversions * campaignShare
-              periodConversionValue += daily.conversionValue * campaignShare
-            }
-          } else {
-            // Fallback to the insights data for the selected period
-            periodSpend = spend
-            periodImpressions = impressions
-            periodClicks = clicks
-            periodConversions = conversions
-            periodConversionValue = conversionValue
-          }
+          // Use the insights data directly since it's already for the selected period
+          // The campaign insights are fetched with the same date parameters as the account insights
+          const periodSpend = spend
+          const periodImpressions = impressions
+          const periodClicks = clicks
+          const periodConversions = conversions
+          const periodConversionValue = conversionValue
           
           // Calculate derived period metrics
           const periodCtr = periodImpressions > 0 ? (periodClicks / periodImpressions) * 100 : 0
@@ -566,7 +550,7 @@ serve(async (req) => {
               name: campaign.name || 'Untitled Campaign',
               status: campaign.status === 'ACTIVE' ? 'Active' : campaign.status || 'Unknown',
               objective,
-              performance: categorizePerformance(ctr, cpc, roas, objective, spend),
+              performance: categorizePerformance(periodCtr, periodCpc, periodRoas, objective, periodSpend),
               spend,
               impressions,
               clicks,
