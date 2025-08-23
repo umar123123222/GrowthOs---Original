@@ -446,8 +446,6 @@ serve(async (req) => {
         }
         
         metrics.dailyMetrics = dailyMetrics
-        console.log(`Daily metrics processed: ${dailyMetrics.length} days`)
-        
         const accountRows = accountJson.data || []
         let spendSum = 0, impSum = 0, clickSum = 0, convSum = 0, convValueSum = 0, ctrSum = 0, cpcSum = 0
         let ctrCount = 0, cpcCount = 0
@@ -530,35 +528,6 @@ serve(async (req) => {
           const roas = spend > 0 ? (conversionValue / spend) : 0
           const objective = campaign.objective || 'UNKNOWN'
 
-          // Calculate period-specific metrics from daily breakdown
-          let periodSpend = 0, periodImpressions = 0, periodClicks = 0, periodConversions = 0, periodConversionValue = 0
-          
-          if (dailyMetrics && dailyMetrics.length > 0) {
-            // Sum up metrics for this campaign from the daily breakdown
-            for (const daily of dailyMetrics) {
-              // For now, we'll use proportional allocation based on the campaign's share of total spend
-              // In a more sophisticated implementation, we'd fetch campaign-specific daily insights
-              const campaignShare = spend / (spend + 1) // Avoid division by zero
-              periodSpend += daily.spend * campaignShare
-              periodImpressions += daily.impressions * campaignShare
-              periodClicks += daily.clicks * campaignShare
-              periodConversions += daily.conversions * campaignShare
-              periodConversionValue += daily.conversionValue * campaignShare
-            }
-          } else {
-            // Fallback to the insights data for the selected period
-            periodSpend = spend
-            periodImpressions = impressions
-            periodClicks = clicks
-            periodConversions = conversions
-            periodConversionValue = conversionValue
-          }
-          
-          // Calculate derived period metrics
-          const periodCtr = periodImpressions > 0 ? (periodClicks / periodImpressions) * 100 : 0
-          const periodCpc = periodClicks > 0 ? periodSpend / periodClicks : 0
-          const periodRoas = periodSpend > 0 ? periodConversionValue / periodSpend : 0
-
           metrics.campaigns.push({
             id: campaign.id,
             name: campaign.name || 'Untitled Campaign',
@@ -575,16 +544,7 @@ serve(async (req) => {
             ctr,
             cpc,
             frequency,
-            reach,
-            // Period-specific metrics
-            spendForPeriod: periodSpend,
-            impressionsForPeriod: periodImpressions,
-            clicksForPeriod: periodClicks,
-            conversionsForPeriod: periodConversions,
-            conversionValueForPeriod: periodConversionValue,
-            ctrForPeriod: periodCtr,
-            cpcForPeriod: periodCpc,
-            roasForPeriod: periodRoas
+            reach
           })
         }
       }
