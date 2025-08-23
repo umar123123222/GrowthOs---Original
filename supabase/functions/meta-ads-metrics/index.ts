@@ -559,33 +559,36 @@ serve(async (req) => {
           const periodCpc = periodClicks > 0 ? periodSpend / periodClicks : 0
           const periodRoas = periodSpend > 0 ? periodConversionValue / periodSpend : 0
 
-          metrics.campaigns.push({
-            id: campaign.id,
-            name: campaign.name || 'Untitled Campaign',
-            status: campaign.status === 'ACTIVE' ? 'Active' : campaign.status || 'Unknown',
-            objective,
-            performance: categorizePerformance(ctr, cpc, roas, objective, spend),
-            spend,
-            impressions,
-            clicks,
-            conversions,
-            conversionValue,
-            roas,
-            costPerPurchase,
-            ctr,
-            cpc,
-            frequency,
-            reach,
-            // Period-specific metrics
-            spendForPeriod: periodSpend,
-            impressionsForPeriod: periodImpressions,
-            clicksForPeriod: periodClicks,
-            conversionsForPeriod: periodConversions,
-            conversionValueForPeriod: periodConversionValue,
-            ctrForPeriod: periodCtr,
-            cpcForPeriod: periodCpc,
-            roasForPeriod: periodRoas
-          })
+          // Only include campaigns that have activity in the selected date range
+          if (spend > 0 || impressions > 0 || clicks > 0) {
+            metrics.campaigns.push({
+              id: campaign.id,
+              name: campaign.name || 'Untitled Campaign',
+              status: campaign.status === 'ACTIVE' ? 'Active' : campaign.status || 'Unknown',
+              objective,
+              performance: categorizePerformance(ctr, cpc, roas, objective, spend),
+              spend,
+              impressions,
+              clicks,
+              conversions,
+              conversionValue,
+              roas,
+              costPerPurchase,
+              ctr,
+              cpc,
+              frequency,
+              reach,
+              // Period-specific metrics
+              spendForPeriod: periodSpend,
+              impressionsForPeriod: periodImpressions,
+              clicksForPeriod: periodClicks,
+              conversionsForPeriod: periodConversions,
+              conversionValueForPeriod: periodConversionValue,
+              ctrForPeriod: periodCtr,
+              cpcForPeriod: periodCpc,
+              roasForPeriod: periodRoas
+            })
+          }
         }
       }
 
