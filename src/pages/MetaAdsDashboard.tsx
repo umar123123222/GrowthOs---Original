@@ -457,7 +457,7 @@ const MetaAdsDashboard: React.FC = () => {
           <CardHeader className="gradient-hero text-white rounded-t-lg">
             <CardTitle className="text-white flex items-center text-xl">
               <Target className="h-6 w-6 mr-3" />
-              Active Campaigns
+              Active Campaigns (Last 30 Days)
             </CardTitle>
             <CardDescription className="text-white/80">
               All currently active advertising campaigns with real-time metrics
