@@ -560,7 +560,7 @@ serve(async (req) => {
           const periodRoas = periodSpend > 0 ? periodConversionValue / periodSpend : 0
 
           // Only include campaigns that have activity in the selected date range
-          if (spend > 0 || impressions > 0 || clicks > 0) {
+          if (periodSpend > 0 || periodImpressions > 0 || periodClicks > 0) {
             metrics.campaigns.push({
               id: campaign.id,
               name: campaign.name || 'Untitled Campaign',
