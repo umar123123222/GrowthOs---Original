@@ -67,32 +67,6 @@ project/
 
 ## Deployment Process
 
-### For SaaS Providers
-
-1. **Set up environment for each client:**
-   ```bash
-   # Client A
-   VITE_SUPABASE_URL=https://client-a.supabase.co
-   VITE_APP_TITLE="Client A Learning Platform"
-   VITE_COMPANY_NAME="Client A Inc"
-   
-   # Client B  
-   VITE_SUPABASE_URL=https://client-b.supabase.co
-   VITE_APP_TITLE="Client B Academy"
-   VITE_COMPANY_NAME="Client B Corp"
-   ```
-
-2. **Build for each client:**
-   ```bash
-   # Process HTML template with client-specific variables
-   node scripts/build-html.js
-   
-   # Build the application
-   npm run build
-   ```
-
-3. **Deploy separately** - Each client gets their own deployment with their own environment configuration.
-
 ### For Single Instance
 
 Just set up your `.env` file once and deploy normally.
