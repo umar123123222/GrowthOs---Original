@@ -1229,6 +1229,36 @@ export type Database = {
           },
         ]
       }
+      success_partner_credits: {
+        Row: {
+          created_at: string | null
+          credits_used: number
+          daily_limit: number
+          date: string
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          credits_used?: number
+          daily_limit?: number
+          date?: string
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          credits_used?: number
+          daily_limit?: number
+          date?: string
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       success_sessions: {
         Row: {
           created_at: string | null

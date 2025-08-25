@@ -29,6 +29,9 @@ export const ENV_CONFIG = {
   // Development Server Configuration
   DEV_PORT: parseInt(import.meta.env.VITE_DEV_PORT || "8080"),
   DEV_HOST: import.meta.env.VITE_DEV_HOST || "::",
+
+  // Success Partner Configuration
+  SUCCESS_PARTNER_DAILY_LIMIT: parseInt(import.meta.env.VITE_SUCCESS_PARTNER_DAILY_LIMIT || "10"),
 } as const;
 
 // Validation function

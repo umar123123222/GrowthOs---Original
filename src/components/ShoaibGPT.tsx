@@ -1,11 +1,12 @@
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { X, Send, MessageSquare, BookOpen, Heart, Brain, Loader2 } from "lucide-react";
+import { X, Send, MessageSquare, BookOpen, Heart, Brain, Loader2, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: number;
@@ -23,6 +24,14 @@ interface ShoaibGPTProps {
   };
 }
 
+interface CreditsInfo {
+  credits_used: number;
+  daily_limit: number;
+  credits_remaining: number;
+  can_send_message: boolean;
+  date: string;
+}
+
 const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([
@@ -34,6 +43,8 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [credits, setCredits] = useState<CreditsInfo | null>(null);
+  const [loadingCredits, setLoadingCredits] = useState(true);
   const { toast } = useToast();
 
   // Validate user data - show error if incomplete
@@ -47,6 +58,48 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
     onClose();
     return null;
   }
+
+  // Fetch credits on component mount
+  useEffect(() => {
+    const fetchCredits = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('success-partner-credits', {
+          method: 'GET'
+        });
+
+        if (error) {
+          console.error('Error fetching credits:', error);
+          return;
+        }
+
+        setCredits(data);
+      } catch (error) {
+        console.error('Error fetching credits:', error);
+      } finally {
+        setLoadingCredits(false);
+      }
+    };
+
+    fetchCredits();
+  }, []);
+
+  // Function to update credits after successful message
+  const updateCredits = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('success-partner-credits', {
+        method: 'POST'
+      });
+
+      if (error) {
+        console.error('Error updating credits:', error);
+        return;
+      }
+
+      setCredits(data);
+    } catch (error) {
+      console.error('Error updating credits:', error);
+    }
+  }, []);
 
   const sendToWebhook = useCallback(async (userMessage: string): Promise<string> => {
     try {
@@ -146,6 +199,16 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
       return;
     }
 
+    // Check if user has remaining credits
+    if (credits && !credits.can_send_message) {
+      toast({
+        title: "Daily Limit Reached",
+        description: `You've used all ${credits.daily_limit} credits for today. Credits reset at midnight UTC.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now(),
       sender: "user",
@@ -167,6 +230,9 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
 
     try {
       const aiReply = await sendToWebhook(userMessage.content);
+      
+      // Update credits after successful AI response
+      await updateCredits();
       
       // Remove loading message and add AI response
       setMessages(prev => {
@@ -200,7 +266,7 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [message, isLoading, sendToWebhook, toast]);
+  }, [message, isLoading, sendToWebhook, updateCredits, credits, toast]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -216,11 +282,47 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
                 <p className="text-sm text-gray-600">Your AI Success Mentor</p>
               </div>
             </div>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="w-4 h-4" />
-            </Button>
+            <div className="flex items-center space-x-2">
+              {/* Credits Display */}
+              {loadingCredits ? (
+                <Badge variant="outline" className="flex items-center space-x-1">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Loading...</span>
+                </Badge>
+              ) : credits ? (
+                <Badge 
+                  variant={credits.credits_remaining <= 2 ? "destructive" : credits.credits_remaining <= 5 ? "secondary" : "outline"}
+                  className="flex items-center space-x-1"
+                >
+                  <MessageSquare className="w-3 h-3" />
+                  <span>{credits.credits_remaining}/{credits.daily_limit}</span>
+                </Badge>
+              ) : null}
+              <Button variant="ghost" size="sm" onClick={onClose}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
           
+          {/* Credits Warning */}
+          {credits && credits.credits_remaining <= 2 && credits.credits_remaining > 0 && (
+            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+              <div className="flex items-center space-x-2 text-sm text-yellow-800">
+                <Clock className="w-4 h-4" />
+                <span>Only {credits.credits_remaining} credits remaining today. Resets at midnight UTC.</span>
+              </div>
+            </div>
+          )}
+          
+          {/* No Credits Left */}
+          {credits && credits.credits_remaining === 0 && (
+            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+              <div className="flex items-center space-x-2 text-sm text-red-800">
+                <Clock className="w-4 h-4" />
+                <span>Daily limit reached. Your {credits.daily_limit} credits will reset at midnight UTC.</span>
+              </div>
+            </div>
+          )}
         </CardHeader>
 
         {/* Messages */}
@@ -267,9 +369,12 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-              disabled={isLoading}
+              disabled={isLoading || (credits && !credits.can_send_message)}
             />
-            <Button onClick={handleSendMessage} disabled={isLoading}>
+            <Button 
+              onClick={handleSendMessage} 
+              disabled={isLoading || (credits && !credits.can_send_message)}
+            >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
@@ -282,22 +387,22 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
           <div className="flex flex-wrap gap-2 mt-2">
             <Badge 
               variant="outline" 
-              className="cursor-pointer hover:bg-gray-100"
-              onClick={() => setMessage("I'm stuck on the current assignment")}
+              className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => credits && credits.can_send_message && setMessage("I'm stuck on the current assignment")}
             >
               Assignment Help
             </Badge>
             <Badge 
               variant="outline" 
-              className="cursor-pointer hover:bg-gray-100"
-              onClick={() => setMessage("Can you explain the video concept again?")}
+              className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => credits && credits.can_send_message && setMessage("Can you explain the video concept again?")}
             >
               Video Explanation
             </Badge>
             <Badge 
               variant="outline" 
-              className="cursor-pointer hover:bg-gray-100"
-              onClick={() => setMessage("I'm feeling demotivated")}
+              className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => credits && credits.can_send_message && setMessage("I'm feeling demotivated")}
             >
               Need Motivation
             </Badge>
