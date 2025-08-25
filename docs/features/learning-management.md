@@ -11,7 +11,6 @@ The Learning Management System (LMS) provides structured content delivery with s
 **Modules** are the primary organizational unit containing:
 - **Recordings** - Video lessons with sequential ordering
 - **Assignments** - Practical exercises requiring mentor approval
-- **Quizzes** - Knowledge assessments with scoring
 - **Resources** - Supplementary materials and downloads
 
 ### Content Progression Model
@@ -253,7 +252,7 @@ Course
 - Intervention triggers
 - Performance feedback
 
-### Certificate System
+### Certificate System (Not available in version 1.0.0)
 - Module completion certificates
 - Course completion credentials
 - Skill verification badges
