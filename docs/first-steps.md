@@ -112,11 +112,6 @@ supabase secrets set SMTP_USER=your-email@company.com --project-ref your-project
 supabase secrets set SMTP_PASSWORD=your-app-password --project-ref your-project-ref
 supabase secrets set SMTP_FROM_EMAIL=noreply@company.com --project-ref your-project-ref
 supabase secrets set SMTP_FROM_NAME="Growth OS" --project-ref your-project-ref
-supabase secrets set SMTP_USER=your-email@company.com --project-ref your-project-ref
-supabase secrets set SMTP_PASSWORD=your-app-password --project-ref your-project-ref
-supabase secrets set SMTP_FROM_EMAIL=noreply@company.com --project-ref your-project-ref
-supabase secrets set SMTP_FROM_NAME="Growth OS" --project-ref your-project-ref
-supabase secrets set SMTP_FROM_EMAIL=noreply@yourdomain.com --project-ref your-project-ref
 ```
 
 ## 🎨 Branding & Customization
