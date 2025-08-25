@@ -80,19 +80,41 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
       }
 
       const data = await response.json();
+      console.log('Success Partner: Webhook response received', { data, type: typeof data });
       
-      // Handle different response formats
+      // Handle different response formats and ensure string output
       let aiResponse = "";
-      if (data.reply) {
-        aiResponse = data.reply;
-      } else if (data.output) {
-        aiResponse = typeof data.output === 'string' ? data.output : JSON.stringify(data.output);
+      if (data && typeof data === 'object') {
+        if (data.reply && typeof data.reply === 'string') {
+          aiResponse = data.reply;
+        } else if (data.output) {
+          if (typeof data.output === 'string') {
+            aiResponse = data.output;
+          } else if (typeof data.output === 'object') {
+            // If output is an object, try to extract meaningful text
+            aiResponse = data.output.text || data.output.message || data.output.content || JSON.stringify(data.output);
+          } else {
+            aiResponse = String(data.output);
+          }
+        } else if (data.message && typeof data.message === 'string') {
+          aiResponse = data.message;
+        } else {
+          // Fallback for any other object structure
+          aiResponse = data.text || data.content || JSON.stringify(data);
+        }
       } else if (typeof data === 'string') {
         aiResponse = data;
       } else {
-        aiResponse = "Sorry, I couldn't process your request right now.";
+        aiResponse = String(data) || "Sorry, I couldn't process your request right now.";
       }
       
+      // Ensure the response is always a string
+      if (typeof aiResponse !== 'string') {
+        console.warn('Success Partner: Non-string response detected, converting:', aiResponse);
+        aiResponse = String(aiResponse);
+      }
+      
+      console.log('Success Partner: Final processed response', { aiResponse, length: aiResponse.length });
       return aiResponse;
     } catch (error) {
       console.error('Webhook error:', error);
@@ -211,7 +233,7 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
                     {msg.sender === "ai" && (
                       <p className="text-xs font-medium mb-1 opacity-70">AI Assistant</p>
                     )}
-                    <p className="text-sm">{msg.content}</p>
+                    <p className="text-sm">{typeof msg.content === 'string' ? msg.content : String(msg.content)}</p>
                     <p className="text-xs opacity-70 mt-1">
                       {msg.timestamp.toLocaleTimeString()}
                     </p>
