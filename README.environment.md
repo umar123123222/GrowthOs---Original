@@ -45,7 +45,6 @@ This project has been made fully configurable to support SaaS deployment scenari
 - `VITE_DEFAULT_FEE_AMOUNT` - Default course fee
 - `VITE_DEFAULT_MAX_INSTALLMENTS` - Max installment count
 - `VITE_DEFAULT_LMS_URL` - Default LMS URL
-- `VITE_DEFAULT_RECOVERY_RATE` - Dashboard recovery rate
 
 ### ⚙️ Development Settings
 - `VITE_DEV_PORT` - Development server port
