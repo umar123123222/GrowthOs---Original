@@ -15,14 +15,12 @@ Admins handle day-to-day operations of Growth OS, including student management, 
 ### Financial Operations
 - **Payment Processing**: Mark installment payments as received
 - **Invoice Management**: Generate and track payment invoices
-- **Financial Reporting**: Monitor revenue and outstanding balances
 - **Payment Plan Configuration**: Set up installment options
 
 ### Content Management
 - **Module Administration**: Create and organize learning modules
 - **Assignment Management**: Set up and monitor assignments
 - **Recording Management**: Upload and organize video content
-- **Quiz Creation**: Design module assessments
 
 ### Support and Communication
 - **Support Ticket Management**: Respond to student inquiries
