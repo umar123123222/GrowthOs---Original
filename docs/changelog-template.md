@@ -2,7 +2,7 @@
 
 Use this template for documenting Growth OS releases. Follow semantic versioning (MAJOR.MINOR.PATCH) and include all changes that affect users or system behavior.
 
-### [1.0.0] - 2025-08-25
+### [Version 1.0.0] - 2025-08-25
 
 ### Added
 - **Bulk Student Operations**: Admins can now update multiple student statuses simultaneously
