@@ -20,7 +20,7 @@ Growth OS is a comprehensive Learning Management System (LMS) designed for e-com
 
 - **Frontend**: React 18, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Supabase (PostgreSQL, Auth, Storage, Edge Functions)
-- **Email**: Resend API with custom SMTP configuration
+- **Email**: SMTP configuration through Supabase Edge Function secrets
 - **Integrations**: Shopify, Zapier webhooks
 - **File Storage**: Supabase Storage (assignments, branding assets)
 
@@ -51,7 +51,7 @@ Growth OS is a comprehensive Learning Management System (LMS) designed for e-com
 
 ### 🔗 Integrations
 - [Supabase](./integrations/supabase.md) - Database, authentication, storage
-- [Resend](./integrations/resend.md) - Email delivery service
+- [SMTP Email](./integrations/smtp-email.md) - Email delivery configuration
 - [Shopify](./integrations/shopify.md) - E-commerce integration
 - [File Storage](./integrations/file-storage.md) - Asset management
 
@@ -81,7 +81,7 @@ Growth OS is a comprehensive Learning Management System (LMS) designed for e-com
 
 2. **Environment Setup**
    - Configure Supabase project (see [Environment Reference](./env-reference.md))
-   - Set up email delivery (see [Resend Integration](./integrations/resend.md))
+   - Set up email delivery (see [SMTP Email Integration](./integrations/smtp-email.md))
    - Configure company branding (see [Company Branding](./features/company-branding.md))
 
 3. **First Admin User**

@@ -19,11 +19,14 @@ Growth OS uses Supabase's built-in secrets management system for environment var
 
 > **Tip:** These values are automatically available in Supabase Edge Functions. Client-side configuration is handled in `src/integrations/supabase/client.ts`.
 
-### Email Configuration (Resend)
+### Email Configuration (SMTP)
 
 | Variable | Purpose | Example | Required For |
 |----------|---------|---------|--------------|
-| `RESEND_API_KEY` | Resend service authentication | `re_123abc...` | All email sending |
+| `SMTP_HOST` | SMTP server hostname | `smtp.gmail.com` | All email sending |
+| `SMTP_PORT` | SMTP server port | `587` | All email sending |
+| `SMTP_USER` | SMTP username | `user@company.com` | All email sending |
+| `SMTP_PASSWORD` | SMTP password/app password | `app_password_123` | All email sending |
 
 ### SMTP Configuration (Alternative Email)
 
@@ -54,8 +57,7 @@ npm run dev
 
 All environment variables should mirror production but point to staging services:
 
-- Use staging Resend API key
-- Configure staging SMTP credentials
+- Use staging SMTP credentials
 - Use staging database (separate Supabase project recommended)
 
 ### Production Environment
@@ -127,10 +129,15 @@ Located in database table `company_settings`:
 
 ### Email Service Configuration
 
-**Option 1: Resend (Recommended)**
+**Option 1: SMTP Configuration (Recommended)**
 ```bash
 # Set in Supabase Secrets
-RESEND_API_KEY=re_your_api_key
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@company.com
+SMTP_PASSWORD=your-app-password
+SMTP_FROM_EMAIL=noreply@company.com
+SMTP_FROM_NAME="Growth OS"
 ```
 
 **Option 2: Custom SMTP**
@@ -181,10 +188,10 @@ checkEnvironment();
 -- Run in Supabase SQL Editor to check secret configuration
 SELECT 
   CASE 
-    WHEN current_setting('app.resend_api_key', true) IS NOT NULL 
-    THEN '✅ Resend API Key configured'
-    ELSE '❌ Resend API Key missing'
-  END as resend_status;
+    WHEN current_setting('app.smtp_host', true) IS NOT NULL 
+    THEN '✅ SMTP Configuration available'
+    ELSE '❌ SMTP Configuration missing'
+  END as smtp_status;
 ```
 
 ## Troubleshooting
@@ -193,7 +200,7 @@ SELECT
 
 **1. Email Delivery Failures**
 ```bash
-# Check Resend API key in Supabase Secrets
+# Check SMTP configuration in Supabase Secrets
 # Verify SMTP configuration if using custom SMTP
 # Check sender email domain authentication
 ```

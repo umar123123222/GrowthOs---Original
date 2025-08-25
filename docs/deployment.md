@@ -42,7 +42,10 @@ This guide covers deploying Growth OS from local development to production envir
    ```bash
    SUPABASE_URL=https://your-staging-project.supabase.co
    SUPABASE_ANON_KEY=your-staging-anon-key
-   RESEND_API_KEY=your-resend-api-key
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@company.com
+   SMTP_PASSWORD=your-app-password
    ```
 
 3. **Deploy Application**
@@ -111,7 +114,12 @@ This guide covers deploying Growth OS from local development to production envir
 2. **Environment Secrets**
    ```bash
    # Set required secrets
-   supabase secrets set RESEND_API_KEY=your-key --project-ref YOUR_PROJECT_REF
+   supabase secrets set SMTP_HOST=smtp.gmail.com --project-ref YOUR_PROJECT_REF
+   supabase secrets set SMTP_PORT=587 --project-ref YOUR_PROJECT_REF
+   supabase secrets set SMTP_USER=your-email@company.com --project-ref YOUR_PROJECT_REF
+   supabase secrets set SMTP_PASSWORD=your-app-password --project-ref YOUR_PROJECT_REF
+   supabase secrets set SMTP_FROM_EMAIL=noreply@company.com --project-ref YOUR_PROJECT_REF
+   supabase secrets set SMTP_FROM_NAME="Growth OS" --project-ref YOUR_PROJECT_REF
    supabase secrets set SMTP_HOST=your-smtp-host --project-ref YOUR_PROJECT_REF
    ```
 
@@ -235,7 +243,7 @@ This guide covers deploying Growth OS from local development to production envir
    - Check firewall and network settings
 
 3. **Email Delivery Issues**
-   - Verify Resend API key
+   - Verify SMTP configuration
    - Check domain verification status
    - Monitor email delivery logs
 

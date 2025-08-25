@@ -35,7 +35,7 @@ The Notifications System provides real-time, email, and in-app notifications for
 ### Edge Functions
 - `motivational-notifications` - Automated engagement system
 - `notification-scheduler` - Scheduled notification processing
-- Email integration through Resend/SMTP
+- Email integration through SMTP configuration
 
 ### Key Database Functions
 ```sql
@@ -50,7 +50,7 @@ notify_mentor_students(mentor_id, type, title, message, metadata)
 ### Environment Variables
 | Variable | Purpose | Default | Required |
 |----------|---------|---------|----------|
-| `RESEND_API_KEY` | Email delivery service | None | Recommended |
+| `SMTP_*` | SMTP email configuration | None | Required |
 | `SMTP_HOST` | Custom SMTP server | None | Alternative |
 | `SMTP_PORT` | SMTP port | 587 | If using SMTP |
 | `SMTP_USER` | SMTP username | None | If using SMTP |
@@ -101,11 +101,11 @@ const STATUSES = ['pending', 'sent', 'delivered', 'failed', 'read'];
 
 ### Email Service Integration
 ```typescript
-// Resend API integration
+// SMTP integration via Edge Functions
 const sendEmailNotification = async (notification) => {
-  const resend = new Resend(process.env.RESEND_API_KEY);
+  const smtpClient = SMTPClient.fromEnv();
   
-  await resend.emails.send({
+  await smtpClient.sendEmail({
     from: process.env.SMTP_LMS_FROM_EMAIL,
     to: user.email,
     subject: notification.title,
@@ -203,7 +203,7 @@ const createEmailTemplate = (type, variables) => {
 ### Common Issues
 
 **Notifications Not Sending**
-- Check email service configuration (Resend/SMTP)
+- Check SMTP email configuration
 - Verify notification triggers in database
 - Review Edge Function logs for errors
 - Confirm user email addresses are valid

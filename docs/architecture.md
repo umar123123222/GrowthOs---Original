@@ -31,7 +31,7 @@ graph TB
     end
     
     subgraph "External Services"
-        M[Resend Email]
+        M[SMTP Email]
         N[Shopify API]
         O[Zapier Webhooks]
     end
@@ -253,7 +253,7 @@ graph LR
 
 ### External Service Connections
 
-- **Email Service**: Resend API for transactional emails
+- **Email Service**: SMTP configuration for transactional emails
 - **E-commerce**: Shopify API for sales data
 - **Automation**: Zapier webhooks for workflow integration
 - **File Storage**: Supabase Storage for uploads

@@ -42,7 +42,7 @@
 
 **Installment Payment**: Structured payment plan allowing students to pay course fees in multiple scheduled payments rather than a single lump sum.
 
-**Integration**: Connection between Growth OS and external services like Shopify, Resend, or Zapier for enhanced functionality.
+**Integration**: Connection between Growth OS and external services like Shopify, email providers, or Zapier for enhanced functionality.
 
 ## J
 
@@ -86,7 +86,7 @@
 
 **Recording**: Video lesson content stored and delivered through the platform, also referred to as "videos" or "lessons".
 
-**Resend**: Email delivery service used for transactional emails, notifications, and automated communications.
+**SMTP**: Simple Mail Transfer Protocol used for sending transactional emails, notifications, and automated communications.
 
 **Role-Based Access Control (RBAC)**: Security system limiting user access based on assigned roles (student, mentor, admin, superadmin, enrollment_manager).
 

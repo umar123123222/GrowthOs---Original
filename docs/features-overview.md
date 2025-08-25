@@ -144,7 +144,7 @@ Growth OS is a comprehensive Learning Management System with advanced features a
 - **Audit Logging**: Comprehensive activity tracking and security logs
 
 ### **Communication System**
-- **Email Integration**: Resend API integration for reliable email delivery
+- **Email Integration**: SMTP configuration for reliable email delivery
 - **Custom SMTP Support**: Option to use custom SMTP servers
 - **Notification Center**: Centralized notification management
 - **Real-Time Updates**: Live notifications and real-time data updates

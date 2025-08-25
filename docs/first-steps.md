@@ -9,7 +9,7 @@ Before starting, ensure you have:
 - **Node.js 18+** and npm installed
 - **Git** for version control
 - **Supabase account** (free tier available)
-- **Resend account** for email delivery (free tier available)
+- **SMTP email credentials** for email delivery (Gmail, Outlook, SendGrid, etc.)
 - **Domain name** (optional, for custom branding)
 
 ## 🚀 Initial Setup
@@ -37,8 +37,12 @@ Edit your `.env` file with the following required variables:
 VITE_SUPABASE_URL=https://your-project-ref.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
 
-# Email Configuration (Resend)
-RESEND_API_KEY=re_your_resend_api_key
+# Email Configuration (SMTP - added as Supabase secrets)
+# These will be configured in Supabase Edge Function secrets
+# SMTP_HOST=smtp.gmail.com
+# SMTP_PORT=587
+# SMTP_USER=your-email@company.com
+# SMTP_PASSWORD=your-app-password
 SMTP_FROM_EMAIL=noreply@yourdomain.com
 SMTP_FROM_NAME=Your Company Name
 
@@ -102,7 +106,16 @@ supabase login
 supabase functions deploy --project-ref your-project-ref
 
 # Set required secrets
-supabase secrets set RESEND_API_KEY=your-resend-key --project-ref your-project-ref
+supabase secrets set SMTP_HOST=smtp.gmail.com --project-ref your-project-ref
+supabase secrets set SMTP_PORT=587 --project-ref your-project-ref
+supabase secrets set SMTP_USER=your-email@company.com --project-ref your-project-ref
+supabase secrets set SMTP_PASSWORD=your-app-password --project-ref your-project-ref
+supabase secrets set SMTP_FROM_EMAIL=noreply@company.com --project-ref your-project-ref
+supabase secrets set SMTP_FROM_NAME="Growth OS" --project-ref your-project-ref
+supabase secrets set SMTP_USER=your-email@company.com --project-ref your-project-ref
+supabase secrets set SMTP_PASSWORD=your-app-password --project-ref your-project-ref
+supabase secrets set SMTP_FROM_EMAIL=noreply@company.com --project-ref your-project-ref
+supabase secrets set SMTP_FROM_NAME="Growth OS" --project-ref your-project-ref
 supabase secrets set SMTP_FROM_EMAIL=noreply@yourdomain.com --project-ref your-project-ref
 ```
 
@@ -156,14 +169,19 @@ Edit `src/index.css` to customize your brand colors:
 
 ## 📧 Email Service Configuration
 
-### 1. Resend Setup
-1. Sign up at [resend.com](https://resend.com)
-2. Verify your domain:
-   - Go to Domains section
-   - Add your domain
-   - Add required DNS records
-   - Wait for verification (usually 5-10 minutes)
-3. Generate API key in API Keys section
+### 1. SMTP Email Setup
+1. Choose your email provider (Gmail, Outlook, SendGrid, etc.)
+2. Configure SMTP credentials:
+   - **Gmail**: Enable 2FA and create App Password
+   - **Outlook**: Use account credentials or app password  
+   - **SendGrid**: Use API key as password
+3. Add SMTP configuration to Supabase secrets:
+   ```bash
+   supabase secrets set SMTP_HOST=smtp.gmail.com --project-ref your-project-ref
+   supabase secrets set SMTP_PORT=587 --project-ref your-project-ref
+   supabase secrets set SMTP_USER=your-email@company.com --project-ref your-project-ref
+   supabase secrets set SMTP_PASSWORD=your-app-password --project-ref your-project-ref
+   ```
 4. Add API key to your environment variables
 
 ### 2. Custom SMTP (Alternative)
@@ -344,7 +362,7 @@ supabase db dump --data-only --project-ref your-project-ref > backup.sql
 ### Common Issues
 
 **Email Not Sending**
-- Verify Resend API key
+- Verify SMTP configuration
 - Check domain verification status
 - Review DNS records
 - Test with different email addresses

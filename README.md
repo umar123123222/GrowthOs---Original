@@ -55,7 +55,7 @@ Growth OS is a comprehensive, AI-powered Learning Management System designed spe
 - **Motivational Messaging**: Automated encouragement and milestone alerts
 - **Support Ticket System**: Multi-tier customer support with priority levels
 - **Activity Logging**: Comprehensive audit trails and user activity tracking
-- **Email Integration**: Resend API integration with custom SMTP support
+- **Email Integration**: SMTP email delivery through Supabase Edge Function secrets
 
 ### **Advanced Integrations**
 - **Shopify Integration**: E-commerce metrics and customer data sync
@@ -83,7 +83,7 @@ Growth OS is a comprehensive, AI-powered Learning Management System designed spe
 - **Storage**: Secure file upload and management
 
 ### **Integrations**
-- **Resend API**: Email delivery service
+- **SMTP Email**: Email delivery via provider credentials
 - **Shopify API**: E-commerce platform integration
 - **Zapier**: Automation and workflow management
 - **PDF Generation**: Dynamic invoice and certificate creation

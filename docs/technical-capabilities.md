@@ -21,7 +21,7 @@ This document outlines the technical capabilities, architecture decisions, and i
 
 ### **Serverless Functions**
 - **Edge Functions**: Deno-based serverless functions for business logic
-- **Email Services**: Resend API integration with custom SMTP fallback
+- **Email Services**: SMTP configuration through Supabase Edge Function secrets
 - **Webhook Handlers**: Automated processing of external service callbacks
 - **Background Jobs**: Scheduled tasks for notifications and maintenance
 
@@ -134,20 +134,19 @@ ORDER BY created_at DESC;
 
 ### **Email Service Integration**
 ```typescript
-// Resend API integration with fallback
+// SMTP integration via Edge Functions
 class EmailService {
   async sendEmail(to: string, subject: string, content: string) {
     try {
-      // Primary: Resend API
-      return await resend.emails.send({
-        from: process.env.SMTP_FROM_EMAIL,
+      // SMTP via Edge Functions with Supabase secrets
+      const smtpClient = SMTPClient.fromEnv();
+      return await smtpClient.sendEmail({
         to,
         subject,
         html: content
       });
     } catch (error) {
-      // Fallback: Custom SMTP
-      return await customSMTP.send({to, subject, content});
+      throw new Error(`Email delivery failed: ${error.message}`);
     }
   }
 }

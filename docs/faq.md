@@ -14,9 +14,9 @@ The platform supports five user roles:
 - **Enrollment Managers**: Handle student onboarding
 
 ### How much does it cost to run Growth OS?
-Growth OS uses a pay-as-you-go model through Supabase and Resend:
+Growth OS uses a pay-as-you-go model through Supabase and your email provider:
 - **Supabase**: Free tier supports up to 50,000 monthly active users
-- **Resend**: Free tier includes 3,000 emails per month
+- **Email Provider**: Most providers offer free tiers (Gmail, Outlook, etc.)
 - **Hosting**: Free on Lovable platform with optional custom domain
 
 ## Student Questions
