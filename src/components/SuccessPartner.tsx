@@ -133,7 +133,9 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       }
 
       const data = await response.json();
-      console.log('Success Partner: Webhook response received', { data, type: typeof data });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Success Partner: Webhook response received', { data, type: typeof data });
+      }
       
       // Handle different response formats and ensure string output
       let aiResponse = "";
@@ -182,7 +184,9 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
         aiResponse = String(aiResponse);
       }
       
-      console.log('Success Partner: Final processed response', { aiResponse, length: aiResponse.length });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Success Partner: Final processed response', { aiResponse, length: aiResponse.length });
+      }
       return aiResponse;
     } catch (error) {
       console.error('Webhook error:', error);
@@ -192,10 +196,12 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
 
   const handleSendMessage = useCallback(async () => {
     if (!message.trim() || isLoading) {
-      console.log('Success Partner: Message sending blocked', { 
-        messageEmpty: !message.trim(), 
-        isLoading 
-      });
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Success Partner: Message sending blocked', { 
+          messageEmpty: !message.trim(), 
+          isLoading 
+        });
+      }
       return;
     }
 

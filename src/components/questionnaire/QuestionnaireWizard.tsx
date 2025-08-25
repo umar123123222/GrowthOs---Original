@@ -102,11 +102,13 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
 
   // Early return for invalid questions
   if (!questions || !Array.isArray(questions) || questions.length === 0) {
-    console.log('QuestionnaireWizard: Invalid questions data', { 
-      questions: questions,
-      isArray: Array.isArray(questions),
-      length: questions?.length 
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('QuestionnaireWizard: Invalid questions data', { 
+        questions: questions,
+        isArray: Array.isArray(questions),
+        length: questions?.length 
+      });
+    }
     safeLogger.warn('QuestionnaireWizard: Returning loading state', { 
       questions: questions,
       isArray: Array.isArray(questions),
@@ -123,11 +125,13 @@ export const QuestionnaireWizard: React.FC<QuestionnaireWizardProps> = ({
     );
   }
 
-  console.log('QuestionnaireWizard: Valid questions received', { 
-    questionCount: questions.length,
-    firstQuestion: questions[0]?.text?.substring(0, 50),
-    sampleQuestion: questions[0]
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('QuestionnaireWizard: Valid questions received', { 
+      questionCount: questions.length,
+      firstQuestion: questions[0]?.text?.substring(0, 50),
+      sampleQuestion: questions[0]
+    });
+  }
 
   // Validate current step
   const validCurrentStep = Math.max(0, Math.min(currentStep, questions.length - 1));

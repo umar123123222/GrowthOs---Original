@@ -464,12 +464,14 @@ const Onboarding = ({
     );
   }
   
-  console.log('Onboarding: About to render questionnaire', {
-    questionCount: questions.length, 
-    submitting, 
-    userId: user?.id,
-    sampleQuestion: questions[0]
-  });
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Onboarding: About to render questionnaire', {
+      questionCount: questions.length, 
+      submitting, 
+      userId: user?.id,
+      sampleQuestion: questions[0]
+    });
+  }
   safeLogger.info('Onboarding: Rendering questionnaire form', { 
     questionCount: questions.length, 
     submitting, 
