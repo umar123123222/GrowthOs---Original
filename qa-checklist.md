@@ -1,16 +1,14 @@
 # Email Automation QA Checklist
 
-## Pre-Test Setup
-- [ ] Configure LMS SMTP in Company Settings → Email
-- [ ] Configure Billing SMTP in Company Settings → Email  
-- [ ] Verify both SMTP configs have different From addresses
+## Pre-Test Setup 
+- [ ] Verify SMTP config has been properly setup at Edge Functions Secret
 - [ ] Ensure test email addresses are accessible
 
 ## Test Cases
 
-### 1. Student Welcome Email (LMS SMTP)
+### 1. Student Welcome Email (SMTP)
 - [ ] Create a new student via admin interface
-- [ ] Verify email arrives from **LMS SMTP From address**
+- [ ] Verify email arrives from **SMTP From address**
 - [ ] Check email contains:
   - [ ] Student's first name
   - [ ] Email address
@@ -19,9 +17,9 @@
   - [ ] Student ID
 - [ ] Verify template placeholders are replaced correctly
 
-### 2. Staff Welcome Email (LMS SMTP)  
+### 2. Staff Welcome Email (SMTP)  
 - [ ] Create a new staff member (instructor/admin)
-- [ ] Verify email arrives from **LMS SMTP From address**
+- [ ] Verify email arrives from **SMTP From address**
 - [ ] Check email contains:
   - [ ] Staff member's first name
   - [ ] Email address
@@ -31,9 +29,9 @@
   - [ ] Department (if applicable)
 - [ ] Verify template placeholders are replaced correctly
 
-### 3. Student Invoice Email (Billing SMTP)
+### 3. Student Invoice Email (SMTP)
 - [ ] Generate a new student invoice
-- [ ] Verify email arrives from **Billing SMTP From address**
+- [ ] Verify email arrives from **SMTP From address**
 - [ ] Check email contains:
   - [ ] Student name
   - [ ] Invoice number in subject line
@@ -48,7 +46,7 @@
 ## Error Handling Tests
 
 ### 4. Missing SMTP Configuration
-- [ ] Disable LMS SMTP config
+- [ ] Disable SMTP config
 - [ ] Create student → verify retry scheduled in audit log
 - [ ] Re-enable LMS SMTP config
 - [ ] Verify email eventually sends after retry
@@ -64,15 +62,14 @@
   - [ ] `mail.failed` events with error details
   - [ ] `mail.retry` events with delay information
 - [ ] Verify audit entries include:
-  - [ ] Purpose (lms/billing)
   - [ ] Template name
   - [ ] Recipient email
   - [ ] Attempt number
   - [ ] Status
 
 ## Cross-Verification
-- [ ] Confirm student emails use LMS From address
-- [ ] Confirm staff emails use LMS From address  
-- [ ] Confirm invoice emails use Billing From address
+- [ ] Confirm student emails use SMTP From address  
+- [ ] Confirm staff emails use SMTP From address  
+- [ ] Confirm invoice emails use SMTP From address  
 - [ ] Verify no email mixing between purposes
 - [ ] Test with multiple simultaneous triggers
