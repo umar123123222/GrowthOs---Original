@@ -120,23 +120,6 @@ This guide covers deploying Growth OS from local development to production envir
    supabase secrets set SMTP_PASSWORD=your-app-password --project-ref YOUR_PROJECT_REF
    supabase secrets set SMTP_FROM_EMAIL=noreply@company.com --project-ref YOUR_PROJECT_REF
    supabase secrets set SMTP_FROM_NAME="Growth OS" --project-ref YOUR_PROJECT_REF
-   supabase secrets set SMTP_HOST=your-smtp-host --project-ref YOUR_PROJECT_REF
-   ```
-
-## Service Integrations
-
-### Email Service (Resend)
-
-1. **Account Setup**
-   - Sign up at [resend.com](https://resend.com)
-   - Verify your domain at [resend.com/domains](https://resend.com/domains)
-   - Generate API key at [resend.com/api-keys](https://resend.com/api-keys)
-
-2. **Configuration**
-   ```bash
-   RESEND_API_KEY=re_your_api_key
-   SMTP_FROM_EMAIL=noreply@yourdomain.com
-   SMTP_FROM_NAME=Growth OS
    ```
 
 ### File Storage
@@ -161,7 +144,7 @@ This guide covers deploying Growth OS from local development to production envir
    - Set up webhook endpoints
    - Test data synchronization
 
-2. **Zapier (Optional)**
+2. **N8N (Optional)**
    - Configure webhook endpoints
    - Set up automation workflows
    - Test integration endpoints
