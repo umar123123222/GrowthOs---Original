@@ -54,8 +54,6 @@
 
 **LMS Status**: Student's access level to learning content (`active`, `inactive`, `suspended`).
 
-**Lovable**: Development platform hosting Growth OS with automatic deployment and preview capabilities.
-
 ## M
 
 **Mentor**: User role responsible for guiding students, reviewing assignments, providing feedback, and tracking student progress.
@@ -68,6 +66,8 @@
 
 **Notification System**: Multi-channel communication system delivering updates via in-app notifications, email, and real-time alerts.
 
+**N8N**: Automation platform that can integrate with Growth OS through webhooks to trigger actions in other applications.
+
 ## O
 
 **Onboarding**: Automated process for new students including email delivery, questionnaire completion, and LMS access setup.
@@ -78,15 +78,9 @@
 
 **Progress Tracking**: System monitoring student advancement through courses, including completion percentages, time spent, and performance metrics.
 
-## Q
-
-**Quiz**: Assessment tool within modules to test student understanding and reinforce learning objectives.
-
 ## R
 
 **Recording**: Video lesson content stored and delivered through the platform, also referred to as "videos" or "lessons".
-
-**SMTP**: Simple Mail Transfer Protocol used for sending transactional emails, notifications, and automated communications.
 
 **Role-Based Access Control (RBAC)**: Security system limiting user access based on assigned roles (student, mentor, admin, superadmin, enrollment_manager).
 
@@ -106,9 +100,7 @@
 
 **Support Ticket**: Customer service system allowing users to submit help requests and receive assistance from staff.
 
-## T
-
-**Tenant**: Multi-tenancy support for running separate instances of Growth OS for different organizations (future enhancement).
+**SMTP**: Simple Mail Transfer Protocol used for sending transactional emails, notifications, and automated communications.
 
 ## U
 
@@ -126,9 +118,6 @@
 
 **Webhook**: HTTP callback mechanism allowing external services to notify Growth OS of events for automation and integration.
 
-## Z
-
-**Zapier**: Automation platform that can integrate with Growth OS through webhooks to trigger actions in other applications.
 
 ## Technical Terms
 
