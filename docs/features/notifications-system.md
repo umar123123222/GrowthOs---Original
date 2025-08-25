@@ -57,8 +57,6 @@ notify_mentor_students(mentor_id, type, title, message, metadata)
 | `SMTP_PASSWORD` | SMTP password | None | If using SMTP |
 | `SMTP_FROM_EMAIL` | Default sender email | None | Yes |
 | `SMTP_FROM_NAME` | Default sender name | Growth OS | No |
-| `SMTP_LMS_FROM_EMAIL` | LMS-specific sender | None | Recommended |
-| `SMTP_LMS_FROM_NAME` | LMS sender name | LMS Team | No |
 
 ### Notification Channels
 ```typescript
