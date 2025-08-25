@@ -54,7 +54,6 @@ The Student Management System handles the complete student lifecycle from initia
 **Progress Tracking**:
 - Module completion percentages
 - Assignment submission status
-- Quiz scores and attempts
 - Time spent in learning materials
 - Engagement analytics
 
@@ -228,7 +227,6 @@ export async function cleanupInactiveStudents() {
 ### Learning Management System
 - Content unlocking based on progress
 - Assignment submission workflows
-- Quiz and assessment integration
 - Certificate generation
 
 ### Notification System
