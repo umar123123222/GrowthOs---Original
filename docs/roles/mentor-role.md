@@ -10,7 +10,6 @@ Mentors provide personalized guidance and assessment for assigned students, revi
 - **Student Assignment**: Manage assigned student portfolios (default: 20 students max)
 - **Assignment Review**: Evaluate and provide feedback on student submissions
 - **Progress Monitoring**: Track individual student learning journeys
-- **Session Scheduling**: Conduct one-on-one and group mentorship sessions
 
 ### Assessment and Feedback
 - **Assignment Grading**: Approve or decline student submissions with detailed feedback
@@ -19,7 +18,6 @@ Mentors provide personalized guidance and assessment for assigned students, revi
 - **Success Tracking**: Monitor student achievement and milestone completion
 
 ### Communication
-- **Student Interaction**: Direct communication with assigned students
 - **Support Collaboration**: Assist with support ticket responses
 - **Progress Reporting**: Communicate student status to administrators
 - **Session Facilitation**: Lead live learning sessions and workshops
