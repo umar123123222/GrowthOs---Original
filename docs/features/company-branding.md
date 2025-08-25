@@ -2,19 +2,17 @@
 
 ## Overview
 
-The Company Branding system enables complete customization of the Growth OS platform with company logos, colors, email templates, and visual identity to match organizational branding requirements.
+The Company Branding system enables complete customization of the Growth OS platform with company logos, colors, and visual identity to match organizational branding requirements.
 
 ## User-Facing Behavior
 
 ### For Superadmins
-- **Logo Management**: Upload and manage company logos with automatic favicon generation
+- **Logo Management**: Upload and manage company logos with manual update of favicon from teh backend
 - **Brand Configuration**: Set company details (name, contact information, colors)
-- **Email Template Customization**: Customize email sender information and templates
-- **Visual Theme Control**: Manage platform color schemes and styling
+- **Email Customization**: Customize email sender information
 
 ### For All Users
 - **Branded Experience**: See company logo and colors throughout the platform
-- **Custom Email Communications**: Receive emails with company branding
 - **Consistent Visual Identity**: Experience cohesive brand presentation
 
 ## Technical Implementation
@@ -192,14 +190,6 @@ const advancedBranding = {
 }
 ```
 
-### Multi-Brand Support
-> **Note:** Multi-tenancy requires significant architecture changes
-
-1. Add tenant_id to company_settings table
-2. Implement tenant-specific branding resolution
-3. Create tenant isolation for storage buckets
-4. Add tenant switching interface for superadmins
-
 ### Brand Asset Management
 ```typescript
 // Advanced asset management
@@ -228,15 +218,7 @@ const brandAssets = {
 1. Superadmin navigates to Company Settings
 2. Uploads company logo (automatic favicon generation)
 3. Sets company name and contact information
-4. Configures brand colors using color picker
-5. Saves settings - changes apply immediately across platform
-
-### Updating Brand Colors
-1. Access Company Settings branding section
-2. Use color picker to select new primary/secondary colors
-3. Preview changes in real-time
-4. Save changes - CSS variables updated instantly
-5. Brand colors applied to all components automatically
+4. Saves settings - changes apply immediately across platform
 
 ## Troubleshooting
 
@@ -261,7 +243,7 @@ const brandAssets = {
 - Review color contrast accessibility
 
 **Email Branding Issues**
-- Verify email template configuration
+- Verify email configuration
 - Check SMTP sender name settings
 - Confirm logo URL is publicly accessible
 - Test email rendering across email clients
