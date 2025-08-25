@@ -17,7 +17,7 @@ The platform supports five user roles:
 Growth OS uses a pay-as-you-go model through Supabase and your email provider:
 - **Supabase**: Free tier supports up to 50,000 monthly active users
 - **Email Provider**: Most providers offer free tiers (Gmail, Outlook, etc.)
-- **Hosting**: Free on Lovable platform with optional custom domain
+- **Hosting**: Free on CloudFlare platform with optional custom domain
 
 ## Student Questions
 
@@ -76,7 +76,7 @@ The default limit is 20 students per mentor, but this can be adjusted by adminis
 
 ### How do I customize company branding?
 1. Navigate to Admin Panel → Company Settings
-2. Upload company logo (automatically generates favicon)
+2. Upload company logo (favicon needs to be updated from the backend)
 3. Configure email templates and sender information
 4. Customize colors and styling through the interface
 
@@ -100,7 +100,7 @@ Growth OS works on all modern browsers:
 ### Can I integrate with other systems?
 Yes, Growth OS supports:
 - **Shopify**: E-commerce metrics integration
-- **Zapier**: Workflow automation via webhooks
+- **N8N**: Workflow automation via webhooks
 - **Custom APIs**: Through Supabase Edge Functions
 - **Email Platforms**: Custom SMTP configuration
 
@@ -153,7 +153,7 @@ Security measures include:
 ### How do I contact support?
 1. **Students**: Use in-app support ticket system
 2. **Mentors/Admins**: Direct email to system administrators
-3. **Technical Issues**: Check documentation first, then create support ticket
+3. **Technical Issues**: Check documentation first, then email at support@core47.ai
 4. **Urgent Issues**: Contact superadmin directly
 
 ### Where can I find more information?
@@ -163,7 +163,7 @@ Security measures include:
 - **Training**: Admin and mentor training sessions available
 
 ### What if I have a feature request?
-1. Submit detailed request through support system
+1. Submit detailed request through at support@core47.ai
 2. Include business justification and use case
 3. Provide mockups or examples if available
 4. Feature requests are reviewed quarterly
