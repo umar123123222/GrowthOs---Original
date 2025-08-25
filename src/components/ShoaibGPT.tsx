@@ -85,18 +85,26 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
       // Handle different response formats and ensure string output
       let aiResponse = "";
       if (data && typeof data === 'object') {
-        if (data.reply && typeof data.reply === 'string') {
+        // Handle nested structure: {"reply":{"output":"message"}}
+        if (data.reply && typeof data.reply === 'object' && data.reply.output) {
+          aiResponse = typeof data.reply.output === 'string' ? data.reply.output : String(data.reply.output);
+        }
+        // Handle flat structure: {"reply":"message"}
+        else if (data.reply && typeof data.reply === 'string') {
           aiResponse = data.reply;
-        } else if (data.output) {
+        }
+        // Handle direct output: {"output":"message"}
+        else if (data.output) {
           if (typeof data.output === 'string') {
             aiResponse = data.output;
           } else if (typeof data.output === 'object') {
-            // If output is an object, try to extract meaningful text
             aiResponse = data.output.text || data.output.message || data.output.content || JSON.stringify(data.output);
           } else {
             aiResponse = String(data.output);
           }
-        } else if (data.message && typeof data.message === 'string') {
+        }
+        // Handle other message fields
+        else if (data.message && typeof data.message === 'string') {
           aiResponse = data.message;
         } else {
           // Fallback for any other object structure
