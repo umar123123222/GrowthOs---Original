@@ -10,7 +10,6 @@ Students are the primary learners in Growth OS, accessing structured learning co
 - **Module Access**: Sequential unlocking of learning modules
 - **Video Consumption**: Track viewing progress and completion
 - **Assignment Submission**: Submit text, files, and URLs for review
-- **Quiz Participation**: Complete module assessments
 
 ### Progress Tracking
 - **Personal Dashboard**: View learning progress and achievements
