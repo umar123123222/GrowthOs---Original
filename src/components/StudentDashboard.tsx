@@ -51,8 +51,10 @@ export function StudentDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Add debug logging and error state
-  console.log('StudentDashboard: Rendering with user:', user?.id, 'role:', user?.role);
+  // Add debug logging with better checks
+  if (process.env.NODE_ENV === 'development') {
+    console.log('StudentDashboard: Rendering with user:', user?.id, 'role:', user?.role);
+  }
   
   // Add error boundary state
   const [hasError, setHasError] = useState(false);
@@ -71,12 +73,12 @@ export function StudentDashboard() {
   const [userLMSStatus, setUserLMSStatus] = useState<string>('active');
   const [firstOnboardingAnswer, setFirstOnboardingAnswer] = useState<string>('');
   const [firstOnboardingRange, setFirstOnboardingRange] = useState<{ min: string; max: string } | null>(null);
-  // Fetch all dashboard data
+  // Fetch all dashboard data - Fix dependencies to prevent infinite loops
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && !loading) {
       fetchDashboardData();
     }
-  }, [user?.id, recordings]);
+  }, [user?.id]); // Remove recordings dependency to prevent loops
 
   const fetchDashboardData = async () => {
     if (!user?.id) {
@@ -188,8 +190,8 @@ export function StudentDashboard() {
         logger.warn('Failed to parse onboarding answers', e);
       }
 
-      // Calculate course progress
-      if (recordings.length > 0) {
+      // Calculate course progress - only when recordings data changes
+      if (recordings && recordings.length > 0) {
         const watchedRecordings = recordings.filter(r => r.isWatched).length;
         const submittedAssignments = recordings.filter(r => r.hasAssignment && r.assignmentSubmitted).length;
         const totalItems = recordings.length + recordings.filter(r => r.hasAssignment).length;
@@ -271,7 +273,9 @@ export function StudentDashboard() {
   }
 
   if (loading) {
-    console.log('StudentDashboard: Loading recordings');
+    if (process.env.NODE_ENV === 'development') {
+      console.log('StudentDashboard: Loading recordings');
+    }
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-lg">Loading your dashboard...</div>
@@ -303,7 +307,9 @@ export function StudentDashboard() {
     );
   }
 
-  console.log('StudentDashboard: Rendering main dashboard content');
+  if (process.env.NODE_ENV === 'development') {
+    console.log('StudentDashboard: Rendering main dashboard content');
+  }
 
   return (
     <div className="space-y-6">

@@ -203,7 +203,9 @@ useEffect(() => {
         let onboardingDone = data.role !== 'student'; // Non-students don't need onboarding
         
         if (data.role === 'student') {
-          console.log('fetchUserProfile: Checking student onboarding status for user:', userId);
+          if (process.env.NODE_ENV === 'development') {
+            console.log('fetchUserProfile: Checking student onboarding status for user:', userId);
+          }
           const { data: studentRow, error: studentErr } = await supabase
             .from('students')
             .select('onboarding_completed')
@@ -212,18 +214,24 @@ useEffect(() => {
           
           if (studentErr) {
             logger.warn('fetchUserProfile: Error fetching student onboarding status', studentErr);
-            console.warn('fetchUserProfile: Student query error, defaulting to onboarding needed:', studentErr.message);
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('fetchUserProfile: Student query error, defaulting to onboarding needed:', studentErr.message);
+            }
             // If error fetching student record, assume onboarding needed
             onboardingDone = false;
           } else if (!studentRow) {
             logger.warn('fetchUserProfile: No student record found for user, assuming onboarding needed', { userId });
-            console.warn('fetchUserProfile: No student record found, onboarding needed');
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('fetchUserProfile: No student record found, onboarding needed');
+            }
             // If no student record exists, they definitely need onboarding
             onboardingDone = false;
           } else {
             // Student record exists, check completion status
             onboardingDone = !!studentRow.onboarding_completed;
-            console.log('fetchUserProfile: Student record found, onboarding_completed:', studentRow.onboarding_completed, 'onboardingDone:', onboardingDone);
+            if (process.env.NODE_ENV === 'development') {
+              console.log('fetchUserProfile: Student record found, onboarding_completed:', studentRow.onboarding_completed, 'onboardingDone:', onboardingDone);
+            }
           }
           
           logger.debug('fetchUserProfile: Student onboarding status', { 
