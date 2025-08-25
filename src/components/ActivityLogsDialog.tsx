@@ -180,7 +180,6 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       assignment_submitted: 'bg-purple-100 text-purple-800',
       profile_updated: 'bg-yellow-100 text-yellow-800',
       module_completed: 'bg-emerald-100 text-emerald-800',
-      quiz_attempted: 'bg-orange-100 text-orange-800',
       // Invoice/payment related
       payment_recorded: 'bg-emerald-100 text-emerald-800',
       invoice_status_changed: 'bg-amber-100 text-amber-800',
@@ -282,7 +281,6 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
                     <SelectItem value="profile_updated">Profile Updated</SelectItem>
                     <SelectItem value="module_completed">Module Completed</SelectItem>
-                    <SelectItem value="quiz_attempted">Quiz Attempted</SelectItem>
                     {/* Invoice/Payments */}
                     <SelectItem value="payment_recorded">Payment Recorded</SelectItem>
                     <SelectItem value="invoice_status_changed">Invoice Status Changed</SelectItem>

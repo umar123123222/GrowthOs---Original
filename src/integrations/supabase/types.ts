@@ -667,21 +667,18 @@ export type Database = {
           description: string | null
           id: string
           order: number | null
-          quiz_questions: Json | null
           title: string
         }
         Insert: {
           description?: string | null
           id?: string
           order?: number | null
-          quiz_questions?: Json | null
           title: string
         }
         Update: {
           description?: string | null
           id?: string
           order?: number | null
-          quiz_questions?: Json | null
           title?: string
         }
         Relationships: []
@@ -817,41 +814,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
-      }
-      quiz_questions: {
-        Row: {
-          correct_option: string | null
-          explanation: string | null
-          id: string
-          module_id: string
-          options: Json
-          question_text: string
-        }
-        Insert: {
-          correct_option?: string | null
-          explanation?: string | null
-          id?: string
-          module_id: string
-          options: Json
-          question_text: string
-        }
-        Update: {
-          correct_option?: string | null
-          explanation?: string | null
-          id?: string
-          module_id?: string
-          options?: Json
-          question_text?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "quiz_questions_module_id_fkey"
-            columns: ["module_id"]
-            isOneToOne: false
-            referencedRelation: "modules"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       recording_attachments: {
         Row: {

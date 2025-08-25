@@ -83,7 +83,7 @@ const Certificates = () => {
     { 
       name: "E-commerce Foundations", 
       description: "Complete all basic modules and assignments",
-      requirements: "• Watch all foundation videos\n• Complete 5 assignments\n• Pass foundation quiz with 80%+"
+      requirements: "• Watch all foundation videos\n• Complete 5 assignments\n• Maintain 80%+ average on assignments"
     },
     { 
       name: "Product Research Specialist", 

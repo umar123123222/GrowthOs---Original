@@ -1359,7 +1359,6 @@ export function StudentsManagement() {
                   <SelectItem value="profile_updated">Profile Updated</SelectItem>
                   <SelectItem value="module_completed">Module Completed</SelectItem>
                   <SelectItem value="video_watched">Video Watched</SelectItem>
-                  <SelectItem value="quiz_attempted">Quiz Attempted</SelectItem>
                   <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
                   <SelectItem value="certificate_generated">Certificate Generated</SelectItem>
                   <SelectItem value="fees_recorded">Fees Recorded</SelectItem>
@@ -1434,8 +1433,6 @@ export function StudentsManagement() {
                               return `Submitted assignment: "${metadata.assignment_title || metadata.title || 'Unknown assignment'}" ${metadata.score ? `(Score: ${metadata.score})` : ''}`;
                             case 'module_completed':
                               return `Completed module: "${metadata.module_title || metadata.title || 'Unknown module'}" ${metadata.completion_percentage ? `(${metadata.completion_percentage}%)` : ''}`;
-                            case 'quiz_attempted':
-                              return `Attempted quiz: "${metadata.quiz_title || metadata.title || 'Unknown quiz'}" ${metadata.score ? `(Score: ${metadata.score}/${metadata.total_questions || 'N/A'})` : ''}`;
                             case 'certificate_generated':
                               return `Generated certificate for: "${metadata.course_title || metadata.title || 'Unknown course'}"`;
                             case 'fees_recorded':

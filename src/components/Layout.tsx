@@ -123,12 +123,6 @@ const NavigationItems = memo(({
           </button>
           
           {courseMenuOpen && <div className="ml-6 mt-2 space-y-2">
-              <Link to="/quizzes" className={`
-                  flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
-                  ${location.pathname === '/quizzes' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
-                `}>
-                Quizzes
-              </Link>
               <Link to="/certificates" className={`
                   flex items-center gap-2 px-3 py-1 text-sm rounded-md transition-colors
                   ${location.pathname === '/certificates' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}

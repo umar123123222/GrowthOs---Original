@@ -339,9 +339,8 @@ Comprehensive analysis of the Growth OS database schema consisting of 39 product
 ### Potential Security Concerns
 
 #### **Medium Priority**:
-1. **Public Quiz Access** - Quiz questions readable without authentication
-2. **Public Milestone Data** - Achievement system exposed publicly
-3. **Extension in Public Schema** - Extensions should be in dedicated schema
+1. **Public Milestone Data** - Achievement system exposed publicly
+2. **Extension in Public Schema** - Extensions should be in dedicated schema
 
 #### **Low Priority**:
 1. **Security Definer Views** - Some views use elevated privileges
@@ -385,9 +384,8 @@ Comprehensive analysis of the Growth OS database schema consisting of 39 product
 ## 🚀 Schema Evolution Recommendations
 
 ### **Immediate (Security)**:
-1. Add authentication requirement to quiz_questions table
-2. Restrict milestone system to authenticated users
-3. Review and potentially refactor security definer views
+1. Restrict milestone system to authenticated users
+2. Review and potentially refactor security definer views
 
 ### **Short Term (Performance)**:
 1. Add composite indexes for common query patterns

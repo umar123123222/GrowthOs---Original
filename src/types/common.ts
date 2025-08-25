@@ -92,7 +92,6 @@ export interface Module {
   title: string;
   description?: string;
   order?: number;
-  quiz_questions?: any; // Quiz questions from quiz.ts
   tenant_id?: string;
 }
 

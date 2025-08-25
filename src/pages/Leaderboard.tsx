@@ -19,10 +19,10 @@ const Leaderboard = () => {
 
   const getBadgesForScore = (points) => {
     const badges = [];
-    if (points >= 2000) badges.push("First Sale", "Quiz Master", "Store Live", "Speed Learner");
-    else if (points >= 1500) badges.push("Store Live", "Quiz Master", "First Sale");
-    else if (points >= 1000) badges.push("Quiz Master", "Store Live");
-    else if (points >= 500) badges.push("Quiz Master");
+    if (points >= 2000) badges.push("First Sale", "Store Live", "Speed Learner");
+    else if (points >= 1500) badges.push("Store Live", "First Sale");
+    else if (points >= 1000) badges.push("Store Live");
+    else if (points >= 500) badges.push("Store Live");
     return badges;
   };
 
@@ -35,7 +35,7 @@ const Leaderboard = () => {
       rank: 1,
       avatar: "SJ",
       progress: 100,
-      badges: ["First Sale", "Quiz Master", "Store Live", "Speed Learner"],
+      badges: ["First Sale", "Store Live", "Speed Learner"],
       streak: 23
     },
     {
@@ -45,7 +45,7 @@ const Leaderboard = () => {
       rank: 2,
       avatar: "MC",
       progress: 98,
-      badges: ["Store Live", "Quiz Master", "First Sale"],
+      badges: ["Store Live", "First Sale"],
       streak: 18
     },
     {
@@ -55,7 +55,7 @@ const Leaderboard = () => {
       rank: 3,
       avatar: "PP",
       progress: 95,
-      badges: ["Quiz Master", "Store Live", "Helper"],
+      badges: ["Store Live", "Helper"],
       streak: 15
     },
     {
@@ -65,7 +65,7 @@ const Leaderboard = () => {
       rank: 4,
       avatar: "YU",
       progress: 78,
-      badges: ["Quiz Master", "Store Live"],
+      badges: ["Store Live"],
       streak: 9,
       isCurrentUser: true
     },
@@ -86,7 +86,7 @@ const Leaderboard = () => {
       rank: 6,
       avatar: "EW",
       progress: 75,
-      badges: ["Quiz Master"],
+      badges: ["Helper"],
       streak: 7
     },
     {
@@ -154,7 +154,6 @@ const Leaderboard = () => {
   const achievements = [
     { name: "First Sale", icon: "💰", description: "Made your first sale", count: 3 },
     { name: "Store Live", icon: "🛒", description: "Launched your store", count: 5 },
-    { name: "Quiz Master", icon: "🧠", description: "Scored 90%+ on all quizzes", count: 8 },
     { name: "Speed Learner", icon: "⚡", description: "Completed module ahead of time", count: 4 },
     { name: "Helper", icon: "🤝", description: "Helped other students", count: 2 }
   ];
@@ -172,7 +171,6 @@ const Leaderboard = () => {
     switch (badge) {
       case "First Sale": return "bg-green-100 text-green-800";
       case "Store Live": return "bg-blue-100 text-blue-800";
-      case "Quiz Master": return "bg-purple-100 text-purple-800";
       case "Speed Learner": return "bg-orange-100 text-orange-800";
       case "Helper": return "bg-pink-100 text-pink-800";
       default: return "bg-gray-100 text-gray-800";

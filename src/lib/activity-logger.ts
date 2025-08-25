@@ -54,8 +54,6 @@ export const ACTIVITY_TYPES = {
   LEADERBOARD_VIEWED: 'leaderboard_viewed',
   MODULE_COMPLETED: 'module_completed',
   MODULE_STARTED: 'module_started',
-  QUIZ_ATTEMPTED: 'quiz_attempted',
-  QUIZ_COMPLETED: 'quiz_completed',
   SUPPORT_TICKET_CREATED: 'support_ticket_created',
   SUPPORT_TICKET_REPLIED: 'support_ticket_replied',
   SESSION_ATTENDED: 'session_attended',

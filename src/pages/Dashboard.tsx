@@ -106,7 +106,6 @@ const Dashboard = ({ user }: { user?: any }) => {
     { title: "Profile Complete", completed: false, icon: "✅" },
     { title: "First Video Watched", completed: false, icon: "📹" },
     { title: "First Assignment", completed: false, icon: "📝" },
-    { title: "Quiz Master", completed: false, icon: "🧠" },
     { title: "Store Live", completed: false, icon: "🛒" },
     { title: "First Sale", completed: false, icon: "💰" }
   ]);
@@ -235,7 +234,6 @@ const Dashboard = ({ user }: { user?: any }) => {
         { title: "Profile Complete", completed: !!(profile?.dream_goal_summary), icon: "✅" },
         { title: "First Video Watched", completed: hasWatchedAnyVideo, icon: "📹" },
         { title: "First Assignment", completed: (submissions?.length || 0) > 0, icon: "📝" },
-        { title: "Quiz Master", completed: false, icon: "🧠" }, // Would need quiz data
         { title: "Store Live", completed: !!(profile?.shopify_credentials), icon: "🛒" },
         { title: "First Sale", completed: false, icon: "💰" } // Would need sales data
       ]);
