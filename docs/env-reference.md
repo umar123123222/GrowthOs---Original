@@ -19,7 +19,7 @@ Growth OS uses Supabase's built-in secrets management system for environment var
 
 > **Tip:** These values are automatically available in Supabase Edge Functions. Client-side configuration is handled in `src/integrations/supabase/client.ts`.
 
-### Email Configuration (SMTP)
+### Email Configuration (SMTP - At Supabase Function Secrets) 
 
 | Variable | Purpose | Example | Required For |
 |----------|---------|---------|--------------|
@@ -28,20 +28,6 @@ Growth OS uses Supabase's built-in secrets management system for environment var
 | `SMTP_USER` | SMTP username | `user@company.com` | All email sending |
 | `SMTP_PASSWORD` | SMTP password/app password | `app_password_123` | All email sending |
 
-### SMTP Configuration (Alternative Email)
-
-| Variable | Purpose | Example | Default |
-|----------|---------|---------|---------|
-| `SMTP_HOST` | SMTP server hostname | `smtp.gmail.com` | None |
-| `SMTP_PORT` | SMTP server port | `587` | `587` |
-| `SMTP_USER` | SMTP username | `user@domain.com` | None |
-| `SMTP_PASSWORD` | SMTP password | `app_password_123` | None |
-| `SMTP_FROM_EMAIL` | Default sender email | `noreply@company.com` | None |
-| `SMTP_FROM_NAME` | Default sender name | `Growth OS` | `Growth OS` |
-| `SMTP_LMS_FROM_EMAIL` | LMS-specific sender | `lms@company.com` | None |
-| `SMTP_LMS_FROM_NAME` | LMS sender name | `LMS Team` | `LMS Team` |
-
-> **Warning:** Configure both LMS and billing SMTP settings with different sender addresses to avoid email delivery issues.
 
 ## Configuration by Environment
 
