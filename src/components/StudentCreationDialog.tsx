@@ -20,15 +20,6 @@ interface Mentor {
   full_name: string
 }
 
-interface Batch {
-  id: string
-  name: string
-}
-
-interface Pod {
-  id: string
-  name: string
-}
 
 export const StudentCreationDialog: React.FC<StudentCreationDialogProps> = ({
   open,
@@ -37,17 +28,13 @@ export const StudentCreationDialog: React.FC<StudentCreationDialogProps> = ({
 }) => {
   const { createStudent, isLoading } = useStudentCreation()
   const [mentors, setMentors] = useState<Mentor[]>([])
-  const [batches, setBatches] = useState<Batch[]>([])
-  const [pods, setPods] = useState<Pod[]>([])
   const [formData, setFormData] = useState<CreateStudentData>({
     email: '',
     password: '',
     full_name: '',
     phone: '',
     address: '',
-    mentor_id: '',
-    batch_id: '',
-    pod_id: ''
+    mentor_id: ''
   })
 
   // Load reference data
@@ -60,22 +47,8 @@ export const StudentCreationDialog: React.FC<StudentCreationDialogProps> = ({
           .select('id, full_name')
           .eq('role', 'mentor')
           .order('full_name')
-        
-        // Load batches
-        const { data: batchesData } = await supabase
-          .from('batches')
-          .select('id, name')
-          .order('name')
-        
-        // Load pods
-        const { data: podsData } = await supabase
-          .from('pods')
-          .select('id, name')
-          .order('name')
 
         setMentors(mentorsData || [])
-        setBatches(batchesData || [])
-        setPods(podsData || [])
       } catch (error) {
         console.error('Error loading reference data:', error)
       }
@@ -95,9 +68,7 @@ export const StudentCreationDialog: React.FC<StudentCreationDialogProps> = ({
 
     const result = await createStudent({
       ...formData,
-      mentor_id: formData.mentor_id || undefined,
-      batch_id: formData.batch_id || undefined,
-      pod_id: formData.pod_id || undefined
+      mentor_id: formData.mentor_id || undefined
     })
 
     if (result.success) {
@@ -107,9 +78,7 @@ export const StudentCreationDialog: React.FC<StudentCreationDialogProps> = ({
         full_name: '',
         phone: '',
         address: '',
-        mentor_id: '',
-        batch_id: '',
-        pod_id: ''
+        mentor_id: ''
       })
       onOpenChange(false)
       onStudentCreated()
@@ -193,43 +162,6 @@ export const StudentCreationDialog: React.FC<StudentCreationDialogProps> = ({
               </Select>
             </div>
             
-            <div className="space-y-2">
-              <Label htmlFor="batch">Batch</Label>
-              <Select 
-                value={formData.batch_id} 
-                onValueChange={(value) => handleInputChange('batch_id', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select batch (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {batches.map((batch) => (
-                    <SelectItem key={batch.id} value={batch.id}>
-                      {batch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="pod">Pod</Label>
-              <Select 
-                value={formData.pod_id} 
-                onValueChange={(value) => handleInputChange('pod_id', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select pod (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {pods.map((pod) => (
-                    <SelectItem key={pod.id} value={pod.id}>
-                      {pod.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
           </div>
           
           <div className="space-y-2">

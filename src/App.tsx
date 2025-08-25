@@ -62,7 +62,7 @@ const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const Profile = lazy(() => import("./pages/Profile"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const LiveSessions = lazy(() => import("./pages/LiveSessions"));
-const Mentorship = lazy(() => import("./pages/Mentorship"));
+
 const Messages = lazy(() => import("./pages/Messages"));
 const Teams = lazy(() => import("./pages/Teams"));
 const StudentsManagement = lazy(() => import("./pages/StudentsManagement"));
@@ -208,7 +208,7 @@ const App = () => {
                     <Route path="assignments" element={<Assignments user={user} />} />
                     <Route path="leaderboard" element={<Leaderboard />} />
                     <Route path="live-sessions" element={<LiveSessions user={user} />} />
-                    <Route path="mentorship" element={<Mentorship />} />
+                    
                     <Route path="messages" element={<Messages />} />
                     <Route path="support" element={<Support />} />
                     <Route path="connect" element={<Connect />} />

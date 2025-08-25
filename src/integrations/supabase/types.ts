@@ -86,7 +86,6 @@ export type Database = {
       available_lessons: {
         Row: {
           assignment_id: string | null
-          batch_id: string | null
           description: string | null
           duration_min: number | null
           id: string
@@ -101,7 +100,6 @@ export type Database = {
         }
         Insert: {
           assignment_id?: string | null
-          batch_id?: string | null
           description?: string | null
           duration_min?: number | null
           id?: string
@@ -116,7 +114,6 @@ export type Database = {
         }
         Update: {
           assignment_id?: string | null
-          batch_id?: string | null
           description?: string | null
           duration_min?: number | null
           id?: string
@@ -156,24 +153,6 @@ export type Database = {
           description?: string | null
           id?: string
           image_url?: string | null
-          name?: string
-        }
-        Relationships: []
-      }
-      batches: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
           name?: string
         }
         Relationships: []
@@ -632,7 +611,6 @@ export type Database = {
           id: string
           order: number | null
           quiz_questions: Json | null
-          tenant_id: string | null
           title: string
         }
         Insert: {
@@ -640,7 +618,6 @@ export type Database = {
           id?: string
           order?: number | null
           quiz_questions?: Json | null
-          tenant_id?: string | null
           title: string
         }
         Update: {
@@ -648,7 +625,6 @@ export type Database = {
           id?: string
           order?: number | null
           quiz_questions?: Json | null
-          tenant_id?: string | null
           title?: string
         }
         Relationships: []
@@ -782,33 +758,6 @@ export type Database = {
           question_id?: string
           updated_at?: string
           user_id?: string
-        }
-        Relationships: []
-      }
-      pods: {
-        Row: {
-          created_at: string | null
-          id: string
-          mentor_id: string | null
-          name: string
-          notes: string | null
-          tenant_id: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          mentor_id?: string | null
-          name: string
-          notes?: string | null
-          tenant_id?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          mentor_id?: string | null
-          name?: string
-          notes?: string | null
-          tenant_id?: string | null
         }
         Relationships: []
       }
@@ -1390,24 +1339,6 @@ export type Database = {
         }
         Relationships: []
       }
-      tenants: {
-        Row: {
-          created_at: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
       user_activity_logs: {
         Row: {
           activity_type: string
@@ -1807,16 +1738,25 @@ export type Database = {
         Returns: string
       }
       create_student_complete: {
-        Args: {
-          p_address?: string
-          p_batch_id?: string
-          p_email: string
-          p_full_name: string
-          p_mentor_id?: string
-          p_password: string
-          p_phone?: string
-          p_pod_id?: string
-        }
+        Args:
+          | {
+              p_address?: string
+              p_batch_id?: string
+              p_email: string
+              p_full_name: string
+              p_mentor_id?: string
+              p_password: string
+              p_phone?: string
+              p_pod_id?: string
+            }
+          | {
+              p_address?: string
+              p_email: string
+              p_full_name: string
+              p_mentor_id?: string
+              p_password: string
+              p_phone?: string
+            }
         Returns: Json
       }
       create_user_with_role: {

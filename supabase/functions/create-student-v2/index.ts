@@ -13,8 +13,6 @@ interface CreateStudentRequest {
   phone?: string
   address?: string
   mentor_id?: string
-  batch_id?: string
-  pod_id?: string
 }
 
 serve(async (req) => {
@@ -45,9 +43,7 @@ serve(async (req) => {
       email: requestData.email,
       full_name: requestData.full_name,
       phone: requestData.phone,
-      mentor_id: requestData.mentor_id,
-      batch_id: requestData.batch_id,
-      pod_id: requestData.pod_id
+      mentor_id: requestData.mentor_id
     })
 
     // Call the database function
@@ -57,9 +53,7 @@ serve(async (req) => {
       p_full_name: requestData.full_name,
       p_phone: requestData.phone || null,
       p_address: requestData.address || null,
-      p_mentor_id: requestData.mentor_id || null,
-      p_batch_id: requestData.batch_id || null,
-      p_pod_id: requestData.pod_id || null
+      p_mentor_id: requestData.mentor_id || null
     })
 
     if (error) {

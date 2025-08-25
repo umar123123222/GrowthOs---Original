@@ -9,8 +9,6 @@ export interface CreateStudentData {
   phone?: string
   address?: string
   mentor_id?: string
-  batch_id?: string
-  pod_id?: string
 }
 
 export interface CreateStudentResponse {
@@ -23,8 +21,6 @@ export interface CreateStudentResponse {
     phone?: string
     address?: string
     mentor_id?: string
-    batch_id?: string
-    pod_id?: string
     created_at: string
   }
   message?: string
