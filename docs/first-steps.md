@@ -51,9 +51,6 @@ VITE_COMPANY_NAME=Your Company Name
 VITE_PRIMARY_COLOR=#your-brand-color
 VITE_SUPPORT_EMAIL=support@yourdomain.com
 
-# Optional: External Integrations
-SHOPIFY_API_KEY=your-shopify-key
-SHOPIFY_API_SECRET=your-shopify-secret
 ```
 
 ### 3. Supabase Project Setup
@@ -156,12 +153,6 @@ Edit `src/index.css` to customize your brand colors:
 }
 ```
 
-### 4. Email Template Branding
-1. Access Superadmin Dashboard > Company Settings
-2. Upload email header logo
-3. Configure email signature
-4. Test email delivery with preview
-
 ## 📧 Email Service Configuration
 
 ### 1. SMTP Email Setup
@@ -226,7 +217,6 @@ WHERE email = 'admin@yourdomain.com';
    - Company name and contact information
    - Default course pricing
    - Installment plan options
-   - Email templates
    - System-wide settings
 
 ### 3. Create First Mentor
@@ -273,14 +263,7 @@ WHERE id = 1;
 
 ## 🌐 Deployment Options
 
-### Option 1: Lovable Platform (Recommended)
-1. Push code to connected GitHub repository
-2. Go to Lovable project dashboard
-3. Click "Publish" button
-4. Configure custom domain if needed
-5. Enable production environment variables
-
-### Option 2: Vercel Deployment
+### Option 1: Vercel Deployment
 ```bash
 # Install Vercel CLI
 npm install -g vercel
@@ -291,7 +274,7 @@ vercel --prod
 # Configure environment variables in Vercel dashboard
 ```
 
-### Option 3: Netlify Deployment
+### Option 2: Netlify Deployment
 ```bash
 # Build the project
 npm run build
@@ -300,7 +283,7 @@ npm run build
 # Upload dist/ folder to Netlify or connect GitHub
 ```
 
-### Option 4: Self-Hosted
+### Option 3: Self-Hosted
 ```bash
 # Build for production
 npm run build
