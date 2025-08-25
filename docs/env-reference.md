@@ -61,7 +61,7 @@ All secrets must be configured in Supabase Dashboard:
 Located in `src/integrations/supabase/client.ts`:
 
 ```typescript
-const SUPABASE_URL = "https://majqoqagohicjigmsilu.supabase.co";
+const SUPABASE_URL = "https://majqoqago***.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIs...";
 ```
 
@@ -71,7 +71,7 @@ Located in `supabase/config.toml`:
 
 ```toml
 project_id = "majqoqagohicjigmsilu"
-site_url = "https://majqoqagohicjigmsilu.lovable.app"
+site_url = "https://majqoqagohicjigmsilu.app"
 jwt_expiry = 3600
 ```
 
@@ -104,7 +104,7 @@ Located in database table `company_settings`:
    ```toml
    # supabase/config.toml
    project_id = "newproject"
-   site_url = "https://newproject.lovable.app"
+   site_url = "https://newproject.app"
    ```
 
 3. **Run database migrations**:
