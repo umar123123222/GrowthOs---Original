@@ -15,7 +15,7 @@ Supabase provides the complete backend infrastructure for Growth OS, including d
 ## Setup and Configuration
 
 ### Environment Variables
-- `SUPABASE_URL`: `https://majqoqagohicjigmsilu.supabase.co`
+- `SUPABASE_URL`: `https://majqoqago****u.supabase.co`
 - `SUPABASE_ANON_KEY`: Public API key for client operations
 - `SUPABASE_SERVICE_ROLE_KEY`: Admin API key for Edge Functions
 
