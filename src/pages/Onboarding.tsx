@@ -7,6 +7,7 @@ import { StudentQuestionnaireForm } from "@/components/questionnaire/StudentQues
 import { supabase } from "@/integrations/supabase/client";
 import { QuestionItem, QuestionnaireResponse } from "@/types/questionnaire";
 import { generateDreamGoalSummary } from "@/utils/dreamGoalUtils";
+import { ENV_CONFIG } from "@/lib/env-config";
 interface OnboardingProps {
   user: any;
   onComplete: () => void;
@@ -190,7 +191,7 @@ const Onboarding = ({
           title: "Request timed out",
           description: "Please try again. If the problem persists, refresh the page."
         });
-      }, 30000); // 30 second timeout
+      }, ENV_CONFIG.DEFAULT_SESSION_DURATION_MINUTES * 1000); // configurable timeout
 
       try {
       safeLogger.info('Starting onboarding completion', { 

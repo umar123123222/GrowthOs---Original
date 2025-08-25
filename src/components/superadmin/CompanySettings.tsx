@@ -289,8 +289,8 @@ export function CompanySettings() {
     return {
       company_name: settings.company_name || 'Your Company',
       address: settings.address || 'Company Address',
-      contact_email: settings.contact_email || 'contact@company.com',
-      primary_phone: settings.primary_phone || '+1 (555) 123-4567',
+      contact_email: settings.contact_email || ENV_CONFIG.SUPPORT_EMAIL,
+      primary_phone: settings.primary_phone || ENV_CONFIG.SUPPORT_PHONE,
       company_logo: getLogoUrl(settings.branding, 'header')
     };
   };
@@ -395,7 +395,7 @@ export function CompanySettings() {
                 type="email"
                 value={settings.contact_email}
                 onChange={(e) => handleInputChange('contact_email', e.target.value)}
-                placeholder="contact@company.com"
+                placeholder={ENV_CONFIG.SUPPORT_EMAIL}
               />
             </div>
 
@@ -406,7 +406,7 @@ export function CompanySettings() {
                 type="url"
                 value={settings.lms_url}
                 onChange={(e) => handleInputChange('lms_url', e.target.value)}
-                placeholder="Growthos.Core47.ai"
+                placeholder={ENV_CONFIG.DEFAULT_LMS_URL}
               />
             </div>
           </CardContent>

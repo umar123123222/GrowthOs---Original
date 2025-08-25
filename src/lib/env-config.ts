@@ -33,6 +33,31 @@ export const ENV_CONFIG = {
   // Success Partner Configuration
   SUCCESS_PARTNER_DAILY_LIMIT: parseInt(import.meta.env.VITE_SUCCESS_PARTNER_DAILY_LIMIT || "10"),
   SUCCESS_PARTNER_WEBHOOK_URL: import.meta.env.VITE_SUCCESS_PARTNER_WEBHOOK_URL || "https://n8n.core47.ai/webhook/SuccessPartner",
+
+  // Support Contact Information
+  SUPPORT_EMAIL: import.meta.env.VITE_SUPPORT_EMAIL || "support@growthos.core47.ai",
+  SUPPORT_PHONE: import.meta.env.VITE_SUPPORT_PHONE || "+92 300 1234567",
+  SUPPORT_WHATSAPP: import.meta.env.VITE_SUPPORT_WHATSAPP || "+923001234567",
+  SUPPORT_ADDRESS: import.meta.env.VITE_SUPPORT_ADDRESS || "Islamabad, Pakistan",
+
+  // External Service URLs
+  WHATSAPP_API_URL: import.meta.env.VITE_WHATSAPP_API_URL || "https://api.whatsapp.com",
+  N8N_WEBHOOK_BASE: import.meta.env.VITE_N8N_WEBHOOK_BASE || "https://n8n.core47.ai/webhook",
+  SHOPIFY_APP_URL: import.meta.env.VITE_SHOPIFY_APP_URL || "https://shopify.core47.ai",
+  
+  // Email Configuration
+  FROM_EMAIL: import.meta.env.VITE_FROM_EMAIL || "noreply@growthos.core47.ai",
+  FROM_NAME: import.meta.env.VITE_FROM_NAME || "Growth OS",
+  REPLY_TO_EMAIL: import.meta.env.VITE_REPLY_TO_EMAIL || "support@growthos.core47.ai",
+
+  // Business Rules
+  DEFAULT_ASSIGNMENT_DEADLINE_DAYS: parseInt(import.meta.env.VITE_DEFAULT_ASSIGNMENT_DEADLINE_DAYS || "7"),
+  DEFAULT_SESSION_DURATION_MINUTES: parseInt(import.meta.env.VITE_DEFAULT_SESSION_DURATION_MINUTES || "60"),
+  MINIMUM_PASSWORD_LENGTH: parseInt(import.meta.env.VITE_MINIMUM_PASSWORD_LENGTH || "8"),
+  
+  // Notification Defaults
+  INACTIVE_STUDENT_THRESHOLD_DAYS: parseInt(import.meta.env.VITE_INACTIVE_STUDENT_THRESHOLD_DAYS || "3"),
+  PAYMENT_REMINDER_DAYS_BEFORE: parseInt(import.meta.env.VITE_PAYMENT_REMINDER_DAYS_BEFORE || "3"),
 } as const;
 
 // Validation function
