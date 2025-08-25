@@ -3,13 +3,14 @@ import App from './App.tsx'
 import './index.css'
 import './styles/app.css'
 import { setupGlobalErrorHandling } from './lib/error-handler'
+import { DOMAIN_CONFIG } from './config/text-content'
 
 // Immediate protection against external redirects - safer approach
 (function blockExternalRedirects() {
   // Block beforeunload events that might trigger redirects
   window.addEventListener('beforeunload', function(e) {
     const target = (e.target as Window)?.location?.href;
-    if (target && (target.includes('growthos.core47.ai') || target.includes('core47.ai'))) {
+    if (target && DOMAIN_CONFIG.isBlockedDomain(target)) {
       e.preventDefault();
       e.returnValue = '';
       console.warn('BLOCKED: External redirect attempt to:', target);
@@ -18,7 +19,7 @@ import { setupGlobalErrorHandling } from './lib/error-handler'
 
   // Block navigation events
   window.addEventListener('popstate', function(e) {
-    if (window.location.href.includes('growthos.core47.ai') || window.location.href.includes('core47.ai')) {
+    if (DOMAIN_CONFIG.isBlockedDomain(window.location.href)) {
       e.preventDefault();
       history.pushState(null, '', '/');
       console.warn('BLOCKED: External navigation to:', window.location.href);
@@ -33,7 +34,7 @@ import { setupGlobalErrorHandling } from './lib/error-handler'
       const originalSrc = Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src');
       Object.defineProperty(element, 'src', {
         set: function(value) {
-          if (typeof value === 'string' && (value.includes('growthos.core47.ai') || value.includes('core47.ai'))) {
+          if (typeof value === 'string' && DOMAIN_CONFIG.isBlockedDomain(value)) {
             console.warn('BLOCKED: Script redirect attempt to:', value);
             return;
           }
@@ -52,7 +53,7 @@ import { setupGlobalErrorHandling } from './lib/error-handler'
   const originalOpen = window.open;
   window.open = function(url, target, features) {
     const urlString = typeof url === 'string' ? url : url?.toString() || '';
-    if (urlString && (urlString.includes('growthos.core47.ai') || urlString.includes('core47.ai'))) {
+    if (urlString && DOMAIN_CONFIG.isBlockedDomain(urlString)) {
       console.warn('BLOCKED: Window.open redirect attempt to:', url);
       return null;
     }

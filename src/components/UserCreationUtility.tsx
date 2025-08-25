@@ -3,39 +3,14 @@ import { useUserManagement } from '@/hooks/useUserManagement';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { TEST_DATA } from '@/config/text-content';
 
-const usersToCreate = [
-  {
-    target_email: 'umaridmpakistan@gmail.com',
-    target_password: 'Umaridmpakistan@gmail.com6',
-    target_role: 'superadmin' as const,
-    target_full_name: 'Super Admin User'
-  },
-  {
-    target_email: 'umarservices0@gmail.com',
-    target_password: '0Exh0&RR',
-    target_role: 'admin' as const,
-    target_full_name: 'Admin User'
-  },
-  {
-    target_email: 'aliegamerz167@gmail.com',
-    target_password: 'hC%l8SZr3',
-    target_role: 'mentor' as const,
-    target_full_name: 'Mentor User'
-  },
-  {
-    target_email: 'tes21312321t@gmail.com',
-    target_password: 'q2%omRhLCySS',
-    target_role: 'student' as const,
-    target_full_name: 'Student User'
-  },
-  {
-    target_email: 'billing@idmpakistan.pk',
-    target_password: 'G6]]GZ:P>I0v',
-    target_role: 'enrollment_manager' as const,
-    target_full_name: 'Enrollment Manager'
-  }
-];
+const usersToCreate = TEST_DATA.SAMPLE_USERS.map(user => ({
+  target_email: user.email,
+  target_password: user.password,
+  target_role: user.role,
+  target_full_name: user.name
+}));
 
 export const UserCreationUtility = () => {
   const { createUser, loading } = useUserManagement();

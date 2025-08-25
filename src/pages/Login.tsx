@@ -14,6 +14,8 @@ import { useNavigate } from "react-router-dom";
 import { logger } from "@/lib/logger";
 import { safeQuery } from '@/lib/database-safety';
 import type { CreatedUserResult } from '@/types/database';
+import { ENV_CONFIG } from '@/lib/env-config';
+import { TEXT_CONTENT } from '@/config/text-content';
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -141,7 +143,7 @@ const Login = () => {
           const {
             data: companySettings
           } = await supabase.from('company_settings').select('contact_email').eq('id', 1).maybeSingle();
-          const contactEmail = companySettings?.contact_email || 'support@growthos.com';
+          const contactEmail = companySettings?.contact_email || ENV_CONFIG.SUPPORT_EMAIL;
 
           // Sign out the user immediately
           await supabase.auth.signOut();
@@ -189,7 +191,7 @@ const Login = () => {
         <CardHeader className="text-center pb-8 pt-8">
           
           <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent mb-2">
-            Welcome to Growth OS
+            {TEXT_CONTENT.WELCOME_MESSAGE}
           </CardTitle>
           
           <div className="flex items-center justify-center gap-2 text-muted-foreground">
@@ -238,7 +240,7 @@ const Login = () => {
                   <span>Signing In...</span>
                 </div> : <div className="flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
                   <Shield className="w-4 h-4" />
-                  <span>Sign In to Growth OS</span>
+                  <span>{TEXT_CONTENT.SIGN_IN_BUTTON}</span>
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
                 </div>}
             </Button>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { TEXT_CONTENT, DOMAIN_CONFIG } from '@/config/text-content';
 
 interface AskShopDomainDialogProps {
   open: boolean;
@@ -36,14 +37,14 @@ export const AskShopDomainDialog = ({ open, onOpenChange, onDomainSave }: AskSho
     // Normalize domain
     let normalizedDomain = domain;
     if (!normalizedDomain.includes('.')) {
-      normalizedDomain += '.myshopify.com';
+      normalizedDomain += DOMAIN_CONFIG.SHOPIFY_SUFFIX;
     }
 
     // Validate format
-    if (!/^[a-z0-9-]+\.myshopify\.com$/.test(normalizedDomain)) {
+    if (!DOMAIN_CONFIG.isValidShopifyDomain(normalizedDomain)) {
       toast({
         title: "Invalid Domain",
-        description: "Domain must be in format: yourstore.myshopify.com",
+        description: `Domain must be in format: ${TEXT_CONTENT.PLACEHOLDER_SHOPIFY_DOMAIN}`,
         variant: "destructive",
       });
       return;
@@ -66,13 +67,13 @@ export const AskShopDomainDialog = ({ open, onOpenChange, onDomainSave }: AskSho
             <Label htmlFor="shop-domain">Shop Domain</Label>
             <Input
               id="shop-domain"
-              placeholder="yourstore.myshopify.com"
+              placeholder={TEXT_CONTENT.PLACEHOLDER_SHOPIFY_DOMAIN}
               value={shopDomain}
               onChange={(e) => setShopDomain(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleShopDomainSave()}
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Use your .myshopify.com domain (e.g., yourstore.myshopify.com). Do not use your custom domain.
+              Use your {DOMAIN_CONFIG.SHOPIFY_SUFFIX} domain (e.g., {TEXT_CONTENT.PLACEHOLDER_SHOPIFY_DOMAIN}). Do not use your custom domain.
             </p>
           </div>
           

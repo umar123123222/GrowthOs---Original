@@ -58,6 +58,27 @@ export const ENV_CONFIG = {
   // Notification Defaults
   INACTIVE_STUDENT_THRESHOLD_DAYS: parseInt(import.meta.env.VITE_INACTIVE_STUDENT_THRESHOLD_DAYS || "3"),
   PAYMENT_REMINDER_DAYS_BEFORE: parseInt(import.meta.env.VITE_PAYMENT_REMINDER_DAYS_BEFORE || "3"),
+
+  // Domain & URL Patterns
+  SHOPIFY_DOMAIN_SUFFIX: import.meta.env.VITE_SHOPIFY_DOMAIN_SUFFIX || ".myshopify.com",
+  SHOPIFY_DOMAIN_PATTERN: import.meta.env.VITE_SHOPIFY_DOMAIN_PATTERN || "^[a-z0-9-]+\\.myshopify\\.com$",
+  BLOCKED_DOMAINS: import.meta.env.VITE_BLOCKED_DOMAINS || "growthos.core47.ai,core47.ai",
+  
+  // Test Data Configuration
+  TEST_ADMIN_EMAIL: import.meta.env.VITE_TEST_ADMIN_EMAIL || "admin@testcompany.com",
+  TEST_MENTOR_EMAIL: import.meta.env.VITE_TEST_MENTOR_EMAIL || "mentor@testcompany.com", 
+  TEST_STUDENT_EMAIL: import.meta.env.VITE_TEST_STUDENT_EMAIL || "student@testcompany.com",
+  TEST_PASSWORD: import.meta.env.VITE_TEST_PASSWORD || "testpassword123",
+  
+  // UI Text Content
+  APP_WELCOME_MESSAGE: import.meta.env.VITE_APP_WELCOME_MESSAGE || "Welcome to Growth OS",
+  SIGN_IN_BUTTON_TEXT: import.meta.env.VITE_SIGN_IN_BUTTON_TEXT || "Sign In to Growth OS",
+  SHOPIFY_PLACEHOLDER: import.meta.env.VITE_SHOPIFY_PLACEHOLDER || "yourstore.myshopify.com",
+  
+  // Error Messages
+  GENERIC_ERROR_MESSAGE: import.meta.env.VITE_GENERIC_ERROR_MESSAGE || "An error occurred. Please try again.",
+  CONNECTION_ERROR_MESSAGE: import.meta.env.VITE_CONNECTION_ERROR_MESSAGE || "Connection failed. Please check your details and try again.",
+  SUCCESS_MESSAGE: import.meta.env.VITE_SUCCESS_MESSAGE || "Operation completed successfully",
 } as const;
 
 // Validation function
