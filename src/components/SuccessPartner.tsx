@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,7 +15,7 @@ interface Message {
   timestamp: Date;
 }
 
-interface ShoaibGPTProps {
+interface SuccessPartnerProps {
   onClose: () => void;
   user?: {
     id: string;
@@ -33,7 +32,7 @@ interface CreditsInfo {
   date: string;
 }
 
-const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
+const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -50,7 +49,7 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
 
   // Validate user data - show error if incomplete
   if (!user?.id || !user?.email) {
-    console.error('ShoaibGPT: Incomplete user data provided', { user });
+    console.error('SuccessPartner: Incomplete user data provided', { user });
     toast({
       title: "User Error",
       description: "Unable to initialize chat. Please refresh the page and try again.",
@@ -414,4 +413,4 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
   );
 };
 
-export default ShoaibGPT;
+export default SuccessPartner;

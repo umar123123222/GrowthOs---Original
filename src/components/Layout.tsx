@@ -1,6 +1,6 @@
 import React, { Suspense, useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import ShoaibGPT from "@/components/ShoaibGPT";
+import SuccessPartner from "@/components/SuccessPartner";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -188,7 +188,7 @@ const Layout = memo(({
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [showShoaibGPT, setShowShoaibGPT] = useState(false);
+  const [showSuccessPartner, setShowSuccessPartner] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState({
     shopify: false,
     meta: false
@@ -576,7 +576,7 @@ const Layout = memo(({
                   variant="outline" 
                   size="sm" 
                   className="text-gray-700 hover:text-blue-600 hover:border-blue-200"
-                  onClick={() => setShowShoaibGPT(true)}
+                  onClick={() => setShowSuccessPartner(true)}
                 >
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Success Partner
@@ -665,9 +665,9 @@ const Layout = memo(({
       {user?.role === 'student' && <MotivationalNotifications />}
       
       {/* Success Partner Dialog */}
-      {showShoaibGPT && user?.id && user?.email && (
-        <ShoaibGPT 
-          onClose={() => setShowShoaibGPT(false)} 
+      {showSuccessPartner && user?.id && user?.email && (
+        <SuccessPartner 
+          onClose={() => setShowSuccessPartner(false)}
           user={{
             id: user.id,
             full_name: user.full_name || user.email.split('@')[0] || 'Student',

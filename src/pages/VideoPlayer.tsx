@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle } from "lucide-react";
-import ShoaibGPT from "@/components/ShoaibGPT";
+import SuccessPartner from "@/components/SuccessPartner";
 import { LectureRating } from "@/components/LectureRating";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -23,7 +23,7 @@ const VideoPlayer = () => {
     user,
     loading: authLoading
   } = useAuth();
-  const [showShoaibGPT, setShowShoaibGPT] = useState(false);
+  const [showSuccessPartner, setShowSuccessPartner] = useState(false);
   const [checkedItems, setCheckedItems] = useState<{
     [key: number]: boolean;
   }>({});
@@ -288,7 +288,7 @@ const VideoPlayer = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* ShoaibGPT Assistant */}
+          {/* Success Partner Assistant */}
           <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
@@ -305,7 +305,7 @@ const VideoPlayer = () => {
               <Button 
                 size="sm" 
                 className="w-full" 
-                onClick={() => setShowShoaibGPT(true)}
+                onClick={() => setShowSuccessPartner(true)}
                 disabled={authLoading || !user?.id || !user?.email}
               >
                 {authLoading ? 'Loading...' : 'Ask Partner'}
@@ -319,9 +319,9 @@ const VideoPlayer = () => {
         </div>
       </div>
 
-      {showShoaibGPT && !authLoading && user?.id && user?.email && (
-        <ShoaibGPT 
-          onClose={() => setShowShoaibGPT(false)} 
+      {showSuccessPartner && !authLoading && user?.id && user?.email && (
+        <SuccessPartner 
+          onClose={() => setShowSuccessPartner(false)}
           user={{
             id: user.id,
             full_name: user.full_name || user.email.split('@')[0] || 'Student',
