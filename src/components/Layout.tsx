@@ -562,7 +562,7 @@ const Layout = memo(({
                 {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
               </Button>
               <Link to="/" className="flex items-center gap-2" aria-label="Home">
-                <AppLogo className="h-8 w-auto max-w-[160px]" alt="Company logo" />
+                <AppLogo className="h-12 w-auto max-w-[200px]" alt="Company logo" />
                 <span className="text-xl font-bold text-gray-900">GrowthOS</span>
               </Link>
             </div>
