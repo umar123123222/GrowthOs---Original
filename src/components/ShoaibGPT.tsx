@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, Send, MessageSquare, BookOpen, Heart, Brain, Loader2, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { ENV_CONFIG } from "@/lib/env-config";
 
 interface Message {
   id: number;
@@ -120,7 +121,7 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
         messageLength: userMessage.length 
       });
       
-      const response = await fetch('https://n8n.core47.ai/webhook/SuccessPartner', {
+      const response = await fetch(ENV_CONFIG.SUCCESS_PARTNER_WEBHOOK_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
