@@ -80,7 +80,20 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
       }
 
       const data = await response.json();
-      return data.reply || "Sorry, I couldn't process your request right now.";
+      
+      // Handle different response formats
+      let aiResponse = "";
+      if (data.reply) {
+        aiResponse = data.reply;
+      } else if (data.output) {
+        aiResponse = typeof data.output === 'string' ? data.output : JSON.stringify(data.output);
+      } else if (typeof data === 'string') {
+        aiResponse = data;
+      } else {
+        aiResponse = "Sorry, I couldn't process your request right now.";
+      }
+      
+      return aiResponse;
     } catch (error) {
       console.error('Webhook error:', error);
       throw error;
