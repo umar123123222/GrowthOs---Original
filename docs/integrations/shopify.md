@@ -2,7 +2,7 @@
 
 ## Overview
 
-Shopify integration provides e-commerce metrics and sales data synchronization for Growth OS analytics and reporting.
+Shopify integration provides e-commerce metrics and sales data synchronization for the Students of the Company using Growth OS analytics and reporting.
 
 ## Purpose in Project
 
