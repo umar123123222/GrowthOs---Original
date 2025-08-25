@@ -85,8 +85,15 @@ const ShoaibGPT = ({ onClose, user }: ShoaibGPTProps) => {
       // Handle different response formats and ensure string output
       let aiResponse = "";
       if (data && typeof data === 'object') {
+        // Handle array format: {"reply":[{"output":"message"}]}
+        if (data.reply && Array.isArray(data.reply) && data.reply.length > 0) {
+          const firstReply = data.reply[0];
+          if (firstReply && typeof firstReply === 'object' && firstReply.output) {
+            aiResponse = typeof firstReply.output === 'string' ? firstReply.output : String(firstReply.output);
+          }
+        }
         // Handle nested structure: {"reply":{"output":"message"}}
-        if (data.reply && typeof data.reply === 'object' && data.reply.output) {
+        else if (data.reply && typeof data.reply === 'object' && data.reply.output) {
           aiResponse = typeof data.reply.output === 'string' ? data.reply.output : String(data.reply.output);
         }
         // Handle flat structure: {"reply":"message"}
