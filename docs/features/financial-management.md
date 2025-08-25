@@ -6,11 +6,6 @@ The Financial Management system handles student payment tracking, installment pl
 
 ## User-Facing Behavior
 
-### For Students
-- **Payment Dashboard**: View installment schedules, payment history, and due dates
-- **Payment Status**: Track payment confirmations and overdue notifications
-- **Invoice Access**: Download payment receipts and invoices
-
 ### For Admins/Enrollment Managers
 - **Payment Tracking**: Mark payments as received, view outstanding balances
 - **Installment Management**: Configure payment plans and schedules
@@ -39,7 +34,6 @@ The Financial Management system handles student payment tracking, installment pl
 | Variable | Purpose | Default | Required |
 |----------|---------|---------|----------|
 | `SMTP_*` | Email delivery for invoices | None | Yes |
-| `RESEND_API_KEY` | Email service | None | Alternative |
 
 ### Company Settings (Database)
 | Setting | Default | Description |
