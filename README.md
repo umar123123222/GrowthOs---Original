@@ -19,14 +19,12 @@ Growth OS is a comprehensive, AI-powered Learning Management System designed spe
 - **Sequential Content Unlocking**: Progress-based module and lesson access
 - **Video-Based Learning**: Integrated video player with rating system
 - **Assignment Management**: File uploads, submissions, and mentor feedback
-- **Quiz & Assessment System**: Module-based quizzes with progress tracking
 - **Recording Analytics**: Video completion tracking and performance metrics
 
 ### **Comprehensive Student Experience**
 - **Interactive Dashboard**: Personalized learning hub with progress tracking
 - **Dream Goal Tracking**: Goal-setting and milestone celebration system
 - **Leaderboard System**: Gamified learning with performance rankings
-- **Certificate Generation**: Automated course completion certificates
 - **Success Partner Chat**: AI-powered assistance and guidance
 
 ### **Mentorship Program**
@@ -59,7 +57,7 @@ Growth OS is a comprehensive, AI-powered Learning Management System designed spe
 
 ### **Advanced Integrations**
 - **Shopify Integration**: E-commerce metrics and customer data sync
-- **Zapier Webhooks**: Third-party automation and workflow integration
+- **N8N Webhooks**: Third-party automation and workflow integration
 - **File Storage System**: Secure document and media management
 - **Analytics Dashboard**: Comprehensive reporting and data visualization
 - **API Integration**: RESTful APIs and Edge Functions for custom workflows
@@ -85,8 +83,7 @@ Growth OS is a comprehensive, AI-powered Learning Management System designed spe
 ### **Integrations**
 - **SMTP Email**: Email delivery via provider credentials
 - **Shopify API**: E-commerce platform integration
-- **Zapier**: Automation and workflow management
-- **PDF Generation**: Dynamic invoice and certificate creation
+- **N8N**: Automation and workflow management
 
 ## 📁 Project Structure
 
@@ -122,7 +119,6 @@ growth-os/
 - Track progress and achievements
 - Participate in live sessions
 - Submit assignments and receive feedback
-- Access certificates and achievements
 - Use Success Partner chat assistance
 
 ### **Mentor**
@@ -205,7 +201,6 @@ Growth OS is highly configurable through environment variables and admin setting
 
 ## 🌟 Enterprise Features
 
-- **Multi-tenancy Support**: Company-specific branding and settings
 - **Scalable Architecture**: Built for high-performance and growth
 - **Advanced Analytics**: Comprehensive reporting and insights
 - **Custom Integrations**: Extensible API for third-party connections
@@ -217,11 +212,9 @@ Growth OS is highly configurable through environment variables and admin setting
 - **Financial Analytics**: Revenue tracking and payment insights
 - **Engagement Metrics**: Video completion and interaction rates
 - **System Performance**: Real-time monitoring and health checks
-- **Custom Reports**: Exportable data and custom analytics
 
 ## 🔄 Deployment Options
 
-- **Lovable Platform**: One-click deployment with custom domains
 - **Self-Hosted**: Deploy on your own infrastructure
 - **Cloud Platforms**: Vercel, Netlify, or any modern hosting platform
 - **Enterprise**: Dedicated infrastructure and support
