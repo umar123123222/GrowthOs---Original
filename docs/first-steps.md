@@ -39,10 +39,10 @@ VITE_SUPABASE_ANON_KEY=your-anon-key
 
 # Email Configuration (SMTP - added as Supabase secrets)
 # These will be configured in Supabase Edge Function secrets
-# SMTP_HOST=smtp.gmail.com
-# SMTP_PORT=587
-# SMTP_USER=your-email@company.com
-# SMTP_PASSWORD=your-app-password
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@company.com
+SMTP_PASSWORD=your-app-password
 SMTP_FROM_EMAIL=noreply@yourdomain.com
 SMTP_FROM_NAME=Your Company Name
 
