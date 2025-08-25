@@ -348,10 +348,9 @@ const config = {
 ```
 
 ### **Deployment Options**
-1. **Lovable Platform**: One-click deployment with custom domains
-2. **Vercel/Netlify**: Serverless deployment with automatic builds
-3. **Traditional Hosting**: Static file hosting on any web server
-4. **Container Deployment**: Docker containerization for custom infrastructure
+1. **Vercel/Netlify**: Serverless deployment with automatic builds
+2. **Traditional Hosting**: Static file hosting on any web server
+3. **Container Deployment**: Docker containerization for custom infrastructure
 
 ## 📈 Scalability Considerations
 
