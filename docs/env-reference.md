@@ -81,13 +81,13 @@ Located in database table `company_settings`:
 
 | Setting | Default Value | Configurable Via |
 |---------|---------------|-------------------|
-| `company_name` | "Your Company" | Admin Panel |
-| `original_fee_amount` | 3000.00 | Admin Panel |
-| `maximum_installment_count` | 3 | Admin Panel |
-| `currency` | "USD" | Admin Panel |
-| `invoice_overdue_days` | 30 | Admin Panel |
-| `invoice_send_gap_days` | 7 | Admin Panel |
-| `enable_student_signin` | false | Admin Panel |
+| `company_name` | "Your Company" | SuperAdmin Panel |
+| `original_fee_amount` | 3000.00 | SuperAdmin Panel |
+| `maximum_installment_count` | 3 | SuperAdmin Panel |
+| `currency` | "USD" | SuperAdmin Panel |
+| `invoice_overdue_days` | 30 | SuperAdmin Panel |
+| `invoice_send_gap_days` | 7 | SuperAdmin Panel |
+| `enable_student_signin` | false | SuperAdmin Panel |
 
 ## Configuration Override Instructions
 
@@ -126,20 +126,11 @@ SMTP_FROM_EMAIL=noreply@company.com
 SMTP_FROM_NAME="Growth OS"
 ```
 
-**Option 2: Custom SMTP**
-```bash
-# Set all SMTP variables in Supabase Secrets
-SMTP_HOST=your.smtp.host
-SMTP_PORT=587
-SMTP_USER=your@email.com
-SMTP_PASSWORD=your_password
-```
-
 ### Company Branding
 
-Upload custom assets via Admin Panel:
+Upload custom assets via SuperAdmin Panel:
 - **Logo**: Company Settings → Branding → Upload Logo
-- **Favicon**: Automatically generated from logo
+- **Favicon**: Need to be added from the backend
 - **Colors**: Customize via CSS variables in `src/index.css`
 
 ## Validation Scripts
