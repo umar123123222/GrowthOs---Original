@@ -13,7 +13,7 @@ Growth OS is a comprehensive Learning Management System (LMS) designed for e-com
 - **Live Session Scheduling** - Success sessions with mentor assignment
 - **Comprehensive Notifications** - Real-time updates via email and in-app messaging
 - **Support Ticket System** - Multi-tier customer support with role-based access
-- **Company Branding** - Customizable logos, colors, and email templates
+- **Company Branding** - Customizable logos, and colors
 - **Analytics & Reporting** - Student performance tracking and leaderboards
 
 ### Technology Stack
@@ -21,7 +21,7 @@ Growth OS is a comprehensive Learning Management System (LMS) designed for e-com
 - **Frontend**: React 18, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Supabase (PostgreSQL, Auth, Storage, Edge Functions)
 - **Email**: SMTP configuration through Supabase Edge Function secrets
-- **Integrations**: Shopify, Zapier webhooks
+- **Integrations**: Shopify, N8N webhooks
 - **File Storage**: Supabase Storage (assignments, branding assets)
 
 ---
