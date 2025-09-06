@@ -244,7 +244,7 @@ graph LR
 ### CI/CD Pipeline
 
 1. **Code Push** → GitHub repository
-2. **Automatic Deploy** → Lovable platform
+2. **Automatic Deploy** → Platform deployment
 3. **Database Migrations** → Supabase CLI
 4. **Edge Functions** → Automatic deployment
 5. **Static Assets** → CDN distribution

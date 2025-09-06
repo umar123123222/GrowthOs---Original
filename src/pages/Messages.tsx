@@ -141,6 +141,15 @@ const Messages = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-2 text-blue-800">
+            <MessageSquare className="w-5 h-5" />
+            <span className="font-semibold">Limited Functionality</span>
+          </div>
+          <p className="text-blue-700 text-sm mt-1">
+            Real-time messaging system is in development. Currently using support tickets for communication.
+          </p>
+        </div>
         <h1 className="text-3xl font-bold mb-2">Complaints & Feedbacks</h1>
         <p className="text-muted-foreground">
           Submit complaints and feedback to improve your learning experience

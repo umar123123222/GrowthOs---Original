@@ -118,9 +118,18 @@ const Certificates = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="mb-6">
+        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-4">
+          <div className="flex items-center gap-2 text-orange-800">
+            <Award className="w-5 h-5" />
+            <span className="font-semibold">Coming Soon</span>
+          </div>
+          <p className="text-orange-700 text-sm mt-1">
+            Certificate generation system is planned for v2.0. Track your progress here for now.
+          </p>
+        </div>
         <h1 className="text-3xl font-bold mb-2">Certificates & Achievements</h1>
         <p className="text-muted-foreground">
-          Track your progress and download earned certificates
+          Track your progress and prepare for upcoming certificate features
         </p>
       </div>
 

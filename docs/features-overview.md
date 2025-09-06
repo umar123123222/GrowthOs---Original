@@ -25,17 +25,17 @@ Growth OS is a comprehensive Learning Management System with advanced features a
 - **File Management**: Secure upload and storage of assignment files
 
 ### **Communication & Support**
-- **Success Partner Chat**: AI-powered assistance and guidance system
-- **Mentor Messaging**: Direct communication with assigned mentors
-- **Support Tickets**: Submit help requests with priority levels
-- **Notifications**: Real-time updates on progress, assignments, and messages
-- **Community Features**: Leaderboard and peer interaction systems
+- **Success Partner Chat**: AI-powered assistance and guidance system *(📋 Planned)*
+- **Mentor Messaging**: Direct communication with assigned mentors *(📋 Planned)*
+- **Support Tickets**: Submit help requests with priority levels ✅
+- **Notifications**: Real-time updates on progress, assignments, and messages ✅
+- **Community Features**: Leaderboard and peer interaction systems *(📋 Planned)*
 
-### **Certificates & Achievements** (Certification not available in Version 1.0.0)
-- **Certificate Generation**: Automated course completion certificates
-- **Achievement Tracking**: Milestone-based reward system
-- **Progress Certificates**: Partial completion recognition
-- **Custom Branding**: Certificates with company branding and logos
+### **Certificates & Achievements** 📋 *Planned for v2.0*
+- **Certificate Generation**: Automated course completion certificates *(Coming Soon)*
+- **Achievement Tracking**: Milestone-based reward system *(Coming Soon)*
+- **Progress Certificates**: Partial completion recognition *(Coming Soon)*
+- **Custom Branding**: Certificates with company branding and logos *(Coming Soon)*
 
 ## 👨‍🏫 Mentor Experience Features
 
@@ -47,11 +47,11 @@ Growth OS is a comprehensive Learning Management System with advanced features a
 - **Communication Tools**: Direct messaging and notification system
 
 ### **Session Management**
-- **Live Session Scheduling**: Schedule and manage success sessions
-- **Calendar Integration**: Integrated calendar with booking system
-- **Session Recording**: Record and store session content
-- **Attendance Tracking**: Monitor student participation in sessions
-- **Session Analytics**: Track session effectiveness and engagement
+- **Live Session Scheduling**: Schedule and manage success sessions 🚧 *(Basic scheduling only)*
+- **Calendar Integration**: Integrated calendar with booking system *(📋 Planned)*
+- **Session Recording**: Record and store session content *(📋 Planned)*
+- **Attendance Tracking**: Monitor student participation in sessions 🚧 *(Basic tracking)*
+- **Session Analytics**: Track session effectiveness and engagement *(📋 Planned)*
 
 ### **Content Delivery**
 - **Assignment Creation**: Create and distribute assignments to students
