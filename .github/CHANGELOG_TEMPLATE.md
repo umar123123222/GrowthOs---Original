@@ -84,4 +84,4 @@ Before publishing a release, ensure:
 ---
 
 ## Next Steps
-Review the [Deployment Guide](./deployment.md) for release procedures and [Environment Reference](./env-reference.md) for configuration management.
+Review the [Deployment Guide](../docs/deployment.md) for release procedures and [Environment Reference](../docs/env-reference.md) for configuration management.
