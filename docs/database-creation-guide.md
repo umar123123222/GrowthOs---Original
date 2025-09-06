@@ -498,6 +498,27 @@ CREATE TRIGGER update_invoices_updated_at
     BEFORE UPDATE ON public.invoices
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
+-- Installment payments tracking
+CREATE TABLE public.installment_payments (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    student_id uuid REFERENCES public.students(id),
+    invoice_id uuid REFERENCES public.invoices(id),
+    amount numeric NOT NULL,
+    payment_date timestamp with time zone NOT NULL DEFAULT now(),
+    payment_method text,
+    transaction_id text,
+    status text NOT NULL DEFAULT 'paid',
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    
+    CONSTRAINT valid_payment_status CHECK (status IN ('paid', 'pending', 'failed', 'refunded'))
+);
+
+CREATE TRIGGER update_installment_payments_updated_at
+    BEFORE UPDATE ON public.installment_payments
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
 -- Installment payments
 CREATE TABLE public.installment_payments (
     id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -517,6 +538,190 @@ CREATE TABLE public.installment_payments (
 
 CREATE TRIGGER update_installment_payments_updated_at
     BEFORE UPDATE ON public.installment_payments
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+```
+
+### 1.8 Milestone System Tables
+
+```sql
+-- Milestone categories
+CREATE TABLE public.milestone_categories (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text NOT NULL,
+    description text,
+    icon text,
+    color text DEFAULT '#3B82F6',
+    display_order integer DEFAULT 0,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TRIGGER update_milestone_categories_updated_at
+    BEFORE UPDATE ON public.milestone_categories
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Milestones
+CREATE TABLE public.milestones (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    category_id uuid REFERENCES public.milestone_categories(id),
+    name text NOT NULL,
+    description text NOT NULL,
+    icon text DEFAULT '🏆',
+    badge_url text,
+    points integer DEFAULT 10,
+    display_order integer DEFAULT 0,
+    is_active boolean DEFAULT true,
+    trigger_type text NOT NULL,
+    trigger_config jsonb DEFAULT '{}',
+    show_celebration boolean DEFAULT false,
+    celebration_message text,
+    celebration_config jsonb DEFAULT '{}',
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    
+    CONSTRAINT valid_trigger_type CHECK (trigger_type IN ('manual', 'auto_assignment', 'auto_recording', 'auto_module', 'auto_streak'))
+);
+
+CREATE TRIGGER update_milestones_updated_at
+    BEFORE UPDATE ON public.milestones
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- User milestones
+CREATE TABLE public.user_milestones (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    milestone_id uuid NOT NULL REFERENCES public.milestones(id) ON DELETE CASCADE,
+    completed_at timestamp with time zone NOT NULL DEFAULT now(),
+    awarded_by uuid REFERENCES public.users(id),
+    notes text,
+    progress_data jsonb,
+    
+    UNIQUE(user_id, milestone_id)
+);
+
+-- User module progress tracking
+CREATE TABLE public.user_module_progress (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    module_id uuid NOT NULL REFERENCES public.modules(id) ON DELETE CASCADE,
+    is_completed boolean DEFAULT false,
+    progress_percentage integer DEFAULT 0,
+    completed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    
+    UNIQUE(user_id, module_id),
+    CONSTRAINT valid_progress CHECK (progress_percentage >= 0 AND progress_percentage <= 100)
+);
+
+CREATE TRIGGER update_user_module_progress_updated_at
+    BEFORE UPDATE ON public.user_module_progress
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+```
+
+### 1.9 Communication and Support Tables
+
+```sql
+-- Notifications table
+CREATE TABLE public.notifications (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    type text NOT NULL,
+    channel text NOT NULL DEFAULT 'system',
+    status text NOT NULL DEFAULT 'sent',
+    payload jsonb NOT NULL DEFAULT '{}',
+    template_key text,
+    payload_hash text,
+    sent_at timestamp with time zone NOT NULL DEFAULT now(),
+    read_at timestamp with time zone,
+    dismissed_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    
+    CONSTRAINT valid_channel CHECK (channel IN ('system', 'email', 'sms', 'push', 'in_app')),
+    CONSTRAINT valid_status CHECK (status IN ('sent', 'read', 'dismissed', 'failed'))
+);
+
+-- Notification templates
+CREATE TABLE public.notification_templates (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    key text NOT NULL UNIQUE,
+    title_md text NOT NULL,
+    body_md text NOT NULL,
+    variables text[] NOT NULL DEFAULT '{}',
+    active boolean NOT NULL DEFAULT true,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER update_notification_templates_updated_at
+    BEFORE UPDATE ON public.notification_templates
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Notification settings
+CREATE TABLE public.notification_settings (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE UNIQUE,
+    mutes jsonb NOT NULL DEFAULT '{}',
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER update_notification_settings_updated_at
+    BEFORE UPDATE ON public.notification_settings
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Support tickets
+CREATE TABLE public.support_tickets (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    title text NOT NULL,
+    description text NOT NULL,
+    status text NOT NULL DEFAULT 'open',
+    priority text NOT NULL DEFAULT 'medium',
+    category text,
+    assigned_to uuid REFERENCES public.users(id),
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    
+    CONSTRAINT valid_ticket_status CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
+    CONSTRAINT valid_priority CHECK (priority IN ('low', 'medium', 'high', 'urgent'))
+);
+
+CREATE TRIGGER update_support_tickets_updated_at
+    BEFORE UPDATE ON public.support_tickets
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Support ticket replies
+CREATE TABLE public.support_ticket_replies (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    ticket_id uuid NOT NULL REFERENCES public.support_tickets(id) ON DELETE CASCADE,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    message text NOT NULL,
+    is_internal boolean NOT NULL DEFAULT false,
+    created_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+-- Messages table
+CREATE TABLE public.messages (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    type text NOT NULL DEFAULT 'feedback',
+    content text NOT NULL,
+    status text NOT NULL DEFAULT 'queued',
+    template_name text,
+    context jsonb DEFAULT '{}',
+    response_id text,
+    sent_at timestamp with time zone NOT NULL DEFAULT now(),
+    replied_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    
+    CONSTRAINT valid_message_type CHECK (type IN ('feedback', 'support', 'notification', 'system')),
+    CONSTRAINT valid_message_status CHECK (status IN ('queued', 'sent', 'delivered', 'failed', 'replied'))
+);
+
+CREATE TRIGGER update_messages_updated_at
+    BEFORE UPDATE ON public.messages
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 ```
 
@@ -772,6 +977,188 @@ CREATE TABLE public.messages (
 CREATE TRIGGER update_messages_updated_at
     BEFORE UPDATE ON public.messages
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+```
+
+### 1.10 Analytics and Tracking Tables
+
+```sql
+-- User activity logs
+CREATE TABLE public.user_activity_logs (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    activity_type text NOT NULL,
+    reference_id uuid,
+    metadata jsonb DEFAULT '{}',
+    occurred_at timestamp with time zone NOT NULL DEFAULT now(),
+    created_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+-- Admin logs
+CREATE TABLE public.admin_logs (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    entity_type text NOT NULL,
+    entity_id uuid,
+    action text NOT NULL,
+    description text,
+    performed_by uuid REFERENCES public.users(id),
+    data jsonb,
+    created_at timestamp without time zone DEFAULT now(),
+    
+    CONSTRAINT valid_entity_type CHECK (entity_type IN ('user', 'student', 'assignment', 'submission', 'invoice', 'recording', 'module', 'notification_template', 'data_access')),
+    CONSTRAINT valid_action CHECK (action IN ('created', 'updated', 'deleted', 'approved', 'rejected', 'sent', 'viewed', 'cascade_deleted', 'password_changed'))
+);
+
+-- Recording ratings
+CREATE TABLE public.recording_ratings (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    recording_id uuid NOT NULL REFERENCES public.available_lessons(id) ON DELETE CASCADE,
+    student_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    rating integer NOT NULL,
+    feedback text,
+    lesson_title text,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    
+    UNIQUE(recording_id, student_id),
+    CONSTRAINT valid_rating CHECK (rating >= 1 AND rating <= 5)
+);
+
+CREATE TRIGGER update_recording_ratings_updated_at
+    BEFORE UPDATE ON public.recording_ratings
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Recording attachments
+CREATE TABLE public.recording_attachments (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    recording_id uuid NOT NULL REFERENCES public.available_lessons(id) ON DELETE CASCADE,
+    file_name text NOT NULL,
+    file_url text NOT NULL,
+    uploaded_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+-- User metrics
+CREATE TABLE public.user_metrics (
+    id bigint NOT NULL GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    source text NOT NULL,
+    metric text NOT NULL,
+    value numeric,
+    date date NOT NULL,
+    fetched_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+-- Success sessions
+CREATE TABLE public.success_sessions (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    title text NOT NULL,
+    description text,
+    start_time timestamp without time zone NOT NULL,
+    end_time timestamp without time zone,
+    schedule_date text,
+    link text NOT NULL,
+    status text DEFAULT 'upcoming',
+    mentor_id uuid REFERENCES public.users(id),
+    mentor_name text,
+    created_by uuid REFERENCES public.users(id),
+    zoom_meeting_id text,
+    zoom_passcode text,
+    host_login_email text,
+    host_login_pwd text,
+    created_at timestamp without time zone DEFAULT now(),
+    
+    CONSTRAINT valid_session_status CHECK (status IN ('upcoming', 'ongoing', 'completed', 'cancelled'))
+);
+
+-- Segmented weekly success sessions (read-only view)
+CREATE TABLE public.segmented_weekly_success_sessions (
+    id uuid NOT NULL PRIMARY KEY,
+    title text,
+    description text,
+    start_time timestamp without time zone,
+    end_time timestamp without time zone,
+    mentor_id uuid,
+    mentor_name text,
+    status text,
+    created_at timestamp without time zone,
+    segment text DEFAULT 'weekly'
+);
+
+-- Success sessions backup table
+CREATE TABLE public.segmented_weekly_success_sessions_backup (
+    id uuid,
+    title text,
+    description text,
+    start_time timestamp without time zone,
+    end_time timestamp without time zone,
+    mentor_id uuid,
+    mentor_name text,
+    status text,
+    created_at timestamp without time zone,
+    segment text
+);
+```
+
+### 1.11 Recovery and Engagement Tables
+
+```sql
+-- Student recovery messages
+CREATE TABLE public.student_recovery_messages (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    message_type text NOT NULL DEFAULT 'whatsapp_inactive',
+    days_inactive integer NOT NULL,
+    message_content text,
+    message_sent_at timestamp with time zone NOT NULL DEFAULT now(),
+    recovery_successful boolean,
+    recovered_at timestamp with time zone,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    
+    CONSTRAINT valid_message_type CHECK (message_type IN ('whatsapp_inactive', 'email_reminder', 'sms_followup'))
+);
+
+CREATE TRIGGER update_student_recovery_messages_updated_at
+    BEFORE UPDATE ON public.student_recovery_messages
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Success partner credits
+CREATE TABLE public.success_partner_credits (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    date date NOT NULL DEFAULT CURRENT_DATE,
+    credits_used integer NOT NULL DEFAULT 0,
+    daily_limit integer NOT NULL DEFAULT 10,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    
+    UNIQUE(user_id, date)
+);
+
+CREATE TRIGGER update_success_partner_credits_updated_at
+    BEFORE UPDATE ON public.success_partner_credits
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Email queue
+CREATE TABLE public.email_queue (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    recipient_email text NOT NULL,
+    recipient_name text NOT NULL,
+    email_type text NOT NULL,
+    credentials jsonb NOT NULL,
+    status text NOT NULL DEFAULT 'pending',
+    retry_count integer DEFAULT 0,
+    error_message text,
+    sent_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    
+    CONSTRAINT valid_email_status CHECK (status IN ('pending', 'sent', 'failed', 'delivered'))
+);
+
+CREATE TRIGGER update_email_queue_updated_at
+    BEFORE UPDATE ON public.email_queue
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Email queue
 CREATE TABLE public.email_queue (
@@ -793,6 +1180,70 @@ CREATE TABLE public.email_queue (
 
 CREATE TRIGGER update_email_queue_updated_at
     BEFORE UPDATE ON public.email_queue
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+```
+
+### 1.12 Additional System Tables
+
+```sql
+-- Badges system
+CREATE TABLE public.badges (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text NOT NULL,
+    description text,
+    image_url text
+);
+
+-- User badges
+CREATE TABLE public.user_badges (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    badge_id uuid NOT NULL REFERENCES public.badges(id) ON DELETE CASCADE,
+    earned_at timestamp with time zone NOT NULL DEFAULT now(),
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    
+    UNIQUE(user_id, badge_id)
+);
+
+-- Course tracks
+CREATE TABLE public.course_tracks (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    name text NOT NULL,
+    description text,
+    created_at timestamp without time zone DEFAULT now()
+);
+
+-- Integrations
+CREATE TABLE public.integrations (
+    id bigint NOT NULL GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    source text NOT NULL,
+    access_token text NOT NULL,
+    refresh_token text,
+    external_id text,
+    connected_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now()
+);
+
+CREATE TRIGGER update_integrations_updated_at
+    BEFORE UPDATE ON public.integrations
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+-- Onboarding responses
+CREATE TABLE public.onboarding_responses (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    question_id text NOT NULL,
+    answer text,
+    answer_type text NOT NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone NOT NULL DEFAULT now(),
+    
+    CONSTRAINT valid_answer_type CHECK (answer_type IN ('text', 'json', 'file'))
+);
+
+CREATE TRIGGER update_onboarding_responses_updated_at
+    BEFORE UPDATE ON public.onboarding_responses
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Integrations (for third-party services)
@@ -867,6 +1318,190 @@ CREATE TABLE public.onboarding_responses (
 CREATE TRIGGER update_onboarding_responses_updated_at
     BEFORE UPDATE ON public.onboarding_responses
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+```
+
+## Step 2: Create Essential Database Functions
+
+### 2.1 User Management Functions
+
+```sql
+-- Get current user role function (prevents RLS recursion)
+CREATE OR REPLACE FUNCTION public.get_current_user_role()
+RETURNS TEXT
+LANGUAGE SQL
+SECURITY DEFINER
+STABLE
+SET search_path = public
+AS $$
+  SELECT role FROM public.users WHERE id = auth.uid();
+$$;
+
+-- Get user LMS status
+CREATE OR REPLACE FUNCTION public.get_user_lms_status(user_id uuid)
+RETURNS text
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+  SELECT COALESCE(lms_status, 'inactive') FROM public.users WHERE id = user_id;
+$function$;
+
+-- Create user with role function
+CREATE OR REPLACE FUNCTION public.create_user_with_role(target_email text, target_password text, target_role text, target_full_name text DEFAULT NULL::text, target_metadata jsonb DEFAULT '{}'::jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  current_user_role text;
+  user_count integer;
+  result jsonb;
+BEGIN
+  -- Get current user count to check if this is bootstrap scenario
+  SELECT COUNT(*) INTO user_count FROM public.users;
+  
+  -- If no users exist, allow creation of superadmin (bootstrap scenario)
+  IF user_count = 0 THEN
+    IF target_role != 'superadmin' THEN
+      RETURN jsonb_build_object('error', 'First user must be a superadmin');
+    END IF;
+    -- Skip permission check for bootstrap
+  ELSE
+    -- Get current user's role for permission check
+    SELECT role INTO current_user_role FROM public.users WHERE id = auth.uid();
+    
+    IF current_user_role IS NULL THEN
+      RETURN jsonb_build_object('error', 'Unauthorized: No valid session');
+    END IF;
+    
+    -- Permission matrix check
+    CASE current_user_role
+      WHEN 'superadmin' THEN
+        -- Superadmins can create anyone
+        NULL;
+      WHEN 'admin' THEN
+        -- Admins can create students, mentors, enrollment_managers
+        IF target_role NOT IN ('student', 'mentor', 'enrollment_manager') THEN
+          RETURN jsonb_build_object('error', 'Admins cannot create ' || target_role || ' users');
+        END IF;
+      WHEN 'enrollment_manager' THEN
+        -- Enrollment managers can only create students
+        IF target_role != 'student' THEN
+          RETURN jsonb_build_object('error', 'Enrollment managers can only create students');
+        END IF;
+      ELSE
+        RETURN jsonb_build_object('error', 'Insufficient permissions to create users');
+    END CASE;
+  END IF;
+  
+  -- Validate role
+  IF target_role NOT IN ('superadmin', 'admin', 'enrollment_manager', 'mentor', 'student') THEN
+    RETURN jsonb_build_object('error', 'Invalid role: ' || target_role);
+  END IF;
+  
+  -- Validate email format
+  IF target_email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' THEN
+    RETURN jsonb_build_object('error', 'Invalid email format');
+  END IF;
+  
+  -- Check if email already exists
+  IF EXISTS (SELECT 1 FROM public.users WHERE email = target_email) THEN
+    RETURN jsonb_build_object('error', 'User with this email already exists');
+  END IF;
+  
+  -- Return success - the actual user creation will be handled by the edge function
+  RETURN jsonb_build_object(
+    'success', true,
+    'message', 'Permission check passed',
+    'can_create', true
+  );
+END;
+$function$;
+
+-- Create student complete function
+CREATE OR REPLACE FUNCTION public.create_student_complete(p_email text, p_password text, p_full_name text, p_phone text DEFAULT NULL::text, p_address text DEFAULT NULL::text, p_mentor_id uuid DEFAULT NULL::uuid, p_batch_id uuid DEFAULT NULL::uuid, p_pod_id uuid DEFAULT NULL::uuid)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+    v_user_id uuid;
+    v_student_id uuid;
+    v_password_display text;
+    v_encrypted_password text;
+    result jsonb;
+BEGIN
+    -- Generate a display password
+    v_password_display := p_password;
+    
+    -- For security, we'll hash the password (in production, this should be done by auth system)
+    v_encrypted_password := crypt(p_password, gen_salt('bf'));
+    
+    -- Create the user first
+    INSERT INTO public.users (
+        email,
+        full_name,
+        role,
+        password_display,
+        password_hash,
+        is_temp_password,
+        status,
+        lms_status,
+        created_at,
+        updated_at
+    ) VALUES (
+        p_email,
+        p_full_name,
+        'student',
+        v_password_display,
+        v_encrypted_password,
+        true,
+        'active',
+        'active',
+        now(),
+        now()
+    ) RETURNING id INTO v_user_id;
+    
+    -- Create the student record with onboarding_completed = false
+    INSERT INTO public.students (
+        user_id,
+        onboarding_completed,
+        enrollment_date,
+        created_at,
+        updated_at
+    ) VALUES (
+        v_user_id,
+        false, -- Ensure onboarding is required
+        now(),
+        now(),
+        now()
+    ) RETURNING id INTO v_student_id;
+    
+    -- Return success result
+    result := jsonb_build_object(
+        'success', true,
+        'user_id', v_user_id,
+        'student_id', v_student_id,
+        'message', 'Student created successfully'
+    );
+    
+    RETURN result;
+    
+EXCEPTION
+    WHEN unique_violation THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'User with this email already exists'
+        );
+    WHEN OTHERS THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Failed to create student: ' || SQLERRM
+        );
+END;
+$function$;
 ```
 
 ## Step 2: Create Core Functions
@@ -1011,6 +1646,278 @@ BEGIN
     ON CONFLICT (user_id, recording_id) 
     DO UPDATE SET is_unlocked = true, unlocked_at = now();
   END IF;
+END;
+$function$;
+```
+
+### 2.2 Sequential Unlock Functions
+
+```sql
+-- Initialize student unlocks
+CREATE OR REPLACE FUNCTION public.initialize_student_unlocks(p_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  first_recording_id uuid;
+BEGIN
+  -- Get the first recording in sequence
+  SELECT id INTO first_recording_id
+  FROM public.available_lessons
+  WHERE sequence_order IS NOT NULL
+  ORDER BY sequence_order ASC
+  LIMIT 1;
+  
+  -- If no recordings with sequence order, get the first one by title
+  IF first_recording_id IS NULL THEN
+    SELECT id INTO first_recording_id
+    FROM public.available_lessons
+    ORDER BY recording_title ASC
+    LIMIT 1;
+  END IF;
+  
+  -- Unlock the first recording for this student
+  IF first_recording_id IS NOT NULL THEN
+    INSERT INTO public.user_unlocks (user_id, recording_id, is_unlocked, unlocked_at)
+    VALUES (p_user_id, first_recording_id, true, now())
+    ON CONFLICT (user_id, recording_id) 
+    DO UPDATE SET is_unlocked = true, unlocked_at = now();
+  END IF;
+END;
+$function$;
+
+-- Initialize first recording unlock based on fees
+CREATE OR REPLACE FUNCTION public.initialize_first_recording_unlock(p_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  first_recording_id uuid;
+  fees_cleared boolean := false;
+BEGIN
+  -- Check if fees are cleared
+  SELECT COALESCE(s.fees_cleared, false) INTO fees_cleared
+  FROM public.students s WHERE s.user_id = p_user_id;
+  
+  -- Only proceed if fees are cleared
+  IF NOT fees_cleared THEN
+    RETURN;
+  END IF;
+  
+  -- Get the first recording in sequence
+  SELECT id INTO first_recording_id
+  FROM public.available_lessons
+  WHERE sequence_order IS NOT NULL
+  ORDER BY sequence_order ASC
+  LIMIT 1;
+  
+  -- If no recordings with sequence order, get the first one by title
+  IF first_recording_id IS NULL THEN
+    SELECT id INTO first_recording_id
+    FROM public.available_lessons
+    ORDER BY recording_title ASC
+    LIMIT 1;
+  END IF;
+  
+  -- Unlock the first recording for this student
+  IF first_recording_id IS NOT NULL THEN
+    INSERT INTO public.user_unlocks (user_id, recording_id, is_unlocked, unlocked_at)
+    VALUES (p_user_id, first_recording_id, true, now())
+    ON CONFLICT (user_id, recording_id) 
+    DO UPDATE SET is_unlocked = true, unlocked_at = now();
+  END IF;
+END;
+$function$;
+
+-- Unlock next recording function
+CREATE OR REPLACE FUNCTION public.unlock_next_recording(p_user_id uuid, p_current_recording_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  curr_order integer;
+  curr_title text;
+  next_rec_id uuid;
+BEGIN
+  -- Get current recording order and title
+  SELECT COALESCE(sequence_order, 999), COALESCE(recording_title, '')
+  INTO curr_order, curr_title
+  FROM public.available_lessons
+  WHERE id = p_current_recording_id;
+
+  IF curr_order IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- Find the next recording in the global sequence
+  SELECT al.id INTO next_rec_id
+  FROM public.available_lessons al
+  WHERE 
+    COALESCE(al.sequence_order, 999) > curr_order
+    OR (
+      COALESCE(al.sequence_order, 999) = curr_order 
+      AND COALESCE(al.recording_title, '') > curr_title
+    )
+  ORDER BY COALESCE(al.sequence_order, 999), al.recording_title
+  LIMIT 1;
+
+  -- If no next recording, nothing to unlock
+  IF next_rec_id IS NULL THEN
+    RETURN;
+  END IF;
+
+  -- Upsert-like behavior without requiring unique constraint
+  IF EXISTS (
+    SELECT 1 FROM public.user_unlocks 
+    WHERE user_id = p_user_id AND recording_id = next_rec_id
+  ) THEN
+    UPDATE public.user_unlocks
+    SET is_unlocked = true, unlocked_at = now()
+    WHERE user_id = p_user_id AND recording_id = next_rec_id;
+  ELSE
+    INSERT INTO public.user_unlocks (user_id, recording_id, is_unlocked, unlocked_at)
+    VALUES (p_user_id, next_rec_id, true, now());
+  END IF;
+END;
+$function$;
+
+-- Get sequential unlock status
+CREATE OR REPLACE FUNCTION public.get_sequential_unlock_status(p_user_id uuid)
+RETURNS TABLE(recording_id uuid, sequence_order integer, is_unlocked boolean, unlock_reason text, assignment_required boolean, assignment_completed boolean, recording_watched boolean)
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+SET search_path = 'public'
+AS $function$
+DECLARE
+  fees_cleared boolean := false;
+  current_sequence integer := 1;
+  prev_assignment_completed boolean := true;
+  prev_recording_watched boolean := true;
+BEGIN
+  -- Check if fees are cleared for this student (required for first recording unlock)
+  SELECT COALESCE(s.fees_cleared, false) INTO fees_cleared
+  FROM public.students s WHERE s.user_id = p_user_id;
+  
+  -- Loop through recordings in sequence order
+  FOR recording_id, sequence_order IN 
+    SELECT al.id, COALESCE(al.sequence_order, 999)
+    FROM public.available_lessons al
+    ORDER BY COALESCE(al.sequence_order, 999), al.recording_title
+  LOOP
+    DECLARE
+      has_assignment boolean := false;
+      assignment_completed boolean := false;
+      is_watched boolean := false;
+      should_unlock boolean := false;
+      reason text := '';
+    BEGIN
+      -- Check if recording has been watched
+      SELECT EXISTS(
+        SELECT 1 FROM public.recording_views rv 
+        WHERE rv.user_id = p_user_id AND rv.recording_id = get_sequential_unlock_status.recording_id AND rv.watched = true
+      ) INTO is_watched;
+      
+      -- Check if this recording has an assignment
+      SELECT EXISTS(
+        SELECT 1 FROM public.available_lessons al 
+        WHERE al.id = get_sequential_unlock_status.recording_id AND al.assignment_id IS NOT NULL
+      ) INTO has_assignment;
+      
+      -- Check if assignment is completed (latest submission approved)
+      IF has_assignment THEN
+        SELECT EXISTS(
+          SELECT 1 
+          FROM public.available_lessons al
+          JOIN public.submissions s ON s.assignment_id = al.assignment_id
+          WHERE al.id = get_sequential_unlock_status.recording_id
+          AND s.student_id = p_user_id
+          AND s.status = 'approved'
+          AND s.version = (
+            SELECT MAX(version) 
+            FROM public.submissions s2 
+            WHERE s2.assignment_id = al.assignment_id AND s2.student_id = p_user_id
+          )
+        ) INTO assignment_completed;
+      ELSE
+        assignment_completed := true; -- No assignment means it's considered complete
+      END IF;
+      
+      -- Determine unlock status (SEQUENTIAL LOGIC WITH ASSIGNMENT BLOCKING)
+      IF current_sequence = 1 THEN
+        -- First recording: only unlock if fees are cleared
+        IF fees_cleared THEN
+          should_unlock := true;
+          reason := 'First recording - unlocked after fees cleared';
+        ELSE
+          should_unlock := false;
+          reason := 'Payment required to unlock first recording';
+        END IF;
+      ELSIF prev_assignment_completed AND prev_recording_watched THEN
+        -- Previous recording was watched AND its assignment was completed
+        should_unlock := true;
+        reason := 'Previous recording watched and assignment completed - unlocked';
+      ELSE
+        should_unlock := false;
+        IF NOT prev_recording_watched THEN
+          reason := 'Previous recording not watched - locked';
+        ELSIF NOT prev_assignment_completed THEN
+          reason := 'Previous assignment not approved - locked';
+        ELSE
+          reason := 'Previous requirements not met - locked';
+        END IF;
+      END IF;
+      
+      -- Return row
+      RETURN QUERY SELECT 
+        get_sequential_unlock_status.recording_id,
+        get_sequential_unlock_status.sequence_order,
+        should_unlock,
+        reason,
+        has_assignment,
+        assignment_completed,
+        is_watched;
+      
+      -- Update state for next iteration (current recording becomes previous)
+      prev_assignment_completed := assignment_completed;
+      prev_recording_watched := is_watched;
+      current_sequence := current_sequence + 1;
+    END;
+  END LOOP;
+END;
+$function$;
+
+-- Sync user unlock progress
+CREATE OR REPLACE FUNCTION public.sync_user_unlock_progress(p_user_id uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  recording_record RECORD;
+  should_unlock BOOLEAN;
+  unlock_msg TEXT;
+BEGIN
+  -- Clear existing unlock records for this user
+  DELETE FROM user_unlocks WHERE user_id = p_user_id;
+  
+  -- Loop through all recordings and apply sequential unlock logic
+  FOR recording_record IN 
+    SELECT * FROM get_sequential_unlock_status(p_user_id)
+  LOOP
+    IF recording_record.is_unlocked THEN
+      INSERT INTO user_unlocks (user_id, recording_id, is_unlocked, unlocked_at)
+      VALUES (p_user_id, recording_record.recording_id, true, now())
+      ON CONFLICT (user_id, recording_id) 
+      DO UPDATE SET is_unlocked = true, unlocked_at = now();
+    END IF;
+  END LOOP;
 END;
 $function$;
 
@@ -1227,6 +2134,83 @@ CREATE OR REPLACE FUNCTION public.is_recording_watched(_user_id uuid, _recording
 RETURNS boolean
 LANGUAGE sql
 STABLE SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+  SELECT COALESCE(
+    (SELECT watched FROM public.recording_views 
+     WHERE user_id = _user_id AND recording_id = _recording_id
+     LIMIT 1),
+    false
+  );
+$function$;
+
+-- Check if assignment is passed
+CREATE OR REPLACE FUNCTION public.is_assignment_passed(_user_id uuid, _assignment_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+  SELECT COALESCE(
+    (SELECT status = 'approved' FROM public.submissions 
+     WHERE student_id = _user_id AND assignment_id = _assignment_id
+     LIMIT 1),
+    false
+  );
+$function$;
+
+-- Check if all modules are completed
+CREATE OR REPLACE FUNCTION public.has_completed_all_modules(_user_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  incomplete_count int;
+BEGIN
+  -- If there are no lessons, do not allow completion
+  IF (SELECT COUNT(*) FROM public.available_lessons) = 0 THEN
+    RETURN false;
+  END IF;
+
+  -- All recordings must be watched
+  SELECT COUNT(*) INTO incomplete_count
+  FROM public.available_lessons al
+  WHERE NOT public.is_recording_watched(_user_id, al.id);
+
+  IF incomplete_count > 0 THEN
+    RETURN false;
+  END IF;
+
+  -- All linked assignments must be approved
+  SELECT COUNT(*) INTO incomplete_count
+  FROM public.assignments a
+  WHERE a.recording_id IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM public.submissions s
+      WHERE s.assignment_id = a.id
+        AND s.student_id = _user_id
+        AND s.status = 'approved'
+    );
+
+  IF incomplete_count > 0 THEN
+    RETURN false;
+  END IF;
+
+  RETURN true;
+END;
+$function$;
+```
+
+### 2.3 Progress Tracking Functions
+
+```sql
+-- Check if recording is watched
+CREATE OR REPLACE FUNCTION public.is_recording_watched(_user_id uuid, _recording_id uuid)
+RETURNS boolean
+LANGUAGE sql
+STABLE SECURITY DEFINER
 SET search_path = ''
 AS $function$
   SELECT COALESCE(
@@ -1293,6 +2277,233 @@ BEGIN
 
   RETURN true;
 END;
+$function$;
+```
+
+### 2.4 Notification Functions
+
+```sql
+-- Create notification function
+CREATE OR REPLACE FUNCTION public.create_notification(p_user_id uuid, p_type text, p_title text, p_message text, p_metadata jsonb DEFAULT '{}'::jsonb)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  notification_id UUID;
+BEGIN
+  INSERT INTO public.notifications (
+    user_id,
+    type,
+    channel,
+    status,
+    sent_at,
+    payload
+  ) VALUES (
+    p_user_id,
+    p_type,
+    'system',
+    'sent',
+    NOW(),
+    jsonb_build_object(
+      'title', p_title,
+      'message', p_message,
+      'metadata', p_metadata
+    )
+  ) RETURNING id INTO notification_id;
+  
+  RETURN notification_id;
+END;
+$function$;
+
+-- Interpolate template function
+CREATE OR REPLACE FUNCTION public.interpolate_template(t text, vars jsonb)
+RETURNS text
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+declare
+  k text;
+  v text;
+  out text := coalesce(t,'');
+begin
+  if vars is null then
+    return out;
+  end if;
+
+  for k in select jsonb_object_keys(vars)
+  loop
+    v := coalesce(vars->>k, '');
+    -- Sanitize output to prevent injection
+    v := replace(v, '<', '&lt;');
+    v := replace(v, '>', '&gt;');
+    v := replace(v, '"', '&quot;');
+    out := replace(out, '{'||k||'}', v);
+  end loop;
+
+  return out;
+end;
+$function$;
+
+-- Get users by role function
+CREATE OR REPLACE FUNCTION public.get_users_by_role(role_code text)
+RETURNS SETOF uuid
+LANGUAGE sql
+STABLE SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+  select id::uuid
+  from public.users
+  where role = role_code
+$function$;
+
+-- Notify users function
+CREATE OR REPLACE FUNCTION public.notify_users(user_ids uuid[], template_key text, payload jsonb)
+RETURNS uuid[]
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+declare
+  -- Parameter aliases to avoid ambiguity with column names
+  v_user_ids alias for $1;
+  v_template_key alias for $2;
+  v_payload alias for $3;
+
+  tpl record;
+  uid uuid;
+  inserted_ids uuid[] := '{}';
+  now_ts timestamptz := now();
+  p_hash text := md5(coalesce(v_payload::text,''));
+  muted boolean;
+  rendered_title text;
+  rendered_body text;
+  existing_id uuid;
+begin
+  -- Fetch active template
+  select * into tpl
+  from public.notification_templates
+  where key = v_template_key and active = true
+  limit 1;
+
+  if tpl is null then
+    -- No active template; nothing to do
+    return inserted_ids;
+  end if;
+
+  -- Render strings using simple interpolation
+  rendered_title := public.interpolate_template(tpl.title_md, v_payload);
+  rendered_body  := public.interpolate_template(tpl.body_md,  v_payload);
+
+  -- Loop over user ids
+  foreach uid in array v_user_ids
+  loop
+    -- Check mutes
+    select coalesce((ns.mutes ->> v_template_key)::boolean, false)
+      into muted
+      from public.notification_settings ns
+      where ns.user_id = uid;
+
+    if muted then
+      continue;
+    end if;
+
+    -- Idempotency: skip if an identical payload for same template was created within last 1s
+    select n.id into existing_id
+    from public.notifications n
+    where n.user_id = uid
+      and coalesce(n.template_key, '') = coalesce(v_template_key,'')
+      and coalesce(n.payload_hash, '') = coalesce(p_hash,'')
+      and n.created_at > (now_ts - interval '1 second')
+    limit 1;
+
+    if existing_id is not null then
+      continue;
+    end if;
+
+    -- Insert
+    insert into public.notifications
+      (user_id, type, channel, status, sent_at, payload, template_key, payload_hash)
+    values
+      (uid, v_template_key, 'in_app', 'sent', now_ts,
+       jsonb_build_object(
+         'title', rendered_title,
+         'message', rendered_body,
+         'template_key', v_template_key,
+         'data', v_payload
+       ),
+       v_template_key,
+       p_hash
+      )
+    returning id into existing_id;
+
+    inserted_ids := inserted_ids || existing_id;
+  end loop;
+
+  return inserted_ids;
+end;
+$function$;
+
+-- Notify roles function
+CREATE OR REPLACE FUNCTION public.notify_roles(role_codes text[], template_key text, payload jsonb)
+RETURNS uuid[]
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+declare
+  uids uuid[];
+  out_ids uuid[] := '{}';
+  role text;
+  tmp_ids uuid[];
+begin
+  uids := '{}';
+  foreach role in array role_codes
+  loop
+    uids := uids || array(select public.get_users_by_role(role));
+  end loop;
+
+  if array_length(uids, 1) is null then
+    return out_ids;
+  end if;
+
+  tmp_ids := public.notify_users(uids, template_key, payload);
+  out_ids := out_ids || tmp_ids;
+  return out_ids;
+end;
+$function$;
+
+-- Mark all notifications read
+CREATE OR REPLACE FUNCTION public.mark_all_notifications_read()
+RETURNS integer
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+declare
+  affected integer;
+begin
+  update public.notifications
+  set status = 'read',
+      read_at = now()
+  where user_id = auth.uid()
+    and status <> 'read';
+
+  get diagnostics affected = row_count;
+  return affected;
+end;
+$function$;
+
+-- Send test notification
+CREATE OR REPLACE FUNCTION public.send_test_notification(template_key text, payload jsonb)
+RETURNS uuid[]
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+  select public.notify_users(array[auth.uid()], template_key, payload)
 $function$;
 ```
 
@@ -1414,6 +2625,146 @@ begin
 
   return inserted_ids;
 end;
+$function$;
+```
+
+### 2.5 Recovery and Analytics Functions
+
+```sql
+-- Get inactive students
+CREATE OR REPLACE FUNCTION public.get_inactive_students(days_threshold integer DEFAULT 3)
+RETURNS TABLE(user_id uuid, email text, full_name text, last_active_at timestamp with time zone, days_inactive integer, phone text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    u.id as user_id,
+    u.email,
+    u.full_name,
+    u.last_active_at,
+    EXTRACT(DAYS FROM (now() - u.last_active_at))::INTEGER as days_inactive,
+    u.phone
+  FROM public.users u
+  WHERE u.role = 'student'
+    AND u.status = 'active'
+    AND u.lms_status = 'active'
+    AND u.last_active_at IS NOT NULL
+    AND u.last_active_at < (now() - INTERVAL '1 day' * days_threshold)
+    AND NOT EXISTS (
+      SELECT 1 FROM public.student_recovery_messages srm
+      WHERE srm.user_id = u.id
+        AND srm.message_sent_at > (now() - INTERVAL '1 day')
+    );
+END;
+$function$;
+
+-- Log data access attempt
+CREATE OR REPLACE FUNCTION public.log_data_access_attempt(table_name text, operation text, user_role text, target_user_id uuid DEFAULT NULL::uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+BEGIN
+  INSERT INTO public.admin_logs (
+    entity_type,
+    entity_id,
+    action,
+    description,
+    performed_by,
+    created_at,
+    data
+  ) VALUES (
+    'data_access',
+    target_user_id,
+    operation,
+    'Data access attempt on ' || table_name || ' by ' || user_role,
+    auth.uid(),
+    now(),
+    jsonb_build_object(
+      'table_name', table_name,
+      'operation', operation,
+      'user_role', user_role,
+      'target_user_id', target_user_id
+    )
+  );
+END;
+$function$;
+
+-- Update company branding
+CREATE OR REPLACE FUNCTION public.update_company_branding(branding_data jsonb)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  result json;
+BEGIN
+  UPDATE public.company_settings 
+  SET branding = branding_data,
+      updated_at = now()
+  WHERE id = 1;
+  
+  IF NOT FOUND THEN
+    INSERT INTO public.company_settings (id, branding, created_at, updated_at)
+    VALUES (1, branding_data, now(), now());
+  END IF;
+  
+  result := json_build_object('success', true, 'branding', branding_data);
+  RETURN result;
+END;
+$function$;
+
+-- Validate questionnaire structure
+CREATE OR REPLACE FUNCTION public.validate_questionnaire_structure(questionnaire_data jsonb)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $function$
+DECLARE
+  question JSONB;
+  answer_type TEXT;
+BEGIN
+  -- Check if questionnaire_data is an array
+  IF jsonb_typeof(questionnaire_data) != 'array' THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Validate each question
+  FOR question IN SELECT jsonb_array_elements(questionnaire_data)
+  LOOP
+    -- Check required fields
+    IF NOT (question ? 'id' AND question ? 'text' AND question ? 'order' AND question ? 'answerType') THEN
+      RETURN FALSE;
+    END IF;
+
+    answer_type := question->>'answerType';
+    
+    -- Validate answerType
+    IF answer_type NOT IN ('singleLine', 'multiLine', 'singleSelect', 'multiSelect', 'file') THEN
+      RETURN FALSE;
+    END IF;
+
+    -- Validate options field for select types
+    IF answer_type IN ('singleSelect', 'multiSelect') THEN
+      IF NOT (question ? 'options' AND jsonb_typeof(question->'options') = 'array' AND jsonb_array_length(question->'options') > 0) THEN
+        RETURN FALSE;
+      END IF;
+    END IF;
+
+    -- Ensure options is not present for non-select types
+    IF answer_type IN ('singleLine', 'multiLine', 'file') AND (question ? 'options') THEN
+      RETURN FALSE;
+    END IF;
+  END LOOP;
+
+  RETURN TRUE;
+END;
 $function$;
 
 -- Notify roles function
