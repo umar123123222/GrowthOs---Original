@@ -79,6 +79,61 @@ export const ENV_CONFIG = {
   GENERIC_ERROR_MESSAGE: import.meta.env.VITE_GENERIC_ERROR_MESSAGE || "An error occurred. Please try again.",
   CONNECTION_ERROR_MESSAGE: import.meta.env.VITE_CONNECTION_ERROR_MESSAGE || "Connection failed. Please check your details and try again.",
   SUCCESS_MESSAGE: import.meta.env.VITE_SUCCESS_MESSAGE || "Operation completed successfully",
+
+  // Feature Flags
+  ENABLE_CONSOLE_LOGGING: import.meta.env.VITE_ENABLE_CONSOLE_LOGGING === 'true' || import.meta.env.MODE === 'development',
+  ENHANCED_ERROR_HANDLING: import.meta.env.VITE_ENHANCED_ERROR_HANDLING !== 'false',
+  SAFE_DATABASE_QUERIES: import.meta.env.VITE_SAFE_DATABASE_QUERIES !== 'false',
+  TYPE_SAFETY_IMPROVEMENTS: import.meta.env.VITE_TYPE_SAFETY_IMPROVEMENTS !== 'false',
+  LMS_SEQUENTIAL_UNLOCK: import.meta.env.VITE_LMS_SEQUENTIAL_UNLOCK === 'true',
+  MIGRATE_SINGLE_QUERIES: import.meta.env.VITE_MIGRATE_SINGLE_QUERIES === 'true',
+  ENABLE_DATABASE_ERROR_BOUNDARIES: import.meta.env.VITE_ENABLE_DATABASE_ERROR_BOUNDARIES === 'true',
+  SAFE_QUERY_FALLBACKS: import.meta.env.VITE_SAFE_QUERY_FALLBACKS === 'true',
+  MIGRATE_CONSOLE_LOGS: import.meta.env.VITE_MIGRATE_CONSOLE_LOGS === 'true',
+  PRESERVE_DEBUG_LOGS: import.meta.env.VITE_PRESERVE_DEBUG_LOGS !== 'false',
+  REPLACE_WINDOW_RELOAD: import.meta.env.VITE_REPLACE_WINDOW_RELOAD === 'true',
+  ENABLE_REAL_RECOVERY_RATE: import.meta.env.VITE_ENABLE_REAL_RECOVERY_RATE === 'true',
+  OPTIMIZE_DATABASE_QUERIES: import.meta.env.VITE_OPTIMIZE_DATABASE_QUERIES === 'true',
+  ENHANCED_LOADING_STATES: import.meta.env.VITE_ENHANCED_LOADING_STATES === 'true',
+  STRICT_TYPE_CHECKING: import.meta.env.VITE_STRICT_TYPE_CHECKING === 'true',
+  RUNTIME_TYPE_VALIDATION: import.meta.env.VITE_RUNTIME_TYPE_VALIDATION === 'true',
+
+  // Performance & UI Thresholds
+  STUDENT_SCORE_THRESHOLD: parseFloat(import.meta.env.VITE_STUDENT_SCORE_THRESHOLD || "85"),
+  SEARCH_DEBOUNCE_MS: parseInt(import.meta.env.VITE_SEARCH_DEBOUNCE_MS || "300"),
+  INPUT_DEBOUNCE_MS: parseInt(import.meta.env.VITE_INPUT_DEBOUNCE_MS || "500"),
+  RESIZE_DEBOUNCE_MS: parseInt(import.meta.env.VITE_RESIZE_DEBOUNCE_MS || "150"),
+  NOTIFICATION_DURATION_MS: parseInt(import.meta.env.VITE_NOTIFICATION_DURATION_MS || "5000"),
+  SUCCESS_TOAST_DURATION_MS: parseInt(import.meta.env.VITE_SUCCESS_TOAST_DURATION_MS || "3000"),
+  ERROR_TOAST_DURATION_MS: parseInt(import.meta.env.VITE_ERROR_TOAST_DURATION_MS || "5000"),
+  ANIMATION_FAST_MS: parseInt(import.meta.env.VITE_ANIMATION_FAST_MS || "200"),
+  ANIMATION_NORMAL_MS: parseInt(import.meta.env.VITE_ANIMATION_NORMAL_MS || "300"),
+  ANIMATION_SLOW_MS: parseInt(import.meta.env.VITE_ANIMATION_SLOW_MS || "500"),
+  ANIMATION_EXTRA_SLOW_MS: parseInt(import.meta.env.VITE_ANIMATION_EXTRA_SLOW_MS || "1000"),
+  
+  // Pagination & Limits
+  DEFAULT_PAGE_SIZE: parseInt(import.meta.env.VITE_DEFAULT_PAGE_SIZE || "10"),
+  MAX_PAGE_SIZE: parseInt(import.meta.env.VITE_MAX_PAGE_SIZE || "100"),
+  INFINITE_SCROLL_THRESHOLD: parseInt(import.meta.env.VITE_INFINITE_SCROLL_THRESHOLD || "2"),
+  
+  // Cache & Timeout Values
+  CACHE_TIME_MS: parseInt(import.meta.env.VITE_CACHE_TIME_MS || "300000"), // 5 minutes
+  STALE_TIME_MS: parseInt(import.meta.env.VITE_STALE_TIME_MS || "30000"), // 30 seconds
+  SETTINGS_STALE_TIME_MS: parseInt(import.meta.env.VITE_SETTINGS_STALE_TIME_MS || "300000"), // 5 minutes
+  DEFAULT_TIMEOUT_MS: parseInt(import.meta.env.VITE_DEFAULT_TIMEOUT_MS || "30000"), // 30 seconds
+  SHORT_TIMEOUT_MS: parseInt(import.meta.env.VITE_SHORT_TIMEOUT_MS || "5000"), // 5 seconds
+  LONG_TIMEOUT_MS: parseInt(import.meta.env.VITE_LONG_TIMEOUT_MS || "60000"), // 60 seconds
+  
+  // Milestone Thresholds
+  MILESTONE_BRONZE: parseInt(import.meta.env.VITE_MILESTONE_BRONZE || "500"),
+  MILESTONE_SILVER: parseInt(import.meta.env.VITE_MILESTONE_SILVER || "1000"),
+  MILESTONE_GOLD: parseInt(import.meta.env.VITE_MILESTONE_GOLD || "1500"),
+  MILESTONE_PLATINUM: parseInt(import.meta.env.VITE_MILESTONE_PLATINUM || "2000"),
+
+  // Validation & Security
+  SESSION_TIMEOUT_MINUTES: parseInt(import.meta.env.VITE_SESSION_TIMEOUT_MINUTES || "30"),
+  MAX_LOGIN_ATTEMPTS: parseInt(import.meta.env.VITE_MAX_LOGIN_ATTEMPTS || "5"),
+  PASSWORD_RESET_TIMEOUT_HOURS: parseInt(import.meta.env.VITE_PASSWORD_RESET_TIMEOUT_HOURS || "24"),
 } as const;
 
 // Validation function
