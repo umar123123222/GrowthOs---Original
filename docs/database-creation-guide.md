@@ -19,6 +19,29 @@ This guide will help you create:
 - Initial configuration data
 - Environment secrets
 
+## Critical Dependencies
+
+**⚠️ IMPORTANT: Execute these functions FIRST before creating any tables or RLS policies!**
+
+### Essential Security Function
+
+```sql
+-- CRITICAL: This function MUST be created before any RLS policies
+-- It's referenced by 68+ RLS policies throughout the system
+CREATE OR REPLACE FUNCTION public.get_current_user_role()
+RETURNS TEXT AS $$
+  SELECT role FROM public.users WHERE id = auth.uid();
+$$ LANGUAGE SQL SECURITY DEFINER STABLE SET search_path = public;
+```
+
+### Required Sequences
+
+```sql
+-- Create sequences for tables that need them
+CREATE SEQUENCE IF NOT EXISTS integrations_id_seq;
+CREATE SEQUENCE IF NOT EXISTS user_metrics_id_seq;
+```
+
 ## Step 1: Create Core Tables
 
 ### 1.1 Company Settings Table
@@ -4180,9 +4203,9 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('recording-attachments', 'recording-attachments', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Create user avatars bucket
+-- Create assignment submissions bucket
 INSERT INTO storage.buckets (id, name, public) 
-VALUES ('avatars', 'avatars', true)
+VALUES ('assignment-submissions', 'assignment-submissions', false)
 ON CONFLICT (id) DO NOTHING;
 ```
 
@@ -4261,33 +4284,44 @@ USING (
     AND public.get_current_user_role() IN ('admin', 'superadmin')
 );
 
--- User avatars policies (public bucket)
-CREATE POLICY "Avatar images are publicly accessible" 
-ON storage.objects 
-FOR SELECT 
-USING (bucket_id = 'avatars');
-
-CREATE POLICY "Users can upload their own avatar" 
+-- Assignment submissions policies
+CREATE POLICY "Students can upload assignment submissions" 
 ON storage.objects 
 FOR INSERT 
 WITH CHECK (
-    bucket_id = 'avatars' 
+    bucket_id = 'assignment-submissions' 
     AND auth.uid()::text = (storage.foldername(name))[1]
 );
 
-CREATE POLICY "Users can update their own avatar" 
+CREATE POLICY "Students can view their own submissions" 
+ON storage.objects 
+FOR SELECT 
+USING (
+    bucket_id = 'assignment-submissions' 
+    AND auth.uid()::text = (storage.foldername(name))[1]
+);
+
+CREATE POLICY "Staff can view all assignment submissions" 
+ON storage.objects 
+FOR SELECT 
+USING (
+    bucket_id = 'assignment-submissions' 
+    AND public.get_current_user_role() IN ('admin', 'superadmin', 'mentor', 'enrollment_manager')
+);
+
+CREATE POLICY "Students can update their own submissions" 
 ON storage.objects 
 FOR UPDATE 
 USING (
-    bucket_id = 'avatars' 
+    bucket_id = 'assignment-submissions' 
     AND auth.uid()::text = (storage.foldername(name))[1]
 );
 
-CREATE POLICY "Users can delete their own avatar" 
+CREATE POLICY "Students can delete their own submissions" 
 ON storage.objects 
 FOR DELETE 
 USING (
-    bucket_id = 'avatars' 
+    bucket_id = 'assignment-submissions' 
     AND auth.uid()::text = (storage.foldername(name))[1]
 );
 ```
