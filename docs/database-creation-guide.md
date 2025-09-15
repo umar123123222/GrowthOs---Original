@@ -12,12 +12,13 @@ Complete step-by-step guide to create a fully functional Growth OS database from
 ## Overview
 
 This guide will help you create:
-- 38 core database tables
+- 38 core database tables with user_security_summary and backup tables
 - 200+ Row Level Security (RLS) policies
-- 35+ custom database functions
-- Storage buckets and policies
+- 50+ custom database functions including all auth, recovery, and notification functions
+- 4 storage buckets with correct policies
 - Initial configuration data
 - Environment secrets
+- Complete user management and security systems
 
 ## Critical Dependencies
 
@@ -477,7 +478,46 @@ CREATE TABLE public.user_unlocks (
 );
 ```
 
-### 1.7 Financial Management Tables
+### 1.7 User Security Summary Tables
+
+```sql
+-- User security summary for monitoring and risk assessment
+CREATE TABLE public.user_security_summary (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    security_score integer DEFAULT 100,
+    last_login_at timestamp with time zone,
+    failed_login_attempts integer DEFAULT 0,
+    password_last_changed timestamp with time zone,
+    suspicious_activity_count integer DEFAULT 0,
+    risk_level text DEFAULT 'low',
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    
+    CONSTRAINT valid_risk_level CHECK (risk_level IN ('low', 'medium', 'high', 'critical')),
+    UNIQUE(user_id)
+);
+
+-- Backup table for user security summary
+CREATE TABLE public.user_security_summary_backup (
+    id uuid,
+    user_id uuid,
+    security_score integer,
+    last_login_at timestamp with time zone,
+    failed_login_attempts integer,
+    password_last_changed timestamp with time zone,
+    suspicious_activity_count integer,
+    risk_level text,
+    created_at timestamp with time zone,
+    updated_at timestamp with time zone,
+    backup_created_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TRIGGER update_user_security_summary_updated_at
+    BEFORE UPDATE ON public.user_security_summary
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+### 1.8 Financial Management Tables
 
 ```sql
 -- Installment plans
@@ -525,27 +565,6 @@ CREATE TRIGGER update_invoices_updated_at
 CREATE TABLE public.installment_payments (
     id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    student_id uuid REFERENCES public.students(id),
-    invoice_id uuid REFERENCES public.invoices(id),
-    amount numeric NOT NULL,
-    payment_date timestamp with time zone NOT NULL DEFAULT now(),
-    payment_method text,
-    transaction_id text,
-    status text NOT NULL DEFAULT 'paid',
-    created_at timestamp with time zone NOT NULL DEFAULT now(),
-    updated_at timestamp with time zone NOT NULL DEFAULT now(),
-    
-    CONSTRAINT valid_payment_status CHECK (status IN ('paid', 'pending', 'failed', 'refunded'))
-);
-
-CREATE TRIGGER update_installment_payments_updated_at
-    BEFORE UPDATE ON public.installment_payments
-    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- Installment payments
-CREATE TABLE public.installment_payments (
-    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     student_id uuid REFERENCES public.students(id) ON DELETE CASCADE,
     invoice_id uuid REFERENCES public.invoices(id) ON DELETE CASCADE,
     amount numeric NOT NULL,
@@ -564,7 +583,67 @@ CREATE TRIGGER update_installment_payments_updated_at
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 ```
 
-### 1.8 Milestone System Tables
+### 1.9 Segmented Success Sessions Tables
+
+```sql
+-- Segmented weekly success sessions view
+CREATE TABLE public.segmented_weekly_success_sessions (
+    id uuid NOT NULL,
+    title text,
+    description text,
+    start_time timestamp without time zone,
+    end_time timestamp without time zone,
+    mentor_id uuid,
+    mentor_name text,
+    status text,
+    created_at timestamp without time zone,
+    segment text DEFAULT 'weekly'
+);
+
+-- Backup table for segmented sessions
+CREATE TABLE public.segmented_weekly_success_sessions_backup (
+    id uuid,
+    title text,
+    description text,
+    start_time timestamp without time zone,
+    end_time timestamp without time zone,
+    mentor_id uuid,
+    mentor_name text,
+    status text,
+    created_at timestamp without time zone,
+    segment text
+);
+```
+
+### 1.10 Onboarding Jobs Table
+
+```sql
+-- Background job processing for onboarding
+CREATE TABLE public.onboarding_jobs (
+    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+    job_type text NOT NULL,
+    status text NOT NULL DEFAULT 'pending',
+    payload jsonb DEFAULT '{}',
+    result jsonb,
+    error_message text,
+    retries integer DEFAULT 0,
+    max_retries integer DEFAULT 3,
+    scheduled_at timestamp with time zone DEFAULT now(),
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    
+    CONSTRAINT valid_job_status CHECK (status IN ('pending', 'processing', 'completed', 'failed', 'cancelled'))
+);
+
+CREATE TRIGGER update_onboarding_jobs_updated_at
+    BEFORE UPDATE ON public.onboarding_jobs
+    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+```
+
+### 1.11 Milestone System Tables
 
 ```sql
 -- Milestone categories
@@ -642,7 +721,7 @@ CREATE TRIGGER update_user_module_progress_updated_at
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 ```
 
-### 1.9 Communication and Support Tables
+### 1.12 Communication and Support Tables
 
 ```sql
 -- Notifications table
@@ -748,55 +827,8 @@ CREATE TRIGGER update_messages_updated_at
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 ```
 
-### 1.8 Notifications System Tables
 
-```sql
--- Notification templates
-CREATE TABLE public.notification_templates (
-    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    key text NOT NULL UNIQUE,
-    title_md text NOT NULL,
-    body_md text NOT NULL,
-    variables text[] NOT NULL DEFAULT '{}',
-    active boolean NOT NULL DEFAULT true,
-    created_at timestamp with time zone NOT NULL DEFAULT now(),
-    updated_at timestamp with time zone NOT NULL DEFAULT now()
-);
-
--- Notifications
-CREATE TABLE public.notifications (
-    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    type text NOT NULL,
-    channel text NOT NULL DEFAULT 'system',
-    status text NOT NULL DEFAULT 'sent',
-    payload jsonb NOT NULL DEFAULT '{}',
-    template_key text,
-    payload_hash text,
-    sent_at timestamp with time zone NOT NULL DEFAULT now(),
-    read_at timestamp with time zone,
-    dismissed_at timestamp with time zone,
-    created_at timestamp with time zone NOT NULL DEFAULT now(),
-    
-    CONSTRAINT valid_channel CHECK (channel IN ('system', 'email', 'sms', 'push', 'in_app')),
-    CONSTRAINT valid_status CHECK (status IN ('sent', 'read', 'dismissed', 'failed'))
-);
-
--- Notification settings
-CREATE TABLE public.notification_settings (
-    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE UNIQUE,
-    mutes jsonb NOT NULL DEFAULT '{}',
-    created_at timestamp with time zone NOT NULL DEFAULT now(),
-    updated_at timestamp with time zone NOT NULL DEFAULT now()
-);
-
-CREATE TRIGGER update_notification_settings_updated_at
-    BEFORE UPDATE ON public.notification_settings
-    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-```
-
-### 1.9 Admin Logs and Activity Tracking
+### 1.13 Admin Logs and Activity Tracking
 
 ```sql
 -- Admin logs for audit trail
@@ -825,42 +857,8 @@ CREATE TABLE public.user_activity_logs (
 );
 ```
 
-### 1.10 Support System Tables
 
-```sql
--- Support tickets
-CREATE TABLE public.support_tickets (
-    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    title text NOT NULL,
-    description text NOT NULL,
-    status text NOT NULL DEFAULT 'open',
-    priority text NOT NULL DEFAULT 'medium',
-    category text,
-    assigned_to uuid REFERENCES public.users(id),
-    created_at timestamp with time zone NOT NULL DEFAULT now(),
-    updated_at timestamp with time zone NOT NULL DEFAULT now(),
-    
-    CONSTRAINT valid_ticket_status CHECK (status IN ('open', 'in_progress', 'resolved', 'closed')),
-    CONSTRAINT valid_priority CHECK (priority IN ('low', 'medium', 'high', 'urgent'))
-);
-
-CREATE TRIGGER update_support_tickets_updated_at
-    BEFORE UPDATE ON public.support_tickets
-    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- Support ticket replies
-CREATE TABLE public.support_ticket_replies (
-    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    ticket_id uuid NOT NULL REFERENCES public.support_tickets(id) ON DELETE CASCADE,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    message text NOT NULL,
-    is_internal boolean NOT NULL DEFAULT false,
-    created_at timestamp with time zone NOT NULL DEFAULT now()
-);
-```
-
-### 1.11 Additional Tables
+### 1.14 Additional Tables
 
 ```sql
 -- Success sessions (live sessions)
@@ -1182,28 +1180,6 @@ CREATE TABLE public.email_queue (
 CREATE TRIGGER update_email_queue_updated_at
     BEFORE UPDATE ON public.email_queue
     FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- Email queue
-CREATE TABLE public.email_queue (
-    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    recipient_email text NOT NULL,
-    recipient_name text NOT NULL,
-    email_type text NOT NULL,
-    credentials jsonb NOT NULL,
-    status text NOT NULL DEFAULT 'pending',
-    retry_count integer DEFAULT 0,
-    error_message text,
-    sent_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    
-    CONSTRAINT valid_email_status CHECK (status IN ('pending', 'sent', 'failed', 'processing'))
-);
-
-CREATE TRIGGER update_email_queue_updated_at
-    BEFORE UPDATE ON public.email_queue
-    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 ```
 
 ### 1.12 Additional System Tables
@@ -1238,12 +1214,12 @@ CREATE TABLE public.course_tracks (
 
 -- Integrations
 CREATE TABLE public.integrations (
-    id bigint NOT NULL GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    id bigint NOT NULL DEFAULT nextval('integrations_id_seq') PRIMARY KEY,
     user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
     source text NOT NULL,
+    external_id text,
     access_token text NOT NULL,
     refresh_token text,
-    external_id text,
     connected_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone NOT NULL DEFAULT now()
 );
@@ -1263,79 +1239,6 @@ CREATE TABLE public.onboarding_responses (
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
     
     CONSTRAINT valid_answer_type CHECK (answer_type IN ('text', 'json', 'file'))
-);
-
-CREATE TRIGGER update_onboarding_responses_updated_at
-    BEFORE UPDATE ON public.onboarding_responses
-    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- Integrations (for third-party services)
-CREATE TABLE public.integrations (
-    id bigint NOT NULL DEFAULT nextval('integrations_id_seq') PRIMARY KEY,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    source text NOT NULL,
-    external_id text,
-    access_token text NOT NULL,
-    refresh_token text,
-    connected_at timestamp with time zone NOT NULL DEFAULT now(),
-    updated_at timestamp with time zone NOT NULL DEFAULT now()
-);
-
--- User metrics (for analytics)
-CREATE TABLE public.user_metrics (
-    id bigint NOT NULL DEFAULT nextval('user_metrics_id_seq') PRIMARY KEY,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    source text NOT NULL,
-    metric text NOT NULL,
-    value numeric NOT NULL,
-    date date NOT NULL,
-    fetched_at timestamp with time zone NOT NULL DEFAULT now()
-);
-
--- Success partner credits
-CREATE TABLE public.success_partner_credits (
-    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    date date NOT NULL DEFAULT CURRENT_DATE,
-    credits_used integer NOT NULL DEFAULT 0,
-    daily_limit integer NOT NULL DEFAULT 10,
-    created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now(),
-    
-    UNIQUE(user_id, date)
-);
-
-CREATE TRIGGER update_success_partner_credits_updated_at
-    BEFORE UPDATE ON public.success_partner_credits
-    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- Student recovery messages
-CREATE TABLE public.student_recovery_messages (
-    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    message_type text NOT NULL DEFAULT 'whatsapp_inactive',
-    days_inactive integer NOT NULL,
-    message_content text,
-    message_sent_at timestamp with time zone NOT NULL DEFAULT now(),
-    recovery_successful boolean,
-    recovered_at timestamp with time zone,
-    created_at timestamp with time zone NOT NULL DEFAULT now(),
-    updated_at timestamp with time zone NOT NULL DEFAULT now()
-);
-
-CREATE TRIGGER update_student_recovery_messages_updated_at
-    BEFORE UPDATE ON public.student_recovery_messages
-    FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
-
--- Onboarding responses
-CREATE TABLE public.onboarding_responses (
-    id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-    question_id text NOT NULL,
-    answer_type text NOT NULL,
-    answer text,
-    created_at timestamp with time zone NOT NULL DEFAULT now(),
-    updated_at timestamp with time zone NOT NULL DEFAULT now()
 );
 
 CREATE TRIGGER update_onboarding_responses_updated_at
@@ -4188,22 +4091,22 @@ CREATE POLICY "Superadmins can manage company settings" ON public.company_settin
 ### 5.1 Create Storage Buckets
 
 ```sql
--- Create assignment files bucket
+-- Create assignment files bucket (matches actual database: public=true)
 INSERT INTO storage.buckets (id, name, public) 
-VALUES ('assignment-files', 'assignment-files', false)
+VALUES ('assignment-files', 'assignment-files', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Create company branding bucket
+-- Create company branding bucket (matches actual database: public=true)
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('company-branding', 'company-branding', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Create recording attachments bucket
+-- Create recording attachments bucket (matches actual database: public=true)
 INSERT INTO storage.buckets (id, name, public) 
-VALUES ('recording-attachments', 'recording-attachments', false)
+VALUES ('recording-attachments', 'recording-attachments', true)
 ON CONFLICT (id) DO NOTHING;
 
--- Create assignment submissions bucket
+-- Create assignment submissions bucket (matches actual database: public=false)
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('assignment-submissions', 'assignment-submissions', false)
 ON CONFLICT (id) DO NOTHING;
@@ -4212,7 +4115,12 @@ ON CONFLICT (id) DO NOTHING;
 ### 5.2 Create Storage Policies
 
 ```sql
--- Assignment files policies
+-- Assignment files policies (public bucket)
+CREATE POLICY "Assignment files are publicly accessible" 
+ON storage.objects 
+FOR SELECT 
+USING (bucket_id = 'assignment-files');
+
 CREATE POLICY "Students can upload assignment files" 
 ON storage.objects 
 FOR INSERT 
@@ -4267,14 +4175,11 @@ USING (
     AND public.get_current_user_role() = 'superadmin'
 );
 
--- Recording attachments policies
-CREATE POLICY "Authenticated users can view recording attachments" 
+-- Recording attachments policies (public bucket)
+CREATE POLICY "Recording attachments are publicly accessible" 
 ON storage.objects 
 FOR SELECT 
-USING (
-    bucket_id = 'recording-attachments' 
-    AND auth.role() = 'authenticated'
-);
+USING (bucket_id = 'recording-attachments');
 
 CREATE POLICY "Admins can manage recording attachments" 
 ON storage.objects 
@@ -4483,6 +4388,444 @@ SELECT routine_name FROM information_schema.routines WHERE routine_schema = 'pub
 
 -- Check RLS is enabled
 SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public' AND rowsecurity = true;
+-- Add all missing functions from database-creation-guide-additions.md
+-- User Creation Functions
+CREATE OR REPLACE FUNCTION public.create_user_with_role(target_email text, target_password text, target_role text, target_full_name text DEFAULT NULL::text, target_metadata jsonb DEFAULT '{}'::jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  current_user_role text;
+  user_count integer;
+  result jsonb;
+BEGIN
+  -- Get current user count to check if this is bootstrap scenario
+  SELECT COUNT(*) INTO user_count FROM public.users;
+  
+  -- If no users exist, allow creation of superadmin (bootstrap scenario)
+  IF user_count = 0 THEN
+    IF target_role != 'superadmin' THEN
+      RETURN jsonb_build_object('error', 'First user must be a superadmin');
+    END IF;
+    -- Skip permission check for bootstrap
+  ELSE
+    -- Get current user's role for permission check
+    SELECT role INTO current_user_role FROM public.users WHERE id = auth.uid();
+    
+    IF current_user_role IS NULL THEN
+      RETURN jsonb_build_object('error', 'Unauthorized: No valid session');
+    END IF;
+    
+    -- Permission matrix check
+    CASE current_user_role
+      WHEN 'superadmin' THEN
+        -- Superadmins can create anyone
+        NULL;
+      WHEN 'admin' THEN
+        -- Admins can create students, mentors, enrollment_managers
+        IF target_role NOT IN ('student', 'mentor', 'enrollment_manager') THEN
+          RETURN jsonb_build_object('error', 'Admins cannot create ' || target_role || ' users');
+        END IF;
+      WHEN 'enrollment_manager' THEN
+        -- Enrollment managers can only create students
+        IF target_role != 'student' THEN
+          RETURN jsonb_build_object('error', 'Enrollment managers can only create students');
+        END IF;
+      ELSE
+        RETURN jsonb_build_object('error', 'Insufficient permissions to create users');
+    END CASE;
+  END IF;
+  
+  -- Validate role
+  IF target_role NOT IN ('superadmin', 'admin', 'enrollment_manager', 'mentor', 'student') THEN
+    RETURN jsonb_build_object('error', 'Invalid role: ' || target_role);
+  END IF;
+  
+  -- Validate email format
+  IF target_email !~ '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' THEN
+    RETURN jsonb_build_object('error', 'Invalid email format');
+  END IF;
+  
+  -- Check if email already exists
+  IF EXISTS (SELECT 1 FROM public.users WHERE email = target_email) THEN
+    RETURN jsonb_build_object('error', 'User with this email already exists');
+  END IF;
+  
+  -- Return success - the actual user creation will be handled by the edge function
+  RETURN jsonb_build_object(
+    'success', true,
+    'message', 'Permission check passed',
+    'can_create', true
+  );
+END;
+$$;
+
+-- Auth and User Management Functions
+CREATE OR REPLACE FUNCTION public.handle_auth_user_deleted()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  -- Skip logging for service role deletions to prevent FK violations
+  IF current_setting('request.jwt.claim.sub', true) = '00000000-0000-0000-0000-000000000000' THEN
+    RETURN OLD;
+  END IF;
+  
+  -- Log deletion for real users with error handling to prevent blocking deletions
+  BEGIN
+    INSERT INTO public.admin_logs (
+      entity_type,
+      entity_id,
+      action,
+      description,
+      performed_by,
+      created_at
+    ) VALUES (
+      'user',  -- Changed from 'auth_user' to 'user' to match check constraint
+      OLD.id,
+      'deleted',  -- Changed from 'auth_deleted' to 'deleted' for consistency
+      'User deleted from auth.users',
+      OLD.id,
+      now()
+    );
+  EXCEPTION
+    WHEN OTHERS THEN
+      -- Log the error but don't block the deletion
+      RAISE NOTICE 'Failed to log user deletion for user %: %', OLD.id, SQLERRM;
+  END;
+  
+  RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER handle_auth_user_deleted_trigger
+    AFTER DELETE ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_auth_user_deleted();
+
+-- Recovery and Analytics Functions
+CREATE OR REPLACE FUNCTION public.get_inactive_students(days_threshold integer DEFAULT 3)
+RETURNS TABLE(user_id uuid, email text, full_name text, last_active_at timestamp with time zone, days_inactive integer, phone text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    u.id as user_id,
+    u.email,
+    u.full_name,
+    u.last_active_at,
+    EXTRACT(DAYS FROM (now() - u.last_active_at))::INTEGER as days_inactive,
+    u.phone
+  FROM public.users u
+  WHERE u.role = 'student'
+    AND u.status = 'active'
+    AND u.lms_status = 'active'
+    AND u.last_active_at IS NOT NULL
+    AND u.last_active_at < (now() - INTERVAL '1 day' * days_threshold)
+    AND NOT EXISTS (
+      SELECT 1 FROM public.student_recovery_messages srm
+      WHERE srm.user_id = u.id
+        AND srm.message_sent_at > (now() - INTERVAL '1 day')
+    );
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.record_recovery_message(p_user_id uuid, p_message_type text DEFAULT 'whatsapp_inactive'::text, p_days_inactive integer DEFAULT 3, p_message_content text DEFAULT NULL::text)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  message_id UUID;
+BEGIN
+  INSERT INTO public.student_recovery_messages (
+    user_id,
+    message_type,
+    days_inactive,
+    message_content
+  ) VALUES (
+    p_user_id,
+    p_message_type,
+    p_days_inactive,
+    p_message_content
+  ) RETURNING id INTO message_id;
+  
+  RETURN message_id;
+END;
+$$;
+
+-- Company Branding Function
+CREATE OR REPLACE FUNCTION public.update_company_branding(branding_data jsonb)
+RETURNS json
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  result json;
+BEGIN
+  UPDATE public.company_settings 
+  SET branding = branding_data,
+      updated_at = now()
+  WHERE id = 1;
+  
+  IF NOT FOUND THEN
+    INSERT INTO public.company_settings (id, branding, created_at, updated_at)
+    VALUES (1, branding_data, now(), now());
+  END IF;
+  
+  result := json_build_object('success', true, 'branding', branding_data);
+  RETURN result;
+END;
+$$;
+
+-- Questionnaire Validation Function
+CREATE OR REPLACE FUNCTION public.validate_questionnaire_structure(questionnaire_data jsonb)
+RETURNS boolean
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+DECLARE
+  question JSONB;
+  answer_type TEXT;
+BEGIN
+  -- Check if questionnaire_data is an array
+  IF jsonb_typeof(questionnaire_data) != 'array' THEN
+    RETURN FALSE;
+  END IF;
+
+  -- Validate each question
+  FOR question IN SELECT jsonb_array_elements(questionnaire_data)
+  LOOP
+    -- Check required fields
+    IF NOT (question ? 'id' AND question ? 'text' AND question ? 'order' AND question ? 'answerType') THEN
+      RETURN FALSE;
+    END IF;
+
+    answer_type := question->>'answerType';
+    
+    -- Validate answerType
+    IF answer_type NOT IN ('singleLine', 'multiLine', 'singleSelect', 'multiSelect', 'file') THEN
+      RETURN FALSE;
+    END IF;
+
+    -- Validate options field for select types
+    IF answer_type IN ('singleSelect', 'multiSelect') THEN
+      IF NOT (question ? 'options' AND jsonb_typeof(question->'options') = 'array' AND jsonb_array_length(question->'options') > 0) THEN
+        RETURN FALSE;
+      END IF;
+    END IF;
+
+    -- Ensure options is not present for non-select types
+    IF answer_type IN ('singleLine', 'multiLine', 'file') AND (question ? 'options') THEN
+      RETURN FALSE;
+    END IF;
+  END LOOP;
+
+  RETURN TRUE;
+END;
+$$;
+
+-- Missing notification functions
+CREATE OR REPLACE FUNCTION public.interpolate_template(t text, vars jsonb)
+RETURNS text
+LANGUAGE plpgsql
+STABLE SECURITY DEFINER
+SET search_path TO ''
+AS $$
+declare
+  k text;
+  v text;
+  out text := coalesce(t,'');
+begin
+  if vars is null then
+    return out;
+  end if;
+
+  for k in select jsonb_object_keys(vars)
+  loop
+    v := coalesce(vars->>k, '');
+    -- Sanitize output to prevent injection
+    v := replace(v, '<', '&lt;');
+    v := replace(v, '>', '&gt;');
+    v := replace(v, '"', '&quot;');
+    out := replace(out, '{'||k||'}', v);
+  end loop;
+
+  return out;
+end;
+$$;
+
+CREATE OR REPLACE FUNCTION public.notify_users(user_ids uuid[], template_key text, payload jsonb)
+RETURNS uuid[]
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+declare
+  -- Parameter aliases to avoid ambiguity with column names
+  v_user_ids alias for $1;
+  v_template_key alias for $2;
+  v_payload alias for $3;
+
+  tpl record;
+  uid uuid;
+  inserted_ids uuid[] := '{}';
+  now_ts timestamptz := now();
+  p_hash text := md5(coalesce(v_payload::text,''));
+  muted boolean;
+  rendered_title text;
+  rendered_body text;
+  existing_id uuid;
+begin
+  -- Fetch active template
+  select * into tpl
+  from public.notification_templates
+  where key = v_template_key and active = true
+  limit 1;
+
+  if tpl is null then
+    -- No active template; nothing to do
+    return inserted_ids;
+  end if;
+
+  -- Render strings using simple interpolation
+  rendered_title := public.interpolate_template(tpl.title_md, v_payload);
+  rendered_body  := public.interpolate_template(tpl.body_md,  v_payload);
+
+  -- Loop over user ids
+  foreach uid in array v_user_ids
+  loop
+    -- Check mutes
+    select coalesce((ns.mutes ->> v_template_key)::boolean, false)
+      into muted
+      from public.notification_settings ns
+      where ns.user_id = uid;
+
+    if muted then
+      continue;
+    end if;
+
+    -- Idempotency: skip if an identical payload for same template was created within last 1s
+    select n.id into existing_id
+    from public.notifications n
+    where n.user_id = uid
+      and coalesce(n.template_key, '') = coalesce(v_template_key,'')
+      and coalesce(n.payload_hash, '') = coalesce(p_hash,'')
+      and n.created_at > (now_ts - interval '1 second')
+    limit 1;
+
+    if existing_id is not null then
+      continue;
+    end if;
+
+    -- Insert
+    insert into public.notifications
+      (user_id, type, channel, status, sent_at, payload, template_key, payload_hash)
+    values
+      (uid, v_template_key, 'in_app', 'sent', now_ts,
+       jsonb_build_object(
+         'title', rendered_title,
+         'message', rendered_body,
+         'template_key', v_template_key,
+         'data', v_payload
+       ),
+       v_template_key,
+       p_hash
+      )
+    returning id into existing_id;
+
+    inserted_ids := inserted_ids || existing_id;
+  end loop;
+
+  return inserted_ids;
+end;
+$$;
+
+CREATE OR REPLACE FUNCTION public.notify_roles(role_codes text[], template_key text, payload jsonb)
+RETURNS uuid[]
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+declare
+  uids uuid[];
+  out_ids uuid[] := '{}';
+  role text;
+  tmp_ids uuid[];
+begin
+  uids := '{}';
+  foreach role in array role_codes
+  loop
+    uids := uids || array(select public.get_users_by_role(role));
+  end loop;
+
+  if array_length(uids, 1) is null then
+    return out_ids;
+  end if;
+
+  tmp_ids := public.notify_users(uids, template_key, payload);
+  out_ids := out_ids || tmp_ids;
+  return out_ids;
+end;
+$$;
+
+-- Success session sync function
+CREATE OR REPLACE FUNCTION public.handle_success_session_sync()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO ''
+AS $$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    DELETE FROM segmented_weekly_success_sessions WHERE id = OLD.id;
+    RETURN OLD;
+  ELSIF TG_OP = 'INSERT' THEN
+    INSERT INTO segmented_weekly_success_sessions (
+      id, title, description, start_time, end_time, 
+      mentor_id, mentor_name, status, created_at, segment
+    ) VALUES (
+      NEW.id,
+      NEW.title,
+      NEW.description,
+      NEW.start_time,
+      NEW.end_time,
+      NEW.mentor_id,
+      NEW.mentor_name,
+      NEW.status,
+      NEW.created_at,
+      'weekly'::text
+    );
+    RETURN NEW;
+  ELSIF TG_OP = 'UPDATE' THEN
+    UPDATE segmented_weekly_success_sessions SET
+      title = NEW.title,
+      description = NEW.description,
+      start_time = NEW.start_time,
+      end_time = NEW.end_time,
+      mentor_id = NEW.mentor_id,
+      mentor_name = NEW.mentor_name,
+      status = NEW.status
+    WHERE id = NEW.id;
+    RETURN NEW;
+  END IF;
+  
+  RETURN NULL;
+END;
+$$;
+
+CREATE TRIGGER handle_success_session_sync_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON public.success_sessions
+    FOR EACH ROW EXECUTE FUNCTION public.handle_success_session_sync();
 ```
 
-This completes the comprehensive database creation guide. Follow these steps in order to create a fully functional Growth OS database with all required tables, functions, policies, and initial data.
+This completes the comprehensive database creation guide. Follow these steps in order to create a fully functional Growth OS database with all required tables, functions, policies, initial data, and missing database components that exactly match your current production database.
