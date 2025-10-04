@@ -2,6 +2,8 @@
 
 Email delivery is essential for Growth OS to send notifications, invoices, password resets, and communications. This guide covers setting up SMTP with different providers.
 
+**Developed by Core47.ai** | Enterprise Email Configuration
+
 ## 📧 Why SMTP is Required
 
 Growth OS sends emails for:
@@ -351,3 +353,6 @@ ORDER BY created_at DESC;
 - [**Resend Setup →**](./resend-setup.md) (Recommended)
 - [**Gmail Setup →**](./smtp-gmail-setup.md) (Testing)
 - [**Custom SMTP →**](./smtp-custom-setup.md) (Advanced)
+
+**Developed by Core47.ai** - © 2025 Core47.ai. All rights reserved.  
+**Support**: support@core47.ai

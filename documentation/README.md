@@ -2,6 +2,8 @@
 
 Complete documentation for deploying, configuring, and managing the Growth OS Learning Management System.
 
+**Developed by Core47.ai** | [Website](https://core47.ai) | [Support](mailto:support@core47.ai)
+
 ## 📚 Documentation Structure
 
 This documentation is organized into three main sections:
@@ -145,6 +147,8 @@ When adding or updating documentation:
 
 ---
 
-**Last Updated**: 2025
-**Version**: 2.0
-**Maintained by**: Core47.ai Team
+**Last Updated**: 2025  
+**Version**: 2.0  
+**Developed & Maintained by**: [Core47.ai](https://core47.ai)  
+**License**: Proprietary - © 2025 Core47.ai. All rights reserved.  
+**Support**: support@core47.ai

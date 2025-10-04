@@ -2,6 +2,8 @@
 
 Complete deployment guides for Growth OS across different platforms and environments.
 
+**Developed by Core47.ai** | Professional Deployment Support Available
+
 ## 🚀 Quick Start
 
 ### For First-Time Deployment
@@ -353,3 +355,7 @@ Regular tasks:
 ---
 
 **Ready to deploy?** Start with the [CloudFlare Workers Guide](./cloudflare-workers.md) or [Database Setup](./database-setup.md)!
+
+**Developed by Core47.ai** - © 2025 Core47.ai. All rights reserved.  
+**Enterprise Support**: enterprise@core47.ai  
+**Website**: https://core47.ai

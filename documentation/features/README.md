@@ -2,6 +2,8 @@
 
 Complete documentation for all Growth OS features, organized by implementation status.
 
+**Developed by Core47.ai** | Enterprise Learning Management System
+
 ## 📊 Feature Status Matrix
 
 ### ✅ Complete Features (12)
@@ -250,3 +252,5 @@ When adding new features:
 **For deployment instructions**, see [Deployment Documentation](../deployment/README.md)
 
 **For database details**, see [Database Documentation](../database/README.md)
+
+**Developed by Core47.ai** - © 2025 Core47.ai. All rights reserved.

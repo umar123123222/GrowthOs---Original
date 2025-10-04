@@ -2,6 +2,8 @@
 
 Complete reference for the Growth OS database architecture, including tables, relationships, security policies, functions, and storage.
 
+**Developed by Core47.ai** | Enterprise-grade PostgreSQL Architecture
+
 ## 📊 Database Overview
 
 Growth OS uses **PostgreSQL** (via Supabase) with:
@@ -354,3 +356,6 @@ WITH CHECK (
 - Check [Troubleshooting](../deployment/verification-checklist.md)
 - Review [Security Policies](./security.md)
 - Consult [Function Reference](./functions.md)
+- Contact Core47.ai Support: support@core47.ai
+
+**Developed by Core47.ai** - © 2025 Core47.ai. All rights reserved.

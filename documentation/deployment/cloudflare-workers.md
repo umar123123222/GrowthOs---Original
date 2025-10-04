@@ -2,6 +2,8 @@
 
 Complete guide for deploying Growth OS to CloudFlare Workers for global edge deployment with automatic HTTPS and excellent performance.
 
+**Developed by Core47.ai** | Enterprise Learning Management System
+
 ## 🌟 Why CloudFlare Workers?
 
 - ⚡ **Global Edge Network** - Deploy to 275+ locations worldwide
@@ -540,3 +542,6 @@ After successful deployment:
 ---
 
 **Deployment successful?** Run the [Verification Checklist](./verification-checklist.md) to ensure everything works!
+
+**Developed by Core47.ai** - © 2025 Core47.ai. All rights reserved.  
+**Need deployment help?** Contact: support@core47.ai
