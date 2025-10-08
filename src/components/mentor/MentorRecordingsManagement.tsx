@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+
 import { Plus, Edit, Trash2, Video, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -462,7 +462,7 @@ export function MentorRecordingsManagement() {
               </TableHeader>
               <TableBody>
                 {recordings.map((recording, index) => (
-                  <Collapsible key={recording.id} open={expandedRecordings.has(recording.id)}>
+                  <React.Fragment key={recording.id}>
                     <TableRow 
                       className="hover:bg-gray-50 transition-colors animate-fade-in cursor-pointer"
                       style={{ animationDelay: `${index * 50}ms` }}
@@ -470,23 +470,21 @@ export function MentorRecordingsManagement() {
                     >
                       <TableCell className="font-medium w-[35%]">
                         <div className="flex items-center space-x-2">
-                          <CollapsibleTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              className="p-0 h-8 w-8 flex-shrink-0"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleRecordingExpansion(recording.id);
-                              }}
-                            >
-                              <ChevronDown 
-                                className={`h-4 w-4 transition-transform ${
-                                  expandedRecordings.has(recording.id) ? 'rotate-180' : ''
-                                }`}
-                              />
-                            </Button>
-                          </CollapsibleTrigger>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="p-0 h-8 w-8 flex-shrink-0"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRecordingExpansion(recording.id);
+                            }}
+                          >
+                            <ChevronDown 
+                              className={`h-4 w-4 transition-transform ${
+                                expandedRecordings.has(recording.id) ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </Button>
                           <span className="truncate">{recording.recording_title}</span>
                         </div>
                       </TableCell>
@@ -530,7 +528,7 @@ export function MentorRecordingsManagement() {
                         </div>
                       </TableCell>
                     </TableRow>
-                    <CollapsibleContent asChild>
+                    {expandedRecordings.has(recording.id) && (
                       <TableRow>
                         <TableCell colSpan={5} className="bg-gray-50 p-6">
                           <div className="space-y-4">
@@ -561,8 +559,8 @@ export function MentorRecordingsManagement() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    </CollapsibleContent>
-                  </Collapsible>
+                    )}
+                  </React.Fragment>
                 ))}
               </TableBody>
             </Table>
