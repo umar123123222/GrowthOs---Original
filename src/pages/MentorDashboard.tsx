@@ -10,7 +10,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { StudentProgress } from '@/components/mentor/StudentProgress';
 import { MyStudents } from '@/components/mentor/MyStudents';
-import { Users, MessageSquare, Clock, CheckCircle, AlertCircle, Calendar, FileText } from 'lucide-react';
+import { MentorRecordingsManagement } from '@/components/mentor/MentorRecordingsManagement';
+import { MentorModulesManagement } from '@/components/mentor/MentorModulesManagement';
+import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
+import { Users, MessageSquare, Clock, CheckCircle, AlertCircle, Calendar, FileText, Video, BookOpen } from 'lucide-react';
 
 interface AssignedStudent {
   id: string;
@@ -161,7 +164,68 @@ export default function MentorDashboard() {
           </div>
 
           <div className="mt-6">
-            <SubmissionsManagement userRole="mentor" />
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-5">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="submissions">Submissions</TabsTrigger>
+                <TabsTrigger value="recordings">Recordings</TabsTrigger>
+                <TabsTrigger value="modules">Modules</TabsTrigger>
+                <TabsTrigger value="assignments">Assignments</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="overview" className="space-y-6 mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Card className="border-l-4 border-l-orange-500">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Assignments Pending Reviews</CardTitle>
+                      <Clock className="h-4 w-4 text-orange-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-orange-900">{stats.pendingReviews}</div>
+                      <p className="text-xs text-muted-foreground">Awaiting your feedback</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-l-4 border-l-green-500">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Assignments Checked</CardTitle>
+                      <CheckCircle className="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-900">{stats.checkedAssignments}</div>
+                      <p className="text-xs text-muted-foreground">Feedback provided</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-l-4 border-l-blue-500">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Sessions Mentored</CardTitle>
+                      <MessageSquare className="h-4 w-4 text-blue-600" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-blue-900">{stats.sessionsMentored}</div>
+                      <p className="text-xs text-muted-foreground">This month</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="submissions" className="mt-6">
+                <SubmissionsManagement userRole="mentor" />
+              </TabsContent>
+
+              <TabsContent value="recordings" className="mt-6">
+                <MentorRecordingsManagement />
+              </TabsContent>
+
+              <TabsContent value="modules" className="mt-6">
+                <MentorModulesManagement />
+              </TabsContent>
+
+              <TabsContent value="assignments" className="mt-6">
+                <AssignmentManagement />
+              </TabsContent>
+            </Tabs>
           </div>
         </div>
       </div>

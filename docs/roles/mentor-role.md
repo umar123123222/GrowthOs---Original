@@ -37,10 +37,12 @@ Mentors provide personalized guidance and assessment for assigned students, revi
 - Financial status visibility for assigned students
 
 ### Content Management
-- View all learning modules and assignments
-- Cannot modify core curriculum content
-- Can provide supplementary resources and guidance
+- **Full Recording Management**: Create, edit, and delete video recordings (excluding video URL modifications)
+- **Module Management**: Create, edit, and delete course modules
+- **Assignment Management**: Create, edit, delete, and link assignments to recordings
+- Can provide supplementary resources and guidance through recording attachments
 - Access to session scheduling and management tools
+- **Note**: Video URLs cannot be modified by mentors for security reasons
 
 ### Administrative Functions
 - Limited support ticket management and responses
