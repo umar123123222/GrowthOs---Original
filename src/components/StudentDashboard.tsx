@@ -121,7 +121,10 @@ export function StudentDashboard() {
       try {
         let firstAnswerText = '';
         let thirdAnswerText = '';
-        const answers: any = studentData?.answers_json;
+        let answers: any = studentData?.answers_json;
+        if (typeof answers === 'string') {
+          try { answers = JSON.parse(answers); } catch {}
+        }
         
         // Extract answers from question 1 and question 3
         if (answers) {
@@ -356,10 +359,8 @@ export function StudentDashboard() {
             
             <div className="bg-background/80 rounded-lg p-4 border border-primary/10">
               <p className="text-base font-normal text-foreground leading-relaxed">
-                {firstOnboardingRange?.min && firstOnboardingRange?.max
-                  ? <>You want to earn between {firstOnboardingRange.min} and {firstOnboardingRange.max}.</>
-                  : firstOnboardingAnswer
-                  ? <>You want to earn {firstOnboardingAnswer}.</>
+                {firstOnboardingAnswer
+                  ? firstOnboardingAnswer
                   : extractFinancialGoalForDisplay(dreamGoal)
                 }
               </p>
