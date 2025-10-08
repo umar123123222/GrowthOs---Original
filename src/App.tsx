@@ -219,9 +219,9 @@ const App = () => {
                     <Route path="shopify-dashboard" element={<ShopifyDashboard />} />
                     <Route path="meta-ads-dashboard" element={<MetaAdsDashboard />} />
                     
-                     {/* Role-specific routes */}
+                    {/* Role-specific routes */}
                     <Route path="admin" element={<AdminDashboard />} />
-                    <Route path="mentor-dashboard/*" element={<MentorDashboard />} />
+                    <Route path="mentor" element={<MentorDashboard />} />
                     <Route path="mentor/sessions" element={<MentorSessionsPage />} />
                     <Route path="superadmin" element={<SuperadminDashboard />} />
                     <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
