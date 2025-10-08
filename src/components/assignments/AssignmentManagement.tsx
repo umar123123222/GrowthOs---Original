@@ -218,14 +218,13 @@ export function AssignmentManagement() {
             {user?.role === 'mentor' ? 'View and edit assignments' : 'Manage assignment assignments and their assignments'}
           </p>
         </div>
-        {user?.role !== 'mentor' && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreateDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-medium">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Assignment
-              </Button>
-            </DialogTrigger>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={openCreateDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-medium">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Assignment
+            </Button>
+          </DialogTrigger>
           
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader className="pb-4">
@@ -316,7 +315,6 @@ export function AssignmentManagement() {
             </form>
           </DialogContent>
         </Dialog>
-        )}
       </div>
 
       {/* All Assignments Section */}
