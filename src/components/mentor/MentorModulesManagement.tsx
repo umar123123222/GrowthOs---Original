@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, BookOpen } from 'lucide-react';
+import { Plus, Edit, BookOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { safeQuery } from '@/lib/database-safety';
@@ -213,57 +213,6 @@ export function MentorModulesManagement() {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (moduleId: string) => {
-    if (!confirm('Are you sure you want to delete this module? This action cannot be undone and will unassign all recordings from this module.')) {
-      return;
-    }
-
-    try {
-      safeLogger.info('Starting module deletion for ID:', { moduleId });
-      
-      safeLogger.info('Unassigning recordings from module...');
-      const { error: unassignError } = await supabase
-        .from('available_lessons')
-        .update({ module: null })
-        .eq('module', moduleId);
-
-      if (unassignError) {
-        safeLogger.error('Error unassigning recordings:', unassignError);
-        throw unassignError;
-      }
-      safeLogger.info('Successfully unassigned recordings');
-
-      safeLogger.info('Deleting module...');
-      const { error: deleteError } = await supabase
-        .from('modules')
-        .delete()
-        .eq('id', moduleId);
-
-      if (deleteError) {
-        safeLogger.error('Error deleting module:', deleteError);
-        throw deleteError;
-      }
-      safeLogger.info('Successfully deleted module');
-
-      toast({
-        title: "Success",
-        description: "Module deleted successfully"
-      });
-      
-      safeLogger.info('Refreshing data after deletion...');
-      setModules(prevModules => prevModules.filter(module => module.id !== moduleId));
-      await Promise.all([fetchModules(), fetchRecordings()]);
-      
-    } catch (error) {
-      safeLogger.error('Error deleting module:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete module. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleRecordingSelect = (recordingId: string) => {
     if (!formData.selectedRecordings.includes(recordingId)) {
       setFormData({
@@ -303,19 +252,10 @@ export function MentorModulesManagement() {
           <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
             Modules Management
           </h2>
-          <p className="text-muted-foreground mt-1 text-lg">Manage course modules and their recordings</p>
+          <p className="text-muted-foreground mt-1 text-lg">View and edit course modules</p>
         </div>
         
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={resetForm}
-              className="hover-scale bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Module
-            </Button>
-          </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold">
@@ -488,14 +428,6 @@ export function MentorModulesManagement() {
                           className="hover-scale"
                         >
                           <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => handleDelete(module.id)}
-                          className="hover-scale text-red-600 hover:text-red-700"
-                        >
-                          <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
                     </TableCell>

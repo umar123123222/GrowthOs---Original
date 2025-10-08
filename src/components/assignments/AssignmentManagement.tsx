@@ -214,15 +214,18 @@ export function AssignmentManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold header-accent">Assignments Management</h1>
-          <p className="text-muted-foreground mt-1">Manage assignment assignments and their assignments</p>
+          <p className="text-muted-foreground mt-1">
+            {user?.role === 'mentor' ? 'View and edit assignments' : 'Manage assignment assignments and their assignments'}
+          </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreateDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-medium">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Assignment
-            </Button>
-          </DialogTrigger>
+        {user?.role !== 'mentor' && (
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openCreateDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-medium">
+                <Plus className="w-4 h-4 mr-2" />
+                Add Assignment
+              </Button>
+            </DialogTrigger>
           
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader className="pb-4">
@@ -313,6 +316,7 @@ export function AssignmentManagement() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* All Assignments Section */}
@@ -354,9 +358,11 @@ export function AssignmentManagement() {
                         <Button variant="outline" size="sm" onClick={() => handleEdit(assignment)} className="hover:bg-gray-50">
                           <Edit className="w-4 h-4" />
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleDelete(assignment.id)} className="hover:bg-red-50 hover:text-red-600">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        {user?.role !== 'mentor' && (
+                          <Button variant="outline" size="sm" onClick={() => handleDelete(assignment.id)} className="hover:bg-red-50 hover:text-red-600">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>)}

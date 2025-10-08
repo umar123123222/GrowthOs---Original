@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import { Plus, Edit, Trash2, Video, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Video, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from '../superadmin/RecordingRatingDetails';
@@ -231,37 +231,6 @@ export function MentorRecordingsManagement() {
     });
   };
 
-  const handleDelete = async (recordingId: string) => {
-    if (!confirm('Are you sure you want to delete this recording?')) return;
-
-    try {
-      safeLogger.info('Deleting recording with ID:', { recordingId });
-      const { error } = await supabase
-        .from('available_lessons')
-        .delete()
-        .eq('id', recordingId);
-
-      if (error) {
-        safeLogger.error('Delete error:', error);
-        throw error;
-      }
-
-      toast({
-        title: "Success",
-        description: "Recording deleted successfully"
-      });
-      
-      await fetchRecordings();
-    } catch (error) {
-      safeLogger.error('Error deleting recording:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete recording",
-        variant: "destructive"
-      });
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -280,29 +249,9 @@ export function MentorRecordingsManagement() {
           <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
             Recordings Management
           </h2>
-          <p className="text-muted-foreground mt-1 text-lg">Manage video recordings and their assignments</p>
+          <p className="text-muted-foreground mt-1 text-lg">View and edit video recordings</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button 
-              onClick={() => {
-                setEditingRecording(null);
-                setFormData({
-                  recording_title: '',
-                  duration_min: 0,
-                  sequence_order: 0,
-                  notes: '',
-                  description: '',
-                  module_id: '',
-                  assignment_id: ''
-                });
-              }}
-              className="hover-scale bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Add Recording
-            </Button>
-          </DialogTrigger>
           <DialogContent className="w-[95vw] sm:max-w-4xl h-[85vh] sm:h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold">
@@ -453,11 +402,11 @@ export function MentorRecordingsManagement() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50">
-                  <TableHead className="font-semibold w-[35%]">Title</TableHead>
-                  <TableHead className="font-semibold w-[10%] text-center">Order</TableHead>
+                  <TableHead className="font-semibold w-[40%]">Title</TableHead>
+                  <TableHead className="font-semibold w-[15%] text-center">Order</TableHead>
                   <TableHead className="font-semibold w-[20%]">Module</TableHead>
                   <TableHead className="font-semibold w-[15%] text-center">Duration</TableHead>
-                  <TableHead className="font-semibold w-[20%] text-center">Actions</TableHead>
+                  <TableHead className="font-semibold w-[10%] text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -468,7 +417,7 @@ export function MentorRecordingsManagement() {
                       style={{ animationDelay: `${index * 50}ms` }}
                       onClick={() => toggleRecordingExpansion(recording.id)}
                     >
-                      <TableCell className="font-medium w-[35%]">
+                      <TableCell className="font-medium w-[40%]">
                         <div className="flex items-center space-x-2">
                           <Button 
                             variant="ghost" 
@@ -488,7 +437,7 @@ export function MentorRecordingsManagement() {
                           <span className="truncate">{recording.recording_title}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="w-[10%] text-center">
+                      <TableCell className="w-[15%] text-center">
                         <Badge variant="outline" className="font-semibold">{recording.sequence_order || 'N/A'}</Badge>
                       </TableCell>
                       <TableCell className="w-[20%]">
@@ -501,7 +450,7 @@ export function MentorRecordingsManagement() {
                       <TableCell className="w-[15%] text-center">
                         <span className="font-medium">{recording.duration_min || 'N/A'} min</span>
                       </TableCell>
-                      <TableCell className="w-[20%]" onClick={(e) => e.stopPropagation()}>
+                      <TableCell className="w-[10%]" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-center space-x-2">
                           <Button 
                             variant="outline" 
@@ -513,17 +462,6 @@ export function MentorRecordingsManagement() {
                             className="hover-scale"
                           >
                             <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDelete(recording.id);
-                            }}
-                            className="hover-scale text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
                       </TableCell>
