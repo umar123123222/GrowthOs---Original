@@ -37,12 +37,13 @@ Mentors provide personalized guidance and assessment for assigned students, revi
 - Financial status visibility for assigned students
 
 ### Content Management
-- **Full Recording Management**: Create, edit, and delete video recordings (excluding video URL modifications)
-- **Module Management**: Create, edit, and delete course modules
-- **Assignment Management**: Create, edit, delete, and link assignments to recordings
+- **Recording Editing**: Edit existing video recordings (cannot create or delete recordings)
+- **Module Editing**: Edit existing course modules (cannot create or delete modules)
+- **Assignment Management**: Create, edit, and link assignments to recordings (cannot delete assignments)
 - Can provide supplementary resources and guidance through recording attachments
 - Access to session scheduling and management tools
 - **Note**: Video URLs cannot be modified by mentors for security reasons
+- **Restriction**: Content structure (recordings, modules) managed by admins/superadmins only
 
 ### Administrative Functions
 - Limited support ticket management and responses
@@ -52,9 +53,12 @@ Mentors provide personalized guidance and assessment for assigned students, revi
 
 ### Restricted Actions
 - Cannot access unassigned student data
-- Cannot modify course structure or assignments
+- Cannot create new recordings or modules (only edit existing ones)
+- Cannot delete recordings, modules, or assignments
+- Cannot modify video URLs in recordings
 - Cannot process payments or financial transactions
 - Cannot manage other mentor accounts
+- Cannot modify system-wide settings or RLS policies
 
 ## Mentorship Workflows
 

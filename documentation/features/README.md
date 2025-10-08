@@ -29,6 +29,19 @@ Complete documentation for all Growth OS features, organized by implementation s
 |---------|--------|----------------|----------------|
 | [Messaging System](./messaging-system.md) | 40% Complete | Basic message submission, display, search | Real-time chat, direct messaging, file attachments |
 
+### ⚠️ Pre-Launch Security Warnings
+
+**CRITICAL**: Several security vulnerabilities have been identified that MUST be resolved before public launch:
+
+1. **Password Hash Exposure** - Enrollment managers can view password hashes
+2. **Missing RLS Policies** - `user_security_summary` table lacks access control
+3. **Hardcoded Credentials** - Supabase credentials in source code
+4. **Console Logging** - 253 statements exposing sensitive data
+
+**Action Required**: Review [Security Issues Document](../../docs/SECURITY_ISSUES.md) and [Pre-Launch Checklist](../../docs/PRE_LAUNCH_CHECKLIST.md) before deployment.
+
+**Launch Readiness**: 🔴 **NOT READY** - Estimated 2-3 weeks to resolve critical issues
+
 ### 📋 Planned for v2.0 (2)
 
 | Feature | Planned Release | Key Features |
@@ -171,9 +184,10 @@ graph TD
 
 **Mentor:**
 - [Mentorship Program](./mentorship-program.md) - Student guidance
-- [Assignment System](./assignment-system.md) - Review submissions
+- [Assignment System](./assignment-system.md) - Create and review assignments
 - [Live Sessions](./live-sessions.md) - Host sessions
 - [Reporting & Analytics](./reporting-analytics.md) - Student progress
+- **Note**: Mentors can edit content but not create/delete structure (see [Mentor Permission Changes](../../docs/MENTOR_PERMISSION_CHANGES.md))
 
 **Student:**
 - [Learning Management](./learning-management.md) - Access content

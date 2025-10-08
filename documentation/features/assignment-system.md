@@ -28,19 +28,25 @@ The Assignment System manages practical exercises that serve as progression gate
 
 ### Mentor Perspective
 
-1. **Assignment Queue Management**
+1. **Assignment Creation and Management**
+   - Create new assignments and link to recordings
+   - Edit existing assignment requirements and settings
+   - Configure submission types and validation rules
+   - **Note**: Cannot delete assignments (admin-only)
+
+2. **Assignment Queue Management**
    - Prioritized list of pending submissions
    - Student context and progress information
    - Assignment history and patterns
    - Workload distribution and capacity
 
-2. **Review Process**
+3. **Review Process**
    - Comprehensive submission viewing
    - Structured feedback forms
    - Approval/decline decision making
    - Progress tracking and analytics
 
-3. **Student Support**
+4. **Student Support**
    - Direct communication channels
    - Performance trend analysis
    - Intervention and support triggers
@@ -87,10 +93,11 @@ CREATE TABLE public.assignment_submissions (
 ### Core Components
 
 **Assignment Management**: `AssignmentManagement.tsx`
-- Create and configure assignments
+- Create and configure assignments (mentors and admins)
 - Link assignments to recordings
 - Set submission requirements
 - Manage assignment metadata
+- **RLS Policy**: Mentors can INSERT and UPDATE assignments (migration 20251008085249)
 
 **Student Submission**: `StudentSubmissionDialog.tsx`
 - Multi-format submission interface

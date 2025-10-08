@@ -176,6 +176,18 @@ Critical security and validation functions.
 
 ## 🔐 Critical Security Information
 
+### ⚠️ Pre-Launch Security Warning
+
+**STATUS**: 🔴 **NOT READY FOR PUBLIC LAUNCH** - Critical security issues present
+
+**Summary of Issues**:
+1. ❌ Password hash exposure via RLS policy (enrollment managers can view passwords)
+2. ❌ Missing RLS policies on `user_security_summary` table
+3. ❌ Hardcoded Supabase credentials in source code
+4. ⚠️ 3 Supabase linter warnings need resolution
+
+**Action Required**: See [Security Issues Document](../../docs/SECURITY_ISSUES.md) for complete details and remediation steps.
+
 ### The `get_current_user_role()` Function
 
 **⚠️ CRITICAL**: This function is the foundation of the entire security system. It's referenced in 68 RLS policies across all tables.
@@ -347,8 +359,11 @@ WITH CHECK (
 - Enable RLS on all user-facing tables
 - Use SECURITY DEFINER for functions that need to bypass RLS
 - Test policies with different user roles
+- Never expose password fields via RLS policies
+- Review Supabase linter warnings before production
 - Document all custom functions
 - Add migrations to version control
+- Rotate credentials after security incidents
 
 ---
 

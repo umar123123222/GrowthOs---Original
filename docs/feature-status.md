@@ -8,6 +8,94 @@ This document tracks the current implementation status of all features documente
 - 📋 **Planned** - Feature is documented but not yet implemented
 - ❌ **Broken/Incomplete** - Feature exists but has known issues
 
+## 🚨 Pre-Launch Critical Issues
+
+**⚠️ WARNING: DO NOT LAUNCH PUBLICLY UNTIL THESE ARE RESOLVED**
+
+### Security Issues (CRITICAL - Must Fix Before Launch)
+
+1. **Data Exposure Vulnerabilities**
+   - ❌ Enrollment managers can view `password_hash` and `password_display` from users table
+   - ❌ `company_settings` table is readable by all authenticated users
+   - ❌ `user_security_summary` table lacks RLS policies (wide open)
+   - **Risk**: Credential theft, data breaches, compliance violations
+   - **Fix Required**: Update RLS policies to restrict password field access
+
+2. **Hardcoded Credentials in Source Code**
+   - ❌ Supabase URL and anon key hardcoded in `src/lib/env-config.ts` (lines 4-6)
+   - **Risk**: Credentials exposed in Git history and build artifacts
+   - **Fix Required**: Move all credentials to environment variables only
+
+3. **Database Security Warnings**
+   - ⚠️ 3 Supabase linter warnings need review
+   - ⚠️ Security Definer views need security audit
+   - ⚠️ PostgreSQL version needs security patches
+   - **Action**: Review and resolve all linter warnings
+
+### Code Quality Issues (HIGH PRIORITY)
+
+4. **Production Console Logging**
+   - ❌ 253 console.log/error/warn statements found across 81 files
+   - **Top offenders**: ConnectAccountsDialog.tsx (20), StudentDashboard.tsx (15), Layout.tsx (12)
+   - **Risk**: Performance impact, sensitive data exposure in browser console
+   - **Fix Required**: Remove all console statements or replace with production logging service
+
+5. **LocalStorage Security Risks**
+   - ⚠️ Shopify domain stored in localStorage (potential XSS target)
+   - ⚠️ Error data persisted in localStorage (may contain sensitive info)
+   - ⚠️ Questionnaire responses in localStorage (privacy concern)
+   - **Fix Required**: Review localStorage usage, move sensitive data to secure storage
+
+### Feature Completeness Issues (MEDIUM PRIORITY)
+
+6. **Missing Documented Features**
+   - ❌ Certificate System - Fully documented but completely missing (no tables, no UI)
+   - ❌ Real-time Chat/Messaging - UI exists but no backend implementation
+   - ❌ Leaderboard - Page exists but displays placeholder data
+   - ❌ AI Success Partner - Documented but not implemented
+   - ❌ Live Video Sessions - Scheduling exists but no video platform integration
+   - **Fix Required**: Add "Coming Soon" banners or implement features
+
+7. **Email System Production Readiness**
+   - ⚠️ SMTP configuration exists but production status unclear
+   - ⚠️ Email delivery monitoring not verified
+   - ⚠️ Retry logic and bounce handling needs testing
+   - **Action**: Full email system audit and testing
+
+### Infrastructure Issues (MEDIUM PRIORITY)
+
+8. **Environment Configuration**
+   - ⚠️ `.env.example` is 569 lines long (excessive complexity)
+   - ⚠️ Many feature flags set to `false` by default
+   - ⚠️ Some variables contain development/test values
+   - **Action**: Clean up configuration, document required vs optional
+
+9. **Missing Database Tables for Documented Features**
+   - ❌ `certificates` table (for certificate system)
+   - ❌ `chat_messages` table (for messaging)
+   - ❌ `leaderboard_entries` table (for gamification)
+   - ❌ `live_sessions` table (for video conferencing)
+   - ❌ `file_versions` table (for version control)
+
+10. **Incomplete Features**
+    - 🚧 Bulk operations partially implemented
+    - 🚧 Advanced analytics missing dashboards
+    - 🚧 File versioning not implemented
+    - 🚧 Calendar integration missing
+    - 🚧 Session recording not implemented
+
+---
+
+**📊 Security Risk Assessment:**
+- **Critical Issues**: 3 (Credential exposure, RLS vulnerabilities)
+- **High Priority**: 2 (Console logging, localStorage security)
+- **Medium Priority**: 5 (Missing features, config issues)
+- **Estimated Fix Time**: 2-3 weeks for security hardening + feature cleanup
+
+**✅ Recommendation**: Do NOT launch publicly until all Critical and High Priority issues are resolved.
+
+---
+
 ## Core Features Status
 
 ### Student Experience
@@ -33,7 +121,9 @@ This document tracks the current implementation status of all features documente
 | Feature | Status | Notes |
 |---------|--------|-------|
 | Student Management | ✅ | View and manage assigned students |
+| Assignment Creation | ✅ | Create and edit assignments (restored Oct 2025) |
 | Assignment Review | ✅ | Grade submissions and provide feedback |
+| Content Editing | ✅ | Edit modules and recordings (cannot delete) |
 | Student Progress Tracking | ✅ | Detailed analytics and monitoring |
 | Mentor Dashboard | ✅ | Overview of mentor activities |
 

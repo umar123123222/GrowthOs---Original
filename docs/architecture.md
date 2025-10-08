@@ -124,20 +124,42 @@ erDiagram
 
 **Function Categories:**
 
-1. **User Management**
-   - `create-student` - Student onboarding with email automation
+1. **User Management** ✅ Production Ready
+   - `create-student-v2` - Student onboarding with email automation
+   - `create-enhanced-student` - Advanced student creation with integrations
    - `create-team-member` - Admin/mentor account creation
    - `delete-user-with-role` - Secure user deletion with audit trails
+   - `secure-user-creation` - Enhanced security for user provisioning
 
-2. **Business Logic**
+2. **Business Logic** ✅ Production Ready
    - `cleanup-inactive-students` - Automated data cleanup
-   - `mark-invoice-paid` - Payment processing
-   - `motivational-notifications` - Automated engagement
+   - `mark-invoice-paid` - Payment processing and LMS unlock
+   - `motivational-notifications` - Automated student engagement
+   - `installment-reminder-scheduler` - Payment reminders
+   - `success-partner-credits` - Credit management system
 
-3. **Integrations**
-   - `shopify-metrics` - E-commerce data sync
-   - `encrypt-token` - Security utilities
-   - `notification-scheduler` - Email automation
+3. **Email & Notifications** ✅ Production Ready
+   - `process-email-queue` - Email delivery processing
+   - `notification-scheduler` - Scheduled notification delivery
+   - ⚠️ **Note**: Email system requires production SMTP verification
+
+4. **Integrations** 🚧 Partial Implementation
+   - `shopify-metrics` - E-commerce data sync (✅ Implemented)
+   - `sync-shopify-metrics` - Automated metric synchronization (✅ Implemented)
+   - `validate-shopify` - Shopify credential validation (✅ Implemented)
+   - `meta-ads-metrics` - Facebook ads integration (⚠️ Requires API key)
+   - `encrypt-token` - Security utilities (✅ Implemented)
+
+5. **Onboarding & Processing** ✅ Production Ready
+   - `process-onboarding-jobs` - Async onboarding processing
+   - Background job queue system for heavy operations
+
+**Edge Function Security**:
+- All functions use Supabase service role for database access
+- Input validation using TypeScript types
+- ⚠️ **Issue**: Some functions lack Zod schema validation (recommended before launch)
+- Error handling with proper HTTP status codes
+- Audit logging for sensitive operations
 
 ### Security Architecture
 
@@ -265,6 +287,61 @@ graph LR
 - **Real-time**: WebSocket connections for live updates
 - **Edge Functions**: Serverless functions for business logic
 
+## Security Architecture
+
+### ⚠️ Known Security Issues
+
+**CRITICAL WARNING**: The system has several critical security vulnerabilities that MUST be addressed before public launch. See [Security Issues Document](./SECURITY_ISSUES.md) for complete details.
+
+**Summary of Critical Issues**:
+1. Password hash exposure via RLS policy (enrollment managers can view passwords)
+2. Missing RLS policies on `user_security_summary` table
+3. Hardcoded Supabase credentials in source code (`src/lib/env-config.ts`)
+4. 253 console.log statements exposing sensitive data
+5. Insecure localStorage usage vulnerable to XSS
+
+**Status**: 🔴 **NOT READY FOR PUBLIC LAUNCH**
+
+### Security Best Practices
+
+**Authentication Security**:
+- JWT tokens with automatic refresh
+- Role-based access control (RBAC)
+- Session timeout and revocation
+- Multi-factor authentication (planned)
+
+**Database Security**:
+- Row Level Security (RLS) on all user tables
+- Security Definer functions for privileged operations
+- Prepared statements to prevent SQL injection
+- Audit logging for all sensitive operations
+
+**API Security**:
+- CORS configuration for allowed origins
+- Rate limiting on all endpoints
+- Input validation using Zod schemas
+- API key rotation procedures
+
+**Data Protection**:
+- Encryption at rest (Supabase Storage)
+- Encryption in transit (TLS/HTTPS)
+- PII data anonymization for analytics
+- GDPR compliance measures
+
+### Security Monitoring
+
+**Logging & Auditing**:
+- All admin actions logged to `admin_logs` table
+- User activity tracked in `user_activity_logs`
+- Failed authentication attempts monitored
+- Suspicious activity alerts (planned)
+
+**Vulnerability Management**:
+- Regular Supabase linter checks
+- Dependency vulnerability scanning
+- Security patch management
+- Annual penetration testing (recommended)
+
 ## Error Handling Strategy
 
 ### Client-Side Error Handling
@@ -273,13 +350,14 @@ graph LR
 - Toast notifications for user feedback
 - Retry mechanisms for network failures
 - Fallback UI components for graceful degradation
+- **⚠️ Issue**: 253 console.log statements need removal before production
 
 ### Server-Side Error Handling
 
 - Database transaction rollbacks
-- Edge Function error responses
-- Audit logging for debugging
-- Automatic retry for transient failures
+- Edge Function error responses with proper status codes
+- Audit logging for debugging (without sensitive data exposure)
+- Automatic retry for transient failures with exponential backoff
 
 ## Next Steps
 

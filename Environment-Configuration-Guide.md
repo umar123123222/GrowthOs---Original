@@ -26,10 +26,12 @@ This project has been made fully configurable to support SaaS deployment scenari
 
 ## What's Configurable
 
-### 🔑 Supabase Configuration
-- `VITE_SUPABASE_URL` - Your Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` - Public anon key
-- `VITE_SUPABASE_PROJECT_ID` - Project identifier
+### 🔑 Supabase Configuration (REQUIRED)
+- `VITE_SUPABASE_URL` - Your Supabase project URL (**Required**, sensitive)
+- `VITE_SUPABASE_ANON_KEY` - Public anon key (**Required**, sensitive)
+- `VITE_SUPABASE_PROJECT_ID` - Project identifier (**Required**, sensitive)
+
+⚠️ **Security Note**: These credentials should NEVER be hardcoded. Always use environment variables.
 
 ### 🎨 Application Branding
 - `VITE_APP_TITLE` - Browser title and meta tags
@@ -83,12 +85,45 @@ node scripts/build-html.js
 node scripts/validate-env.js
 ```
 
+## ⚠️ Security Warnings
+
+**CRITICAL**: Before deploying to production, you MUST:
+
+1. **Never commit `.env` files to Git** - They contain sensitive credentials
+2. **Use environment variables exclusively** - No hardcoded credentials in code
+3. **Rotate credentials regularly** - Especially after any security incident
+4. **Use different credentials per environment** - Dev, staging, and production should have separate keys
+5. **Restrict access to `.env` files** - Limit who can view production credentials
+
+**Known Security Issue**: Currently, `src/lib/env-config.ts` has hardcoded Supabase credentials (lines 4-6). This MUST be fixed before public launch. See [Security Issues Document](./docs/SECURITY_ISSUES.md) for details.
+
+## Environment-Specific Configuration
+
+### Development Environment
+- Can use shared development Supabase project
+- Console logging enabled for debugging
+- Relaxed security settings acceptable
+- File: `.env.development`
+
+### Staging Environment  
+- Should mirror production configuration
+- Use separate Supabase project (not production)
+- Enable detailed logging for testing
+- File: `.env.staging`
+
+### Production Environment
+- **Must use production Supabase project**
+- **All console logging must be removed**
+- **Strict security settings enforced**
+- **Credentials stored in secure vault (not in Git)**
+- File: `.env.production` (never commit this!)
+
 ## Backward Compatibility
 
 - ✅ **All existing hardcoded values are preserved as fallbacks**
 - ✅ **Current deployments continue working without any changes**
 - ✅ **No breaking changes to existing functionality**
-- ✅ **Environment variables are optional - defaults are used if not set**
+- ⚠️ **Environment variables recommended for security** - Fallbacks should only be used in development
 
 ## Migration from Hardcoded Values
 
