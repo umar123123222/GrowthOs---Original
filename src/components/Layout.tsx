@@ -409,21 +409,21 @@ const Layout = memo(({
         href: "/mentor",
         icon: Monitor
       }, {
-        name: "Recordings",
-        href: "/mentor/recordings",
-        icon: Video
+        name: "Success Sessions",
+        href: "/mentor/sessions",
+        icon: Calendar
       }, {
         name: "Modules",
         href: "/mentor/modules",
         icon: BookOpen
       }, {
+        name: "Recordings",
+        href: "/mentor/recordings",
+        icon: Video
+      }, {
         name: "Assignments",
         href: "/mentor/assignments",
         icon: FileText
-      }, {
-        name: "Success Sessions",
-        href: "/mentor/sessions",
-        icon: Calendar
       }, {
         name: "Profile",
         href: "/profile",
