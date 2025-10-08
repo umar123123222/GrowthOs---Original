@@ -114,26 +114,51 @@ const calculateStats = async () => {
 
 const updateInvoiceStatus = async (invoiceId: string, status: string) => {
   try {
-    const updates: any = { status };
     if (status === 'paid') {
-      updates.paid_at = new Date().toISOString();
-    } else if (status !== 'paid') {
-      updates.paid_at = null;
+      // Use the edge function to properly mark as paid, update fees_cleared, and activate user
+      console.log('Calling mark-invoice-paid edge function for invoice:', invoiceId);
+      
+      const { data, error } = await supabase.functions.invoke('mark-invoice-paid', {
+        body: { invoice_id: invoiceId }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Failed to mark invoice as paid');
+      }
+
+      if (!data?.success) {
+        console.error('Payment processing failed:', data?.error);
+        throw new Error(data?.error || 'Failed to process payment');
+      }
+
+      console.log('Payment processed successfully:', data);
+      toast({ title: 'Success', description: 'Invoice marked as paid and student account activated' });
+    } else {
+      // For other status updates, use direct update
+      const updates: any = { status };
+      if (status !== 'paid') {
+        updates.paid_at = null;
+      }
+
+      const { error } = await supabase
+        .from('invoices')
+        .update(updates)
+        .eq('id', invoiceId);
+      
+      if (error) throw error;
+      toast({ title: 'Success', description: 'Invoice status updated' });
     }
-
-    const { error } = await supabase
-      .from('invoices')
-      .update(updates)
-      .eq('id', invoiceId);
-    if (error) throw error;
-
-    toast({ title: 'Success', description: 'Invoice status updated' });
 
     await fetchInvoices();
     await calculateStats();
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating invoice:', error);
-    toast({ title: 'Error', description: 'Failed to update invoice', variant: 'destructive' });
+    toast({ 
+      title: 'Error', 
+      description: error?.message || 'Failed to update invoice', 
+      variant: 'destructive' 
+    });
   }
 };
 

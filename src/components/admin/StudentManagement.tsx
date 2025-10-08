@@ -486,9 +486,9 @@ export const StudentManagement = () => {
   };
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
-     const student = students.find(s => s.id === studentId);
+      const student = students.find(s => s.id === studentId);
       if (!student) return;
-      // Invoices.student_id references students.id (student_record_id), not users.id
+      
       if (!student.student_record_id) {
         toast({
           title: 'Error',
@@ -497,33 +497,44 @@ export const StudentManagement = () => {
         });
         return;
       }
-      const { error } = await supabase.from('invoices').insert({
-        student_id: student.student_record_id,
-        installment_number: installmentNumber,
-        amount: 100,
-        // You can calculate this based on fee structure
-        status: 'paid',
-        due_date: new Date().toISOString()
-      });
-      if (error) throw error;
 
-      // If first installment, activate LMS
-      if (installmentNumber === 1) {
-        await supabase.from('users').update({
-          lms_status: 'active'
-        }).eq('id', studentId);
+      console.log(`Marking installment ${installmentNumber} as paid for student:`, student.student_record_id);
+
+      // Call the mark-invoice-paid edge function
+      const { data, error } = await supabase.functions.invoke('mark-invoice-paid', {
+        body: {
+          student_id: student.student_record_id,
+          installment_number: installmentNumber,
+          amount: 100,
+          due_date: new Date().toISOString()
+        }
+      });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw new Error(error.message || 'Edge function call failed');
       }
+
+      if (!data?.success) {
+        console.error('Payment failed:', data?.error);
+        throw new Error(data?.error || 'Failed to process payment');
+      }
+
+      console.log('Payment processed successfully:', data);
+
       toast({
         title: 'Success',
-        description: `Installment ${installmentNumber} marked as paid`
+        description: `Installment ${installmentNumber} marked as paid and account activated`
       });
-      fetchStudents();
-      fetchInstallmentPayments();
-    } catch (error) {
+
+      // Refresh data
+      await fetchStudents();
+      await fetchInstallmentPayments();
+    } catch (error: any) {
       console.error('Error marking installment as paid:', error);
       toast({
         title: 'Error',
-        description: 'Failed to mark installment as paid',
+        description: error?.message || 'Failed to mark installment as paid',
         variant: 'destructive'
       });
     }
