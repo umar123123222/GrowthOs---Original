@@ -453,11 +453,11 @@ export function MentorRecordingsManagement() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50">
-                  <TableHead className="font-semibold">Title</TableHead>
-                  <TableHead className="font-semibold">Module</TableHead>
-                  <TableHead className="font-semibold">Duration</TableHead>
-                  <TableHead className="font-semibold">Order</TableHead>
-                  <TableHead className="font-semibold">Actions</TableHead>
+                  <TableHead className="font-semibold w-[35%]">Title</TableHead>
+                  <TableHead className="font-semibold w-[10%] text-center">Order</TableHead>
+                  <TableHead className="font-semibold w-[20%]">Module</TableHead>
+                  <TableHead className="font-semibold w-[15%] text-center">Duration</TableHead>
+                  <TableHead className="font-semibold w-[20%] text-center">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -468,13 +468,13 @@ export function MentorRecordingsManagement() {
                       style={{ animationDelay: `${index * 50}ms` }}
                       onClick={() => toggleRecordingExpansion(recording.id)}
                     >
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium w-[35%]">
                         <div className="flex items-center space-x-2">
                           <CollapsibleTrigger asChild>
                             <Button 
                               variant="ghost" 
                               size="sm" 
-                              className="p-0 h-8 w-8"
+                              className="p-0 h-8 w-8 flex-shrink-0"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 toggleRecordingExpansion(recording.id);
@@ -487,22 +487,24 @@ export function MentorRecordingsManagement() {
                               />
                             </Button>
                           </CollapsibleTrigger>
-                          <span>{recording.recording_title}</span>
+                          <span className="truncate">{recording.recording_title}</span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="w-[10%] text-center">
+                        <Badge variant="outline" className="font-semibold">{recording.sequence_order || 'N/A'}</Badge>
+                      </TableCell>
+                      <TableCell className="w-[20%]">
                         {recording.module ? (
                           <Badge variant="secondary">{recording.module.title}</Badge>
                         ) : (
                           <span className="text-muted-foreground">No module</span>
                         )}
                       </TableCell>
-                      <TableCell>{recording.duration_min || 'N/A'} min</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{recording.sequence_order || 'N/A'}</Badge>
+                      <TableCell className="w-[15%] text-center">
+                        <span className="font-medium">{recording.duration_min || 'N/A'} min</span>
                       </TableCell>
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center space-x-2">
+                      <TableCell className="w-[20%]" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-center space-x-2">
                           <Button 
                             variant="outline" 
                             size="sm" 
