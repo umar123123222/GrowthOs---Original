@@ -120,28 +120,50 @@ export function StudentDashboard() {
       const studentData = studentRes.data;
       try {
         let firstAnswerText = '';
+        let thirdAnswerText = '';
         const answers: any = studentData?.answers_json;
         
-        // First priority: check goal_brief field (the custom goal set by student)
-        if (studentData?.goal_brief) {
-          firstAnswerText = String(studentData.goal_brief);
-        }
-        // Second priority: extract from answers_json if goal_brief is not set
-        else if (answers) {
+        // Extract answers from question 1 and question 3
+        if (answers) {
           if (Array.isArray(answers)) {
-            const val: any = answers[0]?.value;
-            if (Array.isArray(val)) firstAnswerText = val.join(', ');
-            else if (val && typeof val === 'object') firstAnswerText = (val.name || val.url || '[file uploaded]');
-            else if (val !== null && val !== undefined) firstAnswerText = String(val);
+            // Get question 1 answer (index 0)
+            const val1: any = answers[0]?.value;
+            if (Array.isArray(val1)) firstAnswerText = val1.join(', ');
+            else if (val1 && typeof val1 === 'object') firstAnswerText = (val1.name || val1.url || '');
+            else if (val1 !== null && val1 !== undefined) firstAnswerText = String(val1);
+            
+            // Get question 3 answer (index 2)
+            const val3: any = answers[2]?.value;
+            if (Array.isArray(val3)) thirdAnswerText = val3.join(', ');
+            else if (val3 && typeof val3 === 'object') thirdAnswerText = (val3.name || val3.url || '');
+            else if (val3 !== null && val3 !== undefined) thirdAnswerText = String(val3);
           } else if (typeof answers === 'object') {
             const entries = Object.values(answers as Record<string, any>) as any[];
             const sorted = entries.sort((a, b) => (a?.order || 0) - (b?.order || 0));
-            const first = sorted[0];
-            const val: any = first?.value;
-            if (Array.isArray(val)) firstAnswerText = val.join(', ');
-            else if (val && typeof val === 'object') firstAnswerText = (val.name || val.url || '[file uploaded]');
-            else if (val !== null && val !== undefined) firstAnswerText = String(val);
+            
+            // Get question 1 (first sorted item)
+            if (sorted[0]) {
+              const val1: any = sorted[0]?.value;
+              if (Array.isArray(val1)) firstAnswerText = val1.join(', ');
+              else if (val1 && typeof val1 === 'object') firstAnswerText = (val1.name || val1.url || '');
+              else if (val1 !== null && val1 !== undefined) firstAnswerText = String(val1);
+            }
+            
+            // Get question 3 (third sorted item)
+            if (sorted[2]) {
+              const val3: any = sorted[2]?.value;
+              if (Array.isArray(val3)) thirdAnswerText = val3.join(', ');
+              else if (val3 && typeof val3 === 'object') thirdAnswerText = (val3.name || val3.url || '');
+              else if (val3 !== null && val3 !== undefined) thirdAnswerText = String(val3);
+            }
           }
+        }
+        
+        // Format as "answer1 for answer3" if both exist
+        if (firstAnswerText && thirdAnswerText) {
+          firstAnswerText = `${firstAnswerText} so that ${thirdAnswerText}`;
+        } else if (studentData?.goal_brief) {
+          firstAnswerText = String(studentData.goal_brief);
         }
         // Derive range (ans1 to ans2) from first question value when available
         let rangeMin = '';
