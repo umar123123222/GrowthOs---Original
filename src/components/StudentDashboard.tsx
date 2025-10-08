@@ -121,7 +121,13 @@ export function StudentDashboard() {
       try {
         let firstAnswerText = '';
         const answers: any = studentData?.answers_json;
-        if (answers) {
+        
+        // First priority: check goal_brief field (the custom goal set by student)
+        if (studentData?.goal_brief) {
+          firstAnswerText = String(studentData.goal_brief);
+        }
+        // Second priority: extract from answers_json if goal_brief is not set
+        else if (answers) {
           if (Array.isArray(answers)) {
             const val: any = answers[0]?.value;
             if (Array.isArray(val)) firstAnswerText = val.join(', ');
@@ -136,9 +142,6 @@ export function StudentDashboard() {
             else if (val && typeof val === 'object') firstAnswerText = (val.name || val.url || '[file uploaded]');
             else if (val !== null && val !== undefined) firstAnswerText = String(val);
           }
-        }
-        if (!firstAnswerText && studentData?.goal_brief) {
-          firstAnswerText = String(studentData.goal_brief);
         }
         // Derive range (ans1 to ans2) from first question value when available
         let rangeMin = '';
