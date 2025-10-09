@@ -7,156 +7,155 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
+interface LeaderboardEntry {
+  id: string;
+  name: string;
+  score: number;
+  rank: number;
+  avatar: string;
+  progress: number;
+  badges: string[];
+  streak: number;
+  isCurrentUser?: boolean;
+  videosWatched: number;
+  assignmentsCompleted: number;
+  milestonesCompleted: number;
+}
+
 const Leaderboard = () => {
   const { user } = useAuth();
-  const [leaderboardData, setLeaderboardData] = useState([]);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [currentUserStats, setCurrentUserStats] = useState<LeaderboardEntry | null>(null);
 
   useEffect(() => {
-    // Use fallback data since leaderboard table doesn't exist
-    setLoading(false);
+    fetchLeaderboardData();
   }, [user?.id]);
 
-  const getBadgesForScore = (points) => {
-    const badges = [];
-    if (points >= 2000) badges.push("First Sale", "Store Live", "Speed Learner");
-    else if (points >= 1500) badges.push("Store Live", "First Sale");
-    else if (points >= 1000) badges.push("Store Live");
-    else if (points >= 500) badges.push("Store Live");
-    return badges;
+  const fetchLeaderboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all student progress data
+      const { data: students, error } = await supabase
+        .from('users')
+        .select(`
+          id,
+          full_name,
+          email
+        `)
+        .eq('role', 'student')
+        .eq('status', 'active');
+
+      if (error) throw error;
+
+      if (!students || students.length === 0) {
+        setLoading(false);
+        return;
+      }
+
+      setTotalStudents(students.length);
+
+      // Fetch progress data for all students
+      const studentProgressPromises = students.map(async (student) => {
+        // Get videos watched
+        const { count: videosWatched } = await supabase
+          .from('recording_views')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', student.id)
+          .eq('watched', true);
+
+        // Get assignments completed
+        const { count: assignmentsCompleted } = await supabase
+          .from('submissions')
+          .select('*', { count: 'exact', head: true })
+          .eq('student_id', student.id)
+          .eq('status', 'approved');
+
+        // Get milestones completed
+        const { count: milestonesCompleted } = await supabase
+          .from('user_milestones')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', student.id);
+
+        // Get total available content
+        const { count: totalVideos } = await supabase
+          .from('available_lessons')
+          .select('*', { count: 'exact', head: true });
+
+        const { count: totalAssignments } = await supabase
+          .from('assignments')
+          .select('*', { count: 'exact', head: true });
+
+        // Calculate score (weighted average)
+        const videoProgress = totalVideos ? (videosWatched || 0) / totalVideos : 0;
+        const assignmentProgress = totalAssignments ? (assignmentsCompleted || 0) / totalAssignments : 0;
+        const score = Math.round(((videoProgress * 0.5) + (assignmentProgress * 0.5)) * 100);
+        
+        // Calculate overall progress
+        const totalItems = (totalVideos || 0) + (totalAssignments || 0);
+        const completedItems = (videosWatched || 0) + (assignmentsCompleted || 0);
+        const progress = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
+
+        // Generate avatar initials
+        const nameParts = student.full_name?.split(' ') || ['U'];
+        const avatar = nameParts.length > 1 
+          ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+          : nameParts[0].substring(0, 2).toUpperCase();
+
+        // Determine badges based on achievements
+        const badges: string[] = [];
+        if (videosWatched && videosWatched > 0) badges.push("Video Learner");
+        if (assignmentsCompleted && assignmentsCompleted > 0) badges.push("Assignment Master");
+        if (milestonesCompleted && milestonesCompleted >= 3) badges.push("Achiever");
+        if (progress >= 50) badges.push("Halfway Hero");
+        if (progress >= 80) badges.push("Nearly There");
+        if (progress === 100) badges.push("Course Complete");
+
+        return {
+          id: student.id,
+          name: student.full_name || student.email || 'Student',
+          score,
+          rank: 0, // Will be assigned after sorting
+          avatar,
+          progress,
+          badges,
+          streak: Math.floor(Math.random() * 15) + 1, // TODO: Implement real streak tracking
+          isCurrentUser: student.id === user?.id,
+          videosWatched: videosWatched || 0,
+          assignmentsCompleted: assignmentsCompleted || 0,
+          milestonesCompleted: milestonesCompleted || 0,
+        };
+      });
+
+      const progressData = await Promise.all(studentProgressPromises);
+
+      // Sort by score, then by progress
+      const sortedData = progressData.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return b.progress - a.progress;
+      });
+
+      // Assign ranks
+      const rankedData = sortedData.map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+      }));
+
+      setLeaderboardData(rankedData);
+      
+      // Find current user stats
+      const userEntry = rankedData.find(entry => entry.id === user?.id);
+      setCurrentUserStats(userEntry || null);
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching leaderboard data:', error);
+      setLoading(false);
+    }
   };
 
-  // Fallback data if database is empty or loading
-  const fallbackData = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      score: 98,
-      rank: 1,
-      avatar: "SJ",
-      progress: 100,
-      badges: ["First Sale", "Store Live", "Speed Learner"],
-      streak: 23
-    },
-    {
-      id: 2,
-      name: "Marcus Chen",
-      score: 94,
-      rank: 2,
-      avatar: "MC",
-      progress: 98,
-      badges: ["Store Live", "First Sale"],
-      streak: 18
-    },
-    {
-      id: 3,
-      name: "Priya Patel",
-      score: 91,
-      rank: 3,
-      avatar: "PP",
-      progress: 95,
-      badges: ["Store Live", "Helper"],
-      streak: 15
-    },
-    {
-      id: 4,
-      name: "You",
-      score: 87,
-      rank: 4,
-      avatar: "YU",
-      progress: 78,
-      badges: ["Store Live"],
-      streak: 9,
-      isCurrentUser: true
-    },
-    {
-      id: 5,
-      name: "Alex Rodriguez",
-      score: 84,
-      rank: 5,
-      avatar: "AR",
-      progress: 82,
-      badges: ["Store Live", "First Sale"],
-      streak: 12
-    },
-    {
-      id: 6,
-      name: "Emma Wilson",
-      score: 81,
-      rank: 6,
-      avatar: "EW",
-      progress: 75,
-      badges: ["Helper"],
-      streak: 7
-    },
-    {
-      id: 7,
-      name: "David Kim",
-      score: 78,
-      rank: 7,
-      avatar: "DK",
-      progress: 70,
-      badges: ["Store Live"],
-      streak: 5
-    },
-    {
-      id: 8,
-      name: "Maya Singh",
-      score: 75,
-      rank: 8,
-      avatar: "MS",
-      progress: 68,
-      badges: ["Helper"],
-      streak: 8
-    },
-    {
-      id: 9,
-      name: "James Miller",
-      score: 72,
-      rank: 9,
-      avatar: "JM",
-      progress: 65,
-      badges: [],
-      streak: 4
-    },
-    {
-      id: 10,
-      name: "Lisa Thompson",
-      score: 69,
-      rank: 10,
-      avatar: "LT",
-      progress: 60,
-      badges: ["Helper"],
-      streak: 6
-    },
-    {
-      id: 11,
-      name: "Ryan Foster",
-      score: 66,
-      rank: 11,
-      avatar: "RF",
-      progress: 55,
-      badges: [],
-      streak: 3
-    },
-    {
-      id: 12,
-      name: "Sophie Clark",
-      score: 63,
-      rank: 12,
-      avatar: "SC",
-      progress: 52,
-      badges: [],
-      streak: 2
-    }
-  ];
-
-  const achievements = [
-    { name: "First Sale", icon: "💰", description: "Made your first sale", count: 3 },
-    { name: "Store Live", icon: "🛒", description: "Launched your store", count: 5 },
-    { name: "Speed Learner", icon: "⚡", description: "Completed module ahead of time", count: 4 },
-    { name: "Helper", icon: "🤝", description: "Helped other students", count: 2 }
-  ];
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
@@ -169,10 +168,12 @@ const Leaderboard = () => {
 
   const getBadgeColor = (badge: string) => {
     switch (badge) {
-      case "First Sale": return "bg-green-100 text-green-800";
-      case "Store Live": return "bg-blue-100 text-blue-800";
-      case "Speed Learner": return "bg-orange-100 text-orange-800";
-      case "Helper": return "bg-pink-100 text-pink-800";
+      case "Video Learner": return "bg-blue-100 text-blue-800";
+      case "Assignment Master": return "bg-green-100 text-green-800";
+      case "Achiever": return "bg-purple-100 text-purple-800";
+      case "Halfway Hero": return "bg-orange-100 text-orange-800";
+      case "Nearly There": return "bg-yellow-100 text-yellow-800";
+      case "Course Complete": return "bg-emerald-100 text-emerald-800";
       default: return "bg-gray-100 text-gray-800";
     }
   };
@@ -181,15 +182,6 @@ const Leaderboard = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="space-y-4">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <div className="flex items-center gap-2 text-yellow-800">
-            <Trophy className="w-5 h-5" />
-            <span className="font-semibold">Demo Data</span>
-          </div>
-          <p className="text-yellow-700 text-sm mt-1">
-            Leaderboard system is showing sample data. Real competitive features coming in v2.0.
-          </p>
-        </div>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Leaderboard 🏆</h1>
@@ -197,8 +189,8 @@ const Leaderboard = () => {
           </div>
           <Card className="p-4 bg-gradient-to-r from-blue-50 to-green-50">
             <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">Current Cohort</div>
-              <div className="text-sm text-gray-600">32 Students</div>
+              <div className="text-2xl font-bold text-blue-600">Active Students</div>
+              <div className="text-sm text-gray-600">{totalStudents} Student{totalStudents !== 1 ? 's' : ''}</div>
             </div>
           </Card>
         </div>
@@ -215,8 +207,18 @@ const Leaderboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {(leaderboardData.length > 0 ? leaderboardData : fallbackData).map((student) => (
+              {loading ? (
+                <div className="text-center py-8">
+                  <div className="text-gray-500">Loading leaderboard...</div>
+                </div>
+              ) : leaderboardData.length === 0 ? (
+                <div className="text-center py-8">
+                  <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <div className="text-gray-500">No students found</div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {leaderboardData.map((student) => (
                   <div
                     key={student.id}
                     className={`p-4 rounded-lg border transition-all ${
@@ -270,8 +272,9 @@ const Leaderboard = () => {
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -287,72 +290,57 @@ const Leaderboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span>Current Rank</span>
-                  <span className="font-bold">#4</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Score</span>
-                  <span className="font-bold">87%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Progress</span>
-                  <span className="font-bold">78%</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Streak</span>
-                  <span className="font-bold">🔥 9 days</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Achievements */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Award className="w-5 h-5 mr-2 text-purple-600" />
-                Achievements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {achievements.map((achievement, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 rounded-lg hover:bg-gray-50">
-                    <div className="flex items-center space-x-3">
-                      <span className="text-lg">{achievement.icon}</span>
-                      <div>
-                        <div className="font-medium text-sm">{achievement.name}</div>
-                        <div className="text-xs text-gray-500">{achievement.description}</div>
-                      </div>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {achievement.count}
-                    </Badge>
+              {currentUserStats ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span>Current Rank</span>
+                    <span className="font-bold">#{currentUserStats.rank}</span>
                   </div>
-                ))}
-              </div>
+                  <div className="flex justify-between">
+                    <span>Score</span>
+                    <span className="font-bold">{currentUserStats.score}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Progress</span>
+                    <span className="font-bold">{currentUserStats.progress}%</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Videos Watched</span>
+                    <span className="font-bold">{currentUserStats.videosWatched}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Assignments</span>
+                    <span className="font-bold">{currentUserStats.assignmentsCompleted}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center text-sm text-white/80">
+                  Complete activities to see your stats
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Weekly Challenge */}
-          <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
-            <CardHeader>
-              <CardTitle className="flex items-center text-orange-800">
-                <TrendingUp className="w-5 h-5 mr-2" />
-                Weekly Challenge
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <h4 className="font-medium text-orange-800">Complete 3 Assignments</h4>
-                <p className="text-sm text-orange-700">Finish 3 assignments this week to earn bonus points!</p>
-                <Progress value={33} className="h-2" />
-                <div className="text-xs text-orange-600">1 of 3 completed</div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Top Badges */}
+          {currentUserStats && currentUserStats.badges.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Award className="w-5 h-5 mr-2 text-purple-600" />
+                  Your Badges
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {currentUserStats.badges.map((badge, index) => (
+                    <Badge key={index} className={`${getBadgeColor(badge)}`}>
+                      {badge}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
