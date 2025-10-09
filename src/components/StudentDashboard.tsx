@@ -121,6 +121,10 @@ export function StudentDashboard() {
       try {
         let firstAnswerText = '';
         let answers: any = studentData?.answers_json;
+        
+        console.log('🔍 StudentDashboard - Raw answers_json:', answers);
+        console.log('🔍 StudentDashboard - goal_brief:', studentData?.goal_brief);
+        
         if (typeof answers === 'string') {
           try { answers = JSON.parse(answers); } catch {}
         }
@@ -135,11 +139,14 @@ export function StudentDashboard() {
             else if (val1 !== null && val1 !== undefined) firstAnswerText = String(val1);
           } else if (typeof answers === 'object') {
             const entries = Object.values(answers as Record<string, any>) as any[];
+            console.log('🔍 StudentDashboard - Object entries:', entries);
             const sorted = entries.sort((a, b) => (a?.order || 0) - (b?.order || 0));
+            console.log('🔍 StudentDashboard - Sorted entries:', sorted);
             
             // Get question 1 (first sorted item)
             if (sorted[0]) {
               const val1: any = sorted[0]?.value;
+              console.log('🔍 StudentDashboard - First value:', val1);
               if (Array.isArray(val1)) firstAnswerText = val1.join(', ');
               else if (val1 && typeof val1 === 'object') firstAnswerText = (val1.name || val1.url || '');
               else if (val1 !== null && val1 !== undefined) firstAnswerText = String(val1);
@@ -147,9 +154,12 @@ export function StudentDashboard() {
           }
         }
         
+        console.log('🔍 StudentDashboard - Extracted firstAnswerText:', firstAnswerText);
+        
         // Fallback to goal_brief if no answer
         if (!firstAnswerText && studentData?.goal_brief) {
           firstAnswerText = String(studentData.goal_brief);
+          console.log('🔍 StudentDashboard - Using goal_brief fallback:', firstAnswerText);
         }
         // Derive range (ans1 to ans2) from first question value when available
         let rangeMin = '';
