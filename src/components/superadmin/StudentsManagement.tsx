@@ -281,25 +281,13 @@ export function StudentsManagement() {
     }
     setFilteredStudents(filtered);
   };
+  const { deleteUser } = useUserManagement();
+  
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this student?')) return;
-    try {
-      const {
-        error
-      } = await supabase.from('users').delete().eq('id', id);
-      if (error) throw error;
-      toast({
-        title: 'Success',
-        description: 'Student deleted successfully'
-      });
+    const success = await deleteUser(id);
+    if (success) {
       fetchStudents();
-    } catch (error) {
-      console.error('Error deleting student:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete student',
-        variant: 'destructive'
-      });
     }
   };
   const handleSuspendAccount = async (studentId: string) => {
@@ -416,23 +404,13 @@ export function StudentsManagement() {
     doc.save(`invoice_${student.student_id}.pdf`);
   };
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
-    try {
-      const {
-        error
-      } = await supabase.from('users').delete().eq('id', studentId);
-      if (error) throw error;
+    const success = await deleteUser(studentId);
+    if (success) {
       toast({
         title: 'Success',
         description: `${studentName} has been deleted successfully`
       });
       fetchStudents();
-    } catch (error: any) {
-      console.error('Error deleting student:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete student: ' + error.message,
-        variant: 'destructive'
-      });
     }
   };
   const getLMSStatusColor = (lmsStatus: string) => {

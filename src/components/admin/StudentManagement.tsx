@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
+import { useUserManagement } from '@/hooks/useUserManagement';
 import { useEnhancedStudentCreation } from '@/hooks/useEnhancedStudentCreation';
 import jsPDF from 'jspdf';
 interface Student {
@@ -83,16 +84,10 @@ export const StudentManagement = () => {
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
   const [timeTick, setTimeTick] = useState(0); // triggers periodic re-render for time-based status updates
-  const {
-    toast
-  } = useToast();
-  const {
-    options: installmentOptions
-  } = useInstallmentOptions();
-  const {
-    createStudent: createEnhancedStudent,
-    isLoading: creationLoading
-  } = useEnhancedStudentCreation();
+  const { toast } = useToast();
+  const { options: installmentOptions } = useInstallmentOptions();
+  const { createStudent: createEnhancedStudent, isLoading: creationLoading } = useEnhancedStudentCreation();
+  const { deleteUser, loading: deleteLoading } = useUserManagement();
   const [formData, setFormData] = useState({
     full_name: '',
     email: '',
@@ -540,23 +535,13 @@ export const StudentManagement = () => {
     }
   };
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
-    try {
-      const {
-        error
-      } = await supabase.from('users').delete().eq('id', studentId);
-      if (error) throw error;
+    const success = await deleteUser(studentId);
+    if (success) {
       toast({
         title: 'Success',
         description: `${studentName} has been deleted successfully`
       });
       fetchStudents();
-    } catch (error: any) {
-      console.error('Error deleting student:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to delete student: ' + error.message,
-        variant: 'destructive'
-      });
     }
   };
   const getLMSStatusColor = (lmsStatus: string) => {

@@ -41,6 +41,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserManagement } from '@/hooks/useUserManagement';
 import { Plus, Activity, Trash2 } from 'lucide-react';
 
 interface TeamMember {
@@ -69,6 +70,7 @@ const AdminTeams = () => {
   const [isAdding, setIsAdding] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { deleteUser, loading: deleteLoading } = useUserManagement();
 
   const fetchTeamMembers = async () => {
     try {
@@ -177,26 +179,13 @@ const AdminTeams = () => {
   };
 
   const handleDeleteMember = async (memberId: string, memberName: string) => {
-    try {
-      const { error } = await supabase
-        .from('users')
-        .delete()
-        .eq('id', memberId);
-
-      if (error) throw error;
-
+    const success = await deleteUser(memberId);
+    if (success) {
       toast({
         title: "Success",
         description: `${memberName} has been deleted successfully`
       });
-
       fetchTeamMembers();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to delete team member: " + error.message,
-        variant: "destructive"
-      });
     }
   };
 

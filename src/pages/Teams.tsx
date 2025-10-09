@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useUserManagement } from '@/hooks/useUserManagement';
 import { Plus, Activity, Eye, Edit, Trash2, Key } from 'lucide-react';
 import { useAuth, User } from '@/hooks/useAuth';
 import AdminTeams from '@/components/admin/AdminTeams';
@@ -50,9 +51,8 @@ const Teams = () => {
     role: ''
   });
   const [isAdding, setIsAdding] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+  const { deleteUser, loading: deleteLoading } = useUserManagement();
   const fetchTeamMembers = async () => {
     try {
       const {
@@ -244,23 +244,13 @@ const Teams = () => {
     }
   };
   const handleDeleteMember = async (memberId: string, memberName: string) => {
-    try {
-      // Delete from users table (this will handle the auth cleanup via trigger if needed)
-      const {
-        error: dbError
-      } = await supabase.from('users').delete().eq('id', memberId);
-      if (dbError) throw dbError;
+    const success = await deleteUser(memberId);
+    if (success) {
       toast({
         title: "Success",
         description: `${memberName} has been deleted successfully`
       });
       fetchTeamMembers();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to delete team member: " + error.message,
-        variant: "destructive"
-      });
     }
   };
   useEffect(() => {
