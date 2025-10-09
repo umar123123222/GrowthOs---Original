@@ -197,7 +197,14 @@ export function StudentDashboard() {
         } else {
           setFirstOnboardingRange(null);
         }
-        if (firstAnswerText) setFirstOnboardingAnswer(firstAnswerText);
+        if (firstAnswerText) {
+          setFirstOnboardingAnswer(firstAnswerText);
+          if (!userResult.data?.dream_goal_summary) {
+            setDreamGoal(firstAnswerText);
+          }
+        } else if (!userResult.data?.dream_goal_summary && studentData?.goal_brief) {
+          setDreamGoal(String(studentData.goal_brief));
+        }
       } catch (e) {
         logger.warn('Failed to parse onboarding answers', e);
       }
