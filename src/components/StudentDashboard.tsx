@@ -73,13 +73,27 @@ export function StudentDashboard() {
   const [userLMSStatus, setUserLMSStatus] = useState<string>('active');
   const [firstOnboardingAnswer, setFirstOnboardingAnswer] = useState<string>('');
   const [firstOnboardingRange, setFirstOnboardingRange] = useState<{ min: string; max: string } | null>(null);
-  // Fetch all dashboard data - Fix dependencies to prevent infinite loops
+  // Fetch all dashboard data when user is ready and recordings finished loading
   useEffect(() => {
     if (user?.id && !loading) {
       fetchDashboardData();
     }
-  }, [user?.id]); // Remove recordings dependency to prevent loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, loading]);
 
+  // Recompute course progress whenever recordings change
+  useEffect(() => {
+    if (!user?.id) return;
+    if (recordings && recordings.length > 0) {
+      const watchedRecordings = recordings.filter(r => r.isWatched).length;
+      const submittedAssignments = recordings.filter(r => r.hasAssignment && r.assignmentSubmitted).length;
+      const totalItems = recordings.length + recordings.filter(r => r.hasAssignment).length;
+      const completedItems = watchedRecordings + submittedAssignments;
+      setCourseProgress(totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0);
+    } else {
+      setCourseProgress(0);
+    }
+  }, [user?.id, recordings]);
   const fetchDashboardData = async () => {
     if (!user?.id) {
       console.warn('StudentDashboard: No user ID available');
@@ -240,55 +254,67 @@ export function StudentDashboard() {
         setAssignmentDueStatus(new Date() > dueDate ? 'overdue' : 'future');
       }
 
-      // Fetch actual milestones from database
-      const { data: allMilestones } = await supabase
-        .from('milestones')
-        .select('*')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
+      // Fetch milestones with resilience - don't fail dashboard if user_milestones missing
+      try {
+        const { data: allMilestones } = await supabase
+          .from('milestones')
+          .select('*')
+          .eq('is_active', true)
+          .order('display_order', { ascending: true });
 
-      const { data: userMilestones } = await supabase
-        .from('user_milestones')
-        .select('milestone_id')
-        .eq('user_id', user.id);
+        let completedMilestoneIds = new Set<string>();
+        try {
+          const { data: userMilestones } = await supabase
+            .from('user_milestones')
+            .select('milestone_id')
+            .eq('user_id', user.id);
+          completedMilestoneIds = new Set(userMilestones?.map(um => um.milestone_id) || []);
+        } catch (milestoneErr) {
+          logger.warn('StudentDashboard: user_milestones not available, proceeding without completion states', milestoneErr);
+        }
 
-      const completedMilestoneIds = new Set(userMilestones?.map(um => um.milestone_id) || []);
+        const milestonesData = (allMilestones || []).map(m => ({
+          id: m.id,
+          title: m.name,
+          completed: completedMilestoneIds.has(m.id),
+          icon: m.icon || '🏆'
+        }));
 
-      const milestonesData = (allMilestones || []).map(m => ({
-        id: m.id,
-        title: m.name,
-        completed: completedMilestoneIds.has(m.id),
-        icon: m.icon || '🏆'
-      }));
-
-      setMilestones(milestonesData);
+        setMilestones(milestonesData);
+      } catch (milestonesError) {
+        logger.warn('StudentDashboard: Failed fetching milestones', milestonesError);
+      }
 
       // Fetch leaderboard position (basic implementation)
-      const { count: totalStudents } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true })
-        .eq('role', 'student');
+      try {
+        const { count: totalStudents } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .eq('role', 'student');
 
-      // Calculate position based on course completion
-      const { data: allStudentProgress } = await supabase
-        .from('recording_views')
-        .select('user_id, recording_id')
-        .eq('watched', true);
+        // Calculate position based on course completion
+        const { data: allStudentProgress } = await supabase
+          .from('recording_views')
+          .select('user_id, recording_id')
+          .eq('watched', true);
 
-      const progressByStudent = new Map<string, number>();
-      allStudentProgress?.forEach(view => {
-        progressByStudent.set(view.user_id, (progressByStudent.get(view.user_id) || 0) + 1);
-      });
+        const progressByStudent = new Map<string, number>();
+        allStudentProgress?.forEach(view => {
+          progressByStudent.set(view.user_id, (progressByStudent.get(view.user_id) || 0) + 1);
+        });
 
-      const currentUserProgress = progressByStudent.get(user.id) || 0;
-      let position = 1;
-      progressByStudent.forEach((progress, studentId) => {
-        if (studentId !== user.id && progress > currentUserProgress) {
-          position++;
-        }
-      });
+        const currentUserProgress = progressByStudent.get(user.id) || 0;
+        let position = 1;
+        progressByStudent.forEach((progress, studentId) => {
+          if (studentId !== user.id && progress > currentUserProgress) {
+            position++;
+          }
+        });
 
-      setLeaderboardPosition({ rank: position, total: totalStudents || 0 });
+        setLeaderboardPosition({ rank: position, total: totalStudents || 0 });
+      } catch (leaderboardErr) {
+        logger.warn('StudentDashboard: Failed to compute leaderboard position', leaderboardErr);
+      }
 
     } catch (error) {
       logger.error('Error fetching dashboard data:', error);
