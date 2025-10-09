@@ -1851,6 +1851,10 @@ export type Database = {
         Args: { role_code: string }
         Returns: string[]
       }
+      has_any_role: {
+        Args: { role_codes: string[] }
+        Returns: boolean
+      }
       has_completed_all_modules: {
         Args: { _user_id: string }
         Returns: boolean
