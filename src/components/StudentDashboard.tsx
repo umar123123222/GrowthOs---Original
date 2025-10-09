@@ -122,9 +122,6 @@ export function StudentDashboard() {
         let firstAnswerText = '';
         let answers: any = studentData?.answers_json;
         
-        console.log('🔍 StudentDashboard - Raw answers_json:', answers);
-        console.log('🔍 StudentDashboard - goal_brief:', studentData?.goal_brief);
-        
         if (typeof answers === 'string') {
           try { answers = JSON.parse(answers); } catch {}
         }
@@ -139,14 +136,11 @@ export function StudentDashboard() {
             else if (val1 !== null && val1 !== undefined) firstAnswerText = String(val1);
           } else if (typeof answers === 'object') {
             const entries = Object.values(answers as Record<string, any>) as any[];
-            console.log('🔍 StudentDashboard - Object entries:', entries);
             const sorted = entries.sort((a, b) => (a?.order || 0) - (b?.order || 0));
-            console.log('🔍 StudentDashboard - Sorted entries:', sorted);
             
             // Get question 1 (first sorted item)
             if (sorted[0]) {
               const val1: any = sorted[0]?.value;
-              console.log('🔍 StudentDashboard - First value:', val1);
               if (Array.isArray(val1)) firstAnswerText = val1.join(', ');
               else if (val1 && typeof val1 === 'object') firstAnswerText = (val1.name || val1.url || '');
               else if (val1 !== null && val1 !== undefined) firstAnswerText = String(val1);
@@ -154,12 +148,9 @@ export function StudentDashboard() {
           }
         }
         
-        console.log('🔍 StudentDashboard - Extracted firstAnswerText:', firstAnswerText);
-        
         // Fallback to goal_brief if no answer
         if (!firstAnswerText && studentData?.goal_brief) {
           firstAnswerText = String(studentData.goal_brief);
-          console.log('🔍 StudentDashboard - Using goal_brief fallback:', firstAnswerText);
         }
         // Derive range (ans1 to ans2) from first question value when available
         let rangeMin = '';
@@ -242,25 +233,55 @@ export function StudentDashboard() {
         setAssignmentDueStatus(new Date() > dueDate ? 'overdue' : 'future');
       }
 
-      // Fetch milestones
-      const { data: watchedVideos } = await supabase
+      // Fetch actual milestones from database
+      const { data: allMilestones } = await supabase
+        .from('milestones')
+        .select('*')
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+
+      const { data: userMilestones } = await supabase
+        .from('user_milestones')
+        .select('milestone_id')
+        .eq('user_id', user.id);
+
+      const completedMilestoneIds = new Set(userMilestones?.map(um => um.milestone_id) || []);
+
+      const milestonesData = (allMilestones || []).map(m => ({
+        id: m.id,
+        title: m.name,
+        completed: completedMilestoneIds.has(m.id),
+        icon: m.icon || '🏆'
+      }));
+
+      setMilestones(milestonesData);
+
+      // Fetch leaderboard position (basic implementation)
+      const { count: totalStudents } = await supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('role', 'student');
+
+      // Calculate position based on course completion
+      const { data: allStudentProgress } = await supabase
         .from('recording_views')
-        .select('recording_id')
-        .eq('user_id', user.id)
+        .select('user_id, recording_id')
         .eq('watched', true);
 
-      const uniqueWatchedVideos = [...new Set(watchedVideos?.map(v => v.recording_id) || [])];
+      const progressByStudent = new Map<string, number>();
+      allStudentProgress?.forEach(view => {
+        progressByStudent.set(view.user_id, (progressByStudent.get(view.user_id) || 0) + 1);
+      });
 
-      setMilestones([
-        { id: '1', title: 'First Video Watched', completed: uniqueWatchedVideos.length > 0, icon: '📹' },
-        { id: '2', title: 'First Assignment Submitted', completed: submittedIds.length > 0, icon: '📝' },
-        { id: '3', title: 'Shopify Connected', completed: !!(userResult.data?.shopify_credentials), icon: '🛒' },
-        { id: '4', title: '50% Course Complete', completed: courseProgress >= 50, icon: '🎯' },
-        { id: '5', title: 'Meta Ads Connected', completed: !!(userResult.data?.meta_ads_credentials), icon: '📊' }
-      ]);
+      const currentUserProgress = progressByStudent.get(user.id) || 0;
+      let position = 1;
+      progressByStudent.forEach((progress, studentId) => {
+        if (studentId !== user.id && progress > currentUserProgress) {
+          position++;
+        }
+      });
 
-      // Skip leaderboard for now since table doesn't exist
-      // We'll implement this later when the leaderboard table is properly created
+      setLeaderboardPosition({ rank: position, total: totalStudents || 0 });
 
     } catch (error) {
       logger.error('Error fetching dashboard data:', error);
@@ -352,10 +373,7 @@ export function StudentDashboard() {
             
             <div className="bg-background/80 rounded-lg p-4 border border-primary/10">
               <p className="text-base font-normal text-foreground leading-relaxed">
-                {firstOnboardingAnswer
-                  ? firstOnboardingAnswer
-                  : extractFinancialGoalForDisplay(dreamGoal)
-                }
+                {firstOnboardingAnswer || extractFinancialGoalForDisplay(dreamGoal)}
               </p>
             </div>
             
