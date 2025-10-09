@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { safeMaybeSingle } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 import CurrentModuleCard from "@/components/CurrentModuleCard";
+import { obfuscateUrl, deobfuscateUrl } from "@/lib/utils";
 const VideoPlayer = () => {
   const {
     moduleId,
@@ -30,6 +31,9 @@ const VideoPlayer = () => {
   const [currentVideo, setCurrentVideo] = useState<any>(null);
   const [showRating, setShowRating] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
+  const [obfuscatedUrl, setObfuscatedUrl] = useState<string>("");
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  
   interface Attachment {
     id: string;
     file_name: string;
@@ -175,6 +179,26 @@ const VideoPlayer = () => {
     };
     loadAttachments();
   }, [currentVideo?.id]);
+
+  // Set iframe src via ref to hide URL from DOM
+  useEffect(() => {
+    if (currentVideo?.videoUrl && iframeRef.current) {
+      const embedUrl = convertToEmbedUrl(currentVideo.videoUrl);
+      const encoded = obfuscateUrl(embedUrl);
+      setObfuscatedUrl(encoded);
+      
+      // Set src via ref instead of JSX to hide from Elements tab
+      iframeRef.current.src = embedUrl;
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      if (iframeRef.current) {
+        iframeRef.current.src = '';
+      }
+    };
+  }, [currentVideo?.videoUrl]);
+  
   // modules list moved to CurrentModuleCard via useVideosData
 
   const handleChecklistToggle = (index: number) => {
@@ -234,7 +258,7 @@ const VideoPlayer = () => {
               <div className="aspect-video bg-gray-900 rounded-t-lg">
                 {currentVideo && (
                   <iframe 
-                    src={convertToEmbedUrl(currentVideo.videoUrl)} 
+                    ref={iframeRef}
                     className="w-full h-full rounded-t-lg" 
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                     allowFullScreen 
