@@ -74,101 +74,180 @@ serve(async (req) => {
       )
     }
 
-    console.log('User found in auth.users, proceeding with deletion')
+    console.log('User found in auth.users, proceeding with cascade deletion of related records...')
 
-    // Delete the auth user first - this should trigger cascading deletion
-    const { error: authDeleteError } = await supabaseClient.auth.admin.deleteUser(target_user_id)
+    // **PHASE 1: Delete all related records in proper order BEFORE deleting auth user**
+    const deletionSteps: string[] = []
 
-    if (authDeleteError) {
-      console.error('Failed to delete auth user:', authDeleteError)
+    try {
+      // Step 1: Get student record ID for invoice cleanup
+      const { data: studentRecord } = await supabaseClient
+        .from('students')
+        .select('id')
+        .eq('user_id', target_user_id)
+        .maybeSingle()
+
+      const studentId = studentRecord?.id
+      deletionSteps.push(`Found student record: ${studentId || 'none'}`)
+
+      // Step 2: Delete invoices (via student_id)
+      if (studentId) {
+        const { error: invoicesError } = await supabaseClient
+          .from('invoices')
+          .delete()
+          .eq('student_id', studentId)
+        if (invoicesError) throw new Error(`Failed to delete invoices: ${invoicesError.message}`)
+        deletionSteps.push('✓ Deleted invoices')
+      }
+
+      // Step 3: Delete submissions (references user_id directly via student_id)
+      const { error: submissionsError } = await supabaseClient
+        .from('submissions')
+        .delete()
+        .eq('student_id', target_user_id)
+      if (submissionsError) throw new Error(`Failed to delete submissions: ${submissionsError.message}`)
+      deletionSteps.push('✓ Deleted submissions')
+
+      // Step 4: Delete student record
+      if (studentId) {
+        const { error: studentError } = await supabaseClient
+          .from('students')
+          .delete()
+          .eq('user_id', target_user_id)
+        if (studentError) throw new Error(`Failed to delete student record: ${studentError.message}`)
+        deletionSteps.push('✓ Deleted student record')
+      }
+
+      // Step 5: Delete user_activity_logs
+      const { error: activityLogsError } = await supabaseClient
+        .from('user_activity_logs')
+        .delete()
+        .eq('user_id', target_user_id)
+      if (activityLogsError) throw new Error(`Failed to delete activity logs: ${activityLogsError.message}`)
+      deletionSteps.push('✓ Deleted user_activity_logs')
+
+      // Step 6: Delete user_badges
+      const { error: badgesError } = await supabaseClient
+        .from('user_badges')
+        .delete()
+        .eq('user_id', target_user_id)
+      if (badgesError) throw new Error(`Failed to delete user badges: ${badgesError.message}`)
+      deletionSteps.push('✓ Deleted user_badges')
+
+      // Step 7: Delete user_unlocks
+      const { error: unlocksError } = await supabaseClient
+        .from('user_unlocks')
+        .delete()
+        .eq('user_id', target_user_id)
+      if (unlocksError) throw new Error(`Failed to delete user unlocks: ${unlocksError.message}`)
+      deletionSteps.push('✓ Deleted user_unlocks')
+
+      // Step 8: Delete recording_views
+      const { error: viewsError } = await supabaseClient
+        .from('recording_views')
+        .delete()
+        .eq('user_id', target_user_id)
+      if (viewsError) throw new Error(`Failed to delete recording views: ${viewsError.message}`)
+      deletionSteps.push('✓ Deleted recording_views')
+
+      // Step 9: Delete notifications
+      const { error: notificationsError } = await supabaseClient
+        .from('notifications')
+        .delete()
+        .eq('user_id', target_user_id)
+      if (notificationsError) throw new Error(`Failed to delete notifications: ${notificationsError.message}`)
+      deletionSteps.push('✓ Deleted notifications')
+
+      // Step 10: Delete support_ticket_replies
+      const { error: repliesError } = await supabaseClient
+        .from('support_ticket_replies')
+        .delete()
+        .eq('user_id', target_user_id)
+      if (repliesError) throw new Error(`Failed to delete support ticket replies: ${repliesError.message}`)
+      deletionSteps.push('✓ Deleted support_ticket_replies')
+
+      // Step 11: Delete support_tickets
+      const { error: ticketsError } = await supabaseClient
+        .from('support_tickets')
+        .delete()
+        .eq('user_id', target_user_id)
+      if (ticketsError) throw new Error(`Failed to delete support tickets: ${ticketsError.message}`)
+      deletionSteps.push('✓ Deleted support_tickets')
+
+      // Step 12: Delete email_queue
+      const { error: emailQueueError } = await supabaseClient
+        .from('email_queue')
+        .delete()
+        .eq('user_id', target_user_id)
+      if (emailQueueError) throw new Error(`Failed to delete email queue: ${emailQueueError.message}`)
+      deletionSteps.push('✓ Deleted email_queue')
+
+      // Step 13: Delete admin_logs where this user was the performer
+      const { error: adminLogsError } = await supabaseClient
+        .from('admin_logs')
+        .delete()
+        .eq('performed_by', target_user_id)
+      if (adminLogsError) throw new Error(`Failed to delete admin logs: ${adminLogsError.message}`)
+      deletionSteps.push('✓ Deleted admin_logs (performed_by)')
+
+      // Step 14: Delete public.users profile
+      const { error: publicUserError } = await supabaseClient
+        .from('users')
+        .delete()
+        .eq('id', target_user_id)
+      if (publicUserError) throw new Error(`Failed to delete public.users: ${publicUserError.message}`)
+      deletionSteps.push('✓ Deleted public.users profile')
+
+      console.log('All related records deleted successfully:', deletionSteps)
+
+      // **PHASE 2: Now delete from auth.users as the final step**
+      console.log('Deleting user from auth.users...')
+      const { error: authDeleteError } = await supabaseClient.auth.admin.deleteUser(target_user_id)
+
+      if (authDeleteError) {
+        console.error('Failed to delete auth user after cleaning up related records:', authDeleteError)
+        throw new Error(`Failed to delete auth user: ${authDeleteError.message}`)
+      }
+
+      deletionSteps.push('✓ Deleted auth.users record')
+      console.log('Auth user deleted successfully')
+
+      // Verify auth deletion
+      const { data: verifyAuthUser, error: verifyAuthError } = await supabaseClient.auth.admin.getUserById(target_user_id)
+      
+      if (!verifyAuthError && verifyAuthUser.user) {
+        console.error('Auth user still exists after deletion attempt!')
+        throw new Error('Auth user deletion verification failed - user still exists')
+      }
+
+      deletionSteps.push('✓ Verified auth user deletion')
+      console.log('User deletion completed successfully - all records removed')
+
+    } catch (cascadeError: any) {
+      console.error('Cascading deletion failed:', cascadeError)
+      console.error('Deletion steps completed:', deletionSteps)
+      
       return new Response(
         JSON.stringify({ 
-          error: `Failed to delete auth user: ${authDeleteError.message}`,
-          details: authDeleteError
+          error: 'Failed during cascading deletion',
+          message: cascadeError.message,
+          completed_steps: deletionSteps,
+          failed_at: cascadeError.message
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log('Auth user deletion completed, verifying deletion...')
-
-    // Verify auth user is actually deleted
-    const { data: verifyAuthUser, error: verifyAuthError } = await supabaseClient.auth.admin.getUserById(target_user_id)
-    
-    if (!verifyAuthError && verifyAuthUser.user) {
-      console.error('Auth user still exists after deletion attempt')
-      return new Response(
-        JSON.stringify({ error: 'Auth user deletion failed - user still exists' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    console.log('Auth user successfully deleted, waiting for cascading deletion...')
-
-    // Wait a moment for cascading deletion to complete
-    await new Promise(resolve => setTimeout(resolve, 1000))
-
-    // Verify public user record is also deleted
-    const { data: verifyPublicUser, error: verifyPublicError } = await supabaseClient
-      .from('users')
-      .select('id')
-      .eq('id', target_user_id)
-      .maybeSingle()
-
-    if (verifyPublicUser) {
-      console.error('Public user record still exists after deletion')
-      
-      // Attempt manual cleanup of public records
-      console.log('Attempting manual cleanup of public records...')
-      
-      try {
-        // Delete from students table first (due to foreign key constraints)
-        await supabaseClient
-          .from('students')
-          .delete()
-          .eq('user_id', target_user_id)
-
-        // Delete from users table
-        const { error: manualDeleteError } = await supabaseClient
-          .from('users')
-          .delete()
-          .eq('id', target_user_id)
-
-        if (manualDeleteError) {
-          console.error('Manual cleanup failed:', manualDeleteError)
-          return new Response(
-            JSON.stringify({ 
-              error: 'Partial deletion - auth user deleted but public records cleanup failed',
-              details: manualDeleteError
-            }),
-            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          )
-        }
-
-        console.log('Manual cleanup completed successfully')
-      } catch (cleanupError) {
-        console.error('Manual cleanup error:', cleanupError)
-        return new Response(
-          JSON.stringify({ 
-            error: 'Partial deletion - auth user deleted but public records cleanup failed',
-            details: cleanupError
-          }),
-          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-    }
-
-    console.log('User deletion completed successfully - both auth and public records removed')
-
     return new Response(
       JSON.stringify({
         success: true,
-        message: 'User successfully deleted from both auth and public records',
+        message: 'User successfully deleted from all systems',
         deleted_user: {
           id: target_user_id,
           email: userToDelete.email,
           role: userToDelete.role
-        }
+        },
+        deletion_steps: deletionSteps
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
