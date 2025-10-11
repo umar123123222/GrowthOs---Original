@@ -44,28 +44,32 @@ export function MentorSessions() {
     if (!user?.id) return;
 
     try {
-      // Temporary implementation - in production this would query the database
-      // For now showing mock data since TypeScript has complex type inference issues
-      const mockSessions: MentorSession[] = [
-        {
-          id: '1',
-          title: 'Business Strategy Session',
-          description: 'Weekly mentoring session on business development strategies',
-          mentor_name: user?.full_name || 'Mentor',
-          schedule_date: '2024-01-15',
-          start_time: '2024-01-15T14:00:00',
-          end_time: '2024-01-15T15:00:00',
-          link: 'https://zoom.us/j/123456789',
-          status: 'upcoming',
-          zoom_meeting_id: '123 456 789',
-          zoom_passcode: 'success123',
-          host_login_email: 'mentor@example.com',
-          host_login_pwd: 'password123'
-        }
-      ];
+      // Fetch sessions where this mentor is assigned
+      const { data, error } = await supabase
+        .from('success_sessions')
+        .select('*')
+        .eq('mentor_id', user.id)
+        .order('start_time', { ascending: true });
+
+      if (error) throw error;
+
+      const sessions: MentorSession[] = (data || []).map(session => ({
+        id: session.id,
+        title: session.title,
+        description: session.description || '',
+        mentor_name: session.mentor_name || '',
+        schedule_date: session.schedule_date || '',
+        start_time: session.start_time,
+        end_time: session.end_time || '',
+        link: session.link,
+        status: session.status || 'upcoming',
+        zoom_meeting_id: session.zoom_meeting_id || '',
+        zoom_passcode: session.zoom_passcode || '',
+        host_login_email: session.host_login_email || '',
+        host_login_pwd: session.host_login_pwd || ''
+      }));
       
-      
-      processSessions(mockSessions);
+      processSessions(sessions);
     } catch (error: any) {
       toast({
         title: "Error", 

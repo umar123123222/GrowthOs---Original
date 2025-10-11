@@ -32,9 +32,10 @@ interface LiveSession {
 
 interface SessionAttendance {
   id: string;
-  live_session_id: string;
-  joined_at: string;
-  left_at: string;
+  user_id: string;
+  session_id: string;
+  attended_at: string;
+  created_at: string;
 }
 
 interface LiveSessionsProps {
@@ -124,8 +125,18 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       if (userError) throw userError;
       setUserLMSStatus(userData?.lms_status || 'active');
 
-      // session_attendance table doesn't exist, use empty array
-      setAttendance([]);
+      // Fetch user's attendance records
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from('session_attendance')
+        .select('*')
+        .eq('user_id', user.id);
+      
+      if (attendanceError) {
+        safeLogger.error('Error fetching attendance:', attendanceError);
+        setAttendance([]);
+      } else {
+        setAttendance(attendanceData || []);
+      }
       
       // Fetch sessions and filter based on user join date
       await fetchSessionsForStudent(userData?.created_at);
@@ -190,16 +201,17 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     try {
       if (!user?.id) throw new Error('No authenticated user');
 
-      // Record attendance in user_activity_logs since session_attendance table doesn't exist
+      // Record attendance in session_attendance table
       const { error } = await supabase
-        .from('user_activity_logs')
+        .from('session_attendance')
         .insert({
           user_id: user.id,
-          activity_type: 'session_joined',
-          metadata: { session_id: sessionId }
+          session_id: sessionId
         });
 
-      if (error) throw error;
+      if (error && error.code !== '23505') { // Ignore duplicate key errors
+        throw error;
+      }
 
       // Open session link
       window.open(sessionLink, '_blank');
@@ -231,7 +243,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   };
 
   const hasAttended = (sessionId: string) => {
-    return attendance.some(a => a.live_session_id === sessionId);
+    return attendance.some(a => a.session_id === sessionId);
   };
 
   if (loading) {

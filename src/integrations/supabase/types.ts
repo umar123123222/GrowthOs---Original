@@ -940,91 +940,37 @@ export type Database = {
           },
         ]
       }
-      segmented_weekly_success_sessions: {
+      session_attendance: {
         Row: {
+          attended_at: string | null
           created_at: string | null
-          description: string | null
-          end_time: string | null
           id: string
-          mentor_id: string | null
-          mentor_name: string | null
-          segment: string | null
-          start_time: string | null
-          status: string | null
-          title: string | null
+          session_id: string
+          user_id: string
         }
         Insert: {
+          attended_at?: string | null
           created_at?: string | null
-          description?: string | null
-          end_time?: string | null
-          id: string
-          mentor_id?: string | null
-          mentor_name?: string | null
-          segment?: string | null
-          start_time?: string | null
-          status?: string | null
-          title?: string | null
+          id?: string
+          session_id: string
+          user_id: string
         }
         Update: {
+          attended_at?: string | null
           created_at?: string | null
-          description?: string | null
-          end_time?: string | null
           id?: string
-          mentor_id?: string | null
-          mentor_name?: string | null
-          segment?: string | null
-          start_time?: string | null
-          status?: string | null
-          title?: string | null
+          session_id?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "segmented_weekly_success_sessions_id_fkey"
-            columns: ["id"]
-            isOneToOne: true
+            foreignKeyName: "session_attendance_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "success_sessions"
             referencedColumns: ["id"]
           },
         ]
-      }
-      segmented_weekly_success_sessions_backup: {
-        Row: {
-          created_at: string | null
-          description: string | null
-          end_time: string | null
-          id: string | null
-          mentor_id: string | null
-          mentor_name: string | null
-          segment: string | null
-          start_time: string | null
-          status: string | null
-          title: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          description?: string | null
-          end_time?: string | null
-          id?: string | null
-          mentor_id?: string | null
-          mentor_name?: string | null
-          segment?: string | null
-          start_time?: string | null
-          status?: string | null
-          title?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          description?: string | null
-          end_time?: string | null
-          id?: string | null
-          mentor_id?: string | null
-          mentor_name?: string | null
-          segment?: string | null
-          start_time?: string | null
-          status?: string | null
-          title?: string | null
-        }
-        Relationships: []
       }
       student_recovery_messages: {
         Row: {
