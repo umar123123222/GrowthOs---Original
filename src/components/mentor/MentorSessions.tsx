@@ -91,8 +91,10 @@ export function MentorSessions() {
     });
     
     const completed = sessions.filter(session => {
+      if (session.status === 'completed') return true;
+      if (!session.end_time) return false;
       const sessionEnd = new Date(session.end_time);
-      return sessionEnd < now || session.status === 'completed';
+      return sessionEnd < now;
     });
 
     setUpcomingSessions(upcoming);
@@ -102,6 +104,12 @@ export function MentorSessions() {
   const canStartSession = (session: MentorSession) => {
     const now = new Date();
     const sessionStart = new Date(session.start_time);
+    
+    // If no end time, allow starting 15 minutes before start time
+    if (!session.end_time) {
+      return session.isAssignedToMe && session.status === 'upcoming' && now >= new Date(sessionStart.getTime() - 15 * 60 * 1000);
+    }
+    
     const sessionEnd = new Date(session.end_time);
     const cutoffTime = new Date(sessionEnd.getTime() + 60 * 60 * 1000); // 60 minutes after end
     
@@ -248,7 +256,8 @@ export function MentorSessions() {
               <div>
                 <div className="font-medium text-sm">Duration</div>
                 <div className="text-sm text-muted-foreground">
-                  {format(new Date(session.start_time), 'h:mm a')} - {format(new Date(session.end_time), 'h:mm a')}
+                  {format(new Date(session.start_time), 'h:mm a')}
+                  {session.end_time && ` - ${format(new Date(session.end_time), 'h:mm a')}`}
                 </div>
               </div>
             </div>
