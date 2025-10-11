@@ -24,6 +24,7 @@ interface MentorSession {
   zoom_passcode?: string;
   host_login_email?: string;
   host_login_pwd?: string;
+  isAssignedToMe?: boolean;
 }
 
 export function MentorSessions() {
@@ -44,11 +45,10 @@ export function MentorSessions() {
     if (!user?.id) return;
 
     try {
-      // Fetch sessions where this mentor is assigned
+      // Fetch all sessions (mentors can see all sessions, not just assigned ones)
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
-        .eq('mentor_id', user.id)
         .order('start_time', { ascending: true });
 
       if (error) throw error;
@@ -57,7 +57,7 @@ export function MentorSessions() {
         id: session.id,
         title: session.title,
         description: session.description || '',
-        mentor_name: session.mentor_name || '',
+        mentor_name: session.mentor_name || 'Unassigned',
         schedule_date: session.schedule_date || '',
         start_time: session.start_time,
         end_time: session.end_time || '',
@@ -66,7 +66,8 @@ export function MentorSessions() {
         zoom_meeting_id: session.zoom_meeting_id || '',
         zoom_passcode: session.zoom_passcode || '',
         host_login_email: session.host_login_email || '',
-        host_login_pwd: session.host_login_pwd || ''
+        host_login_pwd: session.host_login_pwd || '',
+        isAssignedToMe: session.mentor_id === user.id
       }));
       
       processSessions(sessions);
@@ -104,8 +105,8 @@ export function MentorSessions() {
     const sessionEnd = new Date(session.end_time);
     const cutoffTime = new Date(sessionEnd.getTime() + 60 * 60 * 1000); // 60 minutes after end
     
-    // Can start if session is upcoming and within the time window
-    return session.status === 'upcoming' && now >= new Date(sessionStart.getTime() - 15 * 60 * 1000) && now <= cutoffTime;
+    // Can start if session is upcoming, assigned to me, and within the time window
+    return session.isAssignedToMe && session.status === 'upcoming' && now >= new Date(sessionStart.getTime() - 15 * 60 * 1000) && now <= cutoffTime;
   };
 
   const handleStartSession = async (session: MentorSession) => {
@@ -216,6 +217,12 @@ export function MentorSessions() {
               {session.description && (
                 <p className="text-muted-foreground">{session.description}</p>
               )}
+              {session.mentor_name && (
+                <p className="text-sm text-muted-foreground">
+                  Mentor: <span className="font-medium">{session.mentor_name}</span>
+                  {session.isAssignedToMe && <Badge variant="outline" className="ml-2 bg-primary/10">Assigned to you</Badge>}
+                </p>
+              )}
             </div>
             <Badge variant={isUpcoming ? "default" : "secondary"} className="shrink-0">
               {session.status}
@@ -280,10 +287,17 @@ export function MentorSessions() {
           <div className="flex items-center justify-between pt-4 border-t">
             <div className="flex items-center gap-2">
               {isUpcoming ? (
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  <Users className="w-3 h-3 mr-1" />
-                  Ready to Host
-                </Badge>
+                session.isAssignedToMe ? (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                    <Users className="w-3 h-3 mr-1" />
+                    Ready to Host
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="bg-gray-50 text-gray-700">
+                    <Users className="w-3 h-3 mr-1" />
+                    Not Assigned to You
+                  </Badge>
+                )
               ) : (
                 <Badge variant="outline" className="bg-gray-50 text-gray-700">
                   Completed
@@ -299,6 +313,11 @@ export function MentorSessions() {
                 >
                   <Play className="w-4 h-4 mr-2" />
                   Start Session
+                </Button>
+              ) : isUpcoming && !session.isAssignedToMe ? (
+                <Button variant="outline" disabled>
+                  <Users className="w-4 h-4 mr-2" />
+                  Not Your Session
                 </Button>
               ) : isUpcoming ? (
                 <Button variant="outline" disabled>
