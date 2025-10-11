@@ -423,11 +423,12 @@ export const StudentManagement = () => {
         return;
       }
 
+      // Allow resending for pending, overdue, and issued statuses
       const { data: invoice, error } = await supabase
         .from('invoices')
         .select('*')
         .eq('student_id', student.student_record_id)
-        .eq('status', 'issued')
+        .in('status', ['pending', 'overdue', 'issued'])
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -435,18 +436,47 @@ export const StudentManagement = () => {
       if (error) throw error;
       if (!invoice) {
         toast({
-          title: 'No Issued Invoice',
-          description: 'This student has no issued invoices to resend.',
+          title: 'No Invoice Found',
+          description: 'This student has no invoices to resend.',
           variant: 'destructive',
         });
         return;
       }
 
-      const { error: rpcError } = await supabase.rpc('create_notification', {
+      // Get company settings for email details
+      const { data: settings } = await supabase
+        .from('company_settings')
+        .select('company_name, company_email, contact_email')
+        .single();
+
+      // Queue email in email_queue table
+      const { error: emailError } = await supabase
+        .from('email_queue')
+        .insert({
+          user_id: student.id,
+          recipient_email: student.email,
+          recipient_name: student.full_name,
+          email_type: 'invoice_resend',
+          status: 'pending',
+          credentials: {
+            invoice_id: invoice.id,
+            amount: invoice.amount,
+            due_date: invoice.due_date,
+            installment_number: invoice.installment_number,
+            status: invoice.status,
+            company_name: settings?.company_name || 'Company',
+            company_email: settings?.company_email || settings?.contact_email,
+          }
+        });
+
+      if (emailError) throw emailError;
+
+      // Also create in-app notification
+      await supabase.rpc('create_notification', {
         p_user_id: student.id,
         p_type: 'invoice_issued',
-        p_title: 'Invoice Issued',
-        p_message: `Invoice #${invoice.installment_number || ''} has been re-sent.`,
+        p_title: 'Invoice Reminder',
+        p_message: `Invoice #${invoice.installment_number || ''} has been re-sent. Status: ${invoice.status}`,
         p_metadata: {
           invoice_id: invoice.id,
           student_user_id: student.id,
@@ -457,9 +487,7 @@ export const StudentManagement = () => {
         },
       });
 
-      if (rpcError) throw rpcError;
-
-      toast({ title: 'Success', description: 'Invoice re-sent to student.' });
+      toast({ title: 'Success', description: 'Invoice email queued and notification sent to student.' });
     } catch (e) {
       console.error('Error resending invoice:', e);
       toast({ title: 'Error', description: 'Failed to resend invoice', variant: 'destructive' });

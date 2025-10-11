@@ -82,25 +82,42 @@ export const useUserManagement = () => {
   const deleteUser = async (userId: string): Promise<boolean> => {
     setLoading(true);
     try {
+      console.log('[useUserManagement] Attempting to delete user:', userId);
+      
       const { data, error } = await supabase.functions.invoke('delete-user-with-role', {
         body: { target_user_id: userId }
       });
 
-      if (error || data?.error) {
+      console.log('[useUserManagement] Edge function response:', { data, error });
+
+      if (error) {
+        console.error('[useUserManagement] Edge function error:', error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: data?.error || error?.message || "Failed to delete user"
+          description: error.message || "Failed to delete user"
         });
         return false;
       }
 
+      if (data?.error) {
+        console.error('[useUserManagement] Server-side error:', data.error);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: data.error
+        });
+        return false;
+      }
+
+      console.log('[useUserManagement] User deleted successfully');
       toast({
         title: "Success",
         description: "User deleted successfully"
       });
       return true;
     } catch (error: any) {
+      console.error('[useUserManagement] Exception during deletion:', error);
       toast({
         variant: "destructive",
         title: "Error",

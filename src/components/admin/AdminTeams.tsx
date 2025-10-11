@@ -179,13 +179,25 @@ const AdminTeams = () => {
   };
 
   const handleDeleteMember = async (memberId: string, memberName: string) => {
-    const success = await deleteUser(memberId);
-    if (success) {
+    console.log('[AdminTeams] Starting deletion for:', { memberId, memberName });
+    try {
+      const success = await deleteUser(memberId);
+      console.log('[AdminTeams] Deletion result:', success);
+      
+      if (success) {
+        toast({
+          title: "Success",
+          description: `${memberName} has been deleted successfully`
+        });
+        fetchTeamMembers();
+      }
+    } catch (error) {
+      console.error('[AdminTeams] Error in handleDeleteMember:', error);
       toast({
-        title: "Success",
-        description: `${memberName} has been deleted successfully`
+        variant: "destructive",
+        title: "Error",
+        description: "An unexpected error occurred during deletion"
       });
-      fetchTeamMembers();
     }
   };
 
