@@ -84,17 +84,20 @@ export function MentorSessions() {
 
   const processSessions = (sessions: MentorSession[]) => {
     const now = new Date();
+    now.setHours(0, 0, 0, 0); // Start of today
     
     const upcoming = sessions.filter(session => {
       const sessionStart = new Date(session.start_time);
-      return sessionStart >= now || session.status === 'upcoming';
+      sessionStart.setHours(0, 0, 0, 0); // Start of session day
+      // Only show if session is today or in the future
+      return sessionStart >= now;
     });
     
     const completed = sessions.filter(session => {
-      if (session.status === 'completed') return true;
-      if (!session.end_time) return false;
-      const sessionEnd = new Date(session.end_time);
-      return sessionEnd < now;
+      const sessionStart = new Date(session.start_time);
+      sessionStart.setHours(0, 0, 0, 0);
+      // Show as completed if session was before today
+      return sessionStart < now;
     });
 
     setUpcomingSessions(upcoming);
