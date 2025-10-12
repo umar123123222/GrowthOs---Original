@@ -10,6 +10,7 @@ import { ENV_CONFIG } from "@/lib/env-config";
 import { detectBusinessContext, getContextDescription } from "@/lib/ai-context-detector";
 import { buildBusinessContext } from "@/lib/ai-context-builder";
 import { StudentIntegrations } from "@/lib/student-integrations";
+import { useConversationHistory } from "@/hooks/useConversationHistory";
 
 interface Message {
   id: number;
@@ -56,6 +57,9 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
     loading: true
   });
   const { toast } = useToast();
+  
+  // Initialize conversation history hook
+  const { addMessage, getHistory } = useConversationHistory(user?.id || 'unknown');
 
   // Validate user data - show error if incomplete
   if (!user?.id || !user?.email) {
@@ -191,6 +195,7 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
         studentId: studentId,
         studentName: studentName,
         timestamp: new Date().toISOString(),
+        conversationHistory: getHistory(), // Include last 10 message pairs
         ...(businessContext && { businessContext }),
       };
       
@@ -352,12 +357,18 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
     setMessages(prev => [...prev, userMessage, loadingMessage]);
     setMessage("");
     setIsLoading(true);
+    
+    // Add user message to conversation history
+    addMessage('user', userMessage.content);
 
     try {
       const aiReply = await sendToWebhook(userMessage.content);
       
       // Update credits after successful AI response
       await updateCredits();
+      
+      // Add AI response to conversation history
+      addMessage('assistant', aiReply);
       
       // Remove loading message and add AI response
       setMessages(prev => {
