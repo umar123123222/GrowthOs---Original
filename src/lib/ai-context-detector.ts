@@ -1,0 +1,108 @@
+/**
+ * AI Context Detector
+ * Detects when students want to discuss their business metrics
+ * by analyzing keywords in their messages
+ */
+
+export interface BusinessContextFlags {
+  includeShopify: boolean;
+  includeMetaAds: boolean;
+}
+
+const SHOPIFY_KEYWORDS = [
+  'shopify',
+  'sales',
+  'store',
+  'orders',
+  'revenue',
+  'products',
+  'my business',
+  'ecommerce',
+  'customers',
+  'conversions',
+  'gmv',
+  'aov',
+  'average order',
+  'top products',
+  'best selling'
+];
+
+const META_ADS_KEYWORDS = [
+  'meta',
+  'ads',
+  'facebook',
+  'advertising',
+  'campaigns',
+  'roas',
+  'spend',
+  'ad performance',
+  'impressions',
+  'clicks',
+  'ctr',
+  'cost per',
+  'ad budget'
+];
+
+const GENERAL_BUSINESS_KEYWORDS = [
+  'analyze my',
+  'study my',
+  'review my',
+  'check my',
+  'show me my',
+  'how is my',
+  'how are my',
+  "what's my",
+  'my metrics',
+  'my performance',
+  'my data'
+];
+
+/**
+ * Detects if a message contains keywords related to business metrics
+ * @param message - The user's message
+ * @returns Flags indicating which contexts to include
+ */
+export function detectBusinessContext(message: string): BusinessContextFlags {
+  const lowerMessage = message.toLowerCase();
+  
+  // Check for general business keywords that might indicate context is needed
+  const hasGeneralKeywords = GENERAL_BUSINESS_KEYWORDS.some(keyword => 
+    lowerMessage.includes(keyword)
+  );
+  
+  // Check for Shopify-specific keywords
+  const hasShopifyKeywords = SHOPIFY_KEYWORDS.some(keyword => {
+    // Use word boundary matching to avoid false positives
+    const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+    return regex.test(lowerMessage);
+  });
+  
+  // Check for Meta Ads-specific keywords
+  const hasMetaAdsKeywords = META_ADS_KEYWORDS.some(keyword => {
+    const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+    return regex.test(lowerMessage);
+  });
+  
+  // If general business keywords are present, include both contexts
+  // Otherwise, only include specific contexts based on their keywords
+  return {
+    includeShopify: hasShopifyKeywords || (hasGeneralKeywords && !hasMetaAdsKeywords),
+    includeMetaAds: hasMetaAdsKeywords || (hasGeneralKeywords && hasShopifyKeywords)
+  };
+}
+
+/**
+ * Get a user-friendly description of what context will be fetched
+ * @param flags - Context flags
+ * @returns Human-readable description
+ */
+export function getContextDescription(flags: BusinessContextFlags): string {
+  if (flags.includeShopify && flags.includeMetaAds) {
+    return 'Analyzing your Shopify and Meta Ads data...';
+  } else if (flags.includeShopify) {
+    return 'Analyzing your Shopify data...';
+  } else if (flags.includeMetaAds) {
+    return 'Analyzing your Meta Ads data...';
+  }
+  return '';
+}

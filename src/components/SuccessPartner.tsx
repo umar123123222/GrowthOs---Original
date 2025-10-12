@@ -3,10 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { X, Send, MessageSquare, BookOpen, Heart, Brain, Loader2, Clock } from "lucide-react";
+import { X, Send, MessageSquare, BookOpen, Heart, Brain, Loader2, Clock, TrendingUp, BarChart3 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ENV_CONFIG } from "@/lib/env-config";
+import { detectBusinessContext, getContextDescription } from "@/lib/ai-context-detector";
+import { buildBusinessContext } from "@/lib/ai-context-builder";
 
 interface Message {
   id: number;
@@ -45,6 +47,8 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [credits, setCredits] = useState<CreditsInfo | null>(null);
   const [loadingCredits, setLoadingCredits] = useState(true);
+  const [isFetchingContext, setIsFetchingContext] = useState(false);
+  const [contextDescription, setContextDescription] = useState("");
   const { toast } = useToast();
 
   // Validate user data - show error if incomplete
@@ -107,17 +111,41 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       const studentId = user.id;
       const studentName = user.full_name || user.email.split('@')[0] || 'Student';
       
+      // Detect if we need business context
+      const contextFlags = detectBusinessContext(userMessage);
+      const needsContext = contextFlags.includeShopify || contextFlags.includeMetaAds;
+      
+      let businessContext = null;
+      
+      if (needsContext) {
+        setIsFetchingContext(true);
+        const description = getContextDescription(contextFlags);
+        setContextDescription(description);
+        
+        try {
+          businessContext = await buildBusinessContext(studentId, contextFlags);
+        } catch (error) {
+          console.error("Error fetching business context:", error);
+          // Continue without context if fetch fails
+        } finally {
+          setIsFetchingContext(false);
+          setContextDescription("");
+        }
+      }
+      
       const payload = {
         message: userMessage,
         studentId: studentId,
         studentName: studentName,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        ...(businessContext && { businessContext }),
       };
       
       console.log('Success Partner: Sending message', { 
         studentId, 
         studentName, 
-        messageLength: userMessage.length 
+        messageLength: userMessage.length,
+        hasBusinessContext: !!businessContext
       });
       
       const response = await fetch(ENV_CONFIG.SUCCESS_PARTNER_WEBHOOK_URL, {
@@ -331,6 +359,16 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
           )}
         </CardHeader>
 
+        {/* Context Fetching Indicator */}
+        {isFetchingContext && contextDescription && (
+          <div className="mx-4 mb-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center space-x-2 text-sm text-blue-800">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>{contextDescription}</span>
+            </div>
+          </div>
+        )}
+
         {/* Messages */}
         <CardContent className="flex-1 overflow-y-auto space-y-4">
           {messages.map((msg) => (
@@ -394,16 +432,25 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
             <Badge 
               variant="outline" 
               className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => credits && credits.can_send_message && setMessage("I'm stuck on the current assignment")}
+              onClick={() => credits && credits.can_send_message && setMessage("Study my Shopify sales")}
             >
-              Assignment Help
+              <TrendingUp className="w-3 h-3 mr-1" />
+              Analyze Shopify
             </Badge>
             <Badge 
               variant="outline" 
               className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => credits && credits.can_send_message && setMessage("Can you explain the video concept again?")}
+              onClick={() => credits && credits.can_send_message && setMessage("Review my ad performance")}
             >
-              Video Explanation
+              <BarChart3 className="w-3 h-3 mr-1" />
+              Review Ads
+            </Badge>
+            <Badge 
+              variant="outline" 
+              className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`}
+              onClick={() => credits && credits.can_send_message && setMessage("I'm stuck on the current assignment")}
+            >
+              Assignment Help
             </Badge>
             <Badge 
               variant="outline" 
