@@ -24,7 +24,17 @@ const SHOPIFY_KEYWORDS = [
   'aov',
   'average order',
   'top products',
-  'best selling'
+  'best selling',
+  'profit',
+  'margin',
+  'inventory',
+  'bestseller',
+  'cart',
+  '$',
+  'pkr',
+  'rs',
+  'my store',
+  'my shop'
 ];
 
 const META_ADS_KEYWORDS = [
@@ -40,7 +50,14 @@ const META_ADS_KEYWORDS = [
   'clicks',
   'ctr',
   'cost per',
-  'ad budget'
+  'ad budget',
+  'instagram',
+  'ig ads',
+  'ad spend',
+  'ad cost',
+  'facebook ads',
+  'meta pixel',
+  'conversion rate'
 ];
 
 const GENERAL_BUSINESS_KEYWORDS = [
@@ -54,7 +71,8 @@ const GENERAL_BUSINESS_KEYWORDS = [
   "what's my",
   'my metrics',
   'my performance',
-  'my data'
+  'my data',
+  'business performance'
 ];
 
 /**
@@ -86,8 +104,8 @@ export function detectBusinessContext(message: string): BusinessContextFlags {
   // If general business keywords are present, include both contexts
   // Otherwise, only include specific contexts based on their keywords
   return {
-    includeShopify: hasShopifyKeywords || (hasGeneralKeywords && !hasMetaAdsKeywords),
-    includeMetaAds: hasMetaAdsKeywords || (hasGeneralKeywords && hasShopifyKeywords)
+    includeShopify: hasShopifyKeywords || hasGeneralKeywords,
+    includeMetaAds: hasMetaAdsKeywords || hasGeneralKeywords
   };
 }
 

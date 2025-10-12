@@ -124,9 +124,37 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
         
         try {
           businessContext = await buildBusinessContext(studentId, contextFlags);
+          
+          // Check for disconnected integrations and add UI notifications
+          if (businessContext) {
+            const disconnectedServices: string[] = [];
+            
+            if (businessContext.shopify?.connected === false) {
+              disconnectedServices.push('Shopify');
+            }
+            if (businessContext.metaAds?.connected === false) {
+              disconnectedServices.push('Meta Ads');
+            }
+
+            if (disconnectedServices.length > 0) {
+              setMessages(prev => [...prev, {
+                id: Date.now(),
+                sender: "ai",
+                content: `⚠️ ${disconnectedServices.join(' and ')} not connected. Connect them in Settings → Integrations to get personalized insights.`,
+                timestamp: new Date()
+              }]);
+            }
+          }
         } catch (error) {
           console.error("Error fetching business context:", error);
-          // Continue without context if fetch fails
+          
+          // Add user-facing error message
+          setMessages(prev => [...prev, {
+            id: Date.now(),
+            sender: "ai",
+            content: "⚠️ I'm having trouble fetching your business data right now. I'll continue without those metrics, but you may want to check your integrations.",
+            timestamp: new Date()
+          }]);
         } finally {
           setIsFetchingContext(false);
           setContextDescription("");
@@ -218,6 +246,15 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       return aiResponse;
     } catch (error) {
       console.error('Webhook error:', error);
+      
+      // Add user-facing error message for webhook failures
+      setMessages(prev => [...prev, {
+        id: Date.now(),
+        sender: "ai",
+        content: "⚠️ I'm having trouble connecting to my services right now. Please try again in a moment.",
+        timestamp: new Date()
+      }]);
+      
       throw error;
     }
   }, [user]);

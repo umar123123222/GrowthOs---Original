@@ -7,6 +7,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { fetchShopifyMetrics } from './student-integrations';
 import type { BusinessContextFlags } from './ai-context-detector';
 
+// Cache system for context data
+interface CacheEntry {
+  data: ShopifyContext | MetaAdsContext;
+  timestamp: number;
+}
+
+const contextCache = new Map<string, CacheEntry>();
+const CACHE_DURATION = 3 * 60 * 1000; // 3 minutes
+const lastFetchTime = new Map<string, number>();
+const THROTTLE_MS = 2000; // 2 seconds between fetches
+
 export interface ShopifyContext {
   connected: boolean;
   dateRange?: string;
@@ -43,6 +54,13 @@ export interface BusinessContext {
  * Fetches Shopify context for a user
  */
 async function getShopifyContext(userId: string): Promise<ShopifyContext> {
+  // Check cache first
+  const cacheKey = `shopify_${userId}`;
+  const cached = contextCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data as ShopifyContext;
+  }
+
   try {
     // Check if Shopify is connected
     const { data: integration } = await supabase
@@ -62,7 +80,7 @@ async function getShopifyContext(userId: string): Promise<ShopifyContext> {
       endDate: new Date().toISOString()
     });
 
-    return {
+    const result: ShopifyContext = {
       connected: true,
       dateRange: 'last 7 days',
       metrics: {
@@ -73,6 +91,10 @@ async function getShopifyContext(userId: string): Promise<ShopifyContext> {
         salesTrend: metrics.salesTrend || []
       }
     };
+
+    // Cache the result
+    contextCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    return result;
   } catch (error) {
     console.error('Error fetching Shopify context:', error);
     return {
@@ -86,6 +108,13 @@ async function getShopifyContext(userId: string): Promise<ShopifyContext> {
  * Fetches Meta Ads context for a user
  */
 async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
+  // Check cache first
+  const cacheKey = `meta_${userId}`;
+  const cached = contextCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+    return cached.data as MetaAdsContext;
+  }
+
   try {
     // Check if Meta Ads is connected
     const { data: integration } = await supabase
@@ -112,7 +141,7 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
     if (error) throw error;
 
     if (!metrics || metrics.length === 0) {
-      return {
+      const result: MetaAdsContext = {
         connected: true,
         dateRange: 'last 7 days',
         metrics: {
@@ -124,6 +153,8 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
           ctr: 0
         }
       };
+      contextCache.set(cacheKey, { data: result, timestamp: Date.now() });
+      return result;
     }
 
     // Aggregate metrics
@@ -150,7 +181,7 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
     const roas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
     const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
 
-    return {
+    const result: MetaAdsContext = {
       connected: true,
       dateRange: 'last 7 days',
       metrics: {
@@ -162,6 +193,10 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
         ctr
       }
     };
+
+    // Cache the result
+    contextCache.set(cacheKey, { data: result, timestamp: Date.now() });
+    return result;
   } catch (error) {
     console.error('Error fetching Meta Ads context:', error);
     return {
@@ -186,6 +221,14 @@ export async function buildBusinessContext(
   if (!flags.includeShopify && !flags.includeMetaAds) {
     return null;
   }
+
+  // Rate limiting: throttle requests
+  const lastFetch = lastFetchTime.get(userId);
+  if (lastFetch && Date.now() - lastFetch < THROTTLE_MS) {
+    // Too soon, wait a bit
+    await new Promise(resolve => setTimeout(resolve, THROTTLE_MS - (Date.now() - lastFetch)));
+  }
+  lastFetchTime.set(userId, Date.now());
 
   try {
     // Fetch contexts in parallel with timeout
