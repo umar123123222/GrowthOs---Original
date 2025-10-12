@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { X, Send, MessageSquare, BookOpen, Heart, Brain, Loader2, Clock, TrendingUp, BarChart3 } from "lucide-react";
+import { X, Send, MessageSquare, BookOpen, Heart, Brain, Loader2, Clock, TrendingUp, BarChart3, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ENV_CONFIG } from "@/lib/env-config";
 import { detectBusinessContext, getContextDescription } from "@/lib/ai-context-detector";
 import { buildBusinessContext } from "@/lib/ai-context-builder";
+import { StudentIntegrations } from "@/lib/student-integrations";
 
 interface Message {
   id: number;
@@ -49,6 +50,11 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
   const [loadingCredits, setLoadingCredits] = useState(true);
   const [isFetchingContext, setIsFetchingContext] = useState(false);
   const [contextDescription, setContextDescription] = useState("");
+  const [integrationStatus, setIntegrationStatus] = useState({
+    shopify: false,
+    metaAds: false,
+    loading: true
+  });
   const { toast } = useToast();
 
   // Validate user data - show error if incomplete
@@ -86,6 +92,25 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
 
     fetchCredits();
   }, []);
+
+  // Fetch integration status on component mount
+  useEffect(() => {
+    const fetchIntegrationStatus = async () => {
+      try {
+        const integration = await StudentIntegrations.get(user.id);
+        setIntegrationStatus({
+          shopify: integration?.is_shopify_connected ?? false,
+          metaAds: integration?.is_meta_connected ?? false,
+          loading: false
+        });
+      } catch (error) {
+        console.error('Error fetching integration status:', error);
+        setIntegrationStatus(prev => ({ ...prev, loading: false }));
+      }
+    };
+    
+    fetchIntegrationStatus();
+  }, [user.id]);
 
   // Function to update credits after successful message
   const updateCredits = useCallback(async () => {
@@ -280,6 +305,27 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       return;
     }
 
+    // Validate integration requirements BEFORE sending
+    const contextFlags = detectBusinessContext(message);
+    
+    if (contextFlags.includeShopify && !integrationStatus.shopify) {
+      toast({
+        title: "Shopify Not Connected",
+        description: "To analyze your Shopify data, please connect your account first in Settings → Integrations",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (contextFlags.includeMetaAds && !integrationStatus.metaAds) {
+      toast({
+        title: "Meta Ads Not Connected",
+        description: "To analyze your ad performance, please connect your Meta Ads account first in Settings → Integrations",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const userMessage: Message = {
       id: Date.now(),
       sender: "user",
@@ -337,7 +383,7 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [message, isLoading, sendToWebhook, updateCredits, credits, toast]);
+  }, [message, isLoading, sendToWebhook, updateCredits, credits, integrationStatus, toast]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -374,6 +420,32 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
               </Button>
             </div>
           </div>
+          
+          {/* Integration Warning Banner */}
+          {!integrationStatus.loading && (!integrationStatus.shopify || !integrationStatus.metaAds) && (
+            <div className="mt-3 p-3 bg-amber-50 border-l-4 border-amber-400 rounded">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600" />
+                  <p className="text-sm text-amber-800 font-medium">
+                    {!integrationStatus.shopify && !integrationStatus.metaAds
+                      ? "Connect Shopify and Meta Ads to unlock business insights"
+                      : !integrationStatus.shopify
+                      ? "Connect Shopify to analyze your store performance"
+                      : "Connect Meta Ads to analyze your ad campaigns"}
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.location.href = '/connect'}
+                  className="text-xs shrink-0"
+                >
+                  Go to Integrations
+                </Button>
+              </div>
+            </div>
+          )}
           
           {/* Credits Warning */}
           {credits && credits.credits_remaining <= 2 && credits.credits_remaining > 0 && (
@@ -468,16 +540,46 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
           <div className="flex flex-wrap gap-2 mt-2">
             <Badge 
               variant="outline" 
-              className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => credits && credits.can_send_message && setMessage("Study my Shopify sales")}
+              className={`cursor-pointer hover:bg-gray-100 ${
+                !integrationStatus.shopify || (credits && !credits.can_send_message)
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : ''
+              }`}
+              onClick={() => {
+                if (integrationStatus.shopify && credits && credits.can_send_message) {
+                  setMessage("Study my Shopify sales");
+                } else if (!integrationStatus.shopify) {
+                  toast({
+                    title: "Shopify Not Connected",
+                    description: "Please connect your Shopify account first in Settings → Integrations",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              title={!integrationStatus.shopify ? "Connect Shopify first" : ""}
             >
               <TrendingUp className="w-3 h-3 mr-1" />
               Analyze Shopify
             </Badge>
             <Badge 
               variant="outline" 
-              className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => credits && credits.can_send_message && setMessage("Review my ad performance")}
+              className={`cursor-pointer hover:bg-gray-100 ${
+                !integrationStatus.metaAds || (credits && !credits.can_send_message)
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : ''
+              }`}
+              onClick={() => {
+                if (integrationStatus.metaAds && credits && credits.can_send_message) {
+                  setMessage("Review my ad performance");
+                } else if (!integrationStatus.metaAds) {
+                  toast({
+                    title: "Meta Ads Not Connected",
+                    description: "Please connect your Meta Ads account first in Settings → Integrations",
+                    variant: "destructive"
+                  });
+                }
+              }}
+              title={!integrationStatus.metaAds ? "Connect Meta Ads first" : ""}
             >
               <BarChart3 className="w-3 h-3 mr-1" />
               Review Ads
