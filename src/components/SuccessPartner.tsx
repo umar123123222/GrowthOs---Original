@@ -305,10 +305,14 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       return;
     }
 
-    // Validate integration requirements BEFORE sending
-    const contextFlags = detectBusinessContext(message);
+    // Validate integration requirements BEFORE sending - only block SPECIFIC service mentions
+    const lowerMessage = message.toLowerCase();
     
-    if (contextFlags.includeShopify && !integrationStatus.shopify) {
+    // Specific Shopify keywords (not general business terms)
+    const shopifyKeywords = ['shopify', 'store', 'product', 'inventory', 'order'];
+    const hasShopifyKeyword = shopifyKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    if (hasShopifyKeyword && !integrationStatus.shopify) {
       toast({
         title: "Shopify Not Connected",
         description: "To analyze your Shopify data, please connect your account first in Settings → Integrations",
@@ -317,7 +321,11 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       return;
     }
     
-    if (contextFlags.includeMetaAds && !integrationStatus.metaAds) {
+    // Specific Meta Ads keywords (not general business terms)
+    const metaKeywords = ['meta', 'facebook', 'instagram', 'ads', 'campaign', 'roas', 'cpc', 'ctr'];
+    const hasMetaKeyword = metaKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    if (hasMetaKeyword && !integrationStatus.metaAds) {
       toast({
         title: "Meta Ads Not Connected",
         description: "To analyze your ad performance, please connect your Meta Ads account first in Settings → Integrations",
