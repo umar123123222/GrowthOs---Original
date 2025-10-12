@@ -104,3 +104,17 @@ export async function fetchShopifyMetrics(
   if (error) throw error;
   return data;
 }
+
+export async function fetchMetaAdsMetrics(
+  opts?: { dateFrom?: string; dateTo?: string }
+) {
+  const { data, error } = await supabase.functions.invoke('meta-ads-metrics', {
+    body: {
+      dateFrom: opts?.dateFrom,
+      dateTo: opts?.dateTo,
+    }
+  });
+
+  if (error) throw error;
+  return data;
+}

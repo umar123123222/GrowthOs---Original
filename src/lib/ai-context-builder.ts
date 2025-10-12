@@ -4,7 +4,7 @@
  */
 
 import { supabase } from '@/integrations/supabase/client';
-import { fetchShopifyMetrics } from './student-integrations';
+import { fetchShopifyMetrics, StudentIntegrations, fetchMetaAdsMetrics } from './student-integrations';
 import type { BusinessContextFlags } from './ai-context-detector';
 
 // Cache system for context data
@@ -62,15 +62,10 @@ async function getShopifyContext(userId: string): Promise<ShopifyContext> {
   }
 
   try {
-    // Check if Shopify is connected
-    const { data: integration } = await supabase
-      .from('integrations')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('source', 'shopify')
-      .maybeSingle();
-
-    if (!integration) {
+    // Check if Shopify is connected using StudentIntegrations
+    const integration = await StudentIntegrations.get(userId);
+    
+    if (!integration || !integration.is_shopify_connected) {
       return { connected: false };
     }
 
@@ -116,81 +111,33 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
   }
 
   try {
-    // Check if Meta Ads is connected
-    const { data: integration } = await supabase
-      .from('integrations')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('source', 'meta')
-      .maybeSingle();
-
-    if (!integration) {
+    // Check if Meta Ads is connected using StudentIntegrations
+    const integration = await StudentIntegrations.get(userId);
+    
+    if (!integration || !integration.is_meta_connected) {
       return { connected: false };
     }
 
-    // Fetch metrics from user_metrics table
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
-    const { data: metrics, error } = await supabase
-      .from('user_metrics')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('source', 'meta')
-      .gte('date', sevenDaysAgo);
+    // Fetch metrics using the edge function
+    const metricsData = await fetchMetaAdsMetrics({
+      dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+      dateTo: new Date().toISOString()
+    });
 
-    if (error) throw error;
-
-    if (!metrics || metrics.length === 0) {
-      const result: MetaAdsContext = {
-        connected: true,
-        dateRange: 'last 7 days',
-        metrics: {
-          totalSpend: 0,
-          impressions: 0,
-          clicks: 0,
-          conversions: 0,
-          roas: 0,
-          ctr: 0
-        }
-      };
-      contextCache.set(cacheKey, { data: result, timestamp: Date.now() });
-      return result;
+    if (!metricsData || !metricsData.connected) {
+      return { connected: false };
     }
-
-    // Aggregate metrics
-    const totalSpend = metrics
-      .filter(m => m.metric === 'spend')
-      .reduce((sum, m) => sum + Number(m.value), 0);
-    
-    const totalImpressions = metrics
-      .filter(m => m.metric === 'impressions')
-      .reduce((sum, m) => sum + Number(m.value), 0);
-    
-    const totalClicks = metrics
-      .filter(m => m.metric === 'clicks')
-      .reduce((sum, m) => sum + Number(m.value), 0);
-    
-    const totalConversions = metrics
-      .filter(m => m.metric === 'conversions')
-      .reduce((sum, m) => sum + Number(m.value), 0);
-    
-    const totalRevenue = metrics
-      .filter(m => m.metric === 'revenue')
-      .reduce((sum, m) => sum + Number(m.value), 0);
-
-    const roas = totalSpend > 0 ? totalRevenue / totalSpend : 0;
-    const ctr = totalImpressions > 0 ? (totalClicks / totalImpressions) * 100 : 0;
 
     const result: MetaAdsContext = {
       connected: true,
       dateRange: 'last 7 days',
       metrics: {
-        totalSpend,
-        impressions: totalImpressions,
-        clicks: totalClicks,
-        conversions: totalConversions,
-        roas,
-        ctr
+        totalSpend: metricsData.metrics?.totalSpend || 0,
+        impressions: metricsData.metrics?.totalImpressions || 0,
+        clicks: metricsData.metrics?.totalClicks || 0,
+        conversions: metricsData.metrics?.totalConversions || 0,
+        roas: metricsData.metrics?.averageROAS ? metricsData.metrics.averageROAS * 100 : 0,
+        ctr: metricsData.metrics?.averageCTR || 0
       }
     };
 
