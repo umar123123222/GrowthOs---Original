@@ -317,6 +317,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "email_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       installment_payments: {
@@ -453,6 +460,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
             referencedColumns: ["id"]
           },
         ]
@@ -900,6 +914,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "recording_ratings_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       recording_views: {
@@ -1077,6 +1098,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "students_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
             referencedColumns: ["id"]
           },
         ]
@@ -1409,6 +1437,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_milestones: {
@@ -1649,6 +1684,13 @@ export type Database = {
             referencedRelation: "users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -1685,6 +1727,82 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      users_safe_view: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          dream_goal_summary: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          is_temp_password: boolean | null
+          last_active_at: string | null
+          last_login_at: string | null
+          lms_status: string | null
+          lms_user_id: string | null
+          phone: string | null
+          role: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          dream_goal_summary?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_temp_password?: boolean | null
+          last_active_at?: string | null
+          last_login_at?: string | null
+          lms_status?: string | null
+          lms_user_id?: string | null
+          phone?: string | null
+          role?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          dream_goal_summary?: string | null
+          email?: string | null
+          full_name?: string | null
+          id?: string | null
+          is_temp_password?: boolean | null
+          last_active_at?: string | null
+          last_login_at?: string | null
+          lms_status?: string | null
+          lms_user_id?: string | null
+          phone?: string | null
+          role?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "users_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
