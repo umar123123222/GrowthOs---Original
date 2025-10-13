@@ -70,16 +70,9 @@ export function useConversationHistory(userId: string) {
   /**
    * Add a message to conversation history
    * Automatically trims to keep only last 20 messages (10 pairs)
-   * Guards against saving when userId is unknown to prevent fragmentation
+   * Persists all messages including those from unknown users (migration handles the rest)
    */
   const addMessage = (role: 'user' | 'assistant', content: string) => {
-    // Guard: Skip saving to localStorage if userId is unknown
-    // Messages will still appear in UI, but won't persist until user is identified
-    if (userId === 'unknown') {
-      console.warn('Success Partner History: Skipping save for unknown user', { role });
-      return;
-    }
-
     setConversationData(prev => {
       // Check if we need to reset for a new day
       const currentDate = new Date().toISOString().split('T')[0];
