@@ -27,6 +27,14 @@ export interface ShopifyContext {
     averageOrderValue: number;
     topProducts?: Array<{ name: string; sales: number }>;
     salesTrend?: Array<{ date: string; sales: number }>;
+    // Full product details with sales
+    products?: Array<{ 
+      id: number | string; 
+      name: string; 
+      sales: number; 
+      revenue: number;
+      orders?: number;
+    }>;
   };
   error?: string;
 }
@@ -41,6 +49,49 @@ export interface MetaAdsContext {
     conversions: number;
     roas: number;
     ctr: number;
+    // Detailed campaign data
+    campaigns?: Array<{
+      id: string;
+      name: string;
+      status: string;
+      spend: number;
+      impressions: number;
+      clicks: number;
+      conversions: number;
+      ctr: number;
+      cpc: number;
+      cpm: number;
+      roas?: number;
+      performance?: string;
+    }>;
+    // Detailed adset data
+    adSets?: Array<{
+      id: string;
+      name: string;
+      campaignId: string;
+      status: string;
+      spend: number;
+      impressions: number;
+      clicks: number;
+      conversions: number;
+      ctr: number;
+      cpc: number;
+      performance?: string;
+    }>;
+    // Detailed ad data
+    ads?: Array<{
+      id: string;
+      name: string;
+      adSetId: string;
+      status: string;
+      spend: number;
+      impressions: number;
+      clicks: number;
+      conversions: number;
+      ctr: number;
+      cpc: number;
+      performance?: string;
+    }>;
   };
   error?: string;
 }
@@ -83,7 +134,9 @@ async function getShopifyContext(userId: string): Promise<ShopifyContext> {
         orderCount: metrics.orders || 0,
         averageOrderValue: metrics.aov || 0,
         topProducts: metrics.topProducts || [],
-        salesTrend: metrics.salesTrend || []
+        salesTrend: metrics.salesTrend || [],
+        // Include all products with their detailed sales data
+        products: metrics.products || metrics.topProducts || []
       }
     };
 
@@ -137,7 +190,11 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
         clicks: metricsData.metrics?.totalClicks || 0,
         conversions: metricsData.metrics?.totalConversions || 0,
         roas: metricsData.metrics?.averageROAS ? metricsData.metrics.averageROAS * 100 : 0,
-        ctr: metricsData.metrics?.averageCTR || 0
+        ctr: metricsData.metrics?.averageCTR || 0,
+        // Include detailed campaign, adset, and ad data
+        campaigns: metricsData.metrics?.campaigns || [],
+        adSets: metricsData.metrics?.adSets || [],
+        ads: metricsData.metrics?.ads || []
       }
     };
 
