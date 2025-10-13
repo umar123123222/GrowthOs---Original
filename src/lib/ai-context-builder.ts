@@ -254,37 +254,40 @@ export async function buildBusinessContext(
   lastFetchTime.set(userId, Date.now());
 
   try {
-    // Fetch contexts in parallel with timeout
-    const fetchPromises: Promise<any>[] = [];
-    
+    // Fetch contexts with per-service timeouts and return whatever is ready
+    const racers: Array<Promise<any>> = [];
+
+    const withTimeout = <T>(p: Promise<T>, ms: number) =>
+      Promise.race([
+        p,
+        new Promise<T>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms)),
+      ]);
+
     if (flags.includeShopify) {
-      fetchPromises.push(getShopifyContext(userId));
+      racers.push(
+        withTimeout(getShopifyContext(userId), timeout)
+          .then((r) => ({ key: 'shopify', value: r }))
+          .catch(() => ({ key: 'shopify', value: null }))
+      );
     }
-    
     if (flags.includeMetaAds) {
-      fetchPromises.push(getMetaAdsContext(userId));
+      racers.push(
+        withTimeout(getMetaAdsContext(userId), timeout)
+          .then((r) => ({ key: 'metaAds', value: r }))
+          .catch(() => ({ key: 'metaAds', value: null }))
+      );
     }
 
-    // Race against timeout
-    const results = await Promise.race([
-      Promise.all(fetchPromises),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Context fetch timeout')), timeout)
-      )
-    ]) as Array<ShopifyContext | MetaAdsContext>;
+    const settled = await Promise.all(racers);
 
     const context: BusinessContext = {};
-    
-    let resultIndex = 0;
-    
-    if (flags.includeShopify) {
-      context.shopify = results[resultIndex] as ShopifyContext;
-      resultIndex++;
+    for (const item of settled as any[]) {
+      if (item.key === 'shopify' && item.value) context.shopify = item.value as ShopifyContext;
+      if (item.key === 'metaAds' && item.value) context.metaAds = item.value as MetaAdsContext;
     }
-    
-    if (flags.includeMetaAds) {
-      context.metaAds = results[resultIndex] as MetaAdsContext;
-    }
+
+    // If nothing resolved (both timed out/failed), return null so caller can decide fallback
+    if (!context.shopify && !context.metaAds) return null;
 
     return context;
   } catch (error) {
