@@ -147,7 +147,15 @@ async function getShopifyContext(userId: string): Promise<ShopifyContext> {
     console.error('Error fetching Shopify context:', error);
     return {
       connected: true,
-      error: 'Failed to fetch Shopify data'
+      error: 'Failed to fetch Shopify data',
+      metrics: {
+        totalSales: 0,
+        orderCount: 0,
+        averageOrderValue: 0,
+        topProducts: [],
+        salesTrend: [],
+        products: []
+      }
     };
   }
 }
@@ -205,7 +213,18 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
     console.error('Error fetching Meta Ads context:', error);
     return {
       connected: true,
-      error: 'Failed to fetch Meta Ads data'
+      error: 'Failed to fetch Meta Ads data',
+      metrics: {
+        totalSpend: 0,
+        impressions: 0,
+        clicks: 0,
+        conversions: 0,
+        roas: 0,
+        ctr: 0,
+        campaigns: [],
+        adSets: [],
+        ads: []
+      }
     };
   }
 }
