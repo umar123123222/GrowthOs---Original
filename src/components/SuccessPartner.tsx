@@ -141,8 +141,8 @@ const SuccessPartner = ({
           buildBusinessContext(
             user.id,
             { includeShopify: false, includeMetaAds: true },
-            20000,
-            { metaAds: 20000 }
+            60000,
+            { metaAds: 60000 }
           ).catch(error => {
             console.warn('Cache warming failed:', error);
           });
@@ -176,6 +176,32 @@ const SuccessPartner = ({
       console.error('Error updating credits:', error);
     }
   }, []);
+
+  // Helper: sleep
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  // Helper: fetch business context with retries until both services are ready
+  const fetchContextUntilReady = async (studentId: string, flags: { includeShopify: boolean; includeMetaAds: boolean }) => {
+    const start = Date.now();
+    const MAX_WAIT_MS = 120000; // up to 2 minutes
+    const SHOPIFY_TIMEOUT = 30000;
+    const META_TIMEOUT = 60000;
+    let lastContext: any = null;
+    while (Date.now() - start < MAX_WAIT_MS) {
+      try {
+        const ctx = await buildBusinessContext(studentId, flags, Math.max(SHOPIFY_TIMEOUT, META_TIMEOUT), { shopify: SHOPIFY_TIMEOUT, metaAds: META_TIMEOUT });
+        lastContext = ctx;
+        const shopifyReady = !flags.includeShopify || !!ctx?.shopify?.metrics || ctx?.shopify?.connected === true;
+        const metaReady = !flags.includeMetaAds || !!ctx?.metaAds?.metrics || ctx?.metaAds?.connected === true;
+        if (shopifyReady && metaReady) return ctx;
+      } catch (e: any) {
+        safeLogger.warn('Business context fetch attempt failed, retrying...', { error: e?.message });
+      }
+      await sleep(1500);
+    }
+    return lastContext;
+  };
+
   const sendToWebhook = useCallback(async (userMessage: string): Promise<string> => {
     try {
       // Use validated user data (already checked above)
@@ -196,13 +222,8 @@ const SuccessPartner = ({
         const description = getContextDescription(flags);
         setContextDescription(description);
         try {
-          // Use extended timeout for Meta Ads to allow for multiple API calls
-          businessContext = await buildBusinessContext(
-            studentId,
-            flags,
-            8000,
-            { metaAds: 20000 }
-          );
+          // Ensure both Shopify and Meta Ads are ready before proceeding
+          businessContext = await fetchContextUntilReady(studentId, flags);
 
           // Check for disconnected integrations and add UI notifications
           if (businessContext) {
@@ -238,40 +259,8 @@ const SuccessPartner = ({
         }
       }
 
-      // Construct final business context with guaranteed structure for webhook
-      const finalBusinessContext = {
-        ...(flags.includeShopify && {
-          shopify: businessContext?.shopify ?? {
-            connected: !!integrationStatus.shopify,
-            metrics: {
-              totalSales: 0,
-              orderCount: 0,
-              averageOrderValue: 0,
-              topProducts: [],
-              salesTrend: [],
-              products: []
-            },
-            error: 'timeout or fetch failed'
-          }
-        }),
-        ...(flags.includeMetaAds && {
-          metaAds: businessContext?.metaAds ?? {
-            connected: !!integrationStatus.metaAds,
-            metrics: {
-              totalSpend: 0,
-              impressions: 0,
-              clicks: 0,
-              conversions: 0,
-              roas: 0,
-              ctr: 0,
-              campaigns: [],
-              adSets: [],
-              ads: []
-            },
-            error: 'timeout or fetch failed'
-          }
-        })
-      };
+      // Ensure we send when both contexts are ready
+      const finalBusinessContext = businessContext || {};
 
       // Observability: log what we're sending to webhook
       safeLogger.info('Success Partner: Business context prepared', {
