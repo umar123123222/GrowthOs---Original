@@ -142,18 +142,23 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       const studentName = user.full_name || user.email.split('@')[0] || 'Student';
       
       // Detect if we need business context
-      const contextFlags = detectBusinessContext(userMessage);
-      const needsContext = contextFlags.includeShopify || contextFlags.includeMetaAds;
+      const requestedFlags = detectBusinessContext(userMessage);
+      // Always include data for any connected integrations
+      const flags = {
+        includeShopify: integrationStatus.shopify || requestedFlags.includeShopify,
+        includeMetaAds: integrationStatus.metaAds || requestedFlags.includeMetaAds,
+      };
+      const needsContext = flags.includeShopify || flags.includeMetaAds;
       
       let businessContext = null;
       
       if (needsContext) {
         setIsFetchingContext(true);
-        const description = getContextDescription(contextFlags);
+        const description = getContextDescription(flags);
         setContextDescription(description);
         
         try {
-          businessContext = await buildBusinessContext(studentId, contextFlags);
+          businessContext = await buildBusinessContext(studentId, flags);
           
           // Check for disconnected integrations and add UI notifications
           if (businessContext) {
@@ -191,13 +196,21 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
         }
       }
       
+      // Ensure we always send a businessContext object even if fetch failed
+      if (!businessContext) {
+        businessContext = {
+          ...(flags.includeShopify && { shopify: { connected: !!integrationStatus.shopify } }),
+          ...(flags.includeMetaAds && { metaAds: { connected: !!integrationStatus.metaAds } }),
+        } as any;
+      }
+      
       const payload = {
         message: userMessage,
         studentId: studentId,
         studentName: studentName,
         timestamp: new Date().toISOString(),
         conversationHistory: getHistory(), // Include last 10 message pairs
-        ...(businessContext && { businessContext }),
+        businessContext,
       };
       
       safeLogger.info('Success Partner: Sending message', { 
@@ -288,7 +301,7 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       
       throw error;
     }
-  }, [user]);
+  }, [user, integrationStatus, getHistory]);
 
   const handleSendMessage = useCallback(async () => {
     if (!message.trim() || isLoading) {
