@@ -201,12 +201,14 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
  * @param userId - User ID
  * @param flags - Context flags indicating what to fetch
  * @param timeout - Maximum time to wait for context (ms)
+ * @param timeouts - Per-service timeout overrides (optional)
  * @returns Business context object
  */
 export async function buildBusinessContext(
   userId: string,
   flags: BusinessContextFlags,
-  timeout: number = 5000
+  timeout: number = 5000,
+  timeouts?: { shopify?: number; metaAds?: number }
 ): Promise<BusinessContext | null> {
   if (!flags.includeShopify && !flags.includeMetaAds) {
     return null;
@@ -231,15 +233,17 @@ export async function buildBusinessContext(
       ]);
 
     if (flags.includeShopify) {
+      const shopifyTimeout = timeouts?.shopify ?? timeout;
       racers.push(
-        withTimeout(getShopifyContext(userId), timeout)
+        withTimeout(getShopifyContext(userId), shopifyTimeout)
           .then((r) => ({ key: 'shopify', value: r }))
           .catch(() => ({ key: 'shopify', value: null }))
       );
     }
     if (flags.includeMetaAds) {
+      const metaAdsTimeout = timeouts?.metaAds ?? timeout;
       racers.push(
-        withTimeout(getMetaAdsContext(userId), timeout)
+        withTimeout(getMetaAdsContext(userId), metaAdsTimeout)
           .then((r) => ({ key: 'metaAds', value: r }))
           .catch(() => ({ key: 'metaAds', value: null }))
       );
@@ -253,12 +257,25 @@ export async function buildBusinessContext(
       if (item.key === 'metaAds' && item.value) context.metaAds = item.value as MetaAdsContext;
     }
 
-    // If nothing resolved (both timed out/failed), return null so caller can decide fallback
-    if (!context.shopify && !context.metaAds) return null;
+    // Ensure requested services are always present in the response
+    if (flags.includeShopify && !context.shopify) {
+      context.shopify = { connected: false, error: 'timeout or fetch failed' };
+    }
+    if (flags.includeMetaAds && !context.metaAds) {
+      context.metaAds = { connected: false, error: 'timeout or fetch failed' };
+    }
 
     return context;
   } catch (error) {
     console.error('Error building business context:', error);
-    return null;
+    // Even on error, return context with requested services marked as failed
+    const context: BusinessContext = {};
+    if (flags.includeShopify) {
+      context.shopify = { connected: false, error: 'Error building context' };
+    }
+    if (flags.includeMetaAds) {
+      context.metaAds = { connected: false, error: 'Error building context' };
+    }
+    return context;
   }
 }

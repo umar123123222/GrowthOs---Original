@@ -124,16 +124,29 @@ const SuccessPartner = ({
     fetchCredits();
   }, []);
 
-  // Fetch integration status on component mount
+  // Fetch integration status on component mount and warm up cache
   useEffect(() => {
     const fetchIntegrationStatus = async () => {
       try {
         const integration = await StudentIntegrations.get(user.id);
-        setIntegrationStatus({
+        const status = {
           shopify: integration?.is_shopify_connected ?? false,
           metaAds: integration?.is_meta_connected ?? false,
           loading: false
-        });
+        };
+        setIntegrationStatus(status);
+
+        // Warm up Meta Ads cache if connected (prevents timeout on first message)
+        if (status.metaAds) {
+          buildBusinessContext(
+            user.id,
+            { includeShopify: false, includeMetaAds: true },
+            20000,
+            { metaAds: 20000 }
+          ).catch(error => {
+            console.warn('Cache warming failed:', error);
+          });
+        }
       } catch (error) {
         console.error('Error fetching integration status:', error);
         setIntegrationStatus(prev => ({
@@ -183,7 +196,13 @@ const SuccessPartner = ({
         const description = getContextDescription(flags);
         setContextDescription(description);
         try {
-          businessContext = await buildBusinessContext(studentId, flags);
+          // Use extended timeout for Meta Ads to allow for multiple API calls
+          businessContext = await buildBusinessContext(
+            studentId,
+            flags,
+            8000,
+            { metaAds: 20000 }
+          );
 
           // Check for disconnected integrations and add UI notifications
           if (businessContext) {
@@ -219,48 +238,58 @@ const SuccessPartner = ({
         }
       }
 
-      // Ensure we always send a businessContext object even if fetch failed
-      if (!businessContext) {
-        businessContext = {
-          ...(flags.includeShopify && {
-            shopify: {
-              connected: !!integrationStatus.shopify,
-              metrics: {
-                totalSales: 0,
-                orderCount: 0,
-                averageOrderValue: 0,
-                topProducts: [],
-                salesTrend: [],
-                products: []
-              }
-            }
-          }),
-          ...(flags.includeMetaAds && {
-            metaAds: {
-              connected: !!integrationStatus.metaAds,
-              metrics: {
-                totalSpend: 0,
-                impressions: 0,
-                clicks: 0,
-                conversions: 0,
-                roas: 0,
-                ctr: 0,
-                campaigns: [],
-                adSets: [],
-                ads: []
-              }
-            }
-          })
-        } as any;
-      }
+      // Construct final business context with guaranteed structure for webhook
+      const finalBusinessContext = {
+        ...(flags.includeShopify && {
+          shopify: businessContext?.shopify ?? {
+            connected: !!integrationStatus.shopify,
+            metrics: {
+              totalSales: 0,
+              orderCount: 0,
+              averageOrderValue: 0,
+              topProducts: [],
+              salesTrend: [],
+              products: []
+            },
+            error: 'timeout or fetch failed'
+          }
+        }),
+        ...(flags.includeMetaAds && {
+          metaAds: businessContext?.metaAds ?? {
+            connected: !!integrationStatus.metaAds,
+            metrics: {
+              totalSpend: 0,
+              impressions: 0,
+              clicks: 0,
+              conversions: 0,
+              roas: 0,
+              ctr: 0,
+              campaigns: [],
+              adSets: [],
+              ads: []
+            },
+            error: 'timeout or fetch failed'
+          }
+        })
+      };
+
+      // Observability: log what we're sending to webhook
+      safeLogger.info('Success Partner: Business context prepared', {
+        requestedFlags: flags,
+        contextKeys: Object.keys(finalBusinessContext),
+        shopifyConnected: finalBusinessContext.shopify?.connected,
+        metaAdsConnected: finalBusinessContext.metaAds?.connected,
+        metaAdsCampaigns: finalBusinessContext.metaAds?.metrics?.campaigns?.length ?? 0,
+        metaAdsAdSets: finalBusinessContext.metaAds?.metrics?.adSets?.length ?? 0,
+        metaAdsAds: finalBusinessContext.metaAds?.metrics?.ads?.length ?? 0
+      });
       const payload = {
         message: userMessage,
         studentId: studentId,
         studentName: studentName,
         timestamp: new Date().toISOString(),
         conversationHistory: getHistory(),
-        // Include last 10 message pairs
-        businessContext
+        businessContext: finalBusinessContext
       };
       safeLogger.info('Success Partner: Sending message', {
         studentId,
