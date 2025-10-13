@@ -69,6 +69,11 @@ const SuccessPartner = ({
   // Restore today's conversation history into the chat UI on mount
   useEffect(() => {
     const history = getHistory();
+    console.log('Success Partner: Restoring conversation history', { 
+      historyLength: history.length,
+      history: history.map(h => ({ role: h.role, contentPreview: h.content.substring(0, 50) }))
+    });
+    
     if (history && history.length > 0) {
       const restored = history.map((m, i) => ({
         id: Date.now() + i,
@@ -76,6 +81,13 @@ const SuccessPartner = ({
         content: m.content,
         timestamp: new Date(m.timestamp)
       }));
+      
+      console.log('Success Partner: Restored messages', {
+        restoredCount: restored.length,
+        userMessages: restored.filter(m => m.sender === 'user').length,
+        aiMessages: restored.filter(m => m.sender === 'ai').length
+      });
+      
       // Set messages to greeting + restored history
       setMessages([
         {
