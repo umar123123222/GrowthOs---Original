@@ -62,6 +62,27 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
   // Initialize conversation history hook
   const { addMessage, getHistory } = useConversationHistory(user?.id || 'unknown');
 
+  // Restore today's conversation history into the chat UI on mount
+  useEffect(() => {
+    const history = getHistory();
+    if (history && history.length) {
+      setMessages(prev => {
+        // If we already have more than the greeting, don't rehydrate
+        if (prev.length > 1) return prev;
+        const restored = history.map((m, i) => ({
+          id: Date.now() + i,
+          sender: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
+          content: m.content,
+          timestamp: new Date(m.timestamp),
+        }));
+        // Keep greeting as first message, then append restored history
+        return [prev[0], ...restored];
+      });
+    }
+  // Only run once on mount for the current user
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Validate user data - show error if incomplete
   if (!user?.id || !user?.email) {
     console.error('SuccessPartner: Incomplete user data provided', { user });
@@ -199,8 +220,35 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       // Ensure we always send a businessContext object even if fetch failed
       if (!businessContext) {
         businessContext = {
-          ...(flags.includeShopify && { shopify: { connected: !!integrationStatus.shopify } }),
-          ...(flags.includeMetaAds && { metaAds: { connected: !!integrationStatus.metaAds } }),
+          ...(flags.includeShopify && { 
+            shopify: { 
+              connected: !!integrationStatus.shopify,
+              metrics: {
+                totalSales: 0,
+                orderCount: 0,
+                averageOrderValue: 0,
+                topProducts: [],
+                salesTrend: [],
+                products: [],
+              },
+            } 
+          }),
+          ...(flags.includeMetaAds && { 
+            metaAds: { 
+              connected: !!integrationStatus.metaAds,
+              metrics: {
+                totalSpend: 0,
+                impressions: 0,
+                clicks: 0,
+                conversions: 0,
+                roas: 0,
+                ctr: 0,
+                campaigns: [],
+                adSets: [],
+                ads: [],
+              },
+            } 
+          }),
         } as any;
       }
       
