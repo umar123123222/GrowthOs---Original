@@ -442,28 +442,30 @@ const MetaAdsDashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Active Campaigns */}
+        {/* Campaigns in Selected Period */}
         <Card className="shadow-medium hover-lift border-0 animate-fade-in">
           <CardHeader className="gradient-hero text-white rounded-t-lg">
             <CardTitle className="text-white flex items-center text-xl">
               <Target className="h-6 w-6 mr-3" />
-              Active Campaigns
+              Campaigns in Selected Period
             </CardTitle>
             <CardDescription className="text-white/80">
-              All currently active advertising campaigns with real-time metrics
+              Campaigns with spend, impressions, clicks, or conversions in the selected date range
             </CardDescription>
           </CardHeader>
           <CardContent className="py-[15px]">
             <div className="space-y-4">
               {(() => {
-              const activeCampaigns = metaData.campaigns.filter(campaign => campaign.status === 'Active' || campaign.status === 'active' || campaign.status === 'ACTIVE');
+              const campaignsWithActivity = metaData.campaigns.filter(campaign =>
+                (campaign.spend || 0) > 0 || (campaign.impressions || 0) > 0 || (campaign.clicks || 0) > 0 || (campaign.conversions || 0) > 0
+              );
               
-              if (activeCampaigns.length === 0) {
+              if (campaignsWithActivity.length === 0) {
                 return <div className="text-center py-12">
                       <Target className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                      <h3 className="text-lg font-medium mb-2">No Active Campaigns Found</h3>
+                      <h3 className="text-lg font-medium mb-2">No Campaigns Found for Selected Period</h3>
                       <p className="text-muted-foreground mb-4">
-                        {metaData.campaigns.length === 0 ? "No campaigns have been created yet or the API couldn't fetch campaign details." : `You have ${metaData.campaigns.length} total campaigns, but none are currently active.`}
+                        {metaData.campaigns.length === 0 ? "No campaigns have been created yet or the API couldn't fetch campaign details." : `No campaigns recorded activity in the chosen timeframe.`}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Total account metrics: {formatCurrency(metaData.totalSpend)} spent, {formatNumber(metaData.totalImpressions)} impressions
@@ -472,12 +474,10 @@ const MetaAdsDashboard: React.FC = () => {
               }
 
               // Pagination logic for campaigns
-              const totalCampaignPages = Math.ceil(activeCampaigns.length / campaignsPerPage);
+              const totalCampaignPages = Math.ceil(campaignsWithActivity.length / campaignsPerPage);
               const campaignStartIndex = (currentCampaignPage - 1) * campaignsPerPage;
               const campaignEndIndex = campaignStartIndex + campaignsPerPage;
-              const currentCampaigns = activeCampaigns.slice(campaignStartIndex, campaignEndIndex);
-              
-              return <>
+              const currentCampaigns = campaignsWithActivity.slice(campaignStartIndex, campaignEndIndex);
                 {currentCampaigns.map((campaign, index) => <div key={campaign.id} className="border rounded-xl p-6 hover-lift shadow-soft hover:shadow-medium transition-all duration-300 bg-gradient-to-r from-card to-muted/20" style={{
                   animationDelay: `${index * 100}ms`
                 }}>
@@ -491,9 +491,8 @@ const MetaAdsDashboard: React.FC = () => {
                           <div>
                             <h4 className="font-semibold text-xl text-foreground mb-1">{campaign.name}</h4>
                             <div className="flex items-center space-x-3">
-                              <Badge className="bg-success/10 text-success border-success/20 px-3 py-1 flex items-center justify-start">
-                                <span className="inline-block w-2 h-2 bg-success rounded-full mr-2 animate-pulse"></span>
-                                Active
+                              <Badge className={(['Active','active','ACTIVE'].includes(campaign.status) ? 'bg-success/10 text-success border-success/20' : 'bg-muted text-muted-foreground border-muted-foreground/20') + ' px-3 py-1'}>
+                                {campaign.status || 'Unknown'}
                               </Badge>
                               {getPerformanceBadge(campaign.performance)}
                             </div>
@@ -623,24 +622,20 @@ const MetaAdsDashboard: React.FC = () => {
               <Sparkles className="h-6 w-6 mr-3" style={{
               color: 'hsl(var(--primary))'
             }} />
-              All Active Ads
+              Ads in Selected Period
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Complete list of all active ads with detailed performance metrics
+              Ads that recorded spend, impressions, clicks, or conversions in the selected date range
             </CardDescription>
           </CardHeader>
           <CardContent className="py-[10px]">
             <div className="space-y-4">
               {(() => {
-              const activeAds = metaData.ads.filter(ad => {
-                // Check multiple possible field names for delivery status
-                const deliveryStatus = ad.delivery_info?.status || ad.configured_status || ad.effective_status || ad.delivery || ad.status;
-                return deliveryStatus === 'ACTIVE' || deliveryStatus === 'Active' || deliveryStatus === 'active';
-              });
-              const totalPages = Math.ceil(activeAds.length / adsPerPage);
+              const adsWithActivity = metaData.ads;
+              const totalPages = Math.ceil(adsWithActivity.length / adsPerPage);
               const startIndex = (currentPage - 1) * adsPerPage;
               const endIndex = startIndex + adsPerPage;
-              const currentAds = activeAds.slice(startIndex, endIndex);
+              const currentAds = adsWithActivity.slice(startIndex, endIndex);
               return <>
                     {currentAds.length > 0 ? currentAds.map((ad, index) => <div key={ad.id} className="flex items-center justify-between p-4 border rounded-lg">
                           <div className="flex items-center space-x-3">
