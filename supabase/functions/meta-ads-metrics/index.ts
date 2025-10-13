@@ -371,21 +371,22 @@ serve(async (req) => {
       }
 
       // Prepare date parameters for API calls
+      const INSIGHTS_FIELDS = 'spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach'
       let dateParams: { [key: string]: string } = {}
+      let insightsFieldExpr = `insights.date_preset(last_7d){${INSIGHTS_FIELDS}}`
       
       if (dateFrom && dateTo) {
         // Format dates for Facebook API (YYYY-MM-DD)
         const fromDate = new Date(dateFrom).toISOString().split('T')[0]
         const toDate = new Date(dateTo).toISOString().split('T')[0]
         dateParams = {
-          'time_range': JSON.stringify({
-            since: fromDate,
-            until: toDate
-          })
+          time_range: JSON.stringify({ since: fromDate, until: toDate })
         }
+        insightsFieldExpr = `insights.time_range({"since":"${fromDate}","until":"${toDate}"}){${INSIGHTS_FIELDS}}`
         console.log(`Using custom date range: ${fromDate} to ${toDate}`)
       } else {
-        dateParams = { 'date_preset': 'last_7d' }
+        dateParams = { date_preset: 'last_7d' }
+        insightsFieldExpr = `insights.date_preset(last_7d){${INSIGHTS_FIELDS}}`
         console.log('Using default date preset: last_7d')
       }
 
@@ -435,10 +436,7 @@ serve(async (req) => {
 
       // Fetch ad sets with enhanced insights
       const adSetsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/adsets`)
-      adSetsUrl.searchParams.set('fields', 'id,name,status,campaign{id,name},insights{spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach}')
-      Object.entries(dateParams).forEach(([key, value]) => {
-        adSetsUrl.searchParams.set(key, value)
-      })
+      adSetsUrl.searchParams.set('fields', `id,name,status,campaign{id,name},${insightsFieldExpr}`)
       adSetsUrl.searchParams.set('limit', '100')
       adSetsUrl.searchParams.set('access_token', accessToken)
 
@@ -492,10 +490,7 @@ serve(async (req) => {
 
       // Fetch campaigns with enhanced insights
       const campaignsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`)
-      campaignsUrl.searchParams.set('fields', 'id,name,status,objective,insights{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}')
-      Object.entries(dateParams).forEach(([key, value]) => {
-        campaignsUrl.searchParams.set(key, value)
-      })
+      campaignsUrl.searchParams.set('fields', `id,name,status,objective,${insightsFieldExpr}`)
       campaignsUrl.searchParams.set('limit', '50')
       campaignsUrl.searchParams.set('access_token', accessToken)
 
@@ -562,10 +557,7 @@ serve(async (req) => {
 
       // Fetch ads with enhanced insights including parent campaign and adset names
       const adsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/ads`)
-      adsUrl.searchParams.set('fields', 'id,name,status,campaign{id,name},adset{id,name},creative{object_story_spec},insights{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}')
-      Object.entries(dateParams).forEach(([key, value]) => {
-        adsUrl.searchParams.set(key, value)
-      })
+      adsUrl.searchParams.set('fields', `id,name,status,campaign{id,name},adset{id,name},creative{object_story_spec},${insightsFieldExpr}`)
       adsUrl.searchParams.set('limit', '100')
       adsUrl.searchParams.set('access_token', accessToken)
 
