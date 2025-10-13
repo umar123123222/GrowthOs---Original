@@ -8,6 +8,7 @@ import { ConnectAccountsDialog } from '@/components/ConnectAccountsDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useStudentRecordings } from '@/hooks/useStudentRecordings';
 import { supabase } from '@/integrations/supabase/client';
+import { safeLogger } from '@/lib/safe-logger';
 import { InactiveLMSBanner } from '@/components/InactiveLMSBanner';
 import { useToast } from '@/hooks/use-toast';
 import { extractFinancialGoalForDisplay } from '@/utils/dreamGoalUtils';
@@ -53,7 +54,7 @@ export function StudentDashboard() {
 
   // Add debug logging with better checks
   if (process.env.NODE_ENV === 'development') {
-    console.log('StudentDashboard: Rendering with user:', user?.id, 'role:', user?.role);
+    safeLogger.debug('StudentDashboard: Rendering with user', { userId: user?.id, role: user?.role });
   }
   
   // Add error boundary state
@@ -100,7 +101,7 @@ export function StudentDashboard() {
       return;
     }
 
-    console.log('StudentDashboard: Fetching dashboard data for user:', user.id);
+    safeLogger.debug('StudentDashboard: Fetching dashboard data for user', { userId: user.id });
 
     try {
       // Fetch user data including dream goal and connections
@@ -349,7 +350,7 @@ export function StudentDashboard() {
 
   if (loading) {
     if (process.env.NODE_ENV === 'development') {
-      console.log('StudentDashboard: Loading recordings');
+      safeLogger.debug('StudentDashboard: Loading recordings');
     }
     return (
       <div className="flex justify-center items-center h-64">
@@ -383,7 +384,7 @@ export function StudentDashboard() {
   }
 
   if (process.env.NODE_ENV === 'development') {
-    console.log('StudentDashboard: Rendering main dashboard content');
+    safeLogger.debug('StudentDashboard: Rendering main dashboard content');
   }
 
   return (

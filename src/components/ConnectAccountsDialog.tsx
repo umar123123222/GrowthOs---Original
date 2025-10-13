@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { safeLogger } from '@/lib/safe-logger';
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Edit, Settings, Trash2, ChevronDown } from "lucide-react";
@@ -124,7 +125,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
   };
 
   const handleShopDomainSave = async (domain: string) => {
-    console.log('Saving Shopify domain:', domain, 'for user:', userId);
+    safeLogger.info('Saving Shopify domain', { domain, userId });
     
     // If we have a token in memory (user just entered it), complete full connection
     if (currentToken) {
@@ -140,7 +141,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
       // Store domain in localStorage as backup
       try {
         localStorage.setItem(`shopify_domain_${userId}`, domain);
-        console.log('Domain stored in localStorage as backup');
+        safeLogger.debug('Domain stored in localStorage as backup');
       } catch (e) {
         console.warn('Could not store domain in localStorage:', e);
       }
@@ -154,7 +155,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
         .maybeSingle();
 
       if (existing?.id) {
-        console.log('Updating existing integrations row with domain');
+        safeLogger.info('Updating existing integrations row with domain');
         const { error: updateError } = await supabase
           .from('integrations')
           .update({ external_id: domain, updated_at: new Date().toISOString() })
@@ -166,7 +167,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
         }
       } else {
         // Fall back to legacy saved token on users table via StudentIntegrations.get()
-        console.log('No existing integrations row, creating new one with legacy token');
+        safeLogger.info('No existing integrations row, creating new one with legacy token');
         const token = integration?.shopify_api_token;
         if (!token) {
           // Try to get from users table directly
@@ -185,7 +186,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
             return;
           }
           
-          console.log('Creating integrations row with legacy credentials from users table');
+          safeLogger.info('Creating integrations row with legacy credentials from users table');
           const { error: insertError } = await supabase.from('integrations').insert({
             user_id: userId,
             source: 'shopify',
@@ -198,7 +199,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
             throw insertError;
           }
         } else {
-          console.log('Creating integrations row with token from StudentIntegrations');
+          safeLogger.info('Creating integrations row with token from StudentIntegrations');
           const { error: insertError } = await supabase.from('integrations').insert({
             user_id: userId,
             source: 'shopify',
@@ -226,7 +227,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
         throw new Error('Domain was not saved properly');
       }
 
-      console.log('Domain successfully saved and verified');
+      safeLogger.info('Domain successfully saved and verified');
       setShopDomain(domain);
       setShopifyConnected(true);
       if (onConnectionUpdate) onConnectionUpdate();

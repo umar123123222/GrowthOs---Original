@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { ENV_CONFIG } from "@/lib/env-config";
 import { detectBusinessContext, getContextDescription } from "@/lib/ai-context-detector";
+import { safeLogger } from '@/lib/safe-logger';
 import { buildBusinessContext } from "@/lib/ai-context-builder";
 import { StudentIntegrations } from "@/lib/student-integrations";
 import { useConversationHistory } from "@/hooks/useConversationHistory";
@@ -199,7 +200,7 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
         ...(businessContext && { businessContext }),
       };
       
-      console.log('Success Partner: Sending message', { 
+      safeLogger.info('Success Partner: Sending message', { 
         studentId, 
         studentName, 
         messageLength: userMessage.length,
@@ -220,7 +221,7 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
 
       const data = await response.json();
       if (process.env.NODE_ENV === 'development') {
-        console.log('Success Partner: Webhook response received', { data, type: typeof data });
+        safeLogger.info('Success Partner: Webhook response received', { data, type: typeof data });
       }
       
       // Handle different response formats and ensure string output
@@ -271,7 +272,7 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       }
       
       if (process.env.NODE_ENV === 'development') {
-        console.log('Success Partner: Final processed response', { aiResponse, length: aiResponse.length });
+        safeLogger.info('Success Partner: Final processed response', { aiResponse, length: aiResponse.length });
       }
       return aiResponse;
     } catch (error) {
@@ -292,7 +293,7 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
   const handleSendMessage = useCallback(async () => {
     if (!message.trim() || isLoading) {
       if (process.env.NODE_ENV === 'development') {
-        console.log('Success Partner: Message sending blocked', { 
+        safeLogger.warn('Success Partner: Message sending blocked', { 
           messageEmpty: !message.trim(), 
           isLoading 
         });

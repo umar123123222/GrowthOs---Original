@@ -15,6 +15,7 @@ import { AppLogo } from "./AppLogo";
 import { PageSkeleton } from "./LoadingStates/PageSkeleton";
 import RouteContentLoader from "./LoadingStates/RouteContentLoader";
 import { throttle } from "@/utils/performance";
+import { safeLogger } from '@/lib/safe-logger';
 interface LayoutProps {
   user: any;
 }
@@ -211,7 +212,7 @@ const Layout = memo(({
           if (!isMounted) return;
           const hasShopify = !!data.some((r: any) => r.source === 'shopify' && r.access_token);
           const hasMeta = !!data.some((r: any) => r.source === 'meta_ads' && r.access_token);
-          console.log('Connection check - integrations data:', data, 'hasShopify:', hasShopify, 'hasMeta:', hasMeta);
+          safeLogger.debug('Connection check - integrations data', { data, hasShopify, hasMeta });
           setConnectionStatus({
             shopify: hasShopify,
             meta: hasMeta
@@ -230,13 +231,13 @@ const Layout = memo(({
           if (!isMounted) return;
           const hasShopify = !!(userData.shopify_credentials);
           const hasMeta = !!(userData.meta_ads_credentials);
-          console.log('Connection check - user credentials:', userData, 'hasShopify:', hasShopify, 'hasMeta:', hasMeta);
+          safeLogger.debug('Connection check - user credentials', { userData, hasShopify, hasMeta });
           setConnectionStatus({
             shopify: hasShopify,
             meta: hasMeta
           });
         } else {
-          console.log('No connections found in either table');
+          safeLogger.debug('No connections found in either table');
           setConnectionStatus({
             shopify: false,
             meta: false

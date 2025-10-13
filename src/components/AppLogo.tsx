@@ -24,7 +24,7 @@ export function AppLogo({ variant = 'header', className = "h-10 w-auto max-w-[20
           .eq('id', 1)
           .maybeSingle();
 
-        console.log('AppLogo - Company settings data:', data);
+        safeLogger.debug('AppLogo - Company settings data', { data });
         setDebugInfo(data);
 
         if (!error && data) {
