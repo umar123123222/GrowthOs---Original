@@ -7,6 +7,8 @@ import { Separator } from '@/components/ui/separator';
 import { Mail, CreditCard, Clock, Phone, Banknote, DollarSign } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getCurrencySymbol as getCurrencySymbolUtil } from '@/utils/currencyFormatter';
+import { ENV_CONFIG } from '@/lib/env-config';
 interface PaymentMethod {
   type: 'bank_transfer' | 'cod' | 'stripe' | 'custom';
   name: string;
@@ -32,7 +34,7 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
   } = useToast();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [companyDetails, setCompanyDetails] = useState<any>(null);
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState(ENV_CONFIG.DEFAULT_CURRENCY);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (isOpen) {
@@ -51,7 +53,7 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
         if (Array.isArray(methods)) {
           setPaymentMethods(methods as unknown as PaymentMethod[]);
         }
-        setCurrency(data.currency || 'USD');
+        setCurrency(data.currency || ENV_CONFIG.DEFAULT_CURRENCY);
         setCompanyDetails(data);
       }
     } catch (error) {
@@ -65,19 +67,8 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
       setLoading(false);
     }
   };
-  const getCurrencySymbol = (curr: string = 'USD') => {
-    const symbols: {
-      [key: string]: string;
-    } = {
-      USD: '$',
-      EUR: '€',
-      GBP: '£',
-      INR: '₹',
-      CAD: 'C$',
-      AUD: 'A$',
-      PKR: '₨'
-    };
-    return symbols[curr] || curr;
+  const getCurrencySymbol = (curr?: string) => {
+    return getCurrencySymbolUtil(curr || currency);
   };
   const getPaymentMethodIcon = (type: string) => {
     switch (type) {

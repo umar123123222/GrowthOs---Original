@@ -18,7 +18,8 @@ export const ENV_CONFIG = {
 
   // Company Defaults
   DEFAULT_COMPANY_NAME: import.meta.env.VITE_DEFAULT_COMPANY_NAME || "Your Company",
-  DEFAULT_CURRENCY: import.meta.env.VITE_DEFAULT_CURRENCY || "USD",
+  DEFAULT_CURRENCY: import.meta.env.VITE_DEFAULT_CURRENCY || "PKR",
+  CURRENCY_SYMBOL: import.meta.env.VITE_CURRENCY_SYMBOL || "Rs",
   DEFAULT_FEE_AMOUNT: parseFloat(import.meta.env.VITE_DEFAULT_FEE_AMOUNT || "3000"),
   DEFAULT_MAX_INSTALLMENTS: parseInt(import.meta.env.VITE_DEFAULT_MAX_INSTALLMENTS || "3"),
   DEFAULT_LMS_URL: import.meta.env.VITE_DEFAULT_LMS_URL || "https://growthos.core47.ai",

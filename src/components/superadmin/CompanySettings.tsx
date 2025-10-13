@@ -17,6 +17,7 @@ import { getLogoUrl } from '@/utils/logoUtils';
 import { InvoiceTemplate } from '@/components/InvoiceTemplate';
 import PaymentMethodEditor from '@/components/PaymentMethodEditor';
 import { ENV_CONFIG } from '@/lib/env-config';
+import { getCurrencySymbol as getCurrencySymbolUtil } from '@/utils/currencyFormatter';
 
 // Import types from the new questionnaire module
 import { QuestionItem, validateQuestionnaireStructure } from '@/types/questionnaire';
@@ -65,16 +66,7 @@ export function CompanySettings() {
   const { toast } = useToast();
 
   const getCurrencySymbol = (currency: string): string => {
-    const symbols: { [key: string]: string } = {
-      USD: '$',
-      EUR: '€',
-      GBP: '£',
-      PKR: '₨',
-      INR: '₹',
-      CAD: 'C$',
-      AUD: 'A$'
-    };
-    return symbols[currency] || currency;
+    return getCurrencySymbolUtil(currency);
   };
   
   const [loading, setLoading] = useState(true);

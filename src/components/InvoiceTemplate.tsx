@@ -1,5 +1,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
+import { getCurrencySymbol } from '@/utils/currencyFormatter';
+import { ENV_CONFIG } from '@/lib/env-config';
 interface InvoiceItem {
   description: string;
   installment_number: number;
@@ -46,21 +48,7 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
   invoiceData,
   companyDetails
 }) => {
-  // Currency symbol helper function
-  const getCurrencySymbol = (currency: string = 'USD') => {
-    const symbols: { [key: string]: string } = {
-      USD: '$',
-      EUR: '€',
-      GBP: '£',
-      INR: '₹',
-      CAD: 'C$',
-      AUD: 'A$',
-      PKR: '₨'
-    };
-    return symbols[currency] || currency;
-  };
-
-  const currency = invoiceData.currency || 'USD';
+  const currency = invoiceData.currency || ENV_CONFIG.DEFAULT_CURRENCY;
   const currencySymbol = getCurrencySymbol(currency);
   return <div className="max-w-4xl mx-auto bg-white p-8 shadow-lg">
       {/* Header with gradient background */}
