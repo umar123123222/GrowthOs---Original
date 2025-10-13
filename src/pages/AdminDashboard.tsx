@@ -21,6 +21,7 @@ import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAn
 import { MilestoneManagement } from '@/components/admin/MilestoneManagement';
 import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
 import { useRecoveryRate } from '@/hooks/useRecoveryRate';
+import { formatCurrency } from '@/utils/currencyFormatter';
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'dashboard';
@@ -171,7 +172,7 @@ function DashboardContent() {
             <DollarSign className="h-5 w-5 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-yellow-900">${stats.monthlyRevenue.toLocaleString()}</div>
+            <div className="text-3xl font-bold text-yellow-900">{formatCurrency(stats.monthlyRevenue)}</div>
             <p className="text-xs text-muted-foreground">This month</p>
           </CardContent>
         </Card>
