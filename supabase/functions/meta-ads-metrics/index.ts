@@ -433,6 +433,15 @@ serve(async (req) => {
         metrics.averageROAS = spendSum > 0 ? (convValueSum / spendSum) : 0
       }
 
+      // Build insights query with date filtering (for all API calls)
+      let insightsQuery = 'insights'
+      if (dateParams['time_range']) {
+        insightsQuery += `.time_range(${dateParams['time_range']})`
+      } else if (dateParams['date_preset']) {
+        insightsQuery += `.date_preset(${dateParams['date_preset']})`
+      }
+      insightsQuery += '{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}'
+
       // Fetch ad sets with enhanced insights
       const adSetsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/adsets`)
       adSetsUrl.searchParams.set('fields', `id,name,status,campaign{id,name},${insightsQuery}`)
@@ -489,15 +498,6 @@ serve(async (req) => {
       }
 
       // Fetch campaigns with enhanced insights
-      // Build insights query with date filtering
-      let insightsQuery = 'insights'
-      if (dateParams['time_range']) {
-        insightsQuery += `.time_range(${dateParams['time_range']})`
-      } else if (dateParams['date_preset']) {
-        insightsQuery += `.date_preset(${dateParams['date_preset']})`
-      }
-      insightsQuery += '{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}'
-      
       const campaignsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`)
       campaignsUrl.searchParams.set('fields', `id,name,status,objective,${insightsQuery}`)
       campaignsUrl.searchParams.set('filtering', '[{"field":"effective_status","operator":"IN","value":["ACTIVE","PAUSED","DELETED","ARCHIVED"]}]')
