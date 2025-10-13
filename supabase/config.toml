@@ -2,3 +2,9 @@ project_id = "majqoqagohicjigmsilu"
 
 [functions.installment-reminder-scheduler]
 verify_jwt = false
+
+[functions.meta-ads-metrics]
+verify_jwt = false
+
+[functions.shopify-metrics]
+verify_jwt = false

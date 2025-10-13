@@ -106,10 +106,12 @@ export async function fetchShopifyMetrics(
 }
 
 export async function fetchMetaAdsMetrics(
+  userId: string,
   opts?: { dateFrom?: string; dateTo?: string }
 ) {
   const { data, error } = await supabase.functions.invoke('meta-ads-metrics', {
     body: {
+      userId,
       dateFrom: opts?.dateFrom,
       dateTo: opts?.dateTo,
     }

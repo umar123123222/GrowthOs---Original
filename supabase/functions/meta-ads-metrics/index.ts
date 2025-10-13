@@ -39,37 +39,50 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const authHeader = req.headers.get('authorization')
-    if (!authHeader) throw new Error('Missing authorization header')
-    const token = authHeader.replace('Bearer ', '')
-    const { data: user } = await supabaseClient.auth.getUser(token)
-
-    if (!user.user) {
-      return new Response(
-        JSON.stringify({ connected: false, error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
-
-    // Parse request body for date range parameters
+    // Parse request body for date range parameters and optional userId
     let dateFrom: string | null = null
     let dateTo: string | null = null
-    
+    let bodyUserId: string | null = null
+
     if (req.body) {
       try {
         const body = await req.json()
-        dateFrom = body.dateFrom
-        dateTo = body.dateTo
-      } catch (e) {
+        dateFrom = body.dateFrom ?? null
+        dateTo = body.dateTo ?? null
+        bodyUserId = body.userId ?? null
+      } catch (_e) {
         // Ignore parsing errors, use defaults
       }
+    }
+
+    // Determine effective user id: prefer authenticated user, fallback to body.userId
+    let effectiveUserId: string | null = null
+    const authHeader = req.headers.get('authorization')
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '')
+        const { data: user } = await supabaseClient.auth.getUser(token)
+        if (user?.user?.id) effectiveUserId = user.user.id
+      } catch (_e) {
+        // ignore auth parsing errors, we'll fallback to body user id
+      }
+    }
+    if (!effectiveUserId && bodyUserId) {
+      effectiveUserId = bodyUserId
+    }
+
+    if (!effectiveUserId) {
+      return new Response(
+        JSON.stringify({ connected: false, error: 'Unauthorized: missing user id' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     // Try to get Meta Ads integration from integrations table
     const { data: integ, error: integErr } = await supabaseClient
       .from('integrations')
       .select('access_token, external_id')
-      .eq('user_id', user.user.id)
+      .eq('user_id', effectiveUserId)
       .eq('source', 'meta_ads')
       .maybeSingle()
 
@@ -87,7 +100,7 @@ serve(async (req) => {
       const { data: userData, error: userErr } = await supabaseClient
         .from('users')
         .select('meta_ads_credentials')
-        .eq('id', user.user.id)
+        .eq('id', effectiveUserId)
         .maybeSingle()
 
       if (!userErr && userData?.meta_ads_credentials) {

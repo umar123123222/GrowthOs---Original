@@ -160,7 +160,7 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
 
   try {
     // Always call fetchMetaAdsMetrics - it will check connection internally
-    const metricsData = await fetchMetaAdsMetrics({
+    const metricsData = await fetchMetaAdsMetrics(userId, {
       dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       dateTo: new Date().toISOString()
     });

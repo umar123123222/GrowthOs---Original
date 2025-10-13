@@ -48,26 +48,32 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ connected: false, error: 'Missing authorization header' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Parse payload early to allow userId fallback when no auth session
+    let payload: any = {}
+    try { payload = await req.json() } catch { payload = {} }
+
+    // Determine effective user id: prefer authenticated user token, fallback to body.userId
+    let effectiveUserId: string | null = null
+    const authHeader = req.headers.get('authorization')
+    if (authHeader) {
+      try {
+        const token = authHeader.replace('Bearer ', '')
+        const { data: user } = await supabaseClient.auth.getUser(token)
+        if (user?.user?.id) effectiveUserId = user.user.id
+      } catch (_e) {
+        // ignore auth parsing errors
+      }
+    }
+    if (!effectiveUserId && typeof payload.userId === 'string') {
+      effectiveUserId = payload.userId
     }
 
-    const token = authHeader.replace('Bearer ', '');
-    const { data: user } = await supabaseClient.auth.getUser(token);
-    if (!user.user) {
+    if (!effectiveUserId) {
       return new Response(
-        JSON.stringify({ connected: false, error: 'Unauthorized' }),
+        JSON.stringify({ connected: false, error: 'Unauthorized: missing user id' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      )
     }
-
-    // Parse payload
-    let payload: any = {};
-    try { payload = await req.json(); } catch { payload = {}; }
     const startDateInput = payload?.startDate ? new Date(payload.startDate) : null;
     const endDateInput = payload?.endDate ? new Date(payload.endDate) : null;
     const timeBasis: 'created' | 'processed' = (payload?.timeBasis === 'processed') ? 'processed' : 'created';
@@ -76,7 +82,7 @@ serve(async (req) => {
     const { data: integ, error: integErr } = await supabaseClient
       .from('integrations')
       .select('access_token, external_id')
-      .eq('user_id', user.user.id)
+      .eq('user_id', effectiveUserId)
       .eq('source', 'shopify')
       .maybeSingle();
 
@@ -94,7 +100,7 @@ serve(async (req) => {
       const { data: userData, error: userErr } = await supabaseClient
         .from('users')
         .select('shopify_credentials')
-        .eq('id', user.user.id)
+        .eq('id', effectiveUserId)
         .maybeSingle();
 
       if (!userErr && userData?.shopify_credentials) {
