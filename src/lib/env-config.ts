@@ -1,9 +1,9 @@
 // Environment configuration with fallbacks
 export const ENV_CONFIG = {
-  // Supabase Configuration
-  SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL || "https://majqoqagohicjigmsilu.supabase.co",
-  SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1hanFvcWFnb2hpY2ppZ21zaWx1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE2MzM3MTksImV4cCI6MjA2NzIwOTcxOX0.m7QE1xCco9XyfZrTi24lhElL8Bo8Jqj9zOFovfBAzWw",
-  SUPABASE_PROJECT_ID: import.meta.env.VITE_SUPABASE_PROJECT_ID || "majqoqagohicjigmsilu",
+  // Supabase Configuration - REQUIRED (no fallbacks for security)
+  SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
+  SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
+  SUPABASE_PROJECT_ID: import.meta.env.VITE_SUPABASE_PROJECT_ID,
 
   // Application Branding
   APP_TITLE: import.meta.env.VITE_APP_TITLE || "Growth OS - AI-Powered Learning Platform",
@@ -136,8 +136,8 @@ export const ENV_CONFIG = {
   PASSWORD_RESET_TIMEOUT_HOURS: parseInt(import.meta.env.VITE_PASSWORD_RESET_TIMEOUT_HOURS || "24"),
 } as const;
 
-// Validation function
-export function validateEnvironment() {
+// Validation function - Throws error if required env vars missing
+export function validateEnvironment(): boolean {
   const required = [
     'SUPABASE_URL',
     'SUPABASE_ANON_KEY',
@@ -147,8 +147,12 @@ export function validateEnvironment() {
   const missing = required.filter(key => !ENV_CONFIG[key]);
   
   if (missing.length > 0) {
-    console.warn(`Missing required environment variables: ${missing.join(', ')}`);
+    const errorMsg = `❌ CRITICAL: Missing required environment variables: ${missing.join(', ')}\n\n` +
+      `Please create a .env file with these variables. See .env.example for reference.\n\n` +
+      `Required variables:\n${missing.map(k => `  - VITE_${k}`).join('\n')}`;
+    
+    throw new Error(errorMsg);
   }
 
-  return missing.length === 0;
+  return true;
 }
