@@ -2,7 +2,7 @@
 export const ENV_CONFIG = {
   // Supabase Configuration - REQUIRED (no fallbacks for security)
   SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
-  SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_ANON_KEY,
+  SUPABASE_ANON_KEY: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
   SUPABASE_PROJECT_ID: import.meta.env.VITE_SUPABASE_PROJECT_ID,
 
   // Application Branding
@@ -139,17 +139,17 @@ export const ENV_CONFIG = {
 // Validation function - Throws error if required env vars missing
 export function validateEnvironment(): boolean {
   const required = [
-    'SUPABASE_URL',
-    'SUPABASE_ANON_KEY',
-    'SUPABASE_PROJECT_ID'
+    { key: 'SUPABASE_URL', envVar: 'VITE_SUPABASE_URL' },
+    { key: 'SUPABASE_ANON_KEY', envVar: 'VITE_SUPABASE_PUBLISHABLE_KEY' },
+    { key: 'SUPABASE_PROJECT_ID', envVar: 'VITE_SUPABASE_PROJECT_ID' }
   ] as const;
 
-  const missing = required.filter(key => !ENV_CONFIG[key]);
+  const missing = required.filter(({ key }) => !ENV_CONFIG[key]);
   
   if (missing.length > 0) {
-    const errorMsg = `❌ CRITICAL: Missing required environment variables: ${missing.join(', ')}\n\n` +
+    const errorMsg = `❌ CRITICAL: Missing required environment variables: ${missing.map(m => m.key).join(', ')}\n\n` +
       `Please create a .env file with these variables. See .env.example for reference.\n\n` +
-      `Required variables:\n${missing.map(k => `  - VITE_${k}`).join('\n')}`;
+      `Required variables:\n${missing.map(m => `  - ${m.envVar}`).join('\n')}`;
     
     throw new Error(errorMsg);
   }
