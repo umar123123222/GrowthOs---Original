@@ -436,6 +436,7 @@ serve(async (req) => {
       // Fetch ad sets with enhanced insights
       const adSetsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/adsets`)
       adSetsUrl.searchParams.set('fields', `id,name,status,campaign{id,name},${insightsQuery}`)
+      adSetsUrl.searchParams.set('filtering', '[{"field":"effective_status","operator":"IN","value":["ACTIVE","PAUSED","DELETED","ARCHIVED"]}]')
       adSetsUrl.searchParams.set('limit', '100')
       adSetsUrl.searchParams.set('access_token', accessToken)
 
@@ -499,6 +500,7 @@ serve(async (req) => {
       
       const campaignsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`)
       campaignsUrl.searchParams.set('fields', `id,name,status,objective,${insightsQuery}`)
+      campaignsUrl.searchParams.set('filtering', '[{"field":"effective_status","operator":"IN","value":["ACTIVE","PAUSED","DELETED","ARCHIVED"]}]')
       campaignsUrl.searchParams.set('limit', '50')
       campaignsUrl.searchParams.set('access_token', accessToken)
 
@@ -566,6 +568,7 @@ serve(async (req) => {
       // Fetch ads with enhanced insights including parent campaign and adset names
       const adsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/ads`)
       adsUrl.searchParams.set('fields', `id,name,status,campaign{id,name},adset{id,name},creative{object_story_spec},${insightsQuery}`)
+      adsUrl.searchParams.set('filtering', '[{"field":"effective_status","operator":"IN","value":["ACTIVE","PAUSED","DELETED","ARCHIVED"]}]')
       adsUrl.searchParams.set('limit', '100')
       adsUrl.searchParams.set('access_token', accessToken)
 
