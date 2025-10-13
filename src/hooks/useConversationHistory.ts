@@ -29,36 +29,48 @@ export function useConversationHistory(userId: string) {
     }
   );
 
-  // Check if we need to reset for a new day
-  const shouldReset = conversationData.date !== today;
-
-  // Auto-reset if date changed
-  if (shouldReset) {
-    setConversationData({
-      date: today,
-      history: []
-    });
-  }
-
   /**
    * Add a message to conversation history
    * Automatically trims to keep only last 20 messages (10 pairs)
    */
   const addMessage = (role: 'user' | 'assistant', content: string) => {
-    const newMessage: ConversationMessage = {
-      role,
-      content,
-      timestamp: new Date().toISOString()
-    };
-
     setConversationData(prev => {
-      const updatedHistory = [...prev.history, newMessage];
+      // Check if we need to reset for a new day
+      const currentDate = new Date().toISOString().split('T')[0];
+      const shouldReset = prev.date !== currentDate;
       
-      // Keep only last 20 messages (10 pairs)
+      const newMessage: ConversationMessage = {
+        role,
+        content,
+        timestamp: new Date().toISOString()
+      };
+      
+      // If date changed, start fresh with just this message
+      if (shouldReset) {
+        console.log('Success Partner History: Date changed, resetting history', {
+          oldDate: prev.date,
+          newDate: currentDate,
+          firstMessage: role
+        });
+        return {
+          date: currentDate,
+          history: [newMessage]
+        };
+      }
+      
+      // Otherwise append and trim
+      const updatedHistory = [...prev.history, newMessage];
       const trimmedHistory = updatedHistory.slice(-20);
       
+      console.log('Success Partner History: Message saved', {
+        role,
+        totalMessages: trimmedHistory.length,
+        userMessages: trimmedHistory.filter(m => m.role === 'user').length,
+        aiMessages: trimmedHistory.filter(m => m.role === 'assistant').length
+      });
+      
       return {
-        date: today,
+        date: currentDate,
         history: trimmedHistory
       };
     });
@@ -68,6 +80,9 @@ export function useConversationHistory(userId: string) {
    * Get current conversation history for webhook payload
    */
   const getHistory = (): ConversationMessage[] => {
+    const currentDate = new Date().toISOString().split('T')[0];
+    const shouldReset = conversationData.date !== currentDate;
+    
     if (shouldReset) {
       return [];
     }
