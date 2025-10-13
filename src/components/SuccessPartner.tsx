@@ -70,12 +70,27 @@ const SuccessPartner = ({
   useEffect(() => {
     const history = getHistory();
     console.log('Success Partner: Restoring conversation history', { 
+      userId: user?.id,
       historyLength: history.length,
       history: history.map(h => ({ role: h.role, contentPreview: h.content.substring(0, 50) }))
     });
     
     if (history && history.length > 0) {
-      const restored = history.map((m, i) => ({
+      // Sort by timestamp to ensure correct order
+      const sorted = [...history].sort((a, b) => 
+        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+      );
+
+      // De-duplicate adjacent identical messages (protection against double-saves)
+      const deduped: typeof sorted = [];
+      for (const m of sorted) {
+        const last = deduped[deduped.length - 1];
+        if (!last || last.role !== m.role || last.content !== m.content || last.timestamp !== m.timestamp) {
+          deduped.push(m);
+        }
+      }
+
+      const restored = deduped.map((m, i) => ({
         id: Date.now() + i,
         sender: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
         content: m.content,
@@ -85,7 +100,9 @@ const SuccessPartner = ({
       console.log('Success Partner: Restored messages', {
         restoredCount: restored.length,
         userMessages: restored.filter(m => m.sender === 'user').length,
-        aiMessages: restored.filter(m => m.sender === 'ai').length
+        aiMessages: restored.filter(m => m.sender === 'ai').length,
+        firstMessage: restored[0]?.sender,
+        lastMessage: restored[restored.length - 1]?.sender
       });
       
       // Set messages to greeting + restored history
