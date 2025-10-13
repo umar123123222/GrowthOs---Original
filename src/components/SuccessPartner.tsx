@@ -69,23 +69,26 @@ const SuccessPartner = ({
   // Restore today's conversation history into the chat UI on mount
   useEffect(() => {
     const history = getHistory();
-    if (history && history.length) {
-      setMessages(prev => {
-        // If we already have more than the greeting, don't rehydrate
-        if (prev.length > 1) return prev;
-        const restored = history.map((m, i) => ({
-          id: Date.now() + i,
-          sender: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
-          content: m.content,
-          timestamp: new Date(m.timestamp)
-        }));
-        // Keep greeting as first message, then append restored history
-        return [prev[0], ...restored];
-      });
+    if (history && history.length > 0) {
+      const restored = history.map((m, i) => ({
+        id: Date.now() + i,
+        sender: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
+        content: m.content,
+        timestamp: new Date(m.timestamp)
+      }));
+      // Set messages to greeting + restored history
+      setMessages([
+        {
+          id: 1,
+          sender: "ai",
+          content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
+          timestamp: new Date()
+        },
+        ...restored
+      ]);
     }
-    // Only run once on mount for the current user
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?.id]);
 
   // Validate user data - show error if incomplete
   if (!user?.id || !user?.email) {
