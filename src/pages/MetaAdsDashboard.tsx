@@ -478,6 +478,8 @@ const MetaAdsDashboard: React.FC = () => {
               const campaignStartIndex = (currentCampaignPage - 1) * campaignsPerPage;
               const campaignEndIndex = campaignStartIndex + campaignsPerPage;
               const currentCampaigns = campaignsWithActivity.slice(campaignStartIndex, campaignEndIndex);
+              
+              return <>
                 {currentCampaigns.map((campaign, index) => <div key={campaign.id} className="border rounded-xl p-6 hover-lift shadow-soft hover:shadow-medium transition-all duration-300 bg-gradient-to-r from-card to-muted/20" style={{
                   animationDelay: `${index * 100}ms`
                 }}>
@@ -607,7 +609,7 @@ const MetaAdsDashboard: React.FC = () => {
                   </div>}
                 
                 <div className="text-center text-sm text-muted-foreground mt-4">
-                  Showing {currentCampaigns.length} of {activeCampaigns.length} active campaigns
+                  Showing {currentCampaigns.length} of {campaignsWithActivity.length} campaigns with activity
                 </div>
               </>;
             })()}
@@ -696,7 +698,7 @@ const MetaAdsDashboard: React.FC = () => {
                       </div>}
                     
                     <div className="text-center text-sm text-muted-foreground mt-4">
-                      Showing {currentAds.length} of {activeAds.length} active ads
+                      Showing {currentAds.length} of {adsWithActivity.length} ads with activity
                     </div>
                   </>;
             })()}
