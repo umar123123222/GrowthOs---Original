@@ -52,7 +52,84 @@ export function SubmissionsManagement({
   const fetchSubmissions = async () => {
     if (!user) return;
     try {
-      // First get submissions
+      // MENTOR FILTERING: Get assignments assigned to mentor or unassigned
+      if (userRole === 'mentor') {
+        const { data: mentorAssignments, error: assignmentsError } = await supabase
+          .from('assignments')
+          .select('id')
+          .or(`mentor_id.eq.${user.id},mentor_id.is.null`);
+        
+        if (assignmentsError) {
+          console.error('Error fetching mentor assignments:', assignmentsError);
+          throw assignmentsError;
+        }
+        
+        if (!mentorAssignments || mentorAssignments.length === 0) {
+          setSubmissions([]);
+          setLoading(false);
+          return;
+        }
+        
+        const assignmentIds = mentorAssignments.map(a => a.id);
+        
+        // Fetch submissions for these assignments
+        let query = supabase
+          .from('submissions')
+          .select('*')
+          .in('assignment_id', assignmentIds)
+          .order('created_at', { ascending: false });
+
+        // Apply status filter if not 'all'
+        if (filterStatus !== 'all') {
+          query = query.eq('status', filterStatus);
+        }
+
+        const { data: submissionsData, error: submissionsError } = await query;
+        if (submissionsError) {
+          console.error('Error fetching submissions:', submissionsError);
+          throw submissionsError;
+        }
+        
+        if (!submissionsData || submissionsData.length === 0) {
+          setSubmissions([]);
+          setLoading(false);
+          return;
+        }
+
+        // Get assignment and user data separately
+        const studentIds = [...new Set(submissionsData.map(s => s.student_id))];
+        const [assignmentsData, usersData] = await Promise.all([
+          supabase.from('assignments').select('id, name, description, mentor_id').in('id', assignmentIds),
+          supabase.from('users').select('id, full_name, email').in('id', studentIds)
+        ]);
+
+        // Map the data to match the expected format
+        const mappedSubmissions = submissionsData.map(submission => {
+          const assignment = assignmentsData.data?.find(a => a.id === submission.assignment_id) || {
+            name: 'Unknown Assignment',
+            description: ''
+          };
+          const user = usersData.data?.find(u => u.id === submission.student_id);
+          return {
+            ...submission,
+            assignment,
+            student: user ? {
+              full_name: user.full_name || 'Unknown Student',
+              email: user.email || '',
+              student_id: user.id
+            } : {
+              full_name: 'Unknown Student',
+              email: '',
+              student_id: submission.student_id
+            }
+          };
+        });
+        setSubmissions(mappedSubmissions);
+        setLoading(false);
+        return;
+      }
+
+      // ADMIN/SUPERADMIN: Get all submissions
       let query = supabase.from('submissions').select('*').order('created_at', {
         ascending: false
       });
@@ -71,13 +148,14 @@ export function SubmissionsManagement({
       }
       if (!submissionsData || submissionsData.length === 0) {
         setSubmissions([]);
+        setLoading(false);
         return;
       }
 
       // Get assignment and user data separately
       const assignmentIds = [...new Set(submissionsData.map(s => s.assignment_id))];
       const studentIds = [...new Set(submissionsData.map(s => s.student_id))];
-      const [assignmentsData, usersData] = await Promise.all([supabase.from('assignments').select('id, name, description').in('id', assignmentIds), supabase.from('users').select('id, full_name, email').in('id', studentIds)]);
+      const [assignmentsData, usersData] = await Promise.all([supabase.from('assignments').select('id, name, description, mentor_id').in('id', assignmentIds), supabase.from('users').select('id, full_name, email').in('id', studentIds)]);
 
       // Map the data to match the expected format
       const mappedSubmissions = submissionsData.map(submission => {

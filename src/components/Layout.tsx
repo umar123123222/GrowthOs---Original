@@ -426,6 +426,10 @@ const Layout = memo(({
         href: "/mentor/assignments",
         icon: FileText
       }, {
+        name: "Submissions",
+        href: "/mentor/submissions",
+        icon: MessageSquare
+      }, {
         name: "Profile",
         href: "/profile",
         icon: User
