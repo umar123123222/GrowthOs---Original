@@ -6,6 +6,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { fetchShopifyMetrics, StudentIntegrations, fetchMetaAdsMetrics } from './student-integrations';
 import type { BusinessContextFlags } from './ai-context-detector';
+import { ENV_CONFIG } from './env-config';
 
 // Cache system for context data
 interface CacheEntry {
@@ -99,24 +100,33 @@ export interface MetaAdsContext {
 export interface BusinessContext {
   shopify?: ShopifyContext;
   metaAds?: MetaAdsContext;
+  dateRangeDays?: number;
+  dateRange?: {
+    startDate: string;
+    endDate: string;
+  };
 }
 
 /**
  * Fetches Shopify context for a user
  */
-async function getShopifyContext(userId: string): Promise<ShopifyContext> {
+async function getShopifyContext(userId: string, dateRangeDays: number = ENV_CONFIG.SUCCESS_PARTNER_DEFAULT_DATE_RANGE_DAYS): Promise<ShopifyContext> {
   // Check cache first
-  const cacheKey = `shopify_${userId}`;
+  const cacheKey = `shopify_${userId}_${dateRangeDays}`;
   const cached = contextCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return cached.data as ShopifyContext;
   }
 
   try {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - dateRangeDays);
+
     // Always call fetchShopifyMetrics - it will check connection internally
     const metrics = await fetchShopifyMetrics(userId, {
-      startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      endDate: new Date().toISOString()
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
     });
 
     // Check if connected based on the response
@@ -126,7 +136,7 @@ async function getShopifyContext(userId: string): Promise<ShopifyContext> {
 
     const result: ShopifyContext = {
       connected: true,
-      dateRange: 'last 7 days',
+      dateRange: `last ${dateRangeDays} days`,
       metrics: {
         totalSales: metrics.gmv || 0,
         orderCount: metrics.orders || 0,
@@ -150,19 +160,23 @@ async function getShopifyContext(userId: string): Promise<ShopifyContext> {
 /**
  * Fetches Meta Ads context for a user
  */
-async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
+async function getMetaAdsContext(userId: string, dateRangeDays: number = ENV_CONFIG.SUCCESS_PARTNER_DEFAULT_DATE_RANGE_DAYS): Promise<MetaAdsContext> {
   // Check cache first
-  const cacheKey = `meta_${userId}`;
+  const cacheKey = `meta_${userId}_${dateRangeDays}`;
   const cached = contextCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
     return cached.data as MetaAdsContext;
   }
 
   try {
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - dateRangeDays);
+
     // Always call fetchMetaAdsMetrics - it will check connection internally
     const metricsData = await fetchMetaAdsMetrics(userId, {
-      dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-      dateTo: new Date().toISOString()
+      dateFrom: startDate.toISOString(),
+      dateTo: endDate.toISOString()
     });
 
     // Check if connected based on the response
@@ -172,7 +186,7 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
 
     const result: MetaAdsContext = {
       connected: true,
-      dateRange: 'last 7 days',
+      dateRange: `last ${dateRangeDays} days`,
       metrics: {
         totalSpend: metricsData.metrics?.totalSpend || 0,
         impressions: metricsData.metrics?.totalImpressions || 0,
@@ -202,13 +216,15 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
  * @param flags - Context flags indicating what to fetch
  * @param timeout - Maximum time to wait for context (ms)
  * @param timeouts - Per-service timeout overrides (optional)
+ * @param dateRangeDays - Number of days to fetch data for
  * @returns Business context object
  */
 export async function buildBusinessContext(
   userId: string,
   flags: BusinessContextFlags,
   timeout: number = 5000,
-  timeouts?: { shopify?: number; metaAds?: number }
+  timeouts?: { shopify?: number; metaAds?: number },
+  dateRangeDays: number = ENV_CONFIG.SUCCESS_PARTNER_DEFAULT_DATE_RANGE_DAYS
 ): Promise<BusinessContext | null> {
   if (!flags.includeShopify && !flags.includeMetaAds) {
     return null;
@@ -235,7 +251,7 @@ export async function buildBusinessContext(
     if (flags.includeShopify) {
       const shopifyTimeout = timeouts?.shopify ?? timeout;
       racers.push(
-        withTimeout(getShopifyContext(userId), shopifyTimeout)
+        withTimeout(getShopifyContext(userId, dateRangeDays), shopifyTimeout)
           .then((r) => ({ key: 'shopify', value: r }))
           .catch(() => ({ key: 'shopify', value: null }))
       );
@@ -243,7 +259,7 @@ export async function buildBusinessContext(
     if (flags.includeMetaAds) {
       const metaAdsTimeout = timeouts?.metaAds ?? timeout;
       racers.push(
-        withTimeout(getMetaAdsContext(userId), metaAdsTimeout)
+        withTimeout(getMetaAdsContext(userId, dateRangeDays), metaAdsTimeout)
           .then((r) => ({ key: 'metaAds', value: r }))
           .catch(() => ({ key: 'metaAds', value: null }))
       );
@@ -251,7 +267,18 @@ export async function buildBusinessContext(
 
     const settled = await Promise.all(racers);
 
-    const context: BusinessContext = {};
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - dateRangeDays);
+
+    const context: BusinessContext = {
+      dateRangeDays,
+      dateRange: {
+        startDate: startDate.toISOString().split('T')[0],
+        endDate: endDate.toISOString().split('T')[0],
+      }
+    };
+    
     for (const item of settled as any[]) {
       if (item.key === 'shopify' && item.value) context.shopify = item.value as ShopifyContext;
       if (item.key === 'metaAds' && item.value) context.metaAds = item.value as MetaAdsContext;

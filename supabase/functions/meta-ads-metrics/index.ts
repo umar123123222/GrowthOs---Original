@@ -239,6 +239,30 @@ serve(async (req) => {
     const accountIdRaw = externalId
     const accountId = accountIdRaw.startsWith('act_') ? accountIdRaw : `act_${accountIdRaw}`
 
+    // Fetch account currency and basic info first
+    let accountCurrency = 'USD'; // Default fallback
+    try {
+      const currencyUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}`)
+      currencyUrl.searchParams.set('fields', 'currency,name')
+      currencyUrl.searchParams.set('access_token', accessToken)
+      
+      const currencyResp = await fetch(currencyUrl.toString())
+      if (currencyResp.ok) {
+        const currencyData = await currencyResp.json()
+        if (currencyData.currency) {
+          accountCurrency = currencyData.currency
+          console.log(`✓ Account currency detected: ${accountCurrency}`)
+        } else {
+          console.warn('⚠️ Currency field not found in Meta Ads account response')
+        }
+      } else {
+        console.warn(`⚠️ Failed to fetch account currency (status: ${currencyResp.status})`)
+      }
+    } catch (currencyError) {
+      console.error('Error fetching account currency:', currencyError)
+    }
+
+    // Initialize metrics with detected currency
     let metrics = {
       totalSpend: 0,
       totalImpressions: 0,
@@ -251,7 +275,7 @@ serve(async (req) => {
       campaigns: [] as any[],
       adSets: [] as any[],
       ads: [] as any[],
-      currency: 'USD', // Default to USD
+      currency: accountCurrency, // Use detected currency
     }
 
     try {
@@ -350,25 +374,6 @@ serve(async (req) => {
         return 'poor';
       }
 
-      // Fetch account currency and basic info first
-      const accountInfoUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}`)
-      accountInfoUrl.searchParams.set('fields', 'currency,name')
-      accountInfoUrl.searchParams.set('access_token', accessToken)
-      
-      try {
-        const accountInfoResp = await fetch(accountInfoUrl.toString())
-        if (accountInfoResp.ok) {
-          const accountInfo = await accountInfoResp.json()
-          if (accountInfo.currency) {
-            metrics.currency = accountInfo.currency
-            console.log(`Account currency: ${metrics.currency}`)
-          }
-        } else {
-          console.log('Failed to fetch account info:', accountInfoResp.status)
-        }
-      } catch (e) {
-        console.log('Failed to fetch account currency, using default USD:', e.message)
-      }
 
       // Prepare date parameters for API calls
       const INSIGHTS_FIELDS = 'spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach'

@@ -34,6 +34,9 @@ export const ENV_CONFIG = {
   // Success Partner Configuration
   SUCCESS_PARTNER_DAILY_LIMIT: parseInt(import.meta.env.VITE_SUCCESS_PARTNER_DAILY_LIMIT || "10"),
   SUCCESS_PARTNER_WEBHOOK_URL: import.meta.env.VITE_SUCCESS_PARTNER_WEBHOOK_URL || "https://n8n.core47.ai/webhook/SuccessPartner",
+  SUCCESS_PARTNER_DEFAULT_DATE_RANGE_DAYS: parseInt(import.meta.env.VITE_SUCCESS_PARTNER_DEFAULT_DATE_RANGE_DAYS || "7"),
+  META_ADS_MAX_DATE_RANGE_DAYS: parseInt(import.meta.env.VITE_META_ADS_MAX_DATE_RANGE_DAYS || "90"),
+  SHOPIFY_MAX_DATE_RANGE_DAYS: parseInt(import.meta.env.VITE_SHOPIFY_MAX_DATE_RANGE_DAYS || "90"),
 
   // Support Contact Information
   SUPPORT_EMAIL: import.meta.env.VITE_SUPPORT_EMAIL || "support@growthos.core47.ai",

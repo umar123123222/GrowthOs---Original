@@ -176,6 +176,24 @@ export function getCurrencySymbol(currencyCode?: string): string {
 }
 
 /**
+ * Extract currency from business context or fall back to default
+ */
+export function getContextCurrency(businessContext?: any): string {
+  // Try Meta Ads currency first
+  if (businessContext?.metaAds?.metrics?.currency) {
+    return businessContext.metaAds.metrics.currency;
+  }
+  
+  // Try Shopify currency (if we add it in the future)
+  if (businessContext?.shopify?.metrics?.currency) {
+    return businessContext.shopify.metrics.currency;
+  }
+  
+  // Fall back to app default
+  return ENV_CONFIG.DEFAULT_CURRENCY;
+}
+
+/**
  * Parse currency string to number
  */
 export function parseCurrency(value: string): number {

@@ -39,6 +39,7 @@ const SuccessPartner = ({
   user
 }: SuccessPartnerProps) => {
   const [message, setMessage] = useState("");
+  const [dateRangeDays, setDateRangeDays] = useState<number>(ENV_CONFIG.SUCCESS_PARTNER_DEFAULT_DATE_RANGE_DAYS);
   const [messages, setMessages] = useState<Message[]>([{
     id: 1,
     sender: "ai",
@@ -217,7 +218,13 @@ const SuccessPartner = ({
     let lastContext: any = null;
     while (Date.now() - start < MAX_WAIT_MS) {
       try {
-        const ctx = await buildBusinessContext(studentId, flags, Math.max(SHOPIFY_TIMEOUT, META_TIMEOUT), { shopify: SHOPIFY_TIMEOUT, metaAds: META_TIMEOUT });
+        const ctx = await buildBusinessContext(
+          studentId, 
+          flags, 
+          Math.max(SHOPIFY_TIMEOUT, META_TIMEOUT), 
+          { shopify: SHOPIFY_TIMEOUT, metaAds: META_TIMEOUT },
+          dateRangeDays
+        );
         lastContext = ctx;
         const shopifyReady = !flags.includeShopify || !!ctx?.shopify?.metrics || ctx?.shopify?.connected === true;
         const metaReady = !flags.includeMetaAds || !!ctx?.metaAds?.metrics || ctx?.metaAds?.connected === true;
@@ -247,7 +254,11 @@ const SuccessPartner = ({
       let businessContext = null;
       if (needsContext) {
         setIsFetchingContext(true);
-        const description = getContextDescription(flags);
+        const description = `Fetching ${
+          flags.includeShopify && flags.includeMetaAds ? 'Shopify & Meta Ads' :
+          flags.includeShopify ? 'Shopify' :
+          'Meta Ads'
+        } data (last ${dateRangeDays} days)...`;
         setContextDescription(description);
         try {
           // Ensure both Shopify and Meta Ads are ready before proceeding
@@ -306,7 +317,10 @@ const SuccessPartner = ({
         studentName: studentName,
         timestamp: new Date().toISOString(),
         conversationHistory: getHistory(),
-        businessContext: finalBusinessContext
+        businessContext: {
+          ...finalBusinessContext,
+          currency: ENV_CONFIG.DEFAULT_CURRENCY,
+        }
       };
       safeLogger.info('Success Partner: Sending message', {
         studentId,
@@ -397,7 +411,7 @@ const SuccessPartner = ({
       }]);
       throw error;
     }
-  }, [user, integrationStatus, getHistory]);
+  }, [user, integrationStatus, getHistory, dateRangeDays]);
   const handleSendMessage = useCallback(async () => {
     if (!message.trim() || isLoading) {
       if (process.env.NODE_ENV === 'development') {
@@ -537,6 +551,25 @@ const SuccessPartner = ({
             </div>
           </div>
           
+          {/* Date Range Selector - only show when integrations are connected */}
+          {(integrationStatus.shopify || integrationStatus.metaAds) && (
+            <div className="mt-3 flex items-center gap-2 p-2 bg-muted/50 rounded-md">
+              <Clock className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Data period:</span>
+              <select
+                value={dateRangeDays}
+                onChange={(e) => setDateRangeDays(Number(e.target.value))}
+                className="px-3 py-1 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background"
+              >
+                <option value={7}>Last 7 days</option>
+                <option value={14}>Last 14 days</option>
+                <option value={30}>Last 30 days</option>
+                <option value={60}>Last 60 days</option>
+                <option value={90}>Last 90 days</option>
+              </select>
+            </div>
+          )}
+
           {/* Integration Warning Banner */}
           {!integrationStatus.loading && (!integrationStatus.shopify || !integrationStatus.metaAds) && <div className="mt-3 p-3 bg-amber-50 border-l-4 border-amber-400 rounded">
               <div className="flex items-center justify-between">
