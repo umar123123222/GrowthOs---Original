@@ -12,6 +12,7 @@ import { safeLogger } from '@/lib/safe-logger';
 import { buildBusinessContext } from "@/lib/ai-context-builder";
 import { StudentIntegrations } from "@/lib/student-integrations";
 import { useConversationHistory } from "@/hooks/useConversationHistory";
+import ReactMarkdown from 'react-markdown';
 interface Message {
   id: number;
   sender: "user" | "ai" | "loading";
@@ -542,14 +543,29 @@ const SuccessPartner = ({
         {/* Messages */}
         <CardContent className="flex-1 overflow-y-auto space-y-4">
           {messages.map(msg => <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] p-3 rounded-lg ${msg.sender === "user" ? "bg-primary text-primary-foreground" : msg.sender === "loading" ? "bg-muted text-muted-foreground animate-pulse" : "bg-muted/50 text-foreground italic"}`}>
+              <div className={`max-w-[85%] p-3 rounded-lg ${msg.sender === "user" ? "bg-primary text-primary-foreground" : msg.sender === "loading" ? "bg-muted text-muted-foreground animate-pulse" : "bg-muted/50 text-foreground italic"}`}>
                 {msg.sender === "loading" && <div className="flex items-center space-x-2">
                     <Loader2 className="w-3 h-3 animate-spin" />
                     <span className="text-sm">AI Assistant is thinking...</span>
                   </div>}
                 {msg.sender !== "loading" && <>
                     {msg.sender === "ai" && <p className="text-xs font-medium mb-1 opacity-70">AI Assistant</p>}
-                    <p className="text-sm">{typeof msg.content === 'string' ? msg.content : String(msg.content)}</p>
+                    <div className="text-sm prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground">
+                      <ReactMarkdown
+                        components={{
+                          h3: ({node, ...props}) => <h3 className="text-base font-bold mt-3 mb-2" {...props} />,
+                          h4: ({node, ...props}) => <h4 className="text-sm font-semibold mt-2 mb-1" {...props} />,
+                          p: ({node, ...props}) => <p className="mb-2 leading-relaxed" {...props} />,
+                          ul: ({node, ...props}) => <ul className="list-disc ml-4 mb-2 space-y-1" {...props} />,
+                          ol: ({node, ...props}) => <ol className="list-decimal ml-4 mb-2 space-y-1" {...props} />,
+                          li: ({node, ...props}) => <li className="leading-relaxed" {...props} />,
+                          strong: ({node, ...props}) => <strong className="font-semibold" {...props} />,
+                          code: ({node, ...props}) => <code className="bg-black/10 dark:bg-white/10 px-1 py-0.5 rounded text-xs" {...props} />,
+                        }}
+                      >
+                        {typeof msg.content === 'string' ? msg.content : String(msg.content)}
+                      </ReactMarkdown>
+                    </div>
                     <p className="text-xs opacity-70 mt-1">
                       {msg.timestamp.toLocaleTimeString()}
                     </p>
