@@ -1867,6 +1867,10 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_my_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_recovery_statistics: {
         Args: Record<PropertyKey, never>
         Returns: {
