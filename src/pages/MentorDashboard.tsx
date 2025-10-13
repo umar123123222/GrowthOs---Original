@@ -29,7 +29,7 @@ export default function MentorDashboard() {
     checkedAssignments: 0,
     sessionsMentored: 0
   });
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('submissions');
   useEffect(() => {
     if (user) {
       fetchAssignedStudents();
@@ -152,9 +152,24 @@ export default function MentorDashboard() {
 
           <div className="mt-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              
-              
-              
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="submissions" className="flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4" />
+                  Submissions
+                </TabsTrigger>
+                <TabsTrigger value="recordings" className="flex items-center gap-2">
+                  <Video className="w-4 h-4" />
+                  Recordings
+                </TabsTrigger>
+                <TabsTrigger value="modules" className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4" />
+                  Modules
+                </TabsTrigger>
+                <TabsTrigger value="assignments" className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Assignments
+                </TabsTrigger>
+              </TabsList>
 
               <TabsContent value="submissions" className="mt-6">
                 <SubmissionsManagement userRole="mentor" />
