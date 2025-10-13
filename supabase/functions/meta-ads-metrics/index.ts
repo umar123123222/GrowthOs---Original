@@ -433,19 +433,12 @@ serve(async (req) => {
         metrics.averageROAS = spendSum > 0 ? (convValueSum / spendSum) : 0
       }
 
-      // Build insights query with date filtering (for all API calls)
-      let insightsQuery = 'insights'
-      if (dateParams['time_range']) {
-        insightsQuery += `.time_range(${dateParams['time_range']})`
-      } else if (dateParams['date_preset']) {
-        insightsQuery += `.date_preset(${dateParams['date_preset']})`
-      }
-      insightsQuery += '{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}'
-
       // Fetch ad sets with enhanced insights
       const adSetsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/adsets`)
-      adSetsUrl.searchParams.set('fields', `id,name,status,campaign{id,name},${insightsQuery}`)
-      adSetsUrl.searchParams.set('filtering', '[{"field":"effective_status","operator":"IN","value":["ACTIVE","PAUSED","DELETED","ARCHIVED"]}]')
+      adSetsUrl.searchParams.set('fields', 'id,name,status,campaign{id,name},insights{spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach}')
+      Object.entries(dateParams).forEach(([key, value]) => {
+        adSetsUrl.searchParams.set(key, value)
+      })
       adSetsUrl.searchParams.set('limit', '100')
       adSetsUrl.searchParams.set('access_token', accessToken)
 
@@ -499,8 +492,10 @@ serve(async (req) => {
 
       // Fetch campaigns with enhanced insights
       const campaignsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`)
-      campaignsUrl.searchParams.set('fields', `id,name,status,objective,${insightsQuery}`)
-      campaignsUrl.searchParams.set('filtering', '[{"field":"effective_status","operator":"IN","value":["ACTIVE","PAUSED","DELETED","ARCHIVED"]}]')
+      campaignsUrl.searchParams.set('fields', 'id,name,status,objective,insights{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}')
+      Object.entries(dateParams).forEach(([key, value]) => {
+        campaignsUrl.searchParams.set(key, value)
+      })
       campaignsUrl.searchParams.set('limit', '50')
       campaignsUrl.searchParams.set('access_token', accessToken)
 
@@ -567,8 +562,10 @@ serve(async (req) => {
 
       // Fetch ads with enhanced insights including parent campaign and adset names
       const adsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/ads`)
-      adsUrl.searchParams.set('fields', `id,name,status,campaign{id,name},adset{id,name},creative{object_story_spec},${insightsQuery}`)
-      adsUrl.searchParams.set('filtering', '[{"field":"effective_status","operator":"IN","value":["ACTIVE","PAUSED","DELETED","ARCHIVED"]}]')
+      adsUrl.searchParams.set('fields', 'id,name,status,campaign{id,name},adset{id,name},creative{object_story_spec},insights{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}')
+      Object.entries(dateParams).forEach(([key, value]) => {
+        adsUrl.searchParams.set(key, value)
+      })
       adsUrl.searchParams.set('limit', '100')
       adsUrl.searchParams.set('access_token', accessToken)
 
