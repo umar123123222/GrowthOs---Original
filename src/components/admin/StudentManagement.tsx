@@ -1128,8 +1128,8 @@ export const StudentManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayStudents.map(student => <React.Fragment key={student.id}>
-                    <TableRow>
+                {displayStudents.map(student => [
+                    <TableRow key={student.id}>
                       <TableCell>
                         <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
                       </TableCell>
@@ -1186,9 +1186,9 @@ export const StudentManagement = () => {
                            </AlertDialog>
                          </div>
                        </TableCell>
-                    </TableRow>
-                    
-                    {expandedRows.has(student.id) && <TableRow className="animate-accordion-down">
+                     </TableRow>,
+                     
+                     expandedRows.has(student.id) && <TableRow key={`${student.id}-expanded`} className="animate-accordion-down">
                         <TableCell colSpan={8} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1305,8 +1305,8 @@ export const StudentManagement = () => {
                             </div>
                           </div>
                         </TableCell>
-                      </TableRow>}
-                  </React.Fragment>)}
+                      </TableRow>
+                  ].filter(Boolean))}
               </TableBody>
             </Table>
           </div>
