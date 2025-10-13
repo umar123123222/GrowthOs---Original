@@ -136,17 +136,7 @@ const SuccessPartner = ({
         };
         setIntegrationStatus(status);
 
-        // Warm up Meta Ads cache if connected (prevents timeout on first message)
-        if (status.metaAds) {
-          buildBusinessContext(
-            user.id,
-            { includeShopify: false, includeMetaAds: true },
-            60000,
-            { metaAds: 60000 }
-          ).catch(error => {
-            console.warn('Cache warming failed:', error);
-          });
-        }
+        // Cache warming removed - we now only fetch when user query requires it
       } catch (error) {
         console.error('Error fetching integration status:', error);
         setIntegrationStatus(prev => ({
@@ -210,10 +200,10 @@ const SuccessPartner = ({
 
       // Detect if we need business context
       const requestedFlags = detectBusinessContext(userMessage);
-      // Always include data for any connected integrations
+      // Only fetch data when user query requires it AND integration is connected
       const flags = {
-        includeShopify: integrationStatus.shopify || requestedFlags.includeShopify,
-        includeMetaAds: integrationStatus.metaAds || requestedFlags.includeMetaAds
+        includeShopify: requestedFlags.includeShopify && integrationStatus.shopify,
+        includeMetaAds: requestedFlags.includeMetaAds && integrationStatus.metaAds
       };
       const needsContext = flags.includeShopify || flags.includeMetaAds;
       let businessContext = null;
