@@ -428,7 +428,7 @@ const MetaAdsDashboard: React.FC = () => {
             </CardHeader>
             <CardContent className="relative z-10">
               <div className="text-2xl lg:text-3xl font-bold text-foreground mb-1 break-words overflow-hidden">
-                {metaData.averageROAS ? `${(metaData.averageROAS * 100).toFixed(1)}%` : 'N/A'}
+                {metaData.averageROAS ? `${metaData.averageROAS.toFixed(1)}%` : 'N/A'}
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 rounded-full mr-2" style={{
