@@ -60,7 +60,7 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
   const { toast } = useToast();
   
   // Initialize conversation history hook
-  const { addMessage, getHistory } = useConversationHistory(user?.id || 'unknown');
+  const { addMessage, getHistory, messageCount } = useConversationHistory(user?.id || 'unknown');
 
   // Restore today's conversation history into the chat UI on mount
   useEffect(() => {
@@ -481,6 +481,12 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
+              {/* Conversation History Display */}
+              <Badge variant="outline" className="flex items-center space-x-1" title="Conversation history resets daily at 00:00 UTC">
+                <MessageSquare className="w-3 h-3" />
+                <span>{messageCount}/20</span>
+              </Badge>
+              
               {/* Credits Display */}
               {loadingCredits ? (
                 <Badge variant="outline" className="flex items-center space-x-1">

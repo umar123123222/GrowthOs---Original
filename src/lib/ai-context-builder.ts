@@ -113,18 +113,16 @@ async function getShopifyContext(userId: string): Promise<ShopifyContext> {
   }
 
   try {
-    // Check if Shopify is connected using StudentIntegrations
-    const integration = await StudentIntegrations.get(userId);
-    
-    if (!integration || !integration.is_shopify_connected) {
-      return { connected: false };
-    }
-
-    // Fetch metrics using existing function
+    // Always call fetchShopifyMetrics - it will check connection internally
     const metrics = await fetchShopifyMetrics(userId, {
       startDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       endDate: new Date().toISOString()
     });
+
+    // Check if connected based on the response
+    if (!metrics || metrics.error || !metrics.connected) {
+      return { connected: false };
+    }
 
     const result: ShopifyContext = {
       connected: true,
@@ -140,23 +138,12 @@ async function getShopifyContext(userId: string): Promise<ShopifyContext> {
       }
     };
 
-    // Cache the result
+    // Cache the result only if successful
     contextCache.set(cacheKey, { data: result, timestamp: Date.now() });
     return result;
   } catch (error) {
     console.error('Error fetching Shopify context:', error);
-    return {
-      connected: true,
-      error: 'Failed to fetch Shopify data',
-      metrics: {
-        totalSales: 0,
-        orderCount: 0,
-        averageOrderValue: 0,
-        topProducts: [],
-        salesTrend: [],
-        products: []
-      }
-    };
+    return { connected: false, error: 'Failed to fetch Shopify data' };
   }
 }
 
@@ -172,19 +159,13 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
   }
 
   try {
-    // Check if Meta Ads is connected using StudentIntegrations
-    const integration = await StudentIntegrations.get(userId);
-    
-    if (!integration || !integration.is_meta_connected) {
-      return { connected: false };
-    }
-
-    // Fetch metrics using the edge function
+    // Always call fetchMetaAdsMetrics - it will check connection internally
     const metricsData = await fetchMetaAdsMetrics({
       dateFrom: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       dateTo: new Date().toISOString()
     });
 
+    // Check if connected based on the response
     if (!metricsData || !metricsData.connected) {
       return { connected: false };
     }
@@ -206,26 +187,12 @@ async function getMetaAdsContext(userId: string): Promise<MetaAdsContext> {
       }
     };
 
-    // Cache the result
+    // Cache the result only if successful
     contextCache.set(cacheKey, { data: result, timestamp: Date.now() });
     return result;
   } catch (error) {
     console.error('Error fetching Meta Ads context:', error);
-    return {
-      connected: true,
-      error: 'Failed to fetch Meta Ads data',
-      metrics: {
-        totalSpend: 0,
-        impressions: 0,
-        clicks: 0,
-        conversions: 0,
-        roas: 0,
-        ctr: 0,
-        campaigns: [],
-        adSets: [],
-        ads: []
-      }
-    };
+    return { connected: false, error: 'Failed to fetch Meta Ads data' };
   }
 }
 

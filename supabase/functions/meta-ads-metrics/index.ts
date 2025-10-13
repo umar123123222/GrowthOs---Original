@@ -420,6 +420,63 @@ serve(async (req) => {
         metrics.averageROAS = spendSum > 0 ? (convValueSum / spendSum) : 0
       }
 
+      // Fetch ad sets with enhanced insights
+      const adSetsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/adsets`)
+      adSetsUrl.searchParams.set('fields', 'id,name,status,campaign{id,name},insights{spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach}')
+      Object.entries(dateParams).forEach(([key, value]) => {
+        adSetsUrl.searchParams.set(key, value)
+      })
+      adSetsUrl.searchParams.set('limit', '100')
+      adSetsUrl.searchParams.set('access_token', accessToken)
+
+      const adSetsResp = await fetch(adSetsUrl.toString())
+      if (adSetsResp.ok) {
+        const adSetsJson = await adSetsResp.json()
+        const adSetData = adSetsJson.data || []
+        
+        for (const adSet of adSetData) {
+          const insights = adSet.insights?.data?.[0] || {}
+          const spend = Number(insights.spend || 0)
+          const impressions = Number(insights.impressions || 0)
+          const clicks = Number(insights.clicks || 0)
+          const ctr = Number(insights.ctr || 0)
+          const cpc = Number(insights.cpc || 0)
+          
+          let conversions = 0
+          let conversionValue = 0
+          
+          if (Array.isArray(insights.actions)) {
+            const purchase = insights.actions.find((a: any) => a.action_type?.includes('purchase'))
+            if (purchase) conversions = Number(purchase.value || 0)
+          }
+          
+          if (Array.isArray(insights.action_values)) {
+            const purchaseValue = insights.action_values.find((av: any) => av.action_type?.includes('purchase'))
+            if (purchaseValue) conversionValue = Number(purchaseValue.value || 0)
+          }
+          
+          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0
+          
+          // Use campaign objective if available, otherwise default to 'UNKNOWN'
+          const campaignObjective = adSet.campaign?.objective || 'UNKNOWN'
+          
+          metrics.adSets.push({
+            id: adSet.id,
+            name: adSet.name || 'Unnamed Ad Set',
+            campaignId: adSet.campaign?.id || '',
+            status: adSet.status || 'UNKNOWN',
+            spend,
+            impressions,
+            clicks,
+            conversions,
+            ctr,
+            cpc,
+            roas,
+            performance: categorizePerformance(ctr, cpc, roas, campaignObjective, spend)
+          })
+        }
+      }
+
       // Fetch campaigns with enhanced insights
       const campaignsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`)
       campaignsUrl.searchParams.set('fields', 'id,name,status,objective,insights{spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach}')
