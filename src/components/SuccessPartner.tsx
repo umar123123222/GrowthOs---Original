@@ -12,14 +12,12 @@ import { safeLogger } from '@/lib/safe-logger';
 import { buildBusinessContext } from "@/lib/ai-context-builder";
 import { StudentIntegrations } from "@/lib/student-integrations";
 import { useConversationHistory } from "@/hooks/useConversationHistory";
-
 interface Message {
   id: number;
   sender: "user" | "ai" | "loading";
   content: string;
   timestamp: Date;
 }
-
 interface SuccessPartnerProps {
   onClose: () => void;
   user?: {
@@ -28,7 +26,6 @@ interface SuccessPartnerProps {
     email?: string;
   };
 }
-
 interface CreditsInfo {
   credits_used: number;
   daily_limit: number;
@@ -36,17 +33,17 @@ interface CreditsInfo {
   can_send_message: boolean;
   date: string;
 }
-
-const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
+const SuccessPartner = ({
+  onClose,
+  user
+}: SuccessPartnerProps) => {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: 1,
-      sender: "ai",
-      content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([{
+    id: 1,
+    sender: "ai",
+    content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
+    timestamp: new Date()
+  }]);
   const [isLoading, setIsLoading] = useState(false);
   const [credits, setCredits] = useState<CreditsInfo | null>(null);
   const [loadingCredits, setLoadingCredits] = useState(true);
@@ -57,10 +54,16 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
     metaAds: false,
     loading: true
   });
-  const { toast } = useToast();
-  
+  const {
+    toast
+  } = useToast();
+
   // Initialize conversation history hook
-  const { addMessage, getHistory, messageCount } = useConversationHistory(user?.id || 'unknown');
+  const {
+    addMessage,
+    getHistory,
+    messageCount
+  } = useConversationHistory(user?.id || 'unknown');
 
   // Restore today's conversation history into the chat UI on mount
   useEffect(() => {
@@ -73,23 +76,25 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
           id: Date.now() + i,
           sender: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
           content: m.content,
-          timestamp: new Date(m.timestamp),
+          timestamp: new Date(m.timestamp)
         }));
         // Keep greeting as first message, then append restored history
         return [prev[0], ...restored];
       });
     }
-  // Only run once on mount for the current user
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Only run once on mount for the current user
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Validate user data - show error if incomplete
   if (!user?.id || !user?.email) {
-    console.error('SuccessPartner: Incomplete user data provided', { user });
+    console.error('SuccessPartner: Incomplete user data provided', {
+      user
+    });
     toast({
       title: "User Error",
       description: "Unable to initialize chat. Please refresh the page and try again.",
-      variant: "destructive",
+      variant: "destructive"
     });
     onClose();
     return null;
@@ -99,15 +104,16 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
   useEffect(() => {
     const fetchCredits = async () => {
       try {
-        const { data, error } = await supabase.functions.invoke('success-partner-credits', {
+        const {
+          data,
+          error
+        } = await supabase.functions.invoke('success-partner-credits', {
           method: 'GET'
         });
-
         if (error) {
           console.error('Error fetching credits:', error);
           return;
         }
-
         setCredits(data);
       } catch (error) {
         console.error('Error fetching credits:', error);
@@ -115,7 +121,6 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
         setLoadingCredits(false);
       }
     };
-
     fetchCredits();
   }, []);
 
@@ -131,67 +136,64 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
         });
       } catch (error) {
         console.error('Error fetching integration status:', error);
-        setIntegrationStatus(prev => ({ ...prev, loading: false }));
+        setIntegrationStatus(prev => ({
+          ...prev,
+          loading: false
+        }));
       }
     };
-    
     fetchIntegrationStatus();
   }, [user.id]);
 
   // Function to update credits after successful message
   const updateCredits = useCallback(async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('success-partner-credits', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('success-partner-credits', {
         method: 'POST'
       });
-
       if (error) {
         console.error('Error updating credits:', error);
         return;
       }
-
       setCredits(data);
     } catch (error) {
       console.error('Error updating credits:', error);
     }
   }, []);
-
   const sendToWebhook = useCallback(async (userMessage: string): Promise<string> => {
     try {
       // Use validated user data (already checked above)
       const studentId = user.id;
       const studentName = user.full_name || user.email.split('@')[0] || 'Student';
-      
+
       // Detect if we need business context
       const requestedFlags = detectBusinessContext(userMessage);
       // Always include data for any connected integrations
       const flags = {
         includeShopify: integrationStatus.shopify || requestedFlags.includeShopify,
-        includeMetaAds: integrationStatus.metaAds || requestedFlags.includeMetaAds,
+        includeMetaAds: integrationStatus.metaAds || requestedFlags.includeMetaAds
       };
       const needsContext = flags.includeShopify || flags.includeMetaAds;
-      
       let businessContext = null;
-      
       if (needsContext) {
         setIsFetchingContext(true);
         const description = getContextDescription(flags);
         setContextDescription(description);
-        
         try {
           businessContext = await buildBusinessContext(studentId, flags);
-          
+
           // Check for disconnected integrations and add UI notifications
           if (businessContext) {
             const disconnectedServices: string[] = [];
-            
             if (businessContext.shopify?.connected === false) {
               disconnectedServices.push('Shopify');
             }
             if (businessContext.metaAds?.connected === false) {
               disconnectedServices.push('Meta Ads');
             }
-
             if (disconnectedServices.length > 0) {
               setMessages(prev => [...prev, {
                 id: Date.now(),
@@ -203,7 +205,7 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
           }
         } catch (error) {
           console.error("Error fetching business context:", error);
-          
+
           // Add user-facing error message
           setMessages(prev => [...prev, {
             id: Date.now(),
@@ -216,12 +218,12 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
           setContextDescription("");
         }
       }
-      
+
       // Ensure we always send a businessContext object even if fetch failed
       if (!businessContext) {
         businessContext = {
-          ...(flags.includeShopify && { 
-            shopify: { 
+          ...(flags.includeShopify && {
+            shopify: {
               connected: !!integrationStatus.shopify,
               metrics: {
                 totalSales: 0,
@@ -229,12 +231,12 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
                 averageOrderValue: 0,
                 topProducts: [],
                 salesTrend: [],
-                products: [],
-              },
-            } 
+                products: []
+              }
+            }
           }),
-          ...(flags.includeMetaAds && { 
-            metaAds: { 
+          ...(flags.includeMetaAds && {
+            metaAds: {
               connected: !!integrationStatus.metaAds,
               metrics: {
                 totalSpend: 0,
@@ -245,46 +247,45 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
                 ctr: 0,
                 campaigns: [],
                 adSets: [],
-                ads: [],
-              },
-            } 
-          }),
+                ads: []
+              }
+            }
+          })
         } as any;
       }
-      
       const payload = {
         message: userMessage,
         studentId: studentId,
         studentName: studentName,
         timestamp: new Date().toISOString(),
-        conversationHistory: getHistory(), // Include last 10 message pairs
-        businessContext,
+        conversationHistory: getHistory(),
+        // Include last 10 message pairs
+        businessContext
       };
-      
-      safeLogger.info('Success Partner: Sending message', { 
-        studentId, 
-        studentName, 
+      safeLogger.info('Success Partner: Sending message', {
+        studentId,
+        studentName,
         messageLength: userMessage.length,
         hasBusinessContext: !!businessContext
       });
-      
       const response = await fetch(ENV_CONFIG.SUCCESS_PARTNER_WEBHOOK_URL, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
-
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-
       const data = await response.json();
       if (process.env.NODE_ENV === 'development') {
-        safeLogger.info('Success Partner: Webhook response received', { data, type: typeof data });
+        safeLogger.info('Success Partner: Webhook response received', {
+          data,
+          type: typeof data
+        });
       }
-      
+
       // Handle different response formats and ensure string output
       let aiResponse = "";
       if (data && typeof data === 'object') {
@@ -325,20 +326,22 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       } else {
         aiResponse = String(data) || "Sorry, I couldn't process your request right now.";
       }
-      
+
       // Ensure the response is always a string
       if (typeof aiResponse !== 'string') {
         console.warn('Success Partner: Non-string response detected, converting:', aiResponse);
         aiResponse = String(aiResponse);
       }
-      
       if (process.env.NODE_ENV === 'development') {
-        safeLogger.info('Success Partner: Final processed response', { aiResponse, length: aiResponse.length });
+        safeLogger.info('Success Partner: Final processed response', {
+          aiResponse,
+          length: aiResponse.length
+        });
       }
       return aiResponse;
     } catch (error) {
       console.error('Webhook error:', error);
-      
+
       // Add user-facing error message for webhook failures
       setMessages(prev => [...prev, {
         id: Date.now(),
@@ -346,17 +349,15 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
         content: "⚠️ I'm having trouble connecting to my services right now. Please try again in a moment.",
         timestamp: new Date()
       }]);
-      
       throw error;
     }
   }, [user, integrationStatus, getHistory]);
-
   const handleSendMessage = useCallback(async () => {
     if (!message.trim() || isLoading) {
       if (process.env.NODE_ENV === 'development') {
-        safeLogger.warn('Success Partner: Message sending blocked', { 
-          messageEmpty: !message.trim(), 
-          isLoading 
+        safeLogger.warn('Success Partner: Message sending blocked', {
+          messageEmpty: !message.trim(),
+          isLoading
         });
       }
       return;
@@ -367,18 +368,17 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       toast({
         title: "Daily Limit Reached",
         description: `You've used all ${credits.daily_limit} credits for today. Credits reset at midnight UTC.`,
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
 
     // Validate integration requirements BEFORE sending - only block SPECIFIC service mentions
     const lowerMessage = message.toLowerCase();
-    
+
     // Specific Shopify keywords (not general business terms)
     const shopifyKeywords = ['shopify', 'store', 'product', 'inventory', 'order'];
     const hasShopifyKeyword = shopifyKeywords.some(keyword => lowerMessage.includes(keyword));
-    
     if (hasShopifyKeyword && !integrationStatus.shopify) {
       toast({
         title: "Shopify Not Connected",
@@ -387,11 +387,10 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       });
       return;
     }
-    
+
     // Specific Meta Ads keywords (not general business terms)
     const metaKeywords = ['meta', 'facebook', 'instagram', 'ads', 'campaign', 'roas', 'cpc', 'ctr'];
     const hasMetaKeyword = metaKeywords.some(keyword => lowerMessage.includes(keyword));
-    
     if (hasMetaKeyword && !integrationStatus.metaAds) {
       toast({
         title: "Meta Ads Not Connected",
@@ -400,14 +399,12 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
       });
       return;
     }
-
     const userMessage: Message = {
       id: Date.now(),
       sender: "user",
       content: message.trim(),
       timestamp: new Date()
     };
-
     const loadingMessage: Message = {
       id: Date.now() + 1,
       sender: "loading",
@@ -419,19 +416,18 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
     setMessages(prev => [...prev, userMessage, loadingMessage]);
     setMessage("");
     setIsLoading(true);
-    
+
     // Add user message to conversation history
     addMessage('user', userMessage.content);
-
     try {
       const aiReply = await sendToWebhook(userMessage.content);
-      
+
       // Update credits after successful AI response
       await updateCredits();
-      
+
       // Add AI response to conversation history
       addMessage('assistant', aiReply);
-      
+
       // Remove loading message and add AI response
       setMessages(prev => {
         const withoutLoading = prev.filter(msg => msg.sender !== "loading");
@@ -455,19 +451,16 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
         };
         return [...withoutLoading, fallbackMessage];
       });
-      
       toast({
         title: "Connection Error",
         description: "Unable to reach the AI assistant. Please try again later.",
-        variant: "destructive",
+        variant: "destructive"
       });
     } finally {
       setIsLoading(false);
     }
   }, [message, isLoading, sendToWebhook, updateCredits, credits, integrationStatus, toast]);
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  return <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-2xl h-[600px] flex flex-col">
         <CardHeader className="flex-shrink-0">
           <div className="flex items-center justify-between">
@@ -482,26 +475,16 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
             </div>
             <div className="flex items-center space-x-2">
               {/* Conversation History Display */}
-              <Badge variant="outline" className="flex items-center space-x-1" title="Conversation history resets daily at 00:00 UTC">
-                <MessageSquare className="w-3 h-3" />
-                <span>{messageCount}/20</span>
-              </Badge>
+              
               
               {/* Credits Display */}
-              {loadingCredits ? (
-                <Badge variant="outline" className="flex items-center space-x-1">
+              {loadingCredits ? <Badge variant="outline" className="flex items-center space-x-1">
                   <Loader2 className="w-3 h-3 animate-spin" />
                   <span>Loading...</span>
-                </Badge>
-              ) : credits ? (
-                <Badge 
-                  variant={credits.credits_remaining <= 2 ? "destructive" : credits.credits_remaining <= 5 ? "secondary" : "outline"}
-                  className="flex items-center space-x-1"
-                >
+                </Badge> : credits ? <Badge variant={credits.credits_remaining <= 2 ? "destructive" : credits.credits_remaining <= 5 ? "secondary" : "outline"} className="flex items-center space-x-1">
                   <MessageSquare className="w-3 h-3" />
                   <span>{credits.credits_remaining}/{credits.daily_limit}</span>
-                </Badge>
-              ) : null}
+                </Badge> : null}
               <Button variant="ghost" size="sm" onClick={onClose}>
                 <X className="w-4 h-4" />
               </Button>
@@ -509,187 +492,112 @@ const SuccessPartner = ({ onClose, user }: SuccessPartnerProps) => {
           </div>
           
           {/* Integration Warning Banner */}
-          {!integrationStatus.loading && (!integrationStatus.shopify || !integrationStatus.metaAds) && (
-            <div className="mt-3 p-3 bg-amber-50 border-l-4 border-amber-400 rounded">
+          {!integrationStatus.loading && (!integrationStatus.shopify || !integrationStatus.metaAds) && <div className="mt-3 p-3 bg-amber-50 border-l-4 border-amber-400 rounded">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 text-amber-600" />
                   <p className="text-sm text-amber-800 font-medium">
-                    {!integrationStatus.shopify && !integrationStatus.metaAds
-                      ? "Connect Shopify and Meta Ads to unlock business insights"
-                      : !integrationStatus.shopify
-                      ? "Connect Shopify to analyze your store performance"
-                      : "Connect Meta Ads to analyze your ad campaigns"}
+                    {!integrationStatus.shopify && !integrationStatus.metaAds ? "Connect Shopify and Meta Ads to unlock business insights" : !integrationStatus.shopify ? "Connect Shopify to analyze your store performance" : "Connect Meta Ads to analyze your ad campaigns"}
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => window.location.href = '/connect'}
-                  className="text-xs shrink-0"
-                >
+                <Button variant="outline" size="sm" onClick={() => window.location.href = '/connect'} className="text-xs shrink-0">
                   Go to Integrations
                 </Button>
               </div>
-            </div>
-          )}
+            </div>}
           
           {/* Credits Warning */}
-          {credits && credits.credits_remaining <= 2 && credits.credits_remaining > 0 && (
-            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+          {credits && credits.credits_remaining <= 2 && credits.credits_remaining > 0 && <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
               <div className="flex items-center space-x-2 text-sm text-yellow-800">
                 <Clock className="w-4 h-4" />
                 <span>Only {credits.credits_remaining} credits remaining today. Resets at midnight UTC.</span>
               </div>
-            </div>
-          )}
+            </div>}
           
           {/* No Credits Left */}
-          {credits && credits.credits_remaining === 0 && (
-            <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
+          {credits && credits.credits_remaining === 0 && <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded-md">
               <div className="flex items-center space-x-2 text-sm text-red-800">
                 <Clock className="w-4 h-4" />
                 <span>Daily limit reached. Your {credits.daily_limit} credits will reset at midnight UTC.</span>
               </div>
-            </div>
-          )}
+            </div>}
         </CardHeader>
 
         {/* Context Fetching Indicator */}
-        {isFetchingContext && contextDescription && (
-          <div className="mx-4 mb-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        {isFetchingContext && contextDescription && <div className="mx-4 mb-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <div className="flex items-center space-x-2 text-sm text-blue-800">
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>{contextDescription}</span>
             </div>
-          </div>
-        )}
+          </div>}
 
         {/* Messages */}
         <CardContent className="flex-1 overflow-y-auto space-y-4">
-          {messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div className={`max-w-[80%] p-3 rounded-lg ${
-                msg.sender === "user" 
-                  ? "bg-primary text-primary-foreground" 
-                  : msg.sender === "loading"
-                  ? "bg-muted text-muted-foreground animate-pulse"
-                  : "bg-muted/50 text-foreground italic"
-              }`}>
-                {msg.sender === "loading" && (
-                  <div className="flex items-center space-x-2">
+          {messages.map(msg => <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[80%] p-3 rounded-lg ${msg.sender === "user" ? "bg-primary text-primary-foreground" : msg.sender === "loading" ? "bg-muted text-muted-foreground animate-pulse" : "bg-muted/50 text-foreground italic"}`}>
+                {msg.sender === "loading" && <div className="flex items-center space-x-2">
                     <Loader2 className="w-3 h-3 animate-spin" />
                     <span className="text-sm">AI Assistant is thinking...</span>
-                  </div>
-                )}
-                {msg.sender !== "loading" && (
-                  <>
-                    {msg.sender === "ai" && (
-                      <p className="text-xs font-medium mb-1 opacity-70">AI Assistant</p>
-                    )}
+                  </div>}
+                {msg.sender !== "loading" && <>
+                    {msg.sender === "ai" && <p className="text-xs font-medium mb-1 opacity-70">AI Assistant</p>}
                     <p className="text-sm">{typeof msg.content === 'string' ? msg.content : String(msg.content)}</p>
                     <p className="text-xs opacity-70 mt-1">
                       {msg.timestamp.toLocaleTimeString()}
                     </p>
-                  </>
-                )}
+                  </>}
               </div>
-            </div>
-          ))}
+            </div>)}
         </CardContent>
 
         {/* Input */}
         <div className="flex-shrink-0 p-4 border-t">
           <div className="flex space-x-2">
-            <Input
-              placeholder="Ask about videos, assignments, or course content..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && handleSendMessage()}
-              disabled={isLoading || (credits && !credits.can_send_message)}
-            />
-            <Button 
-              onClick={handleSendMessage} 
-              disabled={isLoading || (credits && !credits.can_send_message)}
-            >
-              {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4" />
-              )}
+            <Input placeholder="Ask about videos, assignments, or course content..." value={message} onChange={e => setMessage(e.target.value)} onKeyPress={e => e.key === "Enter" && handleSendMessage()} disabled={isLoading || credits && !credits.can_send_message} />
+            <Button onClick={handleSendMessage} disabled={isLoading || credits && !credits.can_send_message}>
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             </Button>
           </div>
           
           {/* Quick Actions */}
           <div className="flex flex-wrap gap-2 mt-2">
-            <Badge 
-              variant="outline" 
-              className={`cursor-pointer hover:bg-gray-100 ${
-                !integrationStatus.shopify || (credits && !credits.can_send_message)
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : ''
-              }`}
-              onClick={() => {
-                if (integrationStatus.shopify && credits && credits.can_send_message) {
-                  setMessage("Study my Shopify sales");
-                } else if (!integrationStatus.shopify) {
-                  toast({
-                    title: "Shopify Not Connected",
-                    description: "Please connect your Shopify account first in Settings → Integrations",
-                    variant: "destructive"
-                  });
-                }
-              }}
-              title={!integrationStatus.shopify ? "Connect Shopify first" : ""}
-            >
+            <Badge variant="outline" className={`cursor-pointer hover:bg-gray-100 ${!integrationStatus.shopify || credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => {
+            if (integrationStatus.shopify && credits && credits.can_send_message) {
+              setMessage("Study my Shopify sales");
+            } else if (!integrationStatus.shopify) {
+              toast({
+                title: "Shopify Not Connected",
+                description: "Please connect your Shopify account first in Settings → Integrations",
+                variant: "destructive"
+              });
+            }
+          }} title={!integrationStatus.shopify ? "Connect Shopify first" : ""}>
               <TrendingUp className="w-3 h-3 mr-1" />
               Analyze Shopify
             </Badge>
-            <Badge 
-              variant="outline" 
-              className={`cursor-pointer hover:bg-gray-100 ${
-                !integrationStatus.metaAds || (credits && !credits.can_send_message)
-                  ? 'opacity-50 cursor-not-allowed' 
-                  : ''
-              }`}
-              onClick={() => {
-                if (integrationStatus.metaAds && credits && credits.can_send_message) {
-                  setMessage("Review my ad performance");
-                } else if (!integrationStatus.metaAds) {
-                  toast({
-                    title: "Meta Ads Not Connected",
-                    description: "Please connect your Meta Ads account first in Settings → Integrations",
-                    variant: "destructive"
-                  });
-                }
-              }}
-              title={!integrationStatus.metaAds ? "Connect Meta Ads first" : ""}
-            >
+            <Badge variant="outline" className={`cursor-pointer hover:bg-gray-100 ${!integrationStatus.metaAds || credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => {
+            if (integrationStatus.metaAds && credits && credits.can_send_message) {
+              setMessage("Review my ad performance");
+            } else if (!integrationStatus.metaAds) {
+              toast({
+                title: "Meta Ads Not Connected",
+                description: "Please connect your Meta Ads account first in Settings → Integrations",
+                variant: "destructive"
+              });
+            }
+          }} title={!integrationStatus.metaAds ? "Connect Meta Ads first" : ""}>
               <BarChart3 className="w-3 h-3 mr-1" />
               Review Ads
             </Badge>
-            <Badge 
-              variant="outline" 
-              className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => credits && credits.can_send_message && setMessage("I'm stuck on the current assignment")}
-            >
+            <Badge variant="outline" className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => credits && credits.can_send_message && setMessage("I'm stuck on the current assignment")}>
               Assignment Help
             </Badge>
-            <Badge 
-              variant="outline" 
-              className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`}
-              onClick={() => credits && credits.can_send_message && setMessage("I'm feeling demotivated")}
-            >
+            <Badge variant="outline" className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => credits && credits.can_send_message && setMessage("I'm feeling demotivated")}>
               Need Motivation
             </Badge>
           </div>
         </div>
       </Card>
-    </div>
-  );
+    </div>;
 };
-
 export default SuccessPartner;
