@@ -67,58 +67,54 @@ const SuccessPartner = ({
     messageCount
   } = useConversationHistory(user?.id || 'unknown');
 
-  // Restore today's conversation history into the chat UI on mount
+  // Load conversation history from database on mount
   useEffect(() => {
-    const history = getHistory();
-    console.log('Success Partner: Restoring conversation history', { 
-      userId: user?.id,
-      historyLength: history.length,
-      history: history.map(h => ({ role: h.role, contentPreview: h.content.substring(0, 50) }))
-    });
+    if (!user?.id) return;
     
-    if (history && history.length > 0) {
-      // Sort by timestamp to ensure correct order
-      const sorted = [...history].sort((a, b) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
+    const loadMessages = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        
+        const { data: dbMessages, error } = await supabase
+          .from('success_partner_messages')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('date', today)
+          .order('timestamp', { ascending: true });
 
-      // De-duplicate adjacent identical messages (protection against double-saves)
-      const deduped: typeof sorted = [];
-      for (const m of sorted) {
-        const last = deduped[deduped.length - 1];
-        if (!last || last.role !== m.role || last.content !== m.content || last.timestamp !== m.timestamp) {
-          deduped.push(m);
+        if (error) {
+          console.error('Failed to load messages:', error);
+          return;
         }
-      }
 
-      const restored = deduped.map((m, i) => ({
-        id: Date.now() + i,
-        sender: (m.role === 'user' ? 'user' : 'ai') as 'user' | 'ai',
-        content: m.content,
-        timestamp: new Date(m.timestamp)
-      }));
-      
-      console.log('Success Partner: Restored messages', {
-        restoredCount: restored.length,
-        userMessages: restored.filter(m => m.sender === 'user').length,
-        aiMessages: restored.filter(m => m.sender === 'ai').length,
-        firstMessage: restored[0]?.sender,
-        lastMessage: restored[restored.length - 1]?.sender
-      });
-      
-      // Replace messages with greeting + restored history
-      setMessages([
-        {
-          id: 1,
-          sender: "ai",
-          content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
-          timestamp: new Date()
-        },
-        ...restored
-      ]);
-    }
-    // Only run on mount when user ID is available
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (dbMessages && dbMessages.length > 0) {
+          const restored: Message[] = dbMessages.map((msg, idx) => ({
+            id: idx + 2,
+            sender: msg.role === 'user' ? 'user' : 'ai',
+            content: msg.content,
+            timestamp: new Date(msg.timestamp)
+          }));
+
+          console.log('Success Partner: Loaded messages from database', {
+            messageCount: restored.length
+          });
+
+          setMessages([
+            {
+              id: 1,
+              sender: "ai",
+              content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
+              timestamp: new Date()
+            },
+            ...restored
+          ]);
+        }
+      } catch (err) {
+        console.error('Error loading messages:', err);
+      }
+    };
+
+    loadMessages();
   }, [user?.id]);
 
   // Validate user data - show error if incomplete
@@ -473,16 +469,38 @@ const SuccessPartner = ({
     setMessage("");
     setIsLoading(true);
 
-    // Add user message to conversation history
+    // Save user message to database and localStorage
     addMessage('user', userMessage.content);
+    try {
+      await supabase.from('success_partner_messages').insert({
+        user_id: user.id,
+        role: 'user',
+        content: userMessage.content,
+        timestamp: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0]
+      });
+    } catch (dbError) {
+      console.error('Failed to save user message to database:', dbError);
+    }
     try {
       const aiReply = await sendToWebhook(userMessage.content);
 
       // Update credits after successful AI response
       await updateCredits();
 
-      // Add AI response to conversation history
+      // Save AI response to database and localStorage
       addMessage('assistant', aiReply);
+      try {
+        await supabase.from('success_partner_messages').insert({
+          user_id: user.id,
+          role: 'assistant',
+          content: aiReply,
+          timestamp: new Date().toISOString(),
+          date: new Date().toISOString().split('T')[0]
+        });
+      } catch (dbError) {
+        console.error('Failed to save AI message to database:', dbError);
+      }
 
       // Remove loading message and add AI response
       setMessages(prev => {

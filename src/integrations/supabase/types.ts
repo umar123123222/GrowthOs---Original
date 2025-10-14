@@ -1201,6 +1201,36 @@ export type Database = {
         }
         Relationships: []
       }
+      success_partner_messages: {
+        Row: {
+          content: string
+          created_at: string
+          date: string
+          id: string
+          role: string
+          timestamp: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          date?: string
+          id?: string
+          role: string
+          timestamp?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          date?: string
+          id?: string
+          role?: string
+          timestamp?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       success_sessions: {
         Row: {
           created_at: string | null
