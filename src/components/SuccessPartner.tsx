@@ -106,24 +106,20 @@ const SuccessPartner = ({
         lastMessage: restored[restored.length - 1]?.sender
       });
       
-      // Only replace when the UI is still in greeting-only state to avoid duplication
-      setMessages(prev => {
-        if (prev.length <= 1) {
-          return [
-            {
-              id: 1,
-              sender: "ai",
-              content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
-              timestamp: new Date()
-            },
-            ...restored
-          ];
-        }
-        return prev;
-      });
+      // Replace messages with greeting + restored history
+      setMessages([
+        {
+          id: 1,
+          sender: "ai",
+          content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
+          timestamp: new Date()
+        },
+        ...restored
+      ]);
     }
+    // Only run on mount when user ID is available
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, messageCount]);
+  }, [user?.id]);
 
   // Validate user data - show error if incomplete
   if (!user?.id || !user?.email) {
