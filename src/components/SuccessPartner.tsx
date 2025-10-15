@@ -11,7 +11,6 @@ import { detectBusinessContext, getContextDescription } from "@/lib/ai-context-d
 import { safeLogger } from '@/lib/safe-logger';
 import { buildBusinessContext } from "@/lib/ai-context-builder";
 import { StudentIntegrations } from "@/lib/student-integrations";
-import { useConversationHistory } from "@/hooks/useConversationHistory";
 import ReactMarkdown from 'react-markdown';
 interface Message {
   id: number;
@@ -59,13 +58,6 @@ const SuccessPartner = ({
   const {
     toast
   } = useToast();
-
-  // Initialize conversation history hook
-  const {
-    addMessage,
-    getHistory,
-    messageCount
-  } = useConversationHistory(user?.id || 'unknown');
 
   // Load conversation history from database on mount
   useEffect(() => {
@@ -308,7 +300,13 @@ const SuccessPartner = ({
         studentId: studentId,
         studentName: studentName,
         timestamp: new Date().toISOString(),
-        conversationHistory: getHistory(),
+        conversationHistory: messages
+          .filter(m => m.sender !== 'loading')
+          .map(m => ({
+            role: m.sender === 'user' ? 'user' : 'assistant',
+            content: m.content,
+            timestamp: m.timestamp.toISOString()
+          })),
         businessContext: {
           ...finalBusinessContext,
           currency: ENV_CONFIG.DEFAULT_CURRENCY,
@@ -403,7 +401,7 @@ const SuccessPartner = ({
       }]);
       throw error;
     }
-  }, [user, integrationStatus, getHistory, dateRangeDays]);
+  }, [user, integrationStatus, messages, dateRangeDays]);
   const handleSendMessage = useCallback(async () => {
     if (!message.trim() || isLoading) {
       if (process.env.NODE_ENV === 'development') {
@@ -469,16 +467,24 @@ const SuccessPartner = ({
     setMessage("");
     setIsLoading(true);
 
-    // Save user message to database and localStorage
-    addMessage('user', userMessage.content);
+    // Save user message to database
     try {
-      await supabase.from('success_partner_messages').insert({
+      const { error: userInsertError } = await supabase.from('success_partner_messages').insert({
         user_id: user.id,
         role: 'user',
         content: userMessage.content,
         timestamp: new Date().toISOString(),
         date: new Date().toISOString().split('T')[0]
       });
+      
+      if (userInsertError) {
+        console.error('Failed to save user message to database:', userInsertError);
+        toast({
+          title: "Warning",
+          description: "Your message may not persist after refresh. Please try again if needed.",
+          variant: "destructive"
+        });
+      }
     } catch (dbError) {
       console.error('Failed to save user message to database:', dbError);
     }
@@ -488,16 +494,19 @@ const SuccessPartner = ({
       // Update credits after successful AI response
       await updateCredits();
 
-      // Save AI response to database and localStorage
-      addMessage('assistant', aiReply);
+      // Save AI response to database
       try {
-        await supabase.from('success_partner_messages').insert({
+        const { error: aiInsertError } = await supabase.from('success_partner_messages').insert({
           user_id: user.id,
           role: 'assistant',
           content: aiReply,
           timestamp: new Date().toISOString(),
           date: new Date().toISOString().split('T')[0]
         });
+        
+        if (aiInsertError) {
+          console.error('Failed to save AI message to database:', aiInsertError);
+        }
       } catch (dbError) {
         console.error('Failed to save AI message to database:', dbError);
       }
