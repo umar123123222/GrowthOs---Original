@@ -193,6 +193,8 @@ serve(async (req) => {
 
     const minParam = encodeURIComponent(createdMinUtc.toISOString());
     const maxParam = encodeURIComponent(createdMaxUtc.toISOString());
+    
+    console.log(`Fetching orders from ${createdMinUtc.toISOString()} to ${createdMaxUtc.toISOString()} (${startYmd} to ${endYmd} in ${tz})`);
 
     // Fetch all orders with pagination
     const fields = [
@@ -247,6 +249,8 @@ serve(async (req) => {
       }
     }
 
+    console.log(`Fetched ${allOrders.length} total orders from Shopify`);
+    
     // Filter to match Shopify dashboard
     const filtered = allOrders.filter((o: any) => {
       if (o?.test === true) return false;
@@ -254,6 +258,8 @@ serve(async (req) => {
       if ((o?.financial_status || '').toLowerCase() === 'voided') return false;
       return true;
     });
+    
+    console.log(`After filtering: ${filtered.length} orders (removed ${allOrders.length - filtered.length} test/cancelled/voided orders)`);
 
     // Helpers to compute net sales per order (exclude gift card purchases)
     function netForOrder(o: any): number {
@@ -280,6 +286,8 @@ serve(async (req) => {
     const totalSales = filtered.reduce((sum, o) => sum + netForOrder(o), 0);
     const orderCount = filtered.length;
     const aov = orderCount > 0 ? totalSales / orderCount : 0;
+    
+    console.log(`Calculated metrics - Total Sales: ${totalSales}, Order Count: ${orderCount}, AOV: ${aov}`);
 
     // Sales trend grouped by selected timezone and time basis
     const trendMap = new Map<string, number>();
