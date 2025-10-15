@@ -138,13 +138,13 @@ async function getShopifyContext(userId: string, dateRangeDays: number = ENV_CON
       connected: true,
       dateRange: `last ${dateRangeDays} days`,
       metrics: {
-        totalSales: metrics.gmv || 0,
-        orderCount: metrics.orders || 0,
-        averageOrderValue: metrics.aov || 0,
-        topProducts: metrics.topProducts || [],
-        salesTrend: metrics.salesTrend || [],
+        totalSales: metrics.metrics?.gmv || 0,
+        orderCount: metrics.metrics?.orders || 0,
+        averageOrderValue: metrics.metrics?.aov || 0,
+        topProducts: metrics.metrics?.topProducts || [],
+        salesTrend: metrics.metrics?.salesTrend || [],
         // Include all products with their detailed sales data
-        products: metrics.products || metrics.topProducts || []
+        products: metrics.metrics?.products || metrics.metrics?.topProducts || []
       }
     };
 
