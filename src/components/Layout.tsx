@@ -6,15 +6,15 @@ import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook } from "lucide-react";
-import metaIcon from "@/assets/meta-icon.png";
+import metaLogo from "@/assets/meta-logo.svg";
 
 const MetaIcon = ({ className, isActive }: { className?: string, isActive?: boolean }) => (
   <img 
-    src={metaIcon} 
+    src={metaLogo} 
     alt="Meta" 
     className={className}
     style={{
-      filter: isActive ? 'grayscale(0%) brightness(1)' : 'grayscale(100%) brightness(0.6) opacity(0.7)',
+      filter: 'grayscale(100%)',
       objectFit: 'contain'
     }}
   />
