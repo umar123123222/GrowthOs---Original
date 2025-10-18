@@ -156,7 +156,7 @@ const ERROR_MESSAGES: Record<string, UserError> = {
 };
 
 class ErrorHandler {
-  private logError(error: any, context?: string): void {
+  private async logError(error: any, context?: string): Promise<void> {
     // Log full error details for debugging (never shown to user)
     console.error('Error Details:', {
       error,
@@ -166,6 +166,49 @@ class ErrorHandler {
       message: error?.message,
       code: error?.code
     });
+
+    // Log to database for monitoring
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      
+      // Get current user if available
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Determine error type
+      let errorType = 'unknown';
+      if (context?.includes('auth')) errorType = 'auth';
+      else if (context?.includes('database') || context?.includes('db')) errorType = 'database';
+      else if (context?.includes('api')) errorType = 'api';
+      else if (context?.includes('network')) errorType = 'network';
+      else if (context?.includes('validation')) errorType = 'validation';
+      else if (context?.includes('integration')) errorType = 'integration';
+      else if (error?.message?.toLowerCase().includes('ui') || error?.message?.toLowerCase().includes('component')) errorType = 'ui';
+
+      // Determine severity
+      let severity = 'error';
+      if (error?.message?.toLowerCase().includes('critical')) severity = 'critical';
+      else if (error?.message?.toLowerCase().includes('warn')) severity = 'warning';
+      else if (error?.status === 500 || error?.statusCode === 500) severity = 'critical';
+
+      await supabase.from('error_logs').insert({
+        user_id: user?.id || null,
+        error_type: errorType,
+        error_code: error?.code || error?.status?.toString() || error?.statusCode?.toString() || null,
+        error_message: error?.message || 'Unknown error',
+        error_details: {
+          context: context,
+          error: error?.toString(),
+          status: error?.status || error?.statusCode,
+        },
+        stack_trace: error?.stack || null,
+        url: typeof window !== 'undefined' ? window.location.href : null,
+        user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+        severity: severity
+      });
+    } catch (logError) {
+      // Don't throw if logging fails
+      console.warn('Failed to log error to database:', logError);
+    }
   }
 
   private identifyErrorType(error: any): string {
