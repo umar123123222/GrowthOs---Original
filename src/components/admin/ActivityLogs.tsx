@@ -6,8 +6,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
-import { Activity, Download, Search, Filter } from 'lucide-react';
+import { Activity, Download, Search, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface ActivityLog {
@@ -17,10 +18,13 @@ interface ActivityLog {
   occurred_at: string;
   metadata: any;
   reference_id: string | null;
+  description?: string;
+  entity_type?: string;
   users: {
     email: string;
+    full_name: string;
     role: string;
-  };
+  } | null;
 }
 
 export const ActivityLogs = () => {
@@ -72,7 +76,7 @@ export const ActivityLogs = () => {
         if (log.performed_by) {
           const { data: user } = await supabase
             .from('users')
-            .select('email, role')
+            .select('email, full_name, role')
             .eq('id', log.performed_by)
             .maybeSingle();
           userData = user;
@@ -84,6 +88,8 @@ export const ActivityLogs = () => {
           occurred_at: log.created_at,
           user_id: log.performed_by,
           metadata: log.data,
+          description: log.description,
+          entity_type: log.entity_type,
           reference_id: log.entity_id
         };
       }));
@@ -101,16 +107,45 @@ export const ActivityLogs = () => {
     }
   };
 
+  const formatLogDetails = (log: ActivityLog) => {
+    if (log.description) {
+      return log.description;
+    }
+    
+    if (log.metadata) {
+      const data = log.metadata;
+      const keyDetails = [];
+      
+      if (data.status_old && data.status_new) {
+        keyDetails.push(`Status: ${data.status_old} → ${data.status_new}`);
+      }
+      if (data.lms_status_old && data.lms_status_new) {
+        keyDetails.push(`LMS: ${data.lms_status_old} → ${data.lms_status_new}`);
+      }
+      if (data.amount) {
+        keyDetails.push(`Amount: ${data.amount}`);
+      }
+      if (data.installment_number) {
+        keyDetails.push(`Installment #${data.installment_number}`);
+      }
+      
+      return keyDetails.length > 0 ? keyDetails.join(' • ') : 'Action performed';
+    }
+    
+    return 'No details';
+  };
+
   const exportLogs = async () => {
     try {
       const csvContent = [
-        ['Date', 'User', 'Role', 'Activity', 'Details'].join(','),
+        ['Date', 'User', 'Name', 'Role', 'Activity', 'Details'].join(','),
         ...filteredLogs.map(log => [
           new Date(log.occurred_at).toISOString(),
-          log.users?.email || 'Unknown',
-          log.users?.role || 'Unknown',
+          log.users?.email || 'System',
+          log.users?.full_name || 'System',
+          log.users?.role || 'System',
           log.activity_type,
-          JSON.stringify(log.metadata || {})
+          formatLogDetails(log)
         ].join(','))
       ].join('\n');
 
@@ -158,9 +193,25 @@ export const ActivityLogs = () => {
     return roleColors[role as keyof typeof roleColors] || 'bg-gray-500';
   };
 
+  const getEntityBadgeColor = (entityType?: string) => {
+    const colors = {
+      user: 'bg-blue-500',
+      invoice: 'bg-green-500',
+      student: 'bg-purple-500',
+      notification_template: 'bg-yellow-500',
+      data_access: 'bg-red-500'
+    };
+    return colors[entityType as keyof typeof colors] || 'bg-gray-500';
+  };
+
   const filteredLogs = logs.filter(log => {
-    const matchesSearch = log.users?.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.activity_type.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch = 
+      log.users?.email?.toLowerCase().includes(searchLower) ||
+      log.users?.full_name?.toLowerCase().includes(searchLower) ||
+      log.activity_type.toLowerCase().includes(searchLower) ||
+      log.description?.toLowerCase().includes(searchLower) ||
+      (!log.users && 'system'.includes(searchLower));
     const matchesRole = roleFilter === 'all' || log.users?.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -249,11 +300,14 @@ export const ActivityLogs = () => {
             <Table>
               <TableHeader>
                 <TableRow className="hover:bg-transparent border-0">
-                  <TableHead className="font-medium h-12">Timestamp</TableHead>
+                  <TableHead className="font-medium h-12 w-[180px]">Timestamp</TableHead>
                   <TableHead className="font-medium h-12">User</TableHead>
-                  <TableHead className="font-medium h-12">Role</TableHead>
-                  <TableHead className="font-medium h-12">Activity</TableHead>
+                  <TableHead className="font-medium h-12">Name</TableHead>
+                  <TableHead className="font-medium h-12 w-[120px]">Role</TableHead>
+                  <TableHead className="font-medium h-12 w-[120px]">Entity</TableHead>
+                  <TableHead className="font-medium h-12 w-[140px]">Activity</TableHead>
                   <TableHead className="font-medium h-12">Details</TableHead>
+                  <TableHead className="font-medium h-12 w-[80px]">Actions</TableHead>
                 </TableRow>
               </TableHeader>
             </Table>
@@ -265,30 +319,114 @@ export const ActivityLogs = () => {
               <TableBody>
                 {filteredLogs.map((log) => (
                   <TableRow key={log.id} className="hover:bg-muted/30">
-                    <TableCell className="whitespace-nowrap font-mono text-sm">
+                    <TableCell className="whitespace-nowrap font-mono text-sm w-[180px]">
                       {new Date(log.occurred_at).toLocaleString()}
                     </TableCell>
                     <TableCell className="max-w-[200px] truncate">
-                      {log.users?.email || 'Unknown'}
+                      {log.users ? (
+                        log.users.email
+                      ) : (
+                        <span className="text-muted-foreground italic">System</span>
+                      )}
                     </TableCell>
-                    <TableCell>
-                      <Badge className={getRoleBadge(log.users?.role || '')}>
-                        {log.users?.role || 'Unknown'}
-                      </Badge>
+                    <TableCell className="max-w-[180px] truncate">
+                      {log.users?.full_name || (
+                        <span className="text-muted-foreground italic">System</span>
+                      )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="w-[120px]">
+                      {log.users ? (
+                        <Badge className={getRoleBadge(log.users.role)}>
+                          {log.users.role}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-muted">
+                          System
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="w-[120px]">
+                      {log.entity_type && (
+                        <Badge variant="outline" className={getEntityBadgeColor(log.entity_type)}>
+                          {log.entity_type.replace('_', ' ')}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="w-[140px]">
                       <Badge className={getActivityBadge(log.activity_type)}>
                         {log.activity_type.replace('_', ' ')}
                       </Badge>
                     </TableCell>
-                    <TableCell className="max-w-[300px]">
-                      {log.metadata ? (
-                        <div className="text-sm text-muted-foreground truncate">
-                          {JSON.stringify(log.metadata)}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">No details</span>
-                      )}
+                    <TableCell className="max-w-[400px]">
+                      <div className="text-sm truncate">
+                        {formatLogDetails(log)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="w-[80px]">
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Activity Log Details</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <h4 className="text-sm font-semibold mb-2">Timestamp</h4>
+                              <p className="text-sm font-mono">{new Date(log.occurred_at).toLocaleString()}</p>
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-semibold mb-2">Performed By</h4>
+                              <p className="text-sm">
+                                {log.users ? (
+                                  <>
+                                    {log.users.full_name} ({log.users.email})
+                                    <Badge className={`ml-2 ${getRoleBadge(log.users.role)}`}>
+                                      {log.users.role}
+                                    </Badge>
+                                  </>
+                                ) : (
+                                  <>
+                                    <span className="italic text-muted-foreground">System Action</span>
+                                    <Badge variant="secondary" className="ml-2 bg-muted">System</Badge>
+                                  </>
+                                )}
+                              </p>
+                            </div>
+                            {log.entity_type && (
+                              <div>
+                                <h4 className="text-sm font-semibold mb-2">Entity Type</h4>
+                                <Badge variant="outline" className={getEntityBadgeColor(log.entity_type)}>
+                                  {log.entity_type.replace('_', ' ')}
+                                </Badge>
+                              </div>
+                            )}
+                            <div>
+                              <h4 className="text-sm font-semibold mb-2">Activity</h4>
+                              <Badge className={getActivityBadge(log.activity_type)}>
+                                {log.activity_type.replace('_', ' ')}
+                              </Badge>
+                            </div>
+                            {log.description && (
+                              <div>
+                                <h4 className="text-sm font-semibold mb-2">Description</h4>
+                                <p className="text-sm">{log.description}</p>
+                              </div>
+                            )}
+                            {log.metadata && (
+                              <div>
+                                <h4 className="text-sm font-semibold mb-2">Full Data</h4>
+                                <pre className="text-xs bg-muted p-4 rounded-md overflow-x-auto">
+                                  {JSON.stringify(log.metadata, null, 2)}
+                                </pre>
+                              </div>
+                            )}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </TableCell>
                   </TableRow>
                 ))}
