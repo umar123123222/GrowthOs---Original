@@ -8,10 +8,14 @@ const corsHeaders = {
 
 // Secure AES-256-GCM encryption
 async function generateKey(): Promise<CryptoKey> {
+  const encryptionSecret = Deno.env.get('ENCRYPTION_SECRET');
+  
+  if (!encryptionSecret) {
+    throw new Error('ENCRYPTION_SECRET environment variable is not configured. Please add it in Supabase Edge Functions secrets.');
+  }
+  
   // Use a consistent key derivation from environment
-  const keyMaterial = new TextEncoder().encode(
-    Deno.env.get('ENCRYPTION_SECRET') || 'default-encryption-key-change-in-production'
-  );
+  const keyMaterial = new TextEncoder().encode(encryptionSecret);
   
   // Hash the key material to ensure it's 256 bits
   const keyHash = await crypto.subtle.digest('SHA-256', keyMaterial);
