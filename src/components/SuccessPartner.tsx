@@ -67,6 +67,9 @@ const SuccessPartner = ({
       try {
         const today = new Date().toISOString().split('T')[0];
         
+        // Add a small delay to ensure any in-flight messages are saved
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const { data: dbMessages, error } = await supabase
           .from('success_partner_messages')
           .select('*')
@@ -88,18 +91,38 @@ const SuccessPartner = ({
           }));
 
           console.log('Success Partner: Loaded messages from database', {
-            messageCount: restored.length
+            messageCount: restored.length,
+            messages: restored
           });
 
-          setMessages([
-            {
-              id: 1,
-              sender: "ai",
-              content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
-              timestamp: new Date()
-            },
-            ...restored
-          ]);
+          // Check if first message is already a greeting from the AI
+          const hasGreeting = restored.length > 0 && 
+            restored[0].sender === 'ai' && 
+            restored[0].content.includes("Success Partner");
+
+          if (hasGreeting) {
+            // Already has greeting in DB, just show restored messages
+            setMessages(restored);
+          } else {
+            // Prepend default greeting
+            setMessages([
+              {
+                id: 1,
+                sender: "ai",
+                content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
+                timestamp: new Date()
+              },
+              ...restored
+            ]);
+          }
+        } else {
+          // No messages in DB, show default greeting
+          setMessages([{
+            id: 1,
+            sender: "ai",
+            content: "Hello, I'm your Success Partner. I'm here to help you succeed in your e-commerce journey. What can I help you with today?",
+            timestamp: new Date()
+          }]);
         }
       } catch (err) {
         console.error('Error loading messages:', err);
