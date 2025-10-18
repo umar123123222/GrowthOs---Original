@@ -6,8 +6,18 @@ import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook } from "lucide-react";
+import metaLogo from "@/assets/meta-logo.svg";
 
-const MetaIcon = Facebook;
+const MetaIcon = ({ className }: { className?: string }) => (
+  <img 
+    src={metaLogo} 
+    alt="Meta" 
+    className={className}
+    style={{
+      objectFit: 'contain'
+    }}
+  />
+);
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
