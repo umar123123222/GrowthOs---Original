@@ -6,6 +6,12 @@ import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook } from "lucide-react";
+
+const MetaIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 512 512" className={className} fill="currentColor">
+    <path d="M504.1 256C504.1 119 393 7.9 256 7.9S7.9 119 7.9 256 119 504.1 256 504.1 504.1 393 504.1 256zm-247.2-49.6c-7.5 7.5-11.6 17.6-11.6 28.2v87.9c0 22 17.9 39.9 39.9 39.9H373c22 0 39.9-17.9 39.9-39.9V234.6c0-10.6-4.2-20.7-11.6-28.2-7.5-7.5-17.6-11.6-28.2-11.6h-87.9c-10.6 0-20.7 4.2-28.2 11.6zm-99.6 0c-7.5 7.5-11.6 17.6-11.6 28.2v87.9c0 22 17.9 39.9 39.9 39.9h21.3c22 0 39.9-17.9 39.9-39.9V234.6c0-10.6-4.2-20.7-11.6-28.2-7.5-7.5-17.6-11.6-28.2-11.6h-21.3c-10.6 0-20.7 4.2-28.2 11.6z"/>
+  </svg>
+);
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -161,7 +167,7 @@ const NavigationItems = memo(({
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
                     ${location.pathname === '/meta-ads' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
                   `}>
-                  <Facebook className="h-4 w-4" />
+                  <MetaIcon className="h-4 w-4" />
                   <span>Meta Ads</span>
                   <Badge variant="outline" className="ml-auto text-xs">
                     Connected
@@ -491,7 +497,7 @@ const Layout = memo(({
       dynamicItems.push({
         name: "Meta Ads Dashboard",
         href: "/meta-ads-dashboard",
-        icon: Target
+        icon: MetaIcon
       });
     }
 
