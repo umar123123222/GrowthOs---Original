@@ -63,105 +63,134 @@ const Leaderboard = () => {
 
       // Fetch progress data for all students
       const studentProgressPromises = students.map(async (student) => {
-        // Get videos watched
-        const { count: videosWatched } = await supabase
-          .from('recording_views')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', student.id)
-          .eq('watched', true);
+        try {
+          console.log('Processing student:', student.full_name, student.id);
+          
+          // Get videos watched
+          const { count: videosWatched } = await supabase
+            .from('recording_views')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', student.id)
+            .eq('watched', true);
 
-        // Get assignments completed
-        const { count: assignmentsCompleted } = await supabase
-          .from('submissions')
-          .select('*', { count: 'exact', head: true })
-          .eq('student_id', student.id)
-          .eq('status', 'approved');
+          // Get assignments completed
+          const { count: assignmentsCompleted } = await supabase
+            .from('submissions')
+            .select('*', { count: 'exact', head: true })
+            .eq('student_id', student.id)
+            .eq('status', 'approved');
 
-        // Get milestones completed
-        const { count: milestonesCompleted } = await supabase
-          .from('user_milestones')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', student.id);
+          // Get milestones completed
+          const { count: milestonesCompleted } = await supabase
+            .from('user_milestones')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', student.id);
 
-        // Get sessions attended
-        const { count: sessionsAttended } = await supabase
-          .from('session_attendance')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', student.id);
+          // Get sessions attended
+          const { count: sessionsAttended } = await supabase
+            .from('session_attendance')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', student.id);
 
-        // Check Shopify integration
-        const { data: shopifyIntegration } = await supabase
-          .from('integrations')
-          .select('id')
-          .eq('user_id', student.id)
-          .eq('source', 'shopify')
-          .maybeSingle();
+          // Check Shopify integration
+          const { data: shopifyIntegration } = await supabase
+            .from('integrations')
+            .select('id')
+            .eq('user_id', student.id)
+            .eq('source', 'shopify')
+            .maybeSingle();
 
-        // Check Meta Ads integration
-        const { data: metaIntegration } = await supabase
-          .from('integrations')
-          .select('id')
-          .eq('user_id', student.id)
-          .eq('source', 'meta')
-          .maybeSingle();
+          // Check Meta Ads integration
+          const { data: metaIntegration } = await supabase
+            .from('integrations')
+            .select('id')
+            .eq('user_id', student.id)
+            .eq('source', 'meta')
+            .maybeSingle();
 
-        // Get total available content
-        const { count: totalVideos } = await supabase
-          .from('available_lessons')
-          .select('*', { count: 'exact', head: true });
+          // Get total available content
+          const { count: totalVideos } = await supabase
+            .from('available_lessons')
+            .select('*', { count: 'exact', head: true });
 
-        const { count: totalAssignments } = await supabase
-          .from('assignments')
-          .select('*', { count: 'exact', head: true });
+          const { count: totalAssignments } = await supabase
+            .from('assignments')
+            .select('*', { count: 'exact', head: true });
 
-        // Calculate score (weighted average)
-        const videoProgress = totalVideos ? (videosWatched || 0) / totalVideos : 0;
-        const assignmentProgress = totalAssignments ? (assignmentsCompleted || 0) / totalAssignments : 0;
-        const score = Math.round(((videoProgress * 0.5) + (assignmentProgress * 0.5)) * 100);
-        
-        // Calculate overall progress
-        const totalItems = (totalVideos || 0) + (totalAssignments || 0);
-        const completedItems = (videosWatched || 0) + (assignmentsCompleted || 0);
-        const progress = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
+          // Calculate score (weighted average)
+          const videoProgress = totalVideos ? (videosWatched || 0) / totalVideos : 0;
+          const assignmentProgress = totalAssignments ? (assignmentsCompleted || 0) / totalAssignments : 0;
+          const score = Math.round(((videoProgress * 0.5) + (assignmentProgress * 0.5)) * 100);
+          
+          // Calculate overall progress
+          const totalItems = (totalVideos || 0) + (totalAssignments || 0);
+          const completedItems = (videosWatched || 0) + (assignmentsCompleted || 0);
+          const progress = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
 
-        // Generate avatar initials
-        const nameParts = student.full_name?.split(' ') || ['U'];
-        const avatar = nameParts.length > 1 
-          ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
-          : nameParts[0].substring(0, 2).toUpperCase();
+          // Generate avatar initials
+          const nameParts = student.full_name?.split(' ') || ['U'];
+          const avatar = nameParts.length > 1 
+            ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+            : nameParts[0].substring(0, 2).toUpperCase();
 
-        // Determine badges based on achievements
-        const badges: string[] = [];
-        if (videosWatched && videosWatched > 0) badges.push("Video Learner");
-        if (assignmentsCompleted && assignmentsCompleted > 0) badges.push("Assignment Master");
-        if (milestonesCompleted && milestonesCompleted >= 3) badges.push("Achiever");
-        if (progress >= 50) badges.push("Halfway Hero");
-        if (progress >= 80) badges.push("Nearly There");
-        if (progress === 100) badges.push("Course Complete");
+          // Determine badges based on achievements
+          const badges: string[] = [];
+          if (videosWatched && videosWatched > 0) badges.push("Video Learner");
+          if (assignmentsCompleted && assignmentsCompleted > 0) badges.push("Assignment Master");
+          if (milestonesCompleted && milestonesCompleted >= 3) badges.push("Achiever");
+          if (progress >= 50) badges.push("Halfway Hero");
+          if (progress >= 80) badges.push("Nearly There");
+          if (progress === 100) badges.push("Course Complete");
 
-        return {
-          id: student.id,
-          name: student.full_name || student.email || 'Student',
-          score,
-          rank: 0, // Will be assigned after sorting
-          avatar,
-          progress,
-          badges,
-          streak: Math.floor(Math.random() * 15) + 1, // TODO: Implement real streak tracking
-          isCurrentUser: student.id === user?.id,
-          videosWatched: videosWatched || 0,
-          assignmentsCompleted: assignmentsCompleted || 0,
-          milestonesCompleted: milestonesCompleted || 0,
-          sessionsAttended: sessionsAttended || 0,
-          hasShopify: !!shopifyIntegration,
-          hasMeta: !!metaIntegration,
-        };
+          console.log('✓ Student processed:', student.full_name, { videosWatched, assignmentsCompleted, score, progress });
+
+          return {
+            id: student.id,
+            name: student.full_name || student.email || 'Student',
+            score,
+            rank: 0, // Will be assigned after sorting
+            avatar,
+            progress,
+            badges,
+            streak: Math.floor(Math.random() * 15) + 1, // TODO: Implement real streak tracking
+            isCurrentUser: student.id === user?.id,
+            videosWatched: videosWatched || 0,
+            assignmentsCompleted: assignmentsCompleted || 0,
+            milestonesCompleted: milestonesCompleted || 0,
+            sessionsAttended: sessionsAttended || 0,
+            hasShopify: !!shopifyIntegration,
+            hasMeta: !!metaIntegration,
+          };
+        } catch (error) {
+          console.error('❌ Error processing student:', student.full_name, student.id, error);
+          // Return minimal valid entry so student still appears
+          return {
+            id: student.id,
+            name: student.full_name || student.email || 'Student',
+            score: 0,
+            rank: 0,
+            avatar: (student.full_name || 'ST').substring(0, 2).toUpperCase(),
+            progress: 0,
+            badges: [],
+            streak: 0,
+            isCurrentUser: student.id === user?.id,
+            videosWatched: 0,
+            assignmentsCompleted: 0,
+            milestonesCompleted: 0,
+            sessionsAttended: 0,
+            hasShopify: false,
+            hasMeta: false,
+          };
+        }
       });
 
       const progressData = await Promise.all(studentProgressPromises);
+      const validProgress = progressData.filter(Boolean);
+      
+      console.log(`📊 Leaderboard: Processed ${validProgress.length} out of ${students.length} students`);
 
       // Sort by score, then by progress
-      const sortedData = progressData.sort((a, b) => {
+      const sortedData = validProgress.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return b.progress - a.progress;
       });
