@@ -6,11 +6,10 @@ import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook } from "lucide-react";
+import metaLogo from "@/assets/meta-logo.png";
 
 const MetaIcon = ({ className }: { className?: string }) => (
-  <svg viewBox="0 0 512 512" className={className} fill="currentColor">
-    <path d="M504.1 256C504.1 119 393 7.9 256 7.9S7.9 119 7.9 256 119 504.1 256 504.1 504.1 393 504.1 256zm-247.2-49.6c-7.5 7.5-11.6 17.6-11.6 28.2v87.9c0 22 17.9 39.9 39.9 39.9H373c22 0 39.9-17.9 39.9-39.9V234.6c0-10.6-4.2-20.7-11.6-28.2-7.5-7.5-17.6-11.6-28.2-11.6h-87.9c-10.6 0-20.7 4.2-28.2 11.6zm-99.6 0c-7.5 7.5-11.6 17.6-11.6 28.2v87.9c0 22 17.9 39.9 39.9 39.9h21.3c22 0 39.9-17.9 39.9-39.9V234.6c0-10.6-4.2-20.7-11.6-28.2-7.5-7.5-17.6-11.6-28.2-11.6h-21.3c-10.6 0-20.7 4.2-28.2 11.6z"/>
-  </svg>
+  <img src={metaLogo} alt="Meta" className={className} />
 );
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
