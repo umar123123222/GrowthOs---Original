@@ -1,238 +1,125 @@
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Trophy, Star, TrendingUp, Award } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Trophy, TrendingUp, Target, Zap, RefreshCw, Star, Award } from "lucide-react";
+import { toast } from "sonner";
 
-interface LeaderboardEntry {
+interface LeaderboardSnapshot {
   id: string;
-  name: string;
+  user_id: string;
+  display_name: string;
+  avatar_initials: string;
   score: number;
-  rank: number;
-  avatar: string;
   progress: number;
-  badges: string[];
+  videos_watched: number;
+  assignments_completed: number;
+  milestones_completed: number;
+  sessions_attended: number;
+  has_shopify: boolean;
+  has_meta: boolean;
   streak: number;
-  isCurrentUser?: boolean;
-  videosWatched: number;
-  assignmentsCompleted: number;
-  milestonesCompleted: number;
-  sessionsAttended: number;
-  hasShopify: boolean;
-  hasMeta: boolean;
+  rank: number;
+  calculated_at: string;
 }
 
 const Leaderboard = () => {
   const { user } = useAuth();
-  const [leaderboardData, setLeaderboardData] = useState<LeaderboardEntry[]>([]);
+  const [leaderboardData, setLeaderboardData] = useState<LeaderboardSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [rebuilding, setRebuilding] = useState(false);
   const [totalStudents, setTotalStudents] = useState(0);
-  const [currentUserStats, setCurrentUserStats] = useState<LeaderboardEntry | null>(null);
+  const [currentUserStats, setCurrentUserStats] = useState<LeaderboardSnapshot | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchLeaderboardData();
-  }, [user?.id]);
+    if (user) {
+      fetchUserRole();
+      fetchLeaderboardData();
+    }
+  }, [user]);
+
+  const fetchUserRole = async () => {
+    if (!user) return;
+    
+    const { data } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    
+    setUserRole(data?.role || null);
+  };
 
   const fetchLeaderboardData = async () => {
     try {
       setLoading(true);
-      
-      // Fetch all student progress data
-      const { data: students, error } = await supabase
-        .from('users')
-        .select(`
-          id,
-          full_name,
-          email
-        `)
-        .eq('role', 'student')
-        .eq('status', 'active')
-        .eq('lms_status', 'active');
 
-      if (error) throw error;
+      // Fetch all leaderboard snapshots
+      const { data: snapshots, error: snapshotsError } = await supabase
+        .from('leaderboard_snapshots')
+        .select('*')
+        .order('rank', { ascending: true });
 
-      if (!students || students.length === 0) {
-        setLoading(false);
+      if (snapshotsError) {
+        console.error('Error fetching leaderboard:', snapshotsError);
+        toast.error('Failed to load leaderboard');
         return;
       }
 
-      setTotalStudents(students.length);
+      setLeaderboardData(snapshots || []);
+      setTotalStudents(snapshots?.length || 0);
 
-      // Fetch progress data for all students
-      const studentProgressPromises = students.map(async (student) => {
-        try {
-          console.log('Processing student:', student.full_name, student.id);
-          
-          // Get videos watched
-          const { count: videosWatched } = await supabase
-            .from('recording_views')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', student.id)
-            .eq('watched', true);
+      // Find current user's stats
+      const userStats = snapshots?.find(s => s.user_id === user?.id);
+      setCurrentUserStats(userStats || null);
 
-          // Get assignments completed
-          const { count: assignmentsCompleted } = await supabase
-            .from('submissions')
-            .select('*', { count: 'exact', head: true })
-            .eq('student_id', student.id)
-            .eq('status', 'approved');
-
-          // Get milestones completed
-          const { count: milestonesCompleted } = await supabase
-            .from('user_milestones')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', student.id);
-
-          // Get sessions attended
-          const { count: sessionsAttended } = await supabase
-            .from('session_attendance')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', student.id);
-
-          // Check Shopify integration
-          const { data: shopifyIntegration } = await supabase
-            .from('integrations')
-            .select('id')
-            .eq('user_id', student.id)
-            .eq('source', 'shopify')
-            .maybeSingle();
-
-          // Check Meta Ads integration
-          const { data: metaIntegration } = await supabase
-            .from('integrations')
-            .select('id')
-            .eq('user_id', student.id)
-            .eq('source', 'meta')
-            .maybeSingle();
-
-          // Get total available content
-          const { count: totalVideos } = await supabase
-            .from('available_lessons')
-            .select('*', { count: 'exact', head: true });
-
-          const { count: totalAssignments } = await supabase
-            .from('assignments')
-            .select('*', { count: 'exact', head: true });
-
-          // Calculate score (weighted average)
-          const videoProgress = totalVideos ? (videosWatched || 0) / totalVideos : 0;
-          const assignmentProgress = totalAssignments ? (assignmentsCompleted || 0) / totalAssignments : 0;
-          const score = Math.round(((videoProgress * 0.5) + (assignmentProgress * 0.5)) * 100);
-          
-          // Calculate overall progress
-          const totalItems = (totalVideos || 0) + (totalAssignments || 0);
-          const completedItems = (videosWatched || 0) + (assignmentsCompleted || 0);
-          const progress = totalItems ? Math.round((completedItems / totalItems) * 100) : 0;
-
-          // Generate avatar initials
-          const nameParts = student.full_name?.split(' ') || ['U'];
-          const avatar = nameParts.length > 1 
-            ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
-            : nameParts[0].substring(0, 2).toUpperCase();
-
-          // Determine badges based on achievements
-          const badges: string[] = [];
-          if (videosWatched && videosWatched > 0) badges.push("Video Learner");
-          if (assignmentsCompleted && assignmentsCompleted > 0) badges.push("Assignment Master");
-          if (milestonesCompleted && milestonesCompleted >= 3) badges.push("Achiever");
-          if (progress >= 50) badges.push("Halfway Hero");
-          if (progress >= 80) badges.push("Nearly There");
-          if (progress === 100) badges.push("Course Complete");
-
-          console.log('✓ Student processed:', student.full_name, { videosWatched, assignmentsCompleted, score, progress });
-
-          return {
-            id: student.id,
-            name: student.full_name || student.email || 'Student',
-            score,
-            rank: 0, // Will be assigned after sorting
-            avatar,
-            progress,
-            badges,
-            streak: Math.floor(Math.random() * 15) + 1, // TODO: Implement real streak tracking
-            isCurrentUser: student.id === user?.id,
-            videosWatched: videosWatched || 0,
-            assignmentsCompleted: assignmentsCompleted || 0,
-            milestonesCompleted: milestonesCompleted || 0,
-            sessionsAttended: sessionsAttended || 0,
-            hasShopify: !!shopifyIntegration,
-            hasMeta: !!metaIntegration,
-          };
-        } catch (error) {
-          console.error('❌ Error processing student:', student.full_name, student.id, error);
-          // Return minimal valid entry so student still appears
-          return {
-            id: student.id,
-            name: student.full_name || student.email || 'Student',
-            score: 0,
-            rank: 0,
-            avatar: (student.full_name || 'ST').substring(0, 2).toUpperCase(),
-            progress: 0,
-            badges: [],
-            streak: 0,
-            isCurrentUser: student.id === user?.id,
-            videosWatched: 0,
-            assignmentsCompleted: 0,
-            milestonesCompleted: 0,
-            sessionsAttended: 0,
-            hasShopify: false,
-            hasMeta: false,
-          };
-        }
-      });
-
-      const progressData = await Promise.all(studentProgressPromises);
-      const validProgress = progressData.filter(Boolean);
-      
-      console.log(`📊 Leaderboard: Processed ${validProgress.length} out of ${students.length} students`);
-
-      // Sort by score, then by progress
-      const sortedData = validProgress.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return b.progress - a.progress;
-      });
-
-      // Assign ranks
-      const rankedData = sortedData.map((entry, index) => ({
-        ...entry,
-        rank: index + 1,
-      }));
-
-      setLeaderboardData(rankedData);
-      
-      // Find current user stats
-      const userEntry = rankedData.find(entry => entry.id === user?.id);
-      setCurrentUserStats(userEntry || null);
-
-      setLoading(false);
     } catch (error) {
-      console.error('Error fetching leaderboard data:', error);
+      console.error('Error in fetchLeaderboardData:', error);
+      toast.error('Failed to load leaderboard');
+    } finally {
       setLoading(false);
     }
   };
 
+  const handleRebuildLeaderboard = async () => {
+    try {
+      setRebuilding(true);
+      toast.info('Rebuilding leaderboard...');
+
+      const { error } = await supabase.functions.invoke('build-leaderboard');
+
+      if (error) {
+        console.error('Error rebuilding leaderboard:', error);
+        toast.error('Failed to rebuild leaderboard');
+        return;
+      }
+
+      toast.success('Leaderboard rebuilt successfully!');
+      
+      // Refetch data after a short delay
+      setTimeout(() => {
+        fetchLeaderboardData();
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error rebuilding leaderboard:', error);
+      toast.error('Failed to rebuild leaderboard');
+    } finally {
+      setRebuilding(false);
+    }
+  };
 
   const getRankIcon = (rank: number) => {
     switch (rank) {
       case 1: return "🥇";
       case 2: return "🥈";
       case 3: return "🥉";
-      default: return `#${rank}`;
-    }
-  };
-
-  const getBadgeColor = (badge: string) => {
-    switch (badge) {
-      case "Video Learner": return "bg-blue-100 text-blue-800";
-      case "Assignment Master": return "bg-green-100 text-green-800";
-      case "Achiever": return "bg-purple-100 text-purple-800";
-      case "Halfway Hero": return "bg-orange-100 text-orange-800";
-      case "Nearly There": return "bg-yellow-100 text-yellow-800";
-      case "Course Complete": return "bg-emerald-100 text-emerald-800";
-      default: return "bg-gray-100 text-gray-800";
+      default: return "";
     }
   };
 
@@ -242,15 +129,30 @@ const Leaderboard = () => {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Leaderboard 🏆</h1>
-            <p className="text-gray-600 mt-2">See how you stack up against fellow students</p>
+            <h1 className="text-3xl font-bold">Leaderboard 🏆</h1>
+            <p className="text-muted-foreground mt-2">See how you stack up against fellow students</p>
           </div>
-          <Card className="p-4 bg-gradient-to-r from-blue-50 to-green-50">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">Active Students</div>
-              <div className="text-sm text-gray-600">{totalStudents} Student{totalStudents !== 1 ? 's' : ''}</div>
-            </div>
-          </Card>
+          
+          <div className="flex items-center gap-4">
+            <Card className="p-4 bg-gradient-to-r from-primary/10 to-primary/5">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-primary">{totalStudents}</div>
+                <div className="text-sm text-muted-foreground">Active Students</div>
+              </div>
+            </Card>
+
+            {(userRole === 'admin' || userRole === 'superadmin') && (
+              <Button 
+                onClick={handleRebuildLeaderboard}
+                disabled={rebuilding}
+                variant="outline"
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${rebuilding ? 'animate-spin' : ''}`} />
+                {rebuilding ? 'Rebuilding...' : 'Rebuild'}
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -267,82 +169,94 @@ const Leaderboard = () => {
             <CardContent>
               {loading ? (
                 <div className="text-center py-8">
-                  <div className="text-gray-500">Loading leaderboard...</div>
+                  <div className="text-muted-foreground">Loading leaderboard...</div>
                 </div>
               ) : leaderboardData.length === 0 ? (
                 <div className="text-center py-8">
-                  <Trophy className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <div className="text-gray-500">No students found</div>
+                  <Trophy className="w-12 h-12 text-muted mx-auto mb-3" />
+                  <div className="text-muted-foreground">No students found</div>
+                  {(userRole === 'admin' || userRole === 'superadmin') && (
+                    <Button 
+                      onClick={handleRebuildLeaderboard}
+                      className="mt-4"
+                      variant="outline"
+                    >
+                      Build Leaderboard
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {leaderboardData.map((student) => (
-                  <div
-                    key={student.id}
-                    className={`p-4 rounded-lg border transition-all ${
-                      student.isCurrentUser 
-                        ? "bg-blue-50 border-blue-200 shadow-md" 
-                        : "hover:shadow-sm"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-4">
-                        <div className="text-2xl font-bold">
-                          {getRankIcon(student.rank)}
-                        </div>
-                        
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center text-white font-semibold">
-                            {student.avatar}
+                  {leaderboardData.map((entry) => (
+                    <div
+                      key={entry.user_id}
+                      className={`p-4 rounded-lg border transition-all ${
+                        entry.user_id === user?.id
+                          ? 'bg-primary/5 border-primary/20 shadow-md'
+                          : 'hover:shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center space-x-4">
+                          <div className="text-2xl font-bold min-w-[40px]">
+                            {getRankIcon(entry.rank) || `#${entry.rank}`}
                           </div>
-                          <div>
-                            <h3 className={`font-semibold ${student.isCurrentUser ? "text-blue-700" : ""}`}>
-                              {student.name}
-                            </h3>
-                            <div className="flex items-center space-x-2 text-sm text-gray-500">
-                              <span>🔥 {student.streak} day streak</span>
-                              {student.sessionsAttended > 0 && (
-                                <span>• 📅 {student.sessionsAttended} sessions</span>
-                              )}
-                            </div>
-                            {(student.hasShopify || student.hasMeta) && (
-                              <div className="flex gap-1 mt-1">
-                                {student.hasShopify && (
-                                  <Badge variant="outline" className="text-xs">🛒 Shopify</Badge>
+                          
+                          <div className="flex items-center space-x-3">
+                            <Avatar className="h-10 w-10">
+                              <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                                {entry.avatar_initials}
+                              </AvatarFallback>
+                            </Avatar>
+                            
+                            <div>
+                              <h3 className={`font-semibold ${entry.user_id === user?.id ? 'text-primary' : ''}`}>
+                                {entry.display_name}
+                              </h3>
+                              <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                                {entry.streak > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <Zap className="h-3 w-3 text-yellow-500" />
+                                    {entry.streak} day streak
+                                  </span>
                                 )}
-                                {student.hasMeta && (
-                                  <Badge variant="outline" className="text-xs">📊 Meta</Badge>
+                                {entry.sessions_attended > 0 && (
+                                  <>
+                                    <span>•</span>
+                                    <span>📅 {entry.sessions_attended} sessions</span>
+                                  </>
                                 )}
                               </div>
-                            )}
+                              {(entry.has_shopify || entry.has_meta) && (
+                                <div className="flex gap-1 mt-1">
+                                  {entry.has_shopify && (
+                                    <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700 dark:text-green-300">
+                                      🛒 Shopify
+                                    </Badge>
+                                  )}
+                                  {entry.has_meta && (
+                                    <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                                      📊 Meta
+                                    </Badge>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="text-right">
+                          <div className="text-xl font-bold">
+                            {entry.score}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {entry.progress}% complete
                           </div>
                         </div>
                       </div>
                       
-                      <div className="text-right">
-                        <div className="text-xl font-bold text-gray-900">
-                          {student.score}%
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {student.progress}% complete
-                        </div>
-                      </div>
+                      <Progress value={entry.progress} className="h-2" />
                     </div>
-                    
-                    <div className="space-y-2">
-                      <Progress value={student.progress} className="h-2" />
-                      
-                      {student.badges.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {student.badges.map((badge, index) => (
-                            <Badge key={index} className={`text-xs ${getBadgeColor(badge)}`}>
-                              {badge}
-                            </Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
                   ))}
                 </div>
               )}
@@ -353,7 +267,7 @@ const Leaderboard = () => {
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Your Stats */}
-          <Card className="bg-gradient-to-r from-blue-500 to-green-500 text-white">
+          <Card className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground">
             <CardHeader>
               <CardTitle className="flex items-center">
                 <Star className="w-5 h-5 mr-2" />
@@ -369,7 +283,7 @@ const Leaderboard = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Score</span>
-                    <span className="font-bold">{currentUserStats.score}%</span>
+                    <span className="font-bold">{currentUserStats.score}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Progress</span>
@@ -377,51 +291,63 @@ const Leaderboard = () => {
                   </div>
                   <div className="flex justify-between">
                     <span>Videos Watched</span>
-                    <span className="font-bold">{currentUserStats.videosWatched}</span>
+                    <span className="font-bold">{currentUserStats.videos_watched}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Assignments</span>
-                    <span className="font-bold">{currentUserStats.assignmentsCompleted}</span>
+                    <span className="font-bold">{currentUserStats.assignments_completed}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Sessions Joined</span>
-                    <span className="font-bold">{currentUserStats.sessionsAttended}</span>
+                    <span className="font-bold">{currentUserStats.sessions_attended}</span>
                   </div>
-                  {currentUserStats.hasShopify && (
+                  <div className="flex justify-between">
+                    <span>Current Streak</span>
+                    <div className="flex items-center gap-1">
+                      <Zap className="h-4 w-4 text-yellow-300" />
+                      <span className="font-bold">{currentUserStats.streak} days</span>
+                    </div>
+                  </div>
+                  {currentUserStats.has_shopify && (
                     <div className="flex items-center text-sm">
                       <span>✓ Shopify Connected</span>
                     </div>
                   )}
-                  {currentUserStats.hasMeta && (
+                  {currentUserStats.has_meta && (
                     <div className="flex items-center text-sm">
                       <span>✓ Meta Ads Connected</span>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="text-center text-sm text-white/80">
+                <div className="text-center text-sm opacity-80">
                   Complete activities to see your stats
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Top Badges */}
-          {currentUserStats && currentUserStats.badges.length > 0 && (
+          {/* Integrations Badge */}
+          {currentUserStats && (currentUserStats.has_shopify || currentUserStats.has_meta) && (
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Award className="w-5 h-5 mr-2 text-purple-600" />
-                  Your Badges
+                  Your Integrations
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-2">
-                  {currentUserStats.badges.map((badge, index) => (
-                    <Badge key={index} className={`${getBadgeColor(badge)}`}>
-                      {badge}
+                  {currentUserStats.has_shopify && (
+                    <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-300 px-3 py-1">
+                      🛒 Shopify Connected
                     </Badge>
-                  ))}
+                  )}
+                  {currentUserStats.has_meta && (
+                    <Badge variant="secondary" className="bg-blue-500/10 text-blue-700 dark:text-blue-300 px-3 py-1">
+                      📊 Meta Ads Connected
+                    </Badge>
+                  )}
                 </div>
               </CardContent>
             </Card>

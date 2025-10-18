@@ -584,6 +584,88 @@ export type Database = {
           },
         ]
       }
+      leaderboard_snapshots: {
+        Row: {
+          assignments_completed: number
+          avatar_initials: string
+          calculated_at: string
+          created_at: string
+          display_name: string
+          has_meta: boolean
+          has_shopify: boolean
+          id: string
+          milestones_completed: number
+          progress: number
+          rank: number
+          score: number
+          sessions_attended: number
+          streak: number
+          updated_at: string
+          user_id: string
+          videos_watched: number
+        }
+        Insert: {
+          assignments_completed?: number
+          avatar_initials: string
+          calculated_at?: string
+          created_at?: string
+          display_name: string
+          has_meta?: boolean
+          has_shopify?: boolean
+          id?: string
+          milestones_completed?: number
+          progress?: number
+          rank?: number
+          score?: number
+          sessions_attended?: number
+          streak?: number
+          updated_at?: string
+          user_id: string
+          videos_watched?: number
+        }
+        Update: {
+          assignments_completed?: number
+          avatar_initials?: string
+          calculated_at?: string
+          created_at?: string
+          display_name?: string
+          has_meta?: boolean
+          has_shopify?: boolean
+          id?: string
+          milestones_completed?: number
+          progress?: number
+          rank?: number
+          score?: number
+          sessions_attended?: number
+          streak?: number
+          updated_at?: string
+          user_id?: string
+          videos_watched?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leaderboard_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_snapshots_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string

@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.process-success-partner-message]
 verify_jwt = true
+
+[functions.build-leaderboard]
+verify_jwt = false
