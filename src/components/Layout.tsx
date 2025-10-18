@@ -8,8 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook } from "lucide-react";
 import metaLogo from "@/assets/meta-logo.png";
 
-const MetaIcon = ({ className }: { className?: string }) => (
-  <img src={metaLogo} alt="Meta" className={className} />
+const MetaIcon = ({ className, isActive }: { className?: string, isActive?: boolean }) => (
+  <img 
+    src={metaLogo} 
+    alt="Meta" 
+    className={className}
+    style={{
+      filter: isActive ? 'grayscale(0%) brightness(1)' : 'grayscale(100%) brightness(0.6) opacity(0.7)'
+    }}
+  />
 );
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -166,7 +173,7 @@ const NavigationItems = memo(({
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
                     ${location.pathname === '/meta-ads' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
                   `}>
-                  <MetaIcon className="h-4 w-4" />
+                  <MetaIcon className="h-4 w-4" isActive={location.pathname === '/meta-ads'} />
                   <span>Meta Ads</span>
                   <Badge variant="outline" className="ml-auto text-xs">
                     Connected
