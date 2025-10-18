@@ -1044,15 +1044,52 @@ export type Database = {
           },
         ]
       }
+      student_recovery_checks: {
+        Row: {
+          check_completed_at: string | null
+          check_date: string
+          created_at: string | null
+          id: string
+          newly_inactive: number | null
+          recovered: number | null
+          still_inactive: number | null
+          students_checked: number | null
+        }
+        Insert: {
+          check_completed_at?: string | null
+          check_date?: string
+          created_at?: string | null
+          id?: string
+          newly_inactive?: number | null
+          recovered?: number | null
+          still_inactive?: number | null
+          students_checked?: number | null
+        }
+        Update: {
+          check_completed_at?: string | null
+          check_date?: string
+          created_at?: string | null
+          id?: string
+          newly_inactive?: number | null
+          recovered?: number | null
+          still_inactive?: number | null
+          students_checked?: number | null
+        }
+        Relationships: []
+      }
       student_recovery_messages: {
         Row: {
           created_at: string
           days_inactive: number
           id: string
+          last_check_date: string | null
+          last_login_check: string | null
           message_content: string | null
           message_sent_at: string
+          message_status: string | null
           message_type: string
           recovered_at: string | null
+          recovery_cycle: number | null
           recovery_successful: boolean | null
           updated_at: string
           user_id: string
@@ -1061,10 +1098,14 @@ export type Database = {
           created_at?: string
           days_inactive: number
           id?: string
+          last_check_date?: string | null
+          last_login_check?: string | null
           message_content?: string | null
           message_sent_at?: string
+          message_status?: string | null
           message_type?: string
           recovered_at?: string | null
+          recovery_cycle?: number | null
           recovery_successful?: boolean | null
           updated_at?: string
           user_id: string
@@ -1073,10 +1114,14 @@ export type Database = {
           created_at?: string
           days_inactive?: number
           id?: string
+          last_check_date?: string | null
+          last_login_check?: string | null
           message_content?: string | null
           message_sent_at?: string
+          message_status?: string | null
           message_type?: string
           recovered_at?: string | null
+          recovery_cycle?: number | null
           recovery_successful?: boolean | null
           updated_at?: string
           user_id?: string
@@ -1901,6 +1946,14 @@ export type Database = {
         }
         Returns: string
       }
+      create_recovery_record: {
+        Args: {
+          p_days_inactive: number
+          p_recovery_cycle?: number
+          p_user_id: string
+        }
+        Returns: string
+      }
       create_student_complete: {
         Args:
           | {
@@ -1983,6 +2036,21 @@ export type Database = {
           unlock_reason: string
         }[]
       }
+      get_tracked_inactive_students: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          days_inactive: number
+          email: string
+          full_name: string
+          last_check_date: string
+          message_sent_at: string
+          message_status: string
+          phone: string
+          recovery_cycle: number
+          recovery_message_id: string
+          user_id: string
+        }[]
+      }
       get_user_lms_status: {
         Args: { user_id: string }
         Returns: string
@@ -2006,6 +2074,10 @@ export type Database = {
       }
       has_completed_all_modules: {
         Args: { _user_id: string }
+        Returns: boolean
+      }
+      has_student_logged_in_since: {
+        Args: { p_since_date: string; p_user_id: string }
         Returns: boolean
       }
       initialize_first_recording_unlock: {
@@ -2048,6 +2120,10 @@ export type Database = {
       mark_recovery_successful: {
         Args: { p_user_id: string }
         Returns: boolean
+      }
+      mark_student_recovered: {
+        Args: { p_recovery_message_id: string }
+        Returns: undefined
       }
       notify_all_students: {
         Args: {

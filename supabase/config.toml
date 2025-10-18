@@ -1,5 +1,11 @@
 project_id = "majqoqagohicjigmsilu"
 
+[functions.daily-recovery-check]
+verify_jwt = false
+
+[functions.update-recovery-status]
+verify_jwt = false
+
 [functions.installment-reminder-scheduler]
 verify_jwt = false
 

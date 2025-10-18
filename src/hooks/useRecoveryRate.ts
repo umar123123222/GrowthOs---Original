@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface RecoveryStats {
@@ -69,7 +69,10 @@ export const useRecoveryMessages = () => {
           recovered_at,
           message_content,
           created_at,
-          updated_at
+          updated_at,
+          recovery_cycle,
+          message_status,
+          last_check_date
         `)
         .order('message_sent_at', { ascending: false })
         .limit(50);
@@ -100,5 +103,65 @@ export const useRecoveryMessages = () => {
       return data || [];
     },
     refetchInterval: 2 * 60 * 1000,
+  });
+};
+
+// Get tracked students (currently in recovery)
+export const useTrackedStudents = () => {
+  return useQuery({
+    queryKey: ['tracked-inactive-students'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .rpc('get_tracked_inactive_students');
+      if (error) {
+        console.error('Error fetching tracked students:', error);
+        throw error;
+      }
+      return data || [];
+    },
+    refetchInterval: 2 * 60 * 1000,
+  });
+};
+
+// Get daily check history
+export const useDailyCheckHistory = () => {
+  return useQuery({
+    queryKey: ['daily-check-history'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('student_recovery_checks')
+        .select('*')
+        .order('check_date', { ascending: false })
+        .limit(30);
+      if (error) {
+        console.error('Error fetching daily check history:', error);
+        throw error;
+      }
+      return data || [];
+    },
+    refetchInterval: 5 * 60 * 1000,
+  });
+};
+
+// Manual trigger daily check
+export const useTriggerDailyCheck = () => {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke(
+        'daily-recovery-check',
+        { body: {} }
+      );
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recovery-rate'] });
+      queryClient.invalidateQueries({ queryKey: ['inactive-students'] });
+      queryClient.invalidateQueries({ queryKey: ['recovery-messages'] });
+      queryClient.invalidateQueries({ queryKey: ['tracked-inactive-students'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-check-history'] });
+    },
   });
 };
