@@ -109,6 +109,69 @@ const SuccessPartner = ({
     loadMessages();
   }, [user?.id]);
 
+  // Set up Realtime subscription for new messages
+  useEffect(() => {
+    if (!user?.id) return;
+
+    console.log('Setting up Realtime subscription for user:', user.id);
+
+    const channel = supabase
+      .channel('success-partner-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'success_partner_messages',
+          filter: `user_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Realtime: New message received', payload);
+          
+          // Only add assistant messages via realtime (user messages are added immediately)
+          if (payload.new.role === 'assistant') {
+            setMessages(prev => {
+              // Remove loading indicator if present
+              const withoutLoading = prev.filter(m => m.sender !== 'loading');
+              
+              // Check if message already exists (prevent duplicates)
+              const exists = withoutLoading.some(m => 
+                m.sender === 'ai' && 
+                m.content === payload.new.content &&
+                Math.abs(new Date(m.timestamp).getTime() - new Date(payload.new.timestamp).getTime()) < 1000
+              );
+              
+              if (exists) {
+                console.log('Message already exists, skipping');
+                return prev;
+              }
+
+              return [
+                ...withoutLoading,
+                {
+                  id: Date.now(),
+                  sender: 'ai',
+                  content: payload.new.content,
+                  timestamp: new Date(payload.new.timestamp)
+                }
+              ];
+            });
+            
+            setIsLoading(false);
+            console.log('AI response added to UI via Realtime');
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('Realtime subscription status:', status);
+      });
+
+    return () => {
+      console.log('Cleaning up Realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
   // Validate user data - show error if incomplete
   if (!user?.id || !user?.email) {
     console.error('SuccessPartner: Incomplete user data provided', {
@@ -221,20 +284,16 @@ const SuccessPartner = ({
     return lastContext;
   };
 
-  const sendToWebhook = useCallback(async (userMessage: string): Promise<string> => {
+  const sendMessageToBackend = useCallback(async (userMessage: string, studentName: string): Promise<void> => {
     try {
-      // Use validated user data (already checked above)
-      const studentId = user.id;
-      const studentName = user.full_name || user.email.split('@')[0] || 'Student';
-
       // Detect if we need business context
       const requestedFlags = detectBusinessContext(userMessage);
-      // Only fetch data when user query requires it AND integration is connected
       const flags = {
         includeShopify: requestedFlags.includeShopify && integrationStatus.shopify,
         includeMetaAds: requestedFlags.includeMetaAds && integrationStatus.metaAds
       };
       const needsContext = flags.includeShopify || flags.includeMetaAds;
+      
       let businessContext = null;
       if (needsContext) {
         setIsFetchingContext(true);
@@ -244,11 +303,10 @@ const SuccessPartner = ({
           'Meta Ads'
         } data (last ${dateRangeDays} days)...`;
         setContextDescription(description);
+        
         try {
-          // Ensure both Shopify and Meta Ads are ready before proceeding
-          businessContext = await fetchContextUntilReady(studentId, flags);
+          businessContext = await fetchContextUntilReady(user.id, flags);
 
-          // Check for disconnected integrations and add UI notifications
           if (businessContext) {
             const disconnectedServices: string[] = [];
             if (businessContext.shopify?.connected === false) {
@@ -268,8 +326,6 @@ const SuccessPartner = ({
           }
         } catch (error) {
           console.error("Error fetching business context:", error);
-
-          // Add user-facing error message
           setMessages(prev => [...prev, {
             id: Date.now(),
             sender: "ai",
@@ -282,123 +338,56 @@ const SuccessPartner = ({
         }
       }
 
-      // Ensure we send when both contexts are ready
       const finalBusinessContext = businessContext || {};
-
-      // Observability: log what we're sending to webhook
-      safeLogger.info('Success Partner: Business context prepared', {
-        requestedFlags: flags,
-        contextKeys: Object.keys(finalBusinessContext),
-        shopifyConnected: finalBusinessContext.shopify?.connected,
-        metaAdsConnected: finalBusinessContext.metaAds?.connected,
-        metaAdsCampaigns: finalBusinessContext.metaAds?.metrics?.campaigns?.length ?? 0,
-        metaAdsAdSets: finalBusinessContext.metaAds?.metrics?.adSets?.length ?? 0,
-        metaAdsAds: finalBusinessContext.metaAds?.metrics?.ads?.length ?? 0
-      });
-      const payload = {
-        message: userMessage,
-        studentId: studentId,
-        studentName: studentName,
-        timestamp: new Date().toISOString(),
-        conversationHistory: messages
-          .filter(m => m.sender !== 'loading')
-          .map(m => ({
-            role: m.sender === 'user' ? 'user' : 'assistant',
-            content: m.content,
-            timestamp: m.timestamp.toISOString()
-          })),
-        businessContext: {
-          ...finalBusinessContext,
-          currency: ENV_CONFIG.DEFAULT_CURRENCY,
-        }
-      };
-      safeLogger.info('Success Partner: Sending message', {
-        studentId,
-        studentName,
+      
+      safeLogger.info('Success Partner: Sending message to backend', {
+        userId: user.id,
         messageLength: userMessage.length,
         hasBusinessContext: !!businessContext
       });
-      const response = await fetch(ENV_CONFIG.SUCCESS_PARTNER_WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+
+      // Call edge function to process message in background
+      const { data, error } = await supabase.functions.invoke('process-success-partner-message', {
+        body: {
+          message: userMessage,
+          studentName,
+          conversationHistory: messages
+            .filter(m => m.sender !== 'loading')
+            .map(m => ({
+              role: m.sender === 'user' ? 'user' : 'assistant',
+              content: m.content,
+              timestamp: m.timestamp.toISOString()
+            })),
+          businessContext: {
+            ...finalBusinessContext,
+            currency: ENV_CONFIG.DEFAULT_CURRENCY,
+            dateRangeDays
+          },
+          dateRangeDays
+        }
       });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      if (process.env.NODE_ENV === 'development') {
-        safeLogger.info('Success Partner: Webhook response received', {
-          data,
-          type: typeof data
-        });
+
+      if (error) {
+        console.error('Edge function error:', error);
+        throw error;
       }
 
-      // Handle different response formats and ensure string output
-      let aiResponse = "";
-      if (data && typeof data === 'object') {
-        // Handle array format: {"reply":[{"output":"message"}]}
-        if (data.reply && Array.isArray(data.reply) && data.reply.length > 0) {
-          const firstReply = data.reply[0];
-          if (firstReply && typeof firstReply === 'object' && firstReply.output) {
-            aiResponse = typeof firstReply.output === 'string' ? firstReply.output : String(firstReply.output);
-          }
-        }
-        // Handle nested structure: {"reply":{"output":"message"}}
-        else if (data.reply && typeof data.reply === 'object' && data.reply.output) {
-          aiResponse = typeof data.reply.output === 'string' ? data.reply.output : String(data.reply.output);
-        }
-        // Handle flat structure: {"reply":"message"}
-        else if (data.reply && typeof data.reply === 'string') {
-          aiResponse = data.reply;
-        }
-        // Handle direct output: {"output":"message"}
-        else if (data.output) {
-          if (typeof data.output === 'string') {
-            aiResponse = data.output;
-          } else if (typeof data.output === 'object') {
-            aiResponse = data.output.text || data.output.message || data.output.content || JSON.stringify(data.output);
-          } else {
-            aiResponse = String(data.output);
-          }
-        }
-        // Handle other message fields
-        else if (data.message && typeof data.message === 'string') {
-          aiResponse = data.message;
-        } else {
-          // Fallback for any other object structure
-          aiResponse = data.text || data.content || JSON.stringify(data);
-        }
-      } else if (typeof data === 'string') {
-        aiResponse = data;
-      } else {
-        aiResponse = String(data) || "Sorry, I couldn't process your request right now.";
-      }
-
-      // Ensure the response is always a string
-      if (typeof aiResponse !== 'string') {
-        console.warn('Success Partner: Non-string response detected, converting:', aiResponse);
-        aiResponse = String(aiResponse);
-      }
-      if (process.env.NODE_ENV === 'development') {
-        safeLogger.info('Success Partner: Final processed response', {
-          aiResponse,
-          length: aiResponse.length
-        });
-      }
-      return aiResponse;
+      console.log('Message sent to backend for processing:', data);
+      
     } catch (error) {
-      console.error('Webhook error:', error);
-
-      // Add user-facing error message for webhook failures
-      setMessages(prev => [...prev, {
-        id: Date.now(),
-        sender: "ai",
-        content: "⚠️ I'm having trouble connecting to my services right now. Please try again in a moment.",
-        timestamp: new Date()
-      }]);
+      console.error('Backend call error:', error);
+      
+      // Add user-facing error message
+      setMessages(prev => {
+        const withoutLoading = prev.filter(m => m.sender !== 'loading');
+        return [...withoutLoading, {
+          id: Date.now(),
+          sender: "ai",
+          content: "⚠️ I'm having trouble connecting to my services right now. Please try again in a moment.",
+          timestamp: new Date()
+        }];
+      });
+      setIsLoading(false);
       throw error;
     }
   }, [user, integrationStatus, messages, dateRangeDays]);
@@ -489,60 +478,32 @@ const SuccessPartner = ({
       console.error('Failed to save user message to database:', dbError);
     }
     try {
-      const aiReply = await sendToWebhook(userMessage.content);
-
-      // Update credits after successful AI response
+      const studentName = user.full_name || user.email.split('@')[0] || 'Student';
+      
+      // Call backend to process message (response will come via Realtime)
+      await sendMessageToBackend(userMessage.content, studentName);
+      
+      // Update credits optimistically (will be updated by backend too)
       await updateCredits();
 
-      // Save AI response to database
-      try {
-        const { error: aiInsertError } = await supabase.from('success_partner_messages').insert({
-          user_id: user.id,
-          role: 'assistant',
-          content: aiReply,
-          timestamp: new Date().toISOString(),
-          date: new Date().toISOString().split('T')[0]
-        });
-        
-        if (aiInsertError) {
-          console.error('Failed to save AI message to database:', aiInsertError);
-        }
-      } catch (dbError) {
-        console.error('Failed to save AI message to database:', dbError);
-      }
-
-      // Remove loading message and add AI response
-      setMessages(prev => {
-        const withoutLoading = prev.filter(msg => msg.sender !== "loading");
-        const aiMessage: Message = {
-          id: Date.now() + 2,
-          sender: "ai",
-          content: aiReply,
-          timestamp: new Date()
-        };
-        return [...withoutLoading, aiMessage];
-      });
+      // Note: AI response will be added via Realtime subscription
+      // Loading state will be cleared when the response arrives
+      
     } catch (error) {
-      // Remove loading message and add fallback
-      setMessages(prev => {
-        const withoutLoading = prev.filter(msg => msg.sender !== "loading");
-        const fallbackMessage: Message = {
-          id: Date.now() + 2,
-          sender: "ai",
-          content: "Sorry, the assistant is not available right now.",
-          timestamp: new Date()
-        };
-        return [...withoutLoading, fallbackMessage];
-      });
+      console.error('Message sending error:', error);
+      
+      // Error handling is done in sendMessageToBackend
       toast({
         title: "Connection Error",
-        description: "Unable to reach the AI assistant. Please try again later.",
+        description: "Unable to send message. Please try again later.",
         variant: "destructive"
       });
-    } finally {
+      
+      // Remove loading indicator
+      setMessages(prev => prev.filter(msg => msg.sender !== "loading"));
       setIsLoading(false);
     }
-  }, [message, isLoading, sendToWebhook, updateCredits, credits, integrationStatus, toast]);
+  }, [message, isLoading, sendMessageToBackend, updateCredits, credits, integrationStatus, toast, user]);
   return <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-2xl h-[600px] flex flex-col">
         <CardHeader className="flex-shrink-0">

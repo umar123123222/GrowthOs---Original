@@ -1,0 +1,231 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.55.0';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface BusinessContext {
+  shopify?: any;
+  metaAds?: any;
+  currency?: string;
+  dateRangeDays?: number;
+}
+
+serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
+    );
+
+    // Get user
+    const { data: { user }, error: userError } = await supabaseClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { 
+      message, 
+      conversationHistory, 
+      businessContext,
+      studentName,
+      dateRangeDays 
+    } = await req.json();
+
+    if (!message || !message.trim()) {
+      return new Response(
+        JSON.stringify({ error: 'Message is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Processing message for user:', user.id);
+
+    // Check if there's already a response being processed (prevent duplicates)
+    const { data: recentMessages } = await supabaseClient
+      .from('success_partner_messages')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('role', 'user')
+      .order('timestamp', { ascending: false })
+      .limit(1);
+
+    if (recentMessages && recentMessages.length > 0) {
+      const lastUserMessage = recentMessages[0];
+      const timeDiff = Date.now() - new Date(lastUserMessage.timestamp).getTime();
+      
+      // If the last user message was within 2 seconds and matches content, it might be a duplicate
+      if (timeDiff < 2000 && lastUserMessage.content === message.trim()) {
+        console.log('Duplicate message detected, skipping processing');
+        return new Response(
+          JSON.stringify({ status: 'duplicate', message: 'Message already being processed' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Start background processing
+    const processInBackground = async () => {
+      try {
+        console.log('Starting webhook call...');
+        
+        const webhookUrl = Deno.env.get('SUCCESS_PARTNER_WEBHOOK_URL');
+        if (!webhookUrl) {
+          throw new Error('SUCCESS_PARTNER_WEBHOOK_URL not configured');
+        }
+
+        const payload = {
+          message: message.trim(),
+          studentId: user.id,
+          studentName: studentName || user.email?.split('@')[0] || 'Student',
+          timestamp: new Date().toISOString(),
+          conversationHistory: conversationHistory || [],
+          businessContext: businessContext || {}
+        };
+
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+          throw new Error(`Webhook error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('Webhook response received');
+
+        // Parse AI response from various formats
+        let aiResponse = "";
+        if (data && typeof data === 'object') {
+          if (data.reply && Array.isArray(data.reply) && data.reply.length > 0) {
+            const firstReply = data.reply[0];
+            if (firstReply && typeof firstReply === 'object' && firstReply.output) {
+              aiResponse = typeof firstReply.output === 'string' ? firstReply.output : String(firstReply.output);
+            }
+          } else if (data.reply && typeof data.reply === 'object' && data.reply.output) {
+            aiResponse = typeof data.reply.output === 'string' ? data.reply.output : String(data.reply.output);
+          } else if (data.reply && typeof data.reply === 'string') {
+            aiResponse = data.reply;
+          } else if (data.output) {
+            aiResponse = typeof data.output === 'string' ? data.output : String(data.output);
+          } else if (data.message) {
+            aiResponse = data.message;
+          } else {
+            aiResponse = data.text || data.content || JSON.stringify(data);
+          }
+        } else if (typeof data === 'string') {
+          aiResponse = data;
+        } else {
+          aiResponse = String(data) || "Sorry, I couldn't process your request right now.";
+        }
+
+        if (typeof aiResponse !== 'string') {
+          aiResponse = String(aiResponse);
+        }
+
+        // Save AI response to database
+        const { error: insertError } = await supabaseClient
+          .from('success_partner_messages')
+          .insert({
+            user_id: user.id,
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date().toISOString(),
+            date: new Date().toISOString().split('T')[0]
+          });
+
+        if (insertError) {
+          console.error('Failed to save AI response:', insertError);
+          throw insertError;
+        }
+
+        console.log('AI response saved successfully');
+
+        // Update credits
+        try {
+          const today = new Date().toISOString().split('T')[0];
+          const { data: creditData, error: creditFetchError } = await supabaseClient
+            .from('success_partner_credits')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('date', today)
+            .single();
+
+          if (creditFetchError && creditFetchError.code !== 'PGRST116') {
+            console.error('Error fetching credits:', creditFetchError);
+          } else if (creditData) {
+            const { error: updateError } = await supabaseClient
+              .from('success_partner_credits')
+              .update({ credits_used: creditData.credits_used + 1 })
+              .eq('id', creditData.id);
+
+            if (updateError) {
+              console.error('Error updating credits:', updateError);
+            } else {
+              console.log('Credits updated successfully');
+            }
+          }
+        } catch (creditError) {
+          console.error('Credit update failed:', creditError);
+          // Don't fail the whole operation if credit update fails
+        }
+
+      } catch (error) {
+        console.error('Background processing error:', error);
+        
+        // Save error message to database as fallback
+        try {
+          await supabaseClient
+            .from('success_partner_messages')
+            .insert({
+              user_id: user.id,
+              role: 'assistant',
+              content: "⚠️ I'm having trouble connecting to my services right now. Please try asking again in a moment.",
+              timestamp: new Date().toISOString(),
+              date: new Date().toISOString().split('T')[0]
+            });
+        } catch (fallbackError) {
+          console.error('Failed to save fallback message:', fallbackError);
+        }
+      }
+    };
+
+    // Start processing in background
+    EdgeRuntime.waitUntil(processInBackground());
+
+    // Return immediately to client
+    return new Response(
+      JSON.stringify({ 
+        status: 'processing', 
+        message: 'Your message is being processed. The response will appear shortly.' 
+      }),
+      { status: 202, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+
+  } catch (error) {
+    console.error('Request handling error:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});
