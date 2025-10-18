@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Video, FileText, GraduationCap } from 'lucide-react';
+import { Plus, Users, Shield, Banknote, Activity, AlertTriangle, BookOpen, Video, FileText, GraduationCap } from 'lucide-react';
 import { RoleGuard } from '@/components/RoleGuard';
 import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
@@ -285,7 +285,7 @@ function DashboardContent() {
         <Card className="border-l-4 border-l-emerald-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-emerald-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-emerald-800">Revenue Till Now</CardTitle>
-            <DollarSign className="h-5 w-5 text-emerald-600" />
+            <Banknote className="h-5 w-5 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-emerald-900">PKR {stats.totalRevenue.toLocaleString()}</div>
