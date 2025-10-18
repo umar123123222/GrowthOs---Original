@@ -46,6 +46,87 @@ interface ErrorLog {
   };
 }
 
+// Helper function to parse stack trace and extract file location
+const parseStackTraceForDisplay = (stackTrace: string | null, errorDetails: any) => {
+  // If error_details already has parsed info, use it
+  if (errorDetails?.file) {
+    return {
+      file: errorDetails.file,
+      line: errorDetails.line,
+      column: errorDetails.column,
+      function: errorDetails.function,
+      component: errorDetails.component,
+      classification: errorDetails.classification,
+      category: errorDetails.category,
+      userAction: errorDetails.user_action
+    };
+  }
+
+  // Otherwise, parse from stack trace as fallback
+  if (!stackTrace) return null;
+
+  const lines = stackTrace.split('\n');
+  for (const line of lines) {
+    // Match patterns like "at Component (file.tsx:123:45)"
+    const match = line.match(/at\s+(.+?)\s+\((.+?):(\d+):(\d+)\)/) ||
+                  line.match(/at\s+(.+?):(\d+):(\d+)/) ||
+                  line.match(/(.+?):(\d+):(\d+)/);
+    
+    if (match) {
+      const hasFunction = match.length === 5;
+      return {
+        file: hasFunction ? match[2].split('/').pop() : match[1].split('/').pop(),
+        line: hasFunction ? match[3] : match[2],
+        column: hasFunction ? match[4] : match[3],
+        function: hasFunction ? match[1] : undefined,
+        component: hasFunction && match[1].includes('use') ? undefined : match[1],
+        classification: null,
+        category: match[1]?.includes('.tsx') || match[2]?.includes('.tsx') ? 'frontend' : null,
+        userAction: null
+      };
+    }
+  }
+  return null;
+};
+
+// Helper to classify error from message
+const classifyErrorFromMessage = (message: string, stackTrace: string | null) => {
+  const lowerMessage = message.toLowerCase();
+  
+  if (lowerMessage.includes('is not defined') || lowerMessage.includes('is not a function')) {
+    return 'Missing Import';
+  }
+  if (lowerMessage.includes('cannot read') || lowerMessage.includes('undefined')) {
+    return 'Undefined Variable';
+  }
+  if (lowerMessage.includes('permission') || lowerMessage.includes('rls') || lowerMessage.includes('policy')) {
+    return 'Permission Error (RLS)';
+  }
+  if (lowerMessage.includes('network') || lowerMessage.includes('fetch')) {
+    return 'API Request Failed';
+  }
+  if (lowerMessage.includes('validation') || lowerMessage.includes('invalid')) {
+    return 'Validation Error';
+  }
+  if (stackTrace?.includes('Component') || stackTrace?.includes('use')) {
+    return 'Component Error';
+  }
+  if (lowerMessage.includes('query') || lowerMessage.includes('database')) {
+    return 'Database Query Error';
+  }
+  
+  return 'Runtime Error';
+};
+
+// Helper to determine error category from context
+const getErrorCategory = (errorType: string, stackTrace: string | null, message: string) => {
+  if (errorType === 'database' || message.toLowerCase().includes('database')) return 'backend';
+  if (errorType === 'api' || message.toLowerCase().includes('api')) return 'integration';
+  if (errorType === 'validation') return 'user_input';
+  if (stackTrace?.includes('.tsx') || stackTrace?.includes('.jsx')) return 'frontend';
+  return 'unknown';
+};
+
 export const ErrorLogsManagement = () => {
   const { toast } = useToast();
   const [logs, setLogs] = useState<ErrorLog[]>([]);
@@ -377,7 +458,13 @@ export const ErrorLogsManagement = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {logs.map((log) => (
+              {logs.map((log) => {
+                // Parse stack trace for display
+                const parsedInfo = parseStackTraceForDisplay(log.stack_trace, log.error_details);
+                const classification = parsedInfo?.classification || classifyErrorFromMessage(log.error_message, log.stack_trace);
+                const category = parsedInfo?.category || getErrorCategory(log.error_type, log.stack_trace, log.error_message);
+                
+                return (
                 <Card key={log.id} className={`border-l-4 ${
                   log.severity === 'critical' ? 'border-l-destructive' :
                   log.severity === 'error' ? 'border-l-destructive/70' :
@@ -408,47 +495,47 @@ export const ErrorLogsManagement = () => {
                         </div>
 
                         {/* File Location - Prominently Displayed */}
-                        {log.error_details?.file && (
+                        {parsedInfo && (
                           <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
                             <div className="flex items-center gap-2 mb-1">
                               <Code className="h-4 w-4 text-destructive" />
                               <span className="text-sm font-medium text-destructive">Error Location:</span>
                             </div>
                             <div className="font-mono text-sm">
-                              <span className="font-bold text-foreground">{log.error_details.file}</span>
-                              {log.error_details.line && (
-                                <span className="text-muted-foreground">:{log.error_details.line}</span>
+                              <span className="font-bold text-foreground">{parsedInfo.file}</span>
+                              {parsedInfo.line && (
+                                <span className="text-muted-foreground">:{parsedInfo.line}</span>
                               )}
-                              {log.error_details.column && (
-                                <span className="text-muted-foreground">:{log.error_details.column}</span>
+                              {parsedInfo.column && (
+                                <span className="text-muted-foreground">:{parsedInfo.column}</span>
                               )}
                             </div>
-                            {log.error_details.function && (
+                            {parsedInfo.function && (
                               <div className="text-xs text-muted-foreground mt-1">
-                                in function: <span className="font-mono">{log.error_details.function}()</span>
+                                in function: <span className="font-mono">{parsedInfo.function}()</span>
                               </div>
                             )}
-                            {log.error_details.component && (
+                            {parsedInfo.component && (
                               <div className="text-xs text-muted-foreground">
-                                component: <span className="font-mono">&lt;{log.error_details.component} /&gt;</span>
+                                component: <span className="font-mono">&lt;{parsedInfo.component} /&gt;</span>
                               </div>
                             )}
                           </div>
                         )}
 
                         {/* Error Classification */}
-                        {log.error_details?.classification && (
+                        {classification && (
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="font-medium">
-                              {log.error_details.classification}
+                              {classification}
                             </Badge>
-                            {log.error_details.category && (
+                            {category && (
                               <Badge variant="secondary" className="text-xs">
-                                {log.error_details.category === 'frontend' ? '🎨 Frontend' :
-                                 log.error_details.category === 'backend' ? '⚙️ Backend' :
-                                 log.error_details.category === 'user_input' ? '👤 User Input' :
-                                 log.error_details.category === 'integration' ? '🔌 Integration' :
-                                 log.error_details.category}
+                                {category === 'frontend' ? '🎨 Frontend' :
+                                 category === 'backend' ? '⚙️ Backend' :
+                                 category === 'user_input' ? '👤 User Input' :
+                                 category === 'integration' ? '🔌 Integration' :
+                                 category}
                               </Badge>
                             )}
                           </div>
@@ -459,42 +546,35 @@ export const ErrorLogsManagement = () => {
                           <p className="font-semibold text-foreground">
                             {log.error_message}
                           </p>
-                          {log.error_details?.user_action && log.error_details.user_action !== 'Unknown' && (
+                          {parsedInfo?.userAction && parsedInfo.userAction !== 'Unknown' && (
                             <p className="text-sm text-muted-foreground">
-                              During: <span className="font-medium">{log.error_details.user_action}</span>
+                              During: <span className="font-medium">{parsedInfo.userAction}</span>
                             </p>
                           )}
                         </div>
 
                         {/* Quick Fix Suggestions */}
-                        {log.error_details?.classification && (
+                        {classification && (
                           <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
                             <p className="font-medium text-primary mb-1">💡 Suggested Fix:</p>
                             <p className="text-muted-foreground">
-                              {log.error_details.classification === 'Missing Import' && 
-                                'Check if the module is imported correctly. Verify the import path and ensure the component/function is exported.'}
-                              {log.error_details.classification === 'Undefined Variable' && 
+                              {classification === 'Missing Import' && 
+                                `Check if the module is imported correctly. For "${log.error_message.split(' ')[0]}", add: import { ${log.error_message.split(' ')[0]} } from 'lucide-react' (or the appropriate package)`}
+                              {classification === 'Undefined Variable' && 
                                 'Add null checks before accessing properties. Use optional chaining (?.) or provide default values.'}
-                              {log.error_details.classification === 'Type Error' && 
+                              {classification === 'Type Error' && 
                                 'Verify the data type being passed. Check if the function exists and is being called correctly.'}
-                              {log.error_details.classification === 'Permission Error (RLS)' && 
+                              {classification === 'Permission Error (RLS)' && 
                                 'Check Row Level Security policies. Ensure the user has proper permissions and the RLS policy allows this operation.'}
-                              {log.error_details.classification === 'Component Error' && 
+                              {classification === 'Component Error' && 
                                 'Review component props and state. Check for missing dependencies in useEffect or incorrect prop types.'}
-                              {log.error_details.classification === 'Database Query Error' && 
+                              {classification === 'Database Query Error' && 
                                 'Verify the query syntax and table/column names. Check if the referenced data exists.'}
-                              {log.error_details.classification === 'API Request Failed' && 
+                              {classification === 'API Request Failed' && 
                                 'Check network connectivity and API endpoint. Verify request parameters and authentication tokens.'}
-                              {log.error_details.classification === 'Validation Error' && 
+                              {classification === 'Validation Error' && 
                                 'Review form validation rules. Ensure user input matches expected format and constraints.'}
-                              {(!log.error_details.classification.includes('Import') && 
-                                !log.error_details.classification.includes('Undefined') &&
-                                !log.error_details.classification.includes('Type Error') &&
-                                !log.error_details.classification.includes('Permission') &&
-                                !log.error_details.classification.includes('Component') &&
-                                !log.error_details.classification.includes('Database') &&
-                                !log.error_details.classification.includes('API') &&
-                                !log.error_details.classification.includes('Validation')) && 
+                              {classification === 'Runtime Error' && 
                                 'Review the error message and stack trace for clues. Check recent code changes that might have introduced this issue.'}
                             </p>
                           </div>
@@ -551,7 +631,8 @@ export const ErrorLogsManagement = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
 
