@@ -174,7 +174,7 @@ const NavigationItems = memo(({
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
                     ${location.pathname === '/meta-ads' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
                   `}>
-                  <MetaIcon className="h-4 w-4" isActive={location.pathname === '/meta-ads'} />
+                  <MetaIcon className="h-5 w-5" isActive={location.pathname === '/meta-ads'} />
                   <span>Meta Ads</span>
                   <Badge variant="outline" className="ml-auto text-xs">
                     Connected
