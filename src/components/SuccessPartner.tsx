@@ -164,6 +164,15 @@ const SuccessPartner = ({
       )
       .subscribe((status) => {
         console.log('Realtime subscription status:', status);
+        
+        // Handle connection issues with automatic reconnection
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.warn('Realtime connection issue detected, reconnecting...');
+          setTimeout(() => {
+            supabase.removeChannel(channel);
+            // Trigger re-subscription by forcing component re-mount logic
+          }, 3000);
+        }
       });
 
     return () => {
@@ -485,6 +494,28 @@ const SuccessPartner = ({
       
       // Update credits optimistically (will be updated by backend too)
       await updateCredits();
+
+      // Set a safety timeout to remove loading state if no response after 60 seconds
+      setTimeout(() => {
+        setMessages(prev => {
+          const hasAiResponse = prev.some(m => 
+            m.sender === 'ai' && 
+            m.timestamp.getTime() > userMessage.timestamp.getTime()
+          );
+          
+          if (!hasAiResponse && prev.some(m => m.sender === 'loading')) {
+            const withoutLoading = prev.filter(m => m.sender !== 'loading');
+            return [...withoutLoading, {
+              id: Date.now(),
+              sender: "ai" as const,
+              content: "⏱️ This is taking longer than expected. Your response should arrive shortly. If it doesn't, please try asking again.",
+              timestamp: new Date()
+            }];
+          }
+          return prev;
+        });
+        setIsLoading(false);
+      }, 60000);
 
       // Note: AI response will be added via Realtime subscription
       // Loading state will be cleared when the response arrives

@@ -79,133 +79,178 @@ serve(async (req) => {
       }
     }
 
-    // Start background processing
+    // Start background processing with enhanced error handling
     const processInBackground = async () => {
-      try {
-        console.log('Starting webhook call...');
-        
-        const webhookUrl = Deno.env.get('SUCCESS_PARTNER_WEBHOOK_URL');
-        if (!webhookUrl) {
-          throw new Error('SUCCESS_PARTNER_WEBHOOK_URL not configured');
-        }
+      const MAX_RETRIES = 2;
+      let lastError: Error | null = null;
 
-        const payload = {
-          message: message.trim(),
-          studentId: user.id,
-          studentName: studentName || user.email?.split('@')[0] || 'Student',
-          timestamp: new Date().toISOString(),
-          conversationHistory: conversationHistory || [],
-          businessContext: businessContext || {}
-        };
-
-        const response = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-          throw new Error(`Webhook error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        console.log('Webhook response received');
-
-        // Parse AI response from various formats
-        let aiResponse = "";
-        if (data && typeof data === 'object') {
-          if (data.reply && Array.isArray(data.reply) && data.reply.length > 0) {
-            const firstReply = data.reply[0];
-            if (firstReply && typeof firstReply === 'object' && firstReply.output) {
-              aiResponse = typeof firstReply.output === 'string' ? firstReply.output : String(firstReply.output);
-            }
-          } else if (data.reply && typeof data.reply === 'object' && data.reply.output) {
-            aiResponse = typeof data.reply.output === 'string' ? data.reply.output : String(data.reply.output);
-          } else if (data.reply && typeof data.reply === 'string') {
-            aiResponse = data.reply;
-          } else if (data.output) {
-            aiResponse = typeof data.output === 'string' ? data.output : String(data.output);
-          } else if (data.message) {
-            aiResponse = data.message;
-          } else {
-            aiResponse = data.text || data.content || JSON.stringify(data);
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          console.log(`Processing attempt ${attempt + 1}/${MAX_RETRIES + 1}...`);
+          
+          const webhookUrl = Deno.env.get('SUCCESS_PARTNER_WEBHOOK_URL');
+          if (!webhookUrl) {
+            throw new Error('SUCCESS_PARTNER_WEBHOOK_URL not configured');
           }
-        } else if (typeof data === 'string') {
-          aiResponse = data;
-        } else {
-          aiResponse = String(data) || "Sorry, I couldn't process your request right now.";
-        }
 
-        if (typeof aiResponse !== 'string') {
-          aiResponse = String(aiResponse);
-        }
+          // Validate input data
+          if (!message || typeof message !== 'string') {
+            throw new Error('Invalid message format');
+          }
 
-        // Save AI response to database
-        const { error: insertError } = await supabaseClient
-          .from('success_partner_messages')
-          .insert({
-            user_id: user.id,
-            role: 'assistant',
-            content: aiResponse,
+          const payload = {
+            message: message.trim(),
+            studentId: user.id,
+            studentName: studentName || user.email?.split('@')[0] || 'Student',
             timestamp: new Date().toISOString(),
-            date: new Date().toISOString().split('T')[0]
+            conversationHistory: Array.isArray(conversationHistory) ? conversationHistory : [],
+            businessContext: typeof businessContext === 'object' ? businessContext : {}
+          };
+
+          console.log('Calling webhook with payload size:', JSON.stringify(payload).length);
+
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s timeout
+
+          const response = await fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload),
+            signal: controller.signal
           });
 
-        if (insertError) {
-          console.error('Failed to save AI response:', insertError);
-          throw insertError;
-        }
+          clearTimeout(timeoutId);
 
-        console.log('AI response saved successfully');
-
-        // Update credits
-        try {
-          const today = new Date().toISOString().split('T')[0];
-          const { data: creditData, error: creditFetchError } = await supabaseClient
-            .from('success_partner_credits')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('date', today)
-            .single();
-
-          if (creditFetchError && creditFetchError.code !== 'PGRST116') {
-            console.error('Error fetching credits:', creditFetchError);
-          } else if (creditData) {
-            const { error: updateError } = await supabaseClient
-              .from('success_partner_credits')
-              .update({ credits_used: creditData.credits_used + 1 })
-              .eq('id', creditData.id);
-
-            if (updateError) {
-              console.error('Error updating credits:', updateError);
-            } else {
-              console.log('Credits updated successfully');
-            }
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => 'Unknown error');
+            throw new Error(`Webhook error ${response.status}: ${errorText}`);
           }
-        } catch (creditError) {
-          console.error('Credit update failed:', creditError);
-          // Don't fail the whole operation if credit update fails
-        }
 
-      } catch (error) {
-        console.error('Background processing error:', error);
-        
-        // Save error message to database as fallback
-        try {
-          await supabaseClient
+          const data = await response.json();
+          console.log('Webhook response received, type:', typeof data);
+
+          // Enhanced AI response parsing with validation
+          let aiResponse = "";
+          
+          if (!data) {
+            throw new Error('Empty webhook response');
+          }
+
+          if (typeof data === 'object') {
+            // Try different response formats
+            if (data.reply) {
+              if (Array.isArray(data.reply) && data.reply.length > 0) {
+                const firstReply = data.reply[0];
+                aiResponse = firstReply?.output || firstReply?.message || firstReply?.content || String(firstReply);
+              } else if (typeof data.reply === 'object') {
+                aiResponse = data.reply.output || data.reply.message || data.reply.content || String(data.reply);
+              } else if (typeof data.reply === 'string') {
+                aiResponse = data.reply;
+              }
+            } else if (data.output) {
+              aiResponse = String(data.output);
+            } else if (data.message) {
+              aiResponse = data.message;
+            } else if (data.text || data.content) {
+              aiResponse = data.text || data.content;
+            } else {
+              // Fallback: stringify the whole response
+              aiResponse = JSON.stringify(data);
+            }
+          } else if (typeof data === 'string') {
+            aiResponse = data;
+          }
+
+          // Final validation
+          aiResponse = String(aiResponse).trim();
+          if (!aiResponse || aiResponse === 'undefined' || aiResponse === 'null') {
+            throw new Error('Invalid AI response format');
+          }
+
+          console.log('Parsed AI response length:', aiResponse.length);
+
+          // Save AI response to database
+          const { error: insertError } = await supabaseClient
             .from('success_partner_messages')
             .insert({
               user_id: user.id,
               role: 'assistant',
-              content: "⚠️ I'm having trouble connecting to my services right now. Please try asking again in a moment.",
+              content: aiResponse,
               timestamp: new Date().toISOString(),
               date: new Date().toISOString().split('T')[0]
             });
-        } catch (fallbackError) {
-          console.error('Failed to save fallback message:', fallbackError);
+
+          if (insertError) {
+            console.error('Failed to save AI response:', insertError);
+            throw insertError;
+          }
+
+          console.log('AI response saved successfully');
+
+          // Update credits
+          try {
+            const today = new Date().toISOString().split('T')[0];
+            const { data: creditData, error: creditFetchError } = await supabaseClient
+              .from('success_partner_credits')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('date', today)
+              .single();
+
+            if (creditFetchError && creditFetchError.code !== 'PGRST116') {
+              console.error('Error fetching credits:', creditFetchError);
+            } else if (creditData) {
+              const { error: updateError } = await supabaseClient
+                .from('success_partner_credits')
+                .update({ credits_used: creditData.credits_used + 1 })
+                .eq('id', creditData.id);
+
+              if (updateError) {
+                console.error('Error updating credits:', updateError);
+              } else {
+                console.log('Credits updated successfully');
+              }
+            }
+          } catch (creditError) {
+            console.error('Credit update failed:', creditError);
+            // Don't fail the whole operation if credit update fails
+          }
+
+          // Success - break retry loop
+          console.log('Message processing completed successfully');
+          return;
+
+        } catch (error) {
+          lastError = error as Error;
+          console.error(`Attempt ${attempt + 1} failed:`, error);
+          
+          // If this was the last attempt, save error message
+          if (attempt === MAX_RETRIES) {
+            console.error('All retry attempts failed');
+            break;
+          }
+          
+          // Wait before retry (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
         }
+      }
+
+      // All attempts failed - save error message to database
+      console.error('Background processing failed after all retries:', lastError);
+      try {
+        await supabaseClient
+          .from('success_partner_messages')
+          .insert({
+            user_id: user.id,
+            role: 'assistant',
+            content: "⚠️ I'm having trouble connecting to my services right now. Please try asking again in a moment.",
+            timestamp: new Date().toISOString(),
+            date: new Date().toISOString().split('T')[0]
+          });
+      } catch (fallbackError) {
+        console.error('Failed to save fallback message:', fallbackError);
       }
     };
 
