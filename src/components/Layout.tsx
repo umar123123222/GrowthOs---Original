@@ -14,7 +14,8 @@ const MetaIcon = ({ className, isActive }: { className?: string, isActive?: bool
     alt="Meta" 
     className={className}
     style={{
-      filter: isActive ? 'grayscale(0%) brightness(1)' : 'grayscale(100%) brightness(0.6) opacity(0.7)'
+      filter: isActive ? 'grayscale(0%) brightness(1)' : 'grayscale(100%) brightness(0.6) opacity(0.7)',
+      objectFit: 'contain'
     }}
   />
 );
