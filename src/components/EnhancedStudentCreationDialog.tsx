@@ -22,6 +22,9 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
   const { createStudent, isLoading } = useEnhancedStudentCreation()
   const { options: installmentOptions, isLoading: installmentLoading } = useInstallmentOptions()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [currentStep, setCurrentStep] = useState('')
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [createdStudentInfo, setCreatedStudentInfo] = useState<any>(null)
   
   const [formData, setFormData] = useState({
     full_name: '',
@@ -35,12 +38,17 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
 
     if (isSubmitting || isLoading) return
     setIsSubmitting(true)
+    setCurrentStep('Validating information...')
     
     try {
       if (!formData.email || !formData.full_name || !formData.phone || formData.installment_count < 1) {
         return
       }
 
+      setCurrentStep('Creating user account...')
+      await new Promise(resolve => setTimeout(resolve, 300))
+      
+      setCurrentStep('Setting up student profile...')
       const result = await createStudent({
         full_name: formData.full_name,
         email: formData.email,
@@ -49,17 +57,32 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
       })
 
       if (result.success) {
-        setFormData({
-          full_name: '',
-          email: '',
-          phone: '',
-          installment_count: 1
-        })
-        onOpenChange(false)
-        onStudentCreated()
+        setCurrentStep('Sending credentials email...')
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        setCreatedStudentInfo(result.data)
+        setShowSuccess(true)
+        setCurrentStep('')
+        
+        // Reset form and close after showing success
+        setTimeout(() => {
+          setFormData({
+            full_name: '',
+            email: '',
+            phone: '',
+            installment_count: 1
+          })
+          setShowSuccess(false)
+          setCreatedStudentInfo(null)
+          onOpenChange(false)
+          onStudentCreated()
+        }, 3000)
       }
     } finally {
-      setIsSubmitting(false)
+      if (!showSuccess) {
+        setIsSubmitting(false)
+        setCurrentStep('')
+      }
     }
   }
 
@@ -68,13 +91,30 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(open) => !isSubmitting && onOpenChange(open)}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add New Student</DialogTitle>
+          <DialogTitle>
+            {showSuccess ? '✅ Student Created Successfully!' : 'Add New Student'}
+          </DialogTitle>
         </DialogHeader>
         
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {showSuccess ? (
+          <div className="space-y-4 py-6">
+            <div className="text-center space-y-2">
+              <p className="text-sm text-muted-foreground">
+                <strong>{createdStudentInfo?.full_name}</strong> has been added successfully.
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Student ID: <strong>{createdStudentInfo?.student_id}</strong>
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Credentials have been sent to <strong>{createdStudentInfo?.email}</strong>
+              </p>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="full_name">Student Name *</Label>
             <Input
@@ -133,24 +173,39 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             </Select>
           </div>
           
-  <div className="flex gap-2 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isLoading || isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading || isSubmitting || !formData.email || !formData.full_name || !formData.phone || installmentLoading}
-            >
-              {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create Student
-            </Button>
-          </div>
-        </form>
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={isLoading || isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || isSubmitting || !formData.email || !formData.full_name || !formData.phone || installmentLoading}
+              >
+                {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Create Student
+              </Button>
+            </div>
+            
+            {(isLoading || isSubmitting) && currentStep && (
+              <div className="pt-2 space-y-2">
+                <p className="text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  {currentStep}
+                </p>
+                <div className="text-xs text-muted-foreground text-center">
+                  {currentStep.includes('account') && 'Step 1/3'}
+                  {currentStep.includes('profile') && 'Step 2/3'}
+                  {currentStep.includes('email') && 'Step 3/3 - Almost done!'}
+                </div>
+              </div>
+            )}
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   )

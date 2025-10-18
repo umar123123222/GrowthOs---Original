@@ -378,13 +378,54 @@ const SuccessPartner = ({
 
       if (error) {
         console.error('Edge function error:', error);
-        throw error;
+        
+        // Handle specific error types
+        let errorMessage = "⚠️ I'm having trouble connecting to my services right now. Please try again in a moment.";
+        
+        if (error.status === 429 || error.message?.includes('rate limit')) {
+          errorMessage = "⚠️ Daily message limit reached. Your credits will reset at midnight UTC. Please try again tomorrow.";
+        } else if (error.status === 402) {
+          errorMessage = "⚠️ Credit limit reached. Please contact support to increase your daily limit.";
+        } else if (error.status === 403) {
+          errorMessage = "⚠️ You don't have permission to use this feature. Please contact your administrator.";
+        } else if (error.status === 408 || error.message?.includes('timeout')) {
+          errorMessage = "⚠️ The request timed out. Please try with a shorter message or try again later.";
+        } else if (error.message?.includes('token') && error.message?.includes('expired')) {
+          errorMessage = "⚠️ Your session has expired. Please refresh the page and try again.";
+        }
+        
+        setMessages(prev => {
+          const withoutLoading = prev.filter(m => m.sender !== 'loading');
+          return [...withoutLoading, {
+            id: Date.now(),
+            sender: "ai",
+            content: errorMessage,
+            timestamp: new Date()
+          }];
+        });
+        setIsLoading(false);
+        return;
       }
 
       console.log('Message sent to backend for processing:', data);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Backend call error:', error);
+      
+      // Handle specific error types
+      let errorMessage = "⚠️ I'm having trouble connecting to my services right now. Please try again in a moment.";
+      
+      if (error.status === 429 || error.message?.includes('rate limit')) {
+        errorMessage = "⚠️ Daily message limit reached. Your credits will reset at midnight UTC. Please try again tomorrow.";
+      } else if (error.status === 402) {
+        errorMessage = "⚠️ Credit limit reached. Please contact support to increase your daily limit.";
+      } else if (error.status === 403) {
+        errorMessage = "⚠️ You don't have permission to use this feature. Please contact your administrator.";
+      } else if (error.status === 408 || error.message?.includes('timeout')) {
+        errorMessage = "⚠️ The request timed out. Please try with a shorter message or try again later.";
+      } else if (error.message?.includes('network') || error.message?.includes('connection')) {
+        errorMessage = "⚠️ Network connection issue. Please check your internet and try again.";
+      }
       
       // Add user-facing error message
       setMessages(prev => {
@@ -392,7 +433,7 @@ const SuccessPartner = ({
         return [...withoutLoading, {
           id: Date.now(),
           sender: "ai",
-          content: "⚠️ I'm having trouble connecting to my services right now. Please try again in a moment.",
+          content: errorMessage,
           timestamp: new Date()
         }];
       });
@@ -456,7 +497,9 @@ const SuccessPartner = ({
     const loadingMessage: Message = {
       id: Date.now() + 1,
       sender: "loading",
-      content: "AI Assistant is thinking...",
+      content: isFetchingContext 
+        ? contextDescription || "Analyzing your business data..." 
+        : "Processing your message...",
       timestamp: new Date()
     };
 

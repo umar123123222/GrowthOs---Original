@@ -218,8 +218,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Add to email queue for credential delivery
-    const { error: emailQueueError } = await supabaseAdmin
+    // Queue email for credential delivery (non-blocking)
+    supabaseAdmin
       .from('email_queue')
       .insert({
         user_id: authUser.user.id,
@@ -232,12 +232,12 @@ const handler = async (req: Request): Promise<Response> => {
           lms_password: lmsPassword,
           student_id: studentRecord.student_id
         }
+      })
+      .then(({ error: emailQueueError }) => {
+        if (emailQueueError) {
+          console.error('Email queue error:', emailQueueError);
+        }
       });
-
-    if (emailQueueError) {
-      console.error('Email queue error:', emailQueueError);
-      // Continue anyway - email can be sent manually
-    }
 
     // Get company settings including currency and company details
     const { data: companySettings } = await supabaseAdmin
@@ -255,67 +255,7 @@ const handler = async (req: Request): Promise<Response> => {
       primary_phone: companySettings?.primary_phone || ''
     };
 
-    // Send welcome email with credentials via SMTP
-    try {
-      const smtpClient = SMTPClient.fromEnv();
-      
-      await smtpClient.sendEmail({
-        to: email,
-        subject: 'Welcome to Growth OS - Your LMS Access Credentials',
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Welcome to Growth OS, ${full_name}!</h2>
-            
-            <p>Your student account has been created successfully. Here are your login credentials:</p>
-            
-            <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h3>LMS Access Credentials</h3>
-              <p><strong>Student ID:</strong> ${studentRecord.student_id}</p>
-              <p><strong>Installments:</strong> ${installment_count} installment${installment_count > 1 ? 's' : ''}</p>
-              <p><strong>User ID:</strong> ${email}</p>
-              <p><strong>Current Password:</strong> ${loginPassword}</p>
-            </div>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="${loginUrl}" 
-                 style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
-                Start Your Learning Journey
-              </a>
-            </div>
-            
-            <p>Please keep these credentials secure. You can change your password after logging in.</p>
-            
-            <p>If you have any questions, please contact our support team.</p>
-            
-            <p>Best regards,<br>Growth OS Team</p>
-          </div>
-        `,
-      });
-
-      console.log('Email sent successfully via SMTP to:', email);
-
-      // Update email queue status
-      await supabaseAdmin
-        .from('email_queue')
-        .update({ status: 'sent', sent_at: new Date().toISOString() })
-        .eq('user_id', authUser.user.id)
-        .eq('email_type', 'student_credentials');
-        
-    } catch (emailError) {
-      console.error('SMTP email sending error:', emailError);
-      // Update email queue with error
-      await supabaseAdmin
-        .from('email_queue')
-        .update({ 
-          status: 'failed', 
-          error_message: emailError instanceof Error ? emailError.message : 'Unknown SMTP error'
-        })
-        .eq('user_id', authUser.user.id)
-        .eq('email_type', 'student_credentials');
-    }
-
-    // Create first invoice
-    // Create ALL installments at once
+    // Create ALL installments first (fast operation)
     try {
       const { data: companySettings } = await supabaseAdmin
         .from('company_settings')
@@ -353,42 +293,6 @@ const handler = async (req: Request): Promise<Response> => {
           console.error('Error creating installments:', installmentError);
         } else {
           console.log(`All ${installment_count} installments created successfully`);
-          
-          // Send first invoice email immediately for the pending invoice
-          if (installments.length > 0) {
-            const firstInvoice = installments[0];
-            let emailSent = false;
-            const maxRetries = 3;
-            
-            for (let attempt = 1; attempt <= maxRetries && !emailSent; attempt++) {
-              try {
-                console.log(`Invoice email attempt ${attempt}/${maxRetries} for ${email}`);
-                // Validate email before sending
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(email)) {
-                  throw new Error(`Invalid email format: ${email}`);
-                }
-                
-                await sendFirstInvoiceEmail({
-                  installment_number: firstInvoice.installment_number,
-                  amount: firstInvoice.amount,
-                  due_date: firstInvoice.due_date,
-                  student_email: email,
-                  student_name: full_name
-                }, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
-                console.log(`First invoice email sent successfully on attempt ${attempt} to ${email}`);
-                emailSent = true;
-              } catch (emailError) {
-                console.error(`Invoice email attempt ${attempt} failed:`, emailError);
-                if (attempt === maxRetries) {
-                  console.error(`All ${maxRetries} invoice email attempts failed for ${email}`);
-                } else {
-                  console.log(`Waiting 2 seconds before retry ${attempt + 1}...`);
-                  await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-              }
-            }
-          }
         }
       }
       
@@ -397,6 +301,103 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('Invoice creation error:', invoiceError);
       // Continue anyway - invoices can be created manually
     }
+
+    // Send emails in background (non-blocking using EdgeRuntime.waitUntil)
+    const sendEmailsInBackground = async () => {
+      try {
+        const smtpClient = SMTPClient.fromEnv();
+        
+        // Send welcome email
+        try {
+          await smtpClient.sendEmail({
+            to: email,
+            subject: 'Welcome to Growth OS - Your LMS Access Credentials',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2>Welcome to Growth OS, ${full_name}!</h2>
+                
+                <p>Your student account has been created successfully. Here are your login credentials:</p>
+                
+                <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                  <h3>LMS Access Credentials</h3>
+                  <p><strong>Student ID:</strong> ${studentRecord.student_id}</p>
+                  <p><strong>Installments:</strong> ${installment_count} installment${installment_count > 1 ? 's' : ''}</p>
+                  <p><strong>User ID:</strong> ${email}</p>
+                  <p><strong>Current Password:</strong> ${loginPassword}</p>
+                </div>
+                
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="${loginUrl}" 
+                     style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                    Start Your Learning Journey
+                  </a>
+                </div>
+                
+                <p>Please keep these credentials secure. You can change your password after logging in.</p>
+                
+                <p>If you have any questions, please contact our support team.</p>
+                
+                <p>Best regards,<br>Growth OS Team</p>
+              </div>
+            `,
+          });
+
+          console.log('Welcome email sent successfully to:', email);
+
+          await supabaseAdmin
+            .from('email_queue')
+            .update({ status: 'sent', sent_at: new Date().toISOString() })
+            .eq('user_id', authUser.user.id)
+            .eq('email_type', 'student_credentials');
+            
+        } catch (emailError) {
+          console.error('Welcome email error:', emailError);
+          await supabaseAdmin
+            .from('email_queue')
+            .update({ 
+              status: 'failed', 
+              error_message: emailError instanceof Error ? emailError.message : 'Unknown SMTP error'
+            })
+            .eq('user_id', authUser.user.id)
+            .eq('email_type', 'student_credentials');
+        }
+
+        // Send first invoice email if installments were created
+        const { data: companySettings } = await supabaseAdmin
+          .from('company_settings')
+          .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days, payment_methods, currency')
+          .single();
+
+        if (companySettings) {
+          const { data: firstInvoice } = await supabaseAdmin
+            .from('invoices')
+            .select('*')
+            .eq('student_id', studentRecord.id)
+            .eq('installment_number', 1)
+            .maybeSingle();
+
+          if (firstInvoice) {
+            try {
+              await sendFirstInvoiceEmail({
+                installment_number: firstInvoice.installment_number,
+                amount: firstInvoice.amount,
+                due_date: firstInvoice.due_date,
+                student_email: email,
+                student_name: full_name
+              }, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
+              console.log('First invoice email sent successfully');
+            } catch (invoiceEmailError) {
+              console.error('Invoice email error:', invoiceEmailError);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Background email processing error:', error);
+      }
+    };
+
+    // Start background email processing (non-blocking)
+    EdgeRuntime.waitUntil(sendEmailsInBackground());
 
     const response: CreateEnhancedStudentResponse = {
       success: true,

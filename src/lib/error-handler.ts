@@ -8,6 +8,10 @@ export type ErrorContext =
   | 'database'
   | 'upload'
   | 'payment'
+  | 'rate_limit'
+  | 'permission'
+  | 'processing'
+  | 'integration'
   | 'general';
 
 export interface UserError {
@@ -55,6 +59,42 @@ const ERROR_MESSAGES: Record<string, UserError> = {
     message: 'Our servers are experiencing issues.',
     action: 'Please try again in a few minutes.',
     context: 'network'
+  },
+
+  // Rate limit & permission errors
+  'rate_limit_exceeded': {
+    message: 'Daily limit reached. Your credits will reset at midnight UTC.',
+    action: 'Please try again tomorrow or contact support for additional credits.',
+    context: 'rate_limit'
+  },
+  'permission_denied': {
+    message: 'You don\'t have permission to perform this action.',
+    action: 'Contact your administrator if you need access.',
+    context: 'permission'
+  },
+  'token_expired': {
+    message: 'Your access token has expired.',
+    action: 'Please reconnect your account to continue.',
+    context: 'auth'
+  },
+
+  // Processing errors
+  'operation_timeout': {
+    message: 'This operation is taking longer than expected.',
+    action: 'Please wait a moment and check back.',
+    context: 'processing'
+  },
+  'processing_in_progress': {
+    message: 'Your request is being processed.',
+    action: 'This may take a few moments. You\'ll be notified when it\'s complete.',
+    context: 'processing'
+  },
+
+  // Integration errors
+  'integration_error': {
+    message: 'Unable to connect to the integration service.',
+    action: 'Please check your connection settings or try again later.',
+    context: 'integration'
   },
 
   // Validation errors
@@ -129,34 +169,67 @@ class ErrorHandler {
   }
 
   private identifyErrorType(error: any): string {
-    // Network errors
-    if (error?.name === 'NetworkError' || error?.code === 'NETWORK_ERROR') {
-      return 'network_error';
+    // Check HTTP status codes first
+    if (error?.status === 429 || error?.statusCode === 429) {
+      return 'rate_limit_exceeded';
     }
-    if (error?.name === 'TimeoutError' || error?.code === 'TIMEOUT') {
-      return 'timeout';
+    if (error?.status === 403 || error?.statusCode === 403) {
+      return 'permission_denied';
+    }
+    if (error?.status === 401 || error?.statusCode === 401) {
+      return error?.message?.toLowerCase().includes('token') ? 'token_expired' : 'invalid_credentials';
+    }
+    if (error?.status === 408 || error?.statusCode === 408) {
+      return 'operation_timeout';
+    }
+    if (error?.status === 402 || error?.statusCode === 402) {
+      return 'rate_limit_exceeded';
+    }
+    if (error?.status === 404) {
+      return 'record_not_found';
     }
     if (error?.status >= 500) {
       return 'server_error';
     }
 
+    // Check error message patterns
+    const message = error?.message?.toLowerCase() || '';
+    
+    if (message.includes('rate limit') || message.includes('too many requests')) {
+      return 'rate_limit_exceeded';
+    }
+    if (message.includes('permission') || message.includes('forbidden')) {
+      return 'permission_denied';
+    }
+    if (message.includes('processing') || message.includes('in progress')) {
+      return 'processing_in_progress';
+    }
+    if (message.includes('token') && (message.includes('expired') || message.includes('invalid'))) {
+      return 'token_expired';
+    }
+    if (message.includes('integration') || message.includes('connection')) {
+      return 'integration_error';
+    }
+
+    // Network errors
+    if (error?.name === 'NetworkError' || error?.code === 'NETWORK_ERROR') {
+      return 'network_error';
+    }
+    if (error?.name === 'TimeoutError' || error?.code === 'TIMEOUT' || message.includes('timeout')) {
+      return 'timeout';
+    }
+
     // Authentication errors
-    if (error?.code === 'invalid_credentials' || error?.status === 401) {
+    if (error?.code === 'invalid_credentials') {
       return 'invalid_credentials';
     }
     if (error?.code === 'email_not_verified') {
       return 'email_not_verified';
     }
-    if (error?.status === 403) {
-      return 'access_denied';
-    }
 
     // Database errors
-    if (error?.code === '23505' || error?.message?.includes('duplicate')) {
+    if (error?.code === '23505' || message.includes('duplicate')) {
       return 'duplicate_entry';
-    }
-    if (error?.status === 404) {
-      return 'record_not_found';
     }
     if (error?.code?.startsWith('PGRST') || error?.hint) {
       return 'database_error';
