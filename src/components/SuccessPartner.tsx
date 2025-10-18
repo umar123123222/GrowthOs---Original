@@ -531,7 +531,7 @@ const SuccessPartner = ({
     setMessage("");
     setIsLoading(true);
 
-    // Save user message to database
+    // Save user message to database FIRST (await to ensure it completes even if modal closes)
     try {
       const { error: userInsertError } = await supabase.from('success_partner_messages').insert({
         user_id: user.id,
@@ -548,58 +548,49 @@ const SuccessPartner = ({
           description: "Your message may not persist after refresh. Please try again if needed.",
           variant: "destructive"
         });
+        // Still continue to send to backend even if DB save fails
       }
     } catch (dbError) {
       console.error('Failed to save user message to database:', dbError);
     }
-    try {
-      const studentName = user.full_name || user.email.split('@')[0] || 'Student';
-      
-      // Call backend to process message (response will come via Realtime)
-      await sendMessageToBackend(userMessage.content, studentName);
-      
-      // Update credits optimistically (will be updated by backend too)
-      await updateCredits();
+    
+    // Fire-and-forget backend call (response comes via Realtime, so no need to await)
+    const studentName = user.full_name || user.email.split('@')[0] || 'Student';
+    
+    // Don't await - let it run in background. Response will arrive via Realtime subscription
+    sendMessageToBackend(userMessage.content, studentName).then(() => {
+      console.log('Message sent to backend successfully');
+      // Update credits after backend processes (fire-and-forget)
+      updateCredits().catch(e => console.error('Failed to update credits:', e));
+    }).catch(error => {
+      console.error('Backend processing failed:', error);
+      // Error handling is done inside sendMessageToBackend
+    });
 
-      // Set a safety timeout to remove loading state if no response after 60 seconds
-      setTimeout(() => {
-        setMessages(prev => {
-          const hasAiResponse = prev.some(m => 
-            m.sender === 'ai' && 
-            m.timestamp.getTime() > userMessage.timestamp.getTime()
-          );
-          
-          if (!hasAiResponse && prev.some(m => m.sender === 'loading')) {
-            const withoutLoading = prev.filter(m => m.sender !== 'loading');
-            return [...withoutLoading, {
-              id: Date.now(),
-              sender: "ai" as const,
-              content: "⏱️ This is taking longer than expected. Your response should arrive shortly. If it doesn't, please try asking again.",
-              timestamp: new Date()
-            }];
-          }
-          return prev;
-        });
-        setIsLoading(false);
-      }, 60000);
-
-      // Note: AI response will be added via Realtime subscription
-      // Loading state will be cleared when the response arrives
-      
-    } catch (error) {
-      console.error('Message sending error:', error);
-      
-      // Error handling is done in sendMessageToBackend
-      toast({
-        title: "Connection Error",
-        description: "Unable to send message. Please try again later.",
-        variant: "destructive"
+    // Set a safety timeout to remove loading state if no response after 60 seconds
+    setTimeout(() => {
+      setMessages(prev => {
+        const hasAiResponse = prev.some(m => 
+          m.sender === 'ai' && 
+          m.timestamp.getTime() > userMessage.timestamp.getTime()
+        );
+        
+        if (!hasAiResponse && prev.some(m => m.sender === 'loading')) {
+          const withoutLoading = prev.filter(m => m.sender !== 'loading');
+          return [...withoutLoading, {
+            id: Date.now(),
+            sender: "ai" as const,
+            content: "⏱️ This is taking longer than expected. Your response should arrive shortly. If it doesn't, please try asking again.",
+            timestamp: new Date()
+          }];
+        }
+        return prev;
       });
-      
-      // Remove loading indicator
-      setMessages(prev => prev.filter(msg => msg.sender !== "loading"));
       setIsLoading(false);
-    }
+    }, 60000);
+
+    // Note: AI response will be added via Realtime subscription
+    // Loading state will be cleared when the response arrives
   }, [message, isLoading, sendMessageToBackend, updateCredits, credits, integrationStatus, toast, user]);
   return <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-2xl h-[600px] flex flex-col">
