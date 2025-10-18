@@ -1,3 +1,4 @@
+// Version: 2025-10-18-fix-alerttriangle-cache
 import React, { Suspense, useState, useEffect, useCallback, useMemo, useRef, memo } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import SuccessPartner from "@/components/SuccessPartner";

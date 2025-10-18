@@ -66,7 +66,15 @@ const LiveSessions = lazy(() => import("./pages/LiveSessions"));
 const Messages = lazy(() => import("./pages/Messages"));
 const Teams = lazy(() => import("./pages/Teams"));
 const StudentsManagement = lazy(() => import("./pages/StudentsManagement"));
-const Layout = lazy(() => import("./components/Layout"));
+// Layout with retry logic to prevent cache issues
+const Layout = lazy(() => 
+  import("./components/Layout").catch(async (error) => {
+    console.error("Failed to load Layout, retrying...", error);
+    // Retry once after a short delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    return import("./components/Layout");
+  })
+);
 const Support = lazy(() => import("./pages/Support"));
 const Connect = lazy(() => import("./pages/Connect"));
 const ShopifyDashboard = lazy(() => import("./pages/ShopifyDashboard"));
