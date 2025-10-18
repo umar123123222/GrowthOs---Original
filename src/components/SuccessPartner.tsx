@@ -130,6 +130,13 @@ const SuccessPartner = ({
     };
 
     loadMessages();
+
+    // Safety re-fetch: pick up any assistant reply that landed just after opening
+    const refetchTimer = setTimeout(() => {
+      loadMessages();
+    }, 2000);
+
+    return () => clearTimeout(refetchTimer);
   }, [user?.id]);
 
   // Set up Realtime subscription for new messages
@@ -549,6 +556,11 @@ const SuccessPartner = ({
           variant: "destructive"
         });
         // Still continue to send to backend even if DB save fails
+      } else {
+        toast({
+          title: "Message sent",
+          description: "I'll reply shortly.",
+        });
       }
     } catch (dbError) {
       console.error('Failed to save user message to database:', dbError);
