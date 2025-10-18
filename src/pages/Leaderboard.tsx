@@ -20,6 +20,9 @@ interface LeaderboardEntry {
   videosWatched: number;
   assignmentsCompleted: number;
   milestonesCompleted: number;
+  sessionsAttended: number;
+  hasShopify: boolean;
+  hasMeta: boolean;
 }
 
 const Leaderboard = () => {
@@ -46,7 +49,8 @@ const Leaderboard = () => {
           email
         `)
         .eq('role', 'student')
-        .eq('status', 'active');
+        .eq('status', 'active')
+        .eq('lms_status', 'active');
 
       if (error) throw error;
 
@@ -78,6 +82,28 @@ const Leaderboard = () => {
           .from('user_milestones')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', student.id);
+
+        // Get sessions attended
+        const { count: sessionsAttended } = await supabase
+          .from('session_attendance')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', student.id);
+
+        // Check Shopify integration
+        const { data: shopifyIntegration } = await supabase
+          .from('integrations')
+          .select('id')
+          .eq('user_id', student.id)
+          .eq('source', 'shopify')
+          .maybeSingle();
+
+        // Check Meta Ads integration
+        const { data: metaIntegration } = await supabase
+          .from('integrations')
+          .select('id')
+          .eq('user_id', student.id)
+          .eq('source', 'meta')
+          .maybeSingle();
 
         // Get total available content
         const { count: totalVideos } = await supabase
@@ -126,6 +152,9 @@ const Leaderboard = () => {
           videosWatched: videosWatched || 0,
           assignmentsCompleted: assignmentsCompleted || 0,
           milestonesCompleted: milestonesCompleted || 0,
+          sessionsAttended: sessionsAttended || 0,
+          hasShopify: !!shopifyIntegration,
+          hasMeta: !!metaIntegration,
         };
       });
 
@@ -243,7 +272,20 @@ const Leaderboard = () => {
                             </h3>
                             <div className="flex items-center space-x-2 text-sm text-gray-500">
                               <span>🔥 {student.streak} day streak</span>
+                              {student.sessionsAttended > 0 && (
+                                <span>• 📅 {student.sessionsAttended} sessions</span>
+                              )}
                             </div>
+                            {(student.hasShopify || student.hasMeta) && (
+                              <div className="flex gap-1 mt-1">
+                                {student.hasShopify && (
+                                  <Badge variant="outline" className="text-xs">🛒 Shopify</Badge>
+                                )}
+                                {student.hasMeta && (
+                                  <Badge variant="outline" className="text-xs">📊 Meta</Badge>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -312,6 +354,20 @@ const Leaderboard = () => {
                     <span>Assignments</span>
                     <span className="font-bold">{currentUserStats.assignmentsCompleted}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span>Sessions Joined</span>
+                    <span className="font-bold">{currentUserStats.sessionsAttended}</span>
+                  </div>
+                  {currentUserStats.hasShopify && (
+                    <div className="flex items-center text-sm">
+                      <span>✓ Shopify Connected</span>
+                    </div>
+                  )}
+                  {currentUserStats.hasMeta && (
+                    <div className="flex items-center text-sm">
+                      <span>✓ Meta Ads Connected</span>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="text-center text-sm text-white/80">
