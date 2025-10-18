@@ -55,6 +55,39 @@ const Leaderboard = () => {
     setUserRole(data?.role || null);
   };
 
+  // Throttle helpers for auto-build
+  const shouldThrottle = () => {
+    const lastBuildTs = Number(localStorage.getItem('leaderboard:lastBuildTs') || '0');
+    return Date.now() - lastBuildTs < 5 * 60 * 1000; // 5 minutes
+  };
+
+  const markThrottle = () => {
+    localStorage.setItem('leaderboard:lastBuildTs', String(Date.now()));
+  };
+
+  const ensureLeaderboardBuilt = async () => {
+    if (shouldThrottle()) {
+      console.log('[Leaderboard] Build throttled (called within last 5 minutes)');
+      return false;
+    }
+
+    toast.info('Building leaderboard...');
+    const { error } = await supabase.functions.invoke('build-leaderboard');
+    
+    if (error) {
+      console.error('[Leaderboard] Build failed:', error);
+      toast.error('Failed to build leaderboard');
+      return false;
+    }
+
+    markThrottle();
+    console.log('[Leaderboard] Build successful, waiting 1s before refetch');
+    await new Promise(r => setTimeout(r, 1000));
+    await fetchLeaderboardData();
+    toast.success('Leaderboard updated!');
+    return true;
+  };
+
   const fetchLeaderboardData = async () => {
     try {
       setLoading(true);
@@ -66,9 +99,30 @@ const Leaderboard = () => {
         .order('rank', { ascending: true });
 
       if (snapshotsError) {
-        console.error('Error fetching leaderboard:', snapshotsError);
+        console.error('[Leaderboard] Error fetching:', snapshotsError);
         toast.error('Failed to load leaderboard');
         return;
+      }
+
+      console.log(`[Leaderboard] Fetched ${snapshots?.length || 0} snapshots`);
+
+      // Auto-build if empty
+      if (!snapshots || snapshots.length === 0) {
+        console.log('[Leaderboard] Empty data detected, triggering auto-build');
+        setLoading(false);
+        await ensureLeaderboardBuilt();
+        return;
+      }
+
+      // Check staleness (if newest snapshot is older than 10 minutes, auto-rebuild)
+      const newestSnapshot = snapshots[0];
+      const calculatedAt = new Date(newestSnapshot.calculated_at).getTime();
+      const tenMinutesAgo = Date.now() - 10 * 60 * 1000;
+      
+      if (calculatedAt < tenMinutesAgo) {
+        console.log('[Leaderboard] Stale data detected (>10 min old), triggering background rebuild');
+        // Fire-and-forget background rebuild
+        ensureLeaderboardBuilt();
       }
 
       setLeaderboardData(snapshots || []);
@@ -79,7 +133,7 @@ const Leaderboard = () => {
       setCurrentUserStats(userStats || null);
 
     } catch (error) {
-      console.error('Error in fetchLeaderboardData:', error);
+      console.error('[Leaderboard] Error in fetchLeaderboardData:', error);
       toast.error('Failed to load leaderboard');
     } finally {
       setLoading(false);
@@ -174,16 +228,20 @@ const Leaderboard = () => {
               ) : leaderboardData.length === 0 ? (
                 <div className="text-center py-8">
                   <Trophy className="w-12 h-12 text-muted mx-auto mb-3" />
-                  <div className="text-muted-foreground">No students found</div>
-                  {(userRole === 'admin' || userRole === 'superadmin') && (
-                    <Button 
-                      onClick={handleRebuildLeaderboard}
-                      className="mt-4"
-                      variant="outline"
-                    >
-                      Build Leaderboard
-                    </Button>
-                  )}
+                  <div className="text-muted-foreground mb-4">No leaderboard data yet</div>
+                  <Button 
+                    onClick={async () => {
+                      setRebuilding(true);
+                      await ensureLeaderboardBuilt();
+                      setRebuilding(false);
+                    }}
+                    disabled={rebuilding}
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${rebuilding ? 'animate-spin' : ''}`} />
+                    {rebuilding ? 'Building...' : 'Build Leaderboard'}
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-4">
