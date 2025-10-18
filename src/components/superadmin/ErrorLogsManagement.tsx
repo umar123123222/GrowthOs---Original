@@ -407,19 +407,98 @@ export const ErrorLogsManagement = () => {
                           )}
                         </div>
 
+                        {/* File Location - Prominently Displayed */}
+                        {log.error_details?.file && (
+                          <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <Code className="h-4 w-4 text-destructive" />
+                              <span className="text-sm font-medium text-destructive">Error Location:</span>
+                            </div>
+                            <div className="font-mono text-sm">
+                              <span className="font-bold text-foreground">{log.error_details.file}</span>
+                              {log.error_details.line && (
+                                <span className="text-muted-foreground">:{log.error_details.line}</span>
+                              )}
+                              {log.error_details.column && (
+                                <span className="text-muted-foreground">:{log.error_details.column}</span>
+                              )}
+                            </div>
+                            {log.error_details.function && (
+                              <div className="text-xs text-muted-foreground mt-1">
+                                in function: <span className="font-mono">{log.error_details.function}()</span>
+                              </div>
+                            )}
+                            {log.error_details.component && (
+                              <div className="text-xs text-muted-foreground">
+                                component: <span className="font-mono">&lt;{log.error_details.component} /&gt;</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Error Classification */}
+                        {log.error_details?.classification && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="font-medium">
+                              {log.error_details.classification}
+                            </Badge>
+                            {log.error_details.category && (
+                              <Badge variant="secondary" className="text-xs">
+                                {log.error_details.category === 'frontend' ? '🎨 Frontend' :
+                                 log.error_details.category === 'backend' ? '⚙️ Backend' :
+                                 log.error_details.category === 'user_input' ? '👤 User Input' :
+                                 log.error_details.category === 'integration' ? '🔌 Integration' :
+                                 log.error_details.category}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+
                         {/* Error Message */}
                         <div className="space-y-1">
                           <p className="font-semibold text-foreground">
                             {log.error_message}
                           </p>
-                          {log.error_details && (
+                          {log.error_details?.user_action && log.error_details.user_action !== 'Unknown' && (
                             <p className="text-sm text-muted-foreground">
-                              {typeof log.error_details === 'string' 
-                                ? log.error_details 
-                                : JSON.stringify(log.error_details)}
+                              During: <span className="font-medium">{log.error_details.user_action}</span>
                             </p>
                           )}
                         </div>
+
+                        {/* Quick Fix Suggestions */}
+                        {log.error_details?.classification && (
+                          <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
+                            <p className="font-medium text-primary mb-1">💡 Suggested Fix:</p>
+                            <p className="text-muted-foreground">
+                              {log.error_details.classification === 'Missing Import' && 
+                                'Check if the module is imported correctly. Verify the import path and ensure the component/function is exported.'}
+                              {log.error_details.classification === 'Undefined Variable' && 
+                                'Add null checks before accessing properties. Use optional chaining (?.) or provide default values.'}
+                              {log.error_details.classification === 'Type Error' && 
+                                'Verify the data type being passed. Check if the function exists and is being called correctly.'}
+                              {log.error_details.classification === 'Permission Error (RLS)' && 
+                                'Check Row Level Security policies. Ensure the user has proper permissions and the RLS policy allows this operation.'}
+                              {log.error_details.classification === 'Component Error' && 
+                                'Review component props and state. Check for missing dependencies in useEffect or incorrect prop types.'}
+                              {log.error_details.classification === 'Database Query Error' && 
+                                'Verify the query syntax and table/column names. Check if the referenced data exists.'}
+                              {log.error_details.classification === 'API Request Failed' && 
+                                'Check network connectivity and API endpoint. Verify request parameters and authentication tokens.'}
+                              {log.error_details.classification === 'Validation Error' && 
+                                'Review form validation rules. Ensure user input matches expected format and constraints.'}
+                              {(!log.error_details.classification.includes('Import') && 
+                                !log.error_details.classification.includes('Undefined') &&
+                                !log.error_details.classification.includes('Type Error') &&
+                                !log.error_details.classification.includes('Permission') &&
+                                !log.error_details.classification.includes('Component') &&
+                                !log.error_details.classification.includes('Database') &&
+                                !log.error_details.classification.includes('API') &&
+                                !log.error_details.classification.includes('Validation')) && 
+                                'Review the error message and stack trace for clues. Check recent code changes that might have introduced this issue.'}
+                            </p>
+                          </div>
+                        )}
 
                         {/* User Info */}
                         {log.user && (

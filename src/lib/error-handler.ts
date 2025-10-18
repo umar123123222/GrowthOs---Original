@@ -156,6 +156,118 @@ const ERROR_MESSAGES: Record<string, UserError> = {
 };
 
 class ErrorHandler {
+  private parseStackTrace(stack: string): {
+    file: string | null;
+    line: number | null;
+    column: number | null;
+    function: string | null;
+    component: string | null;
+  } {
+    if (!stack) return { file: null, line: null, column: null, function: null, component: null };
+
+    // Parse the first relevant stack line (skip generic Error lines)
+    const lines = stack.split('\n').filter(l => l.trim() && !l.includes('Error:'));
+    
+    for (const line of lines) {
+      // Pattern: at ComponentName.functionName (file.tsx:line:column)
+      // or: at file.tsx:line:column
+      const match = line.match(/at\s+(?:(\w+)\.)?(\w+)?\s*\(?(.*?):(\d+):(\d+)\)?/);
+      
+      if (match) {
+        const [, component, func, filePath, lineNum, colNum] = match;
+        const fileName = filePath?.split('/').pop() || filePath;
+        
+        return {
+          file: fileName || null,
+          line: lineNum ? parseInt(lineNum, 10) : null,
+          column: colNum ? parseInt(colNum, 10) : null,
+          function: func || null,
+          component: component || null
+        };
+      }
+    }
+
+    return { file: null, line: null, column: null, function: null, component: null };
+  }
+
+  private classifyError(error: any, context?: string): {
+    type: string;
+    category: string;
+    classification: string;
+  } {
+    const message = error?.message?.toLowerCase() || '';
+    const stack = error?.stack?.toLowerCase() || '';
+
+    // Determine error type
+    let errorType = 'unknown';
+    let category = 'general';
+    let classification = 'Unknown Error';
+
+    // Frontend/UI Errors
+    if (stack.includes('.tsx') || stack.includes('.jsx') || message.includes('component') || message.includes('render')) {
+      errorType = 'ui';
+      category = 'frontend';
+      
+      if (message.includes('undefined') || message.includes('null')) {
+        classification = 'Undefined Variable';
+      } else if (message.includes('not a function')) {
+        classification = 'Type Error';
+      } else if (message.includes('import') || message.includes('module')) {
+        classification = 'Missing Import';
+      } else {
+        classification = 'Component Error';
+      }
+    }
+    // Database Errors
+    else if (context?.includes('database') || context?.includes('db') || message.includes('database') || 
+             message.includes('query') || message.includes('rls') || message.includes('policy')) {
+      errorType = 'database';
+      category = 'backend';
+      
+      if (message.includes('policy') || message.includes('rls') || message.includes('permission')) {
+        classification = 'Permission Error (RLS)';
+      } else if (message.includes('duplicate') || message.includes('unique')) {
+        classification = 'Duplicate Entry';
+      } else if (message.includes('not found') || message.includes('no rows')) {
+        classification = 'Record Not Found';
+      } else {
+        classification = 'Database Query Error';
+      }
+    }
+    // API Errors
+    else if (context?.includes('api') || message.includes('fetch') || message.includes('request')) {
+      errorType = 'api';
+      category = 'backend';
+      classification = 'API Request Failed';
+    }
+    // Network Errors
+    else if (context?.includes('network') || message.includes('network') || message.includes('timeout')) {
+      errorType = 'network';
+      category = 'backend';
+      classification = 'Network Error';
+    }
+    // Validation Errors
+    else if (context?.includes('validation') || message.includes('validation') || message.includes('invalid')) {
+      errorType = 'validation';
+      category = 'user_input';
+      classification = 'Validation Error';
+    }
+    // Auth Errors
+    else if (context?.includes('auth') || message.includes('auth') || message.includes('permission')) {
+      errorType = 'auth';
+      category = 'backend';
+      classification = 'Authentication Error';
+    }
+    // Integration Errors
+    else if (context?.includes('integration') || message.includes('integration')) {
+      errorType = 'integration';
+      category = 'integration';
+      classification = 'Integration Error';
+    }
+
+    return { type: errorType, category, classification };
+  }
+
   private async logError(error: any, context?: string): Promise<void> {
     // Log full error details for debugging (never shown to user)
     console.error('Error Details:', {
@@ -174,21 +286,22 @@ class ErrorHandler {
       // Get current user if available
       const { data: { user } } = await supabase.auth.getUser();
       
-      // Determine error type
-      let errorType = 'unknown';
-      if (context?.includes('auth')) errorType = 'auth';
-      else if (context?.includes('database') || context?.includes('db')) errorType = 'database';
-      else if (context?.includes('api')) errorType = 'api';
-      else if (context?.includes('network')) errorType = 'network';
-      else if (context?.includes('validation')) errorType = 'validation';
-      else if (context?.includes('integration')) errorType = 'integration';
-      else if (error?.message?.toLowerCase().includes('ui') || error?.message?.toLowerCase().includes('component')) errorType = 'ui';
+      // Parse stack trace for detailed location info
+      const stackInfo = this.parseStackTrace(error?.stack);
+      
+      // Classify the error
+      const { type: errorType, category, classification } = this.classifyError(error, context);
 
       // Determine severity
       let severity = 'error';
       if (error?.message?.toLowerCase().includes('critical')) severity = 'critical';
       else if (error?.message?.toLowerCase().includes('warn')) severity = 'warning';
       else if (error?.status === 500 || error?.statusCode === 500) severity = 'critical';
+      else if (classification.includes('Permission') || classification.includes('RLS')) severity = 'critical';
+
+      // Get user action context from URL
+      const currentUrl = typeof window !== 'undefined' ? window.location.href : null;
+      const urlPath = currentUrl ? new URL(currentUrl).pathname : null;
 
       await supabase.from('error_logs').insert({
         user_id: user?.id || null,
@@ -199,9 +312,18 @@ class ErrorHandler {
           context: context,
           error: error?.toString(),
           status: error?.status || error?.statusCode,
+          category: category,
+          classification: classification,
+          file: stackInfo.file,
+          line: stackInfo.line,
+          column: stackInfo.column,
+          function: stackInfo.function,
+          component: stackInfo.component,
+          url_path: urlPath,
+          user_action: this.inferUserAction(context, urlPath)
         },
         stack_trace: error?.stack || null,
-        url: typeof window !== 'undefined' ? window.location.href : null,
+        url: currentUrl,
         user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
         severity: severity
       });
@@ -209,6 +331,18 @@ class ErrorHandler {
       // Don't throw if logging fails
       console.warn('Failed to log error to database:', logError);
     }
+  }
+
+  private inferUserAction(context?: string, urlPath?: string | null): string {
+    if (context?.includes('form') || context?.includes('submit')) return 'Form Submission';
+    if (context?.includes('button') || context?.includes('click')) return 'Button Click';
+    if (context?.includes('upload')) return 'File Upload';
+    if (context?.includes('delete')) return 'Delete Operation';
+    if (context?.includes('update')) return 'Update Operation';
+    if (context?.includes('create')) return 'Create Operation';
+    if (urlPath?.includes('login')) return 'Login Attempt';
+    if (urlPath?.includes('signup')) return 'Signup Attempt';
+    return 'Unknown';
   }
 
   private identifyErrorType(error: any): string {
