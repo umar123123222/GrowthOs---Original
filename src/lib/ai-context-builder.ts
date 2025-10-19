@@ -192,7 +192,7 @@ async function getMetaAdsContext(userId: string, dateRangeDays: number = ENV_CON
         impressions: metricsData.metrics?.totalImpressions || 0,
         clicks: metricsData.metrics?.totalClicks || 0,
         conversions: metricsData.metrics?.totalConversions || 0,
-        roas: metricsData.metrics?.averageROAS ? metricsData.metrics.averageROAS * 100 : 0,
+        roas: metricsData.metrics?.averageROAS || 0,
         ctr: metricsData.metrics?.averageCTR || 0,
         // Include detailed campaign, adset, and ad data
         campaigns: metricsData.metrics?.campaigns || [],

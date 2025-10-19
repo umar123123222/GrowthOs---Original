@@ -293,10 +293,11 @@ serve(async (req) => {
         case 'CONVERSIONS':
         case 'PURCHASE':
         case 'CATALOG_SALES':
-          if (roas >= 400) primaryScore = 100;
-          else if (roas >= 250) primaryScore = 80;
-          else if (roas >= 150) primaryScore = 60;
-          else if (roas >= 100) primaryScore = 40;
+          // ROAS thresholds for ratio (not percentage)
+          if (roas >= 4) primaryScore = 100;
+          else if (roas >= 2.5) primaryScore = 80;
+          else if (roas >= 1.5) primaryScore = 60;
+          else if (roas >= 1.0) primaryScore = 40;
           else primaryScore = 20;
           
           if (ctr >= 1.5) secondaryScore = 20;
@@ -323,7 +324,8 @@ serve(async (req) => {
         default:
           const ctrScore = ctr >= 2.0 ? 50 : ctr >= 1.5 ? 40 : ctr >= 1.0 ? 30 : 20;
           const cpcScore = cpc <= 1.0 ? 30 : cpc <= 2.0 ? 25 : cpc <= 3.0 ? 20 : 10;
-          const roasScore = roas >= 200 ? 20 : roas >= 100 ? 15 : roas >= 50 ? 10 : 5;
+          // ROAS as ratio for default scoring
+          const roasScore = roas >= 2 ? 20 : roas >= 1 ? 15 : roas >= 0.5 ? 10 : 5;
           primaryScore = ctrScore + cpcScore;
           secondaryScore = roasScore;
       }
@@ -388,7 +390,7 @@ serve(async (req) => {
           .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
-        const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
+        const roas = spend > 0 ? (conversionValue / spend) : 0;
         const performance = categorizePerformance(ctr, cpc, roas, campaign.objective, spend);
 
         metrics.campaigns.push({
@@ -450,7 +452,7 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
-          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
+          const roas = spend > 0 ? (conversionValue / spend) : 0;
           const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
           metrics.campaigns.push({
@@ -476,6 +478,45 @@ serve(async (req) => {
           metrics.totalClicks += clicks;
           metrics.totalConversions += conversions;
           metrics.totalConversionValue += conversionValue;
+        }
+        
+        // Rehydrate campaign statuses to ensure accuracy
+        if (metrics.campaigns.length > 0) {
+          try {
+            const campaignIds = metrics.campaigns.map(c => c.id);
+            const chunkSize = 50;
+            let updatedCount = 0;
+            
+            for (let i = 0; i < campaignIds.length; i += chunkSize) {
+              const chunk = campaignIds.slice(i, i + chunkSize);
+              const batchUrl = new URL('https://graph.facebook.com/v19.0');
+              batchUrl.searchParams.set('ids', chunk.join(','));
+              batchUrl.searchParams.set('fields', 'effective_status,status,objective');
+              batchUrl.searchParams.set('access_token', accessToken);
+              
+              const batchResult = await fetchJson(batchUrl.toString(), 'Campaign status rehydration');
+              
+              if (batchResult.ok && batchResult.data) {
+                for (const [campaignId, campaignData] of Object.entries(batchResult.data)) {
+                  const campaign = metrics.campaigns.find(c => c.id === campaignId);
+                  if (campaign && (campaignData as any).effective_status) {
+                    campaign.status = (campaignData as any).effective_status || (campaignData as any).status;
+                    if ((campaignData as any).objective) {
+                      campaign.objective = (campaignData as any).objective;
+                    }
+                    updatedCount++;
+                  }
+                }
+              }
+            }
+            
+            if (updatedCount > 0) {
+              console.log(`✓ Status rehydration: updated ${updatedCount} campaigns`);
+            }
+          } catch (rehydrationError) {
+            console.warn('⚠️ Status rehydration failed:', rehydrationError);
+            warnings.push('Could not rehydrate campaign statuses');
+          }
         }
       }
     }
@@ -518,7 +559,7 @@ serve(async (req) => {
           .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
-        const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
+        const roas = spend > 0 ? (conversionValue / spend) : 0;
         const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
         metrics.ads.push({
@@ -578,7 +619,7 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
-          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
+          const roas = spend > 0 ? (conversionValue / spend) : 0;
           const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
           metrics.ads.push({
@@ -702,7 +743,7 @@ serve(async (req) => {
       metrics.averageCPC = metrics.totalSpend / metrics.totalClicks;
     }
     if (metrics.totalSpend > 0 && metrics.totalConversionValue > 0) {
-      metrics.averageROAS = (metrics.totalConversionValue / metrics.totalSpend) * 100;
+      metrics.averageROAS = (metrics.totalConversionValue / metrics.totalSpend);
     }
 
     console.log(`✓ Final result: ${metrics.campaigns.length} campaigns, ${metrics.ads.length} ads`);
