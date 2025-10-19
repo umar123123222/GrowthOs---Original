@@ -244,10 +244,12 @@ serve(async (req) => {
     }
 
     const accountIdRaw = externalId
-    const accountId = accountIdRaw.startsWith('act_') ? accountIdRaw : `act_${accountIdRaw}`
+    let accountId = accountIdRaw.startsWith('act_') ? accountIdRaw : `act_${accountIdRaw}`
+    console.log(`Using Meta Ads account ID: ${accountId}`)
 
     // Fetch account currency and basic info first
     let accountCurrency = 'USD'; // Default fallback
+    let currencyOk = false;
     try {
       const currencyUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}`)
       currencyUrl.searchParams.set('fields', 'currency,name')
@@ -258,6 +260,7 @@ serve(async (req) => {
         const currencyData = await currencyResp.json()
         if (currencyData.currency) {
           accountCurrency = currencyData.currency
+          currencyOk = true
           console.log(`✓ Account currency detected: ${accountCurrency}`)
         } else {
           console.warn('⚠️ Currency field not found in Meta Ads account response')
@@ -267,6 +270,48 @@ serve(async (req) => {
       }
     } catch (currencyError) {
       console.error('Error fetching account currency:', currencyError)
+    }
+
+    // If currency fetch failed (likely wrong account id), auto-detect a valid account and retry once
+    if (!currencyOk) {
+      try {
+        console.log('Attempting to auto-detect ad account via /me/adaccounts ...')
+        const accountsUrl = new URL('https://graph.facebook.com/v19.0/me/adaccounts')
+        accountsUrl.searchParams.set('fields', 'id,name,account_status')
+        accountsUrl.searchParams.set('limit', '5')
+        accountsUrl.searchParams.set('access_token', accessToken)
+        const accountsResp = await fetch(accountsUrl.toString())
+        if (accountsResp.ok) {
+          const accountsData = await accountsResp.json()
+          const activeAccount = accountsData.data?.find((acc: any) => acc.account_status === 1) || accountsData.data?.[0]
+          if (activeAccount?.id) {
+            const detectedId = activeAccount.id
+            accountId = detectedId.startsWith('act_') ? detectedId : `act_${detectedId}`
+            console.log(`➡️ Switched to detected account ID: ${accountId}`)
+            // Retry currency fetch with detected account
+            const currencyUrl2 = new URL(`https://graph.facebook.com/v19.0/${accountId}`)
+            currencyUrl2.searchParams.set('fields', 'currency,name')
+            currencyUrl2.searchParams.set('access_token', accessToken)
+            const retry = await fetch(currencyUrl2.toString())
+            if (retry.ok) {
+              const currencyData2 = await retry.json()
+              if (currencyData2.currency) {
+                accountCurrency = currencyData2.currency
+                currencyOk = true
+                console.log(`✓ Account currency detected after switch: ${accountCurrency}`)
+              }
+            }
+            // Persist the corrected external_id for future calls
+            await supabaseClient
+              .from('integrations')
+              .update({ external_id: detectedId })
+              .eq('user_id', effectiveUserId)
+              .eq('source', 'meta_ads')
+          }
+        }
+      } catch (autoErr) {
+        console.warn('Auto-detect account failed:', (autoErr as any)?.message)
+      }
     }
 
     // Initialize metrics with detected currency
