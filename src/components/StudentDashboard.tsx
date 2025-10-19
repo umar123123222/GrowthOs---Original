@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ConnectAccountsDialog } from '@/components/ConnectAccountsDialog';
+import { OnboardingVideoModal } from '@/components/OnboardingVideoModal';
 import { useAuth } from '@/hooks/useAuth';
 import { useStudentRecordings } from '@/hooks/useStudentRecordings';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,6 +75,50 @@ export function StudentDashboard() {
   const [userLMSStatus, setUserLMSStatus] = useState<string>('active');
   const [firstOnboardingAnswer, setFirstOnboardingAnswer] = useState<string>('');
   const [firstOnboardingRange, setFirstOnboardingRange] = useState<{ min: string; max: string } | null>(null);
+  
+  // Onboarding video state
+  const [showOnboardingVideo, setShowOnboardingVideo] = useState(false);
+  const [onboardingVideoUrl, setOnboardingVideoUrl] = useState<string>('');
+  const [checkingVideo, setCheckingVideo] = useState(true);
+  
+  // Check for onboarding video requirement
+  useEffect(() => {
+    const checkOnboardingVideo = async () => {
+      if (!user?.id) return;
+      
+      try {
+        // Fetch company settings to get video URL
+        const { data: settings } = await supabase
+          .from('company_settings')
+          .select('onboarding_video_url')
+          .eq('id', 1)
+          .maybeSingle();
+        
+        // Fetch student record to check if video was watched
+        const { data: student } = await supabase
+          .from('students')
+          .select('onboarding_completed, onboarding_video_watched')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        const videoUrl = settings?.onboarding_video_url;
+        const videoWatched = student?.onboarding_video_watched;
+        const onboardingComplete = student?.onboarding_completed;
+        
+        // Show video if URL exists, onboarding is complete, but video not watched
+        if (videoUrl && onboardingComplete && !videoWatched) {
+          setOnboardingVideoUrl(videoUrl);
+          setShowOnboardingVideo(true);
+        }
+      } catch (error) {
+        logger.error('Error checking onboarding video:', error);
+      } finally {
+        setCheckingVideo(false);
+      }
+    };
+    
+    checkOnboardingVideo();
+  }, [user?.id]);
   // Fetch all dashboard data when user is ready and recordings finished loading
   useEffect(() => {
     if (user?.id && !loading) {
@@ -348,14 +393,29 @@ export function StudentDashboard() {
     );
   }
 
-  if (loading) {
+  if (loading || checkingVideo) {
     if (process.env.NODE_ENV === 'development') {
-      safeLogger.debug('StudentDashboard: Loading recordings');
+      safeLogger.debug('StudentDashboard: Loading recordings or checking video');
     }
     return (
       <div className="flex justify-center items-center h-64">
         <div className="text-lg">Loading your dashboard...</div>
       </div>
+    );
+  }
+
+  // Show onboarding video if required
+  if (showOnboardingVideo && onboardingVideoUrl) {
+    return (
+      <OnboardingVideoModal
+        videoUrl={onboardingVideoUrl}
+        userId={user.id}
+        onComplete={() => {
+          setShowOnboardingVideo(false);
+          // Refresh the page to reload dashboard with updated status
+          window.location.reload();
+        }}
+      />
     );
   }
 

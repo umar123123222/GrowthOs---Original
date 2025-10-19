@@ -52,6 +52,7 @@ interface CompanySettingsData {
   // Student Sign-in & Questionnaire
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
+  onboarding_video_url?: string;
   // Branding
   branding?: {
     logo?: {
@@ -88,7 +89,8 @@ export function CompanySettings() {
     lms_url: ENV_CONFIG.DEFAULT_LMS_URL,
     // Student Sign-in & Questionnaire
     enable_student_signin: false,
-    questionnaire: []
+    questionnaire: [],
+    onboarding_video_url: ''
   });
 
   // State for editing questions
@@ -550,6 +552,39 @@ export function CompanySettings() {
                 </div>
               </>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Student Onboarding Video */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Student Onboarding Video
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="onboarding_video_url">Onboarding Video URL</Label>
+                <Input
+                  id="onboarding_video_url"
+                  type="url"
+                  value={settings.onboarding_video_url || ''}
+                  onChange={(e) => handleInputChange('onboarding_video_url', e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..."
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter the URL of a video (YouTube, Vimeo, or direct video link) that students must watch after completing the onboarding questionnaire. 
+                  The video will be non-skippable and students must watch it completely before accessing their dashboard.
+                </p>
+                {settings.onboarding_video_url && (
+                  <div className="mt-2 p-2 bg-muted rounded-md text-xs">
+                    <strong>Preview:</strong> {settings.onboarding_video_url}
+                  </div>
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
 

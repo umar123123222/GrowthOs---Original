@@ -177,6 +177,7 @@ export type Database = {
           lms_sequential_unlock: boolean | null
           lms_url: string | null
           maximum_installment_count: number
+          onboarding_video_url: string | null
           original_fee_amount: number
           payment_methods: Json | null
           primary_phone: string
@@ -203,6 +204,7 @@ export type Database = {
           lms_sequential_unlock?: boolean | null
           lms_url?: string | null
           maximum_installment_count?: number
+          onboarding_video_url?: string | null
           original_fee_amount?: number
           payment_methods?: Json | null
           primary_phone?: string
@@ -229,6 +231,7 @@ export type Database = {
           lms_sequential_unlock?: boolean | null
           lms_url?: string | null
           maximum_installment_count?: number
+          onboarding_video_url?: string | null
           original_fee_amount?: number
           payment_methods?: Json | null
           primary_phone?: string
@@ -1222,6 +1225,7 @@ export type Database = {
           installment_plan_id: string | null
           lms_username: string
           onboarding_completed: boolean | null
+          onboarding_video_watched: boolean | null
           student_id: string | null
           updated_at: string | null
           user_id: string | null
@@ -1237,6 +1241,7 @@ export type Database = {
           installment_plan_id?: string | null
           lms_username: string
           onboarding_completed?: boolean | null
+          onboarding_video_watched?: boolean | null
           student_id?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -1252,6 +1257,7 @@ export type Database = {
           installment_plan_id?: string | null
           lms_username?: string
           onboarding_completed?: boolean | null
+          onboarding_video_watched?: boolean | null
           student_id?: string | null
           updated_at?: string | null
           user_id?: string | null
