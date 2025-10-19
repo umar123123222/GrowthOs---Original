@@ -421,7 +421,7 @@ serve(async (req) => {
       
       const insightsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`);
       insightsUrl.searchParams.set('level', 'campaign');
-      insightsUrl.searchParams.set('fields', 'campaign_id,campaign_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach');
+      insightsUrl.searchParams.set('fields', 'campaign_id,campaign_name,campaign_status,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach');
       insightsUrl.searchParams.set('limit', '200');
       insightsUrl.searchParams.set('access_token', accessToken);
       Object.entries(dateParams).forEach(([k, v]) => insightsUrl.searchParams.set(k, v));
@@ -456,7 +456,7 @@ serve(async (req) => {
           metrics.campaigns.push({
             id: row.campaign_id,
             name: row.campaign_name || 'Unknown Campaign',
-            status: 'ARCHIVED/PAUSED',
+            status: row.campaign_status || 'ACTIVE',
             objective: 'UNKNOWN',
             spend,
             impressions,
@@ -546,7 +546,7 @@ serve(async (req) => {
       
       const adsInsightsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`);
       adsInsightsUrl.searchParams.set('level', 'ad');
-      adsInsightsUrl.searchParams.set('fields', 'ad_id,ad_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach,campaign_name,adset_name');
+      adsInsightsUrl.searchParams.set('fields', 'ad_id,ad_name,ad_status,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach,campaign_name,adset_name');
       adsInsightsUrl.searchParams.set('limit', '200');
       adsInsightsUrl.searchParams.set('access_token', accessToken);
       Object.entries(dateParams).forEach(([k, v]) => adsInsightsUrl.searchParams.set(k, v));
@@ -584,7 +584,7 @@ serve(async (req) => {
           metrics.ads.push({
             id: row.ad_id,
             name: row.ad_name || 'Unknown Ad',
-            status: 'ARCHIVED/PAUSED',
+            status: row.ad_status || 'ACTIVE',
             spend,
             impressions,
             clicks,
