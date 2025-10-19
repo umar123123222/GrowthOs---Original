@@ -426,8 +426,17 @@ serve(async (req) => {
       insightsUrl.searchParams.set('level', 'campaign');
       insightsUrl.searchParams.set('fields', 'campaign_id,campaign_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach,cpm,purchase_roas');
       insightsUrl.searchParams.set('limit', '200');
+      
+      // Explicitly set date parameters
+      if (dateFrom && dateTo) {
+        const fromDate = new Date(dateFrom).toISOString().split('T')[0];
+        const toDate = new Date(dateTo).toISOString().split('T')[0];
+        insightsUrl.searchParams.set('time_range', JSON.stringify({ since: fromDate, until: toDate }));
+      } else {
+        insightsUrl.searchParams.set('date_preset', datePreset);
+      }
+      
       insightsUrl.searchParams.set('access_token', accessToken);
-      Object.entries(dateParams).forEach(([k, v]) => insightsUrl.searchParams.set(k, v));
 
       const insightsResult = await fetchJson(insightsUrl.toString(), 'Campaign-level insights');
       
@@ -557,8 +566,17 @@ serve(async (req) => {
       adsInsightsUrl.searchParams.set('level', 'ad');
       adsInsightsUrl.searchParams.set('fields', 'ad_id,ad_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach,campaign_name,adset_name,cpm,purchase_roas');
       adsInsightsUrl.searchParams.set('limit', '200');
+      
+      // Explicitly set date parameters
+      if (dateFrom && dateTo) {
+        const fromDate = new Date(dateFrom).toISOString().split('T')[0];
+        const toDate = new Date(dateTo).toISOString().split('T')[0];
+        adsInsightsUrl.searchParams.set('time_range', JSON.stringify({ since: fromDate, until: toDate }));
+      } else {
+        adsInsightsUrl.searchParams.set('date_preset', datePreset);
+      }
+      
       adsInsightsUrl.searchParams.set('access_token', accessToken);
-      Object.entries(dateParams).forEach(([k, v]) => adsInsightsUrl.searchParams.set(k, v));
 
       const adsInsightsResult = await fetchJson(adsInsightsUrl.toString(), 'Ad-level insights');
       
