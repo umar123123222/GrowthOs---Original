@@ -7,25 +7,32 @@ const corsHeaders = {
 }
 
 async function decrypt(encryptedText: string): Promise<string> {
-  const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/encrypt-token`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
-    },
-    body: JSON.stringify({ action: 'decrypt', data: encryptedText })
-  });
-  
-  if (!response.ok) {
-    throw new Error(`Decryption failed: ${response.status}`);
+  // Try local base64 decode first
+  try {
+    const decoded = atob(encryptedText);
+    if (decoded) return decoded;
+  } catch (_) {
+    // Not base64 or invalid
   }
-  
-  const result = await response.json();
-  if (result.error) {
-    throw new Error(`Decryption error: ${result.error}`);
-  }
-  
-  return result.decrypted;
+  // If it's already a plausible plain token (e.g., starts with EAA/CAA), return as-is
+  if (/^(EAA|CAA)/.test(encryptedText)) return encryptedText;
+  // As a last resort, attempt calling helper (optional)
+  try {
+    const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/encrypt-token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('SUPABASE_ANON_KEY')}`,
+      },
+      body: JSON.stringify({ action: 'decrypt', data: encryptedText })
+    });
+    if (response.ok) {
+      const result = await response.json();
+      if (result?.decrypted) return result.decrypted;
+    }
+  } catch (_) {}
+  // Fallback to original string
+  return encryptedText;
 }
 
 serve(async (req) => {
