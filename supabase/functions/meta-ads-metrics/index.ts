@@ -389,8 +389,8 @@ serve(async (req) => {
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
         const reportedROAS = Array.isArray(insightData.purchase_roas) && insightData.purchase_roas.length > 0 ? parseFloat(insightData.purchase_roas[0]?.value || 0) : 0;
-        const roas = spend > 0 ? (conversionValue / spend) : 0;
-        const performance = categorizePerformance(ctr, cpc, roas, campaign.objective, spend);
+        const calculatedROAS = spend > 0 ? (conversionValue / spend) : 0;
+        const performance = categorizePerformance(ctr, cpc, reportedROAS || calculatedROAS, campaign.objective, spend);
 
         metrics.campaigns.push({
           id: campaign.id,
@@ -404,7 +404,8 @@ serve(async (req) => {
           conversionValue,
           ctr,
           cpc,
-          roas,
+          roas: reportedROAS || calculatedROAS,
+          calculatedROAS,
           reportedROAS,
           reach: parseInt(insightData.reach || 0),
           frequency: parseFloat(insightData.frequency || 0),
@@ -453,8 +454,8 @@ serve(async (req) => {
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
           const reportedROAS = Array.isArray(row.purchase_roas) && row.purchase_roas.length > 0 ? parseFloat(row.purchase_roas[0]?.value || 0) : 0;
-          const roas = spend > 0 ? (conversionValue / spend) : 0;
-          const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
+          const calculatedROAS = spend > 0 ? (conversionValue / spend) : 0;
+          const performance = categorizePerformance(ctr, cpc, reportedROAS || calculatedROAS, 'UNKNOWN', spend);
 
           metrics.campaigns.push({
             id: row.campaign_id,
@@ -468,7 +469,8 @@ serve(async (req) => {
             conversionValue,
             ctr,
             cpc,
-            roas,
+            roas: reportedROAS || calculatedROAS,
+            calculatedROAS,
             reportedROAS,
             reach: parseInt(row.reach || 0),
             frequency: parseFloat(row.frequency || 0),
@@ -523,8 +525,8 @@ serve(async (req) => {
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
         const reportedROAS = Array.isArray(insightData.purchase_roas) && insightData.purchase_roas.length > 0 ? parseFloat(insightData.purchase_roas[0]?.value || 0) : 0;
-        const roas = spend > 0 ? (conversionValue / spend) : 0;
-        const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
+        const calculatedROAS = spend > 0 ? (conversionValue / spend) : 0;
+        const performance = categorizePerformance(ctr, cpc, reportedROAS || calculatedROAS, 'UNKNOWN', spend);
 
         metrics.ads.push({
           id: ad.id,
@@ -537,7 +539,8 @@ serve(async (req) => {
           conversionValue,
           ctr,
           cpc,
-          roas,
+          roas: reportedROAS || calculatedROAS,
+          calculatedROAS,
           reportedROAS,
           reach: parseInt(insightData.reach || 0),
           frequency: parseFloat(insightData.frequency || 0),

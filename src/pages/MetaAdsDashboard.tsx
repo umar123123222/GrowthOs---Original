@@ -704,9 +704,16 @@ const MetaAdsDashboard: React.FC = () => {
                             <TrendingUp className="h-3 w-3 mr-1" style={{
                           color: 'hsl(var(--success))'
                         }} />
-                            ROAS
+                            ROAS (Meta)
                           </p>
                            <p className="font-bold text-lg text-foreground break-words overflow-hidden">{campaign.roas ? `${(campaign.roas).toFixed(2)}x` : '—'}</p>
+                        </div>
+                        <div className="bg-gradient-to-br from-purple-500/5 to-purple-500/10 rounded-lg p-4 border border-purple-500/10">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
+                            <Activity className="h-3 w-3 mr-1 text-purple-500" />
+                            ROAS (Calc)
+                          </p>
+                          <p className="font-bold text-lg text-foreground break-words overflow-hidden">{campaign.calculatedROAS ? `${campaign.calculatedROAS.toFixed(2)}x` : '—'}</p>
                         </div>
                         <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 border border-warning/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
