@@ -336,7 +336,7 @@ serve(async (req) => {
       return 'poor';
     };
 
-    const INSIGHTS_FIELDS = 'spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach';
+    const INSIGHTS_FIELDS = 'spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach,cpm,purchase_roas';
     let dateParams: { [key: string]: string } = {};
     let datePreset = 'last_7d';
     
@@ -388,6 +388,7 @@ serve(async (req) => {
           .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
+        const reportedROAS = Array.isArray(insightData.purchase_roas) && insightData.purchase_roas.length > 0 ? parseFloat(insightData.purchase_roas[0]?.value || 0) : 0;
         const roas = spend > 0 ? (conversionValue / spend) : 0;
         const performance = categorizePerformance(ctr, cpc, roas, campaign.objective, spend);
 
@@ -404,6 +405,7 @@ serve(async (req) => {
           ctr,
           cpc,
           roas,
+          reportedROAS,
           reach: parseInt(insightData.reach || 0),
           frequency: parseFloat(insightData.frequency || 0),
           performance
@@ -421,7 +423,7 @@ serve(async (req) => {
       
       const insightsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`);
       insightsUrl.searchParams.set('level', 'campaign');
-      insightsUrl.searchParams.set('fields', 'campaign_id,campaign_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach');
+      insightsUrl.searchParams.set('fields', 'campaign_id,campaign_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach,cpm,purchase_roas');
       insightsUrl.searchParams.set('limit', '200');
       insightsUrl.searchParams.set('access_token', accessToken);
       Object.entries(dateParams).forEach(([k, v]) => insightsUrl.searchParams.set(k, v));
@@ -450,6 +452,7 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
+          const reportedROAS = Array.isArray(row.purchase_roas) && row.purchase_roas.length > 0 ? parseFloat(row.purchase_roas[0]?.value || 0) : 0;
           const roas = spend > 0 ? (conversionValue / spend) : 0;
           const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
@@ -466,6 +469,7 @@ serve(async (req) => {
             ctr,
             cpc,
             roas,
+            reportedROAS,
             reach: parseInt(row.reach || 0),
             frequency: parseFloat(row.frequency || 0),
             performance
@@ -518,6 +522,7 @@ serve(async (req) => {
           .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
+        const reportedROAS = Array.isArray(insightData.purchase_roas) && insightData.purchase_roas.length > 0 ? parseFloat(insightData.purchase_roas[0]?.value || 0) : 0;
         const roas = spend > 0 ? (conversionValue / spend) : 0;
         const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
@@ -533,6 +538,7 @@ serve(async (req) => {
           ctr,
           cpc,
           roas,
+          reportedROAS,
           reach: parseInt(insightData.reach || 0),
           frequency: parseFloat(insightData.frequency || 0),
           performance,
@@ -546,7 +552,7 @@ serve(async (req) => {
       
       const adsInsightsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`);
       adsInsightsUrl.searchParams.set('level', 'ad');
-      adsInsightsUrl.searchParams.set('fields', 'ad_id,ad_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach,campaign_name,adset_name');
+      adsInsightsUrl.searchParams.set('fields', 'ad_id,ad_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach,campaign_name,adset_name,cpm,purchase_roas');
       adsInsightsUrl.searchParams.set('limit', '200');
       adsInsightsUrl.searchParams.set('access_token', accessToken);
       Object.entries(dateParams).forEach(([k, v]) => adsInsightsUrl.searchParams.set(k, v));
