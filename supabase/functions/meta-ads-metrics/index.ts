@@ -293,11 +293,10 @@ serve(async (req) => {
         case 'CONVERSIONS':
         case 'PURCHASE':
         case 'CATALOG_SALES':
-          // ROAS thresholds for ratio (not percentage)
-          if (roas >= 4) primaryScore = 100;
-          else if (roas >= 2.5) primaryScore = 80;
-          else if (roas >= 1.5) primaryScore = 60;
-          else if (roas >= 1.0) primaryScore = 40;
+          if (roas >= 400) primaryScore = 100;
+          else if (roas >= 250) primaryScore = 80;
+          else if (roas >= 150) primaryScore = 60;
+          else if (roas >= 100) primaryScore = 40;
           else primaryScore = 20;
           
           if (ctr >= 1.5) secondaryScore = 20;
@@ -324,8 +323,7 @@ serve(async (req) => {
         default:
           const ctrScore = ctr >= 2.0 ? 50 : ctr >= 1.5 ? 40 : ctr >= 1.0 ? 30 : 20;
           const cpcScore = cpc <= 1.0 ? 30 : cpc <= 2.0 ? 25 : cpc <= 3.0 ? 20 : 10;
-          // ROAS as ratio for default scoring
-          const roasScore = roas >= 2 ? 20 : roas >= 1 ? 15 : roas >= 0.5 ? 10 : 5;
+          const roasScore = roas >= 200 ? 20 : roas >= 100 ? 15 : roas >= 50 ? 10 : 5;
           primaryScore = ctrScore + cpcScore;
           secondaryScore = roasScore;
       }
@@ -358,7 +356,7 @@ serve(async (req) => {
     // Fetch campaigns with all statuses
     const campaignsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`);
     campaignsUrl.searchParams.set('fields', `id,name,status,objective,effective_status,daily_budget,lifetime_budget,insights.date_preset(${datePreset}){${INSIGHTS_FIELDS}}`);
-    campaignsUrl.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED"]');
+    campaignsUrl.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED","DELETED"]');
     campaignsUrl.searchParams.set('limit', '200');
     campaignsUrl.searchParams.set('access_token', accessToken);
     Object.entries(dateParams).forEach(([k, v]) => campaignsUrl.searchParams.set(k, v));
@@ -390,7 +388,7 @@ serve(async (req) => {
           .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
-        const roas = spend > 0 ? (conversionValue / spend) : 0;
+        const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
         const performance = categorizePerformance(ctr, cpc, roas, campaign.objective, spend);
 
         metrics.campaigns.push({
@@ -452,13 +450,13 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
-          const roas = spend > 0 ? (conversionValue / spend) : 0;
+          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
           const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
           metrics.campaigns.push({
             id: row.campaign_id,
             name: row.campaign_name || 'Unknown Campaign',
-            status: 'UNKNOWN',
+            status: 'ARCHIVED/PAUSED',
             objective: 'UNKNOWN',
             spend,
             impressions,
@@ -479,52 +477,13 @@ serve(async (req) => {
           metrics.totalConversions += conversions;
           metrics.totalConversionValue += conversionValue;
         }
-        
-        // Rehydrate campaign statuses to ensure accuracy
-        if (metrics.campaigns.length > 0) {
-          try {
-            const campaignIds = metrics.campaigns.map(c => c.id);
-            const chunkSize = 50;
-            let updatedCount = 0;
-            
-            for (let i = 0; i < campaignIds.length; i += chunkSize) {
-              const chunk = campaignIds.slice(i, i + chunkSize);
-              const batchUrl = new URL('https://graph.facebook.com/v19.0');
-              batchUrl.searchParams.set('ids', chunk.join(','));
-              batchUrl.searchParams.set('fields', 'effective_status,status,objective');
-              batchUrl.searchParams.set('access_token', accessToken);
-              
-              const batchResult = await fetchJson(batchUrl.toString(), 'Campaign status rehydration');
-              
-              if (batchResult.ok && batchResult.data) {
-                for (const [campaignId, campaignData] of Object.entries(batchResult.data)) {
-                  const campaign = metrics.campaigns.find(c => c.id === campaignId);
-                  if (campaign && (campaignData as any).effective_status) {
-                    campaign.status = (campaignData as any).effective_status || (campaignData as any).status;
-                    if ((campaignData as any).objective) {
-                      campaign.objective = (campaignData as any).objective;
-                    }
-                    updatedCount++;
-                  }
-                }
-              }
-            }
-            
-            if (updatedCount > 0) {
-              console.log(`✓ Status rehydration: updated ${updatedCount} campaigns`);
-            }
-          } catch (rehydrationError) {
-            console.warn('⚠️ Status rehydration failed:', rehydrationError);
-            warnings.push('Could not rehydrate campaign statuses');
-          }
-        }
       }
     }
 
     // Fetch ads with all statuses
     const adsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/ads`);
     adsUrl.searchParams.set('fields', `id,name,status,effective_status,adset_id,campaign_id,insights.date_preset(${datePreset}){${INSIGHTS_FIELDS}}`);
-    adsUrl.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED"]');
+    adsUrl.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED","DELETED"]');
     adsUrl.searchParams.set('limit', '200');
     adsUrl.searchParams.set('access_token', accessToken);
     Object.entries(dateParams).forEach(([k, v]) => adsUrl.searchParams.set(k, v));
@@ -559,7 +518,7 @@ serve(async (req) => {
           .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
-        const roas = spend > 0 ? (conversionValue / spend) : 0;
+        const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
         const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
         metrics.ads.push({
@@ -619,13 +578,13 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
-          const roas = spend > 0 ? (conversionValue / spend) : 0;
+          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
           const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
           metrics.ads.push({
             id: row.ad_id,
             name: row.ad_name || 'Unknown Ad',
-            status: 'UNKNOWN',
+            status: 'ARCHIVED/PAUSED',
             spend,
             impressions,
             clicks,
@@ -675,7 +634,7 @@ serve(async (req) => {
       // Retry with last_30d
       const campaignsUrl30 = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`);
       campaignsUrl30.searchParams.set('fields', `id,name,status,objective,effective_status,daily_budget,lifetime_budget,insights.date_preset(last_30d){${INSIGHTS_FIELDS}}`);
-      campaignsUrl30.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED"]');
+      campaignsUrl30.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED","DELETED"]');
       campaignsUrl30.searchParams.set('limit', '200');
       campaignsUrl30.searchParams.set('access_token', accessToken);
       campaignsUrl30.searchParams.set('date_preset', 'last_30d');
@@ -705,7 +664,7 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
-          const roas = spend > 0 ? (conversionValue / spend) : 0;
+          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
           const performance = categorizePerformance(ctr, cpc, roas, campaign.objective, spend);
 
           metrics.campaigns.push({
@@ -743,7 +702,7 @@ serve(async (req) => {
       metrics.averageCPC = metrics.totalSpend / metrics.totalClicks;
     }
     if (metrics.totalSpend > 0 && metrics.totalConversionValue > 0) {
-      metrics.averageROAS = (metrics.totalConversionValue / metrics.totalSpend);
+      metrics.averageROAS = (metrics.totalConversionValue / metrics.totalSpend) * 100;
     }
 
     console.log(`✓ Final result: ${metrics.campaigns.length} campaigns, ${metrics.ads.length} ads`);
