@@ -388,8 +388,20 @@ serve(async (req) => {
           .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
-        const reportedROAS = Array.isArray(insightData.purchase_roas) && insightData.purchase_roas.length > 0 ? parseFloat(insightData.purchase_roas[0]?.value || 0) : 0;
+        // Handle multiple possible formats for purchase_roas
+        let reportedROAS = 0;
+        if (Array.isArray(insightData.purchase_roas) && insightData.purchase_roas.length > 0) {
+          reportedROAS = parseFloat(insightData.purchase_roas[0]?.value || 0);
+        } else if (typeof insightData.purchase_roas === 'object' && insightData.purchase_roas !== null) {
+          reportedROAS = parseFloat(insightData.purchase_roas.value || 0);
+        } else if (typeof insightData.purchase_roas === 'string' || typeof insightData.purchase_roas === 'number') {
+          reportedROAS = parseFloat(insightData.purchase_roas);
+        }
+        console.log(`📊 Campaign ${campaign.name}: purchase_roas raw:`, JSON.stringify(insightData.purchase_roas), `parsed: ${reportedROAS}`);
+        
         const calculatedROAS = spend > 0 ? (conversionValue / spend) : 0;
+        console.log(`📊 Campaign ${campaign.name}: calculatedROAS: ${calculatedROAS}, using: ${reportedROAS || calculatedROAS}`);
+        
         const performance = categorizePerformance(ctr, cpc, reportedROAS || calculatedROAS, campaign.objective, spend);
 
         metrics.campaigns.push({
@@ -462,8 +474,20 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
-          const reportedROAS = Array.isArray(row.purchase_roas) && row.purchase_roas.length > 0 ? parseFloat(row.purchase_roas[0]?.value || 0) : 0;
+          // Handle multiple possible formats for purchase_roas
+          let reportedROAS = 0;
+          if (Array.isArray(row.purchase_roas) && row.purchase_roas.length > 0) {
+            reportedROAS = parseFloat(row.purchase_roas[0]?.value || 0);
+          } else if (typeof row.purchase_roas === 'object' && row.purchase_roas !== null) {
+            reportedROAS = parseFloat(row.purchase_roas.value || 0);
+          } else if (typeof row.purchase_roas === 'string' || typeof row.purchase_roas === 'number') {
+            reportedROAS = parseFloat(row.purchase_roas);
+          }
+          console.log(`📊 Insights Campaign ${row.campaign_name}: purchase_roas raw:`, JSON.stringify(row.purchase_roas), `parsed: ${reportedROAS}`);
+          
           const calculatedROAS = spend > 0 ? (conversionValue / spend) : 0;
+          console.log(`📊 Insights Campaign ${row.campaign_name}: calculatedROAS: ${calculatedROAS}, using: ${reportedROAS || calculatedROAS}`);
+          
           const performance = categorizePerformance(ctr, cpc, reportedROAS || calculatedROAS, 'UNKNOWN', spend);
 
           metrics.campaigns.push({
@@ -533,8 +557,20 @@ serve(async (req) => {
           .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
-        const reportedROAS = Array.isArray(insightData.purchase_roas) && insightData.purchase_roas.length > 0 ? parseFloat(insightData.purchase_roas[0]?.value || 0) : 0;
+        // Handle multiple possible formats for purchase_roas
+        let reportedROAS = 0;
+        if (Array.isArray(insightData.purchase_roas) && insightData.purchase_roas.length > 0) {
+          reportedROAS = parseFloat(insightData.purchase_roas[0]?.value || 0);
+        } else if (typeof insightData.purchase_roas === 'object' && insightData.purchase_roas !== null) {
+          reportedROAS = parseFloat(insightData.purchase_roas.value || 0);
+        } else if (typeof insightData.purchase_roas === 'string' || typeof insightData.purchase_roas === 'number') {
+          reportedROAS = parseFloat(insightData.purchase_roas);
+        }
+        console.log(`📊 Ad ${insightData.ad_name || ad.name}: purchase_roas raw:`, JSON.stringify(insightData.purchase_roas), `parsed: ${reportedROAS}`);
+        
         const calculatedROAS = spend > 0 ? (conversionValue / spend) : 0;
+        console.log(`📊 Ad ${insightData.ad_name || ad.name}: calculatedROAS: ${calculatedROAS}, using: ${reportedROAS || calculatedROAS}`);
+        
         const performance = categorizePerformance(ctr, cpc, reportedROAS || calculatedROAS, 'UNKNOWN', spend);
 
         metrics.ads.push({
