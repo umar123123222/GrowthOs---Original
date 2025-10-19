@@ -159,7 +159,19 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
                 className="w-full h-full"
                 controls
                 autoPlay
+                muted={false}
+                playsInline
                 onEnded={handleVideoEnd}
+                onError={(e) => {
+                  console.error('Video error:', e);
+                  toast({
+                    variant: "destructive",
+                    title: "Video Error",
+                    description: "Unable to load the video. Please contact support.",
+                  });
+                }}
+                onLoadStart={() => console.log('Video loading started')}
+                onCanPlay={() => console.log('Video can play')}
               >
                 Your browser does not support the video tag.
               </video>
