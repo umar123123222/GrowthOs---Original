@@ -35,18 +35,23 @@ interface MetaData {
   warnings?: string[];
   error?: string;
 }
-
 interface DateRange {
   from: Date | undefined;
   to: Date | undefined;
 }
-
 const MetaAdsDashboard: React.FC = () => {
-  const { toast } = useToast();
-  const { user } = useAuth();
+  const {
+    toast
+  } = useToast();
+  const {
+    user
+  } = useAuth();
   const navigate = useNavigate();
-  const { error, handleError, clearError } = useErrorHandler();
-  
+  const {
+    error,
+    handleError,
+    clearError
+  } = useErrorHandler();
   const [loading, setLoading] = useState<boolean>(true);
   const [metaData, setMetaData] = useState<MetaData>({
     campaigns: [],
@@ -89,10 +94,9 @@ const MetaAdsDashboard: React.FC = () => {
   const fetchMetaAdsData = useCallback(async (customDateRange: DateRange | null = null): Promise<void> => {
     setLoading(true);
     clearError();
-    
     try {
       const requestBody: Record<string, any> = {};
-      
+
       // Add date range if specified
       if (customDateRange?.from) {
         requestBody.dateFrom = customDateRange.from.toISOString();
@@ -100,20 +104,23 @@ const MetaAdsDashboard: React.FC = () => {
       if (customDateRange?.to) {
         requestBody.dateTo = customDateRange.to.toISOString();
       }
-
-      const { data, error } = await supabase.functions.invoke('meta-ads-metrics', {
+      const {
+        data,
+        error
+      } = await supabase.functions.invoke('meta-ads-metrics', {
         body: requestBody
       });
-      
       if (error) throw error;
-      
       if (!data?.connected) {
         setConnectionStatus(data?.error ? 'error' : 'disconnected');
-        setMetaData(prev => ({ ...prev, error: data?.error, warnings: data?.warnings }));
+        setMetaData(prev => ({
+          ...prev,
+          error: data?.error,
+          warnings: data?.warnings
+        }));
         setLoading(false);
         return;
       }
-      
       const m = data.metrics || {};
       setMetaData({
         campaigns: m.campaigns || [],
@@ -194,42 +201,31 @@ const MetaAdsDashboard: React.FC = () => {
    */
   const getCampaignStatusBadge = useCallback((status: string): JSX.Element => {
     const normalizedStatus = (status || '').toUpperCase();
-    
     if (['ACTIVE', 'IN_PROCESS', 'WITH_ISSUES'].includes(normalizedStatus)) {
-      return (
-        <Badge className="bg-success/10 text-success border-success/20 px-3 py-1 flex items-center gap-1">
+      return <Badge className="bg-success/10 text-success border-success/20 px-3 py-1 flex items-center gap-1">
           <Play className="h-3 w-3" />
           {status}
-        </Badge>
-      );
+        </Badge>;
     }
-    
     if (['PAUSED'].includes(normalizedStatus)) {
-      return (
-        <Badge className="bg-warning/10 text-warning border-warning/20 px-3 py-1 flex items-center gap-1">
+      return <Badge className="bg-warning/10 text-warning border-warning/20 px-3 py-1 flex items-center gap-1">
           <Pause className="h-3 w-3" />
           {status}
-        </Badge>
-      );
+        </Badge>;
     }
-    
+
     // ARCHIVED, DELETED, or other inactive statuses
-    return (
-      <Badge className="bg-muted text-muted-foreground border-muted-foreground/20 px-3 py-1 flex items-center gap-1">
+    return <Badge className="bg-muted text-muted-foreground border-muted-foreground/20 px-3 py-1 flex items-center gap-1">
         <Ban className="h-3 w-3" />
         {status || 'Unknown'}
-      </Badge>
-    );
+      </Badge>;
   }, []);
 
   /**
    * Categorizes campaigns by effective_status
    */
   const categorizedCampaigns = useMemo(() => {
-    const campaignsWithActivity = metaData.campaigns.filter(campaign =>
-      (campaign.spend || 0) > 0 || (campaign.impressions || 0) > 0 || (campaign.clicks || 0) > 0 || (campaign.conversions || 0) > 0
-    );
-
+    const campaignsWithActivity = metaData.campaigns.filter(campaign => (campaign.spend || 0) > 0 || (campaign.impressions || 0) > 0 || (campaign.clicks || 0) > 0 || (campaign.conversions || 0) > 0);
     return {
       all: campaignsWithActivity,
       active: campaignsWithActivity.filter(c => {
@@ -242,8 +238,7 @@ const MetaAdsDashboard: React.FC = () => {
       }),
       inactive: campaignsWithActivity.filter(c => {
         const status = (c.effective_status || c.status || '').toUpperCase();
-        return ['ARCHIVED', 'DELETED', 'CAMPAIGN_PAUSED', 'ADSET_PAUSED'].includes(status) || 
-               (!['ACTIVE', 'IN_PROCESS', 'WITH_ISSUES', 'PAUSED'].includes(status) && status !== '');
+        return ['ARCHIVED', 'DELETED', 'CAMPAIGN_PAUSED', 'ADSET_PAUSED'].includes(status) || !['ACTIVE', 'IN_PROCESS', 'WITH_ISSUES', 'PAUSED'].includes(status) && status !== '';
       })
     };
   }, [metaData.campaigns]);
@@ -296,13 +291,9 @@ const MetaAdsDashboard: React.FC = () => {
         <Card className="text-center p-12 shadow-elevated">
           <div className="relative mb-8">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-warning/10 rounded-full blur-2xl"></div>
-            {connectionStatus === 'error' ? (
-              <AlertCircle className="h-20 w-20 mx-auto relative z-10 text-destructive" />
-            ) : (
-              <Target className="h-20 w-20 mx-auto relative z-10" style={{
-                color: 'hsl(var(--primary))'
-              }} />
-            )}
+            {connectionStatus === 'error' ? <AlertCircle className="h-20 w-20 mx-auto relative z-10 text-destructive" /> : <Target className="h-20 w-20 mx-auto relative z-10" style={{
+            color: 'hsl(var(--primary))'
+          }} />}
           </div>
           <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-success bg-clip-text text-transparent">
             {connectionStatus === 'error' ? 'Connection Issue' : 'Connect Your Meta Ads Account'}
@@ -310,16 +301,12 @@ const MetaAdsDashboard: React.FC = () => {
           <p className="text-muted-foreground mb-8 max-w-md mx-auto text-lg">
             {metaData.error || 'Unlock powerful insights and analytics for your advertising campaigns.'}
           </p>
-          {metaData.warnings && metaData.warnings.length > 0 && (
-            <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg text-left max-w-md mx-auto">
+          {metaData.warnings && metaData.warnings.length > 0 && <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg text-left max-w-md mx-auto">
               <p className="text-sm text-warning font-medium mb-2">Additional Details:</p>
               <ul className="text-sm text-muted-foreground space-y-1">
-                {metaData.warnings.map((warning, idx) => (
-                  <li key={idx}>• {warning}</li>
-                ))}
+                {metaData.warnings.map((warning, idx) => <li key={idx}>• {warning}</li>)}
               </ul>
-            </div>
-          )}
+            </div>}
           <Button onClick={() => navigate('/connect')} size="lg" className="gradient-primary hover-lift shadow-medium px-8 py-3">
             <ExternalLink className="h-5 w-5 mr-2" />
             Manage Connection
@@ -327,52 +314,34 @@ const MetaAdsDashboard: React.FC = () => {
         </Card>
       </div>;
   }
-  return (
-    <SafeErrorBoundary>
+  return <SafeErrorBoundary>
       <TooltipProvider>
         <div className="max-w-7xl mx-auto space-y-6">
-          {error && (
-            <ErrorMessage 
-              error={error} 
-              onDismiss={clearError}
-              className="mb-4"
-            />
-          )}
+          {error && <ErrorMessage error={error} onDismiss={clearError} className="mb-4" />}
           
           {/* Warnings from backend */}
-          {metaData.warnings && metaData.warnings.length > 0 && (
-            <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-4 animate-fade-in">
+          {metaData.warnings && metaData.warnings.length > 0 && <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-4 animate-fade-in">
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-3">
                   <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
                   <div>
                     <p className="font-medium text-warning mb-2">Data Fetching Notes:</p>
                     <ul className="text-sm text-muted-foreground space-y-1">
-                      {metaData.warnings.map((warning, idx) => (
-                        <li key={idx}>• {warning}</li>
-                      ))}
+                      {metaData.warnings.map((warning, idx) => <li key={idx}>• {warning}</li>)}
                     </ul>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setMetaData(prev => ({ ...prev, warnings: [] }))}
-                  className="text-muted-foreground hover:text-foreground"
-                >
+                <Button variant="ghost" size="sm" onClick={() => setMetaData(prev => ({
+              ...prev,
+              warnings: []
+            }))} className="text-muted-foreground hover:text-foreground">
                   Dismiss
                 </Button>
               </div>
-            </div>
-          )}
+            </div>}
           
           {/* Zero data helper */}
-          {connectionStatus === 'connected' && 
-           metaData.totalSpend === 0 && 
-           metaData.totalImpressions === 0 && 
-           metaData.campaigns.length === 0 && 
-           !dateRange.from && (
-            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4 animate-fade-in">
+          {connectionStatus === 'connected' && metaData.totalSpend === 0 && metaData.totalImpressions === 0 && metaData.campaigns.length === 0 && !dateRange.from && <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4 animate-fade-in">
               <div className="flex items-start space-x-3">
                 <Sparkles className="h-5 w-5 text-primary mt-0.5" />
                 <div className="flex-1">
@@ -380,26 +349,29 @@ const MetaAdsDashboard: React.FC = () => {
                   <p className="text-sm text-muted-foreground mb-3">
                     Try viewing data from the last 30 days to see historical campaigns and ads.
                   </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const to = new Date();
-                      const from = new Date();
-                      from.setDate(from.getDate() - 30);
-                      setDateRange({ from, to });
-                      setPendingDateRange({ from, to });
-                      fetchMetaAdsData({ from, to });
-                    }}
-                    className="text-primary border-primary/30 hover:bg-primary/10"
-                  >
+                  <Button variant="outline" size="sm" onClick={() => {
+                const to = new Date();
+                const from = new Date();
+                from.setDate(from.getDate() - 30);
+                setDateRange({
+                  from,
+                  to
+                });
+                setPendingDateRange({
+                  from,
+                  to
+                });
+                fetchMetaAdsData({
+                  from,
+                  to
+                });
+              }} className="text-primary border-primary/30 hover:bg-primary/10">
                     <CalendarIcon className="h-4 w-4 mr-2" />
                     Try Last 30 Days
                   </Button>
                 </div>
               </div>
-            </div>
-          )}
+            </div>}
         
         {/* Header */}
         <div className="flex items-center justify-between mb-8 animate-slide-up">
@@ -409,8 +381,8 @@ const MetaAdsDashboard: React.FC = () => {
             </h1>
             <p className="text-muted-foreground text-lg mt-2 flex items-center">
               <Activity className="h-5 w-5 mr-2" style={{
-              color: 'hsl(var(--primary))'
-            }} />
+                color: 'hsl(var(--primary))'
+              }} />
               Real-time campaign performance and advertising analytics
             </p>
           </div>
@@ -425,63 +397,42 @@ const MetaAdsDashboard: React.FC = () => {
             <div className="flex items-center space-x-3">
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="hover-lift shadow-soft flex items-center space-x-2"
-                  >
+                  <Button variant="outline" size="sm" className="hover-lift shadow-soft flex items-center space-x-2">
                     <CalendarIcon className="h-4 w-4" />
                     <span>
-                      {dateRange.from && dateRange.to
-                        ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}`
-                        : 'Select date range'}
+                      {dateRange.from && dateRange.to ? `${format(dateRange.from, 'MMM dd')} - ${format(dateRange.to, 'MMM dd')}` : 'Select date range'}
                     </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="range"
-                    defaultMonth={pendingDateRange.from || dateRange.from}
-                    selected={pendingDateRange}
-                    onSelect={(range) => {
-                      setPendingDateRange({
-                        from: range?.from,
-                        to: range?.to
-                      });
-                      setHasDateChanges(true);
-                    }}
-                    numberOfMonths={2}
-                    className="p-3 pointer-events-auto"
-                  />
+                  <Calendar mode="range" defaultMonth={pendingDateRange.from || dateRange.from} selected={pendingDateRange} onSelect={range => {
+                    setPendingDateRange({
+                      from: range?.from,
+                      to: range?.to
+                    });
+                    setHasDateChanges(true);
+                  }} numberOfMonths={2} className="p-3 pointer-events-auto" />
                 </PopoverContent>
               </Popover>
               
-              {hasDateChanges && (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={updateDateRange}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
-                >
+              {hasDateChanges && <Button variant="default" size="sm" onClick={updateDateRange} className="bg-primary text-primary-foreground hover:bg-primary/90">
                   Update
-                </Button>
-              )}
+                </Button>}
               
-              {(dateRange.from || dateRange.to) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setDateRange({ from: undefined, to: undefined });
-                    setPendingDateRange({ from: undefined, to: undefined });
-                    setHasDateChanges(false);
-                    fetchMetaAdsData();
-                  }}
-                  className="text-muted-foreground hover:text-foreground"
-                >
+              {(dateRange.from || dateRange.to) && <Button variant="ghost" size="sm" onClick={() => {
+                setDateRange({
+                  from: undefined,
+                  to: undefined
+                });
+                setPendingDateRange({
+                  from: undefined,
+                  to: undefined
+                });
+                setHasDateChanges(false);
+                fetchMetaAdsData();
+              }} className="text-muted-foreground hover:text-foreground">
                   Clear
-                </Button>
-              )}
+                </Button>}
             </div>
             
             <Button onClick={() => fetchMetaAdsData(dateRange.from ? dateRange : null)} variant="outline" size="sm" className="hover-lift shadow-soft">
@@ -498,8 +449,8 @@ const MetaAdsDashboard: React.FC = () => {
               <CardTitle className="text-sm font-medium text-foreground">Total Spend</CardTitle>
               <div className="p-2 rounded-lg bg-primary/10">
                 <DollarSign className="h-5 w-5 metric-icon" style={{
-                color: 'hsl(var(--primary))'
-              }} />
+                  color: 'hsl(var(--primary))'
+                }} />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
@@ -508,10 +459,7 @@ const MetaAdsDashboard: React.FC = () => {
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-primary rounded-full mr-2"></span>
-                {dateRange.from && dateRange.to 
-                  ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days selected`
-                  : 'Last 7 days'
-                } • {metaData.campaigns?.length || 0} campaigns
+                {dateRange.from && dateRange.to ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days selected` : 'Last 7 days'} • {metaData.campaigns?.length || 0} campaigns
               </p>
             </CardContent>
           </Card>
@@ -521,8 +469,8 @@ const MetaAdsDashboard: React.FC = () => {
               <CardTitle className="text-sm font-medium text-foreground">Impressions</CardTitle>
               <div className="p-2 rounded-lg bg-success/10">
                 <Eye className="h-5 w-5 metric-icon" style={{
-                color: 'hsl(var(--success))'
-              }} />
+                  color: 'hsl(var(--success))'
+                }} />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
@@ -531,9 +479,7 @@ const MetaAdsDashboard: React.FC = () => {
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-success rounded-full mr-2"></span>
-                {(metaData.averageCTR || 0).toFixed(2)}% CTR • {formatNumber(metaData.totalClicks || 0)} clicks • {dateRange.from && dateRange.to 
-                  ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days`
-                  : '7 days'}
+                {(metaData.averageCTR || 0).toFixed(2)}% CTR • {formatNumber(metaData.totalClicks || 0)} clicks • {dateRange.from && dateRange.to ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days` : '7 days'}
               </p>
             </CardContent>
           </Card>
@@ -543,8 +489,8 @@ const MetaAdsDashboard: React.FC = () => {
               <CardTitle className="text-sm font-medium text-foreground">Conversions</CardTitle>
               <div className="p-2 rounded-lg bg-warning/10">
                 <TrendingUp className="h-5 w-5 metric-icon" style={{
-                color: 'hsl(var(--warning))'
-              }} />
+                  color: 'hsl(var(--warning))'
+                }} />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
@@ -553,9 +499,7 @@ const MetaAdsDashboard: React.FC = () => {
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 bg-warning rounded-full mr-2"></span>
-                {formatCurrency(metaData.averageCPC || 0)} avg CPC • {dateRange.from && dateRange.to 
-                  ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days period`
-                  : '7 days'} • {(metaData.totalClicks || 0) > 0 ? ((metaData.totalConversions || 0) / (metaData.totalClicks || 0) * 100).toFixed(2) + '% conv rate' : '0% conv rate'}
+                {formatCurrency(metaData.averageCPC || 0)} avg CPC • {dateRange.from && dateRange.to ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days period` : '7 days'} • {(metaData.totalClicks || 0) > 0 ? ((metaData.totalConversions || 0) / (metaData.totalClicks || 0) * 100).toFixed(2) + '% conv rate' : '0% conv rate'}
               </p>
             </CardContent>
           </Card>
@@ -564,11 +508,11 @@ const MetaAdsDashboard: React.FC = () => {
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
               <CardTitle className="text-sm font-medium text-foreground">ROAS</CardTitle>
               <div className="p-2 rounded-lg" style={{
-              backgroundColor: 'hsl(330 81% 60% / 0.1)'
-            }}>
+                backgroundColor: 'hsl(330 81% 60% / 0.1)'
+              }}>
                 <MousePointer className="h-5 w-5 metric-icon" style={{
-                color: 'hsl(330 81% 60%)'
-              }} />
+                  color: 'hsl(330 81% 60%)'
+                }} />
               </div>
             </CardHeader>
             <CardContent className="relative z-10">
@@ -577,11 +521,9 @@ const MetaAdsDashboard: React.FC = () => {
               </div>
               <p className="text-xs text-muted-foreground flex items-center">
                 <span className="inline-block w-2 h-2 rounded-full mr-2" style={{
-                backgroundColor: 'hsl(330 81% 60%)'
-              }}></span>
-                {formatCurrency(metaData.totalConversionValue || 0)} revenue • {dateRange.from && dateRange.to 
-                  ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days period`
-                  : '7 days'} • {formatCurrency(metaData.totalSpend || 0)} spent
+                  backgroundColor: 'hsl(330 81% 60%)'
+                }}></span>
+                {formatCurrency(metaData.totalConversionValue || 0)} revenue • {dateRange.from && dateRange.to ? `${Math.ceil((dateRange.to.getTime() - dateRange.from.getTime()) / (1000 * 60 * 60 * 24))} days period` : '7 days'} • {formatCurrency(metaData.totalSpend || 0)} spent
               </p>
             </CardContent>
           </Card>
@@ -599,7 +541,7 @@ const MetaAdsDashboard: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="py-[15px]">
-            <Tabs value={campaignStatusFilter} onValueChange={(v) => {
+            <Tabs value={campaignStatusFilter} onValueChange={v => {
               setCampaignStatusFilter(v as typeof campaignStatusFilter);
               setCampaignCurrentPage(1);
             }} className="w-full">
@@ -633,45 +575,39 @@ const MetaAdsDashboard: React.FC = () => {
                 </TabsTrigger>
               </TabsList>
 
-              {['all', 'active', 'paused', 'inactive'].map((filterType) => (
-                <TabsContent key={filterType} value={filterType} className="space-y-4">
+              {['all', 'active', 'paused', 'inactive'].map(filterType => <TabsContent key={filterType} value={filterType} className="space-y-4">
                   {(() => {
-                    const filteredCampaigns = categorizedCampaigns[filterType as keyof typeof categorizedCampaigns];
-                    
-                    if (filteredCampaigns.length === 0) {
-                      return <div className="text-center py-12">
+                  const filteredCampaigns = categorizedCampaigns[filterType as keyof typeof categorizedCampaigns];
+                  if (filteredCampaigns.length === 0) {
+                    return <div className="text-center py-12">
                         <Target className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                         <h3 className="text-lg font-medium mb-2">
                           No {filterType === 'all' ? '' : filterType.charAt(0).toUpperCase() + filterType.slice(1)} Campaigns Found
                         </h3>
                         <p className="text-muted-foreground mb-4">
-                          {categorizedCampaigns.all.length === 0 
-                            ? "No campaigns have been created yet or the API couldn't fetch campaign details."
-                            : `No ${filterType === 'all' ? '' : filterType} campaigns recorded activity in the chosen timeframe.`
-                          }
+                          {categorizedCampaigns.all.length === 0 ? "No campaigns have been created yet or the API couldn't fetch campaign details." : `No ${filterType === 'all' ? '' : filterType} campaigns recorded activity in the chosen timeframe.`}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           Total account metrics: {formatCurrency(metaData.totalSpend)} spent, {formatNumber(metaData.totalImpressions)} impressions
                         </p>
                       </div>;
-                    }
+                  }
 
-                    // Pagination logic for campaigns
-                    const totalCampaignPages = Math.ceil(filteredCampaigns.length / campaignsPerPage);
-                    const campaignStartIndex = (currentCampaignPage - 1) * campaignsPerPage;
-                    const campaignEndIndex = campaignStartIndex + campaignsPerPage;
-                    const currentCampaigns = filteredCampaigns.slice(campaignStartIndex, campaignEndIndex);
-              
-                    return <>
+                  // Pagination logic for campaigns
+                  const totalCampaignPages = Math.ceil(filteredCampaigns.length / campaignsPerPage);
+                  const campaignStartIndex = (currentCampaignPage - 1) * campaignsPerPage;
+                  const campaignEndIndex = campaignStartIndex + campaignsPerPage;
+                  const currentCampaigns = filteredCampaigns.slice(campaignStartIndex, campaignEndIndex);
+                  return <>
                       {currentCampaigns.map((campaign, index) => <div key={campaign.id} className="border rounded-xl p-6 hover-lift shadow-soft hover:shadow-medium transition-all duration-300 bg-gradient-to-r from-card to-muted/20" style={{
-                        animationDelay: `${index * 100}ms`
-                      }}>
+                      animationDelay: `${index * 100}ms`
+                    }}>
                         <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center space-x-4">
                             <div className="p-3 rounded-full bg-gradient-to-r from-primary/20 to-success/20">
                               <Activity className="h-6 w-6" style={{
-                                color: 'hsl(var(--primary))'
-                              }} />
+                              color: 'hsl(var(--primary))'
+                            }} />
                             </div>
                             <div>
                               <h4 className="font-semibold text-xl text-foreground mb-1">{campaign.name}</h4>
@@ -693,8 +629,8 @@ const MetaAdsDashboard: React.FC = () => {
                         <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
                             <DollarSign className="h-3 w-3 mr-1" style={{
-                          color: 'hsl(var(--primary))'
-                        }} />
+                              color: 'hsl(var(--primary))'
+                            }} />
                             Total Spent
                           </p>
                           <p className="font-bold text-lg text-foreground whitespace-nowrap overflow-x-auto">{formatCurrency(campaign.spend || 0)}</p>
@@ -702,24 +638,18 @@ const MetaAdsDashboard: React.FC = () => {
                         <div className="bg-gradient-to-br from-success/5 to-success/10 rounded-lg p-4 border border-success/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
                             <TrendingUp className="h-3 w-3 mr-1" style={{
-                          color: 'hsl(var(--success))'
-                        }} />
+                              color: 'hsl(var(--success))'
+                            }} />
                             ROAS (Meta)
                           </p>
-                           <p className="font-bold text-lg text-foreground break-words overflow-hidden">{campaign.roas ? `${(campaign.roas).toFixed(2)}x` : '—'}</p>
+                           <p className="font-bold text-lg text-foreground break-words overflow-hidden">{campaign.roas ? `${campaign.roas.toFixed(2)}x` : '—'}</p>
                         </div>
-                        <div className="bg-gradient-to-br from-purple-500/5 to-purple-500/10 rounded-lg p-4 border border-purple-500/10">
-                          <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
-                            <Activity className="h-3 w-3 mr-1 text-purple-500" />
-                            ROAS (Calc)
-                          </p>
-                          <p className="font-bold text-lg text-foreground break-words overflow-hidden">{campaign.calculatedROAS ? `${campaign.calculatedROAS.toFixed(2)}x` : '—'}</p>
-                        </div>
+                        
                         <div className="bg-gradient-to-br from-warning/5 to-warning/10 rounded-lg p-4 border border-warning/10">
                           <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center">
                             <Target className="h-3 w-3 mr-1" style={{
-                          color: 'hsl(var(--warning))'
-                        }} />
+                              color: 'hsl(var(--warning))'
+                            }} />
                             Results
                           </p>
                           <p className="font-bold text-lg text-foreground break-words overflow-hidden">{formatNumber(campaign.conversions || campaign.results || 0)}</p>
@@ -770,27 +700,17 @@ const MetaAdsDashboard: React.FC = () => {
                         <Pagination>
                           <PaginationContent>
                             <PaginationItem>
-                              <PaginationPrevious 
-                                onClick={() => setCampaignCurrentPage(prev => Math.max(prev - 1, 1))} 
-                                className={currentCampaignPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
-                              />
+                              <PaginationPrevious onClick={() => setCampaignCurrentPage(prev => Math.max(prev - 1, 1))} className={currentCampaignPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
                             </PaginationItem>
                             
                             {[...Array(totalCampaignPages)].map((_, i) => <PaginationItem key={i + 1}>
-                              <PaginationLink 
-                                onClick={() => setCampaignCurrentPage(i + 1)} 
-                                isActive={currentCampaignPage === i + 1} 
-                                className="cursor-pointer"
-                              >
+                              <PaginationLink onClick={() => setCampaignCurrentPage(i + 1)} isActive={currentCampaignPage === i + 1} className="cursor-pointer">
                                 {i + 1}
                               </PaginationLink>
                             </PaginationItem>)}
                             
                             <PaginationItem>
-                              <PaginationNext 
-                                onClick={() => setCampaignCurrentPage(prev => Math.min(prev + 1, totalCampaignPages))} 
-                                className={currentCampaignPage === totalCampaignPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
-                              />
+                              <PaginationNext onClick={() => setCampaignCurrentPage(prev => Math.min(prev + 1, totalCampaignPages))} className={currentCampaignPage === totalCampaignPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} />
                             </PaginationItem>
                           </PaginationContent>
                         </Pagination>
@@ -800,9 +720,8 @@ const MetaAdsDashboard: React.FC = () => {
                         Showing {currentCampaigns.length} of {filteredCampaigns.length} {filterType === 'all' ? '' : filterType} campaigns with activity
                       </div>
                     </>;
-                  })()}
-                </TabsContent>
-              ))}
+                })()}
+                </TabsContent>)}
             </Tabs>
           </CardContent>
         </Card>
@@ -812,8 +731,8 @@ const MetaAdsDashboard: React.FC = () => {
           <CardHeader className="bg-gradient-to-r from-secondary to-accent text-foreground rounded-t-lg">
             <CardTitle className="flex items-center text-xl">
               <Sparkles className="h-6 w-6 mr-3" style={{
-              color: 'hsl(var(--primary))'
-            }} />
+                color: 'hsl(var(--primary))'
+              }} />
               Ads in Selected Period
             </CardTitle>
             <CardDescription className="text-muted-foreground">
@@ -823,12 +742,12 @@ const MetaAdsDashboard: React.FC = () => {
           <CardContent className="py-[10px]">
             <div className="space-y-4">
               {(() => {
-              const adsWithActivity = metaData.ads;
-              const totalPages = Math.ceil(adsWithActivity.length / adsPerPage);
-              const startIndex = (currentPage - 1) * adsPerPage;
-              const endIndex = startIndex + adsPerPage;
-              const currentAds = adsWithActivity.slice(startIndex, endIndex);
-              return <>
+                const adsWithActivity = metaData.ads;
+                const totalPages = Math.ceil(adsWithActivity.length / adsPerPage);
+                const startIndex = (currentPage - 1) * adsPerPage;
+                const endIndex = startIndex + adsPerPage;
+                const currentAds = adsWithActivity.slice(startIndex, endIndex);
+                return <>
                     {currentAds.length > 0 ? currentAds.map((ad, index) => <div key={ad.id} className="flex items-center justify-between p-4 border rounded-lg">
                           <div className="flex items-center space-x-3">
                             <Badge variant="secondary" className="min-w-[32px] h-8 flex items-center justify-center">
@@ -891,7 +810,7 @@ const MetaAdsDashboard: React.FC = () => {
                       Showing {currentAds.length} of {adsWithActivity.length} ads with activity
                     </div>
                   </>;
-            })()}
+              })()}
             </div>
           </CardContent>
         </Card>
@@ -902,8 +821,8 @@ const MetaAdsDashboard: React.FC = () => {
             <CardHeader className="bg-gradient-to-r from-muted to-accent/20 rounded-t-lg">
               <CardTitle className="flex items-center text-xl">
                 <Activity className="h-6 w-6 mr-3" style={{
-                color: 'hsl(var(--success))'
-              }} />
+                  color: 'hsl(var(--success))'
+                }} />
                 Performance Health
               </CardTitle>
               <CardDescription>
@@ -958,7 +877,6 @@ const MetaAdsDashboard: React.FC = () => {
           </div>
         </div>
       </TooltipProvider>
-    </SafeErrorBoundary>
-  );
+    </SafeErrorBoundary>;
 };
 export default MetaAdsDashboard;
