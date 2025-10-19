@@ -7,7 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { Pagination, PaginationContent, PaginationEllipsis, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Target, TrendingUp, Eye, MousePointer, DollarSign, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Minus, Sparkles, Activity, CalendarIcon } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Target, TrendingUp, Eye, MousePointer, DollarSign, RefreshCw, ExternalLink, AlertCircle, CheckCircle2, ArrowUp, ArrowDown, Minus, Sparkles, Activity, CalendarIcon, Play, Pause, Ban } from 'lucide-react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -67,6 +68,7 @@ const MetaAdsDashboard: React.FC = () => {
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | 'error'>('checking');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [currentCampaignPage, setCampaignCurrentPage] = useState<number>(1);
+  const [campaignStatusFilter, setCampaignStatusFilter] = useState<'all' | 'active' | 'paused' | 'inactive'>('all');
   const [dateRange, setDateRange] = useState<DateRange>({
     from: undefined,
     to: undefined
@@ -186,6 +188,65 @@ const MetaAdsDashboard: React.FC = () => {
         {performance.charAt(0).toUpperCase() + performance.slice(1)}
       </Badge>;
   }, []);
+
+  /**
+   * Gets proper status badge for campaign effective_status
+   */
+  const getCampaignStatusBadge = useCallback((status: string): JSX.Element => {
+    const normalizedStatus = (status || '').toUpperCase();
+    
+    if (['ACTIVE', 'IN_PROCESS', 'WITH_ISSUES'].includes(normalizedStatus)) {
+      return (
+        <Badge className="bg-success/10 text-success border-success/20 px-3 py-1 flex items-center gap-1">
+          <Play className="h-3 w-3" />
+          {status}
+        </Badge>
+      );
+    }
+    
+    if (['PAUSED'].includes(normalizedStatus)) {
+      return (
+        <Badge className="bg-warning/10 text-warning border-warning/20 px-3 py-1 flex items-center gap-1">
+          <Pause className="h-3 w-3" />
+          {status}
+        </Badge>
+      );
+    }
+    
+    // ARCHIVED, DELETED, or other inactive statuses
+    return (
+      <Badge className="bg-muted text-muted-foreground border-muted-foreground/20 px-3 py-1 flex items-center gap-1">
+        <Ban className="h-3 w-3" />
+        {status || 'Unknown'}
+      </Badge>
+    );
+  }, []);
+
+  /**
+   * Categorizes campaigns by effective_status
+   */
+  const categorizedCampaigns = useMemo(() => {
+    const campaignsWithActivity = metaData.campaigns.filter(campaign =>
+      (campaign.spend || 0) > 0 || (campaign.impressions || 0) > 0 || (campaign.clicks || 0) > 0 || (campaign.conversions || 0) > 0
+    );
+
+    return {
+      all: campaignsWithActivity,
+      active: campaignsWithActivity.filter(c => {
+        const status = (c.effective_status || c.status || '').toUpperCase();
+        return ['ACTIVE', 'IN_PROCESS', 'WITH_ISSUES'].includes(status);
+      }),
+      paused: campaignsWithActivity.filter(c => {
+        const status = (c.effective_status || c.status || '').toUpperCase();
+        return status === 'PAUSED';
+      }),
+      inactive: campaignsWithActivity.filter(c => {
+        const status = (c.effective_status || c.status || '').toUpperCase();
+        return ['ARCHIVED', 'DELETED', 'CAMPAIGN_PAUSED', 'ADSET_PAUSED'].includes(status) || 
+               (!['ACTIVE', 'IN_PROCESS', 'WITH_ISSUES', 'PAUSED'].includes(status) && status !== '');
+      })
+    };
+  }, [metaData.campaigns]);
   /**
    * Returns appropriate status icon based on connection status
    */
@@ -531,59 +592,95 @@ const MetaAdsDashboard: React.FC = () => {
           <CardHeader className="gradient-hero text-white rounded-t-lg">
             <CardTitle className="text-white flex items-center text-xl">
               <Target className="h-6 w-6 mr-3" />
-              Campaigns in Selected Period
+              Campaigns by Status
             </CardTitle>
             <CardDescription className="text-white/80">
-              Campaigns with spend, impressions, clicks, or conversions in the selected date range
+              Campaigns with spend, impressions, clicks, or conversions categorized by status
             </CardDescription>
           </CardHeader>
           <CardContent className="py-[15px]">
-            <div className="space-y-4">
-              {(() => {
-              const campaignsWithActivity = metaData.campaigns.filter(campaign =>
-                (campaign.spend || 0) > 0 || (campaign.impressions || 0) > 0 || (campaign.clicks || 0) > 0 || (campaign.conversions || 0) > 0
-              );
-              
-              if (campaignsWithActivity.length === 0) {
-                return <div className="text-center py-12">
-                      <Target className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                      <h3 className="text-lg font-medium mb-2">No Campaigns Found for Selected Period</h3>
-                      <p className="text-muted-foreground mb-4">
-                        {metaData.campaigns.length === 0 ? "No campaigns have been created yet or the API couldn't fetch campaign details." : `No campaigns recorded activity in the chosen timeframe.`}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Total account metrics: {formatCurrency(metaData.totalSpend)} spent, {formatNumber(metaData.totalImpressions)} impressions
-                      </p>
-                    </div>;
-              }
+            <Tabs value={campaignStatusFilter} onValueChange={(v) => {
+              setCampaignStatusFilter(v as typeof campaignStatusFilter);
+              setCampaignCurrentPage(1);
+            }} className="w-full">
+              <TabsList className="grid w-full grid-cols-4 mb-6">
+                <TabsTrigger value="all" className="flex items-center gap-2">
+                  All
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {categorizedCampaigns.all.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="active" className="flex items-center gap-2">
+                  <Play className="h-3 w-3" />
+                  Active
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {categorizedCampaigns.active.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="paused" className="flex items-center gap-2">
+                  <Pause className="h-3 w-3" />
+                  Paused
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {categorizedCampaigns.paused.length}
+                  </Badge>
+                </TabsTrigger>
+                <TabsTrigger value="inactive" className="flex items-center gap-2">
+                  <Ban className="h-3 w-3" />
+                  Inactive
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {categorizedCampaigns.inactive.length}
+                  </Badge>
+                </TabsTrigger>
+              </TabsList>
 
-              // Pagination logic for campaigns
-              const totalCampaignPages = Math.ceil(campaignsWithActivity.length / campaignsPerPage);
-              const campaignStartIndex = (currentCampaignPage - 1) * campaignsPerPage;
-              const campaignEndIndex = campaignStartIndex + campaignsPerPage;
-              const currentCampaigns = campaignsWithActivity.slice(campaignStartIndex, campaignEndIndex);
+              {['all', 'active', 'paused', 'inactive'].map((filterType) => (
+                <TabsContent key={filterType} value={filterType} className="space-y-4">
+                  {(() => {
+                    const filteredCampaigns = categorizedCampaigns[filterType as keyof typeof categorizedCampaigns];
+                    
+                    if (filteredCampaigns.length === 0) {
+                      return <div className="text-center py-12">
+                        <Target className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                        <h3 className="text-lg font-medium mb-2">
+                          No {filterType === 'all' ? '' : filterType.charAt(0).toUpperCase() + filterType.slice(1)} Campaigns Found
+                        </h3>
+                        <p className="text-muted-foreground mb-4">
+                          {categorizedCampaigns.all.length === 0 
+                            ? "No campaigns have been created yet or the API couldn't fetch campaign details."
+                            : `No ${filterType === 'all' ? '' : filterType} campaigns recorded activity in the chosen timeframe.`
+                          }
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Total account metrics: {formatCurrency(metaData.totalSpend)} spent, {formatNumber(metaData.totalImpressions)} impressions
+                        </p>
+                      </div>;
+                    }
+
+                    // Pagination logic for campaigns
+                    const totalCampaignPages = Math.ceil(filteredCampaigns.length / campaignsPerPage);
+                    const campaignStartIndex = (currentCampaignPage - 1) * campaignsPerPage;
+                    const campaignEndIndex = campaignStartIndex + campaignsPerPage;
+                    const currentCampaigns = filteredCampaigns.slice(campaignStartIndex, campaignEndIndex);
               
-              return <>
-                {currentCampaigns.map((campaign, index) => <div key={campaign.id} className="border rounded-xl p-6 hover-lift shadow-soft hover:shadow-medium transition-all duration-300 bg-gradient-to-r from-card to-muted/20" style={{
-                  animationDelay: `${index * 100}ms`
-                }}>
-                      <div className="flex items-center justify-between mb-6">
-                        <div className="flex items-center space-x-4">
-                          <div className="p-3 rounded-full bg-gradient-to-r from-primary/20 to-success/20">
-                            <Activity className="h-6 w-6" style={{
-                          color: 'hsl(var(--primary))'
-                        }} />
-                          </div>
-                          <div>
-                            <h4 className="font-semibold text-xl text-foreground mb-1">{campaign.name}</h4>
-                            <div className="flex items-center space-x-3">
-                              <Badge className={(['Active','active','ACTIVE'].includes(campaign.status) ? 'bg-success/10 text-success border-success/20' : 'bg-muted text-muted-foreground border-muted-foreground/20') + ' px-3 py-1'}>
-                                {campaign.status || 'Unknown'}
-                              </Badge>
-                              {getPerformanceBadge(campaign.performance)}
+                    return <>
+                      {currentCampaigns.map((campaign, index) => <div key={campaign.id} className="border rounded-xl p-6 hover-lift shadow-soft hover:shadow-medium transition-all duration-300 bg-gradient-to-r from-card to-muted/20" style={{
+                        animationDelay: `${index * 100}ms`
+                      }}>
+                        <div className="flex items-center justify-between mb-6">
+                          <div className="flex items-center space-x-4">
+                            <div className="p-3 rounded-full bg-gradient-to-r from-primary/20 to-success/20">
+                              <Activity className="h-6 w-6" style={{
+                                color: 'hsl(var(--primary))'
+                              }} />
+                            </div>
+                            <div>
+                              <h4 className="font-semibold text-xl text-foreground mb-1">{campaign.name}</h4>
+                              <div className="flex items-center space-x-3">
+                                {getCampaignStatusBadge(campaign.effective_status || campaign.status)}
+                                {getPerformanceBadge(campaign.performance)}
+                              </div>
                             </div>
                           </div>
-                        </div>
                         <div className="flex items-center space-x-3 bg-muted/50 rounded-lg px-4 py-2">
                           {getPerformanceIcon(campaign.performance)}
                           <span className="text-sm font-semibold text-foreground">
@@ -661,43 +758,45 @@ const MetaAdsDashboard: React.FC = () => {
                         </div>}
                     </div>)}
 
-                {/* Campaign Pagination Controls */}
-                {totalCampaignPages > 1 && <div className="flex justify-center mt-6">
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious 
-                            onClick={() => setCampaignCurrentPage(prev => Math.max(prev - 1, 1))} 
-                            className={currentCampaignPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
-                          />
-                        </PaginationItem>
-                        
-                        {[...Array(totalCampaignPages)].map((_, i) => <PaginationItem key={i + 1}>
-                            <PaginationLink 
-                              onClick={() => setCampaignCurrentPage(i + 1)} 
-                              isActive={currentCampaignPage === i + 1} 
-                              className="cursor-pointer"
-                            >
-                              {i + 1}
-                            </PaginationLink>
-                          </PaginationItem>)}
-                        
-                        <PaginationItem>
-                          <PaginationNext 
-                            onClick={() => setCampaignCurrentPage(prev => Math.min(prev + 1, totalCampaignPages))} 
-                            className={currentCampaignPage === totalCampaignPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  </div>}
-                
-                <div className="text-center text-sm text-muted-foreground mt-4">
-                  Showing {currentCampaigns.length} of {campaignsWithActivity.length} campaigns with activity
-                </div>
-              </>;
-            })()}
-            </div>
+                      {/* Campaign Pagination Controls */}
+                      {totalCampaignPages > 1 && <div className="flex justify-center mt-6">
+                        <Pagination>
+                          <PaginationContent>
+                            <PaginationItem>
+                              <PaginationPrevious 
+                                onClick={() => setCampaignCurrentPage(prev => Math.max(prev - 1, 1))} 
+                                className={currentCampaignPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
+                              />
+                            </PaginationItem>
+                            
+                            {[...Array(totalCampaignPages)].map((_, i) => <PaginationItem key={i + 1}>
+                              <PaginationLink 
+                                onClick={() => setCampaignCurrentPage(i + 1)} 
+                                isActive={currentCampaignPage === i + 1} 
+                                className="cursor-pointer"
+                              >
+                                {i + 1}
+                              </PaginationLink>
+                            </PaginationItem>)}
+                            
+                            <PaginationItem>
+                              <PaginationNext 
+                                onClick={() => setCampaignCurrentPage(prev => Math.min(prev + 1, totalCampaignPages))} 
+                                className={currentCampaignPage === totalCampaignPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'} 
+                              />
+                            </PaginationItem>
+                          </PaginationContent>
+                        </Pagination>
+                      </div>}
+                      
+                      <div className="text-center text-sm text-muted-foreground mt-4">
+                        Showing {currentCampaigns.length} of {filteredCampaigns.length} {filterType === 'all' ? '' : filterType} campaigns with activity
+                      </div>
+                    </>;
+                  })()}
+                </TabsContent>
+              ))}
+            </Tabs>
           </CardContent>
         </Card>
 
