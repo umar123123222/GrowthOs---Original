@@ -54,7 +54,24 @@ serve(async (req) => {
       );
     }
 
-    console.log('Processing message for user:', user.id);
+    console.log('[SUCCESS PARTNER] Processing message for user:', user.id, 'Message length:', message.trim().length);
+
+    // Save user message first
+    const { error: userMsgError } = await supabaseClient
+      .from('success_partner_messages')
+      .insert({
+        user_id: user.id,
+        role: 'user',
+        content: message.trim(),
+        timestamp: new Date().toISOString(),
+        date: new Date().toISOString().split('T')[0]
+      });
+
+    if (userMsgError) {
+      console.error('[SUCCESS PARTNER] Failed to save user message:', userMsgError);
+    } else {
+      console.log('[SUCCESS PARTNER] User message saved to database');
+    }
 
     // Check if there's already a response being processed (prevent duplicates)
     const { data: recentMessages } = await supabaseClient
@@ -63,21 +80,23 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .eq('role', 'user')
       .order('timestamp', { ascending: false })
-      .limit(1);
+      .limit(2);
 
-    if (recentMessages && recentMessages.length > 0) {
-      const lastUserMessage = recentMessages[0];
+    if (recentMessages && recentMessages.length > 1) {
+      const lastUserMessage = recentMessages[1];
       const timeDiff = Date.now() - new Date(lastUserMessage.timestamp).getTime();
       
-      // If the last user message was within 2 seconds and matches content, it might be a duplicate
-      if (timeDiff < 2000 && lastUserMessage.content === message.trim()) {
-        console.log('Duplicate message detected, skipping processing');
+      // If the last user message was within 3 seconds and matches content, it might be a duplicate
+      if (timeDiff < 3000 && lastUserMessage.content === message.trim()) {
+        console.log('[SUCCESS PARTNER] Duplicate message detected, skipping processing');
         return new Response(
           JSON.stringify({ status: 'duplicate', message: 'Message already being processed' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
     }
+    
+    console.log('[SUCCESS PARTNER] Starting background processing...');
 
     // Start background processing with enhanced error handling
     const processInBackground = async () => {
@@ -86,12 +105,15 @@ serve(async (req) => {
 
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
-          console.log(`Processing attempt ${attempt + 1}/${MAX_RETRIES + 1}...`);
+          console.log(`[SUCCESS PARTNER] Processing attempt ${attempt + 1}/${MAX_RETRIES + 1}...`);
           
           const webhookUrl = Deno.env.get('SUCCESS_PARTNER_WEBHOOK_URL');
           if (!webhookUrl) {
+            console.error('[SUCCESS PARTNER] ERROR: SUCCESS_PARTNER_WEBHOOK_URL not configured');
             throw new Error('SUCCESS_PARTNER_WEBHOOK_URL not configured');
           }
+          
+          console.log('[SUCCESS PARTNER] Webhook URL configured, length:', webhookUrl.length);
 
           // Validate input data
           if (!message || typeof message !== 'string') {
@@ -107,29 +129,42 @@ serve(async (req) => {
             businessContext: typeof businessContext === 'object' ? businessContext : {}
           };
 
-          console.log('Calling webhook with payload size:', JSON.stringify(payload).length);
+          console.log('[SUCCESS PARTNER] Calling webhook, payload size:', JSON.stringify(payload).length, 'bytes');
 
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 55000); // 55s timeout
+          const timeoutId = setTimeout(() => {
+            console.error('[SUCCESS PARTNER] Webhook timeout after 55s');
+            controller.abort();
+          }, 55000); // 55s timeout
 
+          console.log('[SUCCESS PARTNER] Sending request to webhook...');
+          const startTime = Date.now();
+          
           const response = await fetch(webhookUrl, {
             method: 'POST',
             headers: {
-              'Content-Type': 'application/json'
+              'Content-Type': 'application/json',
+              'User-Agent': 'Supabase-Edge-Function/1.0'
             },
             body: JSON.stringify(payload),
             signal: controller.signal
           });
 
           clearTimeout(timeoutId);
+          const duration = Date.now() - startTime;
+          console.log('[SUCCESS PARTNER] Webhook responded in', duration, 'ms with status:', response.status);
 
           if (!response.ok) {
             const errorText = await response.text().catch(() => 'Unknown error');
+            console.error('[SUCCESS PARTNER] Webhook error:', response.status, errorText);
             throw new Error(`Webhook error ${response.status}: ${errorText}`);
           }
 
-          const data = await response.json();
-          console.log('Webhook response received, type:', typeof data);
+          const responseText = await response.text();
+          console.log('[SUCCESS PARTNER] Raw webhook response:', responseText.substring(0, 200));
+          
+          const data = JSON.parse(responseText);
+          console.log('[SUCCESS PARTNER] Parsed response type:', typeof data, 'Keys:', Object.keys(data || {}));
 
           // Enhanced AI response parsing with validation
           let aiResponse = "";
@@ -165,11 +200,12 @@ serve(async (req) => {
 
           // Final validation
           aiResponse = String(aiResponse).trim();
-          if (!aiResponse || aiResponse === 'undefined' || aiResponse === 'null') {
-            throw new Error('Invalid AI response format');
+          if (!aiResponse || aiResponse === 'undefined' || aiResponse === 'null' || aiResponse === '{}') {
+            console.error('[SUCCESS PARTNER] Invalid AI response after parsing:', aiResponse);
+            throw new Error('Invalid AI response format - empty or invalid content');
           }
 
-          console.log('Parsed AI response length:', aiResponse.length);
+          console.log('[SUCCESS PARTNER] Parsed AI response length:', aiResponse.length, 'First 100 chars:', aiResponse.substring(0, 100));
 
           // Save AI response to database
           const { error: insertError } = await supabaseClient
@@ -187,7 +223,7 @@ serve(async (req) => {
             throw insertError;
           }
 
-          console.log('AI response saved successfully');
+          console.log('[SUCCESS PARTNER] AI response saved successfully to database');
 
           // Update credits
           try {
@@ -219,38 +255,50 @@ serve(async (req) => {
           }
 
           // Success - break retry loop
-          console.log('Message processing completed successfully');
+          console.log('[SUCCESS PARTNER] ✅ Message processing completed successfully');
           return;
 
         } catch (error) {
           lastError = error as Error;
-          console.error(`Attempt ${attempt + 1} failed:`, error);
+          console.error(`[SUCCESS PARTNER] ❌ Attempt ${attempt + 1} failed:`, error.message);
+          console.error('[SUCCESS PARTNER] Error stack:', error.stack);
           
           // If this was the last attempt, save error message
           if (attempt === MAX_RETRIES) {
-            console.error('All retry attempts failed');
+            console.error('[SUCCESS PARTNER] All retry attempts exhausted');
             break;
           }
           
           // Wait before retry (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+          const waitTime = 1000 * (attempt + 1);
+          console.log(`[SUCCESS PARTNER] Waiting ${waitTime}ms before retry...`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
         }
       }
 
       // All attempts failed - save error message to database
-      console.error('Background processing failed after all retries:', lastError);
+      console.error('[SUCCESS PARTNER] Background processing FAILED after all retries:', lastError?.message);
+      console.error('[SUCCESS PARTNER] Last error stack:', lastError?.stack);
+      
       try {
+        const errorMessage = lastError?.message?.includes('timeout') 
+          ? "⚠️ The AI service is taking too long to respond. Please try again in a moment."
+          : lastError?.message?.includes('not configured')
+          ? "⚠️ The AI service is not properly configured. Please contact support."
+          : "⚠️ I'm having trouble connecting to my services right now. Please try asking again in a moment.";
+          
         await supabaseClient
           .from('success_partner_messages')
           .insert({
             user_id: user.id,
             role: 'assistant',
-            content: "⚠️ I'm having trouble connecting to my services right now. Please try asking again in a moment.",
+            content: errorMessage,
             timestamp: new Date().toISOString(),
             date: new Date().toISOString().split('T')[0]
           });
+        console.log('[SUCCESS PARTNER] Fallback error message saved to database');
       } catch (fallbackError) {
-        console.error('Failed to save fallback message:', fallbackError);
+        console.error('[SUCCESS PARTNER] Failed to save fallback message:', fallbackError);
       }
     };
 
