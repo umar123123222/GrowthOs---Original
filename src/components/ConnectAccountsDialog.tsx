@@ -496,6 +496,16 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
             <CardContent className="space-y-3">
               {(!metaConnected || editingMeta) && (
                 <>
+                  <div className="mb-2 p-2 bg-primary/5 border border-primary/10 rounded text-xs text-muted-foreground">
+                    <p className="font-medium text-primary mb-1">Required Permissions:</p>
+                    <ul className="space-y-0.5 ml-4">
+                      <li>• ads_read</li>
+                      <li>• ads_management</li>
+                    </ul>
+                    <p className="mt-2 text-xs">
+                      The token must belong to a user or system user with access to the ad account (same Business Manager).
+                    </p>
+                  </div>
                   <div>
                     <Label htmlFor="meta-key" className="text-xs">
                       Meta API Access Token

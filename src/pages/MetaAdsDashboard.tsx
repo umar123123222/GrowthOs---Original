@@ -28,9 +28,11 @@ interface MetaData {
   totalConversionValue: number;
   averageCTR: number;
   averageCPC: number;
-    averageROAS: number;
-    lastUpdated: string | null;
-    currency?: string;
+  averageROAS: number;
+  lastUpdated: string | null;
+  currency?: string;
+  warnings?: string[];
+  error?: string;
 }
 
 interface DateRange {
@@ -58,7 +60,9 @@ const MetaAdsDashboard: React.FC = () => {
     averageCPC: 0,
     averageROAS: 0,
     lastUpdated: null,
-    currency: 'USD'
+    currency: 'USD',
+    warnings: [],
+    error: undefined
   });
   const [connectionStatus, setConnectionStatus] = useState<'checking' | 'connected' | 'disconnected' | 'error'>('checking');
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -102,7 +106,8 @@ const MetaAdsDashboard: React.FC = () => {
       if (error) throw error;
       
       if (!data?.connected) {
-        setConnectionStatus('disconnected');
+        setConnectionStatus(data?.error ? 'error' : 'disconnected');
+        setMetaData(prev => ({ ...prev, error: data?.error, warnings: data?.warnings }));
         setLoading(false);
         return;
       }
@@ -121,7 +126,9 @@ const MetaAdsDashboard: React.FC = () => {
         averageCPC: m.averageCPC ?? m.cpc ?? 0,
         averageROAS: m.averageROAS ?? 0,
         lastUpdated: new Date().toISOString(),
-        currency: m.currency || 'USD'
+        currency: m.currency || 'USD',
+        warnings: data.warnings || [],
+        error: undefined
       });
       setConnectionStatus('connected');
     } catch (error: any) {
@@ -223,24 +230,38 @@ const MetaAdsDashboard: React.FC = () => {
         </div>
       </div>;
   }
-  if (connectionStatus === 'disconnected') {
+  if (connectionStatus === 'disconnected' || connectionStatus === 'error') {
     return <div className="max-w-4xl mx-auto animate-fade-in">
         <Card className="text-center p-12 shadow-elevated">
           <div className="relative mb-8">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-warning/10 rounded-full blur-2xl"></div>
-            <Target className="h-20 w-20 mx-auto relative z-10" style={{
-            color: 'hsl(var(--primary))'
-          }} />
+            {connectionStatus === 'error' ? (
+              <AlertCircle className="h-20 w-20 mx-auto relative z-10 text-destructive" />
+            ) : (
+              <Target className="h-20 w-20 mx-auto relative z-10" style={{
+                color: 'hsl(var(--primary))'
+              }} />
+            )}
           </div>
           <h2 className="text-3xl font-bold mb-4 bg-gradient-to-r from-primary to-success bg-clip-text text-transparent">
-            Connect Your Meta Ads Account
+            {connectionStatus === 'error' ? 'Connection Issue' : 'Connect Your Meta Ads Account'}
           </h2>
           <p className="text-muted-foreground mb-8 max-w-md mx-auto text-lg">
-            Unlock powerful insights and analytics for your advertising campaigns.
+            {metaData.error || 'Unlock powerful insights and analytics for your advertising campaigns.'}
           </p>
+          {metaData.warnings && metaData.warnings.length > 0 && (
+            <div className="mb-6 p-4 bg-warning/10 border border-warning/20 rounded-lg text-left max-w-md mx-auto">
+              <p className="text-sm text-warning font-medium mb-2">Additional Details:</p>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                {metaData.warnings.map((warning, idx) => (
+                  <li key={idx}>• {warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
           <Button onClick={() => navigate('/connect')} size="lg" className="gradient-primary hover-lift shadow-medium px-8 py-3">
             <ExternalLink className="h-5 w-5 mr-2" />
-            Connect Meta Ads Account
+            Manage Connection
           </Button>
         </Card>
       </div>;
@@ -256,6 +277,69 @@ const MetaAdsDashboard: React.FC = () => {
               className="mb-4"
             />
           )}
+          
+          {/* Warnings from backend */}
+          {metaData.warnings && metaData.warnings.length > 0 && (
+            <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-4 animate-fade-in">
+              <div className="flex items-start justify-between">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
+                  <div>
+                    <p className="font-medium text-warning mb-2">Data Fetching Notes:</p>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      {metaData.warnings.map((warning, idx) => (
+                        <li key={idx}>• {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMetaData(prev => ({ ...prev, warnings: [] }))}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Dismiss
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Zero data helper */}
+          {connectionStatus === 'connected' && 
+           metaData.totalSpend === 0 && 
+           metaData.totalImpressions === 0 && 
+           metaData.campaigns.length === 0 && 
+           !dateRange.from && (
+            <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4 animate-fade-in">
+              <div className="flex items-start space-x-3">
+                <Sparkles className="h-5 w-5 text-primary mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-primary mb-2">No recent activity detected</p>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Try viewing data from the last 30 days to see historical campaigns and ads.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const to = new Date();
+                      const from = new Date();
+                      from.setDate(from.getDate() - 30);
+                      setDateRange({ from, to });
+                      setPendingDateRange({ from, to });
+                      fetchMetaAdsData({ from, to });
+                    }}
+                    className="text-primary border-primary/30 hover:bg-primary/10"
+                  >
+                    <CalendarIcon className="h-4 w-4 mr-2" />
+                    Try Last 30 Days
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        
         {/* Header */}
         <div className="flex items-center justify-between mb-8 animate-slide-up">
           <div>
