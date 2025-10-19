@@ -380,13 +380,15 @@ serve(async (req) => {
         const actions = insightData.actions || [];
         const actionValues = insightData.action_values || [];
         
-        const conversions = actions
-          .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
-          .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
+        const purchaseAction = actions.find((a: any) => (a.action_type || '').toLowerCase() === 'omni_purchase') 
+          || actions.find((a: any) => (a.action_type || '').toLowerCase() === 'purchase') 
+          || actions.find((a: any) => (a.action_type || '').toLowerCase().includes('purchase'));
+        const conversions = purchaseAction ? parseFloat(purchaseAction.value || 0) : 0;
         
-        const conversionValue = actionValues
-          .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
-          .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
+        const purchaseValueAction = actionValues.find((a: any) => (a.action_type || '').toLowerCase() === 'omni_purchase') 
+          || actionValues.find((a: any) => (a.action_type || '').toLowerCase() === 'purchase') 
+          || actionValues.find((a: any) => (a.action_type || '').toLowerCase().includes('purchase'));
+        const conversionValue = purchaseValueAction ? parseFloat(purchaseValueAction.value || 0) : 0;
         
         // Handle multiple possible formats for purchase_roas
         let reportedROAS = 0;
@@ -466,13 +468,15 @@ serve(async (req) => {
           const actions = row.actions || [];
           const actionValues = row.action_values || [];
           
-          const conversions = actions
-            .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
-            .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
+          const purchaseAction = actions.find((a: any) => (a.action_type || '').toLowerCase() === 'omni_purchase') 
+            || actions.find((a: any) => (a.action_type || '').toLowerCase() === 'purchase') 
+            || actions.find((a: any) => (a.action_type || '').toLowerCase().includes('purchase'));
+          const conversions = purchaseAction ? parseFloat(purchaseAction.value || 0) : 0;
           
-          const conversionValue = actionValues
-            .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
-            .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
+          const purchaseValueAction = actionValues.find((a: any) => (a.action_type || '').toLowerCase() === 'omni_purchase') 
+            || actionValues.find((a: any) => (a.action_type || '').toLowerCase() === 'purchase') 
+            || actionValues.find((a: any) => (a.action_type || '').toLowerCase().includes('purchase'));
+          const conversionValue = purchaseValueAction ? parseFloat(purchaseValueAction.value || 0) : 0;
           
           // Handle multiple possible formats for purchase_roas
           let reportedROAS = 0;
@@ -549,13 +553,15 @@ serve(async (req) => {
         const actions = insightData.actions || [];
         const actionValues = insightData.action_values || [];
         
-        const conversions = actions
-          .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
-          .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
+        const purchaseAction = actions.find((a: any) => (a.action_type || '').toLowerCase() === 'omni_purchase') 
+          || actions.find((a: any) => (a.action_type || '').toLowerCase() === 'purchase') 
+          || actions.find((a: any) => (a.action_type || '').toLowerCase().includes('purchase'));
+        const conversions = purchaseAction ? parseFloat(purchaseAction.value || 0) : 0;
         
-        const conversionValue = actionValues
-          .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
-          .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
+        const purchaseValueAction = actionValues.find((a: any) => (a.action_type || '').toLowerCase() === 'omni_purchase') 
+          || actionValues.find((a: any) => (a.action_type || '').toLowerCase() === 'purchase') 
+          || actionValues.find((a: any) => (a.action_type || '').toLowerCase().includes('purchase'));
+        const conversionValue = purchaseValueAction ? parseFloat(purchaseValueAction.value || 0) : 0;
         
         // Handle multiple possible formats for purchase_roas
         let reportedROAS = 0;
@@ -719,16 +725,30 @@ serve(async (req) => {
           const actions = insightData.actions || [];
           const actionValues = insightData.action_values || [];
           
-          const conversions = actions
-            .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
-            .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
+          const purchaseAction = actions.find((a: any) => (a.action_type || '').toLowerCase() === 'omni_purchase') 
+            || actions.find((a: any) => (a.action_type || '').toLowerCase() === 'purchase') 
+            || actions.find((a: any) => (a.action_type || '').toLowerCase().includes('purchase'));
+          const conversions = purchaseAction ? parseFloat(purchaseAction.value || 0) : 0;
           
-          const conversionValue = actionValues
-            .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
-            .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
+          const purchaseValueAction = actionValues.find((a: any) => (a.action_type || '').toLowerCase() === 'omni_purchase') 
+            || actionValues.find((a: any) => (a.action_type || '').toLowerCase() === 'purchase') 
+            || actionValues.find((a: any) => (a.action_type || '').toLowerCase().includes('purchase'));
+          const conversionValue = purchaseValueAction ? parseFloat(purchaseValueAction.value || 0) : 0;
           
-          const roas = spend > 0 ? (conversionValue / spend) : 0;
-          const performance = categorizePerformance(ctr, cpc, roas, campaign.objective, spend);
+          // Official ROAS as reported by Meta (purchase_roas)
+          let reportedROAS = 0;
+          if (Array.isArray(insightData.purchase_roas) && insightData.purchase_roas.length > 0) {
+            reportedROAS = parseFloat(insightData.purchase_roas[0]?.value || 0);
+          } else if (typeof insightData.purchase_roas === 'object' && insightData.purchase_roas !== null) {
+            reportedROAS = parseFloat(insightData.purchase_roas.value || 0);
+          } else if (typeof insightData.purchase_roas === 'string' || typeof insightData.purchase_roas === 'number') {
+            reportedROAS = parseFloat(insightData.purchase_roas);
+          }
+          console.log(`📊 Campaign ${campaign.name} (30d fallback): purchase_roas raw:`, JSON.stringify(insightData.purchase_roas), `parsed: ${reportedROAS}`);
+          const calculatedROAS = spend > 0 ? (conversionValue / spend) : 0;
+          console.log(`📊 Campaign ${campaign.name} (30d fallback): calculatedROAS: ${calculatedROAS}, using: ${reportedROAS || calculatedROAS}`);
+          const roasToUse = reportedROAS || calculatedROAS;
+          const performance = categorizePerformance(ctr, cpc, roasToUse, campaign.objective, spend);
 
           metrics.campaigns.push({
             id: campaign.id,
@@ -742,7 +762,9 @@ serve(async (req) => {
             conversionValue,
             ctr,
             cpc,
-            roas,
+            roas: roasToUse,
+            calculatedROAS,
+            reportedROAS,
             reach: parseInt(insightData.reach || 0),
             frequency: parseFloat(insightData.frequency || 0),
             performance
