@@ -177,6 +177,26 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
 
     try {
       console.log('Updating student record...');
+      
+      // First check if record exists
+      const { data: existingStudent, error: checkError } = await supabase
+        .from('students')
+        .select('id, user_id, onboarding_video_watched')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      console.log('Existing student record:', existingStudent, 'Check error:', checkError);
+      
+      if (checkError) {
+        console.error('Error checking student record:', checkError);
+        throw new Error('Could not verify your student record');
+      }
+      
+      if (!existingStudent) {
+        throw new Error('Student record not found');
+      }
+      
+      // Now update
       const { data, error } = await supabase
         .from('students')
         .update({ onboarding_video_watched: true })
@@ -187,7 +207,11 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
 
       if (error) {
         console.error('Database error:', error);
-        throw error;
+        throw new Error(error.message || 'Database update failed');
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('Update did not affect any records');
       }
 
       console.log('Successfully updated, calling onComplete');
@@ -205,7 +229,7 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
       console.error('Error updating video watch status:', error);
       toast({
         variant: "destructive",
-        title: "Error",
+        title: "Update Failed",
         description: error instanceof Error ? error.message : "Failed to update your progress. Please try again.",
       });
       setIsUpdating(false);
