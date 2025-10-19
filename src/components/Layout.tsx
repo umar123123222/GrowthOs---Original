@@ -693,6 +693,16 @@ const Layout = memo(({
           }}
         />
       )}
+      
+      {/* Watermark */}
+      <a 
+        href="https://core47.ai" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="fixed bottom-4 right-4 text-xs text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors z-50"
+      >
+        Developed by Core47.ai
+      </a>
     </div>;
 });
 Layout.displayName = 'Layout';
