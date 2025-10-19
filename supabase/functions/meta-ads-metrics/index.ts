@@ -358,7 +358,7 @@ serve(async (req) => {
     // Fetch campaigns with all statuses
     const campaignsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`);
     campaignsUrl.searchParams.set('fields', `id,name,status,objective,effective_status,daily_budget,lifetime_budget,insights.date_preset(${datePreset}){${INSIGHTS_FIELDS}}`);
-    campaignsUrl.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED","DELETED"]');
+    campaignsUrl.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED"]');
     campaignsUrl.searchParams.set('limit', '200');
     campaignsUrl.searchParams.set('access_token', accessToken);
     Object.entries(dateParams).forEach(([k, v]) => campaignsUrl.searchParams.set(k, v));
@@ -423,7 +423,7 @@ serve(async (req) => {
       
       const insightsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`);
       insightsUrl.searchParams.set('level', 'campaign');
-      insightsUrl.searchParams.set('fields', 'campaign_id,campaign_name,campaign_status,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach');
+      insightsUrl.searchParams.set('fields', 'campaign_id,campaign_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach');
       insightsUrl.searchParams.set('limit', '200');
       insightsUrl.searchParams.set('access_token', accessToken);
       Object.entries(dateParams).forEach(([k, v]) => insightsUrl.searchParams.set(k, v));
@@ -458,7 +458,7 @@ serve(async (req) => {
           metrics.campaigns.push({
             id: row.campaign_id,
             name: row.campaign_name || 'Unknown Campaign',
-            status: row.campaign_status || 'ACTIVE',
+            status: 'UNKNOWN',
             objective: 'UNKNOWN',
             spend,
             impressions,
@@ -524,7 +524,7 @@ serve(async (req) => {
     // Fetch ads with all statuses
     const adsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/ads`);
     adsUrl.searchParams.set('fields', `id,name,status,effective_status,adset_id,campaign_id,insights.date_preset(${datePreset}){${INSIGHTS_FIELDS}}`);
-    adsUrl.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED","DELETED"]');
+    adsUrl.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED"]');
     adsUrl.searchParams.set('limit', '200');
     adsUrl.searchParams.set('access_token', accessToken);
     Object.entries(dateParams).forEach(([k, v]) => adsUrl.searchParams.set(k, v));
@@ -587,7 +587,7 @@ serve(async (req) => {
       
       const adsInsightsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`);
       adsInsightsUrl.searchParams.set('level', 'ad');
-      adsInsightsUrl.searchParams.set('fields', 'ad_id,ad_name,ad_status,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach,campaign_name,adset_name');
+      adsInsightsUrl.searchParams.set('fields', 'ad_id,ad_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach,campaign_name,adset_name');
       adsInsightsUrl.searchParams.set('limit', '200');
       adsInsightsUrl.searchParams.set('access_token', accessToken);
       Object.entries(dateParams).forEach(([k, v]) => adsInsightsUrl.searchParams.set(k, v));
@@ -625,7 +625,7 @@ serve(async (req) => {
           metrics.ads.push({
             id: row.ad_id,
             name: row.ad_name || 'Unknown Ad',
-            status: row.ad_status || 'ACTIVE',
+            status: 'UNKNOWN',
             spend,
             impressions,
             clicks,
@@ -675,7 +675,7 @@ serve(async (req) => {
       // Retry with last_30d
       const campaignsUrl30 = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`);
       campaignsUrl30.searchParams.set('fields', `id,name,status,objective,effective_status,daily_budget,lifetime_budget,insights.date_preset(last_30d){${INSIGHTS_FIELDS}}`);
-      campaignsUrl30.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED","DELETED"]');
+      campaignsUrl30.searchParams.set('effective_status', '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED"]');
       campaignsUrl30.searchParams.set('limit', '200');
       campaignsUrl30.searchParams.set('access_token', accessToken);
       campaignsUrl30.searchParams.set('date_preset', 'last_30d');
@@ -705,7 +705,7 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
-          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
+          const roas = spend > 0 ? (conversionValue / spend) : 0;
           const performance = categorizePerformance(ctr, cpc, roas, campaign.objective, spend);
 
           metrics.campaigns.push({
