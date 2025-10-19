@@ -215,10 +215,7 @@ const MetaAdsDashboard: React.FC = () => {
     }
 
     // ARCHIVED, DELETED, or other inactive statuses
-    return <Badge className="bg-muted text-muted-foreground border-muted-foreground/20 px-3 py-1 flex items-center gap-1">
-        <Ban className="h-3 w-3" />
-        {status || 'Unknown'}
-      </Badge>;
+    return;
   }, []);
 
   /**
@@ -369,22 +366,11 @@ const MetaAdsDashboard: React.FC = () => {
                     <CalendarIcon className="h-4 w-4 mr-2" />
                     Try Last 30 Days
                   </Button>
-              </div>
-            </div>
-          </div>}
-          
-          {/* Date Range Indicator */}
-          {dateRange.from && dateRange.to && <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 mb-4 animate-fade-in">
-              <div className="flex items-center space-x-2 text-sm">
-                <Calendar className="h-4 w-4 text-primary" />
-                <span className="text-muted-foreground">Showing data for:</span>
-                <span className="font-medium text-foreground">
-                  {dateRange.from.toLocaleDateString()} - {dateRange.to.toLocaleDateString()}
-                </span>
+                </div>
               </div>
             </div>}
-          
-          {/* Header */}
+        
+        {/* Header */}
         <div className="flex items-center justify-between mb-8 animate-slide-up">
           <div>
             <h1 className="text-4xl font-bold text-foreground">
