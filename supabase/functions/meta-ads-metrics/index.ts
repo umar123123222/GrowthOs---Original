@@ -293,10 +293,10 @@ serve(async (req) => {
         case 'CONVERSIONS':
         case 'PURCHASE':
         case 'CATALOG_SALES':
-          if (roas >= 400) primaryScore = 100;
-          else if (roas >= 250) primaryScore = 80;
-          else if (roas >= 150) primaryScore = 60;
-          else if (roas >= 100) primaryScore = 40;
+          if (roas >= 4) primaryScore = 100;
+          else if (roas >= 2.5) primaryScore = 80;
+          else if (roas >= 1.5) primaryScore = 60;
+          else if (roas >= 1.0) primaryScore = 40;
           else primaryScore = 20;
           
           if (ctr >= 1.5) secondaryScore = 20;
@@ -323,7 +323,7 @@ serve(async (req) => {
         default:
           const ctrScore = ctr >= 2.0 ? 50 : ctr >= 1.5 ? 40 : ctr >= 1.0 ? 30 : 20;
           const cpcScore = cpc <= 1.0 ? 30 : cpc <= 2.0 ? 25 : cpc <= 3.0 ? 20 : 10;
-          const roasScore = roas >= 200 ? 20 : roas >= 100 ? 15 : roas >= 50 ? 10 : 5;
+          const roasScore = roas >= 2 ? 20 : roas >= 1 ? 15 : roas >= 0.5 ? 10 : 5;
           primaryScore = ctrScore + cpcScore;
           secondaryScore = roasScore;
       }
@@ -388,7 +388,7 @@ serve(async (req) => {
           .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
-        const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
+        const roas = spend > 0 ? (conversionValue / spend) : 0;
         const performance = categorizePerformance(ctr, cpc, roas, campaign.objective, spend);
 
         metrics.campaigns.push({
@@ -450,7 +450,7 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
-          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
+          const roas = spend > 0 ? (conversionValue / spend) : 0;
           const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
           metrics.campaigns.push({
@@ -518,7 +518,7 @@ serve(async (req) => {
           .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
           .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
         
-        const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
+        const roas = spend > 0 ? (conversionValue / spend) : 0;
         const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
         metrics.ads.push({
@@ -578,7 +578,7 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
-          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
+          const roas = spend > 0 ? (conversionValue / spend) : 0;
           const performance = categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend);
 
           metrics.ads.push({
@@ -664,7 +664,7 @@ serve(async (req) => {
             .filter((a: any) => a.action_type.toLowerCase().includes('purchase'))
             .reduce((sum: number, a: any) => sum + parseFloat(a.value || 0), 0);
           
-          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0;
+          const roas = spend > 0 ? (conversionValue / spend) : 0;
           const performance = categorizePerformance(ctr, cpc, roas, campaign.objective, spend);
 
           metrics.campaigns.push({
@@ -702,7 +702,7 @@ serve(async (req) => {
       metrics.averageCPC = metrics.totalSpend / metrics.totalClicks;
     }
     if (metrics.totalSpend > 0 && metrics.totalConversionValue > 0) {
-      metrics.averageROAS = (metrics.totalConversionValue / metrics.totalSpend) * 100;
+      metrics.averageROAS = (metrics.totalConversionValue / metrics.totalSpend);
     }
 
     console.log(`✓ Final result: ${metrics.campaigns.length} campaigns, ${metrics.ads.length} ads`);
