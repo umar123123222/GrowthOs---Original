@@ -57,7 +57,7 @@ serve(async (req) => {
     console.log('[SUCCESS PARTNER] Processing message for user:', user.id, 'Message length:', message.trim().length);
 
     // Save user message first
-    const { error: userMsgError } = await supabaseClient
+    const { data: insertedMessage, error: userMsgError } = await supabaseClient
       .from('success_partner_messages')
       .insert({
         user_id: user.id,
@@ -65,7 +65,9 @@ serve(async (req) => {
         content: message.trim(),
         timestamp: new Date().toISOString(),
         date: new Date().toISOString().split('T')[0]
-      });
+      })
+      .select('*')
+      .single();
 
     if (userMsgError) {
       console.error('[SUCCESS PARTNER] Failed to save user message:', userMsgError);
@@ -82,13 +84,16 @@ serve(async (req) => {
       .order('timestamp', { ascending: false })
       .limit(2);
 
-    if (recentMessages && recentMessages.length > 1) {
-      const lastUserMessage = recentMessages[1];
-      const timeDiff = Date.now() - new Date(lastUserMessage.timestamp).getTime();
-      
-      // If the last user message was within 3 seconds and matches content, it might be a duplicate
-      if (timeDiff < 3000 && lastUserMessage.content === message.trim()) {
-        console.log('[SUCCESS PARTNER] Duplicate message detected, skipping processing');
+    if (recentMessages && recentMessages.length > 1 && insertedMessage) {
+      const previousUserMessage = recentMessages[1];
+      const nowTs = new Date(insertedMessage.timestamp || new Date()).getTime();
+      const prevTs = new Date(previousUserMessage.timestamp).getTime();
+      const withinWindow = nowTs - prevTs < 3000;
+      const sameContent = previousUserMessage.content === message.trim();
+
+      // Only treat as duplicate if our insert is the later one within the window
+      if (withinWindow && sameContent && nowTs > prevTs) {
+        console.log('[SUCCESS PARTNER] Duplicate message detected (secondary), skipping processing');
         return new Response(
           JSON.stringify({ status: 'duplicate', message: 'Message already being processed' }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
