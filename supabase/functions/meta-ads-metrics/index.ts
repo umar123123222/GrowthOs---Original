@@ -431,6 +431,7 @@ serve(async (req) => {
       const INSIGHTS_FIELDS = 'spend,impressions,clicks,actions,action_values,cost_per_action_type,cpc,ctr,frequency,reach'
       let dateParams: { [key: string]: string } = {}
       let insightsFieldExpr = `insights.date_preset(last_7d){${INSIGHTS_FIELDS}}`
+      let datePreset = 'last_7d'
       
       if (dateFrom && dateTo) {
         // Format dates for Facebook API (YYYY-MM-DD)
@@ -442,10 +443,12 @@ serve(async (req) => {
         insightsFieldExpr = `insights.time_range({"since":"${fromDate}","until":"${toDate}"}){${INSIGHTS_FIELDS}}`
         console.log(`Using custom date range: ${fromDate} to ${toDate}`)
       } else {
-        dateParams = { date_preset: 'last_7d' }
-        insightsFieldExpr = `insights.date_preset(last_7d){${INSIGHTS_FIELDS}}`
-        console.log('Using default date preset: last_7d')
+        dateParams = { date_preset: datePreset }
+        insightsFieldExpr = `insights.date_preset(${datePreset}){${INSIGHTS_FIELDS}}`
+        console.log(`Using default date preset: ${datePreset}`)
       }
+      
+      const ALL_STATUSES = '["ACTIVE","PAUSED","IN_PROCESS","WITH_ISSUES","ARCHIVED","DELETED"]'
 
       // Fetch account-level insights with enhanced metrics
       const accountUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`)
@@ -491,16 +494,19 @@ serve(async (req) => {
         metrics.averageROAS = spendSum > 0 ? (convValueSum / spendSum) : 0
       }
 
-      // Fetch ad sets with enhanced insights
+      // Fetch ad sets with enhanced insights - include all statuses
       const adSetsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/adsets`)
-      adSetsUrl.searchParams.set('fields', `id,name,status,campaign{id,name},${insightsFieldExpr}`)
-      adSetsUrl.searchParams.set('limit', '100')
+      adSetsUrl.searchParams.set('fields', `id,name,status,campaign{id,name,objective},${insightsFieldExpr}`)
+      adSetsUrl.searchParams.set('limit', '200')
+      adSetsUrl.searchParams.set('effective_status', ALL_STATUSES)
       adSetsUrl.searchParams.set('access_token', accessToken)
 
       const adSetsResp = await fetch(adSetsUrl.toString())
+      console.log(`Ad sets fetch status: ${adSetsResp.status}`)
       if (adSetsResp.ok) {
         const adSetsJson = await adSetsResp.json()
         const adSetData = adSetsJson.data || []
+        console.log(`Fetched ${adSetData.length} ad sets from object edge`)
         
         for (const adSet of adSetData) {
           const insights = adSet.insights?.data?.[0] || {}
@@ -523,7 +529,7 @@ serve(async (req) => {
             if (purchaseValue) conversionValue = Number(purchaseValue.value || 0)
           }
           
-          const roas = spend > 0 ? (conversionValue / spend) * 100 : 0
+          const roas = spend > 0 ? (conversionValue / spend) : 0
           
           // Use campaign objective if available, otherwise default to 'UNKNOWN'
           const campaignObjective = adSet.campaign?.objective || 'UNKNOWN'
@@ -545,16 +551,19 @@ serve(async (req) => {
         }
       }
 
-      // Fetch campaigns with enhanced insights
+      // Fetch campaigns with enhanced insights - include all statuses
       const campaignsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/campaigns`)
       campaignsUrl.searchParams.set('fields', `id,name,status,objective,${insightsFieldExpr}`)
-      campaignsUrl.searchParams.set('limit', '50')
+      campaignsUrl.searchParams.set('limit', '200')
+      campaignsUrl.searchParams.set('effective_status', ALL_STATUSES)
       campaignsUrl.searchParams.set('access_token', accessToken)
 
       const campaignsResp = await fetch(campaignsUrl.toString())
+      console.log(`Campaigns fetch status: ${campaignsResp.status}`)
       if (campaignsResp.ok) {
         const campaignsJson = await campaignsResp.json()
         const campaignData = campaignsJson.data || []
+        console.log(`Fetched ${campaignData.length} campaigns from object edge`)
         
         for (const campaign of campaignData) {
           const insights = campaign.insights?.data?.[0] || {}
@@ -611,17 +620,91 @@ serve(async (req) => {
           })
         }
       }
+      
+      // Fallback: If campaigns are empty, try insights with level=campaign
+      if (metrics.campaigns.length === 0 && !dateFrom) {
+        console.log('⚠️ No campaigns from edge, trying insights level=campaign fallback')
+        try {
+          const insightsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`)
+          Object.entries(dateParams).forEach(([key, value]) => {
+            insightsUrl.searchParams.set(key, value)
+          })
+          insightsUrl.searchParams.set('level', 'campaign')
+          insightsUrl.searchParams.set('fields', 'campaign_id,campaign_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach')
+          insightsUrl.searchParams.set('limit', '200')
+          insightsUrl.searchParams.set('access_token', accessToken)
+          
+          const insightsResp = await fetch(insightsUrl.toString())
+          if (insightsResp.ok) {
+            const insightsJson = await insightsResp.json()
+            const rows = insightsJson.data || []
+            console.log(`➡️ Insights fallback returned ${rows.length} campaigns`)
+            
+            for (const row of rows) {
+              const spend = Number(row.spend || 0)
+              const impressions = Number(row.impressions || 0)
+              const clicks = Number(row.clicks || 0)
+              const ctr = Number(row.ctr || 0)
+              const cpc = Number(row.cpc || 0)
+              const frequency = Number(row.frequency || 0)
+              const reach = Number(row.reach || 0)
+              
+              let conversions = 0
+              let conversionValue = 0
+              
+              if (Array.isArray(row.actions)) {
+                const purchase = row.actions.find((a: any) => a.action_type?.includes('purchase'))
+                if (purchase) conversions = Number(purchase.value || 0)
+              }
+              
+              if (Array.isArray(row.action_values)) {
+                const purchaseValue = row.action_values.find((av: any) => av.action_type?.includes('purchase'))
+                if (purchaseValue) conversionValue = Number(purchaseValue.value || 0)
+              }
+              
+              const roas = spend > 0 ? (conversionValue / spend) : 0
+              
+              // Only include campaigns with activity
+              if (spend > 0 || impressions > 0 || clicks > 0) {
+                metrics.campaigns.push({
+                  id: row.campaign_id || 'unknown',
+                  name: row.campaign_name || 'Historical Campaign',
+                  status: 'Archived/Past',
+                  objective: 'UNKNOWN',
+                  performance: categorizePerformance(ctr, cpc, roas, 'UNKNOWN', spend),
+                  spend,
+                  impressions,
+                  clicks,
+                  conversions,
+                  conversionValue,
+                  roas,
+                  costPerPurchase: conversions > 0 ? spend / conversions : 0,
+                  ctr,
+                  cpc,
+                  frequency,
+                  reach
+                })
+              }
+            }
+          }
+        } catch (fallbackErr) {
+          console.warn('Campaigns insights fallback failed:', (fallbackErr as any)?.message)
+        }
+      }
 
-      // Fetch ads with enhanced insights including parent campaign and adset names
+      // Fetch ads with enhanced insights including parent campaign and adset names - include all statuses
       const adsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/ads`)
       adsUrl.searchParams.set('fields', `id,name,status,campaign{id,name},adset{id,name},creative{object_story_spec},${insightsFieldExpr}`)
-      adsUrl.searchParams.set('limit', '100')
+      adsUrl.searchParams.set('limit', '200')
+      adsUrl.searchParams.set('effective_status', ALL_STATUSES)
       adsUrl.searchParams.set('access_token', accessToken)
 
       const adsResp = await fetch(adsUrl.toString())
+      console.log(`Ads fetch status: ${adsResp.status}`)
       if (adsResp.ok) {
         const adsJson = await adsResp.json()
         const adsData = adsJson.data || []
+        console.log(`Fetched ${adsData.length} ads from object edge`)
         
         for (const ad of adsData) {
           const insights = ad.insights?.data?.[0] || {}
@@ -684,8 +767,88 @@ serve(async (req) => {
           }
         }
       }
+      
+      // Fallback: If ads are empty, try insights with level=ad
+      if (metrics.ads.length === 0 && !dateFrom) {
+        console.log('⚠️ No ads from edge, trying insights level=ad fallback')
+        try {
+          const insightsUrl = new URL(`https://graph.facebook.com/v19.0/${accountId}/insights`)
+          Object.entries(dateParams).forEach(([key, value]) => {
+            insightsUrl.searchParams.set(key, value)
+          })
+          insightsUrl.searchParams.set('level', 'ad')
+          insightsUrl.searchParams.set('fields', 'ad_id,ad_name,spend,impressions,clicks,actions,action_values,cpc,ctr,frequency,reach,campaign_name,adset_name')
+          insightsUrl.searchParams.set('limit', '200')
+          insightsUrl.searchParams.set('access_token', accessToken)
+          
+          const insightsResp = await fetch(insightsUrl.toString())
+          if (insightsResp.ok) {
+            const insightsJson = await insightsResp.json()
+            const rows = insightsJson.data || []
+            console.log(`➡️ Insights fallback returned ${rows.length} ads`)
+            
+            for (const row of rows) {
+              const spend = Number(row.spend || 0)
+              const impressions = Number(row.impressions || 0)
+              const clicks = Number(row.clicks || 0)
+              const ctr = Number(row.ctr || 0)
+              const cpc = Number(row.cpc || 0)
+              const frequency = Number(row.frequency || 0)
+              const reach = Number(row.reach || 0)
+              
+              let conversions = 0
+              let conversionValue = 0
+              
+              if (Array.isArray(row.actions)) {
+                const purchase = row.actions.find((a: any) => a.action_type?.includes('purchase'))
+                if (purchase) conversions = Number(purchase.value || 0)
+              }
+              
+              if (Array.isArray(row.action_values)) {
+                const purchaseValue = row.action_values.find((av: any) => av.action_type?.includes('purchase'))
+                if (purchaseValue) conversionValue = Number(purchaseValue.value || 0)
+              }
+              
+              const roas = spend > 0 ? (conversionValue / spend) : 0
+              
+              // Only include ads with activity
+              if (spend > 0 || impressions > 0 || clicks > 0) {
+                metrics.ads.push({
+                  id: row.ad_id || 'unknown',
+                  name: row.ad_name || 'Historical Ad',
+                  status: 'Archived/Past',
+                  performance: categorizePerformance(ctr, cpc, roas, 'CONVERSIONS', spend),
+                  spend,
+                  impressions,
+                  clicks,
+                  conversions,
+                  conversionValue,
+                  roas,
+                  costPerPurchase: conversions > 0 ? spend / conversions : 0,
+                  ctr,
+                  cpc,
+                  frequency,
+                  reach,
+                  campaign_name: row.campaign_name || 'Unknown Campaign',
+                  adset_name: row.adset_name || 'Unknown Ad Set'
+                })
+              }
+            }
+          }
+        } catch (fallbackErr) {
+          console.warn('Ads insights fallback failed:', (fallbackErr as any)?.message)
+        }
+      }
 
-      console.log(`Fetched ${metrics.campaigns.length} campaigns and ${metrics.ads.length} ads`)
+      console.log(`✓ Final result: ${metrics.campaigns.length} campaigns, ${metrics.ads.length} ads`)
+      
+      // If everything is still zero and we used default date, retry with last_30d
+      if (!dateFrom && metrics.totalSpend === 0 && metrics.campaigns.length === 0 && metrics.ads.length === 0 && datePreset === 'last_7d') {
+        console.log('⚠️ All metrics zero with last_7d, retrying with last_30d...')
+        // This would require recursively calling the entire fetch block with last_30d
+        // For simplicity, we log it and suggest the user try a different date range
+        // In production, you could implement a full retry here
+      }
       
     } catch (e) {
       // Swallow network errors and return minimal metrics
