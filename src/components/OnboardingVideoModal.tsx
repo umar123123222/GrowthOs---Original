@@ -18,11 +18,22 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
 }) => {
   const [videoCompleted, setVideoCompleted] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showManualConfirm, setShowManualConfirm] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const { toast } = useToast();
 
   const videoType = getVideoType(videoUrl);
+
+  // Show manual confirm button after 30 seconds as fallback
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowManualConfirm(true);
+      console.log('Manual confirm button enabled after 30 seconds');
+    }, 30000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   function getVideoType(url: string): 'youtube' | 'vimeo' | 'bunny' | 'direct' {
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
@@ -64,14 +75,27 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
   }
 
   useEffect(() => {
+    // Log all postMessage events for debugging
+    const handleAllMessages = (event: MessageEvent) => {
+      console.log('PostMessage received:', {
+        origin: event.origin,
+        data: event.data,
+        videoType
+      });
+    };
+
+    window.addEventListener('message', handleAllMessages);
+
     if (videoType === 'youtube') {
       // YouTube iframe API
       const handleMessage = (event: MessageEvent) => {
         if (event.origin === 'https://www.youtube.com') {
           try {
             const data = JSON.parse(event.data);
+            console.log('YouTube event:', data);
             if (data.event === 'onStateChange' && data.info === 0) {
               // Video ended (state 0)
+              console.log('YouTube video completed!');
               setVideoCompleted(true);
             }
           } catch (e) {
@@ -81,14 +105,19 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
       };
 
       window.addEventListener('message', handleMessage);
-      return () => window.removeEventListener('message', handleMessage);
+      return () => {
+        window.removeEventListener('message', handleMessage);
+        window.removeEventListener('message', handleAllMessages);
+      };
     } else if (videoType === 'vimeo') {
       // Vimeo player API
       const handleMessage = (event: MessageEvent) => {
         if (event.origin === 'https://player.vimeo.com') {
           try {
             const data = JSON.parse(event.data);
+            console.log('Vimeo event:', data);
             if (data.event === 'ended') {
+              console.log('Vimeo video completed!');
               setVideoCompleted(true);
             }
           } catch (e) {
@@ -98,55 +127,86 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
       };
 
       window.addEventListener('message', handleMessage);
-      return () => window.removeEventListener('message', handleMessage);
+      return () => {
+        window.removeEventListener('message', handleMessage);
+        window.removeEventListener('message', handleAllMessages);
+      };
     } else if (videoType === 'bunny') {
-      // Bunny Stream player API
+      // Bunny Stream player API - with enhanced detection
       const handleMessage = (event: MessageEvent) => {
         if (event.origin.includes('mediadelivery.net') || event.origin.includes('bunnycdn.com')) {
+          console.log('Bunny Stream event:', event.data);
           try {
             const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
-            // Bunny Stream sends 'ended' event when video finishes
-            if (data.event === 'ended' || data.type === 'ended' || data === 'ended') {
+            // Try multiple detection methods for Bunny Stream
+            if (data.event === 'ended' || 
+                data.type === 'ended' || 
+                data === 'ended' ||
+                data.event === 'timeupdate' && data.duration && data.currentTime >= data.duration - 1) {
+              console.log('Bunny Stream video completed!');
               setVideoCompleted(true);
             }
           } catch (e) {
-            // Ignore parse errors
+            // If it's just a string "ended", handle it
+            if (event.data === 'ended') {
+              console.log('Bunny Stream video completed (string)!');
+              setVideoCompleted(true);
+            }
           }
         }
       };
 
       window.addEventListener('message', handleMessage);
-      return () => window.removeEventListener('message', handleMessage);
+      return () => {
+        window.removeEventListener('message', handleMessage);
+        window.removeEventListener('message', handleAllMessages);
+      };
     }
+
+    return () => window.removeEventListener('message', handleAllMessages);
   }, [videoType]);
 
   const handleVideoEnd = () => {
+    console.log('Direct video ended');
     setVideoCompleted(true);
   };
 
   const handleContinue = async () => {
+    console.log('Continue button clicked', { userId, videoCompleted, isUpdating });
     setIsUpdating(true);
 
     try {
-      const { error } = await supabase
+      console.log('Updating student record...');
+      const { data, error } = await supabase
         .from('students')
         .update({ onboarding_video_watched: true })
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select();
 
-      if (error) throw error;
+      console.log('Update result:', { data, error });
 
+      if (error) {
+        console.error('Database error:', error);
+        throw error;
+      }
+
+      console.log('Successfully updated, calling onComplete');
+      
       toast({
         title: "Welcome!",
-        description: "You can now access your dashboard.",
+        description: "Redirecting to your dashboard...",
       });
 
-      onComplete();
+      // Wait a moment before calling onComplete
+      setTimeout(() => {
+        onComplete();
+      }, 500);
     } catch (error) {
       console.error('Error updating video watch status:', error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to update your progress. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to update your progress. Please try again.",
       });
       setIsUpdating(false);
     }
@@ -232,6 +292,10 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
                   <CheckCircle className="w-5 h-5 text-green-600" />
                   <span className="text-green-600 font-medium">Video completed!</span>
                 </>
+              ) : showManualConfirm ? (
+                <span className="text-amber-600 text-xs">
+                  If you've finished watching, click the button to continue
+                </span>
               ) : (
                 <span className="text-muted-foreground">Please watch the entire video</span>
               )}
@@ -239,7 +303,7 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
 
             <Button
               onClick={handleContinue}
-              disabled={!videoCompleted || isUpdating}
+              disabled={(!videoCompleted && !showManualConfirm) || isUpdating}
               size="lg"
             >
               {isUpdating ? (
