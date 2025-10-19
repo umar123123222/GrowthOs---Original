@@ -575,8 +575,14 @@ export function CompanySettings() {
                   placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..."
                 />
                 <p className="text-xs text-muted-foreground">
-                  Enter the URL of a video (YouTube, Vimeo, or direct video link) that students must watch after completing the onboarding questionnaire. 
+                  Enter the URL of a video (YouTube, Vimeo, Bunny Stream, or direct video link) that students must watch after completing the onboarding questionnaire. 
                   The video will be non-skippable and students must watch it completely before accessing their dashboard.
+                  <br /><br />
+                  <strong>Supported formats:</strong>
+                  <br />• YouTube: https://www.youtube.com/watch?v=...
+                  <br />• Vimeo: https://vimeo.com/...
+                  <br />• Bunny Stream: https://iframe.mediadelivery.net/embed/... or https://video.bunnycdn.com/play/...
+                  <br />• Direct: Any .mp4, .webm, or .ogg video URL
                 </p>
                 {settings.onboarding_video_url && (
                   <div className="mt-2 p-2 bg-muted rounded-md text-xs">

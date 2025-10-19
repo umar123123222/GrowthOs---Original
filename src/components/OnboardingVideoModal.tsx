@@ -24,14 +24,33 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
 
   const videoType = getVideoType(videoUrl);
 
-  function getVideoType(url: string): 'youtube' | 'vimeo' | 'direct' {
+  function getVideoType(url: string): 'youtube' | 'vimeo' | 'bunny' | 'direct' {
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       return 'youtube';
     }
     if (url.includes('vimeo.com')) {
       return 'vimeo';
     }
+    if (url.includes('bunnycdn.com') || url.includes('mediadelivery.net')) {
+      return 'bunny';
+    }
     return 'direct';
+  }
+
+  function getBunnyEmbedUrl(url: string): string {
+    // If already an embed URL, return as is
+    if (url.includes('iframe.mediadelivery.net/embed')) {
+      return url;
+    }
+    // If it's a video.bunnycdn.com URL, convert to embed
+    if (url.includes('video.bunnycdn.com/play')) {
+      const videoId = url.match(/play\/(\d+)\/([^/]+)/);
+      if (videoId) {
+        return `https://iframe.mediadelivery.net/embed/${videoId[1]}/${videoId[2]}?autoplay=true&preload=true`;
+      }
+    }
+    // Otherwise return as is and hope it works
+    return url;
   }
 
   function getYouTubeEmbedUrl(url: string): string {
@@ -70,6 +89,24 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
           try {
             const data = JSON.parse(event.data);
             if (data.event === 'ended') {
+              setVideoCompleted(true);
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+      return () => window.removeEventListener('message', handleMessage);
+    } else if (videoType === 'bunny') {
+      // Bunny Stream player API
+      const handleMessage = (event: MessageEvent) => {
+        if (event.origin.includes('mediadelivery.net') || event.origin.includes('bunnycdn.com')) {
+          try {
+            const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+            // Bunny Stream sends 'ended' event when video finishes
+            if (data.event === 'ended' || data.type === 'ended' || data === 'ended') {
               setVideoCompleted(true);
             }
           } catch (e) {
@@ -148,6 +185,16 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
                 src={getVimeoEmbedUrl(videoUrl)}
                 className="w-full h-full"
                 allow="autoplay; fullscreen; picture-in-picture"
+                allowFullScreen
+              />
+            )}
+
+            {videoType === 'bunny' && (
+              <iframe
+                ref={iframeRef}
+                src={getBunnyEmbedUrl(videoUrl)}
+                className="w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
             )}
