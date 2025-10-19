@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 async function decrypt(encryptedText: string): Promise<string> {
-  const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/secure-encrypt-token`, {
+  const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/encrypt-token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
