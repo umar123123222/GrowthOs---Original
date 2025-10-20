@@ -13,6 +13,8 @@ interface CreateEnhancedStudentRequest {
   full_name: string;
   phone: string;
   installment_count: number;
+  discount_amount?: number;
+  discount_percentage?: number;
 }
 
 interface CreateEnhancedStudentResponse {
@@ -89,8 +91,15 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     // Parse request body
-    const { email, full_name, phone, installment_count }: CreateEnhancedStudentRequest = await req.json();
-    console.log('Request data:', { email, full_name, phone, installment_count });
+    const { 
+      email, 
+      full_name, 
+      phone, 
+      installment_count,
+      discount_amount = 0,
+      discount_percentage = 0
+    }: CreateEnhancedStudentRequest = await req.json();
+    console.log('Request data:', { email, full_name, phone, installment_count, discount_amount, discount_percentage });
 
     // Generate passwords
     const loginPassword = generateSecurePassword();
@@ -139,9 +148,10 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get the current user who is creating this student
+    // Get the current user who is creating this student and validate discount permissions
     const authHeader = req.headers.get('authorization');
     let createdBy = null;
+    let creatorRole = null;
     
     if (authHeader && authHeader.startsWith('Bearer ')) {
       try {
@@ -159,12 +169,35 @@ const handler = async (req: Request): Promise<Response> => {
         } else {
           createdBy = user?.id || null;
           console.log('Student being created by user:', createdBy);
+          
+          // Get creator's role for discount validation
+          if (createdBy) {
+            const { data: userData } = await supabaseAdmin
+              .from('users')
+              .select('role')
+              .eq('id', createdBy)
+              .single();
+            creatorRole = userData?.role || null;
+            console.log('Creator role:', creatorRole);
+          }
         }
       } catch (error) {
         console.log('Could not determine creator:', error);
       }
     } else {
       console.log('No authorization header found or invalid format');
+    }
+
+    // Validate discount permissions
+    if ((discount_amount > 0 || discount_percentage > 0) && !['admin', 'superadmin'].includes(creatorRole || '')) {
+      console.error('Unauthorized discount attempt by role:', creatorRole);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Only admins and superadmins can apply discounts to student fees' 
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Create user profile in public.users
@@ -197,13 +230,46 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create student record
+    // Get company settings to calculate final fee
+    const { data: companySettings } = await supabaseAdmin
+      .from('company_settings')
+      .select('original_fee_amount')
+      .eq('id', 1)
+      .single();
+
+    if (!companySettings) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Company settings not found' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Calculate final fee with discount
+    let finalFeeAmount = companySettings.original_fee_amount;
+    if (discount_percentage > 0) {
+      finalFeeAmount = finalFeeAmount * (1 - discount_percentage / 100);
+    } else if (discount_amount > 0) {
+      finalFeeAmount = finalFeeAmount - discount_amount;
+    }
+    finalFeeAmount = Math.max(0, finalFeeAmount);
+
+    console.log('Fee calculation:', {
+      original: companySettings.original_fee_amount,
+      discount_amount,
+      discount_percentage,
+      final: finalFeeAmount
+    });
+
+    // Create student record with discount info
     const { data: studentRecord, error: studentError } = await supabaseAdmin
       .from('students')
       .insert({
         user_id: authUser.user.id,
         installment_count,
-        lms_username: lmsUserId
+        lms_username: lmsUserId,
+        discount_amount: discount_amount || 0,
+        discount_percentage: discount_percentage || 0,
+        final_fee_amount: finalFeeAmount
       })
       .select()
       .single();
@@ -263,7 +329,7 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       if (companySettings) {
-        const installmentAmount = companySettings.original_fee_amount / installment_count;
+        const installmentAmount = finalFeeAmount / installment_count;
         const intervalDays = companySettings.invoice_send_gap_days || 30;
         
         // Create all installments
@@ -293,6 +359,26 @@ const handler = async (req: Request): Promise<Response> => {
           console.error('Error creating installments:', installmentError);
         } else {
           console.log(`All ${installment_count} installments created successfully`);
+          
+          // Log discount application if applied
+          if (discount_amount > 0 || discount_percentage > 0) {
+            await supabaseAdmin.from('admin_logs').insert({
+              entity_type: 'student',
+              entity_id: studentRecord.id,
+              action: 'discount_applied',
+              description: `Discount applied: ${discount_percentage > 0 ? discount_percentage + '%' : currency + ' ' + discount_amount}`,
+              performed_by: createdBy,
+              data: {
+                original_amount: companySettings.original_fee_amount,
+                discount_amount: discount_amount || 0,
+                discount_percentage: discount_percentage || 0,
+                final_amount: finalFeeAmount,
+                student_email: email,
+                student_name: full_name
+              }
+            });
+            console.log('Discount application logged to admin_logs');
+          }
         }
       }
       

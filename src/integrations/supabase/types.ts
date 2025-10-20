@@ -1217,8 +1217,11 @@ export type Database = {
         Row: {
           answers_json: Json | null
           created_at: string | null
+          discount_amount: number | null
+          discount_percentage: number | null
           enrollment_date: string | null
           fees_cleared: boolean | null
+          final_fee_amount: number | null
           goal_brief: string | null
           id: string
           installment_count: number | null
@@ -1233,8 +1236,11 @@ export type Database = {
         Insert: {
           answers_json?: Json | null
           created_at?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
           enrollment_date?: string | null
           fees_cleared?: boolean | null
+          final_fee_amount?: number | null
           goal_brief?: string | null
           id?: string
           installment_count?: number | null
@@ -1249,8 +1255,11 @@ export type Database = {
         Update: {
           answers_json?: Json | null
           created_at?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
           enrollment_date?: string | null
           fees_cleared?: boolean | null
+          final_fee_amount?: number | null
           goal_brief?: string | null
           id?: string
           installment_count?: number | null

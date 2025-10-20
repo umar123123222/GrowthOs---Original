@@ -7,6 +7,8 @@ export interface EnhancedStudentData {
   full_name: string
   phone: string
   installment_count: number
+  discount_amount?: number
+  discount_percentage?: number
 }
 
 export interface EnhancedStudentResponse {
