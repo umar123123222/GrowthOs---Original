@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -411,6 +411,58 @@ export function StudentsManagement() {
         description: `${studentName} has been deleted successfully`
       });
       fetchStudents();
+    }
+  };
+
+  const handleResetSuccessPartnerCredits = async (studentId: string) => {
+    try {
+      // Delete all existing credits for this user
+      const { error: deleteError } = await supabase
+        .from('success_partner_credits')
+        .delete()
+        .eq('user_id', studentId);
+
+      if (deleteError) {
+        console.error('Error deleting success partner credits:', deleteError);
+        toast({
+          title: 'Error',
+          description: 'Failed to reset Success Partner credits',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Insert fresh record with 0 credits
+      const { error: insertError } = await supabase
+        .from('success_partner_credits')
+        .insert({
+          user_id: studentId,
+          credits_used: 0,
+          daily_limit: 10,
+          date: new Date().toISOString().split('T')[0]
+        });
+
+      if (insertError) {
+        console.error('Error resetting success partner credits:', insertError);
+        toast({
+          title: 'Error',
+          description: 'Failed to reset Success Partner credits',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Success Partner credits have been reset to 0',
+      });
+    } catch (error) {
+      console.error('Unexpected error resetting credits:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive'
+      });
     }
   };
   const getLMSStatusColor = (lmsStatus: string) => {
@@ -1244,6 +1296,16 @@ export function StudentsManagement() {
                                     <Ban className="w-4 h-4 mr-2" />
                                     Suspend LMS
                                   </>}
+                               </Button>
+                               
+                               <Button 
+                                 variant="outline" 
+                                 size="sm" 
+                                 onClick={() => handleResetSuccessPartnerCredits(student.id)}
+                                 className="hover-scale hover:border-yellow-300 hover:text-yellow-600"
+                               >
+                                 <RefreshCw className="w-4 h-4 mr-2" />
+                                 Reset SP Credits
                                </Button>
                                
                                <AlertDialog>
