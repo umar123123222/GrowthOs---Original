@@ -75,31 +75,9 @@ serve(async (req) => {
       console.log('[SUCCESS PARTNER] User message saved to database');
     }
 
-    // Check if there's already a response being processed (prevent duplicates)
-    const { data: recentMessages } = await supabaseClient
-      .from('success_partner_messages')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('role', 'user')
-      .order('timestamp', { ascending: false })
-      .limit(2);
-
-    if (recentMessages && recentMessages.length > 1 && insertedMessage) {
-      const previousUserMessage = recentMessages[1];
-      const nowTs = new Date(insertedMessage.timestamp || new Date()).getTime();
-      const prevTs = new Date(previousUserMessage.timestamp).getTime();
-      const withinWindow = nowTs - prevTs < 3000;
-      const sameContent = previousUserMessage.content === message.trim();
-
-      // Only treat as duplicate if our insert is the later one within the window
-      if (withinWindow && sameContent && nowTs > prevTs) {
-        console.log('[SUCCESS PARTNER] Duplicate message detected (secondary), skipping processing');
-        return new Response(
-          JSON.stringify({ status: 'duplicate', message: 'Message already being processed' }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-    }
+    // Removed aggressive duplicate detection - now relying on frontend to prevent double-sends
+    // The previous logic was blocking legitimate messages with same content within 3s window
+    console.log('[SUCCESS PARTNER] Message saved, proceeding to webhook call...');
     
     console.log('[SUCCESS PARTNER] Starting background processing...');
 

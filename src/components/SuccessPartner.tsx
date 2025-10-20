@@ -472,6 +472,7 @@ const SuccessPartner = ({
     }
   }, [user, integrationStatus, messages, dateRangeDays]);
   const handleSendMessage = useCallback(async () => {
+    // Prevent double-sends: block if already loading or message is empty
     if (!message.trim() || isLoading) {
       if (process.env.NODE_ENV === 'development') {
         safeLogger.warn('Success Partner: Message sending blocked', {
@@ -481,6 +482,11 @@ const SuccessPartner = ({
       }
       return;
     }
+
+    const currentMessage = message.trim();
+    
+    // Clear input immediately to prevent accidental double-sends
+    setMessage("");
 
     // Check if user has remaining credits
     if (credits && !credits.can_send_message) {
@@ -521,7 +527,7 @@ const SuccessPartner = ({
     const userMessage: Message = {
       id: Date.now(),
       sender: "user",
-      content: message.trim(),
+      content: currentMessage,
       timestamp: new Date()
     };
     const loadingMessage: Message = {
@@ -535,7 +541,6 @@ const SuccessPartner = ({
 
     // Add user message and loading indicator
     setMessages(prev => [...prev, userMessage, loadingMessage]);
-    setMessage("");
     setIsLoading(true);
 
     // Save user message to database FIRST (await to ensure it completes even if modal closes)
@@ -731,9 +736,31 @@ const SuccessPartner = ({
         {/* Input */}
         <div className="flex-shrink-0 p-4 border-t">
           <div className="flex space-x-2">
-            <Input placeholder="Ask about videos, assignments, or course content..." value={message} onChange={e => setMessage(e.target.value)} onKeyPress={e => e.key === "Enter" && handleSendMessage()} disabled={isLoading || credits && !credits.can_send_message} />
-            <Button onClick={handleSendMessage} disabled={isLoading || credits && !credits.can_send_message}>
-              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            <Input 
+              placeholder="Ask about videos, assignments, or course content..." 
+              value={message} 
+              onChange={e => setMessage(e.target.value)} 
+              onKeyPress={e => {
+                if (e.key === "Enter" && !e.shiftKey && !isLoading) {
+                  e.preventDefault();
+                  handleSendMessage();
+                }
+              }}
+              disabled={isLoading || (credits && !credits.can_send_message)}
+            />
+            <Button 
+              onClick={handleSendMessage} 
+              disabled={isLoading || !message.trim() || (credits && !credits.can_send_message)}
+              className="flex items-center gap-2"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="sr-only">Sending...</span>
+                </>
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </Button>
           </div>
           
