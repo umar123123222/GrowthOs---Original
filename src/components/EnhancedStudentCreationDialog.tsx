@@ -202,8 +202,15 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                 id="phone"
                 type="tel"
                 value={formData.phone}
-                onChange={(e) => handleInputChange('phone', e.target.value)}
-                placeholder="Enter phone number"
+                onChange={(e) => {
+                  let value = e.target.value.replace(/[^\d-]/g, '')
+                  if (!value.startsWith('92-') && value.length > 0) {
+                    value = '92-' + value.replace(/^92-?/, '')
+                  }
+                  handleInputChange('phone', value)
+                }}
+                placeholder="92-3001234567"
+                pattern="92-[0-9]{10}"
                 required
               />
             </div>
