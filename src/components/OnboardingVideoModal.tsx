@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -244,13 +244,15 @@ export const OnboardingVideoModal: React.FC<OnboardingVideoModalProps> = ({
         onEscapeKeyDown={(e) => e.preventDefault()}
         onInteractOutside={(e) => e.preventDefault()}
       >
-        <div className="space-y-4 p-6">
-          <div>
-            <h2 className="text-2xl font-semibold mb-2">Welcome! Watch this video to get started</h2>
-            <p className="text-sm text-muted-foreground">
-              Please watch the complete video before continuing to your dashboard
-            </p>
-          </div>
+        <DialogHeader className="px-6 pt-6">
+          <DialogTitle className="text-2xl font-semibold">
+            Welcome! Watch this video to get started
+          </DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
+            Please watch the complete video before continuing to your dashboard
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 px-6 pb-6">
 
           <div className="aspect-video bg-black rounded-lg overflow-hidden">
             {videoType === 'youtube' && (
