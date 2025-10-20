@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.55.0';
 import { SMTPClient } from '../_shared/smtp-client.ts';
 // Note: PDF generation removed to avoid Deno file system restrictions
 
@@ -269,7 +269,8 @@ const handler = async (req: Request): Promise<Response> => {
         lms_username: lmsUserId,
         discount_amount: discount_amount || 0,
         discount_percentage: discount_percentage || 0,
-        final_fee_amount: finalFeeAmount
+        final_fee_amount: finalFeeAmount,
+        fees_cleared: finalFeeAmount === 0 // Auto-clear fees for 100% discount
       })
       .select()
       .single();
@@ -283,6 +284,12 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('Student record created:', {
+      student_id: studentRecord.student_id,
+      final_fee: finalFeeAmount,
+      fees_cleared: finalFeeAmount === 0
+    });
 
     // Queue email for credential delivery (non-blocking)
     supabaseAdmin
@@ -321,71 +328,95 @@ const handler = async (req: Request): Promise<Response> => {
       primary_phone: companyDetailsData?.primary_phone || ''
     };
 
-    // Create ALL installments first (fast operation)
-    try {
-      const { data: installmentSettings } = await supabaseAdmin
-        .from('company_settings')
-        .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days, payment_methods, currency')
-        .single();
-
-      if (installmentSettings) {
-        const installmentAmount = finalFeeAmount / installment_count;
-        const intervalDays = installmentSettings.invoice_send_gap_days || 30;
-        
-        // Create all installments
-        const installments = [];
-        for (let i = 1; i <= installment_count; i++) {
-          const issueDate = new Date();
-          issueDate.setDate(issueDate.getDate() + ((i - 1) * intervalDays));
-          
-          const dueDate = new Date(issueDate);
-          dueDate.setDate(dueDate.getDate() + (installmentSettings.invoice_overdue_days || 5));
-
-          installments.push({
-            student_id: studentRecord.id,
-            amount: installmentAmount,
-            installment_number: i,
-            due_date: dueDate.toISOString(),
-            status: i === 1 ? 'pending' : 'scheduled',
-            created_at: issueDate.toISOString()
-          });
+    // Handle installment creation based on final fee
+    if (finalFeeAmount === 0) {
+      console.log('100% discount applied - no invoices will be created');
+      
+      // Log discount application for audit purposes
+      await supabaseAdmin.from('admin_logs').insert({
+        entity_type: 'student',
+        entity_id: studentRecord.id,
+        action: 'discount_applied',
+        description: `100% discount applied - total fee: ${currency} 0.00`,
+        performed_by: createdBy,
+        data: {
+          original_amount: companySettings.original_fee_amount,
+          discount_amount: discount_amount || 0,
+          discount_percentage: discount_percentage || 0,
+          final_amount: 0,
+          student_email: email,
+          student_name: full_name,
+          fees_cleared: true
         }
+      });
+      console.log('100% discount logged - student has immediate access');
+    } else {
+      // Create ALL installments for students with fees (fast operation)
+      try {
+        const { data: installmentSettings } = await supabaseAdmin
+          .from('company_settings')
+          .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days, payment_methods, currency')
+          .single();
 
-        const { error: installmentError } = await supabaseAdmin
-          .from('invoices')
-          .insert(installments);
-
-        if (installmentError) {
-          console.error('Error creating installments:', installmentError);
-        } else {
-          console.log(`All ${installment_count} installments created successfully`);
+        if (installmentSettings) {
+          const installmentAmount = finalFeeAmount / installment_count;
+          const intervalDays = installmentSettings.invoice_send_gap_days || 30;
           
-          // Log discount application if applied
-          if (discount_amount > 0 || discount_percentage > 0) {
-            await supabaseAdmin.from('admin_logs').insert({
-              entity_type: 'student',
-              entity_id: studentRecord.id,
-              action: 'discount_applied',
-              description: `Discount applied: ${discount_percentage > 0 ? discount_percentage + '%' : currency + ' ' + discount_amount}`,
-              performed_by: createdBy,
-              data: {
-                original_amount: installmentSettings.original_fee_amount,
-                discount_amount: discount_amount || 0,
-                discount_percentage: discount_percentage || 0,
-                final_amount: finalFeeAmount,
-                student_email: email,
-                student_name: full_name
-              }
+          // Create all installments
+          const installments = [];
+          for (let i = 1; i <= installment_count; i++) {
+            const issueDate = new Date();
+            issueDate.setDate(issueDate.getDate() + ((i - 1) * intervalDays));
+            
+            const dueDate = new Date(issueDate);
+            dueDate.setDate(dueDate.getDate() + (installmentSettings.invoice_overdue_days || 5));
+
+            installments.push({
+              student_id: studentRecord.id,
+              amount: installmentAmount,
+              installment_number: i,
+              due_date: dueDate.toISOString(),
+              status: i === 1 ? 'pending' : 'scheduled',
+              created_at: issueDate.toISOString()
             });
-            console.log('Discount application logged to admin_logs');
+          }
+
+          const { error: installmentError } = await supabaseAdmin
+            .from('invoices')
+            .insert(installments);
+
+          if (installmentError) {
+            console.error('Error creating installments:', installmentError);
+          } else {
+            console.log(`All ${installment_count} installments created successfully`);
+            
+            // Log discount application if applied
+            if (discount_amount > 0 || discount_percentage > 0) {
+              await supabaseAdmin.from('admin_logs').insert({
+                entity_type: 'student',
+                entity_id: studentRecord.id,
+                action: 'discount_applied',
+                description: `Discount applied: ${discount_percentage > 0 ? discount_percentage + '%' : currency + ' ' + discount_amount}`,
+                performed_by: createdBy,
+                data: {
+                  original_amount: installmentSettings.original_fee_amount,
+                  discount_amount: discount_amount || 0,
+                  discount_percentage: discount_percentage || 0,
+                  final_amount: finalFeeAmount,
+                  student_email: email,
+                  student_name: full_name
+                }
+              });
+              console.log('Discount application logged to admin_logs');
+            }
           }
         }
+        
+        console.log('Installment creation completed successfully');
+      } catch (invoiceError) {
+        console.error('Invoice creation error:', invoiceError);
+        // Continue anyway - invoices can be created manually
       }
-      
-      console.log('Installment creation completed successfully');
-    } catch (invoiceError) {
-      console.error('Invoice creation error:', invoiceError);
-      // Continue anyway - invoices can be created manually
     }
 
     // Send emails in background (non-blocking using EdgeRuntime.waitUntil)

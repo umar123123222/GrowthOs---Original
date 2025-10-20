@@ -1,5 +1,8 @@
 project_id = "majqoqagohicjigmsilu"
 
+[functions.create-enhanced-student]
+verify_jwt = true
+
 [functions.daily-recovery-check]
 verify_jwt = false
 
