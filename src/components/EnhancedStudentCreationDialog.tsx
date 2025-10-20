@@ -148,7 +148,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
 
   return (
     <Dialog open={open} onOpenChange={(open) => !isSubmitting && onOpenChange(open)}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {showSuccess ? '✅ Student Created Successfully!' : 'Add New Student'}
@@ -171,65 +171,68 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="full_name">Student Name *</Label>
-            <Input
-              id="full_name"
-              value={formData.full_name}
-              onChange={(e) => handleInputChange('full_name', e.target.value)}
-              placeholder="Enter student's full name"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address *</Label>
-            <Input
-              id="email"
-              type="email"
-              value={formData.email}
-              onChange={(e) => handleInputChange('email', e.target.value)}
-              placeholder="Enter email address"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone Number *</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={formData.phone}
-              onChange={(e) => handleInputChange('phone', e.target.value)}
-              placeholder="Enter phone number"
-              required
-            />
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="installments">Number of Installments *</Label>
-            <Select 
-              value={formData.installment_count.toString()} 
-              onValueChange={(value) => handleInputChange('installment_count', parseInt(value))}
-              disabled={installmentLoading}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select installment plan" />
-              </SelectTrigger>
-              <SelectContent>
-                {installmentOptions.map((option) => {
-                  const count = parseInt(option.value.split('_')[0])
-                  return (
-                    <SelectItem key={option.value} value={count.toString()}>
-                      {option.label}
-                    </SelectItem>
-                  )
-                })}
-              </SelectContent>
-            </Select>
+          {/* Two-column grid for main fields */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Student Name *</Label>
+              <Input
+                id="full_name"
+                value={formData.full_name}
+                onChange={(e) => handleInputChange('full_name', e.target.value)}
+                placeholder="Enter student's full name"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address *</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                placeholder="Enter email address"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number *</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => handleInputChange('phone', e.target.value)}
+                placeholder="Enter phone number"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="installments">Number of Installments *</Label>
+              <Select 
+                value={formData.installment_count.toString()} 
+                onValueChange={(value) => handleInputChange('installment_count', parseInt(value))}
+                disabled={installmentLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select installment plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {installmentOptions.map((option) => {
+                    const count = parseInt(option.value.split('_')[0])
+                    return (
+                      <SelectItem key={option.value} value={count.toString()}>
+                        {option.label}
+                      </SelectItem>
+                    )
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          {/* Admin-Only Discount Section */}
+          {/* Admin-Only Discount Section - Full Width */}
           {canApplyDiscount && (
             <Card className="border-orange-200 bg-orange-50/50">
               <CardHeader className="pb-3">
@@ -239,59 +242,61 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                <div className="space-y-2">
-                  <Label>Discount Type</Label>
-                  <Select
-                    value={formData.discount_type}
-                    onValueChange={(value: 'none' | 'fixed' | 'percentage') => {
-                      setFormData(prev => ({ 
-                        ...prev, 
-                        discount_type: value,
-                        discount_amount: 0,
-                        discount_percentage: 0
-                      }))
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">No Discount</SelectItem>
-                      <SelectItem value="fixed">Fixed Amount</SelectItem>
-                      <SelectItem value="percentage">Percentage</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Discount Type</Label>
+                    <Select
+                      value={formData.discount_type}
+                      onValueChange={(value: 'none' | 'fixed' | 'percentage') => {
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          discount_type: value,
+                          discount_amount: 0,
+                          discount_percentage: 0
+                        }))
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Discount</SelectItem>
+                        <SelectItem value="fixed">Fixed Amount</SelectItem>
+                        <SelectItem value="percentage">Percentage</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {formData.discount_type === 'fixed' && (
+                    <div className="space-y-2">
+                      <Label>Discount Amount ({currency})</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max={originalFee}
+                        step="0.01"
+                        value={formData.discount_amount}
+                        onChange={(e) => handleInputChange('discount_amount', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  )}
+
+                  {formData.discount_type === 'percentage' && (
+                    <div className="space-y-2">
+                      <Label>Discount Percentage (%)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.01"
+                        value={formData.discount_percentage}
+                        onChange={(e) => handleInputChange('discount_percentage', parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  )}
                 </div>
-
-                {formData.discount_type === 'fixed' && (
-                  <div className="space-y-2">
-                    <Label>Discount Amount ({currency})</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max={originalFee}
-                      step="0.01"
-                      value={formData.discount_amount}
-                      onChange={(e) => handleInputChange('discount_amount', parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                )}
-
-                {formData.discount_type === 'percentage' && (
-                  <div className="space-y-2">
-                    <Label>Discount Percentage (%)</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      value={formData.discount_percentage}
-                      onChange={(e) => handleInputChange('discount_percentage', parseFloat(e.target.value) || 0)}
-                      placeholder="0.00"
-                    />
-                  </div>
-                )}
 
                 {formData.discount_type !== 'none' && (
                   <div className="pt-2 space-y-1 border-t border-orange-200">
