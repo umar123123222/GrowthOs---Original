@@ -106,7 +106,7 @@ export function StudentDashboard() {
         const onboardingComplete = student?.onboarding_completed;
         
         // Show video if URL exists, onboarding is complete, but video not watched
-        if (videoUrl && onboardingComplete && !videoWatched) {
+        if (videoUrl && videoUrl.trim() !== '' && onboardingComplete && !videoWatched) {
           setOnboardingVideoUrl(videoUrl);
           setShowOnboardingVideo(true);
         }
