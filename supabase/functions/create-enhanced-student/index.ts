@@ -306,31 +306,31 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     // Get company settings including currency and company details
-    const { data: companySettings } = await supabaseAdmin
+    const { data: companyDetailsData } = await supabaseAdmin
       .from('company_settings')
       .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods')
       .eq('id', 1)
       .single();
     
-    const loginUrl = companySettings?.lms_url || 'https://growthos.core47.ai';
-    const currency = companySettings?.currency || 'USD';
+    const loginUrl = companyDetailsData?.lms_url || 'https://growthos.core47.ai';
+    const currency = companyDetailsData?.currency || 'USD';
     const companyDetails: CompanyDetails = {
-      company_name: companySettings?.company_name || 'Your Company',
-      address: companySettings?.address || '',
-      contact_email: companySettings?.contact_email || '',
-      primary_phone: companySettings?.primary_phone || ''
+      company_name: companyDetailsData?.company_name || 'Your Company',
+      address: companyDetailsData?.address || '',
+      contact_email: companyDetailsData?.contact_email || '',
+      primary_phone: companyDetailsData?.primary_phone || ''
     };
 
     // Create ALL installments first (fast operation)
     try {
-      const { data: companySettings } = await supabaseAdmin
+      const { data: installmentSettings } = await supabaseAdmin
         .from('company_settings')
         .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days, payment_methods, currency')
         .single();
 
-      if (companySettings) {
+      if (installmentSettings) {
         const installmentAmount = finalFeeAmount / installment_count;
-        const intervalDays = companySettings.invoice_send_gap_days || 30;
+        const intervalDays = installmentSettings.invoice_send_gap_days || 30;
         
         // Create all installments
         const installments = [];
@@ -339,7 +339,7 @@ const handler = async (req: Request): Promise<Response> => {
           issueDate.setDate(issueDate.getDate() + ((i - 1) * intervalDays));
           
           const dueDate = new Date(issueDate);
-          dueDate.setDate(dueDate.getDate() + (companySettings.invoice_overdue_days || 5));
+          dueDate.setDate(dueDate.getDate() + (installmentSettings.invoice_overdue_days || 5));
 
           installments.push({
             student_id: studentRecord.id,
@@ -369,7 +369,7 @@ const handler = async (req: Request): Promise<Response> => {
               description: `Discount applied: ${discount_percentage > 0 ? discount_percentage + '%' : currency + ' ' + discount_amount}`,
               performed_by: createdBy,
               data: {
-                original_amount: companySettings.original_fee_amount,
+                original_amount: installmentSettings.original_fee_amount,
                 discount_amount: discount_amount || 0,
                 discount_percentage: discount_percentage || 0,
                 final_amount: finalFeeAmount,
@@ -449,12 +449,12 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Send first invoice email if installments were created
-        const { data: companySettings } = await supabaseAdmin
+        const { data: invoiceSettings } = await supabaseAdmin
           .from('company_settings')
           .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days, payment_methods, currency')
           .single();
 
-        if (companySettings) {
+        if (invoiceSettings) {
           const { data: firstInvoice } = await supabaseAdmin
             .from('invoices')
             .select('*')
@@ -470,7 +470,7 @@ const handler = async (req: Request): Promise<Response> => {
                 due_date: firstInvoice.due_date,
                 student_email: email,
                 student_name: full_name
-              }, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
+              }, loginUrl, currency, companyDetails, invoiceSettings?.payment_methods || []);
               console.log('First invoice email sent successfully');
             } catch (invoiceEmailError) {
               console.error('Invoice email error:', invoiceEmailError);
