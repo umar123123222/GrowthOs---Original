@@ -203,14 +203,22 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => {
-                  let value = e.target.value.replace(/[^\d-]/g, '')
-                  if (!value.startsWith('92-') && value.length > 0) {
-                    value = '92-' + value.replace(/^92-?/, '')
+                  let value = e.target.value.trim()
+                  // Keep only digits and optional leading +
+                  value = value.replace(/[^\d+]/g, '')
+                  // Ensure only one + at the start
+                  if (value.indexOf('+') > 0) {
+                    value = value.replace(/\+/g, '')
+                  }
+                  // Convert 92xxxxxxxxxx to +92xxxxxxxxxx
+                  if (value.startsWith('92') && !value.startsWith('+')) {
+                    value = '+' + value
                   }
                   handleInputChange('phone', value)
                 }}
-                placeholder="92-3001234567"
-                pattern="92-[0-9]{10}"
+                placeholder="+923001234567"
+                pattern="^\+?[1-9]\d{1,14}$"
+                title="Enter phone in E.164 format (e.g., +923001234567)"
                 required
               />
             </div>

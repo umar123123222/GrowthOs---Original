@@ -416,21 +416,40 @@ export function StudentsManagement() {
 
   const handleResetSuccessPartnerCredits = async (studentId: string) => {
     try {
+      const session = await supabase.auth.getSession();
+      const token = session.data.session?.access_token;
+      
+      if (!token) {
+        toast({
+          title: 'Error',
+          description: 'No active session found',
+          variant: 'destructive'
+        });
+        return;
+      }
+
       const { data, error } = await supabase.functions.invoke('admin-reset-sp-credits', {
-        body: { target_user_id: studentId }
+        body: { target_user_id: studentId },
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
       });
 
       if (error) throw error;
 
-      toast({
-        title: 'Success',
-        description: 'Success Partner credits have been reset to 0',
-      });
+      if (data?.success) {
+        toast({
+          title: 'Success',
+          description: 'Success Partner credits have been reset to 0',
+        });
+      } else {
+        throw new Error(data?.error || 'Unknown error');
+      }
     } catch (error) {
       console.error('Error resetting credits via edge function:', error);
       toast({
         title: 'Error',
-        description: 'Failed to reset Success Partner credits',
+        description: error instanceof Error ? error.message : 'Failed to reset Success Partner credits',
         variant: 'destructive'
       });
     }

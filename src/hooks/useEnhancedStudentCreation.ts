@@ -69,13 +69,25 @@ export const useEnhancedStudentCreation = () => {
       } else {
         const rawError = data?.error || 'Unknown error occurred'
         const isEmailExists = /already exists/i.test(rawError)
-        const friendlyMessage = isEmailExists ? 'A user with this email already exists.' : rawError
+        const isPhoneInvalid = data?.error_code === 'INVALID_PHONE_FORMAT' || /phone.*format|E\.164/i.test(rawError)
+        
+        let friendlyMessage = rawError
+        if (isEmailExists) {
+          friendlyMessage = 'A user with this email already exists.'
+        } else if (isPhoneInvalid) {
+          friendlyMessage = 'Invalid phone format. Please use international format (e.g., +923001234567)'
+        }
+        
         toast({
           title: "Error",
           description: friendlyMessage,
           variant: "destructive",
         })
-        return { success: false, error: friendlyMessage, error_code: isEmailExists ? 'EMAIL_EXISTS' : data?.error_code }
+        return { 
+          success: false, 
+          error: friendlyMessage, 
+          error_code: isEmailExists ? 'EMAIL_EXISTS' : (isPhoneInvalid ? 'INVALID_PHONE' : data?.error_code)
+        }
       }
     } catch (err) {
       console.error('Unexpected error:', err)

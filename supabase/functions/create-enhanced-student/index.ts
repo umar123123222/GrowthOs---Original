@@ -115,6 +115,30 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Sanitize phone to E.164 format
+    let sanitizedPhone = phone.trim().replace(/[^\d+]/g, '');
+    // Ensure only one + at start
+    if (sanitizedPhone.indexOf('+') > 0) {
+      sanitizedPhone = sanitizedPhone.replace(/\+/g, '');
+    }
+    // Convert 92xxxxxxxxxx to +92xxxxxxxxxx
+    if (sanitizedPhone.startsWith('92') && !sanitizedPhone.startsWith('+')) {
+      sanitizedPhone = '+' + sanitizedPhone;
+    }
+    // Validate E.164 format: +[1-9][digits]{1-14}
+    if (!/^\+?[1-9]\d{1,14}$/.test(sanitizedPhone)) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Invalid phone format. Please use E.164 format (e.g., +923001234567)',
+          error_code: 'INVALID_PHONE_FORMAT'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log('Phone sanitized:', { original: phone, sanitized: sanitizedPhone });
+
     // Check if user already exists
     const { data: existingUser } = await supabaseAdmin
       .from('users')
@@ -207,7 +231,7 @@ const handler = async (req: Request): Promise<Response> => {
         id: authUser.user.id,
         email,
         full_name,
-        phone: phone,
+        phone: sanitizedPhone,
         role: 'student',
         password_display: loginPassword,
         password_hash: passwordHash,
