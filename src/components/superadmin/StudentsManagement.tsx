@@ -416,51 +416,21 @@ export function StudentsManagement() {
 
   const handleResetSuccessPartnerCredits = async (studentId: string) => {
     try {
-      // Delete all existing credits for this user
-      const { error: deleteError } = await supabase
-        .from('success_partner_credits')
-        .delete()
-        .eq('user_id', studentId);
+      const { data, error } = await supabase.functions.invoke('admin-reset-sp-credits', {
+        body: { target_user_id: studentId }
+      });
 
-      if (deleteError) {
-        console.error('Error deleting success partner credits:', deleteError);
-        toast({
-          title: 'Error',
-          description: 'Failed to reset Success Partner credits',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      // Insert fresh record with 0 credits
-      const { error: insertError } = await supabase
-        .from('success_partner_credits')
-        .insert({
-          user_id: studentId,
-          credits_used: 0,
-          daily_limit: 10,
-          date: new Date().toISOString().split('T')[0]
-        });
-
-      if (insertError) {
-        console.error('Error resetting success partner credits:', insertError);
-        toast({
-          title: 'Error',
-          description: 'Failed to reset Success Partner credits',
-          variant: 'destructive'
-        });
-        return;
-      }
+      if (error) throw error;
 
       toast({
         title: 'Success',
         description: 'Success Partner credits have been reset to 0',
       });
     } catch (error) {
-      console.error('Unexpected error resetting credits:', error);
+      console.error('Error resetting credits via edge function:', error);
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred',
+        description: 'Failed to reset Success Partner credits',
         variant: 'destructive'
       });
     }

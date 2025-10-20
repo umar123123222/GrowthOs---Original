@@ -23,3 +23,6 @@ verify_jwt = true
 
 [functions.build-leaderboard]
 verify_jwt = false
+
+[functions.admin-reset-sp-credits]
+verify_jwt = true
