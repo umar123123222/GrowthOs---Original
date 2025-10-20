@@ -50,6 +50,7 @@ const SuccessPartner = ({
   const [loadingCredits, setLoadingCredits] = useState(true);
   const [isFetchingContext, setIsFetchingContext] = useState(false);
   const [contextDescription, setContextDescription] = useState("");
+  const [explicitContextFlags, setExplicitContextFlags] = useState<{ includeShopify: boolean; includeMetaAds: boolean } | null>(null);
   const [integrationStatus, setIntegrationStatus] = useState({
     shopify: false,
     metaAds: false,
@@ -325,13 +326,18 @@ const SuccessPartner = ({
 
   const sendMessageToBackend = useCallback(async (userMessage: string, studentName: string): Promise<void> => {
     try {
-      // Detect if we need business context
-      const requestedFlags = detectBusinessContext(userMessage);
+      // Use explicit flags if set (from badge click), otherwise detect from message
+      const requestedFlags = explicitContextFlags || detectBusinessContext(userMessage);
       const flags = {
         includeShopify: requestedFlags.includeShopify && integrationStatus.shopify,
         includeMetaAds: requestedFlags.includeMetaAds && integrationStatus.metaAds
       };
       const needsContext = flags.includeShopify || flags.includeMetaAds;
+      
+      // Clear explicit flags after use
+      if (explicitContextFlags) {
+        setExplicitContextFlags(null);
+      }
       
       let businessContext = null;
       if (needsContext) {
@@ -470,7 +476,7 @@ const SuccessPartner = ({
       setIsLoading(false);
       throw error;
     }
-  }, [user, integrationStatus, messages, dateRangeDays]);
+  }, [user, integrationStatus, messages, dateRangeDays, explicitContextFlags]);
   const handleSendMessage = useCallback(async () => {
     // Prevent double-sends: block if already loading or message is empty
     if (!message.trim() || isLoading) {
@@ -769,6 +775,7 @@ const SuccessPartner = ({
             <Badge variant="outline" className={`cursor-pointer hover:bg-gray-100 ${!integrationStatus.shopify || credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => {
             if (integrationStatus.shopify && credits && credits.can_send_message) {
               setMessage("Study my Shopify sales");
+              setExplicitContextFlags({ includeShopify: true, includeMetaAds: false });
             } else if (!integrationStatus.shopify) {
               toast({
                 title: "Shopify Not Connected",
@@ -783,6 +790,7 @@ const SuccessPartner = ({
             <Badge variant="outline" className={`cursor-pointer hover:bg-gray-100 ${!integrationStatus.metaAds || credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => {
             if (integrationStatus.metaAds && credits && credits.can_send_message) {
               setMessage("Review my ad performance");
+              setExplicitContextFlags({ includeShopify: false, includeMetaAds: true });
             } else if (!integrationStatus.metaAds) {
               toast({
                 title: "Meta Ads Not Connected",
@@ -794,10 +802,20 @@ const SuccessPartner = ({
               <BarChart3 className="w-3 h-3 mr-1" />
               Review Ads
             </Badge>
-            <Badge variant="outline" className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => credits && credits.can_send_message && setMessage("I'm stuck on the current assignment")}>
+            <Badge variant="outline" className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => {
+              if (credits && credits.can_send_message) {
+                setMessage("I'm stuck on the current assignment");
+                setExplicitContextFlags(null); // No context needed for this
+              }
+            }}>
               Assignment Help
             </Badge>
-            <Badge variant="outline" className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => credits && credits.can_send_message && setMessage("I'm feeling demotivated")}>
+            <Badge variant="outline" className={`cursor-pointer hover:bg-gray-100 ${credits && !credits.can_send_message ? 'opacity-50 cursor-not-allowed' : ''}`} onClick={() => {
+              if (credits && credits.can_send_message) {
+                setMessage("I'm feeling demotivated");
+                setExplicitContextFlags(null); // No context needed for this
+              }
+            }}>
               Need Motivation
             </Badge>
           </div>

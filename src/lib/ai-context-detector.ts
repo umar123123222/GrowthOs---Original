@@ -30,9 +30,6 @@ const SHOPIFY_KEYWORDS = [
   'inventory',
   'bestseller',
   'cart',
-  '$',
-  'pkr',
-  'rs',
   'my store',
   'my shop'
 ];
@@ -76,12 +73,35 @@ const GENERAL_BUSINESS_KEYWORDS = [
 ];
 
 /**
+ * Check if message contains currency with numbers (e.g., "PKR 5000", "$100")
+ */
+function containsCurrencyWithNumber(message: string): boolean {
+  const currencyPatterns = [
+    /\$\s*\d+/i,           // $100 or $ 100
+    /pkr\s*\d+/i,          // PKR 5000 or PKR5000
+    /rs\.?\s*\d+/i,        // Rs. 5000 or Rs 5000
+    /\d+\s*(?:pkr|rs)/i    // 5000 PKR or 5000 Rs
+  ];
+  
+  return currencyPatterns.some(pattern => pattern.test(message));
+}
+
+/**
  * Detects if a message contains keywords related to business metrics
  * @param message - The user's message
  * @returns Flags indicating which contexts to include
  */
 export function detectBusinessContext(message: string): BusinessContextFlags {
-  const lowerMessage = message.toLowerCase();
+  const lowerMessage = message.toLowerCase().trim();
+  
+  // Ignore very short messages (like greetings)
+  const wordCount = lowerMessage.split(/\s+/).length;
+  if (wordCount < 3) {
+    return { includeShopify: false, includeMetaAds: false };
+  }
+  
+  // Check for currency mentions with numbers
+  const hasCurrencyMention = containsCurrencyWithNumber(message);
   
   // Check for general business keywords that might indicate context is needed
   const hasGeneralKeywords = GENERAL_BUSINESS_KEYWORDS.some(keyword => 
@@ -91,21 +111,35 @@ export function detectBusinessContext(message: string): BusinessContextFlags {
   // Check for Shopify-specific keywords
   const hasShopifyKeywords = SHOPIFY_KEYWORDS.some(keyword => {
     // Use word boundary matching to avoid false positives
-    const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+    const regex = new RegExp(`\\b${keyword.toLowerCase()}\\b`, 'i');
     return regex.test(lowerMessage);
   });
   
   // Check for Meta Ads-specific keywords
   const hasMetaAdsKeywords = META_ADS_KEYWORDS.some(keyword => {
-    const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+    const regex = new RegExp(`\\b${keyword.toLowerCase()}\\b`, 'i');
     return regex.test(lowerMessage);
   });
   
-  // If general business keywords are present, include both contexts
-  // Otherwise, only include specific contexts based on their keywords
+  // Determine flags based on keywords
+  const shopifyFlag = hasShopifyKeywords || (hasGeneralKeywords && hasCurrencyMention);
+  const metaFlag = hasMetaAdsKeywords || (hasGeneralKeywords && !hasCurrencyMention);
+  
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[AI Context Detector]', {
+      message: lowerMessage,
+      wordCount,
+      hasCurrencyMention,
+      hasGeneralKeywords,
+      hasShopifyKeywords,
+      hasMetaAdsKeywords,
+      flags: { includeShopify: shopifyFlag, includeMetaAds: metaFlag }
+    });
+  }
+  
   return {
-    includeShopify: hasShopifyKeywords || hasGeneralKeywords,
-    includeMetaAds: hasMetaAdsKeywords || hasGeneralKeywords
+    includeShopify: shopifyFlag,
+    includeMetaAds: metaFlag
   };
 }
 
