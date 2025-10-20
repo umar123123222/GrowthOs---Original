@@ -280,16 +280,15 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                     <Input
                       type="number"
                       min="0"
-                      max={originalFee - 1}
+                      max={originalFee}
                       step="0.01"
                       value={formData.discount_amount}
                       onChange={(e) => {
                         const value = parseFloat(e.target.value) || 0
-                        handleInputChange('discount_amount', Math.min(originalFee - 1, Math.max(0, value)))
+                        handleInputChange('discount_amount', Math.min(originalFee, Math.max(0, value)))
                       }}
                       placeholder="0.00"
                     />
-                    <p className="text-xs text-muted-foreground">Must leave at least {currency} 1 after discount</p>
                   </div>
                 )}
 
@@ -299,16 +298,15 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                     <Input
                       type="number"
                       min="0"
-                      max="99"
+                      max="100"
                       step="0.01"
                       value={formData.discount_percentage}
                       onChange={(e) => {
                         const value = parseFloat(e.target.value) || 0
-                        handleInputChange('discount_percentage', Math.min(99, Math.max(0, value)))
+                        handleInputChange('discount_percentage', Math.min(100, Math.max(0, value)))
                       }}
                       placeholder="0.00"
                     />
-                    <p className="text-xs text-muted-foreground">Maximum 99% discount allowed</p>
                   </div>
                 )}
                 </div>
