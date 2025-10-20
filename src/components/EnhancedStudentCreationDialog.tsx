@@ -274,35 +274,43 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                     </Select>
                   </div>
 
-                  {formData.discount_type === 'fixed' && (
-                    <div className="space-y-2">
-                      <Label>Discount Amount ({currency})</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max={originalFee}
-                        step="0.01"
-                        value={formData.discount_amount}
-                        onChange={(e) => handleInputChange('discount_amount', parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                      />
-                    </div>
-                  )}
+                {formData.discount_type === 'fixed' && (
+                  <div className="space-y-2">
+                    <Label>Discount Amount ({currency})</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max={originalFee - 1}
+                      step="0.01"
+                      value={formData.discount_amount}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0
+                        handleInputChange('discount_amount', Math.min(originalFee - 1, Math.max(0, value)))
+                      }}
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-muted-foreground">Must leave at least {currency} 1 after discount</p>
+                  </div>
+                )}
 
-                  {formData.discount_type === 'percentage' && (
-                    <div className="space-y-2">
-                      <Label>Discount Percentage (%)</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        step="0.01"
-                        value={formData.discount_percentage}
-                        onChange={(e) => handleInputChange('discount_percentage', parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                      />
-                    </div>
-                  )}
+                {formData.discount_type === 'percentage' && (
+                  <div className="space-y-2">
+                    <Label>Discount Percentage (%)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="99"
+                      step="0.01"
+                      value={formData.discount_percentage}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0
+                        handleInputChange('discount_percentage', Math.min(99, Math.max(0, value)))
+                      }}
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-muted-foreground">Maximum 99% discount allowed</p>
+                  </div>
+                )}
                 </div>
 
                 {formData.discount_type !== 'none' && (

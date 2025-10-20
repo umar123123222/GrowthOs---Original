@@ -244,6 +244,21 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Validate discount amounts
+    if (discount_percentage >= 100) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Discount percentage must be less than 100%' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (discount_amount >= companySettings.original_fee_amount) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Discount amount cannot be equal to or greater than the original fee' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Calculate final fee with discount
     let finalFeeAmount = companySettings.original_fee_amount;
     if (discount_percentage > 0) {
@@ -251,7 +266,7 @@ const handler = async (req: Request): Promise<Response> => {
     } else if (discount_amount > 0) {
       finalFeeAmount = finalFeeAmount - discount_amount;
     }
-    finalFeeAmount = Math.max(0, finalFeeAmount);
+    finalFeeAmount = Math.max(1, finalFeeAmount); // Ensure minimum fee of 1
 
     console.log('Fee calculation:', {
       original: companySettings.original_fee_amount,
