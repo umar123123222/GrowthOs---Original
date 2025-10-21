@@ -856,11 +856,7 @@ const MetaAdsDashboard: React.FC = () => {
                   <Progress value={metaData.campaigns.filter(c => c.performance === 'poor').length / metaData.campaigns.length * 100} className="h-2" />
                 </div>
 
-                <div className="pt-4 border-t">
-                  <p className="text-sm text-muted-foreground">
-                    <strong>{metaData.campaigns.filter(c => c.status === 'Active').length}</strong> active campaigns out of <strong>{metaData.campaigns.length}</strong> total
-                  </p>
-                </div>
+                
               </div>
             </CardContent>
           </Card>
