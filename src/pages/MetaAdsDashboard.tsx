@@ -325,7 +325,6 @@ const MetaAdsDashboard: React.FC = () => {
                     <p className="font-medium text-warning mb-2">Data Fetching Notes:</p>
                     <ul className="text-sm text-muted-foreground space-y-1">
                       {metaData.warnings.map((warning, idx) => <li key={idx}>• {warning}</li>)}
-                      <li>• Metrics might vary due to Meta API processing delays and data aggregation</li>
                     </ul>
                   </div>
                 </div>
@@ -758,9 +757,7 @@ const MetaAdsDashboard: React.FC = () => {
                                 <span className="text-xs text-muted-foreground">
                                   {ad.ctr}% CTR • {formatCurrency(ad.cpc)} CPC
                                 </span>
-                                <Badge variant={ad.status === 'Active' || ad.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                                  {ad.status}
-                                </Badge>
+                                
                               </div>
                               <div className="text-xs text-muted-foreground space-y-1">
                                 <div className="flex items-center space-x-2">
