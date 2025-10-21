@@ -2029,6 +2029,10 @@ export type Database = {
       }
     }
     Functions: {
+      can_view_sensitive_user_data: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       check_and_award_milestone: {
         Args: { p_context?: Json; p_milestone_type: string; p_user_id: string }
         Returns: boolean
