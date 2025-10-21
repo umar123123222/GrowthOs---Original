@@ -2,6 +2,8 @@
 
 This document serves as a comprehensive reference for all environment variables used in the Growth OS project. All variables are optional and include sensible fallbacks.
 
+> **📝 Note:** The `.env.example` file has been streamlined to include only the most commonly used variables (~100 lines). This document contains the complete reference for all 100+ available configuration options.
+
 ## Quick Setup
 
 1. **Copy environment template:**

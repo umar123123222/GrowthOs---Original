@@ -1,6 +1,6 @@
 # Environment Configuration Guide
 
-This project has been made fully configurable to support SaaS deployment scenarios where each client gets their own UI and database instance.
+This project uses environment variables for configuration, allowing easy customization without code changes. The `.env.example` file provides a streamlined template with essential variables, while complete documentation is available in `docs/env-reference.md`.
 
 ## Quick Setup
 
@@ -26,31 +26,29 @@ This project has been made fully configurable to support SaaS deployment scenari
 
 ## What's Configurable
 
-### 🔑 Supabase Configuration (REQUIRED)
-- `VITE_SUPABASE_URL` - Your Supabase project URL (**Required**, sensitive)
-- `VITE_SUPABASE_ANON_KEY` - Public anon key (**Required**, sensitive)
-- `VITE_SUPABASE_PROJECT_ID` - Project identifier (**Required**, sensitive)
+The `.env.example` file includes the most commonly used variables organized into clear sections:
 
-⚠️ **Security Note**: These credentials should NEVER be hardcoded. Always use environment variables.
+### 🔑 Required Configuration
+- **Supabase credentials** - URL, anon key, and project ID (get from Supabase Dashboard)
 
-### 🎨 Application Branding
-- `VITE_APP_TITLE` - Browser title and meta tags
-- `VITE_APP_DESCRIPTION` - Meta description for SEO
-- `VITE_APP_AUTHOR` - Author metadata
-- `VITE_COMPANY_NAME` - Company name in branding
-- `VITE_TWITTER_HANDLE` - Social media handle
-- `VITE_FAVICON_PATH` - Path to favicon
+### 🎨 Customizable Settings
+- **Application Branding** - Title, description, company name, social handles
+- **Site Configuration** - Base URL for deployments
+- **Company Defaults** - Currency, fees, installments, recovery rate
+- **Contact Information** - Support email, phone, WhatsApp
+- **External Services** - API URLs for integrations
+- **Business Rules** - Deadlines, session durations, thresholds
+- **Feature Flags** - Enable/disable experimental features
 
-### 🏢 Company Defaults
-- `VITE_DEFAULT_COMPANY_NAME` - Default company name
-- `VITE_DEFAULT_CURRENCY` - Default currency (USD, EUR, etc.)
-- `VITE_DEFAULT_FEE_AMOUNT` - Default course fee
-- `VITE_DEFAULT_MAX_INSTALLMENTS` - Max installment count
-- `VITE_DEFAULT_LMS_URL` - Default LMS URL
+### 📚 Additional Options
+For advanced configuration including:
+- Performance tuning (debouncing, timeouts, caching)
+- Milestone thresholds (gamification)
+- Security settings (session timeouts, login attempts)
+- UI text customization
+- Test data configuration
 
-### ⚙️ Development Settings
-- `VITE_DEV_PORT` - Development server port
-- `VITE_DEV_HOST` - Development server host
+See **`docs/env-reference.md`** for the complete reference of all 100+ available variables.
 
 ## File Structure
 

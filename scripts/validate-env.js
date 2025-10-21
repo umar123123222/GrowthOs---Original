@@ -29,3 +29,4 @@ console.log('\n💡 To customize configuration:');
 console.log('   1. Copy .env.example to .env');
 console.log('   2. Update variables in .env file');
 console.log('   3. Restart development server');
+console.log('\n📚 Full documentation: docs/env-reference.md');
