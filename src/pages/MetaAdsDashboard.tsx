@@ -328,6 +328,7 @@ const MetaAdsDashboard: React.FC = () => {
                     <p className="font-medium text-warning mb-2">Data Fetching Notes:</p>
                     <ul className="text-sm text-muted-foreground space-y-1">
                       {metaData.warnings.map((warning, idx) => <li key={idx}>• {warning}</li>)}
+                      <li>• Metrics might vary due to Meta API processing delays and data aggregation</li>
                     </ul>
                   </div>
                 </div>
