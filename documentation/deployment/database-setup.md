@@ -30,33 +30,95 @@ This guide creates a complete Growth OS database with:
 
 ---
 
+## ⚠️ Why This Execution Order Matters
+
+### Critical Dependency: get_current_user_role() MUST BE FIRST
+
+The `get_current_user_role()` function is referenced by **68+ RLS policies** across all tables. Creating it first prevents:
+- ❌ "function does not exist" errors when creating policies
+- ❌ Policy creation failures
+- ❌ Need to rollback and recreate policies
+
+### Tables Before Foreign Keys
+
+Foreign keys reference other tables' columns. Create all tables before adding foreign key constraints to avoid:
+- ❌ "relation does not exist" errors
+- ❌ Column reference failures
+
+### RLS Policies After Tables
+
+RLS policies reference table columns and the `get_current_user_role()` function. Create policies after tables exist to avoid:
+- ❌ "relation does not exist" errors
+- ❌ "function does not exist" errors
+
+### Functions Before Triggers
+
+Triggers call database functions. Create functions before triggers to avoid:
+- ❌ "function does not exist" errors
+- ❌ Trigger creation failures
+
+### Sequences Before Tables
+
+Some tables depend on sequences for auto-incrementing IDs. Create sequences first to avoid:
+- ❌ "sequence does not exist" errors
+
+**For complete migration chronology**, see [Migration Order Guide](../../documentation/database/migration-order.md)
+
+---
+
 # STEP 0: Critical Security Function (MUST BE FIRST!)
 
-This function is referenced by 200+ RLS policies. Create it before anything else.
+**⚠️ DEPENDS ON: Nothing - This is step 0 for a reason!**
+
+This function is referenced by 68+ RLS policies. Create it before anything else or all policy creation will fail.
 
 ```sql
 -- CRITICAL: This MUST be the first thing you create
+-- Used by 68+ RLS policies across all tables
 CREATE OR REPLACE FUNCTION public.get_current_user_role()
 RETURNS TEXT AS $$
   SELECT role FROM public.users WHERE id = auth.uid();
 $$ LANGUAGE SQL SECURITY DEFINER STABLE SET search_path = public;
 ```
 
+**Verification**:
+```sql
+-- Should execute without error (will return NULL until users table exists)
+SELECT public.get_current_user_role();
+```
+
 ---
 
 # STEP 1: Create Required Sequences
 
+**⚠️ DEPENDS ON: Step 0 (get_current_user_role function)**
+
 ```sql
 -- Sequences for auto-incrementing IDs
+-- Used by integrations and user_metrics tables
 CREATE SEQUENCE IF NOT EXISTS public.integrations_id_seq;
 CREATE SEQUENCE IF NOT EXISTS public.user_metrics_id_seq;
+```
+
+**Verification**:
+```sql
+-- Check sequences exist
+SELECT sequence_name FROM information_schema.sequences 
+WHERE sequence_schema = 'public';
+-- Should show integrations_id_seq and user_metrics_id_seq
 ```
 
 ---
 
 # STEP 2: Create All Tables (Execute in Order)
 
+**⚠️ DEPENDS ON: Steps 0 and 1 (function and sequences)**
+
+**Critical**: Tables must be created in this exact order due to foreign key dependencies.
+
 ## 2.1 Company Settings Table
+
+**⚠️ DEPENDS ON: Nothing - no foreign keys**
 
 ```sql
 CREATE TABLE public.company_settings (
@@ -92,6 +154,8 @@ INSERT INTO public.company_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
 ## 2.2 Users Table (Core Authentication)
 
+**⚠️ DEPENDS ON: Nothing - no foreign keys (this is the base table)**
+
 ```sql
 CREATE TABLE public.users (
     id uuid NOT NULL PRIMARY KEY,
@@ -116,6 +180,8 @@ CREATE TABLE public.users (
 
 ## 2.3 Students Table
 
+**⚠️ DEPENDS ON: users table**
+
 ```sql
 CREATE TABLE public.students (
     id uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -135,6 +201,8 @@ CREATE TABLE public.students (
 ```
 
 ## 2.4 Learning Management Tables
+
+**⚠️ DEPENDS ON: users, modules tables**
 
 ```sql
 -- Modules
