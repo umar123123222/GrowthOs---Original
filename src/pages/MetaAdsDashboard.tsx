@@ -317,17 +317,7 @@ const MetaAdsDashboard: React.FC = () => {
           {error && <ErrorMessage error={error} onDismiss={clearError} className="mb-4" />}
           
           {/* Meta API Notice */}
-          <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 mb-4 animate-fade-in">
-            <div className="flex items-start space-x-3">
-              <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
-              <div>
-                <p className="font-medium text-primary mb-1">Meta API Data Notice</p>
-                <p className="text-sm text-muted-foreground">
-                  Metrics might vary due to Meta API processing delays and data aggregation. Data is typically updated within 24-48 hours.
-                </p>
-              </div>
-            </div>
-          </div>
+          
 
           {/* Warnings from backend */}
           {metaData.warnings && metaData.warnings.length > 0 && <div className="bg-warning/10 border border-warning/20 rounded-lg p-4 mb-4 animate-fade-in">
