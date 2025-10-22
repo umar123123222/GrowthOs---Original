@@ -164,10 +164,29 @@ export const StudentManagement = () => {
   };
   const fetchStudents = async () => {
     try {
+      // Fetch student user_ids from user_roles table, then fetch their data
+      const { data: studentRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'student');
+      
+      if (rolesError) throw rolesError;
+      
+      const studentUserIds = studentRoles?.map(r => r.user_id) || [];
+      
+      if (studentUserIds.length === 0) {
+        setStudents([]);
+        return;
+      }
+
       // Fetch users and their corresponding student records in parallel
-      const [usersRes, studentsRes] = await Promise.all([supabase.from('users').select('*').eq('role', 'student').order('created_at', {
-        ascending: false
-      }), supabase.from('students').select('id, user_id, student_id, installment_count')]);
+      const [usersRes, studentsRes] = await Promise.all([
+        supabase.from('users').select('*').in('id', studentUserIds).order('created_at', {
+          ascending: false
+        }), 
+        supabase.from('students').select('id, user_id, student_id, installment_count')
+      ]);
+      
       if (usersRes.error) throw usersRes.error;
       if (studentsRes.error) {
         console.warn('Warning fetching students table:', studentsRes.error);
