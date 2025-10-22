@@ -175,63 +175,71 @@ export function StudentsManagement() {
   };
   const fetchStudents = async () => {
     try {
-      // Fetch students with creator information and student details
-      const {
-        data,
-        error
-      } = await supabase.from('users').select(`
-          *,
-          creator:created_by (
-            full_name,
-            email
-          ),
-          students (
-            id,
-            installment_count,
-            student_id,
-            lms_username
-          )
-        `).eq('role', 'student').order('created_at', {
-        ascending: false
-      });
-      if (error) throw error;
+      // Fetch student user_ids from user_roles table, then fetch their data
+      const { data: studentRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'student');
+      if (rolesError) throw rolesError;
 
-      // Transform the data to include creator information and proper fees structure
-      const studentsWithCreators: Student[] = (data || []).map(student => {
-        const studentRecord = student.students?.[0]; // Get first student record
-        const installmentCount = studentRecord?.installment_count || 1;
-        const feesStructure = installmentCount === 1 ? '1_installment' : installmentCount === 2 ? '2_installments' : installmentCount === 3 ? '3_installments' : '1_installment';
+      const studentUserIds = studentRoles?.map(r => r.user_id) || [];
+      if (studentUserIds.length === 0) {
+        setStudents([]);
+        setTotalStudents(0);
+        setActiveStudents(0);
+        setSuspendedStudents(0);
+        setOverdueStudents(0);
+        return;
+      }
+
+      // Fetch users and their corresponding student records in parallel
+      const [usersRes, studentsRes] = await Promise.all([
+        supabase.from('users').select('*').in('id', studentUserIds).order('created_at', { ascending: false }),
+        supabase.from('students').select('id, user_id, student_id, installment_count')
+      ]);
+      if (usersRes.error) throw usersRes.error;
+      if (studentsRes.error) {
+        console.warn('Warning fetching students table:', studentsRes.error);
+      }
+
+      const usersData = usersRes.data || [];
+      const studentsTable = studentsRes.data || [];
+      const studentIdMap = new Map<string, { student_id: string | null; student_record_id: string | null; installment_count: number | null }>(
+        studentsTable.map((s: any) => [s.user_id as string, { student_id: s.student_id as string | null, student_record_id: s.id as string | null, installment_count: (s.installment_count as number | null) ?? null }])
+      );
+
+      // Transform User data to Student data using real students.student_id
+      const studentsData: Student[] = usersData.map((user: any) => {
+        const mapEntry = studentIdMap.get(user.id);
+        const count = mapEntry?.installment_count ?? null;
+        const feesStructure = count === 1 ? '1_installment' : count === 2 ? '2_installments' : count === 3 ? '3_installments' : count ? `${count}_installments` : '';
         return {
-          ...student,
-          student_id: studentRecord?.student_id || student.lms_user_id || '',
-          student_record_id: studentRecord?.id || null,
-          phone: student.phone || '',
-          password_display: student.password_display || '',
+          ...user,
+          student_id: mapEntry?.student_id || '',
+          student_record_id: mapEntry?.student_record_id || null,
+          phone: user.phone || '',
+          password_display: user.password_display || '',
           fees_structure: feesStructure,
           fees_overdue: false,
           last_invoice_date: '',
           last_invoice_sent: false,
           fees_due_date: '',
-          last_suspended_date: '',
-          created_by: student.created_by || null,
-          creator: student.creator || null
-        };
+          last_suspended_date: ''
+        } as Student;
       });
-      setStudents(studentsWithCreators);
-      setTotalStudents(data?.length || 0);
+      setStudents(studentsData);
+      setTotalStudents(usersData.length || 0);
 
       // Calculate active students (those who have been active in the last 30 days)
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-      const activeCount = data?.filter(student => student.last_active_at && new Date(student.last_active_at) > thirtyDaysAgo).length || 0;
+      const activeCount = usersData.filter((student: any) => student.last_active_at && new Date(student.last_active_at) > thirtyDaysAgo).length || 0;
       setActiveStudents(activeCount);
 
       // Calculate suspended and overdue students
-      const suspendedCount = data?.filter(student => student.lms_status === 'suspended').length || 0;
-      // Note: fees_overdue not available in users table, defaulting to 0
-      const overdueCount = 0;
+      const suspendedCount = usersData.filter((student: any) => student.lms_status === 'suspended').length || 0;
       setSuspendedStudents(suspendedCount);
-      setOverdueStudents(overdueCount);
+      setOverdueStudents(0);
     } catch (error) {
       console.error('Error fetching students:', error);
       toast({
@@ -822,19 +830,22 @@ export function StudentsManagement() {
     }
     try {
       const lms_status = action === 'suspend' ? 'suspended' : 'active';
-      const {
-        error
-      } = await supabase.from('users').update({
-        lms_status
-      }).in('id', Array.from(selectedStudents));
+      const { error } = await supabase
+        .from('users')
+        .update({ lms_status })
+        .in('id', Array.from(selectedStudents));
       if (error) throw error;
+
+      // Optimistic UI update
+      setStudents(prev => prev.map(s => (selectedStudents.has(s.id) ? { ...s, lms_status } as Student : s)));
+
       toast({
         title: 'Success',
         description: `${selectedStudents.size} student(s) ${action === 'suspend' ? 'suspended' : 'activated'} successfully`
       });
       setSelectedStudents(new Set());
       setBulkActionDialog(false);
-      fetchStudents();
+      await fetchStudents();
     } catch (error) {
       console.error('Error updating bulk LMS status:', error);
       toast({
