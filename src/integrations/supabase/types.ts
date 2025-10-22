@@ -1751,6 +1751,27 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_security_summary_backup: {
         Row: {
           created_at: string | null
@@ -2156,6 +2177,10 @@ export type Database = {
         Args: { user_id: string }
         Returns: string
       }
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
       get_user_unlock_status: {
         Args: { _user_id: string }
         Returns: {
@@ -2175,6 +2200,13 @@ export type Database = {
       }
       has_completed_all_modules: {
         Args: { _user_id: string }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
         Returns: boolean
       }
       has_student_logged_in_since: {
@@ -2288,6 +2320,12 @@ export type Database = {
       }
     }
     Enums: {
+      app_role:
+        | "superadmin"
+        | "admin"
+        | "enrollment_manager"
+        | "mentor"
+        | "student"
       assignment_submission_status:
         | "submitted"
         | "under_review"
@@ -2421,6 +2459,13 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: [
+        "superadmin",
+        "admin",
+        "enrollment_manager",
+        "mentor",
+        "student",
+      ],
       assignment_submission_status: [
         "submitted",
         "under_review",
