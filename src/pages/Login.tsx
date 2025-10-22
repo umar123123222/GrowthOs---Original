@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,23 @@ const Login = () => {
     refreshUser
   } = useAuth();
   const navigate = useNavigate();
+
+  // Check for suspension error on mount (persisted from previous login attempt)
+  useEffect(() => {
+    const suspensionError = sessionStorage.getItem('suspension_error');
+    if (suspensionError) {
+      setLoginError(suspensionError);
+      sessionStorage.removeItem('suspension_error');
+      
+      // Clear stale error after 60 seconds
+      const timeout = setTimeout(() => {
+        setLoginError("");
+      }, 60000);
+      
+      return () => clearTimeout(timeout);
+    }
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const startAll = performance.now();
@@ -146,9 +163,12 @@ const Login = () => {
           const contactEmail = companySettings?.contact_email || ENV_CONFIG.SUPPORT_EMAIL;
           const companyName = companySettings?.company_name || 'Support';
 
+          // Store error in sessionStorage before signing out (to persist across component remount)
+          const errorMessage = `Account Suspended|Your account has been temporarily suspended. Please contact ${companyName} at ${contactEmail} to resolve this issue and regain access.`;
+          sessionStorage.setItem('suspension_error', errorMessage);
+          
           // Sign out the user immediately
           await supabase.auth.signOut();
-          setLoginError(`Account Suspended|Your account has been temporarily suspended. Please contact ${companyName} at ${contactEmail} to resolve this issue and regain access.`);
           return;
         }
         toast({
@@ -157,6 +177,9 @@ const Login = () => {
         });
       }
 
+      // Clear any stored suspension errors on successful login
+      sessionStorage.removeItem('suspension_error');
+      
       // Refresh the user data in our auth hook and navigate to dashboard
       const tRefreshStart = performance.now();
       await refreshUser();
@@ -231,6 +254,11 @@ const Login = () => {
                 <Input id="email" type="email" value={email} onChange={e => {
                 setEmail(e.target.value);
                 if (emailError) setEmailError("");
+                // Clear suspension error when user starts typing
+                if (loginError.includes('Suspended')) {
+                  setLoginError("");
+                  sessionStorage.removeItem('suspension_error');
+                }
               }} className={`h-12 pl-4 pr-4 border-2 transition-all duration-200 rounded-lg ${emailError ? 'border-destructive focus:border-destructive' : 'border-gray-200 focus:border-blue-500'}`} placeholder="your@email.com" required />
               </div>
               <FieldError error={emailError} />
