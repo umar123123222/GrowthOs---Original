@@ -16,6 +16,7 @@ interface EmailOptions {
   html: string;
   text?: string;
   attachments?: EmailAttachment[];
+  cc?: string;
 }
 
 interface EmailAttachment {
@@ -54,7 +55,7 @@ export class SMTPClient {
   }
 
   async sendEmail(options: EmailOptions): Promise<void> {
-    const { to, subject, html, text, attachments } = options;
+    const { to, subject, html, text, attachments, cc } = options;
     let conn: Deno.TcpConn | null = null;
     let tlsConn: Deno.TlsConn | null = null;
 
@@ -169,6 +170,15 @@ export class SMTPClient {
         throw new Error(`RCPT TO failed: ${rcptResponse}`);
       }
 
+      // Add CC recipient if provided
+      if (cc) {
+        await sendCommand(`RCPT TO:<${cc}>`);
+        const ccResponse = await readResponse();
+        if (!ccResponse.startsWith('250')) {
+          console.warn(`CC recipient failed, continuing without CC: ${ccResponse}`);
+        }
+      }
+
       await sendCommand('DATA');
       const dataResponse = await readResponse();
       if (!dataResponse.startsWith('354')) {
@@ -187,6 +197,7 @@ export class SMTPClient {
         const emailParts = [
           `From: ${this.config.fromName} <${this.config.fromEmail}>`,
           `To: ${to}`,
+          ...(cc ? [`Cc: ${cc}`] : []),
           `Subject: ${subject}`,
           `Message-ID: ${messageId}`,
           `Date: ${new Date().toUTCString()}`,
@@ -224,6 +235,7 @@ export class SMTPClient {
         emailContent = [
           `From: ${this.config.fromName} <${this.config.fromEmail}>`,
           `To: ${to}`,
+          ...(cc ? [`Cc: ${cc}`] : []),
           `Subject: ${subject}`,
           `Message-ID: ${messageId}`,
           `Date: ${new Date().toUTCString()}`,

@@ -226,9 +226,11 @@ async function sendInstallmentIssueEmail(invoice: any, loginUrl: string, currenc
     
     const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
     
+    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
     await smtpClient.sendEmail({
       to: studentEmail,
       subject: `Installment #${invoice.installment_number} Issued - Payment Due ${dueDate}`,
+      ...(billingCc ? { cc: billingCc } : {}),
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #2563eb;">Installment Payment Issued</h2>
@@ -305,9 +307,11 @@ async function sendFirstReminderEmail(invoice: any, loginUrl: string, currency: 
     
     const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
     
+    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
     await smtpClient.sendEmail({
       to: studentEmail,
       subject: `Payment Reminder - Installment #${invoice.installment_number} Due ${dueDate}`,
+      ...(billingCc ? { cc: billingCc } : {}),
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #f59e0b;">Payment Reminder</h2>
@@ -382,9 +386,11 @@ async function sendSecondReminderEmail(invoice: any, loginUrl: string, currency:
     
     const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
     
+    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
     await smtpClient.sendEmail({
       to: studentEmail,
       subject: `FINAL REMINDER - Installment #${invoice.installment_number} Due ${dueDate}`,
+      ...(billingCc ? { cc: billingCc } : {}),
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #dc2626;">Final Payment Reminder</h2>
@@ -454,9 +460,11 @@ async function sendDueEmail(invoice: any, loginUrl: string, currency: string, co
     
     const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
     
+    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
     await smtpClient.sendEmail({
       to: studentEmail,
       subject: `URGENT - Payment Overdue for Installment #${invoice.installment_number}`,
+      ...(billingCc ? { cc: billingCc } : {}),
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <h2 style="color: #dc2626;">Payment Overdue Notice</h2>

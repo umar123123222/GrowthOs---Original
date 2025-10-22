@@ -469,9 +469,11 @@ const handler = async (req: Request): Promise<Response> => {
         
         // Send welcome email
         try {
+          const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
           await smtpClient.sendEmail({
             to: email,
             subject: 'Welcome to Growth OS - Your LMS Access Credentials',
+            ...(notificationCc ? { cc: notificationCc } : {}),
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <h2>Welcome to Growth OS, ${full_name}!</h2>
@@ -628,9 +630,11 @@ async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: s
       </div>
     `).join('');
     
+    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
     await smtpClient.sendEmail({
       to: studentEmail,
       subject: `Invoice #${invoice.installment_number.toString().padStart(3, '0')} - Payment Due ${dueDate}`,
+      ...(billingCc ? { cc: billingCc } : {}),
       html: `
         <!DOCTYPE html>
         <html>
