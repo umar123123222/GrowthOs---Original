@@ -360,11 +360,20 @@ export const StudentManagement = () => {
   };
   const saveStatusUpdate = async () => {
     if (!selectedStudentForStatus) return;
+    
+    const oldStatus = selectedStudentForStatus.lms_status;
+    
+    // Optimistic UI update
+    setStudents(prev => prev.map(s => 
+      s.id === selectedStudentForStatus.id ? { ...s, lms_status: newLMSStatus } : s
+    ));
+    
     try {
       const {
         error
       } = await supabase.from('users').update({
-        lms_status: newLMSStatus
+        lms_status: newLMSStatus,
+        updated_at: new Date().toISOString()
       }).eq('id', selectedStudentForStatus.id);
       if (error) throw error;
       
@@ -380,6 +389,12 @@ export const StudentManagement = () => {
       });
     } catch (error) {
       console.error('Error updating LMS status:', error);
+      
+      // Rollback optimistic update
+      setStudents(prev => prev.map(s => 
+        s.id === selectedStudentForStatus.id ? { ...s, lms_status: oldStatus } : s
+      ));
+      
       toast({
         title: 'Error',
         description: 'Failed to update LMS status',
@@ -388,10 +403,17 @@ export const StudentManagement = () => {
     }
   };
   const handleToggleLMSSuspension = async (studentId: string, currentStatus: string) => {
+    const newLMSStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+    
+    // Optimistic UI update
+    setStudents(prev => prev.map(s => 
+      s.id === studentId ? { ...s, lms_status: newLMSStatus } : s
+    ));
+    
     try {
-      const newLMSStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
       const updateData: any = {
-        lms_status: newLMSStatus
+        lms_status: newLMSStatus,
+        updated_at: new Date().toISOString()
       };
       if (newLMSStatus === 'suspended') {
         updateData.last_suspended_date = new Date().toISOString();
@@ -410,6 +432,12 @@ export const StudentManagement = () => {
       });
     } catch (error) {
       console.error('Error updating LMS suspension status:', error);
+      
+      // Rollback optimistic update
+      setStudents(prev => prev.map(s => 
+        s.id === studentId ? { ...s, lms_status: currentStatus } : s
+      ));
+      
       toast({
         title: 'Error',
         description: 'Failed to update LMS suspension status',

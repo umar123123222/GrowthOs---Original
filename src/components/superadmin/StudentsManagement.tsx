@@ -540,22 +540,38 @@ export function StudentsManagement() {
     setExpandedRows(newExpanded);
   };
   const handleToggleLMSSuspension = async (studentId: string, currentStatus: string) => {
+    const newLMSStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
+    
+    // Optimistic UI update
+    setStudents(prev => prev.map(s => 
+      s.id === studentId ? { ...s, lms_status: newLMSStatus } : s
+    ));
+    
     try {
-      const newLMSStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
       const updateData: any = {
-        lms_status: newLMSStatus
+        lms_status: newLMSStatus,
+        updated_at: new Date().toISOString()
       };
       const {
         error
       } = await supabase.from('users').update(updateData).eq('id', studentId);
       if (error) throw error;
+      
+      // Refresh to ensure consistency
+      await fetchStudents();
+      
       toast({
         title: 'Success',
         description: `LMS account ${newLMSStatus === 'suspended' ? 'suspended' : 'activated'} successfully`
       });
-      fetchStudents();
     } catch (error) {
       console.error('Error toggling LMS suspension:', error);
+      
+      // Rollback optimistic update
+      setStudents(prev => prev.map(s => 
+        s.id === studentId ? { ...s, lms_status: currentStatus } : s
+      ));
+      
       toast({
         title: 'Error',
         description: 'Failed to update LMS status',
@@ -595,24 +611,44 @@ export function StudentsManagement() {
   };
   const saveStatusUpdate = async () => {
     if (!selectedStudentForStatus || !newLMSStatus) return;
+    
+    const oldStatus = selectedStudentForStatus.lms_status;
+    
+    // Optimistic UI update
+    setStudents(prev => prev.map(s => 
+      s.id === selectedStudentForStatus.id ? { ...s, lms_status: newLMSStatus } : s
+    ));
+    
     try {
       const updateData: any = {
-        lms_status: newLMSStatus
+        lms_status: newLMSStatus,
+        updated_at: new Date().toISOString()
       };
       const {
         error
       } = await supabase.from('users').update(updateData).eq('id', selectedStudentForStatus.id);
       if (error) throw error;
+      
+      // Close dialog
+      setStatusUpdateDialog(false);
+      setSelectedStudentForStatus(null);
+      setNewLMSStatus('');
+      
+      // Refresh to ensure consistency
+      await fetchStudents();
+      
       toast({
         title: 'Success',
         description: 'LMS status updated successfully'
       });
-      setStatusUpdateDialog(false);
-      setSelectedStudentForStatus(null);
-      setNewLMSStatus('');
-      fetchStudents();
     } catch (error) {
       console.error('Error updating LMS status:', error);
+      
+      // Rollback optimistic update
+      setStudents(prev => prev.map(s => 
+        s.id === selectedStudentForStatus.id ? { ...s, lms_status: oldStatus } : s
+      ));
+      
       toast({
         title: 'Error',
         description: 'Failed to update LMS status',
