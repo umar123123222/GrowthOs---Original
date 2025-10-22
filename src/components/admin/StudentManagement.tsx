@@ -36,7 +36,6 @@ interface Student {
   last_invoice_date: string;
   last_invoice_sent: boolean;
   fees_due_date: string;
-  last_suspended_date: string;
 }
 interface InstallmentPayment {
   id: string;
@@ -211,8 +210,7 @@ export const StudentManagement = () => {
           fees_overdue: false,
           last_invoice_date: '',
           last_invoice_sent: false,
-          fees_due_date: '',
-          last_suspended_date: ''
+          fees_due_date: ''
         } as Student;
       });
       setStudents(studentsData);
@@ -351,16 +349,12 @@ export const StudentManagement = () => {
     ));
     
     try {
-      const updateData: any = {
-        lms_status: newLMSStatus,
-        updated_at: new Date().toISOString()
-      };
-      if (newLMSStatus === 'suspended') {
-        updateData.last_suspended_date = new Date().toISOString();
-      }
       const {
         error
-      } = await supabase.from('users').update(updateData).eq('id', studentId);
+      } = await supabase.from('users').update({
+        lms_status: newLMSStatus,
+        updated_at: new Date().toISOString()
+      }).eq('id', studentId);
       if (error) throw error;
       
       // Wait for fetchStudents to complete before showing success toast
@@ -1182,15 +1176,6 @@ export const StudentManagement = () => {
                                 </div>
                               </div>
                             </div>
-
-                            {student.last_suspended_date && (
-                              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                                <div className="lg:col-span-3">
-                                  <Label className="text-sm font-medium text-gray-700">Last Suspended Date</Label>
-                                  <p className="text-sm text-red-600">{formatDate(student.last_suspended_date)}</p>
-                                </div>
-                              </div>
-                            )}
                             
                             {/* Installment Payment Buttons */}
                             {(student.fees_structure === '1_installment' || student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && <div className="pt-3 border-t border-blue-200">
