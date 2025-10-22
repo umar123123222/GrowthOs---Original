@@ -58,11 +58,16 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
       }
     } catch (error) {
       console.error('Error fetching company settings:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load payment information",
-        variant: "destructive"
-      });
+      
+      // Don't show payment error toast if there's a suspension error
+      const suspensionError = sessionStorage.getItem('suspension_error');
+      if (!suspensionError) {
+        toast({
+          title: "Error",
+          description: "Failed to load payment information",
+          variant: "destructive"
+        });
+      }
     } finally {
       setLoading(false);
     }
