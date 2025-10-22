@@ -142,12 +142,13 @@ const Login = () => {
           // Fetch company settings to get contact email
           const {
             data: companySettings
-          } = await supabase.from('company_settings').select('contact_email').eq('id', 1).maybeSingle();
+          } = await supabase.from('company_settings').select('contact_email, company_name').eq('id', 1).maybeSingle();
           const contactEmail = companySettings?.contact_email || ENV_CONFIG.SUPPORT_EMAIL;
+          const companyName = companySettings?.company_name || 'Support';
 
           // Sign out the user immediately
           await supabase.auth.signOut();
-          setLoginError(`Your LMS access is currently suspended. Please contact support at ${contactEmail} for assistance.`);
+          setLoginError(`Account Suspended|Your account has been temporarily suspended. Please contact ${companyName} at ${contactEmail} to resolve this issue and regain access.`);
           return;
         }
         toast({
@@ -202,7 +203,24 @@ const Login = () => {
         </CardHeader>
         
         <CardContent className="px-8 pb-8">
-          {loginError && <ErrorMessage error={loginError} className="mb-6" onDismiss={() => setLoginError("")} />}
+          {loginError && (() => {
+            const [title, message] = loginError.includes('|') ? loginError.split('|') : ['Error', loginError];
+            return (
+              <div className={`mb-6 p-4 rounded-lg border-2 ${
+                loginError.includes('suspended') || loginError.includes('Suspended')
+                  ? 'bg-amber-50 border-amber-300 text-amber-900'
+                  : 'bg-red-50 border-red-300 text-red-900'
+              }`}>
+                <div className="flex items-start gap-3">
+                  <Shield className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1">{title}</h3>
+                    <p className="text-sm leading-relaxed">{message}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
