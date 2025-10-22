@@ -2050,10 +2050,7 @@ export type Database = {
       }
     }
     Functions: {
-      can_view_sensitive_user_data: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      can_view_sensitive_user_data: { Args: never; Returns: boolean }
       check_and_award_milestone: {
         Args: { p_context?: Json; p_milestone_type: string; p_user_id: string }
         Returns: boolean
@@ -2076,9 +2073,20 @@ export type Database = {
         }
         Returns: string
       }
-      create_student_complete: {
-        Args:
-          | {
+      create_student_complete:
+        | {
+            Args: {
+              p_address?: string
+              p_email: string
+              p_full_name: string
+              p_mentor_id?: string
+              p_password: string
+              p_phone?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
               p_address?: string
               p_batch_id?: string
               p_email: string
@@ -2088,16 +2096,8 @@ export type Database = {
               p_phone?: string
               p_pod_id?: string
             }
-          | {
-              p_address?: string
-              p_email: string
-              p_full_name: string
-              p_mentor_id?: string
-              p_password: string
-              p_phone?: string
-            }
-        Returns: Json
-      }
+            Returns: Json
+          }
       create_user_with_role: {
         Args: {
           target_email: string
@@ -2108,10 +2108,7 @@ export type Database = {
         }
         Returns: Json
       }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_current_user_role: { Args: never; Returns: string }
       get_inactive_students: {
         Args: { days_threshold?: number }
         Returns: {
@@ -2123,12 +2120,9 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_my_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_my_role: { Args: never; Returns: string }
       get_recovery_statistics: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           failed_recoveries: number
           pending_recoveries: number
@@ -2159,7 +2153,7 @@ export type Database = {
         }[]
       }
       get_tracked_inactive_students: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           days_inactive: number
           email: string
@@ -2173,10 +2167,7 @@ export type Database = {
           user_id: string
         }[]
       }
-      get_user_lms_status: {
-        Args: { user_id: string }
-        Returns: string
-      }
+      get_user_lms_status: { Args: { user_id: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -2190,14 +2181,8 @@ export type Database = {
           recording_id: string
         }[]
       }
-      get_users_by_role: {
-        Args: { role_code: string }
-        Returns: string[]
-      }
-      has_any_role: {
-        Args: { role_codes: string[] }
-        Returns: boolean
-      }
+      get_users_by_role: { Args: { role_code: string }; Returns: string[] }
+      has_any_role: { Args: { role_codes: string[] }; Returns: boolean }
       has_completed_all_modules: {
         Args: { _user_id: string }
         Returns: boolean
@@ -2221,10 +2206,7 @@ export type Database = {
         Args: { p_user_id: string }
         Returns: undefined
       }
-      interpolate_template: {
-        Args: { t: string; vars: Json }
-        Returns: string
-      }
+      interpolate_template: { Args: { t: string; vars: Json }; Returns: string }
       is_assignment_passed: {
         Args: { _assignment_id: string; _user_id: string }
         Returns: boolean
@@ -2246,10 +2228,7 @@ export type Database = {
         }
         Returns: undefined
       }
-      mark_all_notifications_read: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
+      mark_all_notifications_read: { Args: never; Returns: number }
       mark_recovery_successful: {
         Args: { p_user_id: string }
         Returns: boolean
@@ -2298,10 +2277,7 @@ export type Database = {
         Args: { payload: Json; template_key: string }
         Returns: string[]
       }
-      sync_all_users_unlock_progress: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      sync_all_users_unlock_progress: { Args: never; Returns: string }
       sync_user_unlock_progress: {
         Args: { p_user_id: string }
         Returns: undefined
@@ -2310,10 +2286,7 @@ export type Database = {
         Args: { p_current_recording_id: string; p_user_id: string }
         Returns: undefined
       }
-      update_company_branding: {
-        Args: { branding_data: Json }
-        Returns: Json
-      }
+      update_company_branding: { Args: { branding_data: Json }; Returns: Json }
       validate_questionnaire_structure: {
         Args: { questionnaire_data: Json }
         Returns: boolean
