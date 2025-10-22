@@ -367,12 +367,17 @@ export const StudentManagement = () => {
         lms_status: newLMSStatus
       }).eq('id', selectedStudentForStatus.id);
       if (error) throw error;
+      
+      // Close dialog first
+      setStatusUpdateDialog(false);
+      
+      // Wait for fetchStudents to complete
+      await fetchStudents();
+      
       toast({
         title: 'Success',
         description: 'LMS status updated successfully'
       });
-      setStatusUpdateDialog(false);
-      fetchStudents();
     } catch (error) {
       console.error('Error updating LMS status:', error);
       toast({
@@ -395,11 +400,14 @@ export const StudentManagement = () => {
         error
       } = await supabase.from('users').update(updateData).eq('id', studentId);
       if (error) throw error;
+      
+      // Wait for fetchStudents to complete before showing success toast
+      await fetchStudents();
+      
       toast({
         title: 'Success',
         description: `LMS account ${newLMSStatus === 'suspended' ? 'suspended' : 'activated'} successfully`
       });
-      fetchStudents();
     } catch (error) {
       console.error('Error updating LMS suspension status:', error);
       toast({
