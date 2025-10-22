@@ -94,14 +94,18 @@ function DashboardContent() {
         data: modules
       } = await supabase.from('modules').select('id');
 
-      // Fetch active students
-      const activeStudents = users?.filter(user => user.role === 'student' && user.status === 'Active').length || 0;
+      // Fetch active students (status is lowercase in database)
+      const activeStudents = users?.filter(user => user.role === 'student' && user.status === 'active').length || 0;
 
-      // Get course completion rate from activity logs
-      const {
-        data: progressData
-      } = await supabase.from('user_activity_logs').select('*').eq('activity_type', 'module_completed');
-      const courseCompletion = progressData?.length || 0;
+      // Calculate actual course completion percentage
+      const totalStudents = users?.filter(user => user.role === 'student').length || 0;
+      const { data: completedModules } = await supabase
+        .from('user_activity_logs')
+        .select('user_id')
+        .eq('activity_type', 'module_completed');
+      
+      const studentsWithCompletions = new Set(completedModules?.map(log => log.user_id)).size;
+      const courseCompletion = totalStudents > 0 ? Math.round((studentsWithCompletions / totalStudents) * 100) : 0;
 
       // Fetch open support tickets
       const {
