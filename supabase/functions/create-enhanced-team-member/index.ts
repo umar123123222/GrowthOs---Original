@@ -159,6 +159,25 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Create role entry in user_roles table (CRITICAL for security)
+    const { error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .insert({
+        user_id: authUser.user.id,
+        role: role
+      });
+
+    if (roleError) {
+      console.error('Role creation error:', roleError);
+      // Cleanup if role creation fails
+      await supabaseAdmin.from('users').delete().eq('id', authUser.user.id);
+      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      return new Response(
+        JSON.stringify({ success: false, error: `Failed to create user role: ${roleError.message}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Add to email queue for credential delivery
     const { error: emailQueueError } = await supabaseAdmin
       .from('email_queue')
