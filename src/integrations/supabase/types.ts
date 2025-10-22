@@ -2152,6 +2152,7 @@ export type Database = {
           unlock_reason: string
         }[]
       }
+      get_team_member_password: { Args: { member_id: string }; Returns: string }
       get_tracked_inactive_students: {
         Args: never
         Returns: {

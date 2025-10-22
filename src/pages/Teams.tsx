@@ -394,26 +394,41 @@ const Teams = () => {
                     if (!open) setSelectedMember(null);
                   }}>
                         <DialogTrigger asChild>
-                          <Button variant="outline" size="sm" onClick={() => setSelectedMember(member)}>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={async () => {
+                              setSelectedMember(member);
+                              // Fetch password securely for superadmins
+                              if (user?.role === 'superadmin') {
+                                const { data, error } = await supabase.rpc('get_team_member_password', {
+                                  member_id: member.id
+                                });
+                                if (!error && data) {
+                                  setSelectedMember({ ...member, password_display: data });
+                                }
+                              }
+                            }}
+                          >
                             <Key className="w-4 h-4 mr-1" />
                             Credentials
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-lg">
                           <DialogHeader>
-                            <DialogTitle>Login Credentials - {member.full_name}</DialogTitle>
+                            <DialogTitle>Login Credentials - {selectedMember?.full_name}</DialogTitle>
                           </DialogHeader>
                           <div className="space-y-3">
                             <div>
                               <Label className="text-sm font-medium">Email</Label>
-                              <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded">{member.email}</p>
+                              <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded">{selectedMember?.email}</p>
                             </div>
                             <div>
                               <Label className="text-sm font-medium">
                                 {user?.role === 'superadmin' ? 'Password' : 'Access'}
                               </Label>
                               {user?.role === 'superadmin' ? <p className="text-sm text-gray-900 bg-gray-50 px-3 py-2 rounded font-mono">
-                                  {member.password_display || 'Password not available'}
+                                  {selectedMember?.password_display || 'Loading password...'}
                                 </p> : <p className="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded">
                                   Credentials are securely managed through the system
                                 </p>}
