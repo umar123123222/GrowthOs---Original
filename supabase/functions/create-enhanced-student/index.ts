@@ -254,6 +254,25 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Create user role entry (required for role-based queries)
+    const { error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .insert({
+        user_id: authUser.user.id,
+        role: 'student'
+      });
+
+    if (roleError) {
+      console.error('User role creation error:', roleError);
+      // Cleanup on failure
+      await supabaseAdmin.from('users').delete().eq('id', authUser.user.id);
+      await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+      return new Response(
+        JSON.stringify({ success: false, error: `Failed to create user role: ${roleError.message}` }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Get company settings to calculate final fee
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
