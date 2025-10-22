@@ -190,7 +190,15 @@ serve(async (req) => {
       if (adminLogsError) throw new Error(`Failed to delete admin logs: ${adminLogsError.message}`)
       deletionSteps.push('✓ Deleted admin_logs (performed_by)')
 
-      // Step 14: Delete public.users profile
+      // Step 14: Delete user_roles (CRITICAL for security)
+      const { error: userRolesError } = await supabaseClient
+        .from('user_roles')
+        .delete()
+        .eq('user_id', target_user_id)
+      if (userRolesError) throw new Error(`Failed to delete user_roles: ${userRolesError.message}`)
+      deletionSteps.push('✓ Deleted user_roles')
+
+      // Step 15: Delete public.users profile
       const { error: publicUserError } = await supabaseClient
         .from('users')
         .delete()
