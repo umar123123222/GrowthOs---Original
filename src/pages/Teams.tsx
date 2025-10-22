@@ -64,7 +64,13 @@ const Teams = () => {
         .in('role', user?.role === 'superadmin' ? ['superadmin', 'admin', 'mentor', 'enrollment_manager'] : ['admin', 'mentor', 'enrollment_manager'])
         .order('created_at', { ascending: false });
       if (error) throw error;
-      setTeamMembers(data || []);
+      
+      // For non-superadmins, filter out password fields client-side
+      const filteredData = user?.role !== 'superadmin' 
+        ? data?.map(({ password_display, password_hash, ...rest }) => rest)
+        : data;
+      
+      setTeamMembers(filteredData || []);
     } catch (error: any) {
       toast({
         title: "Error",
