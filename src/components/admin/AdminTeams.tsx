@@ -74,11 +74,11 @@ const AdminTeams = () => {
 
   const fetchTeamMembers = async () => {
     try {
-      // Admins can only see mentors, not other admins or superadmins
+      // Admins can see mentors and enrollment managers
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('role', 'mentor')
+        .in('role', ['mentor', 'enrollment_manager'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -139,26 +139,79 @@ const AdminTeams = () => {
       });
       return;
     }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newMember.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsAdding(true);
 
     try {
-      const { error } = await supabase
-        .from('users')
-        .insert([{
-          full_name: newMember.full_name,
-          email: newMember.email,
-          role: newMember.role,
-          status: 'active',
-          password_display: 'temp123',
-          password_hash: 'temp123'
-        }]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Success",
-        description: "Team member added successfully"
+      // Use the enhanced edge function for proper auth user creation and email delivery
+      const response = await supabase.functions.invoke('create-enhanced-team-member', {
+        body: {
+          email: newMember.email.toLowerCase().trim(),
+          full_name: newMember.full_name.trim(),
+          role: newMember.role
+        }
       });
+
+      if (response.error) {
+        let errorMessage = 'Failed to create team member';
+        if (response.error.message) {
+          try {
+            const errorData = JSON.parse(response.error.message);
+            errorMessage = errorData.error || errorData.message || response.error.message;
+          } catch {
+            errorMessage = response.error.message;
+          }
+        }
+
+        if (errorMessage.toLowerCase().includes('already exists') || errorMessage.toLowerCase().includes('email_exists')) {
+          toast({
+            title: "Email Already Registered",
+            description: "This email is already registered in the system.",
+            variant: "destructive"
+          });
+          return;
+        }
+        throw new Error(errorMessage);
+      }
+
+      if (!response.data?.success) {
+        const errorMsg = response.data?.error || 'Failed to create team member';
+        if (errorMsg.toLowerCase().includes('already exists') || errorMsg.toLowerCase().includes('email_exists')) {
+          toast({
+            title: "Email Already Registered",
+            description: "This email is already registered in the system.",
+            variant: "destructive"
+          });
+          return;
+        }
+        throw new Error(errorMsg);
+      }
+
+      // Trigger email processing
+      try {
+        await supabase.functions.invoke('process-email-queue');
+        toast({
+          title: "Success",
+          description: `${newMember.role} account created and credentials sent to ${newMember.email}`
+        });
+      } catch (emailError) {
+        toast({
+          title: "Warning",
+          description: `Account created but failed to send credential email. Password: ${response.data?.generated_password || 'Contact admin'}`,
+          variant: "destructive"
+        });
+      }
 
       setNewMember({
         full_name: '',
@@ -170,7 +223,7 @@ const AdminTeams = () => {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to add team member",
+        description: "Failed to add team member: " + error.message,
         variant: "destructive"
       });
     } finally {
@@ -267,6 +320,7 @@ const AdminTeams = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="mentor">Mentor</SelectItem>
+                    <SelectItem value="enrollment_manager">Enrollment Manager</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
