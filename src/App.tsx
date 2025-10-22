@@ -137,6 +137,14 @@ const App = () => {
     initPerformanceMonitoring();
   }, [user?.id]);
 
+  // Close paywall and reset invoice when user signs out
+  useEffect(() => {
+    if (!user) {
+      setShowPaywall(false);
+      setPendingInvoice(null);
+    }
+  }, [user]);
+
   const checkPaymentStatus = async () => {
     if (!user?.id) return;
 
@@ -267,13 +275,15 @@ const App = () => {
             </Suspense>
           </BrowserRouter>
           
-          {/* Paywall Modal */}
-          <PaywallModal
-            isOpen={showPaywall}
-            onOpenChange={setShowPaywall}
-            invoiceAmount={pendingInvoice?.amount}
-            invoiceNumber={pendingInvoice?.invoice_number}
-          />
+          {/* Paywall Modal - only render when user is authenticated */}
+          {user && (
+            <PaywallModal
+              isOpen={showPaywall}
+              onOpenChange={setShowPaywall}
+              invoiceAmount={pendingInvoice?.amount}
+              invoiceNumber={pendingInvoice?.invoice_number}
+            />
+          )}
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

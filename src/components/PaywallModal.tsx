@@ -37,12 +37,20 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
   const [currency, setCurrency] = useState(ENV_CONFIG.DEFAULT_CURRENCY);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    if (isOpen) {
-      fetchCompanySettings();
-    }
+    if (!isOpen) return;
+    
+    // Don't fetch anything if user is suspended
+    const suspensionError = sessionStorage.getItem('suspension_error');
+    if (suspensionError) return;
+    
+    fetchCompanySettings();
   }, [isOpen]);
   const fetchCompanySettings = async () => {
     try {
+      // Check if user is authenticated before fetching
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
       const {
         data,
         error
@@ -59,9 +67,14 @@ export const PaywallModal: React.FC<PaywallModalProps> = ({
     } catch (error) {
       console.error('Error fetching company settings:', error);
       
-      // Don't show payment error toast if there's a suspension error
+      // Don't show error toast for suspended users or auth/permission errors
       const suspensionError = sessionStorage.getItem('suspension_error');
-      if (!suspensionError) {
+      const status = (error as any)?.status ?? (error as any)?.code;
+      const message = (error as any)?.message ?? "";
+      const isAuthOrPermissionError = status === 401 || status === 403 || 
+        /permission|auth|rls/i.test(message);
+      
+      if (!suspensionError && !isAuthOrPermissionError) {
         toast({
           title: "Error",
           description: "Failed to load payment information",

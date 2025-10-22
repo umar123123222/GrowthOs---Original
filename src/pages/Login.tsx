@@ -37,10 +37,11 @@ const Login = () => {
     const suspensionError = sessionStorage.getItem('suspension_error');
     if (suspensionError) {
       setLoginError(suspensionError);
-      sessionStorage.removeItem('suspension_error');
       
-      // Clear stale error after 60 seconds
+      // Keep the flag for 60 seconds so other components can check it
+      // This prevents payment error toasts during suspension flow
       const timeout = setTimeout(() => {
+        sessionStorage.removeItem('suspension_error');
         setLoginError("");
       }, 60000);
       
