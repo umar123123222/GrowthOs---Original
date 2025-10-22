@@ -194,7 +194,7 @@ export function StudentsManagement() {
 
       // Fetch users and their corresponding student records in parallel
       const [usersRes, studentsRes] = await Promise.all([
-        supabase.from('users').select('*').in('id', studentUserIds).order('created_at', { ascending: false }),
+        supabase.from('users').select('*, creator:created_by(full_name, email)').in('id', studentUserIds).order('created_at', { ascending: false }),
         supabase.from('students').select('id, user_id, student_id, installment_count')
       ]);
       if (usersRes.error) throw usersRes.error;
