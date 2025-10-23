@@ -17,6 +17,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved documentation structure and navigation
 - Enhanced developer experience with better configuration management
 
+### Fixed
+- **Suspended Account Error Handling**: Eliminated unprofessional "Failed to load payment information" error toast for suspended users
+  - PaywallModal now properly checks for suspension status before fetching data
+  - Modal automatically closes when user signs out
+  - Suspension error flag persists for 60 seconds to allow proper error suppression across components
+  - Authentication and permission errors no longer trigger payment-related error messages
+
 ## [2.1.0] - 2025-01-06
 
 ### Added
