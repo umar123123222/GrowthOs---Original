@@ -16,9 +16,37 @@ This document details the security status of the Growth OS system, including res
 
 ---
 
-## 🎉 Recent Security Fixes (October 2025)
+## 🎉 Recent Security Fixes
 
-### ✅ Critical RLS Recursion Fixed
+### ✅ Suspended Account Error Handling (January 2025)
+**Date Fixed**: January 2025  
+**Components**: `App.tsx`, `PaywallModal.tsx`, `Login.tsx`
+
+**Original Issue**: Unprofessional error handling for suspended accounts
+- Suspended users saw "Failed to load payment information" toast
+- Multiple confusing error messages displayed simultaneously
+- PaywallModal attempted to fetch data after user signed out
+- Poor user experience damaged platform credibility
+
+**Solution Implemented**:
+- PaywallModal conditionally rendered only when user is authenticated
+- Added suspension flag check before fetching payment data
+- Modal automatically closes when user becomes null
+- Suspension error flag persists for 60 seconds across components
+- Hardened error suppression for auth/permission errors (401, 403)
+
+**Impact**: ✅ Suspended users now see only relevant "Account Suspended" message
+
+**Verification**:
+```typescript
+// Test suspended account login
+// Expected: Only "Account Suspended" message
+// No payment-related errors should appear
+```
+
+---
+
+### ✅ Critical RLS Recursion Fixed (October 2025)
 **Date Fixed**: October 21, 2025  
 **Migration**: `20251021082209_e7760674-5e31-448f-acdf-e79ce1255a58.sql`
 

@@ -225,6 +225,62 @@ const RoleGuard = ({ allowedRoles, children, fallback }) => {
 4. Remove auth user
 5. Log deletion action
 
+## Error Handling
+
+### Suspended Account Flow
+
+**Implementation Details** (Updated: January 2025):
+
+The system implements graceful error handling for suspended accounts to prevent confusing error messages:
+
+1. **Error Detection**
+   - Login attempt detected for suspended account
+   - System stores `suspension_error` flag in sessionStorage
+   - Flag persists for 60 seconds to coordinate error suppression
+
+2. **PaywallModal Coordination**
+   - Modal checks for suspension flag before fetching payment data
+   - Automatically closes when user signs out
+   - Suppresses "Failed to load payment information" toast during suspension flow
+
+3. **Error Message Priority**
+   - Only displays "Account Suspended" message to user
+   - Suppresses all payment-related errors (401, 403, RLS permission errors)
+   - Prevents multiple confusing error toasts
+
+**Technical Implementation**:
+
+```typescript
+// Login.tsx - Set suspension flag with 60s timeout
+useEffect(() => {
+  const suspensionError = sessionStorage.getItem('suspension_error');
+  if (suspensionError) {
+    setLoginError(suspensionError);
+    const timeout = setTimeout(() => {
+      sessionStorage.removeItem('suspension_error');
+      setLoginError("");
+    }, 60000);
+    return () => clearTimeout(timeout);
+  }
+}, []);
+
+// PaywallModal.tsx - Check suspension before fetching
+useEffect(() => {
+  if (!isOpen) return;
+  const suspensionError = sessionStorage.getItem('suspension_error');
+  if (suspensionError) return; // Don't fetch during suspension
+  fetchCompanySettings();
+}, [isOpen]);
+
+// App.tsx - Close paywall on sign out
+useEffect(() => {
+  if (!user) {
+    setShowPaywall(false);
+    setPendingInvoice(null);
+  }
+}, [user]);
+```
+
 ## Troubleshooting
 
 ### Common Issues
@@ -234,6 +290,12 @@ const RoleGuard = ({ allowedRoles, children, fallback }) => {
 - Verify password requirements
 - Check for account suspension
 - Validate role assignments
+
+**Suspended Account Errors**
+- User should only see "Account Suspended" message
+- No payment-related errors should appear
+- Error flag persists for 60 seconds across components
+- Modal automatically closes on sign out
 
 **Permission Errors**
 - Verify user role in database
