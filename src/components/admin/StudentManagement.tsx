@@ -271,8 +271,7 @@ export const StudentManagement = () => {
 
       // Calculate suspended and overdue students
       const suspendedCount = usersData.filter((student: any) => student.lms_status === 'suspended').length || 0;
-      // Note: fees_overdue not available in users table, defaulting to 0
-      const overdueCount = 0;
+      const overdueCount = studentsData.filter(student => student.fees_overdue === true).length || 0;
       setSuspendedStudents(suspendedCount);
       setOverdueStudents(overdueCount);
     } catch (error) {
@@ -305,17 +304,22 @@ export const StudentManagement = () => {
     }
 
     // Apply invoice filter
-    if (invoiceFilter === 'fees_due') {
-      // Has pending invoices that are not yet overdue
+    if (invoiceFilter === 'fees_cleared') {
+      // All fees have been cleared
+      filtered = filtered.filter(student => student.fees_cleared === true);
+    } else if (invoiceFilter === 'fees_due') {
+      // Has pending invoices that are not yet overdue and fees NOT cleared
       filtered = filtered.filter(student => 
-        !student.fees_overdue && student.last_invoice_sent && !student.fees_cleared
+        student.last_invoice_sent && 
+        !student.fees_overdue && 
+        !student.fees_cleared
       );
     } else if (invoiceFilter === 'fees_overdue') {
-      // Has invoices that are past due date
-      filtered = filtered.filter(student => student.fees_overdue);
-    } else if (invoiceFilter === 'fees_cleared') {
-      // All fees have been cleared
-      filtered = filtered.filter(student => student.fees_cleared);
+      // Has invoices that are past due date (regardless of fees_cleared status)
+      filtered = filtered.filter(student => student.fees_overdue === true);
+    } else if (invoiceFilter === 'no_invoice') {
+      // No invoices have been sent at all
+      filtered = filtered.filter(student => !student.last_invoice_sent);
     }
     setFilteredStudents(filtered);
   };
@@ -1052,9 +1056,10 @@ export const StudentManagement = () => {
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
             <SelectItem value="all">All Fees Status</SelectItem>
+            <SelectItem value="fees_cleared">Fees Cleared</SelectItem>
             <SelectItem value="fees_due">Fees Due</SelectItem>
             <SelectItem value="fees_overdue">Fees Overdue</SelectItem>
-            <SelectItem value="fees_cleared">Fees Cleared</SelectItem>
+            <SelectItem value="no_invoice">No Invoice</SelectItem>
           </SelectContent>
         </Select>
       </div>
