@@ -395,8 +395,13 @@ export function RecordingsManagement() {
                   <label className="text-sm font-medium text-foreground">Sequence Order</label>
                   <Input
                     type="number"
+                    min="0"
+                    step="1"
                     value={formData.sequence_order}
-                    onChange={(e) => setFormData({ ...formData, sequence_order: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 0;
+                      setFormData({ ...formData, sequence_order: Math.max(0, value) });
+                    }}
                     placeholder="Order"
                     className="transition-all duration-200 focus:scale-[1.02]"
                   />
