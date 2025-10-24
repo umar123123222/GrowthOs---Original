@@ -353,7 +353,7 @@ export function RecordingsManagement() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Title</label>
+                <label className="text-sm font-medium text-foreground">Title <span className="text-destructive">*</span></label>
                 <Input
                   value={formData.recording_title}
                   onChange={(e) => setFormData({ ...formData, recording_title: e.target.value })}
@@ -364,7 +364,7 @@ export function RecordingsManagement() {
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Video URL</label>
+                <label className="text-sm font-medium text-foreground">Video URL <span className="text-destructive">*</span></label>
                 <Input
                   value={formData.recording_url}
                   onChange={(e) => setFormData({ ...formData, recording_url: e.target.value })}
@@ -376,7 +376,7 @@ export function RecordingsManagement() {
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Duration (minutes)</label>
+                  <label className="text-sm font-medium text-foreground">Duration (minutes) <span className="text-destructive">*</span></label>
                   <Input
                     type="number"
                     min="0"
@@ -388,11 +388,12 @@ export function RecordingsManagement() {
                     }}
                     placeholder="Duration"
                     className="transition-all duration-200 focus:scale-[1.02]"
+                    required
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-foreground">Sequence Order</label>
+                  <label className="text-sm font-medium text-foreground">Overall Sequence <span className="text-destructive">*</span></label>
                   <Input
                     type="number"
                     min="0"
@@ -404,15 +405,17 @@ export function RecordingsManagement() {
                     }}
                     placeholder="Order"
                     className="transition-all duration-200 focus:scale-[1.02]"
+                    required
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Module</label>
+                <label className="text-sm font-medium text-foreground">Module <span className="text-destructive">*</span></label>
                 <Select
                   value={formData.module_id}
                   onValueChange={(value) => setFormData({ ...formData, module_id: value })}
+                  required
                 >
                   <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
                     <SelectValue placeholder="Select a module" />
