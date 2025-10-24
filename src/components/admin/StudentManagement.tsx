@@ -97,7 +97,7 @@ export const StudentManagement = () => {
   }, [students]);
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, installmentPayments]);
 
   // Re-render periodically so time-based invoice statuses (due/overdue) update without refresh
   useEffect(() => {
@@ -303,23 +303,21 @@ export const StudentManagement = () => {
       filtered = filtered.filter(student => student.fees_structure === feesStructureFilter);
     }
 
-    // Apply invoice filter
-    if (invoiceFilter === 'fees_cleared') {
-      // All fees have been cleared
-      filtered = filtered.filter(student => student.fees_cleared === true);
-    } else if (invoiceFilter === 'fees_due') {
-      // Has pending invoices that are not yet overdue and fees NOT cleared
-      filtered = filtered.filter(student => 
-        student.last_invoice_sent && 
-        !student.fees_overdue && 
-        !student.fees_cleared
-      );
-    } else if (invoiceFilter === 'fees_overdue') {
-      // Has invoices that are past due date (regardless of fees_cleared status)
-      filtered = filtered.filter(student => student.fees_overdue === true);
-    } else if (invoiceFilter === 'no_invoice') {
-      // No invoices have been sent at all
-      filtered = filtered.filter(student => !student.last_invoice_sent);
+    // Apply invoice filter - use same logic as badge display
+    if (invoiceFilter !== 'all') {
+      filtered = filtered.filter(student => {
+        const status = getInvoiceStatus(student);
+        if (invoiceFilter === 'fees_cleared') {
+          return status === 'Cleared';
+        } else if (invoiceFilter === 'fees_due') {
+          return status === 'Due';
+        } else if (invoiceFilter === 'fees_overdue') {
+          return status === 'Overdue';
+        } else if (invoiceFilter === 'no_invoice') {
+          return status === 'No Invoice';
+        }
+        return true;
+      });
     }
     setFilteredStudents(filtered);
   };
