@@ -97,7 +97,7 @@ export const StudentManagement = () => {
   }, [students]);
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, installmentPayments]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, installmentPayments, timeTick]);
 
   // Re-render periodically so time-based invoice statuses (due/overdue) update without refresh
   useEffect(() => {
@@ -935,7 +935,13 @@ export const StudentManagement = () => {
         <span className="ml-2 text-muted-foreground">Loading students...</span>
       </div>;
   }
-  const displayStudents = filteredStudents.length > 0 ? filteredStudents : students;
+  const hasActiveFilters = Boolean(
+    searchTerm ||
+    lmsStatusFilter !== 'all' ||
+    feesStructureFilter !== 'all' ||
+    invoiceFilter !== 'all'
+  );
+  const displayStudents = hasActiveFilters ? filteredStudents : students;
   return <div className="space-y-6 animate-fade-in px-0 mx-0">
       <div className="flex justify-between items-center">
         <div className="animate-fade-in">
@@ -1114,7 +1120,17 @@ export const StudentManagement = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayStudents.map(student => [
+                {hasActiveFilters && displayStudents.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-12">
+                      <div className="flex flex-col items-center space-y-2">
+                        <p className="text-muted-foreground text-lg">No students match the selected filters</p>
+                        <p className="text-sm text-muted-foreground">Try adjusting your search or filter criteria</p>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  displayStudents.map(student => [
                     <TableRow key={student.id}>
                       <TableCell>
                         <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
@@ -1172,115 +1188,201 @@ export const StudentManagement = () => {
                      </TableRow>,
                      
                      expandedRows.has(student.id) && <TableRow key={`${student.id}-expanded`} className="animate-accordion-down">
-                        <TableCell colSpan={8} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
-                          <div className="space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Joining Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(student.created_at)}</p>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
-                                <p className="text-sm text-gray-900">{getDisplayFeesStructureLabel(student)}</p>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(getLastInvoiceSentDate(student))}</p>
-                              </div>
-                            </div>
+                       <TableCell colSpan={8} className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-l-4 border-l-blue-200">
+                         <div className="space-y-6">
+                           {/* Basic Info Section */}
+                           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                             <div>
+                               <Label className="text-sm font-medium text-gray-700">Joining Date</Label>
+                               <p className="text-sm text-gray-900">{formatDate(student.created_at)}</p>
+                             </div>
+                             <div>
+                               <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
+                               <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
+                             </div>
+                             <div>
+                               <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
+                               <p className="text-sm text-gray-900">{getLastInvoiceSentDate(student)}</p>
+                             </div>
+                           </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
-                                <p className="text-sm text-gray-900">{formatDate(getNextInvoiceDueDate(student))}</p>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
-                                <p className="text-sm text-gray-900">{getInvoiceStatus(student)}</p>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
-                                <div className="flex items-center space-x-2">
-                                  <p className="text-sm text-gray-900">{student.lms_user_id || 'Not set'}</p>
-                                  {student.lms_user_id && (
-                                    <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(student.lms_user_id)}>
-                                      <Key className="w-3 h-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
+                           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                             <div>
+                               <Label className="text-sm font-medium text-gray-700">Invoice Due Date</Label>
+                               <p className="text-sm text-gray-900">{formatDate(getNextInvoiceDueDate(student))}</p>
+                             </div>
+                             <div>
+                               <Label className="text-sm font-medium text-gray-700">Invoice Status</Label>
+                               <p className="text-sm text-gray-900">{getInvoiceStatus(student)}</p>
+                             </div>
+                             <div>
+                               <Label className="text-sm font-medium text-gray-700">LMS User ID</Label>
+                               <div className="flex items-center space-x-2">
+                                 <p className="text-sm text-gray-900">{student.lms_user_id || 'Not set'}</p>
+                                 {student.lms_user_id && (
+                                   <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(student.lms_user_id)}>
+                                     <Key className="w-3 h-3" />
+                                   </Button>
+                                 )}
+                               </div>
+                             </div>
+                           </div>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                              <div className="lg:col-span-3">
-                                <Label className="text-sm font-medium text-gray-700">LMS Password</Label>
-                                <div className="flex items-center space-x-2">
-                                  <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
-                                    {student.password_display || 'Not set'}
-                                  </p>
-                                  {student.password_display && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => navigator.clipboard.writeText(student.password_display as string)}
-                                      title="Copy password"
-                                    >
-                                      <Key className="w-3 h-3" />
-                                    </Button>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                            
-                            {/* Installment Payment Buttons */}
-                            {(student.fees_structure === '1_installment' || student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && <div className="pt-3 border-t border-blue-200">
-                                <Label className="text-sm font-medium text-gray-700 mb-2 block">Installment Payments</Label>
-                                <div className="flex flex-wrap gap-2">
-                                  {Array.from({
-                            length: student.fees_structure === '1_installment' ? 1 : student.fees_structure === '2_installments' ? 2 : 3
-                          }, (_, index) => {
-                            const installmentNumber = index + 1;
-                             const payments = installmentPayments.get(student.student_record_id || '') || [];
-                              const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
-                            return <Button key={installmentNumber} variant={isPaid ? "default" : "outline"} size="sm" disabled={isPaid} onClick={() => handleMarkInstallmentPaid(student.id, installmentNumber)} className={`hover-scale ${isPaid ? "bg-green-500 hover:bg-green-600" : "hover:border-green-300 hover:text-green-600"}`}>
-                                        {isPaid ? <CheckCircle className="w-4 h-4 mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
-                                        {isPaid ? `${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid` : `Mark ${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid`}
-                                      </Button>;
-                          })}
-                                </div>
-                              </div>}
-                            
-                            <div className="flex flex-wrap gap-2 pt-4 border-t border-blue-200">
-                              <Button variant="outline" size="sm" onClick={() => handleViewActivityLogs(student.id)} className="hover-scale hover:border-blue-300 hover:text-blue-600">
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Activity Logs
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleResendInvoice(student)} className="hover-scale hover:border-purple-300 hover:text-purple-600">
-                                <FileText className="w-4 h-4 mr-2" />
-                                Resend Invoice
-                              </Button>
-                              {student.last_invoice_date && <Button variant="outline" size="sm" onClick={() => downloadInvoicePDF(student)} className="hover-scale hover:border-orange-300 hover:text-orange-600">
-                                  <Download className="w-4 h-4 mr-2" />
-                                  Download Invoice
-                                </Button>}
-                              <Button variant="outline" size="sm" onClick={() => handleStatusUpdate(student.id)} className="hover-scale hover:border-blue-300 hover:text-blue-600">
-                                <Settings className="w-4 h-4 mr-2" />
-                                Update Status
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleToggleLMSSuspension(student.id, student.lms_status)} className={`hover-scale ${student.lms_status === 'suspended' ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:text-red-700 hover:border-red-300"}`}>
-                                {student.lms_status === 'suspended' ? <>
-                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                    Activate LMS
-                                  </> : <>
-                                    <Ban className="w-4 h-4 mr-2" />
-                                    Suspend LMS
-                                  </>}
-                              </Button>
-                            </div>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                  ].filter(Boolean))}
+                           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                             <div className="lg:col-span-3">
+                               <Label className="text-sm font-medium text-gray-700">LMS Password</Label>
+                               <div className="flex items-center space-x-2">
+                                 <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
+                                   {student.password_display || 'Not set'}
+                                 </p>
+                                 {student.password_display && (
+                                   <Button
+                                     variant="ghost"
+                                     size="sm"
+                                     onClick={() =>
+                                       navigator.clipboard.writeText(student.password_display)}
+                                     title="Copy password"
+                                   >
+                                     <Key className="w-3 h-3" />
+                                   </Button>
+                                 )}
+                               </div>
+                             </div>
+                           </div>
+
+                           {/* Installment Payment Buttons */}
+                           {(student.fees_structure === '1_installment' ||
+                             student.fees_structure === '2_installments' ||
+                             student.fees_structure === '3_installments') && (
+                             <div className="pt-4 border-t border-blue-200">
+                               <Label className="text-sm font-medium text-gray-700 mb-2 block">Installment Payments</Label>
+                               <div className="flex flex-wrap gap-2">
+                                 {Array.from(
+                                   {
+                                     length:
+                                       student.fees_structure === '1_installment'
+                                         ? 1
+                                         : student.fees_structure === '2_installments'
+                                         ? 2
+                                         : 3,
+                                   },
+                                   (_, index) => {
+                                     const installmentNumber = index + 1;
+                                     const payments =
+                                       installmentPayments.get(student.student_record_id || '') ||
+                                       installmentPayments.get(student.id) ||
+                                       [];
+                                     const isPaid = payments.some(
+                                       (p: any) =>
+                                         p.installment_number === installmentNumber && p.status === 'paid'
+                                     );
+
+                                     return (
+                                       <Button
+                                         key={installmentNumber}
+                                         variant={isPaid ? 'default' : 'outline'}
+                                         size="sm"
+                                         disabled={isPaid}
+                                         onClick={() =>
+                                           handleMarkInstallmentPaid(student.id, installmentNumber)}
+                                         className={`hover-scale ${
+                                           isPaid
+                                             ? 'bg-green-500 hover:bg-green-600'
+                                             : 'hover:border-green-300 hover:text-green-600'
+                                         }`}
+                                       >
+                                         {isPaid ? (
+                                           <CheckCircle className="w-4 h-4 mr-2" />
+                                         ) : (
+                                           <DollarSign className="w-4 h-4 mr-2" />
+                                         )}
+                                         {isPaid
+                                           ? `${installmentNumber}${
+                                               installmentNumber === 1
+                                                 ? 'st'
+                                                 : installmentNumber === 2
+                                                 ? 'nd'
+                                                 : 'rd'
+                                             } Paid`
+                                           : `Mark ${installmentNumber}${
+                                               installmentNumber === 1
+                                                 ? 'st'
+                                                 : installmentNumber === 2
+                                                 ? 'nd'
+                                                 : 'rd'
+                                             } Paid`}
+                                       </Button>
+                                     );
+                                   }
+                                 )}
+                               </div>
+                             </div>
+                           )}
+
+                           <div className="flex flex-wrap gap-2 pt-4 border-t border-blue-200">
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => handleViewActivityLogs(student.id)}
+                               className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                             >
+                               <Eye className="w-4 h-4 mr-2" />
+                               View Activity Logs
+                             </Button>
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => handleResendInvoice(student)}
+                               className="hover-scale hover:border-purple-300 hover:text-purple-600"
+                             >
+                               <FileText className="w-4 h-4 mr-2" />
+                               Resend Invoice
+                             </Button>
+                             {student.last_invoice_date && (
+                               <Button
+                                 variant="outline"
+                                 size="sm"
+                                 onClick={() => downloadInvoicePDF(student)}
+                                 className="hover-scale hover:border-orange-300 hover:text-orange-600"
+                               >
+                                 <Download className="w-4 h-4 mr-2" />
+                                 Download Invoice
+                               </Button>
+                             )}
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => handleStatusUpdate(student.id)}
+                               className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                             >
+                               <Settings className="w-4 h-4 mr-2" />
+                               Update Status
+                             </Button>
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() =>
+                                 handleToggleLMSSuspension(student.id, student.lms_status)}
+                               className={`hover-scale ${
+                                 student.lms_status === 'suspended'
+                                   ? 'text-green-600 hover:text-green-700 hover:border-green-300'
+                                   : 'text-red-600 hover:text-red-700 hover:border-red-300'
+                               }`}
+                             >
+                               {student.lms_status === 'suspended' ? <>
+                                   <CheckCircle className="w-4 h-4 mr-2" />
+                                   Activate LMS
+                                 </> : <>
+                                   <Ban className="w-4 h-4 mr-2" />
+                                   Suspend LMS
+                                 </>}
+                             </Button>
+                           </div>
+                         </div>
+                       </TableCell>
+                     </TableRow>
+                  ].filter(Boolean))
+                )}
               </TableBody>
             </Table>
           </div>
