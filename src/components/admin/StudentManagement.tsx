@@ -36,6 +36,7 @@ interface Student {
   last_invoice_date: string;
   last_invoice_sent: boolean;
   fees_due_date: string;
+  fees_cleared?: boolean;
 }
 interface InstallmentPayment {
   id: string;
@@ -171,35 +172,80 @@ export const StudentManagement = () => {
         return;
       }
 
-      // Fetch users and their corresponding student records in parallel
-      const [usersRes, studentsRes] = await Promise.all([
+      // Fetch users, students, and invoices in parallel
+      const [usersRes, studentsRes, invoicesRes] = await Promise.all([
         supabase.from('users').select('*').in('id', studentUserIds).order('created_at', {
           ascending: false
         }), 
-        supabase.from('students').select('id, user_id, student_id, installment_count')
+        supabase.from('students').select('id, user_id, student_id, installment_count, fees_cleared'),
+        supabase.from('invoices').select('student_id, status, due_date, amount, created_at')
       ]);
       
       if (usersRes.error) throw usersRes.error;
       if (studentsRes.error) {
         console.warn('Warning fetching students table:', studentsRes.error);
       }
+      if (invoicesRes.error) {
+        console.warn('Warning fetching invoices:', invoicesRes.error);
+      }
+
       const usersData = usersRes.data || [];
       const studentsTable = studentsRes.data || [];
+      const invoicesData = invoicesRes.data || [];
+
+      // Create invoice map grouped by student_id
+      const invoiceMap = new Map<string, any[]>();
+      invoicesData.forEach((invoice: any) => {
+        const existing = invoiceMap.get(invoice.student_id) || [];
+        existing.push(invoice);
+        invoiceMap.set(invoice.student_id, existing);
+      });
+
       const studentIdMap = new Map<string, {
         student_id: string | null;
         student_record_id: string | null;
         installment_count: number | null;
+        fees_cleared: boolean;
       }>(studentsTable.map((s: any) => [s.user_id as string, {
         student_id: s.student_id as string | null,
         student_record_id: s.id as string | null,
-        installment_count: s.installment_count as number | null ?? null
+        installment_count: s.installment_count as number | null ?? null,
+        fees_cleared: s.fees_cleared || false
       }]));
 
-      // Transform User data to Student data using real students.student_id
+      // Transform User data to Student data with real fees status
       const studentsData: Student[] = usersData.map((user: any) => {
         const mapEntry = studentIdMap.get(user.id);
         const count = mapEntry?.installment_count ?? null;
         const feesStructure = count === 1 ? '1_installment' : count === 2 ? '2_installments' : count === 3 ? '3_installments' : count ? `${count}_installments` : '';
+        
+        // Get fees_cleared from student record
+        const feesCleared = mapEntry?.fees_cleared || false;
+        
+        // Get invoices for this student (using student_record_id)
+        const studentInvoices = invoiceMap.get(mapEntry?.student_record_id || '') || [];
+        
+        // Calculate fees status
+        const today = new Date();
+        const pendingInvoices = studentInvoices.filter((inv: any) => inv.status === 'pending');
+        const overdueInvoices = pendingInvoices.filter((inv: any) => new Date(inv.due_date) < today);
+        
+        const fees_overdue = overdueInvoices.length > 0;
+        const last_invoice_sent = studentInvoices.length > 0;
+        
+        // Get most recent invoice date
+        const sortedInvoices = [...studentInvoices].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        const last_invoice_date = sortedInvoices[0]?.created_at || '';
+        
+        // Get earliest due date from pending invoices
+        const sortedDueDates = pendingInvoices
+          .map((inv: any) => inv.due_date)
+          .filter(Boolean)
+          .sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+        const fees_due_date = sortedDueDates[0] || '';
+
         return {
           ...user,
           student_id: mapEntry?.student_id || '',
@@ -207,10 +253,11 @@ export const StudentManagement = () => {
           phone: user.phone || '',
           password_display: user.password_display || '',
           fees_structure: feesStructure,
-          fees_overdue: false,
-          last_invoice_date: '',
-          last_invoice_sent: false,
-          fees_due_date: ''
+          fees_overdue,
+          last_invoice_date,
+          last_invoice_sent,
+          fees_due_date,
+          fees_cleared: feesCleared
         } as Student;
       });
       setStudents(studentsData);
@@ -259,11 +306,16 @@ export const StudentManagement = () => {
 
     // Apply invoice filter
     if (invoiceFilter === 'fees_due') {
-      filtered = filtered.filter(student => student.last_invoice_sent && !student.fees_overdue);
+      // Has pending invoices that are not yet overdue
+      filtered = filtered.filter(student => 
+        !student.fees_overdue && student.last_invoice_sent && !student.fees_cleared
+      );
     } else if (invoiceFilter === 'fees_overdue') {
+      // Has invoices that are past due date
       filtered = filtered.filter(student => student.fees_overdue);
     } else if (invoiceFilter === 'fees_cleared') {
-      filtered = filtered.filter(student => !student.fees_overdue && student.last_invoice_sent);
+      // All fees have been cleared
+      filtered = filtered.filter(student => student.fees_cleared);
     }
     setFilteredStudents(filtered);
   };
