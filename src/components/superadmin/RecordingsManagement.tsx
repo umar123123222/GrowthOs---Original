@@ -379,8 +379,13 @@ export function RecordingsManagement() {
                   <label className="text-sm font-medium text-foreground">Duration (minutes)</label>
                   <Input
                     type="number"
+                    min="0"
+                    step="1"
                     value={formData.duration_min}
-                    onChange={(e) => setFormData({ ...formData, duration_min: parseInt(e.target.value) || 0 })}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 0;
+                      setFormData({ ...formData, duration_min: Math.max(0, value) });
+                    }}
                     placeholder="Duration"
                     className="transition-all duration-200 focus:scale-[1.02]"
                   />

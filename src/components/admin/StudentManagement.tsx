@@ -1198,7 +1198,7 @@ export const StudentManagement = () => {
                              </div>
                              <div>
                                <Label className="text-sm font-medium text-gray-700">Fees Structure</Label>
-                               <p className="text-sm text-gray-900">{getFeesStructureLabel(student.fees_structure)}</p>
+                               <p className="text-sm text-gray-900">{getDisplayFeesStructureLabel(student)}</p>
                              </div>
                              <div>
                                <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
