@@ -275,6 +275,9 @@ export function StudentsManagement() {
       filtered = filtered.filter(student => {
         const key = String(student.student_record_id || '');
         const invs = installmentPayments.get(key) || [];
+        if (invoiceFilter === 'no_invoice') {
+          return invs.length === 0;
+        }
         if (invoiceFilter === 'fees_due') {
           return invs.some(inv => inv.status === 'issued' && inv.due_date && new Date(inv.due_date) >= now);
         }
@@ -1116,6 +1119,7 @@ export function StudentsManagement() {
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
             <SelectItem value="all">All Fees Status</SelectItem>
+            <SelectItem value="no_invoice">No Invoice</SelectItem>
             <SelectItem value="fees_due">Fees Due</SelectItem>
             <SelectItem value="fees_overdue">Fees Overdue</SelectItem>
             <SelectItem value="fees_cleared">Fees Cleared</SelectItem>
