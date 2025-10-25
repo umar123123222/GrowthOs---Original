@@ -26,3 +26,6 @@ verify_jwt = false
 
 [functions.admin-reset-sp-credits]
 verify_jwt = true
+
+[functions.success-partner-credits]
+verify_jwt = true

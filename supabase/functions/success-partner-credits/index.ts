@@ -21,23 +21,19 @@ serve(async (req) => {
   }
 
   try {
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Get user from auth header
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: 'Authorization header required' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
+    // Create Supabase client with user's JWT
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      {
+        global: {
+          headers: { Authorization: req.headers.get('Authorization')! },
+        },
+      }
     );
+
+    // Get user
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
 
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Invalid authorization' }), {
@@ -51,7 +47,7 @@ serve(async (req) => {
 
     if (req.method === 'GET') {
       // Get current credit status
-      const { data: creditRecord, error } = await supabase
+      const { data: creditRecord, error } = await supabaseClient
         .from('success_partner_credits')
         .select('*')
         .eq('user_id', user.id)
@@ -68,7 +64,7 @@ serve(async (req) => {
 
       // If no record exists for today, create one
       if (!creditRecord) {
-        const { data: newRecord, error: insertError } = await supabase
+        const { data: newRecord, error: insertError } = await supabaseClient
           .from('success_partner_credits')
           .insert({
             user_id: user.id,
@@ -115,7 +111,7 @@ serve(async (req) => {
 
     if (req.method === 'POST') {
       // Increment credit usage (called after successful AI response)
-      const { data: creditRecord, error: fetchError } = await supabase
+      const { data: creditRecord, error: fetchError } = await supabaseClient
         .from('success_partner_credits')
         .select('*')
         .eq('user_id', user.id)
@@ -139,7 +135,7 @@ serve(async (req) => {
       }
 
       // Increment credits_used
-      const { data: updatedRecord, error: updateError } = await supabase
+      const { data: updatedRecord, error: updateError } = await supabaseClient
         .from('success_partner_credits')
         .update({ credits_used: creditRecord.credits_used + 1 })
         .eq('user_id', user.id)
