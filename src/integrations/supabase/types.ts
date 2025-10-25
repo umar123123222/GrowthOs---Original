@@ -128,6 +128,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_available_lessons_assignment"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "session_recordings_module_fkey"
             columns: ["module"]
             isOneToOne: false
