@@ -279,13 +279,18 @@ export function StudentsManagement() {
           return invs.length === 0;
         }
         if (invoiceFilter === 'fees_due') {
-          return invs.some(inv => inv.status === 'issued' && inv.due_date && new Date(inv.due_date) >= now);
+          // Has unpaid invoices that are not overdue
+          const unpaidInvoices = invs.filter(inv => inv.status !== 'paid');
+          return unpaidInvoices.some(inv => inv.due_date && new Date(inv.due_date) >= now);
         }
         if (invoiceFilter === 'fees_overdue') {
-          return invs.some(inv => inv.status === 'issued' && inv.due_date && new Date(inv.due_date) < now);
+          // Has unpaid invoices that are overdue
+          const unpaidInvoices = invs.filter(inv => inv.status !== 'paid');
+          return unpaidInvoices.some(inv => inv.due_date && new Date(inv.due_date) < now);
         }
         if (invoiceFilter === 'fees_cleared') {
-          return invs.length > 0 && !invs.some(inv => inv.status === 'issued');
+          // All invoices are paid
+          return invs.length > 0 && invs.every(inv => inv.status === 'paid');
         }
         return true;
       });
