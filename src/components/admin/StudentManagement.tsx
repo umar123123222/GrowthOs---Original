@@ -466,12 +466,12 @@ export const StudentManagement = () => {
         return;
       }
 
-      // Allow resending for pending, overdue, and issued statuses
+      // Allow resending for any unpaid invoice
       const { data: invoice, error } = await supabase
         .from('invoices')
         .select('*')
         .eq('student_id', student.student_record_id)
-        .in('status', ['pending', 'overdue', 'issued'])
+        .neq('status', 'paid')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();

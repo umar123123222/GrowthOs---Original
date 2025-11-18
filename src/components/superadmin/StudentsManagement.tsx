@@ -364,14 +364,14 @@ export function StudentsManagement() {
       const {
         data: invoice,
         error
-      } = await supabase.from('invoices').select('*').eq('student_id', student.student_record_id).eq('status', 'issued').order('created_at', {
+      } = await supabase.from('invoices').select('*').eq('student_id', student.student_record_id).neq('status', 'paid').order('created_at', {
         ascending: false
       }).limit(1).maybeSingle();
       if (error) throw error;
       if (!invoice) {
         toast({
-          title: 'No Issued Invoice',
-          description: 'This student has no issued invoices to resend.',
+          title: 'No Invoice Found',
+          description: 'This student has no unpaid invoices to resend.',
           variant: 'destructive'
         });
         return;
@@ -748,7 +748,7 @@ export function StudentsManagement() {
   const getLastInvoiceSentDate = (student: Student) => {
     const key = student.student_record_id || '';
     const payments = installmentPayments.get(key) || [];
-    const sorted = payments.filter(p => (p.status === 'issued' || p.status === 'pending' || p.status === 'paid') && p.created_at).sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime());
+    const sorted = payments.filter(p => p.created_at).sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime());
     if (sorted.length > 0) {
       return formatDate(sorted[0].created_at as string);
     }
