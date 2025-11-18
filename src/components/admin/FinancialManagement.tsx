@@ -97,10 +97,10 @@ const calculateStats = async () => {
       .filter(i => i.status === 'paid')
       .reduce((sum, i) => sum + (i.amount || 0), 0);
     const pendingAmount = invoices
-      .filter(i => i.status === 'pending' || i.status === 'issued')
+      .filter(i => i.status !== 'paid')
       .reduce((sum, i) => sum + (i.amount || 0), 0);
     const overdueAmount = invoices
-      .filter(i => i.status === 'issued' && new Date(i.due_date) < now)
+      .filter(i => i.status !== 'paid' && i.due_date && new Date(i.due_date) < now)
       .reduce((sum, i) => sum + (i.amount || 0), 0);
     const collectionRate = invoices.length
       ? (totalRevenue / (totalRevenue + pendingAmount + overdueAmount)) * 100
