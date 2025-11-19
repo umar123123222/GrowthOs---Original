@@ -121,7 +121,7 @@ serve(async (req) => {
 
         // Send credentials email
         const smtpClient = SMTPClient.fromEnv();
-        await smtpClient.send({
+        await smtpClient.sendEmail({
           to: email,
           subject: `${companyName} - Updated Login Credentials`,
           html: `
