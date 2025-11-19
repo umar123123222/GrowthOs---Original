@@ -67,10 +67,17 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
 
       // Check if email was sent and handle different scenarios
       if (emailChanged && data?.email_sent) {
-        toast({
-          title: 'Success',
-          description: 'Student details updated and login credentials sent to new email'
-        });
+        if (data?.password_regenerated) {
+          toast({
+            title: 'Student Updated & Password Reset',
+            description: 'Student details updated successfully. A new password was generated and login credentials have been sent to their new email address.',
+          });
+        } else {
+          toast({
+            title: 'Success',
+            description: 'Student details updated and login credentials sent to new email'
+          });
+        }
       } else if (emailChanged && !data?.email_sent && data?.email_error) {
         console.error('Email sending failed:', data.email_error);
         toast({
