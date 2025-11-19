@@ -419,8 +419,8 @@ const handler = async (req: Request): Promise<Response> => {
               amount: installmentAmount,
               installment_number: i,
               due_date: dueDate.toISOString(),
-              status: i === 1 ? 'pending' : 'scheduled',
-              created_at: issueDate.toISOString()
+              status: i === 1 ? 'pending' : 'scheduled'
+              // created_at will use database default (now()) - don't set it to future date
             });
           }
 
