@@ -153,7 +153,7 @@ const handler = async (req: Request): Promise<Response> => {
           error: 'A student with this email address already exists in the system',
           error_code: 'EMAIL_EXISTS'
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -171,7 +171,7 @@ const handler = async (req: Request): Promise<Response> => {
           error: `A student with this phone number already exists (${existingPhone.email})`,
           error_code: 'PHONE_EXISTS'
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
