@@ -63,19 +63,32 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
         throw new Error(data.error);
       }
 
-      // Check if email was actually sent
-      if (emailChanged && !data?.email_sent) {
+      console.log('Update result:', data);
+
+      // Check if email was sent and handle different scenarios
+      if (emailChanged && data?.email_sent) {
         toast({
-          title: 'Partial Success',
-          description: `Student details updated, but credentials email failed to send${data?.email_error ? `: ${data.email_error}` : ' (SMTP not configured)'}`,
+          title: 'Success',
+          description: 'Student details updated and login credentials sent to new email'
+        });
+      } else if (emailChanged && !data?.email_sent && data?.email_error) {
+        console.error('Email sending failed:', data.email_error);
+        toast({
+          title: 'Partially Updated',
+          description: `Student updated but email failed: ${data.email_error}`,
+          variant: 'destructive'
+        });
+      } else if (emailChanged && !data?.email_sent) {
+        console.warn('Email not sent - SMTP may not be configured');
+        toast({
+          title: 'Partially Updated',
+          description: 'Student updated but credentials email not sent (SMTP not configured)',
           variant: 'destructive'
         });
       } else {
         toast({
           title: 'Success',
-          description: emailChanged 
-            ? 'Student details updated and login credentials sent to new email'
-            : 'Student details updated successfully'
+          description: 'Student details updated successfully'
         });
       }
 

@@ -108,19 +108,69 @@ serve(async (req) => {
     let emailSent = false;
     let emailError = null;
     
-    if (emailChanged && resend_credentials && existingUser.password_display) {
+    // Pre-flight checks logging
+    console.log('Email sending conditions check:', {
+      emailChanged,
+      resend_credentials,
+      has_password_display: !!existingUser.password_display,
+      old_email: oldEmail,
+      new_email: email
+    });
+
+    // Verify SMTP configuration
+    const smtpConfigured = !!(
+      Deno.env.get('SMTP_HOST') &&
+      Deno.env.get('SMTP_PORT') &&
+      Deno.env.get('SMTP_USER') &&
+      Deno.env.get('SMTP_PASSWORD') &&
+      Deno.env.get('SMTP_FROM_EMAIL')
+    );
+
+    console.log('SMTP Configuration Status:', {
+      configured: smtpConfigured,
+      has_host: !!Deno.env.get('SMTP_HOST'),
+      has_port: !!Deno.env.get('SMTP_PORT'),
+      has_user: !!Deno.env.get('SMTP_USER'),
+      has_password: !!Deno.env.get('SMTP_PASSWORD'),
+      has_from_email: !!Deno.env.get('SMTP_FROM_EMAIL'),
+      has_from_name: !!Deno.env.get('SMTP_FROM_NAME')
+    });
+
+    if (!smtpConfigured) {
+      emailError = 'SMTP not configured in function secrets. Please configure SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, and SMTP_FROM_EMAIL.';
+      console.error('SMTP Configuration Error:', emailError);
+    }
+    
+    if (emailChanged && resend_credentials && existingUser.password_display && smtpConfigured) {
+      console.log('Starting email sending process...');
+      
       try {
         // Get company details
-        const { data: companySettings } = await supabaseAdmin
+        console.log('Fetching company settings...');
+        const { data: companySettings, error: companyError } = await supabaseAdmin
           .from('company_settings')
           .select('company_name, company_logo, lms_url')
           .single();
 
+        if (companyError) {
+          console.error('Error fetching company settings:', companyError);
+        }
+
         const companyName = companySettings?.company_name || 'Growth OS';
         const loginUrl = companySettings?.lms_url || Deno.env.get('SUPABASE_URL') || '';
 
-        // Send credentials email
+        console.log('Company settings retrieved:', { companyName, loginUrl });
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+          throw new Error(`Invalid email format: ${email}`);
+        }
+
+        console.log('Initializing SMTP client...');
         const smtpClient = SMTPClient.fromEnv();
+        
+        console.log('Sending email to:', email);
         await smtpClient.sendEmail({
           to: email,
           subject: `${companyName} - Updated Login Credentials`,
@@ -179,12 +229,36 @@ serve(async (req) => {
           `,
         });
 
-        console.log(`Credentials email sent to ${email}`);
+        console.log(`✅ Credentials email successfully sent to ${email}`);
         emailSent = true;
       } catch (error) {
-        console.error('Error sending credentials email:', error);
-        emailError = error instanceof Error ? error.message : 'Failed to send email';
+        console.error('❌ Error sending credentials email:', error);
+        console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+        
+        // Detailed error categorization
+        let errorMessage = 'Failed to send email';
+        if (error instanceof Error) {
+          if (error.message.includes('Connection')) {
+            errorMessage = `SMTP Connection Error: ${error.message}`;
+          } else if (error.message.includes('Authentication') || error.message.includes('auth')) {
+            errorMessage = `SMTP Authentication Error: ${error.message}`;
+          } else if (error.message.includes('Invalid email')) {
+            errorMessage = `Email Validation Error: ${error.message}`;
+          } else {
+            errorMessage = `SMTP Error: ${error.message}`;
+          }
+        }
+        
+        emailError = errorMessage;
+        console.error('Categorized error:', emailError);
       }
+    } else if (emailChanged && resend_credentials && !existingUser.password_display) {
+      emailError = 'No password_display found for this student. Cannot send credentials.';
+      console.warn('Email not sent:', emailError);
+    } else if (emailChanged && !resend_credentials) {
+      console.log('Email changed but resend_credentials is false, skipping email send');
+    } else if (!emailChanged) {
+      console.log('Email not changed, skipping email send');
     }
 
     return new Response(
