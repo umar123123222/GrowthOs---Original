@@ -8,12 +8,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import { Plus, Edit, Video, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Video, ChevronDown, GripVertical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from '../superadmin/RecordingRatingDetails';
 import { RecordingAttachmentsManager } from '../superadmin/RecordingAttachmentsManager';
 import { safeLogger } from '@/lib/safe-logger';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Recording {
   id: string;
@@ -38,6 +55,131 @@ interface Module {
 interface Assignment {
   id: string;
   name: string;
+}
+
+// Sortable Table Row Component
+function SortableRecordingRow({
+  recording,
+  index,
+  isExpanded,
+  onToggle,
+  onEdit,
+}: {
+  recording: Recording;
+  index: number;
+  isExpanded: boolean;
+  onToggle: () => void;
+  onEdit: (recording: Recording) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: recording.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <React.Fragment>
+      <TableRow
+        ref={setNodeRef}
+        style={style}
+        className="hover:bg-gray-50 transition-colors animate-fade-in cursor-pointer"
+      >
+        <TableCell className="w-[40px]">
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing hover:text-primary transition-colors flex justify-center"
+          >
+            <GripVertical className="w-5 h-5" />
+          </div>
+        </TableCell>
+        <TableCell className="font-medium w-[40%]" onClick={onToggle}>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-0 h-8 w-8 flex-shrink-0"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle();
+              }}
+            >
+              <ChevronDown
+                className={`h-4 w-4 transition-transform ${
+                  isExpanded ? 'rotate-180' : ''
+                }`}
+              />
+            </Button>
+            <span className="truncate">{recording.recording_title}</span>
+          </div>
+        </TableCell>
+        <TableCell className="w-[15%] text-center">
+          <Badge variant="outline" className="font-semibold">
+            {recording.sequence_order || 'N/A'}
+          </Badge>
+        </TableCell>
+        <TableCell className="w-[20%]">
+          {recording.module ? (
+            <Badge variant="secondary">{recording.module.title}</Badge>
+          ) : (
+            <span className="text-muted-foreground">No module</span>
+          )}
+        </TableCell>
+        <TableCell className="w-[15%] text-center">
+          <span className="font-medium">{recording.duration_min || 'N/A'} min</span>
+        </TableCell>
+        <TableCell className="w-[10%]" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(recording);
+              }}
+              className="hover-scale"
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </div>
+        </TableCell>
+      </TableRow>
+      {isExpanded && (
+        <TableRow>
+          <TableCell colSpan={6} className="bg-gray-50 p-6">
+            <div className="space-y-4">
+              {recording.description && (
+                <div>
+                  <h4 className="font-semibold mb-2">Description:</h4>
+                  <p className="text-sm text-muted-foreground">{recording.description}</p>
+                </div>
+              )}
+              {recording.notes && (
+                <div>
+                  <h4 className="font-semibold mb-2">Notes:</h4>
+                  <p className="text-sm text-muted-foreground">{recording.notes}</p>
+                </div>
+              )}
+              <RecordingRatingDetails
+                recordingId={recording.id}
+                recordingTitle={recording.recording_title}
+                onDelete={() => {}}
+              />
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </React.Fragment>
+  );
 }
 
 export function MentorRecordingsManagement() {
@@ -231,6 +373,66 @@ export function MentorRecordingsManagement() {
     });
   };
 
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle recording reordering
+  const handleRecordingDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = recordings.findIndex((r) => r.id === active.id);
+    const newIndex = recordings.findIndex((r) => r.id === over.id);
+
+    const newRecordings = arrayMove(recordings, oldIndex, newIndex);
+
+    // Update order numbers sequentially
+    const updatedRecordings = newRecordings.map((recording, index) => ({
+      ...recording,
+      sequence_order: index + 1,
+    }));
+
+    // Update UI immediately
+    setRecordings(updatedRecordings);
+
+    // Update order in database
+    try {
+      const updates = updatedRecordings.map((recording, index) => ({
+        id: recording.id,
+        sequence_order: index + 1,
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from('available_lessons')
+          .update({ sequence_order: update.sequence_order })
+          .eq('id', update.id);
+      }
+
+      toast({
+        title: 'Success',
+        description: 'Recording order updated',
+      });
+    } catch (error) {
+      safeLogger.error('Error updating recording order:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update recording order',
+        variant: 'destructive',
+      });
+      // Revert on error
+      fetchRecordings();
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -399,109 +601,43 @@ export function MentorRecordingsManagement() {
               <p className="text-muted-foreground">Create your first recording to get started</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead className="font-semibold w-[40%]">Title</TableHead>
-                  <TableHead className="font-semibold w-[15%] text-center">Order</TableHead>
-                  <TableHead className="font-semibold w-[20%]">Module</TableHead>
-                  <TableHead className="font-semibold w-[15%] text-center">Duration</TableHead>
-                  <TableHead className="font-semibold w-[10%] text-center">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recordings.map((recording, index) => (
-                  <React.Fragment key={recording.id}>
-                    <TableRow 
-                      className="hover:bg-gray-50 transition-colors animate-fade-in cursor-pointer"
-                      style={{ animationDelay: `${index * 50}ms` }}
-                      onClick={() => toggleRecordingExpansion(recording.id)}
-                    >
-                      <TableCell className="font-medium w-[40%]">
-                        <div className="flex items-center space-x-2">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="p-0 h-8 w-8 flex-shrink-0"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleRecordingExpansion(recording.id);
-                            }}
-                          >
-                            <ChevronDown 
-                              className={`h-4 w-4 transition-transform ${
-                                expandedRecordings.has(recording.id) ? 'rotate-180' : ''
-                              }`}
-                            />
-                          </Button>
-                          <span className="truncate">{recording.recording_title}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="w-[15%] text-center">
-                        <Badge variant="outline" className="font-semibold">{recording.sequence_order || 'N/A'}</Badge>
-                      </TableCell>
-                      <TableCell className="w-[20%]">
-                        {recording.module ? (
-                          <Badge variant="secondary">{recording.module.title}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground">No module</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="w-[15%] text-center">
-                        <span className="font-medium">{recording.duration_min || 'N/A'} min</span>
-                      </TableCell>
-                      <TableCell className="w-[10%]" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-center space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEdit(recording);
-                            }}
-                            className="hover-scale"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                    {expandedRecordings.has(recording.id) && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="bg-gray-50 p-6">
-                          <div className="space-y-4">
-                            {recording.description && (
-                              <div>
-                                <h4 className="font-semibold mb-2">Description:</h4>
-                                <p className="text-sm text-muted-foreground">{recording.description}</p>
-                              </div>
-                            )}
-                            {recording.notes && (
-                              <div>
-                                <h4 className="font-semibold mb-2">Notes:</h4>
-                                <p className="text-sm text-muted-foreground">{recording.notes}</p>
-                              </div>
-                            )}
-                            <RecordingRatingDetails 
-                              recordingId={recording.id} 
-                              recordingTitle={recording.recording_title}
-                              onDelete={() => {
-                                setExpandedRecordings(prev => {
-                                  const newSet = new Set(prev);
-                                  newSet.delete(recording.id);
-                                  return newSet;
-                                });
-                                fetchRecordings();
-                              }}
-                            />
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </React.Fragment>
-                ))}
-              </TableBody>
-            </Table>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleRecordingDragEnd}
+            >
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead className="font-semibold w-[40px]"></TableHead>
+                    <TableHead className="font-semibold w-[40%]">
+                      Title <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>
+                    </TableHead>
+                    <TableHead className="font-semibold w-[15%] text-center">Order</TableHead>
+                    <TableHead className="font-semibold w-[20%]">Module</TableHead>
+                    <TableHead className="font-semibold w-[15%] text-center">Duration</TableHead>
+                    <TableHead className="font-semibold w-[10%] text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <SortableContext
+                    items={recordings.map((r) => r.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {recordings.map((recording, index) => (
+                      <SortableRecordingRow
+                        key={recording.id}
+                        recording={recording}
+                        index={index}
+                        isExpanded={expandedRecordings.has(recording.id)}
+                        onToggle={() => toggleRecordingExpansion(recording.id)}
+                        onEdit={handleEdit}
+                      />
+                    ))}
+                  </SortableContext>
+                </TableBody>
+              </Table>
+            </DndContext>
           )}
         </CardContent>
       </Card>
