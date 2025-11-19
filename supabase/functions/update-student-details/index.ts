@@ -105,6 +105,9 @@ serve(async (req) => {
     }
 
     // If email changed and credentials should be resent
+    let emailSent = false;
+    let emailError = null;
+    
     if (emailChanged && resend_credentials && existingUser.password_display) {
       try {
         // Get company details
@@ -177,9 +180,10 @@ serve(async (req) => {
         });
 
         console.log(`Credentials email sent to ${email}`);
-      } catch (emailError) {
-        console.error('Error sending credentials email:', emailError);
-        // Don't fail the request if email fails
+        emailSent = true;
+      } catch (error) {
+        console.error('Error sending credentials email:', error);
+        emailError = error instanceof Error ? error.message : 'Failed to send email';
       }
     }
 
@@ -187,7 +191,8 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true,
         message: 'Student details updated successfully',
-        email_sent: emailChanged && resend_credentials
+        email_sent: emailSent,
+        email_error: emailError
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

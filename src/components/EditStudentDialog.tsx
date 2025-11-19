@@ -63,12 +63,21 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
         throw new Error(data.error);
       }
 
-      toast({
-        title: 'Success',
-        description: emailChanged 
-          ? 'Student details updated and login credentials sent to new email'
-          : 'Student details updated successfully'
-      });
+      // Check if email was actually sent
+      if (emailChanged && !data?.email_sent) {
+        toast({
+          title: 'Partial Success',
+          description: `Student details updated, but credentials email failed to send${data?.email_error ? `: ${data.email_error}` : ' (SMTP not configured)'}`,
+          variant: 'destructive'
+        });
+      } else {
+        toast({
+          title: 'Success',
+          description: emailChanged 
+            ? 'Student details updated and login credentials sent to new email'
+            : 'Student details updated successfully'
+        });
+      }
 
       onStudentUpdated();
       onOpenChange(false);
