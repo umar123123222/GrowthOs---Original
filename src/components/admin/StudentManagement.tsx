@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { EnhancedStudentCreationDialog } from '@/components/EnhancedStudentCreationDialog';
+import { EditStudentDialog } from '@/components/EditStudentDialog';
 import jsPDF from 'jspdf';
 interface Student {
   id: string;
@@ -81,6 +82,8 @@ export const StudentManagement = () => {
   const [bulkActionDialog, setBulkActionDialog] = useState(false);
   const [passwordEditDialog, setPasswordEditDialog] = useState(false);
   const [selectedStudentForPassword, setSelectedStudentForPassword] = useState<Student | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedStudentForEdit, setSelectedStudentForEdit] = useState<Student | null>(null);
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
   const [timeTick, setTimeTick] = useState(0); // triggers periodic re-render for time-based status updates
@@ -959,6 +962,12 @@ export const StudentManagement = () => {
           onOpenChange={setIsDialogOpen}
           onStudentCreated={fetchStudents}
         />
+        <EditStudentDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          student={selectedStudentForEdit}
+          onStudentUpdated={fetchStudents}
+        />
       </div>
 
       {/* Stats Cards */}
@@ -1158,6 +1167,19 @@ export const StudentManagement = () => {
                        </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => {
+                                setSelectedStudentForEdit(student);
+                                setEditDialogOpen(true);
+                              }}
+                              title="Edit Student"
+                              className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            
                             <Button variant="outline" size="sm" onClick={() => toggleRowExpansion(student.id)} title={expandedRows.has(student.id) ? "Collapse" : "Expand"} className="hover-scale hover:border-green-300 hover:text-green-600">
                               {expandedRows.has(student.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </Button>
