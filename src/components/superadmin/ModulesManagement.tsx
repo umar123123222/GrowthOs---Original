@@ -461,8 +461,14 @@ export function ModulesManagement() {
 
     const newModules = arrayMove(modules, oldIndex, newIndex);
     
+    // Update order numbers sequentially
+    const updatedModules = newModules.map((module, index) => ({
+      ...module,
+      order: index + 1
+    }));
+    
     // Update UI immediately
-    setModules(newModules);
+    setModules(updatedModules);
 
     // Update order in database
     try {
