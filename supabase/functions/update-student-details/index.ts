@@ -7,6 +7,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+function generateSecurePassword(): string {
+  const length = 12;
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+  let password = '';
+  for (let i = 0; i < length; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
+
 interface UpdateStudentRequest {
   user_id: string;
   full_name: string;
@@ -79,15 +89,21 @@ serve(async (req) => {
     const oldEmail = existingUser.email;
     const emailChanged = email !== oldEmail;
 
-    // Update user in auth.users
+    // Update user in auth.users with email confirmation disabled
+    console.log('Updating email in auth.users...');
     const { error: authUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
       user_id,
-      { email: email }
+      { 
+        email: email,
+        email_confirm: false  // Critical: bypass email confirmation
+      }
     );
 
     if (authUpdateError) {
+      console.error('Failed to update auth.users email:', authUpdateError);
       throw new Error(`Failed to update auth user: ${authUpdateError.message}`);
     }
+    console.log('✅ Successfully updated email in auth.users');
 
     // Update user in public.users
     const { error: updateError } = await supabaseAdmin
@@ -107,6 +123,7 @@ serve(async (req) => {
     // If email changed and credentials should be resent
     let emailSent = false;
     let emailError = null;
+    let passwordRegenerated = false;
     
     // Pre-flight checks logging
     console.log('Email sending conditions check:', {
@@ -141,7 +158,55 @@ serve(async (req) => {
       console.error('SMTP Configuration Error:', emailError);
     }
     
-    if (emailChanged && resend_credentials && existingUser.password_display && smtpConfigured) {
+    // Check if password needs to be generated
+    let passwordToSend = existingUser.password_display;
+
+    if (emailChanged && resend_credentials && !passwordToSend && smtpConfigured) {
+      console.log('No password_display found, generating new password for user:', user_id);
+      
+      try {
+        // Generate new password
+        const newPassword = generateSecurePassword();
+        
+        // Update password in auth.users
+        const { error: pwUpdateError } = await supabaseAdmin.auth.admin.updateUserById(
+          user_id,
+          { 
+            password: newPassword,
+            email_confirm: false
+          }
+        );
+        
+        if (pwUpdateError) {
+          console.error('Failed to update password in auth.users:', pwUpdateError);
+          emailError = `Failed to generate new password: ${pwUpdateError.message}`;
+        } else {
+          // Update password_display in public.users
+          const { error: dbUpdateError } = await supabaseAdmin
+            .from('users')
+            .update({
+              password_display: newPassword,
+              is_temp_password: true,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', user_id);
+          
+          if (dbUpdateError) {
+            console.error('Failed to update password_display:', dbUpdateError);
+            emailError = `Failed to store new password: ${dbUpdateError.message}`;
+          } else {
+            passwordToSend = newPassword;
+            passwordRegenerated = true;
+            console.log('✅ New password generated and stored successfully');
+          }
+        }
+      } catch (error) {
+        console.error('Error during password generation:', error);
+        emailError = `Password generation failed: ${error.message}`;
+      }
+    }
+    
+    if (emailChanged && resend_credentials && passwordToSend && smtpConfigured) {
       console.log('Starting email sending process...');
       
       try {
@@ -167,12 +232,20 @@ serve(async (req) => {
           throw new Error(`Invalid email format: ${email}`);
         }
 
+        // Read CC email from function secrets
+        const ccEmail = Deno.env.get('NOTIFICATION_EMAIL_CC');
+        console.log('CC configuration:', { 
+          has_cc: !!ccEmail, 
+          cc_email: ccEmail ? '***@***.***' : 'none' 
+        });
+
         console.log('Initializing SMTP client...');
         const smtpClient = SMTPClient.fromEnv();
         
         console.log('Sending email to:', email);
         await smtpClient.sendEmail({
           to: email,
+          cc: ccEmail || undefined,
           subject: `${companyName} - Updated Login Credentials`,
           html: `
             <!DOCTYPE html>
@@ -209,7 +282,7 @@ serve(async (req) => {
                       </div>
                       <div class="credential-row">
                         <span class="label">Password:</span><br>
-                        <span class="value">${existingUser.password_display}</span>
+                        <span class="value">${passwordToSend}</span>
                       </div>
                     </div>
                     
@@ -229,7 +302,7 @@ serve(async (req) => {
           `,
         });
 
-        console.log(`✅ Credentials email successfully sent to ${email}`);
+        console.log(`✅ Credentials email successfully sent to ${email}${ccEmail ? ' with CC to ' + ccEmail : ''}`);
         emailSent = true;
       } catch (error) {
         console.error('❌ Error sending credentials email:', error);
@@ -252,9 +325,6 @@ serve(async (req) => {
         emailError = errorMessage;
         console.error('Categorized error:', emailError);
       }
-    } else if (emailChanged && resend_credentials && !existingUser.password_display) {
-      emailError = 'No password_display found for this student. Cannot send credentials.';
-      console.warn('Email not sent:', emailError);
     } else if (emailChanged && !resend_credentials) {
       console.log('Email changed but resend_credentials is false, skipping email send');
     } else if (!emailChanged) {
@@ -266,7 +336,8 @@ serve(async (req) => {
         success: true,
         message: 'Student details updated successfully',
         email_sent: emailSent,
-        email_error: emailError
+        email_error: emailError,
+        password_regenerated: passwordRegenerated
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
