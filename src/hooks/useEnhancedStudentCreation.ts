@@ -67,15 +67,26 @@ export const useEnhancedStudentCreation = () => {
         })
         return data
       } else {
-        const rawError = data?.error || 'Unknown error occurred'
-        const isEmailExists = /already exists/i.test(rawError)
-        const isPhoneInvalid = data?.error_code === 'INVALID_PHONE_FORMAT' || /phone.*format|E\.164/i.test(rawError)
+        const errorCode = data?.error_code
+        let friendlyMessage = data?.error || 'Unknown error occurred'
         
-        let friendlyMessage = rawError
-        if (isEmailExists) {
-          friendlyMessage = 'A user with this email already exists.'
-        } else if (isPhoneInvalid) {
-          friendlyMessage = 'Invalid phone format. Please use international format (e.g., +923001234567)'
+        // Map error codes to user-friendly messages
+        switch (errorCode) {
+          case 'EMAIL_EXISTS':
+            friendlyMessage = 'A student with this email address already exists in the system.'
+            break
+          case 'PHONE_EXISTS':
+            friendlyMessage = data?.error || 'A student with this phone number already exists in the system.'
+            break
+          case 'INVALID_PHONE_FORMAT':
+            friendlyMessage = 'Invalid phone format. Please use international format (e.g., +923001234567)'
+            break
+          case 'MISSING_FIELDS':
+            friendlyMessage = 'Please fill in all required fields.'
+            break
+          default:
+            // Use the error message from the server
+            friendlyMessage = data?.error || 'Failed to create student. Please try again.'
         }
         
         toast({
@@ -86,7 +97,7 @@ export const useEnhancedStudentCreation = () => {
         return { 
           success: false, 
           error: friendlyMessage, 
-          error_code: isEmailExists ? 'EMAIL_EXISTS' : (isPhoneInvalid ? 'INVALID_PHONE' : data?.error_code)
+          error_code: errorCode
         }
       }
     } catch (err) {

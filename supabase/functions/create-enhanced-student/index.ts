@@ -139,16 +139,38 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Phone sanitized:', { original: phone, sanitized: sanitizedPhone });
 
-    // Check if user already exists
+    // Check if email already exists
     const { data: existingUser } = await supabaseAdmin
       .from('users')
-      .select('id')
+      .select('id, email')
       .eq('email', email)
       .maybeSingle();
 
     if (existingUser) {
       return new Response(
-        JSON.stringify({ success: false, error: 'User with this email already exists' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'A student with this email address already exists in the system',
+          error_code: 'EMAIL_EXISTS'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if phone number already exists
+    const { data: existingPhone } = await supabaseAdmin
+      .from('users')
+      .select('id, email, full_name')
+      .eq('phone', sanitizedPhone)
+      .maybeSingle();
+
+    if (existingPhone) {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `A student with this phone number already exists (${existingPhone.email})`,
+          error_code: 'PHONE_EXISTS'
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
