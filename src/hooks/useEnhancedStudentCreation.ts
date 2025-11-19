@@ -46,17 +46,41 @@ export const useEnhancedStudentCreation = () => {
         }
       })
 
+      // Handle edge function errors (network issues, etc.)
       if (error) {
         console.error('Edge function error:', error)
+        
+        // Try to parse error message if it contains our custom error
+        const errorMessage = error?.message || error?.toString() || ''
+        const errorCode = errorMessage.includes('PHONE_EXISTS') ? 'PHONE_EXISTS' 
+          : errorMessage.includes('EMAIL_EXISTS') ? 'EMAIL_EXISTS'
+          : errorMessage.includes('INVALID_PHONE_FORMAT') ? 'INVALID_PHONE_FORMAT'
+          : 'FUNCTION_ERROR'
+        
+        let friendlyMessage = 'Failed to create student. Please try again.'
+        
+        switch (errorCode) {
+          case 'EMAIL_EXISTS':
+            friendlyMessage = 'A student with this email address already exists in the system.'
+            break
+          case 'PHONE_EXISTS':
+            friendlyMessage = 'A student with this phone number already exists in the system.'
+            break
+          case 'INVALID_PHONE_FORMAT':
+            friendlyMessage = 'Invalid phone format. Please use international format (e.g., +923001234567)'
+            break
+        }
+        
         toast({
           title: "Error",
-          description: "Failed to create student. Please try again.",
+          description: friendlyMessage,
           variant: "destructive",
         })
+        
         return {
           success: false,
-          error: 'Edge function error',
-          error_code: 'FUNCTION_ERROR'
+          error: friendlyMessage,
+          error_code: errorCode
         }
       }
 
