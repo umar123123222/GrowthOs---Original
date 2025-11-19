@@ -8,12 +8,29 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Edit, Trash2, Video, ChevronDown, RefreshCw } from 'lucide-react';
+import { Plus, Edit, Trash2, Video, ChevronDown, RefreshCw, GripVertical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from './RecordingRatingDetails';
 import { RecordingAttachmentsManager } from './RecordingAttachmentsManager';
 import { safeLogger } from '@/lib/safe-logger';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Recording {
   id: string;
@@ -38,6 +55,134 @@ interface Module {
 interface Assignment {
   id: string;
   name: string;
+}
+
+// Sortable Recording Row Component
+function SortableRecordingRow({ 
+  recording, 
+  index, 
+  isExpanded, 
+  onToggleExpand, 
+  onEdit, 
+  onDelete,
+  onRefresh
+}: {
+  recording: Recording;
+  index: number;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  onEdit: (recording: Recording) => void;
+  onDelete: (id: string) => void;
+  onRefresh: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: recording.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <Collapsible open={isExpanded} onOpenChange={onToggleExpand}>
+      <div 
+        ref={setNodeRef}
+        style={style}
+        className="grid grid-cols-[24px_24px_1fr_220px_100px_80px_120px] items-center gap-4 p-4 hover:bg-gray-50 transition-colors animate-fade-in"
+      >
+        <div
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing hover:text-primary transition-colors flex justify-center"
+        >
+          <GripVertical className="w-5 h-5" />
+        </div>
+        <div className="flex justify-center">
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="p-0 h-6 w-6 hover:bg-transparent"
+            >
+              <ChevronDown className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+        </div>
+        <div className="font-medium truncate">{recording.recording_title}</div>
+        <div className="text-center">
+          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+            {recording.module?.title || 'Unassigned'}
+          </Badge>
+        </div>
+        <div className="text-center text-sm text-muted-foreground">
+          {recording.duration_min} min
+        </div>
+        <div className="text-center">
+          <Badge variant="outline">{recording.sequence_order || 0}</Badge>
+        </div>
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEdit(recording)}
+            className="hover-scale hover:bg-blue-50 hover:border-blue-300"
+          >
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onDelete(recording.id)}
+            className="hover-scale hover:bg-red-50 hover:border-red-300"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+      
+      <CollapsibleContent>
+        <div className="px-4 pb-4 space-y-4 bg-gray-50/50">
+          {recording.description && (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Description:</p>
+              <p className="text-sm text-gray-600">{recording.description}</p>
+            </div>
+          )}
+          {recording.notes && (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Notes:</p>
+              <p className="text-sm text-gray-600">{recording.notes}</p>
+            </div>
+          )}
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-1">Video URL:</p>
+            <a 
+              href={recording.recording_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 hover:underline break-all"
+            >
+              {recording.recording_url}
+            </a>
+          </div>
+          <div className="pt-2">
+            <RecordingRatingDetails 
+              recordingId={recording.id} 
+              recordingTitle={recording.recording_title}
+              onDelete={onRefresh}
+            />
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
 }
 
 export function RecordingsManagement() {
@@ -227,6 +372,66 @@ export function RecordingsManagement() {
       }
       return newSet;
     });
+  };
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle recording reordering
+  const handleRecordingDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    const oldIndex = recordings.findIndex((r) => r.id === active.id);
+    const newIndex = recordings.findIndex((r) => r.id === over.id);
+
+    const newRecordings = arrayMove(recordings, oldIndex, newIndex);
+    
+    // Update order numbers sequentially
+    const updatedRecordings = newRecordings.map((recording, index) => ({
+      ...recording,
+      sequence_order: index + 1
+    }));
+    
+    // Update UI immediately
+    setRecordings(updatedRecordings);
+
+    // Update order in database
+    try {
+      const updates = updatedRecordings.map((recording, index) => ({
+        id: recording.id,
+        sequence_order: index + 1
+      }));
+
+      for (const update of updates) {
+        await supabase
+          .from('available_lessons')
+          .update({ sequence_order: update.sequence_order })
+          .eq('id', update.id);
+      }
+
+      toast({
+        title: "Success",
+        description: "Recording order updated"
+      });
+    } catch (error) {
+      safeLogger.error('Error updating recording order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update recording order",
+        variant: "destructive"
+      });
+      // Revert on error
+      fetchRecordings();
+    }
   };
 
   const handleRecordingDeleted = (recordingId: string) => {
@@ -517,9 +722,10 @@ export function RecordingsManagement() {
           ) : (
             <div data-testid="recordings-table" className="w-full">
               {/* Header */}
-              <div className="grid grid-cols-[24px_1fr_220px_100px_80px_120px] items-center gap-4 p-4 bg-gray-50 border-b font-semibold text-sm">
+              <div className="grid grid-cols-[24px_24px_1fr_220px_100px_80px_120px] items-center gap-4 p-4 bg-gray-50 border-b font-semibold text-sm">
                 <div></div>
-                <div>Title</div>
+                <div></div>
+                <div>Title <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span></div>
                 <div className="text-center">Module</div>
                 <div className="text-center">Duration</div>
                 <div className="text-center">Order</div>
@@ -527,78 +733,31 @@ export function RecordingsManagement() {
               </div>
               
               {/* Body */}
-              <div className="divide-y">
-                {recordings.map((recording, index) => (
-                  <Collapsible
-                    key={recording.id}
-                    open={expandedRecordings.has(recording.id)}
-                    onOpenChange={() => toggleRecordingExpansion(recording.id)}
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleRecordingDragEnd}
+              >
+                <div className="divide-y">
+                  <SortableContext
+                    items={recordings.map(r => r.id)}
+                    strategy={verticalListSortingStrategy}
                   >
-                    {/* Main Row */}
-                    <div 
-                      className="grid grid-cols-[24px_1fr_220px_100px_80px_120px] items-center gap-4 p-4 hover:bg-gray-50 transition-colors animate-fade-in"
-                      style={{ animationDelay: `${index * 100}ms` }}
-                    >
-                      <div className="flex justify-center">
-                        <CollapsibleTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-6 h-6 p-0"
-                            aria-label={`${expandedRecordings.has(recording.id) ? 'Collapse' : 'Expand'} details for ${recording.recording_title}`}
-                          >
-                            <ChevronDown 
-                              className={`w-4 h-4 transition-transform duration-200 ${
-                                expandedRecordings.has(recording.id) ? 'rotate-180' : ''
-                              }`} 
-                            />
-                          </Button>
-                        </CollapsibleTrigger>
-                      </div>
-                      
-                      <div className="font-medium truncate">
-                        {recording.recording_title}
-                      </div>
-                      
-                      <div className="flex justify-center">
-                        <Badge variant="outline" className="bg-purple-100 text-purple-800">
-                          {recording.module?.title || 'No Module'}
-                        </Badge>
-                      </div>
-                      
-                      <div className="flex justify-center">
-                        <Badge variant="secondary">{recording.duration_min} min</Badge>
-                      </div>
-                      
-                      <div className="flex justify-center">
-                        <Badge variant="outline">{recording.sequence_order}</Badge>
-                      </div>
-                      
-                      <div className="flex justify-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEdit(recording)}
-                          className="hover-scale hover:bg-blue-50 hover:border-blue-300"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    {/* Expanded Content */}
-                    <CollapsibleContent>
-                      <div className="border-t">
-                        <RecordingRatingDetails
-                          recordingId={recording.id}
-                          recordingTitle={recording.recording_title}
-                          onDelete={() => handleRecordingDeleted(recording.id)}
-                        />
-                      </div>
-                    </CollapsibleContent>
-                  </Collapsible>
-                ))}
-              </div>
+                    {recordings.map((recording, index) => (
+                      <SortableRecordingRow
+                        key={recording.id}
+                        recording={recording}
+                        index={index}
+                        isExpanded={expandedRecordings.has(recording.id)}
+                        onToggleExpand={() => toggleRecordingExpansion(recording.id)}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        onRefresh={fetchRecordings}
+                      />
+                    ))}
+                  </SortableContext>
+                </div>
+              </DndContext>
             </div>
           )}
         </CardContent>
