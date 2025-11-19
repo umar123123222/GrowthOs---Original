@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trash2, Plus, UserPlus, Users, Eye } from "lucide-react";
+import { Trash2, Plus, UserPlus, Users, Eye, Edit } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserManagement } from "@/hooks/useUserManagement";
 import { EnhancedStudentCreationDialog } from "@/components/EnhancedStudentCreationDialog";
 import { CredentialDisplayDialog } from "@/components/CredentialDisplayDialog";
+import { EditStudentDialog } from "@/components/EditStudentDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -14,6 +15,7 @@ interface Student {
   id: string;
   email: string;
   full_name: string;
+  phone: string;
   role: string;
   created_at: string;
   student_id?: string;
@@ -27,6 +29,7 @@ const StudentsManagement = () => {
   const { deleteUser, loading } = useUserManagement();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [credentialDialogOpen, setCredentialDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const { toast } = useToast();
@@ -35,7 +38,7 @@ const StudentsManagement = () => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('*')
+        .select('id, email, full_name, phone, role, created_at')
         .eq('role', 'student')
         .order('created_at', { ascending: false });
 
@@ -83,6 +86,11 @@ const StudentsManagement = () => {
     setCredentialDialogOpen(true);
   };
 
+  const handleEditStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setEditDialogOpen(true);
+  };
+
   // Check permissions for page access
   if (!user || !hasRole(['superadmin', 'admin', 'enrollment_manager'])) {
     return (
@@ -114,6 +122,13 @@ const StudentsManagement = () => {
           open={isDialogOpen}
           onOpenChange={setIsDialogOpen}
           onStudentCreated={handleStudentCreated}
+        />
+
+        <EditStudentDialog
+          open={editDialogOpen}
+          onOpenChange={setEditDialogOpen}
+          student={selectedStudent}
+          onStudentUpdated={handleStudentCreated}
         />
 
         <CredentialDisplayDialog
@@ -200,25 +215,33 @@ const StudentsManagement = () => {
                   <TableCell>
                     <div className="flex space-x-2">
                       {hasRole(['superadmin', 'admin']) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewCredentials(student)}
-                        >
-                          <Eye className="w-4 h-4 mr-1" />
-                          View Credentials
-                        </Button>
-                      )}
-                      {hasRole(['superadmin', 'admin']) && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteStudent(student.id)}
-                          disabled={loading}
-                        >
-                          <Trash2 className="w-4 h-4 mr-1" />
-                          Delete
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditStudent(student)}
+                          >
+                            <Edit className="w-4 h-4 mr-1" />
+                            Edit
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleViewCredentials(student)}
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            View Credentials
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteStudent(student.id)}
+                            disabled={loading}
+                          >
+                            <Trash2 className="w-4 h-4 mr-1" />
+                            Delete
+                          </Button>
+                        </>
                       )}
                     </div>
                   </TableCell>
