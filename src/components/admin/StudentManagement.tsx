@@ -1226,7 +1226,7 @@ export const StudentManagement = () => {
                              </div>
                              <div>
                                <Label className="text-sm font-medium text-gray-700">Last Invoice Sent Date</Label>
-                               <p className="text-sm text-gray-900">{getLastInvoiceSentDate(student)}</p>
+                               <p className="text-sm text-gray-900">{formatDate(getLastInvoiceSentDate(student))}</p>
                              </div>
                            </div>
 
