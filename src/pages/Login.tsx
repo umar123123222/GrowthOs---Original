@@ -37,18 +37,16 @@ const Login = () => {
     const suspensionError = sessionStorage.getItem('suspension_error');
     if (suspensionError) {
       setLoginError(suspensionError);
-      
+
       // Keep the flag for 60 seconds so other components can check it
       // This prevents payment error toasts during suspension flow
       const timeout = setTimeout(() => {
         sessionStorage.removeItem('suspension_error');
         setLoginError("");
       }, 60000);
-      
       return () => clearTimeout(timeout);
     }
   }, []);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const startAll = performance.now();
@@ -167,7 +165,7 @@ const Login = () => {
           // Store error in sessionStorage before signing out (to persist across component remount)
           const errorMessage = `Account Suspended|Your account has been temporarily suspended. Please contact ${companyName} at ${contactEmail} to resolve this issue and regain access.`;
           sessionStorage.setItem('suspension_error', errorMessage);
-          
+
           // Sign out the user immediately
           await supabase.auth.signOut();
           return;
@@ -180,7 +178,7 @@ const Login = () => {
 
       // Clear any stored suspension errors on successful login
       sessionStorage.removeItem('suspension_error');
-      
+
       // Refresh the user data in our auth hook and navigate to dashboard
       const tRefreshStart = performance.now();
       await refreshUser();
@@ -228,13 +226,8 @@ const Login = () => {
         
         <CardContent className="px-8 pb-8">
           {loginError && (() => {
-            const [title, message] = loginError.includes('|') ? loginError.split('|') : ['Error', loginError];
-            return (
-              <div className={`mb-6 p-4 rounded-lg border-2 ${
-                loginError.includes('suspended') || loginError.includes('Suspended')
-                  ? 'bg-amber-50 border-amber-300 text-amber-900'
-                  : 'bg-red-50 border-red-300 text-red-900'
-              }`}>
+          const [title, message] = loginError.includes('|') ? loginError.split('|') : ['Error', loginError];
+          return <div className={`mb-6 p-4 rounded-lg border-2 ${loginError.includes('suspended') || loginError.includes('Suspended') ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-red-50 border-red-300 text-red-900'}`}>
                 <div className="flex items-start gap-3">
                   <Shield className="w-5 h-5 mt-0.5 flex-shrink-0" />
                   <div className="flex-1">
@@ -242,9 +235,8 @@ const Login = () => {
                     <p className="text-sm leading-relaxed">{message}</p>
                   </div>
                 </div>
-              </div>
-            );
-          })()}
+              </div>;
+        })()}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -292,11 +284,8 @@ const Login = () => {
                 </div>}
             </Button>
             
-            <div className="text-center mt-4">
-              <Link 
-                to="/reset-password" 
-                className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
-              >
+            <div className="text-center mt-4 my-[2px]">
+              <Link to="/reset-password" className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors">
                 Forgot Password?
               </Link>
             </div>
