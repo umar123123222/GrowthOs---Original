@@ -107,6 +107,46 @@ export const ActivityLogs = () => {
     }
   };
 
+  const formatRoleLabel = (role: string): string => {
+    const roleLabels: Record<string, string> = {
+      superadmin: 'Super Admin',
+      admin: 'Admin',
+      mentor: 'Mentor',
+      student: 'Student',
+      enrollment_manager: 'Enrollment Manager'
+    };
+    return roleLabels[role] || role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ');
+  };
+
+  const formatActivityLabel = (activity: string): string => {
+    const activityLabels: Record<string, string> = {
+      created: 'Created',
+      updated: 'Updated',
+      deleted: 'Deleted',
+      login: 'Login',
+      logout: 'Logout',
+      video_watched: 'Video Watched',
+      assignment_submitted: 'Assignment Submitted',
+      profile_updated: 'Profile Updated',
+      page_visit: 'Page Visit',
+      cascade_deleted: 'Cascade Deleted',
+      password_access_attempt: 'Password Access Attempt'
+    };
+    return activityLabels[activity] || activity.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  };
+
+  const formatEntityLabel = (entity: string): string => {
+    const entityLabels: Record<string, string> = {
+      user: 'User',
+      invoice: 'Invoice',
+      student: 'Student',
+      notification_template: 'Notification Template',
+      data_access: 'Data Access',
+      integration: 'Integration'
+    };
+    return entityLabels[entity] || entity.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  };
+
   const formatLogDetails = (log: ActivityLog) => {
     if (log.description) {
       return log.description;
@@ -116,23 +156,40 @@ export const ActivityLogs = () => {
       const data = log.metadata;
       const keyDetails = [];
       
-      if (data.status_old && data.status_new) {
-        keyDetails.push(`Status: ${data.status_old} → ${data.status_new}`);
+      // Status changes
+      if (data.status_old !== undefined && data.status_new !== undefined) {
+        keyDetails.push(`Status changed from "${data.status_old || 'none'}" to "${data.status_new || 'none'}"`);
       }
-      if (data.lms_status_old && data.lms_status_new) {
-        keyDetails.push(`LMS: ${data.lms_status_old} → ${data.lms_status_new}`);
+      if (data.lms_status_old !== undefined && data.lms_status_new !== undefined) {
+        keyDetails.push(`LMS status changed from "${data.lms_status_old || 'none'}" to "${data.lms_status_new || 'none'}"`);
       }
+      
+      // Invoice related
       if (data.amount) {
-        keyDetails.push(`Amount: ${data.amount}`);
+        keyDetails.push(`Amount: PKR ${data.amount.toLocaleString()}`);
       }
       if (data.installment_number) {
         keyDetails.push(`Installment #${data.installment_number}`);
+      }
+      if (data.due_date) {
+        keyDetails.push(`Due: ${new Date(data.due_date).toLocaleDateString()}`);
+      }
+      if (data.paid_at) {
+        keyDetails.push(`Paid: ${new Date(data.paid_at).toLocaleDateString()}`);
+      }
+      
+      // User related
+      if (data.email) {
+        keyDetails.push(`Email: ${data.email}`);
+      }
+      if (data.full_name) {
+        keyDetails.push(`Name: ${data.full_name}`);
       }
       
       return keyDetails.length > 0 ? keyDetails.join(' • ') : 'Action performed';
     }
     
-    return 'No details';
+    return 'No details available';
   };
 
   const exportLogs = async () => {
@@ -326,7 +383,7 @@ export const ActivityLogs = () => {
                       {log.users ? (
                         log.users.email
                       ) : (
-                        <span className="text-muted-foreground italic">System</span>
+                        <span className="text-muted-foreground italic">System Action</span>
                       )}
                     </TableCell>
                     <TableCell className="max-w-[180px] truncate">
@@ -337,7 +394,7 @@ export const ActivityLogs = () => {
                     <TableCell className="w-[120px]">
                       {log.users ? (
                         <Badge className={getRoleBadge(log.users.role)}>
-                          {log.users.role}
+                          {formatRoleLabel(log.users.role)}
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="bg-muted">
@@ -348,17 +405,17 @@ export const ActivityLogs = () => {
                     <TableCell className="w-[120px]">
                       {log.entity_type && (
                         <Badge variant="outline" className={getEntityBadgeColor(log.entity_type)}>
-                          {log.entity_type.replace('_', ' ')}
+                          {formatEntityLabel(log.entity_type)}
                         </Badge>
                       )}
                     </TableCell>
                     <TableCell className="w-[140px]">
                       <Badge className={getActivityBadge(log.activity_type)}>
-                        {log.activity_type.replace('_', ' ')}
+                        {formatActivityLabel(log.activity_type)}
                       </Badge>
                     </TableCell>
                     <TableCell className="max-w-[400px]">
-                      <div className="text-sm truncate">
+                      <div className="text-sm truncate" title={formatLogDetails(log)}>
                         {formatLogDetails(log)}
                       </div>
                     </TableCell>
@@ -385,12 +442,12 @@ export const ActivityLogs = () => {
                                   <>
                                     {log.users.full_name} ({log.users.email})
                                     <Badge className={`ml-2 ${getRoleBadge(log.users.role)}`}>
-                                      {log.users.role}
+                                      {formatRoleLabel(log.users.role)}
                                     </Badge>
                                   </>
                                 ) : (
                                   <>
-                                    <span className="italic text-muted-foreground">System Action</span>
+                                    <span className="italic text-muted-foreground">Automated System Action</span>
                                     <Badge variant="secondary" className="ml-2 bg-muted">System</Badge>
                                   </>
                                 )}
@@ -400,14 +457,14 @@ export const ActivityLogs = () => {
                               <div>
                                 <h4 className="text-sm font-semibold mb-2">Entity Type</h4>
                                 <Badge variant="outline" className={getEntityBadgeColor(log.entity_type)}>
-                                  {log.entity_type.replace('_', ' ')}
+                                  {formatEntityLabel(log.entity_type)}
                                 </Badge>
                               </div>
                             )}
                             <div>
                               <h4 className="text-sm font-semibold mb-2">Activity</h4>
                               <Badge className={getActivityBadge(log.activity_type)}>
-                                {log.activity_type.replace('_', ' ')}
+                                {formatActivityLabel(log.activity_type)}
                               </Badge>
                             </div>
                             {log.description && (
