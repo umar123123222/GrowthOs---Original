@@ -107,6 +107,9 @@ const ResetPassword = () => {
     }
     setIsLoading(true);
     try {
+      // Get current user before updating password
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const {
         error
       } = await supabase.auth.updateUser({
@@ -121,6 +124,24 @@ const ResetPassword = () => {
         });
         return;
       }
+      
+      // Sync password_display in users table so admins can see current password
+      if (user?.id) {
+        const { error: syncError } = await supabase
+          .from('users')
+          .update({ 
+            password_display: password,
+            is_temp_password: false,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+        
+        if (syncError) {
+          console.error('Error syncing password display:', syncError);
+          // Don't fail the whole operation, password was still updated
+        }
+      }
+      
       toast({
         title: "Password Updated",
         description: "Your password has been successfully reset. You can now login with your new password."

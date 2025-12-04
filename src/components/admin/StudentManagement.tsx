@@ -29,6 +29,7 @@ interface Student {
   phone: string;
   lms_user_id: string;
   password_display?: string;
+  is_temp_password?: boolean;
   created_at: string;
   last_active_at: string;
   fees_structure: string;
@@ -255,6 +256,7 @@ export const StudentManagement = () => {
           student_record_id: mapEntry?.student_record_id || null,
           phone: user.phone || '',
           password_display: user.password_display || '',
+          is_temp_password: user.is_temp_password ?? true,
           fees_structure: feesStructure,
           fees_overdue,
           last_invoice_date,
@@ -1252,7 +1254,20 @@ export const StudentManagement = () => {
 
                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                              <div className="lg:col-span-3">
-                               <Label className="text-sm font-medium text-gray-700">LMS Password</Label>
+                               <div className="flex items-center gap-2 mb-1">
+                                 <Label className="text-sm font-medium text-gray-700">LMS Password</Label>
+                                 {student.is_temp_password ? (
+                                   <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+                                     <Key className="w-3 h-3 mr-1" />
+                                     Temporary
+                                   </Badge>
+                                 ) : (
+                                   <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                                     <CheckCircle className="w-3 h-3 mr-1" />
+                                     Set by User
+                                   </Badge>
+                                 )}
+                               </div>
                                <div className="flex items-center space-x-2">
                                  <p className="text-sm text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded border">
                                    {student.password_display || 'Not set'}
@@ -1261,14 +1276,24 @@ export const StudentManagement = () => {
                                    <Button
                                      variant="ghost"
                                      size="sm"
-                                     onClick={() =>
-                                       navigator.clipboard.writeText(student.password_display)}
+                                     onClick={() => {
+                                       navigator.clipboard.writeText(student.password_display || '');
+                                       toast({
+                                         title: 'Copied',
+                                         description: 'Password copied to clipboard'
+                                       });
+                                     }}
                                      title="Copy password"
                                    >
                                      <Key className="w-3 h-3" />
                                    </Button>
                                  )}
                                </div>
+                               {!student.is_temp_password && (
+                                 <p className="text-xs text-muted-foreground mt-1">
+                                   This password was set by the student and is synced with their current login credentials.
+                                 </p>
+                               )}
                              </div>
                            </div>
 
