@@ -279,14 +279,6 @@ const Login = () => {
                 </Button>
               </div>
               <FieldError error={passwordError} />
-              <div className="flex justify-end">
-                <Link 
-                  to="/reset-password" 
-                  className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
-                >
-                  Forgot Password?
-                </Link>
-              </div>
             </div>
             
             <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group" disabled={isLoading}>
@@ -299,18 +291,16 @@ const Login = () => {
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
                 </div>}
             </Button>
-          </form>
-          
-          <div className="mt-8 text-center">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                
-              </div>
+            
+            <div className="text-center mt-4">
+              <Link 
+                to="/reset-password" 
+                className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+              >
+                Forgot Password?
+              </Link>
             </div>
-          </div>
+          </form>
         </CardContent>
       </Card>
     </div>;
