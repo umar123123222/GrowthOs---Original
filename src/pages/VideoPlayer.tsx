@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle } from "lucide-react";
+import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, RefreshCw } from "lucide-react";
 import SuccessPartner from "@/components/SuccessPartner";
 import { LectureRating } from "@/components/LectureRating";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,6 +63,7 @@ const VideoPlayer = () => {
   const [showRating, setShowRating] = useState(false);
   const [videoUrlError, setVideoUrlError] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
+  const [iframeKey, setIframeKey] = useState(0);
   const [obfuscatedUrl, setObfuscatedUrl] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   
@@ -80,9 +81,16 @@ const VideoPlayer = () => {
     return text ? (text.match(urlRegex) || []).map(u => u.startsWith('http') ? u : `http://${u}`) : [];
   };
 
-  // Helper to convert YouTube URLs to embed format
+  // Helper to convert YouTube URLs to embed format and add BunnyStream parameters
   const convertToEmbedUrl = (url: string): string => {
     if (!url) return '';
+    
+    // Handle BunnyStream URLs - add required parameters for proper playback
+    if (url.includes('iframe.mediadelivery.net/embed/')) {
+      const hasParams = url.includes('?');
+      const bunnyParams = 'autoplay=true&loop=false&muted=false&preload=true&responsive=true';
+      return hasParams ? `${url}&${bunnyParams}` : `${url}?${bunnyParams}`;
+    }
     
     // If already an embed URL, return as is
     if (url.includes('youtube.com/embed/') || url.includes('youtu.be/embed/')) {
@@ -232,14 +240,8 @@ const VideoPlayer = () => {
       // Set src via ref instead of JSX to hide from Elements tab
       iframeRef.current.src = embedUrl;
     }
-    
-    // Cleanup on unmount
-    return () => {
-      if (iframeRef.current) {
-        iframeRef.current.src = '';
-      }
-    };
-  }, [currentVideo?.videoUrl]);
+    // Removed cleanup that was causing blank video issues
+  }, [currentVideo?.videoUrl, iframeKey]);
   
   // modules list moved to CurrentModuleCard via useVideosData
 
@@ -297,7 +299,7 @@ const VideoPlayer = () => {
         <div className="lg:col-span-3 space-y-6">
           <Card>
             <CardContent className="p-0">
-              <div className="aspect-video bg-gray-900 rounded-t-lg">
+              <div className="aspect-video bg-gray-900 rounded-t-lg relative">
                 {videoUrlError ? (
                   <div className="w-full h-full flex items-center justify-center bg-muted rounded-t-lg">
                     <div className="text-center p-6">
@@ -306,15 +308,26 @@ const VideoPlayer = () => {
                     </div>
                   </div>
                 ) : currentVideo && (
-                  <iframe 
-                    ref={iframeRef}
-                    className="w-full h-full rounded-t-lg" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                    allowFullScreen 
-                    title={currentVideo.title}
-                    frameBorder="0"
-                    loading="lazy"
-                  />
+                  <>
+                    <iframe 
+                      key={`video-${currentVideo.id}-${iframeKey}`}
+                      ref={iframeRef}
+                      className="w-full h-full rounded-t-lg" 
+                      allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture" 
+                      allowFullScreen 
+                      title={currentVideo.title}
+                      frameBorder="0"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="absolute top-2 right-2 opacity-70 hover:opacity-100"
+                      onClick={() => setIframeKey(prev => prev + 1)}
+                      title="Reload video if not playing"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                  </>
                 )}
               </div>
               <div className="p-6">
