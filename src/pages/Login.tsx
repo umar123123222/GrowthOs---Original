@@ -10,7 +10,7 @@ import { Eye, EyeOff, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react
 import { safeLogger } from '@/lib/safe-logger';
 import { ErrorMessage, FieldError } from "@/components/ui/error-message";
 import { errorHandler, handleApiError } from "@/lib/error-handler";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { logger } from "@/lib/logger";
 import { safeQuery } from '@/lib/database-safety';
 import type { CreatedUserResult } from '@/types/database';
@@ -279,6 +279,14 @@ const Login = () => {
                 </Button>
               </div>
               <FieldError error={passwordError} />
+              <div className="flex justify-end">
+                <Link 
+                  to="/reset-password" 
+                  className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
             </div>
             
             <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group" disabled={isLoading}>
