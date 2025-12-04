@@ -947,8 +947,8 @@ export const StudentManagement = () => {
     invoiceFilter !== 'all'
   );
   const displayStudents = hasActiveFilters ? filteredStudents : students;
-  return <div className="flex flex-col h-[calc(100vh-140px)] animate-fade-in px-0 mx-0 gap-6">
-      <div className="flex justify-between items-center flex-shrink-0">
+  return <div className="space-y-6 animate-fade-in px-0 mx-0">
+      <div className="flex justify-between items-center">
         <div className="animate-fade-in">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
             👥 Students Management
@@ -973,7 +973,7 @@ export const StudentManagement = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="border-l-4 border-l-blue-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-blue-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-800">Total Students</CardTitle>
@@ -1033,7 +1033,7 @@ export const StudentManagement = () => {
       </div>
 
       {/* Search and Filter */}
-      <div className="flex gap-4 items-center flex-wrap flex-shrink-0">
+      <div className="flex gap-4 items-center flex-wrap">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search by ID, name, email, or phone..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
@@ -1106,19 +1106,18 @@ export const StudentManagement = () => {
         </Card>}
 
       {/* Students Table */}
-      <Card className="animate-fade-in flex-1 min-h-0 flex flex-col">
-        <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b flex-shrink-0">
+      <Card className="animate-fade-in">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b">
           <CardTitle className="flex items-center text-xl">
             <Users className="w-5 h-5 mr-2 text-blue-600" />
             Students Directory ({displayStudents.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-0 flex-1 min-h-0 overflow-hidden">
-          <ScrollArea className="h-full">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="sticky top-0 bg-background z-10">
-                  <TableRow>
+        <CardContent className="px-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
                   <TableHead className="w-12">
                     <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
                   </TableHead>
@@ -1434,7 +1433,6 @@ export const StudentManagement = () => {
               </TableBody>
             </Table>
           </div>
-          </ScrollArea>
         </CardContent>
       </Card>
 
