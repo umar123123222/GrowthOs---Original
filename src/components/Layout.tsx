@@ -15,6 +15,7 @@ import { FloatingActivityButton } from "./FloatingActivityButton";
 import { ActivityLogsDialog } from "./ActivityLogsDialog";
 import { MotivationalNotifications } from "./MotivationalNotifications";
 import { AppLogo } from "./AppLogo";
+import { ScrollToTop } from "./ScrollToTop";
 import { PageSkeleton } from "./LoadingStates/PageSkeleton";
 import RouteContentLoader from "./LoadingStates/RouteContentLoader";
 import { throttle } from "@/utils/performance";
@@ -678,6 +679,7 @@ const Layout = memo(({
       
       {/* Floating Activity Button */}
       <FloatingActivityButton />
+      <ScrollToTop />
       
       {/* Motivational Notifications for Students */}
       {user?.role === 'student' && <MotivationalNotifications />}
