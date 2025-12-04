@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Edit, Trash2, Video, ChevronDown, RefreshCw, GripVertical } from 'lucide-react';
+import { Plus, Edit, Trash2, Video, ChevronDown, RefreshCw, GripVertical, HelpCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from './RecordingRatingDetails';
@@ -194,6 +194,7 @@ export function RecordingsManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecording, setEditingRecording] = useState<Recording | null>(null);
   const [expandedRecordings, setExpandedRecordings] = useState<Set<string>>(new Set());
+  const [showUrlExamples, setShowUrlExamples] = useState(false);
   const [formData, setFormData] = useState({
     recording_title: '',
     recording_url: '',
@@ -577,6 +578,51 @@ export function RecordingsManagement() {
                   className="transition-all duration-200 focus:scale-[1.02]"
                   required
                 />
+                <Collapsible open={showUrlExamples} onOpenChange={setShowUrlExamples}>
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      <HelpCircle className="w-3 h-3 mr-1" />
+                      {showUrlExamples ? 'Hide' : 'Show'} URL format examples
+                      <ChevronDown className={`w-3 h-3 ml-1 transition-transform ${showUrlExamples ? 'rotate-180' : ''}`} />
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <div className="bg-muted/50 rounded-md p-3 text-xs space-y-3 border">
+                      <div>
+                        <p className="font-semibold text-foreground mb-1">BunnyStream (Recommended):</p>
+                        <code className="block bg-background px-2 py-1 rounded text-[11px] break-all">
+                          https://iframe.mediadelivery.net/embed/494424/e2054877-6f57-4cc0-aac9-96af6137af3d
+                        </code>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground mb-1">YouTube:</p>
+                        <code className="block bg-background px-2 py-1 rounded text-[11px] break-all">
+                          https://www.youtube.com/watch?v=dQw4w9WgXcQ
+                        </code>
+                        <code className="block bg-background px-2 py-1 rounded text-[11px] break-all mt-1">
+                          https://youtu.be/dQw4w9WgXcQ
+                        </code>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground mb-1">Google Drive:</p>
+                        <code className="block bg-background px-2 py-1 rounded text-[11px] break-all">
+                          https://drive.google.com/file/d/FILE_ID/preview
+                        </code>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-foreground mb-1">Direct Embed URL:</p>
+                        <code className="block bg-background px-2 py-1 rounded text-[11px] break-all">
+                          https://www.youtube.com/embed/dQw4w9WgXcQ
+                        </code>
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </div>
               
               <div className="grid grid-cols-2 gap-4">
