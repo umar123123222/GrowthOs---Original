@@ -11,7 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -88,6 +91,8 @@ export const StudentManagement = () => {
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
   const [timeTick, setTimeTick] = useState(0); // triggers periodic re-render for time-based status updates
+  const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
+  const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
   const { toast } = useToast();
   const { options: installmentOptions } = useInstallmentOptions();
   const { deleteUser, loading: deleteLoading } = useUserManagement();
@@ -438,6 +443,94 @@ export const StudentManagement = () => {
       });
     }
   };
+  const grantExtension = async (student: Student, newDueDate: Date) => {
+    try {
+      if (!student.student_record_id) {
+        toast({
+          title: 'Error',
+          description: 'No student record found',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Find the earliest unpaid invoice
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('student_id', student.student_record_id)
+        .neq('status', 'paid')
+        .order('due_date', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (invoiceError) throw invoiceError;
+
+      if (!invoice) {
+        toast({
+          title: 'No Invoice Found',
+          description: 'No unpaid invoice to extend',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Update extended_due_date
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({
+          extended_due_date: newDueDate.toISOString(),
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', invoice.id);
+
+      if (updateError) throw updateError;
+
+      // If LMS was suspended, reactivate it
+      if (student.lms_status === 'suspended') {
+        const { error: lmsError } = await supabase
+          .from('users')
+          .update({
+            lms_status: 'active',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', student.id);
+
+        if (lmsError) throw lmsError;
+      }
+
+      // Send notification to student
+      await supabase.rpc('create_notification', {
+        p_user_id: student.id,
+        p_type: 'fee_extension',
+        p_title: 'Payment Extension Granted',
+        p_message: `Your payment due date has been extended to ${format(newDueDate, 'PPP')}.`,
+        p_metadata: {
+          invoice_id: invoice.id,
+          new_due_date: newDueDate.toISOString(),
+          installment_number: invoice.installment_number
+        }
+      });
+
+      toast({
+        title: 'Extension Granted',
+        description: `Due date extended to ${format(newDueDate, 'PPP')}${student.lms_status === 'suspended' ? ' and LMS reactivated' : ''}.`
+      });
+
+      setExtensionPopoverOpen(null);
+      setExtensionDate(undefined);
+      fetchStudents();
+      fetchInstallmentPayments();
+    } catch (error) {
+      console.error('Error granting extension:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to grant extension',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const generateInvoice = async (studentId: string) => {
     try {
       const {
@@ -1376,15 +1469,41 @@ export const StudentManagement = () => {
                                <Eye className="w-4 h-4 mr-2" />
                                View Activity Logs
                              </Button>
-                             <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => handleResendInvoice(student)}
-                               className="hover-scale hover:border-purple-300 hover:text-purple-600"
-                             >
-                               <FileText className="w-4 h-4 mr-2" />
-                               Resend Invoice
-                             </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleResendInvoice(student)}
+                                className="hover-scale hover:border-purple-300 hover:text-purple-600"
+                              >
+                                <FileText className="w-4 h-4 mr-2" />
+                                Resend Invoice
+                              </Button>
+                              <Popover open={extensionPopoverOpen === student.id} onOpenChange={(open) => {
+                                setExtensionPopoverOpen(open ? student.id : null);
+                                if (!open) setExtensionDate(undefined);
+                              }}>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" size="sm" className="hover-scale hover:border-amber-300 hover:text-amber-600">
+                                    <CalendarIcon className="w-4 h-4 mr-2" />
+                                    Extend Due Date
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={extensionDate}
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        setExtensionDate(date);
+                                        grantExtension(student, date);
+                                      }
+                                    }}
+                                    disabled={(date) => date < new Date()}
+                                    initialFocus
+                                    className="pointer-events-auto"
+                                  />
+                                </PopoverContent>
+                              </Popover>
                              {student.last_invoice_date && (
                                <Button
                                  variant="outline"
