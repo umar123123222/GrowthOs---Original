@@ -49,6 +49,7 @@ const OnboardingWrapper = ({ user }: { user: any }) => {
 
 // Lazy load components for better performance
 const Login = lazy(() => import("./pages/Login"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
@@ -192,6 +193,9 @@ const App = () => {
           <BrowserRouter>
             <Suspense fallback={<PageLoader />}>
               <Routes>
+                {/* Public routes - accessible without authentication */}
+                <Route path="reset-password" element={<ResetPassword />} />
+                
                 {!user ? (
                   <Route path="*" element={<Login />} />
                 ) : user?.role === 'student' && !user?.onboarding_done ? (
