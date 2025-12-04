@@ -16,6 +16,8 @@ const ResetPassword = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [isResetMode, setIsResetMode] = useState(false);
+  const [isCheckingToken, setIsCheckingToken] = useState(true);
+  const [linkError, setLinkError] = useState("");
   const [emailError, setEmailError] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
@@ -26,12 +28,50 @@ const ResetPassword = () => {
 
   // Check if we're in password reset mode (user clicked link from email)
   useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-    const type = hashParams.get('type');
-    if (accessToken && type === 'recovery') {
-      setIsResetMode(true);
-    }
+    const handlePasswordResetToken = async () => {
+      try {
+        // Check for PKCE code in query parameters (modern Supabase format)
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        
+        if (code) {
+          // Exchange the code for a session
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (error) {
+            console.error('Code exchange error:', error);
+            setLinkError("This password reset link has expired or is invalid. Please request a new one.");
+            setIsCheckingToken(false);
+            return;
+          }
+          
+          if (data.session) {
+            setIsResetMode(true);
+            // Clean up URL by removing the code parameter
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+          setIsCheckingToken(false);
+          return;
+        }
+        
+        // Check for hash parameters (legacy format)
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token');
+        const type = hashParams.get('type');
+        
+        if (accessToken && type === 'recovery') {
+          setIsResetMode(true);
+        }
+        
+        setIsCheckingToken(false);
+      } catch (error) {
+        console.error('Token handling error:', error);
+        setLinkError("An error occurred while processing your reset link. Please try again.");
+        setIsCheckingToken(false);
+      }
+    };
+
+    handlePasswordResetToken();
 
     // Listen for auth state changes (for when user clicks email link)
     const {
@@ -41,6 +81,7 @@ const ResetPassword = () => {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsResetMode(true);
+        setIsCheckingToken(false);
       }
     });
     return () => subscription.unsubscribe();
@@ -191,7 +232,34 @@ const ResetPassword = () => {
         </CardHeader>
         
         <CardContent className="px-8 pb-8">
-          {emailSent && !isResetMode ? <div className="text-center space-y-6">
+          {isCheckingToken ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-blue-600 mb-4" />
+              <p className="text-gray-600">Verifying your reset link...</p>
+            </div>
+          ) : linkError ? (
+            <div className="text-center space-y-6">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-800 text-sm">{linkError}</p>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setLinkError("");
+                  setIsResetMode(false);
+                }} 
+                className="w-full"
+              >
+                Request a new reset link
+              </Button>
+              
+              <Link to="/" className="flex items-center justify-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Login
+              </Link>
+            </div>
+          ) : emailSent && !isResetMode ? <div className="text-center space-y-6">
               <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
                 <p className="text-emerald-800 text-sm">
                   A password reset link has been sent to <strong>{email}</strong>. Please check your inbox and spam folder.
