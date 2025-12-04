@@ -23,6 +23,8 @@ serve(async (req: Request) => {
     // Calculate the date 2 weeks ago
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     
     // Find students who:
     // 1. Have LMS status 'inactive'
@@ -34,10 +36,8 @@ serve(async (req: Request) => {
         id,
         full_name,
         email,
-        student_id,
         created_at,
-        lms_status,
-        installment_payments!inner(id)
+        lms_status
       `)
       .eq('role', 'student')
       .eq('lms_status', 'inactive')
@@ -50,10 +50,11 @@ serve(async (req: Request) => {
 
     console.log(`Found ${inactiveStudents?.length || 0} potentially inactive students`);
 
-    // Filter out students who have made at least one payment
+    // Filter out students who have made at least one payment or have a valid extension
     const studentsToDelete = [];
     
     for (const student of inactiveStudents || []) {
+      // Check for payments
       const { data: payments, error: paymentError } = await supabase
         .from('installment_payments')
         .select('id')
@@ -65,10 +66,63 @@ serve(async (req: Request) => {
         continue;
       }
 
-      // If no payments found, mark for deletion
-      if (!payments || payments.length === 0) {
-        studentsToDelete.push(student);
+      // If payments found, skip this student
+      if (payments && payments.length > 0) {
+        console.log(`Student ${student.id} has payments, skipping deletion`);
+        continue;
       }
+
+      // Get student record to find student_id for invoice check
+      const { data: studentRecord } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', student.id)
+        .single();
+
+      if (studentRecord) {
+        // Check for invoices with valid extensions (extended_due_date in the future)
+        const { data: invoicesWithExtension, error: invoiceError } = await supabase
+          .from('invoices')
+          .select('id, extended_due_date, due_date, installment_number')
+          .eq('student_id', studentRecord.id)
+          .eq('installment_number', 1) // First installment
+          .not('status', 'eq', 'paid');
+
+        if (invoiceError) {
+          console.error(`Error checking invoices for student ${student.id}:`, invoiceError);
+          continue;
+        }
+
+        // Check if there's an active extension
+        const hasValidExtension = invoicesWithExtension?.some(invoice => {
+          if (invoice.extended_due_date) {
+            const extendedDate = new Date(invoice.extended_due_date);
+            return extendedDate > today;
+          }
+          return false;
+        });
+
+        if (hasValidExtension) {
+          console.log(`Student ${student.id} has valid fee extension, skipping deletion`);
+          continue;
+        }
+
+        // Check if the first invoice's effective due date (with extension) + 2 weeks has passed
+        const firstInvoice = invoicesWithExtension?.find(inv => inv.installment_number === 1);
+        if (firstInvoice) {
+          const effectiveDueDate = new Date(firstInvoice.extended_due_date || firstInvoice.due_date);
+          const deletionThreshold = new Date(effectiveDueDate);
+          deletionThreshold.setDate(deletionThreshold.getDate() + 14); // 2 weeks after due date
+
+          if (today < deletionThreshold) {
+            console.log(`Student ${student.id} not past deletion threshold yet, skipping`);
+            continue;
+          }
+        }
+      }
+
+      // Mark for deletion
+      studentsToDelete.push(student);
     }
 
     console.log(`${studentsToDelete.length} students will be deleted`);
@@ -79,6 +133,20 @@ serve(async (req: Request) => {
     // Delete students one by one
     for (const student of studentsToDelete) {
       try {
+        // Log the deletion before it happens
+        await supabase.from('admin_logs').insert({
+          entity_type: 'user',
+          entity_id: student.id,
+          action: 'auto_deleted',
+          description: `Student auto-deleted: inactive + unpaid first fee for 2+ weeks`,
+          data: {
+            full_name: student.full_name,
+            email: student.email,
+            created_at: student.created_at,
+            lms_status: student.lms_status
+          }
+        });
+
         const { error: deleteError } = await supabase
           .from('users')
           .delete()
@@ -92,12 +160,11 @@ serve(async (req: Request) => {
         deletedStudents.push({
           id: student.id,
           name: student.full_name,
-          email: student.email,
-          student_id: student.student_id
+          email: student.email
         });
         
         deletedCount++;
-        console.log(`Deleted student: ${student.full_name} (${student.student_id})`);
+        console.log(`Deleted student: ${student.full_name} (${student.email})`);
       } catch (error) {
         console.error(`Failed to delete student ${student.id}:`, error);
       }

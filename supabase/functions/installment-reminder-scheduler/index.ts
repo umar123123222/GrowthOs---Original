@@ -87,18 +87,21 @@ serve(async (req) => {
     } else {
       for (const invoice of pendingInvoices || []) {
         const issueDate = new Date(invoice.created_at);
-        const dueDate = new Date(invoice.due_date);
-        const daysDiff = Math.floor((dueDate.getTime() - issueDate.getTime()) / (1000 * 60 * 60 * 24));
+        // Use extended_due_date if set, otherwise use due_date
+        const effectiveDueDate = invoice.extended_due_date 
+          ? new Date(invoice.extended_due_date) 
+          : new Date(invoice.due_date);
+        const daysDiff = Math.floor((effectiveDueDate.getTime() - issueDate.getTime()) / (1000 * 60 * 60 * 24));
         
-        // Calculate reminder dates with equal intervals
+        // Calculate reminder dates with equal intervals based on effective due date
         const firstReminderDate = new Date(issueDate);
         firstReminderDate.setDate(firstReminderDate.getDate() + Math.floor(daysDiff / 3));
         
         const secondReminderDate = new Date(issueDate);
         secondReminderDate.setDate(secondReminderDate.getDate() + Math.floor(2 * daysDiff / 3));
 
-        // Check if due date has passed
-        if (today >= dueDate) {
+        // Check if effective due date has passed
+        if (today >= effectiveDueDate) {
           await supabaseAdmin
             .from('invoices')
             .update({ status: 'due' })
@@ -113,6 +116,41 @@ serve(async (req) => {
             `Installment #${invoice.installment_number} of $${invoice.amount} is now overdue. Please make payment immediately.`,
             { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date }
           );
+
+          // Suspend LMS access when invoice becomes due
+          const { error: suspendError } = await supabaseAdmin
+            .from('users')
+            .update({ lms_status: 'suspended' })
+            .eq('id', invoice.students.user_id);
+
+          if (suspendError) {
+            console.error(`Error suspending LMS for user ${invoice.students.user_id}:`, suspendError);
+          } else {
+            console.log(`LMS suspended for user ${invoice.students.user_id} due to overdue payment`);
+            
+            // Log the suspension
+            await supabaseAdmin.from('admin_logs').insert({
+              entity_type: 'user',
+              entity_id: invoice.students.user_id,
+              action: 'lms_suspended',
+              description: `LMS suspended due to overdue installment #${invoice.installment_number}`,
+              data: { 
+                invoice_id: invoice.id, 
+                installment_number: invoice.installment_number,
+                amount: invoice.amount 
+              }
+            });
+
+            // Send suspension notification
+            await createInstallmentNotification(
+              supabaseAdmin,
+              invoice.students.user_id,
+              'lms_suspended',
+              'LMS Access Suspended',
+              `Your learning platform access has been suspended due to overdue payment for Installment #${invoice.installment_number}. Please make payment to restore access.`,
+              { invoice_id: invoice.id, installment_number: invoice.installment_number }
+            );
+          }
 
           console.log(`Marked installment ${invoice.installment_number} as due for student ${invoice.students.users.full_name}`);
         }
@@ -132,8 +170,8 @@ serve(async (req) => {
             invoice.students.user_id,
             'installment_reminder',
             'Payment Reminder',
-            `Reminder: Installment #${invoice.installment_number} of $${invoice.amount} is due on ${new Date(invoice.due_date).toLocaleDateString()}`,
-            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date }
+            `Reminder: Installment #${invoice.installment_number} of $${invoice.amount} is due on ${effectiveDueDate.toLocaleDateString()}`,
+            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() }
           );
 
           console.log(`Sent first reminder for installment ${invoice.installment_number} to student ${invoice.students.users.full_name}`);
@@ -154,8 +192,8 @@ serve(async (req) => {
             invoice.students.user_id,
             'installment_reminder',
             'Final Payment Reminder',
-            `Final reminder: Installment #${invoice.installment_number} of $${invoice.amount} is due on ${new Date(invoice.due_date).toLocaleDateString()}`,
-            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date }
+            `Final reminder: Installment #${invoice.installment_number} of $${invoice.amount} is due on ${effectiveDueDate.toLocaleDateString()}`,
+            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() }
           );
 
           console.log(`Sent second reminder for installment ${invoice.installment_number} to student ${invoice.students.users.full_name}`);
@@ -191,7 +229,7 @@ async function sendInstallmentIssueEmail(invoice: any, loginUrl: string, currenc
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
-    const dueDate = new Date(invoice.due_date).toLocaleDateString();
+    const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
     
     // Get currency symbol
     const getCurrencySymbol = (curr: string = 'USD') => {
@@ -272,7 +310,7 @@ async function sendFirstReminderEmail(invoice: any, loginUrl: string, currency: 
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
-    const dueDate = new Date(invoice.due_date).toLocaleDateString();
+    const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
     
     // Get currency symbol
     const getCurrencySymbol = (curr: string = 'USD') => {
@@ -353,7 +391,7 @@ async function sendSecondReminderEmail(invoice: any, loginUrl: string, currency:
     const smtpClient = SMTPClient.fromEnv();
     const studentEmail = invoice.students.users.email;
     const studentName = invoice.students.users.full_name;
-    const dueDate = new Date(invoice.due_date).toLocaleDateString();
+    const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
     
     const getCurrencySymbol = (curr: string = 'USD') => {
       const symbols: { [key: string]: string } = {
@@ -436,12 +474,13 @@ async function sendDueEmail(invoice: any, loginUrl: string, currency: string, co
     };
     
     const currencySymbol = getCurrencySymbol(currency);
+    const effectiveDueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
     
     // Generate PDF invoice
     const invoiceData: InvoiceData = {
       invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
       date: new Date().toLocaleDateString(),
-      due_date: new Date(invoice.due_date).toLocaleDateString(),
+      due_date: effectiveDueDate,
       student_name: studentName,
       student_email: studentEmail,
       items: [{
@@ -463,24 +502,24 @@ async function sendDueEmail(invoice: any, loginUrl: string, currency: string, co
     const billingCc = Deno.env.get('BILLING_EMAIL_CC');
     await smtpClient.sendEmail({
       to: studentEmail,
-      subject: `URGENT - Payment Overdue for Installment #${invoice.installment_number}`,
+      subject: `URGENT - Payment Overdue for Installment #${invoice.installment_number} - LMS Access Suspended`,
       ...(billingCc ? { cc: billingCc } : {}),
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #dc2626;">Payment Overdue Notice</h2>
+          <h2 style="color: #dc2626;">Payment Overdue - LMS Access Suspended</h2>
           
           <p>Dear ${studentName},</p>
           
-          <p><strong>Your payment is now overdue.</strong> Immediate action is required to avoid service suspension:</p>
+          <p><strong>Your payment is now overdue and your LMS access has been suspended.</strong> Immediate action is required to restore your access:</p>
           
           <div style="background-color: #fecaca; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #dc2626;">
             <h3 style="margin-top: 0; color: #dc2626;">Overdue Payment</h3>
             <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
             <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
-            <p><strong>Status:</strong> OVERDUE</p>
+            <p><strong>Status:</strong> OVERDUE - LMS SUSPENDED</p>
           </div>
           
-          <p><strong>Action Required:</strong> Your learning platform access may be suspended until payment is received. Please make payment immediately to restore full access. The detailed invoice with payment instructions is attached to this email.</p>
+          <p><strong>Action Required:</strong> Your learning platform access has been suspended until payment is received. Please make payment immediately to restore full access. The detailed invoice with payment instructions is attached to this email.</p>
           
           <p>If you need assistance or wish to discuss payment arrangements, please contact our support team immediately.</p>
           

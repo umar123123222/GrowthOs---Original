@@ -5,9 +5,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, TrendingUp, AlertTriangle, Download, Search } from 'lucide-react';
+import { DollarSign, TrendingUp, AlertTriangle, Download, Search, CalendarIcon, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 interface Invoice {
   id: string;
@@ -15,6 +19,7 @@ interface Invoice {
   installment_number: number;
   amount: number;
   due_date: string;
+  extended_due_date: string | null;
   status: string;
   payment_date: string | null;
   users: {
@@ -33,19 +38,27 @@ export const FinancialManagement = () => {
     overdueAmount: 0,
     collectionRate: 0
   });
+  const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
+  const [extensionInvoiceId, setExtensionInvoiceId] = useState<string | null>(null);
+  const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchInvoices();
-    calculateStats();
   }, []);
+
+  useEffect(() => {
+    if (invoices.length > 0) {
+      calculateStats();
+    }
+  }, [invoices]);
 
 const fetchInvoices = async () => {
   setLoading(true);
   try {
     const { data: invData, error: invErr } = await supabase
       .from('invoices')
-      .select('id, student_id, installment_number, amount, due_date, status, paid_at');
+      .select('id, student_id, installment_number, amount, due_date, extended_due_date, status, paid_at');
     if (invErr) throw invErr;
 
     const invoicesRaw = invData || [];
@@ -75,6 +88,7 @@ const fetchInvoices = async () => {
         installment_number: row.installment_number,
         amount: Number(row.amount || 0),
         due_date: row.due_date,
+        extended_due_date: row.extended_due_date || null,
         status: row.status,
         payment_date: row.paid_at,
         users: { email }
@@ -100,7 +114,11 @@ const calculateStats = async () => {
       .filter(i => i.status !== 'paid')
       .reduce((sum, i) => sum + (i.amount || 0), 0);
     const overdueAmount = invoices
-      .filter(i => i.status !== 'paid' && i.due_date && new Date(i.due_date) < now)
+      .filter(i => {
+        if (i.status === 'paid') return false;
+        const effectiveDate = i.extended_due_date || i.due_date;
+        return effectiveDate && new Date(effectiveDate) < now;
+      })
       .reduce((sum, i) => sum + (i.amount || 0), 0);
     const collectionRate = invoices.length
       ? (totalRevenue / (totalRevenue + pendingAmount + overdueAmount)) * 100
@@ -151,12 +169,96 @@ const updateInvoiceStatus = async (invoiceId: string, status: string) => {
     }
 
     await fetchInvoices();
-    await calculateStats();
   } catch (error: any) {
     console.error('Error updating invoice:', error);
     toast({ 
       title: 'Error', 
       description: error?.message || 'Failed to update invoice', 
+      variant: 'destructive' 
+    });
+  }
+};
+
+const grantExtension = async (invoiceId: string, newDate: Date) => {
+  try {
+    const { error } = await supabase
+      .from('invoices')
+      .update({ 
+        extended_due_date: newDate.toISOString(),
+        // Reset status to pending if it was due/overdue
+        status: 'pending'
+      })
+      .eq('id', invoiceId);
+    
+    if (error) throw error;
+
+    // Get invoice details for notification
+    const invoice = invoices.find(i => i.id === invoiceId);
+    if (invoice?.student_id) {
+      // Get user_id from student
+      const { data: student } = await supabase
+        .from('students')
+        .select('user_id')
+        .eq('id', invoice.student_id)
+        .single();
+
+      if (student?.user_id) {
+        // Create notification for the student
+        await supabase.rpc('create_notification', {
+          p_user_id: student.user_id,
+          p_type: 'fee_extension',
+          p_title: 'Fee Extension Granted',
+          p_message: `Your payment deadline for Installment #${invoice.installment_number} has been extended to ${format(newDate, 'PPP')}`,
+          p_metadata: { 
+            invoice_id: invoiceId, 
+            new_due_date: newDate.toISOString(),
+            installment_number: invoice.installment_number
+          }
+        });
+
+        // Also reactivate LMS if it was suspended due to this overdue
+        await supabase
+          .from('users')
+          .update({ lms_status: 'active' })
+          .eq('id', student.user_id)
+          .eq('lms_status', 'suspended');
+      }
+    }
+
+    toast({ 
+      title: 'Extension Granted', 
+      description: `Due date extended to ${format(newDate, 'PPP')}` 
+    });
+    
+    setExtensionPopoverOpen(null);
+    setExtensionDate(undefined);
+    await fetchInvoices();
+  } catch (error: any) {
+    console.error('Error granting extension:', error);
+    toast({ 
+      title: 'Error', 
+      description: error?.message || 'Failed to grant extension', 
+      variant: 'destructive' 
+    });
+  }
+};
+
+const clearExtension = async (invoiceId: string) => {
+  try {
+    const { error } = await supabase
+      .from('invoices')
+      .update({ extended_due_date: null })
+      .eq('id', invoiceId);
+    
+    if (error) throw error;
+
+    toast({ title: 'Extension Cleared', description: 'Due date reset to original' });
+    await fetchInvoices();
+  } catch (error: any) {
+    console.error('Error clearing extension:', error);
+    toast({ 
+      title: 'Error', 
+      description: error?.message || 'Failed to clear extension', 
       variant: 'destructive' 
     });
   }
@@ -168,6 +270,7 @@ const getStatusBadge = (status: string) => {
     pending: { color: 'bg-yellow-500', label: 'Pending' },
     issued: { color: 'bg-amber-500', label: 'Issued' },
     overdue: { color: 'bg-red-500', label: 'Overdue' },
+    due: { color: 'bg-red-500', label: 'Due' },
     failed: { color: 'bg-gray-500', label: 'Failed' }
   };
   const config = statusConfig[status] || { color: 'bg-gray-500', label: status };
@@ -268,6 +371,7 @@ const getStatusBadge = (status: string) => {
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="issued">Issued</SelectItem>
                 <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="due">Due</SelectItem>
                 <SelectItem value="overdue">Overdue</SelectItem>
                 <SelectItem value="failed">Failed</SelectItem>
               </SelectContent>
@@ -292,27 +396,107 @@ const getStatusBadge = (status: string) => {
                   <TableCell>{invoice.users?.email}</TableCell>
                   <TableCell>Installment {invoice.installment_number}</TableCell>
                   <TableCell>${invoice.amount}</TableCell>
-                  <TableCell>{new Date(invoice.due_date).toLocaleDateString()}</TableCell>
-                  <TableCell>{getStatusBadge(invoice.status)}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col gap-1">
+                      <span className={invoice.extended_due_date ? 'line-through text-muted-foreground text-xs' : ''}>
+                        {new Date(invoice.due_date).toLocaleDateString()}
+                      </span>
+                      {invoice.extended_due_date && (
+                        <span className="flex items-center gap-1 text-amber-600 font-medium">
+                          <Clock className="w-3 h-3" />
+                          {new Date(invoice.extended_due_date).toLocaleDateString()}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {getStatusBadge(invoice.status)}
+                      {invoice.extended_due_date && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-600">
+                          Extended
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     {invoice.payment_date ? new Date(invoice.payment_date).toLocaleDateString() : 'N/A'}
                   </TableCell>
                   <TableCell>
-                    <Select
-                      value={invoice.status}
-                      onValueChange={(value) => updateInvoiceStatus(invoice.id, value)}
-                    >
-                      <SelectTrigger className="w-32">
-                        <SelectValue />
-                      </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="issued">Issued</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
-                          <SelectItem value="overdue">Overdue</SelectItem>
-                          <SelectItem value="failed">Failed</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={invoice.status}
+                        onValueChange={(value) => updateInvoiceStatus(invoice.id, value)}
+                      >
+                        <SelectTrigger className="w-28">
+                          <SelectValue />
+                        </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="issued">Issued</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="due">Due</SelectItem>
+                            <SelectItem value="overdue">Overdue</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                          </SelectContent>
+                      </Select>
+                      
+                      {invoice.status !== 'paid' && (
+                        <Popover 
+                          open={extensionPopoverOpen === invoice.id} 
+                          onOpenChange={(open) => {
+                            setExtensionPopoverOpen(open ? invoice.id : null);
+                            if (!open) setExtensionDate(undefined);
+                          }}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="gap-1"
+                            >
+                              <CalendarIcon className="w-3 h-3" />
+                              Extend
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="end">
+                            <div className="p-3 border-b">
+                              <p className="text-sm font-medium">Extend Due Date</p>
+                              <p className="text-xs text-muted-foreground">
+                                Current: {new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <Calendar
+                              mode="single"
+                              selected={extensionDate}
+                              onSelect={setExtensionDate}
+                              disabled={(date) => date < new Date()}
+                              initialFocus
+                              className={cn("p-3 pointer-events-auto")}
+                            />
+                            <div className="p-3 border-t flex gap-2">
+                              <Button 
+                                size="sm" 
+                                className="flex-1"
+                                disabled={!extensionDate}
+                                onClick={() => extensionDate && grantExtension(invoice.id, extensionDate)}
+                              >
+                                Grant Extension
+                              </Button>
+                              {invoice.extended_due_date && (
+                                <Button 
+                                  size="sm" 
+                                  variant="destructive"
+                                  onClick={() => clearExtension(invoice.id)}
+                                >
+                                  Clear
+                                </Button>
+                              )}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
