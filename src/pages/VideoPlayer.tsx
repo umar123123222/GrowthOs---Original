@@ -13,6 +13,37 @@ import { safeMaybeSingle } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 import CurrentModuleCard from "@/components/CurrentModuleCard";
 import { obfuscateUrl, deobfuscateUrl } from "@/lib/utils";
+
+// Sanitize video URLs by removing garbage prefixes
+const sanitizeVideoUrl = (url: string): string => {
+  if (!url) return '';
+  
+  let cleanUrl = url.trim();
+  
+  // Remove common garbage prefixes that may have been copy-pasted
+  const garbagePrefixes = [
+    'ChatGPT said:',
+    'AI said:',
+    'AI:',
+    'Copy:',
+    'Link:',
+    'URL:',
+  ];
+  
+  for (const prefix of garbagePrefixes) {
+    if (cleanUrl.toLowerCase().startsWith(prefix.toLowerCase())) {
+      cleanUrl = cleanUrl.substring(prefix.length).trim();
+    }
+  }
+  
+  // Validate it's a proper URL
+  if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+    return '';
+  }
+  
+  return cleanUrl;
+};
+
 const VideoPlayer = () => {
   const {
     moduleId,
@@ -30,6 +61,7 @@ const VideoPlayer = () => {
   }>({});
   const [currentVideo, setCurrentVideo] = useState<any>(null);
   const [showRating, setShowRating] = useState(false);
+  const [videoUrlError, setVideoUrlError] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
   const [obfuscatedUrl, setObfuscatedUrl] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -183,7 +215,17 @@ const VideoPlayer = () => {
   // Set iframe src via ref to hide URL from DOM
   useEffect(() => {
     if (currentVideo?.videoUrl && iframeRef.current) {
-      const embedUrl = convertToEmbedUrl(currentVideo.videoUrl);
+      // Sanitize the URL first
+      const sanitizedUrl = sanitizeVideoUrl(currentVideo.videoUrl);
+      
+      if (!sanitizedUrl) {
+        setVideoUrlError(true);
+        logger.error('Invalid video URL detected:', currentVideo.videoUrl);
+        return;
+      }
+      
+      setVideoUrlError(false);
+      const embedUrl = convertToEmbedUrl(sanitizedUrl);
       const encoded = obfuscateUrl(embedUrl);
       setObfuscatedUrl(encoded);
       
@@ -256,7 +298,14 @@ const VideoPlayer = () => {
           <Card>
             <CardContent className="p-0">
               <div className="aspect-video bg-gray-900 rounded-t-lg">
-                {currentVideo && (
+                {videoUrlError ? (
+                  <div className="w-full h-full flex items-center justify-center bg-muted rounded-t-lg">
+                    <div className="text-center p-6">
+                      <p className="text-destructive font-medium mb-2">Video URL is invalid</p>
+                      <p className="text-muted-foreground text-sm">Please contact support to fix this video.</p>
+                    </div>
+                  </div>
+                ) : currentVideo && (
                   <iframe 
                     ref={iframeRef}
                     className="w-full h-full rounded-t-lg" 
