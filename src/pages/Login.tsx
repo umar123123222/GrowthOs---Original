@@ -284,7 +284,7 @@ const Login = () => {
                 </div>}
             </Button>
             
-            <div className="text-center mt-4 my-[2px]">
+            <div className="text-center mt-4 my-[6px]">
               <Link to="/reset-password" className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors">
                 Forgot Password?
               </Link>
