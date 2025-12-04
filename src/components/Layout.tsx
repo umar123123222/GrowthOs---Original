@@ -11,7 +11,7 @@ const MetaIcon = Facebook;
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { FloatingActivityButton } from "./FloatingActivityButton";
+
 import { ActivityLogsDialog } from "./ActivityLogsDialog";
 import { MotivationalNotifications } from "./MotivationalNotifications";
 import { AppLogo } from "./AppLogo";
@@ -678,7 +678,6 @@ const Layout = memo(({
       </div>
       
       {/* Floating Activity Button */}
-      <FloatingActivityButton />
       <ScrollToTop />
       
       {/* Motivational Notifications for Students */}
