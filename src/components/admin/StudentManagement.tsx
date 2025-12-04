@@ -1199,30 +1199,29 @@ export const StudentManagement = () => {
         </Card>}
 
       {/* Students Table */}
-      <Card className="animate-fade-in">
+      <Card className="animate-fade-in w-full">
         <CardHeader className="bg-gradient-to-r from-slate-50 to-blue-50 border-b">
           <CardTitle className="flex items-center text-xl">
             <Users className="w-5 h-5 mr-2 text-blue-600" />
             Students Directory ({displayStudents.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="px-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
-                  </TableHead>
-                  <TableHead>Student ID</TableHead>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Fees Structure</TableHead>
-                  <TableHead>LMS Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+        <CardContent className="p-0">
+          <Table className="w-full">
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
+                </TableHead>
+                <TableHead className="w-[100px]">Student ID</TableHead>
+                <TableHead className="min-w-[120px]">Name</TableHead>
+                <TableHead className="min-w-[180px]">Email</TableHead>
+                <TableHead className="w-[130px]">Phone</TableHead>
+                <TableHead className="w-[120px]">Fees Structure</TableHead>
+                <TableHead className="min-w-[180px]">LMS Status</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
               <TableBody>
                 {hasActiveFilters && displayStudents.length === 0 ? (
                   <TableRow>
@@ -1551,7 +1550,6 @@ export const StudentManagement = () => {
                 )}
               </TableBody>
             </Table>
-          </div>
         </CardContent>
       </Card>
 
