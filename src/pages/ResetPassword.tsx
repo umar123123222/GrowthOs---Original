@@ -30,8 +30,29 @@ const ResetPassword = () => {
   useEffect(() => {
     const handlePasswordResetToken = async () => {
       try {
-        // Check for PKCE code in query parameters (modern Supabase format)
+        // Check for error parameters FIRST (Supabase redirects with these when link is expired/invalid)
         const urlParams = new URLSearchParams(window.location.search);
+        const error = urlParams.get('error');
+        const errorCode = urlParams.get('error_code');
+        const errorDescription = urlParams.get('error_description');
+        
+        // Also check hash for error parameters
+        const errorHashParams = new URLSearchParams(window.location.hash.substring(1));
+        const hashError = errorHashParams.get('error');
+        const hashErrorCode = errorHashParams.get('error_code');
+        const hashErrorDescription = errorHashParams.get('error_description');
+        
+        // If any error is present, show the error message
+        if (error || hashError || errorCode === 'otp_expired' || hashErrorCode === 'otp_expired') {
+          const description = errorDescription || hashErrorDescription || 'Email link is invalid or has expired';
+          setLinkError(decodeURIComponent(description.replace(/\+/g, ' ')));
+          // Clean up URL
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setIsCheckingToken(false);
+          return;
+        }
+        
+        // Check for PKCE code in query parameters (modern Supabase format)
         const code = urlParams.get('code');
         
         if (code) {
