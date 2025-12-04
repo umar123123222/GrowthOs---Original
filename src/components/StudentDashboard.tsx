@@ -331,35 +331,28 @@ export function StudentDashboard() {
         logger.warn('StudentDashboard: Failed fetching milestones', milestonesError);
       }
 
-      // Fetch leaderboard position (basic implementation)
+      // Fetch leaderboard position from leaderboard_snapshots (active students only)
       try {
-        const { count: totalStudents } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('role', 'student');
+        // Get current user's rank from leaderboard snapshots
+        const { data: userSnapshot } = await supabase
+          .from('leaderboard_snapshots')
+          .select('rank')
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-        // Calculate position based on course completion
-        const { data: allStudentProgress } = await supabase
-          .from('recording_views')
-          .select('user_id, recording_id')
-          .eq('watched', true);
+        // Get total count of students in leaderboard (active students)
+        const { count: totalActiveStudents } = await supabase
+          .from('leaderboard_snapshots')
+          .select('*', { count: 'exact', head: true });
 
-        const progressByStudent = new Map<string, number>();
-        allStudentProgress?.forEach(view => {
-          progressByStudent.set(view.user_id, (progressByStudent.get(view.user_id) || 0) + 1);
-        });
-
-        const currentUserProgress = progressByStudent.get(user.id) || 0;
-        let position = 1;
-        progressByStudent.forEach((progress, studentId) => {
-          if (studentId !== user.id && progress > currentUserProgress) {
-            position++;
-          }
-        });
-
-        setLeaderboardPosition({ rank: position, total: totalStudents || 0 });
+        if (userSnapshot?.rank && totalActiveStudents) {
+          setLeaderboardPosition({ rank: userSnapshot.rank, total: totalActiveStudents });
+        } else if (totalActiveStudents) {
+          // User not in leaderboard yet, show as last
+          setLeaderboardPosition({ rank: totalActiveStudents + 1, total: totalActiveStudents });
+        }
       } catch (leaderboardErr) {
-        logger.warn('StudentDashboard: Failed to compute leaderboard position', leaderboardErr);
+        logger.warn('StudentDashboard: Failed to fetch leaderboard position', leaderboardErr);
       }
 
     } catch (error) {
