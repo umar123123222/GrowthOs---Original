@@ -11,7 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -106,6 +109,8 @@ export function StudentsManagement() {
     lms_status: 'inactive'
   });
   const [timeTick, setTimeTick] = useState(0);
+  const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
+  const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
   const {
     options: installmentOptions
   } = useInstallmentOptions();
@@ -406,6 +411,92 @@ export function StudentsManagement() {
       });
     }
   };
+
+  const grantExtension = async (student: Student, newDueDate: Date) => {
+    try {
+      if (!student.student_record_id) {
+        toast({
+          title: 'Error',
+          description: 'No student record found',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Find the latest unpaid invoice
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('student_id', student.student_record_id)
+        .neq('status', 'paid')
+        .order('installment_number', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (invoiceError) throw invoiceError;
+
+      if (!invoice) {
+        toast({
+          title: 'No Unpaid Invoice',
+          description: 'This student has no unpaid invoices to extend.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      // Update the invoice with extended_due_date
+      const { error: updateError } = await supabase
+        .from('invoices')
+        .update({
+          extended_due_date: newDueDate.toISOString(),
+          status: 'pending'
+        })
+        .eq('id', invoice.id);
+
+      if (updateError) throw updateError;
+
+      // If student was suspended, reactivate LMS
+      if (student.lms_status === 'suspended') {
+        const { error: lmsError } = await supabase
+          .from('users')
+          .update({ lms_status: 'active' })
+          .eq('id', student.id);
+
+        if (lmsError) throw lmsError;
+      }
+
+      // Send notification to student
+      await supabase.rpc('create_notification', {
+        p_user_id: student.id,
+        p_type: 'fee_extension',
+        p_title: 'Payment Extension Granted',
+        p_message: `Your payment due date has been extended to ${format(newDueDate, 'PPP')}.`,
+        p_metadata: {
+          invoice_id: invoice.id,
+          new_due_date: newDueDate.toISOString(),
+          installment_number: invoice.installment_number
+        }
+      });
+
+      toast({
+        title: 'Extension Granted',
+        description: `Due date extended to ${format(newDueDate, 'PPP')}${student.lms_status === 'suspended' ? ' and LMS reactivated' : ''}.`
+      });
+
+      setExtensionPopoverOpen(null);
+      setExtensionDate(undefined);
+      fetchStudents();
+      fetchInstallmentPayments();
+    } catch (error) {
+      console.error('Error granting extension:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to grant extension',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const downloadInvoicePDF = (student: Student) => {
     const doc = new jsPDF();
     doc.setFontSize(20);
@@ -1325,6 +1416,32 @@ export function StudentsManagement() {
                                 <FileText className="w-4 h-4 mr-2" />
                                 Resend Invoice
                               </Button>
+                              <Popover open={extensionPopoverOpen === student.id} onOpenChange={(open) => {
+                                setExtensionPopoverOpen(open ? student.id : null);
+                                if (!open) setExtensionDate(undefined);
+                              }}>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" size="sm" className="hover-scale hover:border-amber-300 hover:text-amber-600">
+                                    <CalendarIcon className="w-4 h-4 mr-2" />
+                                    Extend Due Date
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0" align="start">
+                                  <Calendar
+                                    mode="single"
+                                    selected={extensionDate}
+                                    onSelect={(date) => {
+                                      if (date) {
+                                        setExtensionDate(date);
+                                        grantExtension(student, date);
+                                      }
+                                    }}
+                                    disabled={(date) => date < new Date()}
+                                    initialFocus
+                                    className="pointer-events-auto"
+                                  />
+                                </PopoverContent>
+                              </Popover>
                               {student.last_invoice_date && <Button variant="outline" size="sm" onClick={() => downloadInvoicePDF(student)} className="hover-scale hover:border-orange-300 hover:text-orange-600">
                                   <Download className="w-4 h-4 mr-2" />
                                   Download Invoice
