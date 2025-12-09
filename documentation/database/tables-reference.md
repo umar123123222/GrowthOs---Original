@@ -2,38 +2,73 @@
 
 Detailed reference for all Growth OS database tables and their structure.
 
+**Total Tables**: 44 | **Last Updated**: December 2025
+
 ## User Management Tables
 
 ### `users`
 Core authentication and user profiles.
 ```sql
 - id (uuid, primary key)
-- email (text, unique)
-- created_at (timestamp)
-- role (enum: student, mentor, admin, enrollment_manager, superadmin)
-- is_active (boolean)
+- email (text, unique, not null)
+- full_name (text, not null)
+- role (text: superadmin, admin, enrollment_manager, mentor, student)
+- status (text: active, inactive, suspended)
+- lms_status (text: active, inactive, suspended)
+- phone (text)
+- password_hash (text) -- superadmin only
+- password_display (text) -- superadmin only
+- is_temp_password (boolean)
+- last_active_at (timestamptz)
+- last_login_at (timestamptz)
+- dream_goal_summary (text)
+- shopify_credentials (text)
+- meta_ads_credentials (text)
+- created_at (timestamptz)
+- updated_at (timestamptz)
 ```
 
 ### `students`
-Student-specific profile information.
+Student-specific profile and enrollment information.
 ```sql
 - id (uuid, primary key)
 - user_id (uuid, foreign key to users)
-- full_name (text)
-- company_name (text)
-- phone_number (text)
-- course_access (boolean)
-- created_at (timestamp)
+- student_id (text, unique, auto-generated STU000001)
+- lms_username (text, not null)
+- enrollment_date (timestamptz)
+- fees_cleared (boolean)
+- onboarding_completed (boolean)
+- onboarding_video_watched (boolean)
+- installment_plan_id (uuid, foreign key)
+- installment_count (integer)
+- discount_amount (numeric)
+- discount_percentage (numeric)
+- final_fee_amount (numeric)
+- goal_brief (text)
+- answers_json (jsonb)
+- created_at (timestamptz)
+- updated_at (timestamptz)
 ```
 
-### `student_details`
-Extended student information and preferences.
+### `user_roles`
+User role assignments.
 ```sql
 - id (uuid, primary key)
-- student_id (uuid, foreign key to students)
-- business_info (jsonb)
-- learning_preferences (jsonb)
-- contact_preferences (jsonb)
+- user_id (uuid, not null)
+- role (app_role enum)
+- created_at (timestamptz)
+```
+
+### `onboarding_responses`
+Student onboarding questionnaire responses.
+```sql
+- id (uuid, primary key)
+- user_id (uuid, not null)
+- question_id (text, not null)
+- answer (text)
+- answer_type (text, not null)
+- created_at (timestamptz)
+- updated_at (timestamptz)
 ```
 
 ## Learning Management Tables

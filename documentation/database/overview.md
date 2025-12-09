@@ -7,10 +7,10 @@ A high-level overview of the Growth OS database architecture and organization.
 Growth OS uses Supabase PostgreSQL with a comprehensive schema designed for scalability and security.
 
 ### Key Statistics
-- **38 Production Tables** across 10 functional areas
-- **35+ Database Functions** for business logic
+- **44 Production Tables** across 10 functional areas
+- **40+ Database Functions** for business logic
 - **200+ RLS Policies** for comprehensive security
-- **25+ Triggers** for automation and data integrity
+- **29 Edge Functions** for serverless backend logic
 - **Optimized Indexes** for performance
 - **4 Storage Buckets** for file management
 
@@ -180,7 +180,7 @@ File upload and storage management across multiple buckets.
 ## Security Architecture
 
 ### Row-Level Security (RLS)
-- **Universal RLS** enabled on all 38 production tables
+- **Universal RLS** enabled on all 44 production tables
 - **200+ Security Policies** covering all CRUD operations
 - **Role-based access control** with 5 distinct user roles:
   - `superadmin` - Full system access

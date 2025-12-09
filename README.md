@@ -39,7 +39,7 @@ Growth OS is a comprehensive Learning Management System (LMS) designed for moder
 - **Backend**: Supabase (PostgreSQL + Edge Functions)
 - **Authentication**: Row-Level Security (RLS) with 200+ policies
 - **Storage**: Supabase Storage with 4 buckets
-- **Database**: 38 tables, 35+ functions, 25+ triggers
+- **Database**: 44 tables, 40+ functions, 29 edge functions
 
 ---
 
@@ -65,15 +65,15 @@ Comprehensive documentation is available in the `/documentation` folder:
 
 ## 🏗️ Architecture
 
-### Database Architecture (38 Tables)
+### Database Architecture (44 Tables)
 
-**User Management** (6 tables): `users`, `students`, `onboarding_responses`, `user_activity_logs`, `admin_logs`, `student_recovery_messages`
+**User Management** (7 tables): `users`, `students`, `user_roles`, `onboarding_responses`, `user_activity_logs`, `admin_logs`, `student_recovery_messages`
 
-**Learning & Content** (10 tables): `modules`, `available_lessons`, `recording_attachments`, `recording_views`, `recording_ratings`, `user_unlocks`, `assignments`, `submissions`, `badges`, `user_badges`
+**Learning & Content** (11 tables): `modules`, `available_lessons`, `recording_attachments`, `recording_views`, `recording_ratings`, `user_unlocks`, `user_module_progress`, `assignments`, `submissions`, `badges`, `user_badges`
 
 **Financial System** (4 tables): `invoices`, `installment_payments`, `installment_plans`, `company_settings` (financial fields)
 
-**Communication** (5 tables): `notifications`, `notification_templates`, `notification_settings`, `messages`, `email_queue`
+**Communication** (6 tables): `notifications`, `notification_templates`, `notification_settings`, `messages`, `email_queue`, `success_partner_messages`
 
 **Support & Sessions** (4 tables): `support_tickets`, `support_ticket_replies`, `success_sessions`, `session_attendance`
 
@@ -81,13 +81,13 @@ Comprehensive documentation is available in the `/documentation` folder:
 
 **System Configuration** (2 tables): `company_settings`, `course_tracks`
 
-**Gamification** (2 tables): `milestones`, `milestone_categories`
+**Gamification** (4 tables): `milestones`, `milestone_categories`, `user_milestones`, `leaderboard_snapshots`
 
-**Security** (2 tables): `user_security_summary`, `error_logs`
+**Recovery & Monitoring** (3 tables): `student_recovery_checks`, `student_recovery_messages`, `error_logs`
 
 ### Security Features
 
-- ✅ **Row-Level Security (RLS)** on all 38 tables
+- ✅ **Row-Level Security (RLS)** on all 44 tables
 - ✅ **200+ RLS Policies** for granular access control
 - ✅ **Role-Based Access Control (RBAC)** with 5 distinct roles
 - ✅ **Audit Logging** for all administrative actions
@@ -260,8 +260,8 @@ For licensing inquiries, contact: [licensing@core47.ai](mailto:licensing@core47.
 
 ---
 
-**Version**: 2.0  
-**Last Updated**: October 2025  
+**Version**: 2.1  
+**Last Updated**: December 2025  
 **Status**: Production Ready ✅
 
 ---

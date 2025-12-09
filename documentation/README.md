@@ -63,13 +63,13 @@ Step-by-step deployment instructions:
 - **Backend**: Supabase (PostgreSQL + Edge Functions)
 - **Authentication**: Row-Level Security (RLS) with 5 user roles
 - **Storage**: Supabase Storage with 4 buckets
-- **Database**: 38 production tables, 35+ functions, 200+ RLS policies
+- **Database**: 44 production tables, 40+ functions, 200+ RLS policies
 
 ### Key Statistics
-- **38 Production Tables** across 10 functional areas
-- **35+ Database Functions** (security, notifications, progress tracking)
+- **44 Production Tables** across 10 functional areas
+- **40+ Database Functions** (security, notifications, progress tracking)
 - **200+ RLS Policies** for granular access control
-- **25+ Database Triggers** for automation
+- **29 Edge Functions** for serverless backend logic
 - **4 Storage Buckets** for file management
 - **5 User Roles** (Superadmin, Admin, Enrollment Manager, Mentor, Student)
 
@@ -80,17 +80,19 @@ Step-by-step deployment instructions:
 | Authentication System | ✅ Complete | [Docs](./features/authentication-system.md) |
 | Student Management | ✅ Complete | [Docs](./features/student-management.md) |
 | Learning Management (LMS) | ✅ Complete | [Docs](./features/learning-management.md) |
+| Sequential Unlock System | ✅ Complete | [Docs](./features/sequential-unlock-system.md) |
 | Assignment System | ✅ Complete | [Docs](./features/assignment-system.md) |
 | Financial Management | ✅ Complete | [Docs](./features/financial-management.md) |
 | Notifications System | ✅ Complete | [Docs](./features/notifications-system.md) |
 | Support Tickets | ✅ Complete | [Docs](./features/support-tickets.md) |
 | Live Sessions | ✅ Complete | [Docs](./features/live-sessions.md) |
-| Mentorship Program | ✅ Complete | [Docs](./features/mentorship-program.md) |
+| Student Recovery System | ✅ Complete | [Docs](./features/student-recovery-system.md) |
+| Success Partner AI | ✅ Complete | [Docs](./features/success-partner-ai.md) |
 | Company Branding | ✅ Complete | [Docs](./features/company-branding.md) |
+| Recording Ratings | ✅ Complete | [Docs](./features/recording-ratings.md) |
 | Activity Logging | ✅ Complete | [Docs](./features/user-activity-logging.md) |
 | Reporting & Analytics | ✅ Complete | [Docs](./features/reporting-analytics.md) |
-| Messaging System | 🚧 Partial | [Docs](./features/messaging-system.md) |
-| Leaderboard System | 📋 Planned | [Docs](./features/leaderboard-system.md) |
+| Leaderboard System | ✅ Complete | [Docs](./features/leaderboard-system.md) |
 | Certificate System | 📋 Planned | [Docs](./features/certificates-system.md) |
 
 **Legend**: ✅ Complete | 🚧 Partial Implementation | 📋 Planned for v2.0
@@ -147,8 +149,8 @@ When adding or updating documentation:
 
 ---
 
-**Last Updated**: 2025  
-**Version**: 2.0  
+**Last Updated**: December 2025  
+**Version**: 2.1  
 **Developed & Maintained by**: [Core47.ai](https://core47.ai)  
 **License**: Proprietary - © 2025 Core47.ai. All rights reserved.  
 **Support**: support@core47.ai
