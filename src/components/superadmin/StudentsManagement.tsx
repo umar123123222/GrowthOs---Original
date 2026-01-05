@@ -1521,19 +1521,58 @@ export function StudentsManagement() {
                                   <Download className="w-4 h-4 mr-2" />
                                   Download Invoice
                                 </Button>}
-                              <Button variant="outline" size="sm" onClick={() => handleStatusUpdate(student.id)} className="hover-scale hover:border-blue-300 hover:text-blue-600">
-                                <Settings className="w-4 h-4 mr-2" />
-                                Update Status
-                              </Button>
-                              <Button variant="outline" size="sm" onClick={() => handleToggleLMSSuspension(student.id, student.lms_status)} className={`hover-scale ${student.lms_status === 'suspended' ? "text-green-600 hover:text-green-700 hover:border-green-300" : "text-red-600 hover:text-red-700 hover:border-red-300"}`}>
-                                {student.lms_status === 'suspended' ? <>
-                                    <CheckCircle className="w-4 h-4 mr-2" />
-                                    Activate LMS
-                                  </> : <>
-                                    <Ban className="w-4 h-4 mr-2" />
-                                    Suspend LMS
-                                  </>}
-                               </Button>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button variant="outline" size="sm" className="hover-scale hover:border-blue-300 hover:text-blue-600">
+                                    <Settings className="w-4 h-4 mr-2" />
+                                    LMS Status
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-48 p-2" align="start">
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground mb-2 px-2">Change LMS Status</p>
+                                    {['active', 'inactive', 'suspended', 'dropout', 'complete'].map((status) => (
+                                      <Button
+                                        key={status}
+                                        variant={student.lms_status === status ? "secondary" : "ghost"}
+                                        size="sm"
+                                        className="w-full justify-start text-sm"
+                                        onClick={async () => {
+                                          if (student.lms_status !== status) {
+                                            try {
+                                              const { error } = await supabase.from('users').update({
+                                                lms_status: status,
+                                                updated_at: new Date().toISOString()
+                                              }).eq('id', student.id);
+                                              if (error) throw error;
+                                              toast({
+                                                title: 'Success',
+                                                description: `LMS status updated to ${status}`
+                                              });
+                                              fetchStudents();
+                                            } catch (error) {
+                                              console.error('Error updating status:', error);
+                                              toast({
+                                                title: 'Error',
+                                                description: 'Failed to update status',
+                                                variant: 'destructive'
+                                              });
+                                            }
+                                          }
+                                        }}
+                                        disabled={student.lms_status === status}
+                                      >
+                                        {status === 'active' && <CheckCircle className="w-3 h-3 mr-2 text-green-600" />}
+                                        {status === 'inactive' && <Clock className="w-3 h-3 mr-2 text-yellow-600" />}
+                                        {status === 'suspended' && <Ban className="w-3 h-3 mr-2 text-red-600" />}
+                                        {status === 'dropout' && <XCircle className="w-3 h-3 mr-2 text-orange-600" />}
+                                        {status === 'complete' && <Award className="w-3 h-3 mr-2 text-blue-600" />}
+                                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                                      </Button>
+                                    ))}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
                                
                                <Button 
                                  variant="outline" 
