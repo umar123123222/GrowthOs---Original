@@ -631,9 +631,9 @@ export function CourseManagement() {
                           title={course.is_published ? 'Unpublish' : 'Publish'}
                         >
                           {course.is_published ? (
-                            <EyeOff className="w-4 h-4" />
-                          ) : (
                             <Eye className="w-4 h-4" />
+                          ) : (
+                            <EyeOff className="w-4 h-4" />
                           )}
                         </Button>
                         <Button
