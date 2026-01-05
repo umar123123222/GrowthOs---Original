@@ -356,6 +356,36 @@ const handler = async (req: Request): Promise<Response> => {
       fees_cleared: finalFeeAmount === 0
     });
 
+    // Auto-enroll student in default course (for backward compatibility)
+    try {
+      const { data: defaultCourse } = await supabaseAdmin
+        .from('courses')
+        .select('id')
+        .eq('is_active', true)
+        .order('sequence_order', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (defaultCourse) {
+        const { error: enrollError } = await supabaseAdmin
+          .from('course_enrollments')
+          .insert({
+            student_id: studentRecord.id,
+            course_id: defaultCourse.id,
+            status: 'active',
+            progress_percentage: 0
+          });
+
+        if (enrollError) {
+          console.error('Course enrollment error (non-fatal):', enrollError);
+        } else {
+          console.log('Student auto-enrolled in default course:', defaultCourse.id);
+        }
+      }
+    } catch (enrollError) {
+      console.error('Course enrollment failed (non-fatal):', enrollError);
+    }
+
     // Queue email for credential delivery (non-blocking)
     supabaseAdmin
       .from('email_queue')

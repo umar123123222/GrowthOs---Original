@@ -20,6 +20,16 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } }
     );
 
+    // Check if multi-course mode is enabled
+    const { data: settings } = await supabaseServiceRole
+      .from('company_settings')
+      .select('multi_course_enabled')
+      .eq('id', 1)
+      .maybeSingle();
+
+    const isMultiCourse = settings?.multi_course_enabled ?? false;
+    console.log('Multi-course mode:', isMultiCourse);
+
     // 1. Get all active students
     const { data: activeStudents, error: studentsError } = await supabaseServiceRole
       .from('users')
@@ -36,6 +46,8 @@ Deno.serve(async (req) => {
     console.log(`Found ${activeStudents?.length || 0} active students`);
 
     // 2. Get total available content
+    // For multi-course: count all lessons across all courses
+    // For single-course: count all lessons (same behavior)
     const [lessonsCount, assignmentsCount] = await Promise.all([
       supabaseServiceRole.from('available_lessons').select('id', { count: 'exact', head: true }),
       supabaseServiceRole.from('assignments').select('id', { count: 'exact', head: true })
@@ -49,7 +61,8 @@ Deno.serve(async (req) => {
     // 3. Batch fetch all student data
     const userIds = activeStudents?.map(s => s.id) || [];
     
-    const [recordingViewsData, submissionsData, sessionAttendanceData, integrationsData] = await Promise.all([
+    // Get course enrollments for each student (for multi-course scoring)
+    const [recordingViewsData, submissionsData, sessionAttendanceData, integrationsData, enrollmentsData] = await Promise.all([
       // Recording views (watched videos)
       supabaseServiceRole
         .from('recording_views')
@@ -75,7 +88,14 @@ Deno.serve(async (req) => {
         .from('integrations')
         .select('user_id, source')
         .in('user_id', userIds)
-        .in('source', ['shopify', 'meta'])
+        .in('source', ['shopify', 'meta']),
+
+      // Course enrollments (for multi-course bonus)
+      isMultiCourse ? supabaseServiceRole
+        .from('course_enrollments')
+        .select('student_id, progress_percentage')
+        .in('student_id', userIds)
+        .eq('status', 'active') : Promise.resolve({ data: [] })
     ]);
 
     // 4. Count per user
@@ -87,7 +107,9 @@ Deno.serve(async (req) => {
         assignmentsCompleted: 0,
         sessionsAttended: 0,
         hasShopify: false,
-        hasMeta: false
+        hasMeta: false,
+        courseCount: 0,
+        avgCourseProgress: 0
       });
     });
 
@@ -118,6 +140,29 @@ Deno.serve(async (req) => {
       }
     });
 
+    // Count course enrollments and average progress (multi-course bonus)
+    if (isMultiCourse && enrollmentsData.data) {
+      const userEnrollments = new Map<string, { count: number; totalProgress: number }>();
+      
+      enrollmentsData.data.forEach(enrollment => {
+        const studentId = enrollment.student_id;
+        if (!userEnrollments.has(studentId)) {
+          userEnrollments.set(studentId, { count: 0, totalProgress: 0 });
+        }
+        const data = userEnrollments.get(studentId)!;
+        data.count++;
+        data.totalProgress += enrollment.progress_percentage || 0;
+      });
+
+      userEnrollments.forEach((data, studentId) => {
+        const counts = countsByUser.get(studentId);
+        if (counts) {
+          counts.courseCount = data.count;
+          counts.avgCourseProgress = data.count > 0 ? Math.round(data.totalProgress / data.count) : 0;
+        }
+      });
+    }
+
     // 5. Calculate scores and build snapshots
     const snapshots = activeStudents?.map(student => {
       const counts = countsByUser.get(student.id) || {
@@ -125,7 +170,9 @@ Deno.serve(async (req) => {
         assignmentsCompleted: 0,
         sessionsAttended: 0,
         hasShopify: false,
-        hasMeta: false
+        hasMeta: false,
+        courseCount: 0,
+        avgCourseProgress: 0
       };
 
       // Calculate weighted score (same weights as frontend)
@@ -133,13 +180,23 @@ Deno.serve(async (req) => {
       const assignmentScore = counts.assignmentsCompleted * 20;
       const sessionScore = counts.sessionsAttended * 15;
       const integrationScore = (counts.hasShopify ? 25 : 0) + (counts.hasMeta ? 25 : 0);
-      const score = videoScore + assignmentScore + sessionScore + integrationScore;
+      
+      // Multi-course bonus: additional points for multiple course enrollments
+      const multiCourseBonus = isMultiCourse ? (counts.courseCount > 1 ? counts.courseCount * 5 : 0) : 0;
+      
+      const score = videoScore + assignmentScore + sessionScore + integrationScore + multiCourseBonus;
 
       // Calculate progress percentage
-      const videoProgress = totalVideos > 0 ? (counts.videosWatched / totalVideos) * 40 : 0;
-      const assignmentProgress = totalAssignments > 0 ? (counts.assignmentsCompleted / totalAssignments) * 40 : 0;
-      const integrationProgress = (counts.hasShopify ? 10 : 0) + (counts.hasMeta ? 10 : 0);
-      const progress = Math.min(100, Math.round(videoProgress + assignmentProgress + integrationProgress));
+      // For multi-course: use average course progress if available
+      let progress: number;
+      if (isMultiCourse && counts.courseCount > 0) {
+        progress = counts.avgCourseProgress;
+      } else {
+        const videoProgress = totalVideos > 0 ? (counts.videosWatched / totalVideos) * 40 : 0;
+        const assignmentProgress = totalAssignments > 0 ? (counts.assignmentsCompleted / totalAssignments) * 40 : 0;
+        const integrationProgress = (counts.hasShopify ? 10 : 0) + (counts.hasMeta ? 10 : 0);
+        progress = Math.min(100, Math.round(videoProgress + assignmentProgress + integrationProgress));
+      }
 
       // Generate avatar initials
       const nameParts = student.full_name?.trim().split(' ') || ['?'];
@@ -205,6 +262,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         count: snapshots.length,
+        multiCourseMode: isMultiCourse,
         message: `Leaderboard updated with ${snapshots.length} students`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
