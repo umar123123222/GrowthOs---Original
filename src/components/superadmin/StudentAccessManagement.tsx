@@ -16,6 +16,7 @@ interface Course {
   title: string;
   is_published: boolean;
   is_active: boolean;
+  isPathwayOnly?: boolean; // True if course is only accessible via pathway
 }
 
 interface Pathway {
@@ -31,6 +32,11 @@ interface Enrollment {
   pathway_id: string | null;
   status: string;
   enrolled_at: string | null;
+}
+
+interface PathwayCourse {
+  course_id: string;
+  pathway_id: string;
 }
 
 interface StudentAccessManagementProps {
@@ -54,6 +60,7 @@ export function StudentAccessManagement({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [standaloneCourses, setStandaloneCourses] = useState<Course[]>([]); // Courses not in any pathway
   const [pathways, setPathways] = useState<Pathway[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set());
@@ -68,17 +75,31 @@ export function StudentAccessManagement({
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [coursesRes, pathwaysRes, enrollmentsRes] = await Promise.all([
+      const [coursesRes, pathwaysRes, enrollmentsRes, pathwayCoursesRes] = await Promise.all([
         supabase.from('courses').select('id, title, is_published, is_active').eq('is_active', true).order('title'),
         supabase.from('learning_pathways').select('id, name, is_published, is_active').eq('is_active', true).order('name'),
-        supabase.from('course_enrollments').select('*').eq('student_id', studentId)
+        supabase.from('course_enrollments').select('*').eq('student_id', studentId),
+        supabase.from('pathway_courses').select('course_id, pathway_id')
       ]);
 
       if (coursesRes.error) throw coursesRes.error;
       if (pathwaysRes.error) throw pathwaysRes.error;
       if (enrollmentsRes.error) throw enrollmentsRes.error;
+      if (pathwayCoursesRes.error) throw pathwayCoursesRes.error;
 
-      setCourses(coursesRes.data || []);
+      // Get set of course IDs that are part of any pathway
+      const coursesInPathways = new Set(
+        (pathwayCoursesRes.data || []).map(pc => pc.course_id)
+      );
+
+      // All courses
+      const allCourses = coursesRes.data || [];
+      setCourses(allCourses);
+
+      // Filter to only standalone courses (not part of any pathway)
+      const standalone = allCourses.filter(c => !coursesInPathways.has(c.id));
+      setStandaloneCourses(standalone);
+
       setPathways(pathwaysRes.data || []);
       setEnrollments(enrollmentsRes.data || []);
 
@@ -232,9 +253,9 @@ export function StudentAccessManagement({
   };
 
   const handleBulkAssignCourses = async () => {
-    const unassignedCourses = courses.filter(c => !selectedCourses.has(c.id));
+    const unassignedCourses = standaloneCourses.filter(c => !selectedCourses.has(c.id));
     if (unassignedCourses.length === 0) {
-      toast({ title: 'Info', description: 'All courses are already assigned' });
+      toast({ title: 'Info', description: 'All standalone courses are already assigned' });
       return;
     }
 
@@ -251,7 +272,12 @@ export function StudentAccessManagement({
         if (error) throw error;
       }
 
-      setSelectedCourses(new Set(courses.map(c => c.id)));
+      // Update selected to include all standalone courses
+      setSelectedCourses(prev => {
+        const next = new Set(prev);
+        standaloneCourses.forEach(c => next.add(c.id));
+        return next;
+      });
       const { data } = await supabase.from('course_enrollments').select('*').eq('student_id', studentId);
       setEnrollments(data || []);
       onAccessUpdated?.();
@@ -357,10 +383,10 @@ export function StudentAccessManagement({
   const handleBulkAssignAll = async () => {
     setSaving(true);
     try {
-      const unassignedCourses = courses.filter(c => !selectedCourses.has(c.id));
+      const unassignedCourses = standaloneCourses.filter(c => !selectedCourses.has(c.id));
       const unassignedPathways = pathways.filter(p => !selectedPathways.has(p.id));
 
-      // Insert courses
+      // Insert standalone courses only
       for (const course of unassignedCourses) {
         const { error } = await supabase.from('course_enrollments').insert({
           student_id: studentId,
@@ -385,9 +411,12 @@ export function StudentAccessManagement({
         if (error) throw error;
       }
 
-      // Already inserted above via loops
-
-      setSelectedCourses(new Set(courses.map(c => c.id)));
+      // Update selected to include all standalone courses and pathways
+      setSelectedCourses(prev => {
+        const next = new Set(prev);
+        standaloneCourses.forEach(c => next.add(c.id));
+        return next;
+      });
       setSelectedPathways(new Set(pathways.map(p => p.id)));
       const { data } = await supabase.from('course_enrollments').select('*').eq('student_id', studentId);
       setEnrollments(data || []);
@@ -496,7 +525,7 @@ export function StudentAccessManagement({
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="courses" className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4" />
-                  Courses ({selectedCourses.size}/{courses.length})
+                  Courses ({standaloneCourses.filter(c => selectedCourses.has(c.id)).length}/{standaloneCourses.length})
                 </TabsTrigger>
                 <TabsTrigger value="pathways" className="flex items-center gap-2">
                   <Route className="w-4 h-4" />
@@ -529,10 +558,10 @@ export function StudentAccessManagement({
                 </div>
                 <ScrollArea className="h-[300px] border rounded-lg">
                   <div className="p-3 space-y-2">
-                    {courses.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-8">No courses available</p>
+                    {standaloneCourses.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">No standalone courses available. All courses are part of pathways.</p>
                     ) : (
-                      courses.map(course => {
+                      standaloneCourses.map(course => {
                         const isEnrolled = selectedCourses.has(course.id);
                         return (
                           <div
