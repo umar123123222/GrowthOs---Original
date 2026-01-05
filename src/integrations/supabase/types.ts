@@ -2561,6 +2561,32 @@ export type Database = {
         }
         Returns: Json
       }
+      get_catalog_courses: {
+        Args: { p_user_id?: string }
+        Returns: {
+          course_id: string
+          currency: string
+          description: string
+          enrollment_status: string
+          is_enrolled: boolean
+          module_count: number
+          price: number
+          recording_count: number
+          thumbnail_url: string
+          title: string
+        }[]
+      }
+      get_course_modules: {
+        Args: { p_course_id: string }
+        Returns: {
+          assignment_count: number
+          module_description: string
+          module_id: string
+          module_order: number
+          module_title: string
+          recording_count: number
+        }[]
+      }
       get_current_user_role: { Args: never; Returns: string }
       get_default_course_id: { Args: never; Returns: string }
       get_inactive_students: {
@@ -2572,6 +2598,16 @@ export type Database = {
           last_active_at: string
           phone: string
           user_id: string
+        }[]
+      }
+      get_mentor_courses: {
+        Args: { p_mentor_id: string }
+        Returns: {
+          course_id: string
+          course_title: string
+          is_global: boolean
+          is_primary: boolean
+          student_count: number
         }[]
       }
       get_my_role: { Args: never; Returns: string }
@@ -2668,10 +2704,29 @@ export type Database = {
           recording_id: string
         }[]
       }
+      get_user_unlock_status_v2: {
+        Args: { p_course_id?: string; p_user_id: string }
+        Returns: {
+          assignment_completed: boolean
+          assignment_id: string
+          is_unlocked: boolean
+          module_id: string
+          module_title: string
+          recording_id: string
+          recording_title: string
+          sequence_order: number
+          unlock_reason: string
+          watched: boolean
+        }[]
+      }
       get_users_by_role: { Args: { role_code: string }; Returns: string[] }
       has_any_role: { Args: { role_codes: string[] }; Returns: boolean }
       has_completed_all_modules: {
         Args: { _user_id: string }
+        Returns: boolean
+      }
+      has_course_access: {
+        Args: { p_course_id: string; p_user_id: string }
         Returns: boolean
       }
       has_role: {
