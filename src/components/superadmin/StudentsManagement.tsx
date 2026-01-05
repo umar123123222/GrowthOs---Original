@@ -1266,7 +1266,7 @@ export function StudentsManagement() {
             <Table className="w-full table-auto">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12">
+                  <TableHead className="w-12 pl-4">
                     <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
                   </TableHead>
                   <TableHead>Student ID</TableHead>
@@ -1276,13 +1276,13 @@ export function StudentsManagement() {
                   <TableHead>Fees Structure</TableHead>
                   <TableHead>LMS Status</TableHead>
                   <TableHead>Created By</TableHead>
-                  <TableHead>Actions</TableHead>
+                  <TableHead className="pr-4">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {displayStudents.map(student => {
                 const rowElements = [<TableRow key={`main-${student.id}`}>
-                      <TableCell>
+                      <TableCell className="pl-4">
                         <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
                       </TableCell>
                       <TableCell className="font-medium whitespace-normal break-words">{student.student_id}</TableCell>
@@ -1307,7 +1307,7 @@ export function StudentsManagement() {
                            </div>
                          </TableCell>
                          <TableCell>{student.creator?.full_name || 'System'}</TableCell>
-                         <TableCell>
+                         <TableCell className="pr-4">
                            <div className="flex space-x-1">
                               <Button variant="outline" size="sm" onClick={() => {
                         // Check if user has permission to edit
