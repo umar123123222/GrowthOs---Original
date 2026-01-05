@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Route, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { Plus, Edit, Trash2, Route, Eye, EyeOff, ArrowRight, GitFork } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -49,9 +49,12 @@ export function PathwayManagement() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [coursesDialogOpen, setCoursesDialogOpen] = useState(false);
+  const [choiceDialogOpen, setChoiceDialogOpen] = useState(false);
   const [editingPathway, setEditingPathway] = useState<LearningPathway | null>(null);
   const [selectedPathway, setSelectedPathway] = useState<LearningPathway | null>(null);
   const [pathwayCourses, setPathwayCourses] = useState<PathwayCourse[]>([]);
+  const [choiceCourse1, setChoiceCourse1] = useState<string>('');
+  const [choiceCourse2, setChoiceCourse2] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -239,11 +242,15 @@ export function PathwayManagement() {
     setCoursesDialogOpen(true);
   };
 
-  const handleAddCourseToPathway = async (courseId: string) => {
+  const handleAddCourseToPathway = async (courseId: string, isChoicePoint: boolean = false, choiceGroup: number | null = null) => {
     if (!selectedPathway) return;
 
     try {
-      const nextStep = pathwayCourses.length + 1;
+      // Calculate the next step number based on existing courses
+      const maxStep = pathwayCourses.reduce((max, pc) => Math.max(max, pc.step_number), 0);
+      const nextStep = isChoicePoint && choiceGroup !== null 
+        ? pathwayCourses.find(pc => pc.choice_group === choiceGroup)?.step_number || maxStep + 1
+        : maxStep + 1;
       
       const { error } = await supabase
         .from('pathway_courses')
@@ -251,15 +258,16 @@ export function PathwayManagement() {
           pathway_id: selectedPathway.id,
           course_id: courseId,
           step_number: nextStep,
-          is_mandatory: true,
-          is_choice_point: false
+          is_mandatory: !isChoicePoint,
+          is_choice_point: isChoicePoint,
+          choice_group: choiceGroup
         });
 
       if (error) throw error;
 
       toast({
         title: "Success",
-        description: "Course added to pathway"
+        description: isChoicePoint ? "Choice course added to pathway" : "Course added to pathway"
       });
       
       await fetchPathwayCourses(selectedPathway.id);
@@ -272,6 +280,59 @@ export function PathwayManagement() {
         variant: "destructive"
       });
     }
+  };
+
+  const handleAddChoicePoint = async (courseId1: string, courseId2: string) => {
+    if (!selectedPathway) return;
+
+    try {
+      const maxStep = pathwayCourses.reduce((max, pc) => Math.max(max, pc.step_number), 0);
+      const nextStep = maxStep + 1;
+      const newChoiceGroup = Math.max(...pathwayCourses.map(pc => pc.choice_group || 0), 0) + 1;
+
+      // Insert both courses as choice options
+      const { error } = await supabase
+        .from('pathway_courses')
+        .insert([
+          {
+            pathway_id: selectedPathway.id,
+            course_id: courseId1,
+            step_number: nextStep,
+            is_mandatory: false,
+            is_choice_point: true,
+            choice_group: newChoiceGroup
+          },
+          {
+            pathway_id: selectedPathway.id,
+            course_id: courseId2,
+            step_number: nextStep,
+            is_mandatory: false,
+            is_choice_point: true,
+            choice_group: newChoiceGroup
+          }
+        ]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Choice point added to pathway"
+      });
+      
+      await fetchPathwayCourses(selectedPathway.id);
+      await fetchPathways();
+    } catch (error) {
+      logger.error('Error adding choice point:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add choice point",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAddToExistingChoiceGroup = async (courseId: string, choiceGroup: number) => {
+    await handleAddCourseToPathway(courseId, true, choiceGroup);
   };
 
   const handleRemoveCourseFromPathway = async (pathwayCourseId: string) => {
@@ -359,6 +420,26 @@ export function PathwayManagement() {
   const availableCoursesForPathway = courses.filter(
     c => !pathwayCourses.some(pc => pc.course_id === c.id)
   );
+
+  // Group pathway courses by step number and choice group for rendering
+  const groupedPathwayCourses = pathwayCourses.reduce((acc, pc) => {
+    const key = pc.is_choice_point ? `choice-${pc.choice_group}` : `step-${pc.step_number}`;
+    if (!acc[key]) {
+      acc[key] = {
+        step_number: pc.step_number,
+        is_choice_point: pc.is_choice_point,
+        choice_group: pc.choice_group,
+        courses: []
+      };
+    }
+    acc[key].courses.push(pc);
+    return acc;
+  }, {} as Record<string, { step_number: number; is_choice_point: boolean; choice_group: number | null; courses: PathwayCourse[] }>);
+
+  const sortedGroups = Object.values(groupedPathwayCourses).sort((a, b) => a.step_number - b.step_number);
+  
+  // Get existing choice groups for adding more options
+  const existingChoiceGroups = [...new Set(pathwayCourses.filter(pc => pc.is_choice_point && pc.choice_group).map(pc => pc.choice_group!))];
 
   return (
     <div className="space-y-6">
@@ -560,23 +641,47 @@ export function PathwayManagement() {
             {/* Current courses in pathway */}
             <div>
               <Label className="text-sm font-medium">Courses in Pathway</Label>
-              {pathwayCourses.length === 0 ? (
+              {sortedGroups.length === 0 ? (
                 <p className="text-sm text-muted-foreground mt-2">No courses added yet.</p>
               ) : (
                 <div className="flex flex-wrap items-center gap-2 mt-2">
-                  {pathwayCourses.map((pc, index) => (
-                    <div key={pc.id} className="flex items-center gap-1">
-                      <Badge variant="secondary" className="flex items-center gap-2">
-                        <span className="font-bold">{pc.step_number}.</span>
-                        {pc.course_title}
-                        <button
-                          onClick={() => handleRemoveCourseFromPathway(pc.id)}
-                          className="ml-1 hover:text-red-500"
-                        >
-                          ×
-                        </button>
-                      </Badge>
-                      {index < pathwayCourses.length - 1 && (
+                  {sortedGroups.map((group, index) => (
+                    <div key={`group-${group.step_number}-${group.choice_group}`} className="flex items-center gap-1">
+                      {group.is_choice_point ? (
+                        // Choice point - show courses with OR between them
+                        <div className="flex items-center gap-1 border border-dashed border-primary/50 rounded-lg p-2 bg-primary/5">
+                          <GitFork className="w-4 h-4 text-primary mr-1" />
+                          {group.courses.map((pc, pcIndex) => (
+                            <div key={pc.id} className="flex items-center gap-1">
+                              <Badge variant="outline" className="flex items-center gap-2 border-primary/50">
+                                {pc.course_title}
+                                <button
+                                  onClick={() => handleRemoveCourseFromPathway(pc.id)}
+                                  className="ml-1 hover:text-red-500"
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                              {pcIndex < group.courses.length - 1 && (
+                                <span className="text-xs font-semibold text-primary px-1">OR</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        // Regular sequential course
+                        <Badge variant="secondary" className="flex items-center gap-2">
+                          <span className="font-bold">{group.step_number}.</span>
+                          {group.courses[0]?.course_title}
+                          <button
+                            onClick={() => handleRemoveCourseFromPathway(group.courses[0]?.id)}
+                            className="ml-1 hover:text-red-500"
+                          >
+                            ×
+                          </button>
+                        </Badge>
+                      )}
+                      {index < sortedGroups.length - 1 && (
                         <ArrowRight className="w-4 h-4 text-muted-foreground" />
                       )}
                     </div>
@@ -585,22 +690,81 @@ export function PathwayManagement() {
               )}
             </div>
 
-            {/* Add course */}
+            {/* Add sequential course */}
             {availableCoursesForPathway.length > 0 && (
-              <div>
-                <Label className="text-sm font-medium">Add Course</Label>
-                <Select onValueChange={handleAddCourseToPathway}>
-                  <SelectTrigger className="mt-2">
-                    <SelectValue placeholder="Select a course to add..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableCoursesForPathway.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Add Sequential Course</Label>
+                  <Select onValueChange={(value) => handleAddCourseToPathway(value, false, null)}>
+                    <SelectTrigger className="mt-2">
+                      <SelectValue placeholder="Select a course to add..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCoursesForPathway.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Add choice point */}
+                {availableCoursesForPathway.length >= 2 && (
+                  <div>
+                    <Label className="text-sm font-medium flex items-center gap-2">
+                      <GitFork className="w-4 h-4" />
+                      Add Choice Point (Either/Or)
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1 mb-2">
+                      Add a branching point where students can choose between courses
+                    </p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => {
+                        setChoiceCourse1('');
+                        setChoiceCourse2('');
+                        setChoiceDialogOpen(true);
+                      }}
+                    >
+                      <GitFork className="w-4 h-4 mr-2" />
+                      Create Choice Point
+                    </Button>
+                  </div>
+                )}
+
+                {/* Add to existing choice group */}
+                {existingChoiceGroups.length > 0 && availableCoursesForPathway.length > 0 && (
+                  <div>
+                    <Label className="text-sm font-medium">Add to Existing Choice</Label>
+                    <p className="text-xs text-muted-foreground mt-1 mb-2">
+                      Add another option to an existing choice point
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      {existingChoiceGroups.map((group) => {
+                        const groupCourses = pathwayCourses.filter(pc => pc.choice_group === group);
+                        return (
+                          <Select 
+                            key={group} 
+                            onValueChange={(courseId) => handleAddToExistingChoiceGroup(courseId, group)}
+                          >
+                            <SelectTrigger className="w-auto">
+                              <SelectValue placeholder={`Add to: ${groupCourses.map(c => c.course_title).join(' / ')}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableCoursesForPathway.map((course) => (
+                                <SelectItem key={course.id} value={course.id}>
+                                  {course.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -608,6 +772,75 @@ export function PathwayManagement() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setCoursesDialogOpen(false)}>
               Done
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Choice Point Creation Dialog */}
+      <Dialog open={choiceDialogOpen} onOpenChange={setChoiceDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Choice Point</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select two courses that students can choose between:
+            </p>
+            <div className="space-y-3">
+              <div>
+                <Label>Course Option 1</Label>
+                <Select value={choiceCourse1} onValueChange={setChoiceCourse1}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select first course..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCoursesForPathway
+                      .filter(c => c.id !== choiceCourse2)
+                      .map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-center">
+                <span className="text-sm font-semibold text-primary bg-primary/10 px-3 py-1 rounded">OR</span>
+              </div>
+              <div>
+                <Label>Course Option 2</Label>
+                <Select value={choiceCourse2} onValueChange={setChoiceCourse2}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select second course..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableCoursesForPathway
+                      .filter(c => c.id !== choiceCourse1)
+                      .map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChoiceDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (choiceCourse1 && choiceCourse2) {
+                  handleAddChoicePoint(choiceCourse1, choiceCourse2);
+                  setChoiceDialogOpen(false);
+                }
+              }}
+              disabled={!choiceCourse1 || !choiceCourse2}
+            >
+              Create Choice Point
             </Button>
           </DialogFooter>
         </DialogContent>
