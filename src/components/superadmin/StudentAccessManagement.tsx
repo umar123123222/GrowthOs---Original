@@ -16,7 +16,6 @@ interface Course {
   title: string;
   is_published: boolean;
   is_active: boolean;
-  isPathwayOnly?: boolean; // True if course is only accessible via pathway
 }
 
 interface Pathway {
@@ -60,11 +59,30 @@ export function StudentAccessManagement({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [standaloneCourses, setStandaloneCourses] = useState<Course[]>([]); // Courses not in any pathway
   const [pathways, setPathways] = useState<Pathway[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<Set<string>>(new Set());
   const [selectedPathways, setSelectedPathways] = useState<Set<string>>(new Set());
+  const [pathwayCourses, setPathwayCourses] = useState<PathwayCourse[]>([]);
+  const [pathwayNames, setPathwayNames] = useState<Map<string, string>>(new Map());
+
+  // Get courses that are included in the student's assigned pathways
+  const getCoursesInAssignedPathways = () => {
+    const assignedPathwayIds = Array.from(selectedPathways);
+    const coursesViaPathway = new Map<string, string[]>(); // courseId -> [pathwayNames]
+    
+    pathwayCourses.forEach(pc => {
+      if (assignedPathwayIds.includes(pc.pathway_id)) {
+        const pathwayName = pathwayNames.get(pc.pathway_id) || 'Unknown Pathway';
+        if (!coursesViaPathway.has(pc.course_id)) {
+          coursesViaPathway.set(pc.course_id, []);
+        }
+        coursesViaPathway.get(pc.course_id)!.push(pathwayName);
+      }
+    });
+    
+    return coursesViaPathway;
+  };
 
   useEffect(() => {
     if (open && studentId) {
@@ -87,18 +105,17 @@ export function StudentAccessManagement({
       if (enrollmentsRes.error) throw enrollmentsRes.error;
       if (pathwayCoursesRes.error) throw pathwayCoursesRes.error;
 
-      // Get set of course IDs that are part of any pathway
-      const coursesInPathways = new Set(
-        (pathwayCoursesRes.data || []).map(pc => pc.course_id)
-      );
-
       // All courses
       const allCourses = coursesRes.data || [];
       setCourses(allCourses);
 
-      // Filter to only standalone courses (not part of any pathway)
-      const standalone = allCourses.filter(c => !coursesInPathways.has(c.id));
-      setStandaloneCourses(standalone);
+      // Store pathway courses for later reference
+      setPathwayCourses(pathwayCoursesRes.data || []);
+
+      // Store pathway names for display
+      const pathwayNamesMap = new Map<string, string>();
+      (pathwaysRes.data || []).forEach(p => pathwayNamesMap.set(p.id, p.name));
+      setPathwayNames(pathwayNamesMap);
 
       setPathways(pathwaysRes.data || []);
       setEnrollments(enrollmentsRes.data || []);
@@ -253,9 +270,11 @@ export function StudentAccessManagement({
   };
 
   const handleBulkAssignCourses = async () => {
-    const unassignedCourses = standaloneCourses.filter(c => !selectedCourses.has(c.id));
+    const coursesViaPathway = getCoursesInAssignedPathways();
+    // Only assign courses not already covered by an assigned pathway
+    const unassignedCourses = courses.filter(c => !selectedCourses.has(c.id) && !coursesViaPathway.has(c.id));
     if (unassignedCourses.length === 0) {
-      toast({ title: 'Info', description: 'All standalone courses are already assigned' });
+      toast({ title: 'Info', description: 'All assignable courses are already assigned' });
       return;
     }
 
@@ -272,10 +291,10 @@ export function StudentAccessManagement({
         if (error) throw error;
       }
 
-      // Update selected to include all standalone courses
+      // Update selected to include newly assigned courses
       setSelectedCourses(prev => {
         const next = new Set(prev);
-        standaloneCourses.forEach(c => next.add(c.id));
+        unassignedCourses.forEach(c => next.add(c.id));
         return next;
       });
       const { data } = await supabase.from('course_enrollments').select('*').eq('student_id', studentId);
@@ -383,10 +402,12 @@ export function StudentAccessManagement({
   const handleBulkAssignAll = async () => {
     setSaving(true);
     try {
-      const unassignedCourses = standaloneCourses.filter(c => !selectedCourses.has(c.id));
+      const coursesViaPathway = getCoursesInAssignedPathways();
+      // Only assign courses not covered by assigned pathways
+      const unassignedCourses = courses.filter(c => !selectedCourses.has(c.id) && !coursesViaPathway.has(c.id));
       const unassignedPathways = pathways.filter(p => !selectedPathways.has(p.id));
 
-      // Insert standalone courses only
+      // Insert assignable courses only
       for (const course of unassignedCourses) {
         const { error } = await supabase.from('course_enrollments').insert({
           student_id: studentId,
@@ -411,10 +432,10 @@ export function StudentAccessManagement({
         if (error) throw error;
       }
 
-      // Update selected to include all standalone courses and pathways
+      // Update selected courses and pathways
       setSelectedCourses(prev => {
         const next = new Set(prev);
-        standaloneCourses.forEach(c => next.add(c.id));
+        unassignedCourses.forEach(c => next.add(c.id));
         return next;
       });
       setSelectedPathways(new Set(pathways.map(p => p.id)));
@@ -525,7 +546,7 @@ export function StudentAccessManagement({
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="courses" className="flex items-center gap-2">
                   <BookOpen className="w-4 h-4" />
-                  Courses ({standaloneCourses.filter(c => selectedCourses.has(c.id)).length}/{standaloneCourses.length})
+                  Courses ({courses.filter(c => selectedCourses.has(c.id)).length}/{courses.length})
                 </TabsTrigger>
                 <TabsTrigger value="pathways" className="flex items-center gap-2">
                   <Route className="w-4 h-4" />
@@ -558,58 +579,77 @@ export function StudentAccessManagement({
                 </div>
                 <ScrollArea className="h-[300px] border rounded-lg">
                   <div className="p-3 space-y-2">
-                    {standaloneCourses.length === 0 ? (
-                      <p className="text-center text-muted-foreground py-8">No standalone courses available. All courses are part of pathways.</p>
+                    {courses.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">No courses available</p>
                     ) : (
-                      standaloneCourses.map(course => {
-                        const isEnrolled = selectedCourses.has(course.id);
-                        return (
-                          <div
-                            key={course.id}
-                            className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                              isEnrolled ? 'bg-green-50 border-green-200' : 'bg-muted/30 border-border'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={isEnrolled}
-                                onCheckedChange={() => handleToggleCourse(course.id)}
-                                disabled={saving}
-                              />
-                              <div>
-                                <p className="font-medium">{course.title}</p>
-                                <div className="flex gap-2 mt-1">
-                                  {course.is_published ? (
-                                    <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-200">Published</Badge>
-                                  ) : (
-                                    <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700 border-yellow-200">Draft</Badge>
-                                  )}
+                      (() => {
+                        const coursesViaPathway = getCoursesInAssignedPathways();
+                        return courses.map(course => {
+                          const isEnrolled = selectedCourses.has(course.id);
+                          const pathwayNames = coursesViaPathway.get(course.id);
+                          const isViaPathway = !!pathwayNames && pathwayNames.length > 0;
+                          
+                          return (
+                            <div
+                              key={course.id}
+                              className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${
+                                isViaPathway 
+                                  ? 'bg-purple-50 border-purple-200 opacity-80' 
+                                  : isEnrolled 
+                                    ? 'bg-green-50 border-green-200' 
+                                    : 'bg-muted/30 border-border'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3">
+                                <Checkbox
+                                  checked={isEnrolled || isViaPathway}
+                                  onCheckedChange={() => !isViaPathway && handleToggleCourse(course.id)}
+                                  disabled={saving || isViaPathway}
+                                />
+                                <div>
+                                  <p className="font-medium">{course.title}</p>
+                                  <div className="flex gap-2 mt-1 flex-wrap">
+                                    {course.is_published ? (
+                                      <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-200">Published</Badge>
+                                    ) : (
+                                      <Badge variant="outline" className="text-xs bg-yellow-100 text-yellow-700 border-yellow-200">Draft</Badge>
+                                    )}
+                                    {isViaPathway && (
+                                      <Badge variant="outline" className="text-xs bg-purple-100 text-purple-700 border-purple-200">
+                                        Via: {pathwayNames.join(', ')}
+                                      </Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                            <Button
-                              variant={isEnrolled ? "destructive" : "default"}
-                              size="sm"
-                              onClick={() => handleToggleCourse(course.id)}
-                              disabled={saving}
-                            >
-                              {saving ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : isEnrolled ? (
-                                <>
-                                  <XCircle className="w-4 h-4 mr-1" />
-                                  Revoke
-                                </>
+                              {isViaPathway ? (
+                                <Badge variant="secondary" className="text-xs">Included in Pathway</Badge>
                               ) : (
-                                <>
-                                  <CheckCircle className="w-4 h-4 mr-1" />
-                                  Grant
-                                </>
+                                <Button
+                                  variant={isEnrolled ? "destructive" : "default"}
+                                  size="sm"
+                                  onClick={() => handleToggleCourse(course.id)}
+                                  disabled={saving}
+                                >
+                                  {saving ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : isEnrolled ? (
+                                    <>
+                                      <XCircle className="w-4 h-4 mr-1" />
+                                      Revoke
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="w-4 h-4 mr-1" />
+                                      Grant
+                                    </>
+                                  )}
+                                </Button>
                               )}
-                            </Button>
-                          </div>
-                        );
-                      })
+                            </div>
+                          );
+                        });
+                      })()
                     )}
                   </div>
                 </ScrollArea>
