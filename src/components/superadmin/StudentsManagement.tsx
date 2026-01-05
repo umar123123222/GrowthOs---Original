@@ -1381,27 +1381,47 @@ export function StudentsManagement() {
                               </div>
 
                               {/* Payment Summary */}
-                              {(() => {
-                                const paymentSummary = getPaymentSummary(student);
-                                return (
-                                  <>
-                                    <div>
-                                      <Label className="text-sm font-medium text-muted-foreground">Total Fee Amount</Label>
-                                      <p className="text-sm text-foreground font-semibold">{paymentSummary.totalAmount}</p>
-                                    </div>
-                                    <div>
-                                      <Label className="text-sm font-medium text-muted-foreground">Amount Paid</Label>
-                                      <p className="text-sm text-green-600 font-semibold">{paymentSummary.paidAmount}</p>
-                                    </div>
-                                    <div>
-                                      <Label className="text-sm font-medium text-muted-foreground">Outstanding Balance</Label>
-                                      <p className={`text-sm font-semibold ${paymentSummary.outstandingRaw > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                        {paymentSummary.outstanding}
-                                      </p>
-                                    </div>
-                                  </>
-                                );
-                              })()}
+                              <div>
+                                <Label className="text-sm font-medium text-muted-foreground">Total Fee Amount</Label>
+                                <p className="text-sm text-foreground font-semibold">
+                                  {(() => {
+                                    const key = student.student_record_id || '';
+                                    const payments = installmentPayments.get(key) || [];
+                                    const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                                    return payments.length > 0 ? `$${totalAmount.toLocaleString()}` : 'N/A';
+                                  })()}
+                                </p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-muted-foreground">Amount Paid</Label>
+                                <p className="text-sm text-green-600 font-semibold">
+                                  {(() => {
+                                    const key = student.student_record_id || '';
+                                    const payments = installmentPayments.get(key) || [];
+                                    const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
+                                    return `$${paidAmount.toLocaleString()}`;
+                                  })()}
+                                </p>
+                              </div>
+                              <div>
+                                <Label className="text-sm font-medium text-muted-foreground">Outstanding Balance</Label>
+                                <p className={`text-sm font-semibold ${(() => {
+                                  const key = student.student_record_id || '';
+                                  const payments = installmentPayments.get(key) || [];
+                                  const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                                  const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
+                                  return (totalAmount - paidAmount) > 0 ? 'text-red-600' : 'text-green-600';
+                                })()}`}>
+                                  {(() => {
+                                    const key = student.student_record_id || '';
+                                    const payments = installmentPayments.get(key) || [];
+                                    const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+                                    const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
+                                    const outstanding = totalAmount - paidAmount;
+                                    return payments.length > 0 ? `$${outstanding.toLocaleString()}` : 'N/A';
+                                  })()}
+                                </p>
+                              </div>
 
                               {/* Row 2: Invoice Due Date, Invoice Status, LMS User ID */}
                               <div>
