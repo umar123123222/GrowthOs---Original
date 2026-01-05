@@ -6,9 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CheckCircle, XCircle, Eye, MessageSquare, Clock, FileText } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CheckCircle, XCircle, Eye, MessageSquare, Clock, FileText, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useCourses } from '@/hooks/useCourses';
+
 interface Submission {
   id: string;
   assignment_id: string;
@@ -22,6 +25,7 @@ interface Submission {
     name: string;
     description?: string;
     mentor_id?: string;
+    course_id?: string;
   };
   student: {
     full_name: string;
@@ -29,26 +33,28 @@ interface Submission {
     student_id?: string;
   } | null;
 }
+
 interface SubmissionsManagementProps {
   userRole?: 'mentor' | 'admin' | 'superadmin';
 }
+
 export function SubmissionsManagement({
   userRole
 }: SubmissionsManagementProps) {
-  const {
-    user
-  } = useAuth();
-  const {
-    toast
-  } = useToast();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const { enrolledCourses, isMultiCourseEnabled, loading: coursesLoading } = useCourses();
+  
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterCourse, setFilterCourse] = useState<string>('all');
+
   useEffect(() => {
     fetchSubmissions();
-  }, [user, filterStatus]);
+  }, [user, filterStatus, filterCourse]);
   const fetchSubmissions = async () => {
     if (!user) return;
     try {
@@ -269,12 +275,30 @@ export function SubmissionsManagement({
   }
   return <div className="p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-bold header-accent">Submissions Management</h1>
           <p className="text-muted-foreground mt-1">Manage assignment submissions and their assignments</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
+          {/* Course filter for multi-course mode */}
+          {isMultiCourseEnabled && enrolledCourses.length > 1 && (
+            <Select value={filterCourse} onValueChange={setFilterCourse}>
+              <SelectTrigger className="w-[180px]">
+                <BookOpen className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Courses</SelectItem>
+                {enrolledCourses.map((course) => (
+                  <SelectItem key={course.id} value={course.id}>
+                    {course.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          
           <Button variant={filterStatus === 'all' ? 'default' : 'outline'} onClick={() => setFilterStatus('all')} className={filterStatus === 'all' ? 'bg-primary text-primary-foreground shadow-medium' : ''}>
             All
           </Button>
