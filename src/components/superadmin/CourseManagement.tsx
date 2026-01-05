@@ -8,10 +8,23 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Plus, Edit, Trash2, BookOpen, Eye, EyeOff, GripVertical } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Edit, Trash2, BookOpen, Eye, EyeOff, UserCheck, Users } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+
+interface Mentor {
+  id: string;
+  full_name: string | null;
+  email: string;
+}
+
+interface MentorAssignment {
+  mentor_id: string;
+  is_primary: boolean;
+  mentor?: Mentor;
+}
 
 interface Course {
   id: string;
@@ -26,12 +39,17 @@ interface Course {
   created_at: string | null;
   module_count?: number;
   enrollment_count?: number;
+  mentors?: MentorAssignment[];
 }
 
 export function CourseManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
+  const [mentors, setMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [mentorDialogOpen, setMentorDialogOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedMentorId, setSelectedMentorId] = useState<string>('');
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [formData, setFormData] = useState({
     title: '',
@@ -47,7 +65,22 @@ export function CourseManagement() {
 
   useEffect(() => {
     fetchCourses();
+    fetchMentors();
   }, []);
+
+  const fetchMentors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, full_name, email')
+        .eq('role', 'mentor');
+
+      if (error) throw error;
+      setMentors(data || []);
+    } catch (error) {
+      logger.error('Error fetching mentors:', error);
+    }
+  };
 
   const fetchCourses = async () => {
     try {
@@ -71,8 +104,14 @@ export function CourseManagement() {
         .from('course_enrollments')
         .select('course_id');
 
+      // Get mentor assignments per course
+      const { data: mentorAssignmentsData } = await supabase
+        .from('mentor_course_assignments')
+        .select('course_id, mentor_id, is_primary');
+
       const moduleCountMap = new Map<string, number>();
       const enrollmentCountMap = new Map<string, number>();
+      const mentorAssignmentsMap = new Map<string, MentorAssignment[]>();
 
       modulesData?.forEach(m => {
         if (m.course_id) {
@@ -86,10 +125,19 @@ export function CourseManagement() {
         }
       });
 
+      mentorAssignmentsData?.forEach(ma => {
+        if (ma.course_id) {
+          const existing = mentorAssignmentsMap.get(ma.course_id) || [];
+          existing.push({ mentor_id: ma.mentor_id, is_primary: ma.is_primary || false });
+          mentorAssignmentsMap.set(ma.course_id, existing);
+        }
+      });
+
       const coursesWithCounts = (coursesData || []).map(course => ({
         ...course,
         module_count: moduleCountMap.get(course.id) || 0,
-        enrollment_count: enrollmentCountMap.get(course.id) || 0
+        enrollment_count: enrollmentCountMap.get(course.id) || 0,
+        mentors: mentorAssignmentsMap.get(course.id) || []
       }));
 
       setCourses(coursesWithCounts);
@@ -102,6 +150,77 @@ export function CourseManagement() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAssignMentor = async () => {
+    if (!selectedCourse || !selectedMentorId) return;
+
+    try {
+      // Check if mentor is already assigned to this course
+      const existingAssignment = selectedCourse.mentors?.find(m => m.mentor_id === selectedMentorId);
+      if (existingAssignment) {
+        toast({
+          title: "Already Assigned",
+          description: "This mentor is already assigned to this course",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('mentor_course_assignments')
+        .insert({
+          course_id: selectedCourse.id,
+          mentor_id: selectedMentorId,
+          is_primary: (selectedCourse.mentors?.length || 0) === 0 // First mentor is primary
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Mentor assigned to course successfully"
+      });
+
+      setMentorDialogOpen(false);
+      setSelectedMentorId('');
+      await fetchCourses();
+    } catch (error) {
+      logger.error('Error assigning mentor:', error);
+      toast({
+        title: "Error",
+        description: "Failed to assign mentor",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRemoveMentor = async (courseId: string, mentorId: string) => {
+    if (!confirm('Remove this mentor from the course?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('mentor_course_assignments')
+        .delete()
+        .eq('course_id', courseId)
+        .eq('mentor_id', mentorId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Mentor removed from course"
+      });
+
+      await fetchCourses();
+    } catch (error) {
+      logger.error('Error removing mentor:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove mentor",
+        variant: "destructive"
+      });
     }
   };
 
@@ -399,6 +518,7 @@ export function CourseManagement() {
                 <TableHead>Title</TableHead>
                 <TableHead>Modules</TableHead>
                 <TableHead>Students</TableHead>
+                <TableHead>Mentor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Order</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -407,7 +527,7 @@ export function CourseManagement() {
             <TableBody>
               {courses.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>No courses yet. Create your first course to get started.</p>
                   </TableCell>
@@ -443,6 +563,41 @@ export function CourseManagement() {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{course.enrollment_count || 0} enrolled</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap items-center gap-1">
+                        {course.mentors && course.mentors.length > 0 ? (
+                          course.mentors.map((assignment) => {
+                            const mentor = mentors.find(m => m.id === assignment.mentor_id);
+                            return (
+                              <Badge 
+                                key={assignment.mentor_id} 
+                                variant={assignment.is_primary ? "default" : "secondary"}
+                                className="cursor-pointer hover:bg-destructive hover:text-destructive-foreground"
+                                onClick={() => handleRemoveMentor(course.id, assignment.mentor_id)}
+                                title="Click to remove"
+                              >
+                                <UserCheck className="w-3 h-3 mr-1" />
+                                {mentor?.full_name || mentor?.email || 'Unknown'}
+                              </Badge>
+                            );
+                          })
+                        ) : (
+                          <span className="text-muted-foreground text-sm">No mentor</span>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => {
+                            setSelectedCourse(course);
+                            setMentorDialogOpen(true);
+                          }}
+                          title="Assign mentor"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -505,6 +660,59 @@ export function CourseManagement() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Assign Mentor Dialog */}
+      <Dialog open={mentorDialogOpen} onOpenChange={setMentorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Assign Mentor to {selectedCourse?.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Select Mentor</Label>
+              <Select value={selectedMentorId} onValueChange={setSelectedMentorId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a mentor..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {mentors.map(mentor => (
+                    <SelectItem key={mentor.id} value={mentor.id}>
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4" />
+                        {mentor.full_name || mentor.email}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {selectedCourse?.mentors && selectedCourse.mentors.length > 0 && (
+              <div className="space-y-2">
+                <Label>Currently Assigned</Label>
+                <div className="flex flex-wrap gap-2">
+                  {selectedCourse.mentors.map(assignment => {
+                    const mentor = mentors.find(m => m.id === assignment.mentor_id);
+                    return (
+                      <Badge key={assignment.mentor_id} variant={assignment.is_primary ? "default" : "secondary"}>
+                        {mentor?.full_name || mentor?.email || 'Unknown'}
+                        {assignment.is_primary && ' (Primary)'}
+                      </Badge>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMentorDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAssignMentor} disabled={!selectedMentorId}>
+              Assign Mentor
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
