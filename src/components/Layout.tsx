@@ -6,12 +6,10 @@ import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route } from "lucide-react";
-
 const MetaIcon = Facebook;
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-
 import { ActivityLogsDialog } from "./ActivityLogsDialog";
 import { MotivationalNotifications } from "./MotivationalNotifications";
 import { AppLogo } from "./AppLogo";
@@ -211,31 +209,36 @@ const Layout = memo(({
           data,
           error
         } = await supabase.from('integrations').select('source, access_token').eq('user_id', user.id);
-        
         if (!error && data && data.length > 0) {
           if (!isMounted) return;
           const hasShopify = !!data.some((r: any) => r.source === 'shopify' && r.access_token);
           const hasMeta = !!data.some((r: any) => r.source === 'meta_ads' && r.access_token);
-          safeLogger.debug('Connection check - integrations data', { data, hasShopify, hasMeta });
+          safeLogger.debug('Connection check - integrations data', {
+            data,
+            hasShopify,
+            hasMeta
+          });
           setConnectionStatus({
             shopify: hasShopify,
             meta: hasMeta
           });
           return;
         }
-        
+
         // Fallback: Check users table for credential fields
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('shopify_credentials, meta_ads_credentials')
-          .eq('id', user.id)
-          .single();
-          
+        const {
+          data: userData,
+          error: userError
+        } = await supabase.from('users').select('shopify_credentials, meta_ads_credentials').eq('id', user.id).single();
         if (!userError && userData) {
           if (!isMounted) return;
-          const hasShopify = !!(userData.shopify_credentials);
-          const hasMeta = !!(userData.meta_ads_credentials);
-          safeLogger.debug('Connection check - user credentials', { userData, hasShopify, hasMeta });
+          const hasShopify = !!userData.shopify_credentials;
+          const hasMeta = !!userData.meta_ads_credentials;
+          safeLogger.debug('Connection check - user credentials', {
+            userData,
+            hasShopify,
+            hasMeta
+          });
           setConnectionStatus({
             shopify: hasShopify,
             meta: hasMeta
@@ -598,17 +601,10 @@ const Layout = memo(({
               <NotificationDropdown />
               
               {/* Success Partner Button - Only for students */}
-              {user?.role === 'student' && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-gray-700 hover:text-blue-600 hover:border-blue-200"
-                  onClick={() => setShowSuccessPartner(true)}
-                >
+              {user?.role === 'student' && <Button variant="outline" size="sm" className="text-gray-700 hover:text-blue-600 hover:border-blue-200" onClick={() => setShowSuccessPartner(true)}>
                   <MessageCircle className="w-4 h-4 mr-2" />
                   Success Partner
-                </Button>
-              )}
+                </Button>}
               
               {/* Activity Logs Button for authorized users - Only admins and superadmins */}
               {(isUserSuperadmin || isUserAdmin) && <ActivityLogsDialog>
@@ -677,7 +673,7 @@ const Layout = memo(({
 
         {/* Main Content */}
         <main className={`flex-1 w-full max-w-full overflow-x-hidden pt-24 animate-fade-in ${sidebarCollapsed ? 'pl-16' : 'pl-80'} transition-all duration-300`}>
-          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-[10px] py-0">
+          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 py-0 lg:px-0">
             <Suspense fallback={<RouteContentLoader path={location.pathname} />}>
               <Outlet />
             </Suspense>
@@ -692,24 +688,14 @@ const Layout = memo(({
       {user?.role === 'student' && <MotivationalNotifications />}
       
       {/* Success Partner Dialog */}
-      {showSuccessPartner && user?.id && user?.email && (
-        <SuccessPartner 
-          onClose={() => setShowSuccessPartner(false)}
-          user={{
-            id: user.id,
-            full_name: user.full_name || user.email.split('@')[0] || 'Student',
-            email: user.email
-          }}
-        />
-      )}
+      {showSuccessPartner && user?.id && user?.email && <SuccessPartner onClose={() => setShowSuccessPartner(false)} user={{
+      id: user.id,
+      full_name: user.full_name || user.email.split('@')[0] || 'Student',
+      email: user.email
+    }} />}
       
       {/* Watermark */}
-      <a 
-        href="https://core47.ai" 
-        target="_blank" 
-        rel="noopener noreferrer"
-        className="fixed bottom-4 right-4 text-xs text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors z-50"
-      >
+      <a href="https://core47.ai" target="_blank" rel="noopener noreferrer" className="fixed bottom-4 right-4 text-xs text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors z-50">
         Developed by Core47.ai
       </a>
     </div>;
