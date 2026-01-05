@@ -7,7 +7,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { BookOpen, Route, Plus, Trash2, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { BookOpen, Route, Plus, Trash2, CheckCircle, XCircle, Loader2, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -16,6 +16,7 @@ interface Course {
   title: string;
   is_published: boolean;
   is_active: boolean;
+  price?: number | null;
 }
 
 interface Pathway {
@@ -23,6 +24,7 @@ interface Pathway {
   name: string;
   is_published: boolean;
   is_active: boolean;
+  price?: number | null;
 }
 
 interface Enrollment {
@@ -94,8 +96,8 @@ export function StudentAccessManagement({
     setLoading(true);
     try {
       const [coursesRes, pathwaysRes, enrollmentsRes, pathwayCoursesRes] = await Promise.all([
-        supabase.from('courses').select('id, title, is_published, is_active').eq('is_active', true).order('title'),
-        supabase.from('learning_pathways').select('id, name, is_published, is_active').eq('is_active', true).order('name'),
+        supabase.from('courses').select('id, title, is_published, is_active, price').eq('is_active', true).order('title'),
+        supabase.from('learning_pathways').select('id, name, is_published, is_active, price').eq('is_active', true).order('name'),
         supabase.from('course_enrollments').select('*').eq('student_id', studentId),
         supabase.from('pathway_courses').select('course_id, pathway_id')
       ]);
@@ -146,6 +148,85 @@ export function StudentAccessManagement({
     }
   };
 
+  // Function to create and send invoice when access is granted
+  const createAndSendInvoice = async (
+    itemType: 'course' | 'pathway',
+    itemName: string,
+    itemPrice: number | null | undefined,
+    courseNames: string[],
+    pathwayNames: string[]
+  ) => {
+    try {
+      // Calculate the due date (30 days from now)
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30);
+
+      // Get the next installment number for this student
+      const { data: existingInvoices } = await supabase
+        .from('invoices')
+        .select('installment_number')
+        .eq('student_id', studentId)
+        .order('installment_number', { ascending: false })
+        .limit(1);
+
+      const nextInstallmentNumber = (existingInvoices?.[0]?.installment_number || 0) + 1;
+      const amount = itemPrice || 0;
+
+      // Create the invoice with enrollment details
+      const { data: invoice, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert({
+          student_id: studentId,
+          installment_number: nextInstallmentNumber,
+          amount: amount,
+          due_date: dueDate.toISOString(),
+          status: 'pending',
+          enrollment_details: {
+            courses: courseNames,
+            pathways: pathwayNames
+          },
+          notes: `Invoice for ${itemType}: ${itemName}`
+        })
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      // Send notification to student
+      await supabase.rpc('create_notification', {
+        p_user_id: studentUserId,
+        p_type: 'invoice_issued',
+        p_title: 'New Invoice Generated',
+        p_message: `An invoice has been generated for your ${itemType} enrollment: ${itemName}. Amount: $${amount}. Due date: ${dueDate.toLocaleDateString()}.`,
+        p_metadata: {
+          invoice_id: invoice?.id,
+          amount: amount,
+          due_date: dueDate.toISOString(),
+          item_type: itemType,
+          item_name: itemName,
+          courses: courseNames,
+          pathways: pathwayNames
+        }
+      });
+
+      toast({
+        title: 'Invoice Sent',
+        description: `Invoice generated and sent for ${itemName}`,
+      });
+
+      return invoice;
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      // Don't throw - invoice creation is secondary to access granting
+      toast({
+        title: 'Warning',
+        description: 'Access granted but invoice could not be created',
+        variant: 'destructive'
+      });
+      return null;
+    }
+  };
+
   const getEnrollmentForCourse = (courseId: string) => {
     return enrollments.find(e => e.course_id === courseId);
   };
@@ -157,6 +238,7 @@ export function StudentAccessManagement({
   const handleToggleCourse = async (courseId: string) => {
     const isCurrentlyEnrolled = selectedCourses.has(courseId);
     const enrollment = getEnrollmentForCourse(courseId);
+    const course = courses.find(c => c.id === courseId);
 
     setSaving(true);
     try {
@@ -196,6 +278,14 @@ export function StudentAccessManagement({
         if (error) throw error;
 
         setSelectedCourses(prev => new Set(prev).add(courseId));
+        
+        // Send invoice for new course assignment
+        if (course) {
+          const currentCourseNames = [course.title];
+          const currentPathwayNames = Array.from(selectedPathways).map(pId => pathwayNames.get(pId) || '').filter(Boolean);
+          await createAndSendInvoice('course', course.title, course.price, currentCourseNames, currentPathwayNames);
+        }
+        
         toast({ title: 'Access Granted', description: 'Course access has been added' });
       }
 
@@ -214,6 +304,7 @@ export function StudentAccessManagement({
   const handleTogglePathway = async (pathwayId: string) => {
     const isCurrentlyEnrolled = selectedPathways.has(pathwayId);
     const enrollment = getEnrollmentForPathway(pathwayId);
+    const pathway = pathways.find(p => p.id === pathwayId);
 
     setSaving(true);
     try {
@@ -254,6 +345,14 @@ export function StudentAccessManagement({
         if (error) throw error;
 
         setSelectedPathways(prev => new Set(prev).add(pathwayId));
+        
+        // Send invoice for new pathway assignment
+        if (pathway) {
+          const currentCourseNames = Array.from(selectedCourses).map(cId => courses.find(c => c.id === cId)?.title || '').filter(Boolean);
+          const currentPathwayNames = [pathway.name];
+          await createAndSendInvoice('pathway', pathway.name, pathway.price, currentCourseNames, currentPathwayNames);
+        }
+        
         toast({ title: 'Access Granted', description: 'Pathway access has been added' });
       }
 

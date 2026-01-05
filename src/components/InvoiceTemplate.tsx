@@ -23,6 +23,10 @@ interface InvoiceData {
   currency?: string;
   payment_methods?: PaymentMethod[];
   terms?: string;
+  enrollment_details?: {
+    courses?: string[];
+    pathways?: string[];
+  };
 }
 
 interface PaymentMethod {
@@ -105,6 +109,44 @@ export const InvoiceTemplate: React.FC<InvoiceTemplateProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Enrolled Courses & Pathways */}
+      {invoiceData.enrollment_details && (
+        (invoiceData.enrollment_details.courses?.length || 0) > 0 || 
+        (invoiceData.enrollment_details.pathways?.length || 0) > 0
+      ) && (
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <h3 className="text-sm font-semibold text-gray-700 mb-3">Enrolled Program Details:</h3>
+          <div className="grid grid-cols-2 gap-4">
+            {invoiceData.enrollment_details.courses && invoiceData.enrollment_details.courses.length > 0 && (
+              <div>
+                <span className="text-xs font-medium text-gray-600 uppercase">Courses:</span>
+                <ul className="mt-1 space-y-1">
+                  {invoiceData.enrollment_details.courses.map((course, idx) => (
+                    <li key={idx} className="text-sm text-gray-800 flex items-center">
+                      <span className="w-1.5 h-1.5 bg-blue-500 rounded-full mr-2"></span>
+                      {course}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {invoiceData.enrollment_details.pathways && invoiceData.enrollment_details.pathways.length > 0 && (
+              <div>
+                <span className="text-xs font-medium text-gray-600 uppercase">Learning Pathways:</span>
+                <ul className="mt-1 space-y-1">
+                  {invoiceData.enrollment_details.pathways.map((pathway, idx) => (
+                    <li key={idx} className="text-sm text-gray-800 flex items-center">
+                      <span className="w-1.5 h-1.5 bg-purple-500 rounded-full mr-2"></span>
+                      {pathway}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Items Table */}
       <div className="mb-8">

@@ -867,6 +867,35 @@ export function StudentsManagement() {
     if (openWithDue.length === 0) return false;
     return openWithDue.some(p => new Date(p.due_date as string).getTime() < Date.now());
   };
+
+  // Compute payment summary for a student
+  const getPaymentSummary = (student: Student) => {
+    const key = student.student_record_id || '';
+    const payments = installmentPayments.get(key) || [];
+    
+    // Calculate total amount from all invoices
+    const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    // Calculate paid amount
+    const paidAmount = payments
+      .filter(p => p.status === 'paid')
+      .reduce((sum, p) => sum + (p.amount || 0), 0);
+    
+    // Calculate outstanding
+    const outstanding = totalAmount - paidAmount;
+    
+    // Format with currency symbol (using simple $ for now, can be enhanced with actual currency)
+    const formatCurrency = (amount: number) => {
+      return amount > 0 ? `$${amount.toLocaleString()}` : '$0';
+    };
+    
+    return {
+      totalAmount: payments.length > 0 ? formatCurrency(totalAmount) : 'N/A',
+      paidAmount: formatCurrency(paidAmount),
+      outstanding: payments.length > 0 ? formatCurrency(outstanding) : 'N/A',
+      outstandingRaw: outstanding
+    };
+  };
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
       const student = students.find(s => s.id === studentId);
@@ -1350,6 +1379,29 @@ export function StudentsManagement() {
                                 <Label className="text-sm font-medium text-muted-foreground">Last Invoice Sent Date</Label>
                                 <p className="text-sm text-foreground">{getLastInvoiceSentDate(student)}</p>
                               </div>
+
+                              {/* Payment Summary */}
+                              {(() => {
+                                const paymentSummary = getPaymentSummary(student);
+                                return (
+                                  <>
+                                    <div>
+                                      <Label className="text-sm font-medium text-muted-foreground">Total Fee Amount</Label>
+                                      <p className="text-sm text-foreground font-semibold">{paymentSummary.totalAmount}</p>
+                                    </div>
+                                    <div>
+                                      <Label className="text-sm font-medium text-muted-foreground">Amount Paid</Label>
+                                      <p className="text-sm text-green-600 font-semibold">{paymentSummary.paidAmount}</p>
+                                    </div>
+                                    <div>
+                                      <Label className="text-sm font-medium text-muted-foreground">Outstanding Balance</Label>
+                                      <p className={`text-sm font-semibold ${paymentSummary.outstandingRaw > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                                        {paymentSummary.outstanding}
+                                      </p>
+                                    </div>
+                                  </>
+                                );
+                              })()}
 
                               {/* Row 2: Invoice Due Date, Invoice Status, LMS User ID */}
                               <div>
