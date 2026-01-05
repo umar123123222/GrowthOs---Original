@@ -782,6 +782,7 @@ export type Database = {
           amount: number
           created_at: string | null
           due_date: string
+          enrollment_details: Json | null
           extended_due_date: string | null
           first_reminder_sent: boolean | null
           first_reminder_sent_at: string | null
@@ -800,6 +801,7 @@ export type Database = {
           amount: number
           created_at?: string | null
           due_date: string
+          enrollment_details?: Json | null
           extended_due_date?: string | null
           first_reminder_sent?: boolean | null
           first_reminder_sent_at?: string | null
@@ -818,6 +820,7 @@ export type Database = {
           amount?: number
           created_at?: string | null
           due_date?: string
+          enrollment_details?: Json | null
           extended_due_date?: string | null
           first_reminder_sent?: boolean | null
           first_reminder_sent_at?: string | null
