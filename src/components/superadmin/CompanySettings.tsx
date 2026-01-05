@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send } from 'lucide-react';
+import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
@@ -53,6 +53,8 @@ interface CompanySettingsData {
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
   onboarding_video_url?: string;
+  // Multi-Course Feature
+  multi_course_enabled: boolean;
   // Branding
   branding?: {
     logo?: {
@@ -90,7 +92,9 @@ export function CompanySettings() {
     // Student Sign-in & Questionnaire
     enable_student_signin: false,
     questionnaire: [],
-    onboarding_video_url: ''
+    onboarding_video_url: '',
+    // Multi-Course Feature
+    multi_course_enabled: false
   });
 
   // State for editing questions
@@ -403,6 +407,32 @@ export function CompanySettings() {
                 placeholder={ENV_CONFIG.DEFAULT_LMS_URL}
               />
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Multi-Course Feature */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5" />
+              Multi-Course Feature
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="multi_course_enabled"
+                checked={settings.multi_course_enabled}
+                onCheckedChange={(checked) => handleInputChange('multi_course_enabled', checked)}
+              />
+              <Label htmlFor="multi_course_enabled" className="font-medium">
+                Enable Multi-Course Support
+              </Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              When enabled, students can enroll in multiple courses and the platform will support course-specific content, 
+              progress tracking, and learning pathways.
+            </p>
           </CardContent>
         </Card>
 

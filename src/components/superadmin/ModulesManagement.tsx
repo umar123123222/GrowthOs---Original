@@ -37,6 +37,7 @@ interface Module {
   description: string;
   order: number;
   recording_count: number;
+  course_id: string | null;
 }
 
 interface Recording {
@@ -46,12 +47,18 @@ interface Recording {
   sequence_order?: number;
 }
 
+interface Course {
+  id: string;
+  title: string;
+}
+
 // Sortable Module Row Component
-function SortableModuleRow({ module, index, onEdit, onDelete }: {
+function SortableModuleRow({ module, index, onEdit, onDelete, courses }: {
   module: Module;
   index: number;
   onEdit: (module: Module) => void;
   onDelete: (id: string) => void;
+  courses: Course[];
 }) {
   const {
     attributes,
@@ -67,6 +74,8 @@ function SortableModuleRow({ module, index, onEdit, onDelete }: {
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  const courseName = courses.find(c => c.id === module.course_id)?.title || 'Global';
 
   return (
     <TableRow 
@@ -88,6 +97,11 @@ function SortableModuleRow({ module, index, onEdit, onDelete }: {
         <div className="truncate" title={module.description}>
           {module.description || 'No description'}
         </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant={module.course_id ? "default" : "outline"}>
+          {courseName}
+        </Badge>
       </TableCell>
       <TableCell>
         <Badge variant="outline">{module.order}</Badge>
@@ -174,6 +188,7 @@ function SortableRecordingBadge({ recording, onRemove }: {
 export function ModulesManagement() {
   const [modules, setModules] = useState<Module[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
@@ -181,13 +196,15 @@ export function ModulesManagement() {
     title: '',
     description: '',
     order: 0,
-    selectedRecordings: [] as string[]
+    selectedRecordings: [] as string[],
+    course_id: '' as string
   });
   const { toast } = useToast();
 
   useEffect(() => {
     fetchModules();
     fetchRecordings();
+    fetchCourses();
   }, []);
 
   const fetchModules = async () => {
@@ -226,6 +243,21 @@ export function ModulesManagement() {
     }
   };
 
+  const fetchCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, title')
+        .eq('is_active', true)
+        .order('title');
+
+      if (error) throw error;
+      setCourses(data || []);
+    } catch (error) {
+      safeLogger.error('Error fetching courses:', error);
+    }
+  };
+
   const fetchRecordings = async () => {
     try {
       const { data, error } = await supabase
@@ -260,7 +292,8 @@ export function ModulesManagement() {
           .update({
             title: formData.title.trim(),
             description: formData.description.trim(),
-            order: formData.order
+            order: formData.order,
+            course_id: formData.course_id || null
           })
           .eq('id', editingModule.id);
 
@@ -288,7 +321,8 @@ export function ModulesManagement() {
             .insert({
               title: formData.title.trim(),
               description: formData.description.trim(),
-              order: formData.order
+              order: formData.order,
+              course_id: formData.course_id || null
             })
             .select()
             .single(),
@@ -319,7 +353,7 @@ export function ModulesManagement() {
       // Reset form and close dialog
       setDialogOpen(false);
       setEditingModule(null);
-      setFormData({ title: '', description: '', order: 0, selectedRecordings: [] });
+      setFormData({ title: '', description: '', order: 0, selectedRecordings: [], course_id: '' });
       
       // Refresh data
       await fetchModules();
@@ -350,7 +384,8 @@ export function ModulesManagement() {
         title: module.title,
         description: module.description || '',
         order: module.order || 0,
-        selectedRecordings: assignedRecordings?.map(r => r.id) || []
+        selectedRecordings: assignedRecordings?.map(r => r.id) || [],
+        course_id: module.course_id || ''
       });
     } catch (error) {
       safeLogger.error('Error fetching assigned recordings:', error);
@@ -358,7 +393,8 @@ export function ModulesManagement() {
         title: module.title,
         description: module.description || '',
         order: module.order || 0,
-        selectedRecordings: []
+        selectedRecordings: [],
+        course_id: module.course_id || ''
       });
     }
     
@@ -437,7 +473,7 @@ export function ModulesManagement() {
 
   const resetForm = () => {
     setEditingModule(null);
-    setFormData({ title: '', description: '', order: 0, selectedRecordings: [] });
+    setFormData({ title: '', description: '', order: 0, selectedRecordings: [], course_id: '' });
   };
 
   // Drag and drop sensors
@@ -590,6 +626,29 @@ export function ModulesManagement() {
               </div>
 
               <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Course</label>
+                <Select 
+                  value={formData.course_id} 
+                  onValueChange={(value) => setFormData({ ...formData, course_id: value })}
+                >
+                  <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
+                    <SelectValue placeholder="Select a course (optional)" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    <SelectItem value="">No Course (Global)</SelectItem>
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Assign this module to a specific course, or leave empty for global access
+                </p>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Assign Recordings</label>
                 <Select onValueChange={handleRecordingSelect}>
                   <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
@@ -703,6 +762,7 @@ export function ModulesManagement() {
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead className="font-semibold">Title</TableHead>
                     <TableHead className="font-semibold">Description</TableHead>
+                    <TableHead className="font-semibold">Course</TableHead>
                     <TableHead className="font-semibold">Order</TableHead>
                     <TableHead className="font-semibold">Recordings</TableHead>
                     <TableHead className="font-semibold">Actions</TableHead>
@@ -720,6 +780,7 @@ export function ModulesManagement() {
                         index={index}
                         onEdit={handleEdit}
                         onDelete={handleDelete}
+                        courses={courses}
                       />
                     ))}
                   </SortableContext>

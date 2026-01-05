@@ -5,7 +5,7 @@ import SuccessPartner from "@/components/SuccessPartner";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook } from "lucide-react";
+import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route } from "lucide-react";
 
 const MetaIcon = Facebook;
 import NotificationDropdown from "./NotificationDropdown";
@@ -300,7 +300,15 @@ const Layout = memo(({
         href: "/superadmin",
         icon: Monitor
       }, {
-        name: "Course",
+        name: "Courses",
+        href: "/superadmin?tab=courses",
+        icon: GraduationCap
+      }, {
+        name: "Pathways",
+        href: "/superadmin?tab=pathways",
+        icon: Route
+      }, {
+        name: "Content",
         icon: BookOpen,
         isExpandable: true,
         subItems: [{
