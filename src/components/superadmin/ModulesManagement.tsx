@@ -628,14 +628,14 @@ export function ModulesManagement() {
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground">Course</label>
                 <Select 
-                  value={formData.course_id} 
-                  onValueChange={(value) => setFormData({ ...formData, course_id: value })}
+                  value={formData.course_id || "global"} 
+                  onValueChange={(value) => setFormData({ ...formData, course_id: value === "global" ? "" : value })}
                 >
                   <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
                     <SelectValue placeholder="Select a course (optional)" />
                   </SelectTrigger>
                   <SelectContent className="bg-white z-50">
-                    <SelectItem value="">No Course (Global)</SelectItem>
+                    <SelectItem value="global">No Course (Global)</SelectItem>
                     {courses.map((course) => (
                       <SelectItem key={course.id} value={course.id}>
                         {course.title}
