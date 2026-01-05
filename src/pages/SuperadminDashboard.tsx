@@ -18,6 +18,8 @@ import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAn
 import { MilestoneManagement } from '@/components/admin/MilestoneManagement';
 import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
 import { ErrorLogsManagement } from '@/components/superadmin/ErrorLogsManagement';
+import { CourseManagement } from '@/components/superadmin/CourseManagement';
+import { PathwayManagement } from '@/components/superadmin/PathwayManagement';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ENV_CONFIG } from '@/lib/env-config';
@@ -68,6 +70,10 @@ export default function SuperadminDashboard() {
         return <StudentAnalytics />;
       case 'error-logs':
         return <ErrorLogsManagement />;
+      case 'courses':
+        return <CourseManagement />;
+      case 'pathways':
+        return <PathwayManagement />;
       default:
         return <DashboardContent />;
     }
