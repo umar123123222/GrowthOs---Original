@@ -11,7 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon, BookOpen } from 'lucide-react';
+import { StudentAccessManagement } from './StudentAccessManagement';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -111,6 +112,8 @@ export function StudentsManagement() {
   const [timeTick, setTimeTick] = useState(0);
   const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
+  const [accessManagementOpen, setAccessManagementOpen] = useState(false);
+  const [selectedStudentForAccess, setSelectedStudentForAccess] = useState<Student | null>(null);
   const {
     options: installmentOptions
   } = useInstallmentOptions();
@@ -1463,6 +1466,18 @@ export function StudentsManagement() {
                                <Button 
                                  variant="outline" 
                                  size="sm" 
+                                 onClick={() => {
+                                   setSelectedStudentForAccess(student);
+                                   setAccessManagementOpen(true);
+                                 }}
+                                 className="hover-scale hover:border-indigo-300 hover:text-indigo-600"
+                               >
+                                 <BookOpen className="w-4 h-4 mr-2" />
+                                 Manage Access
+                               </Button>
+                               <Button 
+                                 variant="outline" 
+                                 size="sm" 
                                  onClick={() => handleResetSuccessPartnerCredits(student.id)}
                                  className="hover-scale hover:border-yellow-300 hover:text-yellow-600"
                                >
@@ -1806,5 +1821,17 @@ export function StudentsManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Student Access Management Dialog */}
+      {selectedStudentForAccess && (
+        <StudentAccessManagement
+          open={accessManagementOpen}
+          onOpenChange={setAccessManagementOpen}
+          studentId={selectedStudentForAccess.student_record_id || ''}
+          studentUserId={selectedStudentForAccess.id}
+          studentName={selectedStudentForAccess.full_name}
+          onAccessUpdated={fetchStudents}
+        />
+      )}
     </div>;
 }
