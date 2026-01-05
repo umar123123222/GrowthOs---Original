@@ -645,81 +645,84 @@ export function ModulesManagement() {
                 {/* Right Column */}
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-foreground">Description</label>
-                    <Textarea
-                      value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                      placeholder="Enter module description"
-                      className="transition-all duration-200 focus:scale-[1.02] min-h-[180px]"
-                    />
+                    <label className="text-sm font-medium text-foreground">Assign Recordings</label>
+                    <Select onValueChange={handleRecordingSelect}>
+                      <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
+                        <SelectValue placeholder="Select recordings to assign" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {recordings.map((recording) => {
+                          const isCurrentlyAssigned = recording.module && recording.module !== editingModule?.id;
+                          const isSelected = formData.selectedRecordings.includes(recording.id);
+                          
+                          return (
+                            <SelectItem 
+                              key={recording.id} 
+                              value={recording.id}
+                              disabled={isSelected}
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span className={isSelected ? 'opacity-50' : ''}>
+                                  {recording.recording_title}
+                                </span>
+                                {isCurrentlyAssigned && (
+                                  <Badge variant="secondary" className="ml-2 text-xs">
+                                    Assigned
+                                  </Badge>
+                                )}
+                                {isSelected && (
+                                  <Badge variant="outline" className="ml-2 text-xs">
+                                    Selected
+                                  </Badge>
+                                )}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                    
+                    <div className="mt-3 flex flex-wrap gap-2 min-h-[100px] p-2 border border-dashed border-border rounded-md">
+                      {formData.selectedRecordings.length > 0 ? (
+                        <DndContext
+                          sensors={sensors}
+                          collisionDetection={closestCenter}
+                          onDragEnd={handleRecordingDragEnd}
+                        >
+                          <SortableContext
+                            items={formData.selectedRecordings}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {formData.selectedRecordings.map((recordingId) => {
+                              const recording = recordings.find(r => r.id === recordingId);
+                              if (!recording) return null;
+                              return (
+                                <SortableRecordingBadge
+                                  key={recordingId}
+                                  recording={recording}
+                                  onRemove={handleRecordingRemove}
+                                />
+                              );
+                            })}
+                          </SortableContext>
+                        </DndContext>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No recordings selected</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
 
+              {/* Description - Full Width at Bottom */}
               <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Assign Recordings</label>
-                <Select onValueChange={handleRecordingSelect}>
-                  <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
-                    <SelectValue placeholder="Select recordings to assign" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white z-50">
-                    {recordings.map((recording) => {
-                      const isCurrentlyAssigned = recording.module && recording.module !== editingModule?.id;
-                      const isSelected = formData.selectedRecordings.includes(recording.id);
-                      
-                      return (
-                        <SelectItem 
-                          key={recording.id} 
-                          value={recording.id}
-                          disabled={isSelected}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span className={isSelected ? 'opacity-50' : ''}>
-                              {recording.recording_title}
-                            </span>
-                            {isCurrentlyAssigned && (
-                              <Badge variant="secondary" className="ml-2 text-xs">
-                                Assigned
-                              </Badge>
-                            )}
-                            {isSelected && (
-                              <Badge variant="outline" className="ml-2 text-xs">
-                                Selected
-                              </Badge>
-                            )}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
-                
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {formData.selectedRecordings.length > 0 && (
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleRecordingDragEnd}
-                    >
-                      <SortableContext
-                        items={formData.selectedRecordings}
-                        strategy={verticalListSortingStrategy}
-                      >
-                        {formData.selectedRecordings.map((recordingId) => {
-                          const recording = recordings.find(r => r.id === recordingId);
-                          if (!recording) return null;
-                          return (
-                            <SortableRecordingBadge
-                              key={recordingId}
-                              recording={recording}
-                              onRemove={handleRecordingRemove}
-                            />
-                          );
-                        })}
-                      </SortableContext>
-                    </DndContext>
-                  )}
-                </div>
+                <label className="text-sm font-medium text-foreground">Description</label>
+                <Textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Enter module description"
+                  className="transition-all duration-200 focus:scale-[1.02] min-h-[100px]"
+                />
               </div>
 
               <div className="flex justify-end space-x-3 pt-4">
