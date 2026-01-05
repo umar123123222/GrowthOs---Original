@@ -584,68 +584,76 @@ export function ModulesManagement() {
               Add Module
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-3xl">
             <DialogHeader>
               <DialogTitle className="text-xl font-semibold">
                 {editingModule ? 'Edit Module' : 'Add New Module'}
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Title *</label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Enter module title"
-                  className="transition-all duration-200 focus:scale-[1.02]"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Description</label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Enter module description"
-                  className="transition-all duration-200 focus:scale-[1.02] min-h-[100px]"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Order *</label>
-                <Input
-                  type="number"
-                  value={formData.order}
-                  onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-                  placeholder="Enter display order"
-                  className="transition-all duration-200 focus:scale-[1.02]"
-                  min="0"
-                  required
-                />
-              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Title *</label>
+                    <Input
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="Enter module title"
+                      className="transition-all duration-200 focus:scale-[1.02]"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Order *</label>
+                    <Input
+                      type="number"
+                      value={formData.order}
+                      onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
+                      placeholder="Enter display order"
+                      className="transition-all duration-200 focus:scale-[1.02]"
+                      min="0"
+                      required
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Course</label>
-                <Select 
-                  value={formData.course_id || "global"} 
-                  onValueChange={(value) => setFormData({ ...formData, course_id: value === "global" ? "" : value })}
-                >
-                  <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
-                    <SelectValue placeholder="Select a course (optional)" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white z-50">
-                    <SelectItem value="global">No Course (Global)</SelectItem>
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Assign this module to a specific course, or leave empty for global access
-                </p>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Course</label>
+                    <Select 
+                      value={formData.course_id || "global"} 
+                      onValueChange={(value) => setFormData({ ...formData, course_id: value === "global" ? "" : value })}
+                    >
+                      <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
+                        <SelectValue placeholder="Select a course (optional)" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        <SelectItem value="global">No Course (Global)</SelectItem>
+                        {courses.map((course) => (
+                          <SelectItem key={course.id} value={course.id}>
+                            {course.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Assign this module to a specific course, or leave empty for global access
+                    </p>
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-foreground">Description</label>
+                    <Textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Enter module description"
+                      className="transition-all duration-200 focus:scale-[1.02] min-h-[180px]"
+                    />
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">
