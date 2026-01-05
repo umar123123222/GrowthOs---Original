@@ -2553,7 +2553,16 @@ export type Database = {
         }
         Returns: Json
       }
+      enroll_student_in_course: {
+        Args: {
+          p_course_id: string
+          p_pathway_id?: string
+          p_student_id: string
+        }
+        Returns: Json
+      }
       get_current_user_role: { Args: never; Returns: string }
+      get_default_course_id: { Args: never; Returns: string }
       get_inactive_students: {
         Args: { days_threshold?: number }
         Returns: {
@@ -2566,6 +2575,22 @@ export type Database = {
         }[]
       }
       get_my_role: { Args: never; Returns: string }
+      get_pathway_next_options: {
+        Args: {
+          p_current_step: number
+          p_pathway_id: string
+          p_user_id: string
+        }
+        Returns: {
+          choice_group: number
+          course_description: string
+          course_id: string
+          course_title: string
+          is_choice_point: boolean
+          is_mandatory: boolean
+          step_number: number
+        }[]
+      }
       get_recovery_statistics: {
         Args: never
         Returns: {
@@ -2586,6 +2611,22 @@ export type Database = {
           recording_watched: boolean
           sequence_order: number
           unlock_reason: string
+        }[]
+      }
+      get_student_courses: {
+        Args: { p_user_id: string }
+        Returns: {
+          completed_at: string
+          course_description: string
+          course_id: string
+          course_title: string
+          enrolled_at: string
+          enrollment_status: string
+          is_pathway: boolean
+          pathway_id: string
+          pathway_name: string
+          progress_percentage: number
+          thumbnail_url: string
         }[]
       }
       get_student_unlock_sequence: {
@@ -2661,6 +2702,7 @@ export type Database = {
         Args: { _module_id: string; _user_id: string }
         Returns: boolean
       }
+      is_multi_course_enabled: { Args: never; Returns: boolean }
       is_recording_watched: {
         Args: { _recording_id: string; _user_id: string }
         Returns: boolean
@@ -2733,6 +2775,10 @@ export type Database = {
         Returns: undefined
       }
       update_company_branding: { Args: { branding_data: Json }; Returns: Json }
+      update_course_progress: {
+        Args: { p_course_id: string; p_student_id: string }
+        Returns: undefined
+      }
       validate_questionnaire_structure: {
         Args: { questionnaire_data: Json }
         Returns: boolean
