@@ -7,7 +7,8 @@ import { Progress } from '@/components/ui/progress';
 import { ConnectAccountsDialog } from '@/components/ConnectAccountsDialog';
 import { OnboardingVideoModal } from '@/components/OnboardingVideoModal';
 import { useAuth } from '@/hooks/useAuth';
-import { useStudentRecordings } from '@/hooks/useStudentRecordings';
+import { useCourses } from '@/hooks/useCourses';
+import { useCourseRecordings } from '@/hooks/useCourseRecordings';
 import { supabase } from '@/integrations/supabase/client';
 import { safeLogger } from '@/lib/safe-logger';
 import { InactiveLMSBanner } from '@/components/InactiveLMSBanner';
@@ -15,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { extractFinancialGoalForDisplay } from '@/utils/dreamGoalUtils';
 import { safeQuery, safeMaybeSingle } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
+import { CourseSelector } from '@/components/courses/CourseSelector';
 import type { UserDataResult, StudentDataResult } from '@/types/database';
 import { 
   Trophy, 
@@ -49,9 +51,25 @@ interface Milestone {
 
 export function StudentDashboard() {
   const { user } = useAuth();
-  const { recordings, loading } = useStudentRecordings();
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Course-aware hooks
+  const { 
+    enrolledCourses, 
+    activeCourse, 
+    setActiveCourse, 
+    loading: coursesLoading,
+    isMultiCourseEnabled 
+  } = useCourses();
+  
+  const { 
+    recordings, 
+    courseProgress: computedProgress,
+    loading: recordingsLoading 
+  } = useCourseRecordings(activeCourse?.id || null);
+  
+  const loading = coursesLoading || recordingsLoading;
 
   // Add debug logging with better checks
   if (process.env.NODE_ENV === 'development') {
@@ -127,19 +145,12 @@ export function StudentDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, loading]);
 
-  // Recompute course progress whenever recordings change
+  // Use the computed progress from useCourseRecordings
   useEffect(() => {
-    if (!user?.id) return;
-    if (recordings && recordings.length > 0) {
-      const watchedRecordings = recordings.filter(r => r.isWatched).length;
-      const submittedAssignments = recordings.filter(r => r.hasAssignment && r.assignmentSubmitted).length;
-      const totalItems = recordings.length + recordings.filter(r => r.hasAssignment).length;
-      const completedItems = watchedRecordings + submittedAssignments;
-      setCourseProgress(totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0);
-    } else {
-      setCourseProgress(0);
+    if (computedProgress !== undefined) {
+      setCourseProgress(computedProgress);
     }
-  }, [user?.id, recordings]);
+  }, [computedProgress]);
   const fetchDashboardData = async () => {
     if (!user?.id) {
       console.warn('StudentDashboard: No user ID available');
@@ -443,6 +454,19 @@ export function StudentDashboard() {
   return (
     <div className="space-y-6">
       <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
+      
+      {/* Course Selector for multi-course users */}
+      {isMultiCourseEnabled && enrolledCourses.length > 1 && (
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-medium">Your Courses</h2>
+          <CourseSelector
+            courses={enrolledCourses}
+            activeCourseId={activeCourse?.id || null}
+            onCourseChange={setActiveCourse}
+            loading={coursesLoading}
+          />
+        </div>
+      )}
       
       {/* Refined Financial Goal Banner */}
       <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
