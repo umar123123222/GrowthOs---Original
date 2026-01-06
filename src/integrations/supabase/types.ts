@@ -936,6 +936,7 @@ export type Database = {
           created_by: string | null
           currency: string | null
           description: string | null
+          drip_enabled: boolean | null
           id: string
           is_active: boolean | null
           is_published: boolean | null
@@ -950,6 +951,7 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           description?: string | null
+          drip_enabled?: boolean | null
           id?: string
           is_active?: boolean | null
           is_published?: boolean | null
@@ -964,6 +966,7 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           description?: string | null
+          drip_enabled?: boolean | null
           id?: string
           is_active?: boolean | null
           is_published?: boolean | null
