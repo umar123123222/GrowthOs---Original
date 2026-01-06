@@ -456,6 +456,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_published: boolean | null
+          max_installments: number | null
           price: number | null
           sequence_order: number | null
           thumbnail_url: string | null
@@ -470,6 +471,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_published?: boolean | null
+          max_installments?: number | null
           price?: number | null
           sequence_order?: number | null
           thumbnail_url?: string | null
@@ -484,6 +486,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_published?: boolean | null
+          max_installments?: number | null
           price?: number | null
           sequence_order?: number | null
           thumbnail_url?: string | null
@@ -936,6 +939,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_published: boolean | null
+          max_installments: number | null
           name: string
           price: number | null
           thumbnail_url: string | null
@@ -949,6 +953,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_published?: boolean | null
+          max_installments?: number | null
           name: string
           price?: number | null
           thumbnail_url?: string | null
@@ -962,6 +967,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_published?: boolean | null
+          max_installments?: number | null
           name?: string
           price?: number | null
           thumbnail_url?: string | null
