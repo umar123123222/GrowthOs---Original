@@ -133,21 +133,106 @@ const handler = async (req: Request): Promise<Response> => {
     }
     console.log("Invoice marked as paid successfully");
 
-    // Update students.fees_cleared
-    console.log("Updating fees_cleared for student:", invoice.student_id);
-    const { error: updateStudentError } = await supabase
-      .from("students")
-      .update({
-        fees_cleared: true,
-        updated_at: new Date().toISOString()
-      })
-      .eq("id", invoice.student_id);
+    // Update enrollment payment status if invoice is linked to a course/pathway
+    if (invoice.course_id || invoice.pathway_id) {
+      console.log("Updating enrollment payment status for course/pathway");
+      
+      // Get all invoices for this specific enrollment
+      let enrollmentQuery = supabase
+        .from("invoices")
+        .select("id, status, amount")
+        .eq("student_id", invoice.student_id);
+      
+      if (invoice.course_id) {
+        enrollmentQuery = enrollmentQuery.eq("course_id", invoice.course_id);
+      } else if (invoice.pathway_id) {
+        enrollmentQuery = enrollmentQuery.eq("pathway_id", invoice.pathway_id);
+      }
+      
+      const { data: enrollmentInvoices, error: fetchError } = await enrollmentQuery;
+      
+      if (!fetchError && enrollmentInvoices) {
+        const totalInvoices = enrollmentInvoices.length;
+        const paidInvoices = enrollmentInvoices.filter(inv => inv.status === "paid").length;
+        const totalAmount = enrollmentInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
+        const paidAmount = enrollmentInvoices
+          .filter(inv => inv.status === "paid")
+          .reduce((sum, inv) => sum + (inv.amount || 0), 0);
+        
+        let paymentStatus: string;
+        if (paidInvoices === 0) {
+          paymentStatus = "pending";
+        } else if (paidInvoices === totalInvoices) {
+          paymentStatus = "paid";
+        } else {
+          paymentStatus = "partial";
+        }
+        
+        // Update course enrollment
+        let updateEnrollmentQuery = supabase
+          .from("course_enrollments")
+          .update({
+            payment_status: paymentStatus,
+            amount_paid: paidAmount,
+            total_amount: totalAmount,
+            updated_at: new Date().toISOString()
+          })
+          .eq("student_id", invoice.student_id);
+        
+        if (invoice.course_id) {
+          updateEnrollmentQuery = updateEnrollmentQuery.eq("course_id", invoice.course_id);
+        } else if (invoice.pathway_id) {
+          updateEnrollmentQuery = updateEnrollmentQuery.eq("pathway_id", invoice.pathway_id);
+        }
+        
+        const { error: enrollUpdateError } = await updateEnrollmentQuery;
+        
+        if (enrollUpdateError) {
+          console.error("Failed to update enrollment payment status:", enrollUpdateError.message);
+        } else {
+          console.log(`Enrollment payment status updated to ${paymentStatus}`);
+        }
+        
+        // Only update global fees_cleared if ALL enrollments are fully paid
+        if (paymentStatus === "paid") {
+          // Check if all other enrollments are also fully paid
+          const { data: allEnrollments } = await supabase
+            .from("course_enrollments")
+            .select("payment_status")
+            .eq("student_id", invoice.student_id)
+            .eq("status", "active");
+          
+          const allPaid = allEnrollments?.every(e => e.payment_status === "paid" || e.payment_status === "waived");
+          
+          if (allPaid) {
+            console.log("All enrollments paid - updating global fees_cleared");
+            await supabase
+              .from("students")
+              .update({
+                fees_cleared: true,
+                updated_at: new Date().toISOString()
+              })
+              .eq("id", invoice.student_id);
+          }
+        }
+      }
+    } else {
+      // Legacy behavior for invoices without course/pathway link
+      console.log("Updating fees_cleared for student (legacy):", invoice.student_id);
+      const { error: updateStudentError } = await supabase
+        .from("students")
+        .update({
+          fees_cleared: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", invoice.student_id);
 
-    if (updateStudentError) {
-      console.error("Failed to update student fees_cleared:", updateStudentError.message);
-      throw new Error(`Failed to update student: ${updateStudentError.message}`);
+      if (updateStudentError) {
+        console.error("Failed to update student fees_cleared:", updateStudentError.message);
+        throw new Error(`Failed to update student: ${updateStudentError.message}`);
+      }
+      console.log("Student fees_cleared updated successfully");
     }
-    console.log("Student fees_cleared updated successfully");
 
     // Activate user account
     console.log("Activating user account:", userId);
@@ -171,10 +256,12 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Payment recorded, fees cleared, and user account activated",
+        message: "Payment recorded, enrollment payment status updated, and user account activated",
         invoice_id: invoiceId,
         student_id: invoice.student_id,
-        user_id: userId
+        user_id: userId,
+        course_id: invoice.course_id || null,
+        pathway_id: invoice.pathway_id || null
       }),
       { 
         headers: { ...corsHeaders, "Content-Type": "application/json" },

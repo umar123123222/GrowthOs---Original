@@ -17,6 +17,7 @@ interface Course {
   is_published: boolean;
   is_active: boolean;
   price?: number | null;
+  max_installments?: number | null;
 }
 
 interface Pathway {
@@ -25,6 +26,7 @@ interface Pathway {
   is_published: boolean;
   is_active: boolean;
   price?: number | null;
+  max_installments?: number | null;
 }
 
 interface Enrollment {
@@ -95,12 +97,15 @@ export function StudentAccessManagement({
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [coursesRes, pathwaysRes, enrollmentsRes, pathwayCoursesRes] = await Promise.all([
-        supabase.from('courses').select('id, title, is_published, is_active, price').eq('is_active', true).order('title'),
-        supabase.from('learning_pathways').select('id, name, is_published, is_active, price').eq('is_active', true).order('name'),
+      const [coursesRes, pathwaysRes, enrollmentsRes, pathwayCoursesRes, settingsRes] = await Promise.all([
+        supabase.from('courses').select('id, title, is_published, is_active, price, max_installments').eq('is_active', true).order('title'),
+        supabase.from('learning_pathways').select('id, name, is_published, is_active, price, max_installments').eq('is_active', true).order('name'),
         supabase.from('course_enrollments').select('*').eq('student_id', studentId),
-        supabase.from('pathway_courses').select('course_id, pathway_id')
+        supabase.from('pathway_courses').select('course_id, pathway_id'),
+        supabase.from('company_settings').select('invoice_send_gap_days, invoice_overdue_days').single()
       ]);
+      
+      const invoiceSettings = settingsRes.data || { invoice_send_gap_days: 30, invoice_overdue_days: 5 };
 
       if (coursesRes.error) throw coursesRes.error;
       if (pathwaysRes.error) throw pathwaysRes.error;
@@ -148,79 +153,103 @@ export function StudentAccessManagement({
     }
   };
 
-  // Function to create and send invoice when access is granted
-  const createAndSendInvoice = async (
+  // Function to create installment invoices for a course/pathway enrollment
+  const createEnrollmentInvoices = async (
     itemType: 'course' | 'pathway',
+    itemId: string,
     itemName: string,
     itemPrice: number | null | undefined,
-    courseNames: string[],
-    pathwayNames: string[]
+    maxInstallments: number | null | undefined
   ) => {
     try {
-      // Calculate the due date (30 days from now)
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + 30);
+      const price = itemPrice || 0;
+      if (price <= 0) {
+        console.log('Free enrollment - no invoices needed');
+        return null;
+      }
 
-      // Get the next installment number for this student
-      const { data: existingInvoices } = await supabase
-        .from('invoices')
-        .select('installment_number')
-        .eq('student_id', studentId)
-        .order('installment_number', { ascending: false })
-        .limit(1);
-
-      const nextInstallmentNumber = (existingInvoices?.[0]?.installment_number || 0) + 1;
-      const amount = itemPrice || 0;
-
-      // Create the invoice with enrollment details
-      const { data: invoice, error: invoiceError } = await supabase
-        .from('invoices')
-        .insert({
-          student_id: studentId,
-          installment_number: nextInstallmentNumber,
-          amount: amount,
-          due_date: dueDate.toISOString(),
-          status: 'pending',
-          enrollment_details: {
-            courses: courseNames,
-            pathways: pathwayNames
-          },
-          notes: `Invoice for ${itemType}: ${itemName}`
-        })
-        .select()
+      // Get invoice settings
+      const { data: settings } = await supabase
+        .from('company_settings')
+        .select('invoice_send_gap_days, invoice_overdue_days')
         .single();
 
+      const gapDays = settings?.invoice_send_gap_days || 30;
+      const overdueDays = settings?.invoice_overdue_days || 5;
+      const installments = maxInstallments || 3;
+      const installmentAmount = price / installments;
+
+      // Create all installment invoices
+      const invoices = [];
+      for (let i = 1; i <= installments; i++) {
+        const issueDate = new Date();
+        issueDate.setDate(issueDate.getDate() + ((i - 1) * gapDays));
+        
+        const dueDate = new Date(issueDate);
+        dueDate.setDate(dueDate.getDate() + overdueDays);
+
+        invoices.push({
+          student_id: studentId,
+          course_id: itemType === 'course' ? itemId : null,
+          pathway_id: itemType === 'pathway' ? itemId : null,
+          installment_number: i,
+          amount: installmentAmount,
+          due_date: dueDate.toISOString(),
+          status: i === 1 ? 'pending' : 'scheduled',
+          enrollment_details: {
+            courses: itemType === 'course' ? [itemName] : [],
+            pathways: itemType === 'pathway' ? [itemName] : []
+          },
+          notes: `Installment ${i} of ${installments} for ${itemType}: ${itemName}`
+        });
+      }
+
+      const { data: createdInvoices, error: invoiceError } = await supabase
+        .from('invoices')
+        .insert(invoices)
+        .select();
+
       if (invoiceError) throw invoiceError;
+
+      // Update enrollment with payment info
+      await supabase
+        .from('course_enrollments')
+        .update({
+          total_amount: price,
+          amount_paid: 0,
+          payment_status: 'pending',
+          updated_at: new Date().toISOString()
+        })
+        .eq('student_id', studentId)
+        .eq(itemType === 'course' ? 'course_id' : 'pathway_id', itemId);
 
       // Send notification to student
       await supabase.rpc('create_notification', {
         p_user_id: studentUserId,
         p_type: 'invoice_issued',
         p_title: 'New Invoice Generated',
-        p_message: `An invoice has been generated for your ${itemType} enrollment: ${itemName}. Amount: $${amount}. Due date: ${dueDate.toLocaleDateString()}.`,
+        p_message: `${installments} invoice${installments > 1 ? 's have' : ' has'} been generated for your ${itemType} enrollment: ${itemName}. First installment: $${installmentAmount.toFixed(2)}. Total: $${price.toFixed(2)}.`,
         p_metadata: {
-          invoice_id: invoice?.id,
-          amount: amount,
-          due_date: dueDate.toISOString(),
+          invoice_ids: createdInvoices?.map(inv => inv.id),
+          total_amount: price,
+          installment_amount: installmentAmount,
+          total_installments: installments,
           item_type: itemType,
-          item_name: itemName,
-          courses: courseNames,
-          pathways: pathwayNames
+          item_name: itemName
         }
       });
 
       toast({
-        title: 'Invoice Sent',
-        description: `Invoice generated and sent for ${itemName}`,
+        title: 'Invoices Created',
+        description: `${installments} installment invoice${installments > 1 ? 's' : ''} generated for ${itemName}`,
       });
 
-      return invoice;
+      return createdInvoices;
     } catch (error) {
-      console.error('Error creating invoice:', error);
-      // Don't throw - invoice creation is secondary to access granting
+      console.error('Error creating invoices:', error);
       toast({
         title: 'Warning',
-        description: 'Access granted but invoice could not be created',
+        description: 'Access granted but invoices could not be created',
         variant: 'destructive'
       });
       return null;
@@ -267,23 +296,24 @@ export function StudentAccessManagement({
         setSelectedCourses(prev => new Set(prev).add(courseId));
         toast({ title: 'Access Granted', description: 'Course access has been restored' });
       } else {
-        // Create new enrollment
+        // Create new enrollment with payment tracking
         const { error } = await supabase.from('course_enrollments').insert({
           student_id: studentId,
           course_id: courseId,
           status: 'active',
           progress_percentage: 0,
-          enrolled_at: new Date().toISOString()
+          enrolled_at: new Date().toISOString(),
+          total_amount: course?.price || 0,
+          amount_paid: 0,
+          payment_status: course?.price && course.price > 0 ? 'pending' : 'waived'
         });
         if (error) throw error;
 
         setSelectedCourses(prev => new Set(prev).add(courseId));
         
-        // Send invoice for new course assignment
-        if (course) {
-          const currentCourseNames = [course.title];
-          const currentPathwayNames = Array.from(selectedPathways).map(pId => pathwayNames.get(pId) || '').filter(Boolean);
-          await createAndSendInvoice('course', course.title, course.price, currentCourseNames, currentPathwayNames);
+        // Create installment invoices for new course assignment
+        if (course && course.price && course.price > 0) {
+          await createEnrollmentInvoices('course', course.id, course.title, course.price, course.max_installments);
         }
         
         toast({ title: 'Access Granted', description: 'Course access has been added' });
@@ -333,24 +363,25 @@ export function StudentAccessManagement({
         setSelectedPathways(prev => new Set(prev).add(pathwayId));
         toast({ title: 'Access Granted', description: 'Pathway access has been restored' });
       } else {
-        // Create new enrollment
+        // Create new enrollment with payment tracking
         const { error } = await supabase.from('course_enrollments').insert({
           student_id: studentId,
           course_id: null as unknown as string,
           pathway_id: pathwayId,
           status: 'active',
           progress_percentage: 0,
-          enrolled_at: new Date().toISOString()
+          enrolled_at: new Date().toISOString(),
+          total_amount: pathway?.price || 0,
+          amount_paid: 0,
+          payment_status: pathway?.price && pathway.price > 0 ? 'pending' : 'waived'
         });
         if (error) throw error;
 
         setSelectedPathways(prev => new Set(prev).add(pathwayId));
         
-        // Send invoice for new pathway assignment
-        if (pathway) {
-          const currentCourseNames = Array.from(selectedCourses).map(cId => courses.find(c => c.id === cId)?.title || '').filter(Boolean);
-          const currentPathwayNames = [pathway.name];
-          await createAndSendInvoice('pathway', pathway.name, pathway.price, currentCourseNames, currentPathwayNames);
+        // Create installment invoices for new pathway assignment
+        if (pathway && pathway.price && pathway.price > 0) {
+          await createEnrollmentInvoices('pathway', pathway.id, pathway.name, pathway.price, pathway.max_installments);
         }
         
         toast({ title: 'Access Granted', description: 'Pathway access has been added' });
