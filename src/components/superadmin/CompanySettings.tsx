@@ -42,8 +42,6 @@ interface CompanySettingsData {
   address: string;
   contact_email: string;
   currency: string;
-  original_fee_amount: number;
-  maximum_installment_count: number;
   invoice_notes?: string;
   invoice_overdue_days: number;
   invoice_send_gap_days: number;
@@ -84,8 +82,6 @@ export function CompanySettings() {
     address: '',
     contact_email: '',
     currency: ENV_CONFIG.DEFAULT_CURRENCY,
-    original_fee_amount: ENV_CONFIG.DEFAULT_FEE_AMOUNT,
-    maximum_installment_count: ENV_CONFIG.DEFAULT_MAX_INSTALLMENTS,
     invoice_notes: '',
     invoice_overdue_days: ENV_CONFIG.DEFAULT_INVOICE_OVERDUE_DAYS,
     invoice_send_gap_days: ENV_CONFIG.DEFAULT_INVOICE_SEND_GAP_DAYS,
@@ -272,15 +268,15 @@ export function CompanySettings() {
         {
           description: 'Course Fee - Installment 1',
           installment_number: 1,
-          price: settings.original_fee_amount / settings.maximum_installment_count,
-          total: settings.original_fee_amount / settings.maximum_installment_count
+          price: 10000,
+          total: 10000
         }
       ],
-      subtotal: settings.original_fee_amount / settings.maximum_installment_count,
+      subtotal: 10000,
       tax: 0,
-      total: settings.original_fee_amount / settings.maximum_installment_count,
-      total_program_cost: settings.original_fee_amount,
-      total_installments: settings.maximum_installment_count,
+      total: 10000,
+      total_program_cost: 30000,
+      total_installments: 3,
       currency: settings.currency || 'USD',
       payment_methods: settings.payment_methods || [],
       terms: settings.invoice_notes || 'Please send payment within 30 days of receiving this invoice.'
@@ -684,44 +680,6 @@ export function CompanySettings() {
                   Select your preferred currency
                 </p>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="original_fee_amount">Original Fee Amount</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">
-                    {getCurrencySymbol(settings.currency)}
-                  </span>
-                  <Input
-                    id="original_fee_amount"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={settings.original_fee_amount}
-                    onChange={(e) => handleInputChange('original_fee_amount', parseFloat(e.target.value))}
-                    placeholder={ENV_CONFIG.DEFAULT_FEE_AMOUNT.toString()}
-                    className="pl-8"
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  The total course fee amount
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="maximum_installment_count">Maximum Installment Count</Label>
-                <Input
-                  id="maximum_installment_count"
-                  type="number"
-                  min="1"
-                  max="12"
-                  value={settings.maximum_installment_count}
-                  onChange={(e) => handleInputChange('maximum_installment_count', parseInt(e.target.value))}
-                  placeholder="3"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Maximum number of installments allowed (1-12)
-                </p>
-              </div>
             </div>
 
             <Separator className="my-6" />
@@ -862,17 +820,9 @@ export function CompanySettings() {
               </div>
             </div>
 
-            <Separator className="my-6" />
-
-            <div className="bg-muted p-4 rounded-lg">
-              <h4 className="font-medium mb-2">Calculated Installment Amount</h4>
-              <p className="text-2xl font-bold text-primary">
-                {getCurrencySymbol(settings.currency)}{(settings.original_fee_amount / settings.maximum_installment_count).toFixed(2)}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Per installment based on current settings
-              </p>
-            </div>
+            <p className="text-sm text-muted-foreground mt-4">
+              Note: Fee amounts and installment counts are now configured per course/pathway in the Courses and Pathways sections.
+            </p>
           </CardContent>
         </Card>
 
