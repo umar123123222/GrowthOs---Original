@@ -4,12 +4,20 @@
 
 The Sequential Unlock System enforces a structured learning path where students must complete recordings and assignments in order. This system is feature-flagged and maintains backward compatibility.
 
-## Feature Flag
+## Feature Flags
 
+### Sequential Unlock
 - **Flag**: `lms_sequential_unlock` in `company_settings` table
 - **Default**: `false` (disabled)
 - **When disabled**: Uses existing unlock behavior (zero regression)
 - **When enabled**: Enforces sequential unlock rules
+
+### Content Drip
+- **Flag**: `drip_enabled_default` in `company_settings` table
+- **Default**: `false` (disabled)
+- **Course Override**: `drip_enabled` in `courses` table (null = use default, true/false = override)
+- **Pathway Override**: `drip_enabled` in `learning_pathways` table (null = use default, true/false = override)
+- **Recording Setting**: `drip_days` in `available_lessons` table (days after enrollment before available)
 
 ## Business Rules
 
@@ -26,6 +34,13 @@ The Sequential Unlock System enforces a structured learning path where students 
 5. **Unlock Next**: If approved, next recording by `sequence_order` is unlocked
 6. **Resubmission**: If declined, student can resubmit; latest approved submission unlocks next recording
 
+### Content Drip Rules
+- When drip is enabled for a course/pathway, recordings unlock based on time since enrollment
+- Each recording has a `drip_days` value (default 0 = immediate)
+- A recording is available when: `NOW() >= enrolled_at + drip_days`
+- Drip timing is checked IN ADDITION to sequential requirements
+- Both conditions must be met for a recording to unlock
+
 ### Version Control
 - Each resubmission increments the `version` field
 - Current status always reflects the latest submission
@@ -35,6 +50,10 @@ The Sequential Unlock System enforces a structured learning path where students 
 
 ### New/Modified Fields (Additive Only)
 - `company_settings.lms_sequential_unlock` (boolean, default false)
+- `company_settings.drip_enabled_default` (boolean, default false)
+- `courses.drip_enabled` (boolean, nullable - null means use default)
+- `learning_pathways.drip_enabled` (boolean, nullable - null means use default)
+- `available_lessons.drip_days` (integer, default 0)
 - `submissions.version` (integer, default 1)
 - `students.fees_cleared` (boolean, default false)
 
@@ -44,15 +63,7 @@ The Sequential Unlock System enforces a structured learning path where students 
 - `user_unlocks` - tracks what's unlocked for each student
 - `recording_views` - tracks what's been watched
 - `submissions` - enhanced with version tracking
-
-## Functions
-
-### `get_sequential_unlock_status(p_user_id uuid)`
-- **Purpose**: Returns unlock status respecting feature flag
-- **Behavior**: 
-  - When flag OFF: delegates to existing `get_student_unlock_sequence`
-  - When flag ON: enforces sequential unlock rules
-- **Returns**: recording_id, sequence_order, is_unlocked, unlock_reason, assignment_required, assignment_completed
+- `course_enrollments.enrolled_at` - used for drip timing calculations
 
 ### `handle_sequential_submission_approval()`
 - **Purpose**: Trigger function for submission approvals

@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen } from 'lucide-react';
+import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
@@ -55,6 +55,8 @@ interface CompanySettingsData {
   onboarding_video_url?: string;
   // Multi-Course Feature
   multi_course_enabled: boolean;
+  // Drip Content Feature
+  drip_enabled_default: boolean;
   // Branding
   branding?: {
     logo?: {
@@ -94,7 +96,9 @@ export function CompanySettings() {
     questionnaire: [],
     onboarding_video_url: '',
     // Multi-Course Feature
-    multi_course_enabled: false
+    multi_course_enabled: false,
+    // Drip Content Feature
+    drip_enabled_default: false
   });
 
   // State for editing questions
@@ -432,6 +436,32 @@ export function CompanySettings() {
             <p className="text-sm text-muted-foreground">
               When enabled, students can enroll in multiple courses and the platform will support course-specific content, 
               progress tracking, and learning pathways.
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Content Drip Settings */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Content Drip Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="drip_enabled_default"
+                checked={settings.drip_enabled_default}
+                onCheckedChange={(checked) => handleInputChange('drip_enabled_default', checked)}
+              />
+              <Label htmlFor="drip_enabled_default" className="font-medium">
+                Enable Content Drip by Default
+              </Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              When enabled, recordings will unlock based on days since enrollment. Each recording can have a "drip days" 
+              value that determines when it becomes available. Courses and pathways can override this setting individually.
             </p>
           </CardContent>
         </Card>
