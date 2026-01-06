@@ -367,39 +367,48 @@ export type Database = {
       }
       course_enrollments: {
         Row: {
+          amount_paid: number | null
           completed_at: string | null
           course_id: string
           created_at: string | null
           enrolled_at: string | null
           id: string
           pathway_id: string | null
+          payment_status: string | null
           progress_percentage: number | null
           status: string | null
           student_id: string
+          total_amount: number | null
           updated_at: string | null
         }
         Insert: {
+          amount_paid?: number | null
           completed_at?: string | null
           course_id: string
           created_at?: string | null
           enrolled_at?: string | null
           id?: string
           pathway_id?: string | null
+          payment_status?: string | null
           progress_percentage?: number | null
           status?: string | null
           student_id: string
+          total_amount?: number | null
           updated_at?: string | null
         }
         Update: {
+          amount_paid?: number | null
           completed_at?: string | null
           course_id?: string
           created_at?: string | null
           enrolled_at?: string | null
           id?: string
           pathway_id?: string | null
+          payment_status?: string | null
           progress_percentage?: number | null
           status?: string | null
           student_id?: string
+          total_amount?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -783,6 +792,7 @@ export type Database = {
       invoices: {
         Row: {
           amount: number
+          course_id: string | null
           created_at: string | null
           due_date: string
           enrollment_details: Json | null
@@ -793,6 +803,7 @@ export type Database = {
           installment_number: number
           notes: string | null
           paid_at: string | null
+          pathway_id: string | null
           payment_method: string | null
           second_reminder_sent: boolean | null
           second_reminder_sent_at: string | null
@@ -802,6 +813,7 @@ export type Database = {
         }
         Insert: {
           amount: number
+          course_id?: string | null
           created_at?: string | null
           due_date: string
           enrollment_details?: Json | null
@@ -812,6 +824,7 @@ export type Database = {
           installment_number: number
           notes?: string | null
           paid_at?: string | null
+          pathway_id?: string | null
           payment_method?: string | null
           second_reminder_sent?: boolean | null
           second_reminder_sent_at?: string | null
@@ -821,6 +834,7 @@ export type Database = {
         }
         Update: {
           amount?: number
+          course_id?: string | null
           created_at?: string | null
           due_date?: string
           enrollment_details?: Json | null
@@ -831,6 +845,7 @@ export type Database = {
           installment_number?: number
           notes?: string | null
           paid_at?: string | null
+          pathway_id?: string | null
           payment_method?: string | null
           second_reminder_sent?: boolean | null
           second_reminder_sent_at?: string | null
@@ -839,6 +854,20 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invoices_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_pathway_id_fkey"
+            columns: ["pathway_id"]
+            isOneToOne: false
+            referencedRelation: "learning_pathways"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invoices_student_id_fkey"
             columns: ["student_id"]

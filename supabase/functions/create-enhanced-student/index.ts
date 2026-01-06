@@ -357,23 +357,37 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     // Auto-enroll student in default course (for backward compatibility)
+    let defaultCourseId: string | null = null;
+    let defaultCoursePrice: number | null = null;
+    let defaultCourseMaxInstallments: number | null = null;
+    
     try {
       const { data: defaultCourse } = await supabaseAdmin
         .from('courses')
-        .select('id')
+        .select('id, price, max_installments')
         .eq('is_active', true)
         .order('sequence_order', { ascending: true })
         .limit(1)
         .maybeSingle();
 
       if (defaultCourse) {
+        defaultCourseId = defaultCourse.id;
+        defaultCoursePrice = defaultCourse.price;
+        defaultCourseMaxInstallments = defaultCourse.max_installments;
+        
+        // Determine payment status based on whether there's a fee
+        const courseHasFee = defaultCourse.price && defaultCourse.price > 0 && finalFeeAmount > 0;
+        
         const { error: enrollError } = await supabaseAdmin
           .from('course_enrollments')
           .insert({
             student_id: studentRecord.id,
             course_id: defaultCourse.id,
             status: 'active',
-            progress_percentage: 0
+            progress_percentage: 0,
+            total_amount: courseHasFee ? finalFeeAmount : 0,
+            amount_paid: 0,
+            payment_status: courseHasFee ? 'pending' : 'waived'
           });
 
         if (enrollError) {
@@ -457,7 +471,7 @@ const handler = async (req: Request): Promise<Response> => {
           const installmentAmount = finalFeeAmount / installment_count;
           const intervalDays = installmentSettings.invoice_send_gap_days || 30;
           
-          // Create all installments
+          // Create all installments with course_id link
           const installments = [];
           for (let i = 1; i <= installment_count; i++) {
             const issueDate = new Date();
@@ -468,6 +482,8 @@ const handler = async (req: Request): Promise<Response> => {
 
             installments.push({
               student_id: studentRecord.id,
+              course_id: defaultCourseId, // Link invoice to course
+              pathway_id: null,
               amount: installmentAmount,
               installment_number: i,
               due_date: dueDate.toISOString(),

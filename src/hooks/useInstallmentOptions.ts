@@ -12,10 +12,14 @@ interface InstallmentOption {
   label: string;
 }
 
-export const useInstallmentOptions = () => {
+/**
+ * Hook for generating installment options.
+ * Can use a specific max count (from course/pathway) or fall back to company settings.
+ */
+export const useInstallmentOptions = (specificMaxCount?: number) => {
   const [options, setOptions] = useState<InstallmentOption[]>([]);
-  const [maxCount, setMaxCount] = useState<number>(3);
-  const [isLoading, setIsLoading] = useState(true);
+  const [maxCount, setMaxCount] = useState<number>(specificMaxCount || 3);
+  const [isLoading, setIsLoading] = useState(!specificMaxCount);
   const { toast } = useToast();
 
   const generateOptions = (count: number): InstallmentOption[] => {
@@ -29,6 +33,14 @@ export const useInstallmentOptions = () => {
   };
 
   const fetchCompanySettings = async () => {
+    // If a specific max count is provided, use it directly
+    if (specificMaxCount) {
+      setMaxCount(specificMaxCount);
+      setOptions(generateOptions(specificMaxCount));
+      setIsLoading(false);
+      return;
+    }
+
     try {
       safeLogger.info('Fetching company settings for installments...');
       const { data, error } = await supabase
@@ -53,6 +65,15 @@ export const useInstallmentOptions = () => {
       setIsLoading(false);
     }
   };
+
+  // Update options when specificMaxCount changes
+  useEffect(() => {
+    if (specificMaxCount) {
+      setMaxCount(specificMaxCount);
+      setOptions(generateOptions(specificMaxCount));
+      setIsLoading(false);
+    }
+  }, [specificMaxCount]);
 
   const validateInstallmentValue = (value: string): boolean => {
     const match = value.match(/^(\d+)_installments?$/);

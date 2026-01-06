@@ -16,6 +16,8 @@ import { cn } from '@/lib/utils';
 interface Invoice {
   id: string;
   student_id: string | null;
+  course_id: string | null;
+  pathway_id: string | null;
   installment_number: number;
   amount: number;
   due_date: string;
@@ -25,6 +27,8 @@ interface Invoice {
   users: {
     email: string;
   };
+  course_name?: string;
+  pathway_name?: string;
 }
 
 export const FinancialManagement = () => {
@@ -58,15 +62,20 @@ const fetchInvoices = async () => {
   try {
     const { data: invData, error: invErr } = await supabase
       .from('invoices')
-      .select('id, student_id, installment_number, amount, due_date, extended_due_date, status, paid_at');
+      .select('id, student_id, course_id, pathway_id, installment_number, amount, due_date, extended_due_date, status, paid_at');
     if (invErr) throw invErr;
 
     const invoicesRaw = invData || [];
     const studentIds = Array.from(new Set(invoicesRaw.map((i: any) => i.student_id).filter(Boolean)));
+    const courseIds = Array.from(new Set(invoicesRaw.map((i: any) => i.course_id).filter(Boolean)));
+    const pathwayIds = Array.from(new Set(invoicesRaw.map((i: any) => i.pathway_id).filter(Boolean)));
 
     let studentMap = new Map<string, string>(); // student_id -> user_id
     let emailMap = new Map<string, string>();   // user_id -> email
+    let courseMap = new Map<string, string>();  // course_id -> title
+    let pathwayMap = new Map<string, string>(); // pathway_id -> name
 
+    // Fetch related data
     if (studentIds.length) {
       const [{ data: students, error: sErr }, { data: users, error: uErr }] = await Promise.all([
         supabase.from('students').select('id, user_id').in('id', studentIds),
@@ -74,9 +83,26 @@ const fetchInvoices = async () => {
       ]);
       if (sErr) throw sErr;
       if (uErr) throw uErr;
-
       (students || []).forEach((s: any) => studentMap.set(s.id, s.user_id));
       (users || []).forEach((u: any) => emailMap.set(u.id, u.email));
+    }
+    
+    if (courseIds.length) {
+      const { data: courses, error: cErr } = await supabase
+        .from('courses')
+        .select('id, title')
+        .in('id', courseIds);
+      if (cErr) throw cErr;
+      (courses || []).forEach((c: any) => courseMap.set(c.id, c.title));
+    }
+    
+    if (pathwayIds.length) {
+      const { data: pathways, error: pErr } = await supabase
+        .from('learning_pathways')
+        .select('id, name')
+        .in('id', pathwayIds);
+      if (pErr) throw pErr;
+      (pathways || []).forEach((p: any) => pathwayMap.set(p.id, p.name));
     }
 
     const mapped: Invoice[] = (invoicesRaw as any[]).map((row: any) => {
@@ -85,13 +111,17 @@ const fetchInvoices = async () => {
       return {
         id: row.id,
         student_id: row.student_id || null,
+        course_id: row.course_id || null,
+        pathway_id: row.pathway_id || null,
         installment_number: row.installment_number,
         amount: Number(row.amount || 0),
         due_date: row.due_date,
         extended_due_date: row.extended_due_date || null,
         status: row.status,
         payment_date: row.paid_at,
-        users: { email }
+        users: { email },
+        course_name: row.course_id ? courseMap.get(row.course_id) : undefined,
+        pathway_name: row.pathway_id ? pathwayMap.get(row.pathway_id) : undefined
       };
     });
 
@@ -382,6 +412,7 @@ const getStatusBadge = (status: string) => {
             <TableHeader>
               <TableRow>
                 <TableHead>Student Email</TableHead>
+                <TableHead>Course/Pathway</TableHead>
                 <TableHead>Installment</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Due Date</TableHead>
@@ -394,6 +425,21 @@ const getStatusBadge = (status: string) => {
               {filteredInvoices.map((invoice) => (
                 <TableRow key={invoice.id}>
                   <TableCell>{invoice.users?.email}</TableCell>
+                  <TableCell>
+                    {invoice.course_name && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        {invoice.course_name}
+                      </Badge>
+                    )}
+                    {invoice.pathway_name && (
+                      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+                        {invoice.pathway_name}
+                      </Badge>
+                    )}
+                    {!invoice.course_name && !invoice.pathway_name && (
+                      <span className="text-muted-foreground text-sm">General</span>
+                    )}
+                  </TableCell>
                   <TableCell>Installment {invoice.installment_number}</TableCell>
                   <TableCell>${invoice.amount}</TableCell>
                   <TableCell>
