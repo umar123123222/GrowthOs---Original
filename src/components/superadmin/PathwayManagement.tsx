@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Route, Eye, EyeOff, ArrowRight, GitFork } from 'lucide-react';
+import { Plus, Edit, Trash2, Route, Eye, EyeOff, ArrowRight, GitFork, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -24,6 +24,7 @@ interface LearningPathway {
   is_active: boolean;
   is_published: boolean;
   created_at: string | null;
+  drip_enabled: boolean | null;
   course_count?: number;
 }
 
@@ -62,7 +63,8 @@ export function PathwayManagement() {
     price: 0,
     currency: 'PKR',
     is_active: true,
-    is_published: false
+    is_published: false,
+    drip_enabled: null as boolean | null
   });
   const { toast } = useToast();
 
@@ -94,6 +96,7 @@ export function PathwayManagement() {
 
       const pathwaysWithCounts = (pathwaysData || []).map(pathway => ({
         ...pathway,
+        drip_enabled: (pathway as any).drip_enabled ?? null,
         course_count: courseCountMap.get(pathway.id) || 0
       }));
 
@@ -178,8 +181,9 @@ export function PathwayManagement() {
             price: formData.price,
             currency: formData.currency,
             is_active: formData.is_active,
-            is_published: formData.is_published
-          })
+            is_published: formData.is_published,
+            drip_enabled: formData.drip_enabled
+          } as any)
           .eq('id', editingPathway.id);
 
         if (error) throw error;
@@ -198,8 +202,9 @@ export function PathwayManagement() {
             price: formData.price,
             currency: formData.currency,
             is_active: formData.is_active,
-            is_published: formData.is_published
-          });
+            is_published: formData.is_published,
+            drip_enabled: formData.drip_enabled
+          } as any);
 
         if (error) throw error;
 
@@ -231,7 +236,8 @@ export function PathwayManagement() {
       price: pathway.price || 0,
       currency: pathway.currency || 'PKR',
       is_active: pathway.is_active,
-      is_published: pathway.is_published
+      is_published: pathway.is_published,
+      drip_enabled: pathway.drip_enabled
     });
     setDialogOpen(true);
   };
@@ -405,7 +411,8 @@ export function PathwayManagement() {
       price: 0,
       currency: 'PKR',
       is_active: true,
-      is_published: false
+      is_published: false,
+      drip_enabled: null
     });
   };
 
@@ -531,6 +538,33 @@ export function PathwayManagement() {
                   />
                   <Label htmlFor="is_published">Published</Label>
                 </div>
+              </div>
+
+              {/* Drip Content Setting */}
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Content Drip
+                </Label>
+                <Select
+                  value={formData.drip_enabled === null ? 'default' : formData.drip_enabled ? 'on' : 'off'}
+                  onValueChange={(value) => setFormData({ 
+                    ...formData, 
+                    drip_enabled: value === 'default' ? null : value === 'on' 
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select drip setting" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Use Default (Company Setting)</SelectItem>
+                    <SelectItem value="on">Enabled</SelectItem>
+                    <SelectItem value="off">Disabled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, recordings unlock based on days since enrollment
+                </p>
               </div>
               
               <DialogFooter>

@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, BookOpen, Eye, EyeOff, UserCheck, Users } from 'lucide-react';
+import { Plus, Edit, Trash2, BookOpen, Eye, EyeOff, UserCheck, Users, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -37,6 +37,7 @@ interface Course {
   is_published: boolean;
   sequence_order: number | null;
   created_at: string | null;
+  drip_enabled: boolean | null;
   module_count?: number;
   enrollment_count?: number;
   mentors?: MentorAssignment[];
@@ -59,7 +60,8 @@ export function CourseManagement() {
     currency: 'PKR',
     is_active: true,
     is_published: false,
-    sequence_order: 0
+    sequence_order: 0,
+    drip_enabled: null as boolean | null
   });
   const { toast } = useToast();
 
@@ -135,6 +137,7 @@ export function CourseManagement() {
 
       const coursesWithCounts = (coursesData || []).map(course => ({
         ...course,
+        drip_enabled: (course as any).drip_enabled ?? null,
         module_count: moduleCountMap.get(course.id) || 0,
         enrollment_count: enrollmentCountMap.get(course.id) || 0,
         mentors: mentorAssignmentsMap.get(course.id) || []
@@ -248,8 +251,9 @@ export function CourseManagement() {
             currency: formData.currency,
             is_active: formData.is_active,
             is_published: formData.is_published,
-            sequence_order: formData.sequence_order
-          })
+            sequence_order: formData.sequence_order,
+            drip_enabled: formData.drip_enabled
+          } as any)
           .eq('id', editingCourse.id);
 
         if (error) throw error;
@@ -269,8 +273,9 @@ export function CourseManagement() {
             currency: formData.currency,
             is_active: formData.is_active,
             is_published: formData.is_published,
-            sequence_order: formData.sequence_order
-          });
+            sequence_order: formData.sequence_order,
+            drip_enabled: formData.drip_enabled
+          } as any);
 
         if (error) throw error;
 
@@ -303,7 +308,8 @@ export function CourseManagement() {
       currency: course.currency || 'PKR',
       is_active: course.is_active,
       is_published: course.is_published,
-      sequence_order: course.sequence_order || 0
+      sequence_order: course.sequence_order || 0,
+      drip_enabled: course.drip_enabled
     });
     setDialogOpen(true);
   };
@@ -389,7 +395,8 @@ export function CourseManagement() {
       currency: 'PKR',
       is_active: true,
       is_published: false,
-      sequence_order: courses.length + 1
+      sequence_order: courses.length + 1,
+      drip_enabled: null
     });
   };
 
@@ -495,6 +502,33 @@ export function CourseManagement() {
                   />
                   <Label htmlFor="is_published">Published</Label>
                 </div>
+              </div>
+
+              {/* Drip Content Setting */}
+              <div className="space-y-2 pt-2 border-t">
+                <Label className="flex items-center gap-2">
+                  <Clock className="w-4 h-4" />
+                  Content Drip
+                </Label>
+                <Select
+                  value={formData.drip_enabled === null ? 'default' : formData.drip_enabled ? 'on' : 'off'}
+                  onValueChange={(value) => setFormData({ 
+                    ...formData, 
+                    drip_enabled: value === 'default' ? null : value === 'on' 
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select drip setting" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="default">Use Default (Company Setting)</SelectItem>
+                    <SelectItem value="on">Enabled</SelectItem>
+                    <SelectItem value="off">Disabled</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, recordings unlock based on days since enrollment
+                </p>
               </div>
               
               <DialogFooter>

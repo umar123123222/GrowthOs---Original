@@ -2645,6 +2645,8 @@ export type Database = {
         Returns: {
           assignment_completed: boolean
           assignment_required: boolean
+          drip_locked: boolean
+          drip_unlock_date: string
           is_unlocked: boolean
           recording_id: string
           recording_watched: boolean

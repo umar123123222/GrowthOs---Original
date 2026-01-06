@@ -41,6 +41,7 @@ interface Recording {
   notes: string;
   description?: string | null;
   assignment_id: string | null;
+  drip_days: number;
   module: {
     id: string;
     title: string;
@@ -203,7 +204,8 @@ export function RecordingsManagement() {
     notes: '',
     description: '',
     module_id: '',
-    assignment_id: ''
+    assignment_id: '',
+    drip_days: 0
   });
   const { toast } = useToast();
 
@@ -230,7 +232,7 @@ export function RecordingsManagement() {
       }
       
       safeLogger.info('Recordings fetched:', { data });
-      setRecordings(data || []);
+      setRecordings((data || []).map(r => ({ ...r, drip_days: (r as any).drip_days || 0 })));
     } catch (error) {
       safeLogger.error('Failed to fetch recordings:', error);
       toast({
@@ -285,7 +287,8 @@ export function RecordingsManagement() {
         notes: formData.notes || null,
         description: formData.description || null,
         module: formData.module_id || null,
-        assignment_id: formData.assignment_id || null
+        assignment_id: formData.assignment_id || null,
+        drip_days: formData.drip_days || 0
       };
 
       safeLogger.info('Prepared recording data:', { recordingData });
@@ -333,7 +336,8 @@ export function RecordingsManagement() {
         notes: '',
         description: '',
         module_id: '',
-        assignment_id: ''
+        assignment_id: '',
+        drip_days: 0
       });
       
       // Refresh recordings
@@ -358,7 +362,8 @@ export function RecordingsManagement() {
       notes: recording.notes,
       description: recording.description || '',
       module_id: recording.module?.id || '',
-      assignment_id: recording.assignment_id || ''
+      assignment_id: recording.assignment_id || '',
+      drip_days: (recording as any).drip_days || 0
     });
     setDialogOpen(true);
   };
@@ -542,7 +547,8 @@ export function RecordingsManagement() {
                     notes: '',
                     description: '',
                     module_id: '',
-                    assignment_id: ''
+                    assignment_id: '',
+                    drip_days: 0
                   });
                 }}
                 className="hover-scale bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
@@ -658,6 +664,25 @@ export function RecordingsManagement() {
                     className="transition-all duration-200 focus:scale-[1.02]"
                     required
                   />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Drip Days</label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formData.drip_days}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 0;
+                      setFormData({ ...formData, drip_days: Math.max(0, value) });
+                    }}
+                    placeholder="Days after enrollment"
+                    className="transition-all duration-200 focus:scale-[1.02]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Days after enrollment before this recording becomes available (0 = immediately)
+                  </p>
                 </div>
               </div>
 

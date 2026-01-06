@@ -12,6 +12,8 @@ interface RecordingUnlock {
   assignment_required: boolean;
   assignment_completed: boolean;
   recording_watched: boolean;
+  drip_locked: boolean;
+  drip_unlock_date: string | null;
 }
 
 export const useRecordingUnlocks = () => {
@@ -128,7 +130,9 @@ export const useRecordingUnlocks = () => {
         unlock_reason: item.unlock_reason,
         assignment_required: item.assignment_required,
         assignment_completed: item.assignment_completed,
-        recording_watched: item.recording_watched
+        recording_watched: item.recording_watched,
+        drip_locked: item.drip_locked || false,
+        drip_unlock_date: item.drip_unlock_date || null
       }));
 
       logger.debug('Sequential unlock data:', { data: transformedData });
