@@ -21,6 +21,7 @@ interface LearningPathway {
   thumbnail_url: string | null;
   price: number | null;
   currency: string | null;
+  max_installments: number | null;
   is_active: boolean;
   is_published: boolean;
   created_at: string | null;
@@ -62,6 +63,7 @@ export function PathwayManagement() {
     thumbnail_url: '',
     price: 0,
     currency: 'PKR',
+    max_installments: null as number | null,
     is_active: true,
     is_published: false,
     drip_enabled: null as boolean | null
@@ -97,6 +99,7 @@ export function PathwayManagement() {
       const pathwaysWithCounts = (pathwaysData || []).map(pathway => ({
         ...pathway,
         drip_enabled: (pathway as any).drip_enabled ?? null,
+        max_installments: (pathway as any).max_installments ?? null,
         course_count: courseCountMap.get(pathway.id) || 0
       }));
 
@@ -180,6 +183,7 @@ export function PathwayManagement() {
             thumbnail_url: formData.thumbnail_url.trim() || null,
             price: formData.price,
             currency: formData.currency,
+            max_installments: formData.max_installments,
             is_active: formData.is_active,
             is_published: formData.is_published,
             drip_enabled: formData.drip_enabled
@@ -201,6 +205,7 @@ export function PathwayManagement() {
             thumbnail_url: formData.thumbnail_url.trim() || null,
             price: formData.price,
             currency: formData.currency,
+            max_installments: formData.max_installments,
             is_active: formData.is_active,
             is_published: formData.is_published,
             drip_enabled: formData.drip_enabled
@@ -235,6 +240,7 @@ export function PathwayManagement() {
       thumbnail_url: pathway.thumbnail_url || '',
       price: pathway.price || 0,
       currency: pathway.currency || 'PKR',
+      max_installments: pathway.max_installments,
       is_active: pathway.is_active,
       is_published: pathway.is_published,
       drip_enabled: pathway.drip_enabled
@@ -410,6 +416,7 @@ export function PathwayManagement() {
       thumbnail_url: '',
       price: 0,
       currency: 'PKR',
+      max_installments: null,
       is_active: true,
       is_published: false,
       drip_enabled: null
@@ -492,7 +499,7 @@ export function PathwayManagement() {
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">Price</Label>
                   <Input
@@ -502,6 +509,22 @@ export function PathwayManagement() {
                     onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                     min={0}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="max_installments">Max Installments</Label>
+                  <Input
+                    id="max_installments"
+                    type="number"
+                    value={formData.max_installments ?? ''}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      max_installments: e.target.value ? parseInt(e.target.value) : null 
+                    })}
+                    min={1}
+                    max={12}
+                    placeholder="Default"
+                  />
+                  <p className="text-xs text-muted-foreground">1-12, blank for default</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="currency">Currency</Label>

@@ -33,6 +33,7 @@ interface Course {
   thumbnail_url: string | null;
   price: number | null;
   currency: string | null;
+  max_installments: number | null;
   is_active: boolean;
   is_published: boolean;
   sequence_order: number | null;
@@ -58,6 +59,7 @@ export function CourseManagement() {
     thumbnail_url: '',
     price: 0,
     currency: 'PKR',
+    max_installments: null as number | null,
     is_active: true,
     is_published: false,
     sequence_order: 0,
@@ -138,6 +140,7 @@ export function CourseManagement() {
       const coursesWithCounts = (coursesData || []).map(course => ({
         ...course,
         drip_enabled: (course as any).drip_enabled ?? null,
+        max_installments: (course as any).max_installments ?? null,
         module_count: moduleCountMap.get(course.id) || 0,
         enrollment_count: enrollmentCountMap.get(course.id) || 0,
         mentors: mentorAssignmentsMap.get(course.id) || []
@@ -249,6 +252,7 @@ export function CourseManagement() {
             thumbnail_url: formData.thumbnail_url.trim() || null,
             price: formData.price,
             currency: formData.currency,
+            max_installments: formData.max_installments,
             is_active: formData.is_active,
             is_published: formData.is_published,
             sequence_order: formData.sequence_order,
@@ -271,6 +275,7 @@ export function CourseManagement() {
             thumbnail_url: formData.thumbnail_url.trim() || null,
             price: formData.price,
             currency: formData.currency,
+            max_installments: formData.max_installments,
             is_active: formData.is_active,
             is_published: formData.is_published,
             sequence_order: formData.sequence_order,
@@ -306,6 +311,7 @@ export function CourseManagement() {
       thumbnail_url: course.thumbnail_url || '',
       price: course.price || 0,
       currency: course.currency || 'PKR',
+      max_installments: course.max_installments,
       is_active: course.is_active,
       is_published: course.is_published,
       sequence_order: course.sequence_order || 0,
@@ -393,6 +399,7 @@ export function CourseManagement() {
       thumbnail_url: '',
       price: 0,
       currency: 'PKR',
+      max_installments: null,
       is_active: true,
       is_published: false,
       sequence_order: courses.length + 1,
@@ -462,7 +469,7 @@ export function CourseManagement() {
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">Price</Label>
                   <Input
@@ -472,6 +479,22 @@ export function CourseManagement() {
                     onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                     min={0}
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="max_installments">Max Installments</Label>
+                  <Input
+                    id="max_installments"
+                    type="number"
+                    value={formData.max_installments ?? ''}
+                    onChange={(e) => setFormData({ 
+                      ...formData, 
+                      max_installments: e.target.value ? parseInt(e.target.value) : null 
+                    })}
+                    min={1}
+                    max={12}
+                    placeholder="Default"
+                  />
+                  <p className="text-xs text-muted-foreground">1-12, blank for company default</p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="sequence_order">Order</Label>
