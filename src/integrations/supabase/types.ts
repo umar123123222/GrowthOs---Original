@@ -214,6 +214,7 @@ export type Database = {
       company_settings: {
         Row: {
           address: string
+          announcement_banner: Json | null
           branding: Json | null
           company_email: string | null
           company_logo: string | null
@@ -242,6 +243,7 @@ export type Database = {
         }
         Insert: {
           address?: string
+          announcement_banner?: Json | null
           branding?: Json | null
           company_email?: string | null
           company_logo?: string | null
@@ -270,6 +272,7 @@ export type Database = {
         }
         Update: {
           address?: string
+          announcement_banner?: Json | null
           branding?: Json | null
           company_email?: string | null
           company_logo?: string | null

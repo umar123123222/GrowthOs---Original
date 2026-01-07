@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen, Clock } from 'lucide-react';
+import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen, Clock, Megaphone, Info, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
@@ -33,6 +33,15 @@ interface PaymentMethod {
 
 // Using environment variables for SMTP configuration only
 
+interface AnnouncementBannerSettings {
+  enabled: boolean;
+  message: string;
+  start_date: string;
+  end_date: string;
+  background_color: 'blue' | 'yellow' | 'red' | 'green';
+  dismissible: boolean;
+}
+
 interface CompanySettingsData {
   id?: string;
   company_name: string;
@@ -55,6 +64,8 @@ interface CompanySettingsData {
   multi_course_enabled: boolean;
   // Drip Content Feature
   drip_enabled_default: boolean;
+  // Announcement Banner
+  announcement_banner?: AnnouncementBannerSettings;
   // Branding
   branding?: {
     logo?: {
@@ -94,7 +105,16 @@ export function CompanySettings() {
     // Multi-Course Feature
     multi_course_enabled: false,
     // Drip Content Feature
-    drip_enabled_default: false
+    drip_enabled_default: false,
+    // Announcement Banner
+    announcement_banner: {
+      enabled: false,
+      message: '',
+      start_date: '',
+      end_date: '',
+      background_color: 'blue',
+      dismissible: true
+    }
   });
 
   // State for editing questions
@@ -462,6 +482,182 @@ export function CompanySettings() {
           </CardContent>
         </Card>
 
+        {/* Announcement Banner */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Megaphone className="h-5 w-5" />
+              Announcement Banner
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="announcement_banner_enabled"
+                checked={settings.announcement_banner?.enabled || false}
+                onCheckedChange={(checked) => setSettings(prev => ({
+                  ...prev,
+                  announcement_banner: {
+                    ...prev.announcement_banner!,
+                    enabled: checked
+                  }
+                }))}
+              />
+              <Label htmlFor="announcement_banner_enabled" className="font-medium">
+                Enable Announcement Banner
+              </Label>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Display an announcement banner at the top of the LMS for all users during the specified date range.
+            </p>
+
+            {settings.announcement_banner?.enabled && (
+              <>
+                <Separator className="my-4" />
+                
+                <div className="space-y-4">
+                  {/* Message */}
+                  <div className="space-y-2">
+                    <Label htmlFor="announcement_message">Banner Message</Label>
+                    <Textarea
+                      id="announcement_message"
+                      value={settings.announcement_banner?.message || ''}
+                      onChange={(e) => setSettings(prev => ({
+                        ...prev,
+                        announcement_banner: {
+                          ...prev.announcement_banner!,
+                          message: e.target.value
+                        }
+                      }))}
+                      placeholder="Enter your announcement message..."
+                      rows={2}
+                    />
+                  </div>
+
+                  {/* Date Range */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="announcement_start_date">Start Date</Label>
+                      <Input
+                        id="announcement_start_date"
+                        type="datetime-local"
+                        value={settings.announcement_banner?.start_date || ''}
+                        onChange={(e) => setSettings(prev => ({
+                          ...prev,
+                          announcement_banner: {
+                            ...prev.announcement_banner!,
+                            start_date: e.target.value
+                          }
+                        }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="announcement_end_date">End Date</Label>
+                      <Input
+                        id="announcement_end_date"
+                        type="datetime-local"
+                        value={settings.announcement_banner?.end_date || ''}
+                        onChange={(e) => setSettings(prev => ({
+                          ...prev,
+                          announcement_banner: {
+                            ...prev.announcement_banner!,
+                            end_date: e.target.value
+                          }
+                        }))}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Color and Dismissible */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="announcement_color">Banner Color</Label>
+                      <Select
+                        value={settings.announcement_banner?.background_color || 'blue'}
+                        onValueChange={(value) => setSettings(prev => ({
+                          ...prev,
+                          announcement_banner: {
+                            ...prev.announcement_banner!,
+                            background_color: value as 'blue' | 'yellow' | 'red' | 'green'
+                          }
+                        }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="blue">
+                            <div className="flex items-center gap-2">
+                              <Info className="h-4 w-4 text-blue-600" />
+                              Blue (Info)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="yellow">
+                            <div className="flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                              Yellow (Warning)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="red">
+                            <div className="flex items-center gap-2">
+                              <AlertCircle className="h-4 w-4 text-red-600" />
+                              Red (Critical)
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="green">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              Green (Success)
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>User Dismissible</Label>
+                      <div className="flex items-center space-x-2 pt-2">
+                        <Switch
+                          id="announcement_dismissible"
+                          checked={settings.announcement_banner?.dismissible ?? true}
+                          onCheckedChange={(checked) => setSettings(prev => ({
+                            ...prev,
+                            announcement_banner: {
+                              ...prev.announcement_banner!,
+                              dismissible: checked
+                            }
+                          }))}
+                        />
+                        <Label htmlFor="announcement_dismissible" className="font-normal text-sm text-muted-foreground">
+                          Allow users to dismiss the banner
+                        </Label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  {settings.announcement_banner?.message && (
+                    <div className="space-y-2">
+                      <Label>Preview</Label>
+                      <div className={`py-3 px-4 rounded-lg flex items-center justify-center gap-3 ${
+                        settings.announcement_banner?.background_color === 'blue' ? 'bg-blue-600 text-white' :
+                        settings.announcement_banner?.background_color === 'yellow' ? 'bg-yellow-500 text-yellow-900' :
+                        settings.announcement_banner?.background_color === 'red' ? 'bg-red-600 text-white' :
+                        settings.announcement_banner?.background_color === 'green' ? 'bg-green-600 text-white' :
+                        'bg-blue-600 text-white'
+                      }`}>
+                        {settings.announcement_banner?.background_color === 'blue' && <Info className="h-5 w-5" />}
+                        {settings.announcement_banner?.background_color === 'yellow' && <AlertTriangle className="h-5 w-5" />}
+                        {settings.announcement_banner?.background_color === 'red' && <AlertCircle className="h-5 w-5" />}
+                        {settings.announcement_banner?.background_color === 'green' && <CheckCircle className="h-5 w-5" />}
+                        <p className="text-sm font-medium">{settings.announcement_banner?.message}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         {/* Student Sign-in & Questionnaire */}
         <Card className="lg:col-span-2">
