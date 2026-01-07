@@ -214,6 +214,15 @@ const Layout = memo(({
       if (!user?.id || user?.role !== 'student') return;
       
       try {
+        // First, look up the student record to get the correct students.id
+        const { data: studentData } = await supabase
+          .from('students')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const studentId = studentData?.id;
+
         // Fetch all active courses
         const { data: courses } = await supabase
           .from('courses')
@@ -221,14 +230,17 @@ const Layout = memo(({
           .eq('is_active', true)
           .order('sequence_order', { ascending: true });
 
-        // Fetch student enrollments
-        const { data: enrollments } = await supabase
-          .from('course_enrollments')
-          .select('course_id, status')
-          .eq('student_id', user.id)
-          .eq('status', 'active');
+        // Fetch student enrollments using the correct students.id
+        let enrolledCourseIds = new Set<string>();
+        if (studentId) {
+          const { data: enrollments } = await supabase
+            .from('course_enrollments')
+            .select('course_id, status')
+            .eq('student_id', studentId)
+            .eq('status', 'active');
 
-        const enrolledCourseIds = new Set(enrollments?.map(e => e.course_id) || []);
+          enrolledCourseIds = new Set(enrollments?.map(e => e.course_id) || []);
+        }
 
         const courseItems: CourseMenuItem[] = (courses || []).map(course => ({
           id: course.id,
