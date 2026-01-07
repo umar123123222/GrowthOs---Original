@@ -45,10 +45,17 @@ interface Recording {
   module: {
     id: string;
     title: string;
+    course_id: string | null;
   };
 }
 
 interface Module {
+  id: string;
+  title: string;
+  course_id: string | null;
+}
+
+interface Course {
   id: string;
   title: string;
 }
@@ -189,6 +196,7 @@ function SortableRecordingRow({
 export function RecordingsManagement() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncingUnlocks, setSyncingUnlocks] = useState(false);
@@ -203,6 +211,7 @@ export function RecordingsManagement() {
     sequence_order: 0,
     notes: '',
     description: '',
+    course_id: '',
     module_id: '',
     assignment_id: '',
     drip_days: 0
@@ -211,6 +220,7 @@ export function RecordingsManagement() {
 
   useEffect(() => {
     fetchRecordings();
+    fetchCourses();
     fetchModules();
     fetchAssignments();
   }, []);
@@ -222,7 +232,7 @@ export function RecordingsManagement() {
         .from('available_lessons')
         .select(`
           *,
-          module:modules(id, title)
+          module:modules(id, title, course_id)
         `)
         .order('sequence_order');
 
@@ -232,7 +242,16 @@ export function RecordingsManagement() {
       }
       
       safeLogger.info('Recordings fetched:', { data });
-      setRecordings((data || []).map(r => ({ ...r, drip_days: (r as any).drip_days || 0 })));
+      setRecordings((data || []).map(r => {
+        const mod = r.module as { id: string; title: string; course_id: string | null } | null;
+        return { 
+          ...r, 
+          drip_days: (r as any).drip_days || 0,
+          module: mod 
+            ? { id: mod.id, title: mod.title, course_id: mod.course_id || null } 
+            : { id: '', title: '', course_id: null }
+        };
+      }));
     } catch (error) {
       safeLogger.error('Failed to fetch recordings:', error);
       toast({
@@ -245,11 +264,26 @@ export function RecordingsManagement() {
     }
   };
 
+  const fetchCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, title')
+        .eq('is_active', true)
+        .order('sequence_order');
+
+      if (error) throw error;
+      setCourses(data || []);
+    } catch (error) {
+      safeLogger.error('Error fetching courses:', error);
+    }
+  };
+
   const fetchModules = async () => {
     try {
       const { data, error } = await supabase
         .from('modules')
-        .select('id, title')
+        .select('id, title, course_id')
         .order('order');
 
       if (error) throw error;
@@ -258,6 +292,11 @@ export function RecordingsManagement() {
       safeLogger.error('Error fetching modules:', error);
     }
   };
+
+  // Filter modules based on selected course
+  const filteredModules = formData.course_id 
+    ? modules.filter(m => m.course_id === formData.course_id)
+    : modules;
 
   const fetchAssignments = async () => {
     try {
@@ -335,6 +374,7 @@ export function RecordingsManagement() {
         sequence_order: 0,
         notes: '',
         description: '',
+        course_id: '',
         module_id: '',
         assignment_id: '',
         drip_days: 0
@@ -361,6 +401,7 @@ export function RecordingsManagement() {
       sequence_order: recording.sequence_order,
       notes: recording.notes,
       description: recording.description || '',
+      course_id: recording.module?.course_id || '',
       module_id: recording.module?.id || '',
       assignment_id: recording.assignment_id || '',
       drip_days: (recording as any).drip_days || 0
@@ -546,6 +587,7 @@ export function RecordingsManagement() {
                     sequence_order: 0,
                     notes: '',
                     description: '',
+                    course_id: '',
                     module_id: '',
                     assignment_id: '',
                     drip_days: 0
@@ -686,24 +728,47 @@ export function RecordingsManagement() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground">Module <span className="text-destructive">*</span></label>
-                <Select
-                  value={formData.module_id}
-                  onValueChange={(value) => setFormData({ ...formData, module_id: value })}
-                  required
-                >
-                  <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
-                    <SelectValue placeholder="Select a module" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white z-50">
-                    {modules.map((module) => (
-                      <SelectItem key={module.id} value={module.id}>
-                        {module.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Course</label>
+                  <Select
+                    value={formData.course_id}
+                    onValueChange={(value) => setFormData({ ...formData, course_id: value, module_id: '' })}
+                  >
+                    <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
+                      <SelectValue placeholder="Select a course (optional)" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-50">
+                      <SelectItem value="">All Courses</SelectItem>
+                      {courses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Filter modules by course</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Module <span className="text-destructive">*</span></label>
+                  <Select
+                    value={formData.module_id}
+                    onValueChange={(value) => setFormData({ ...formData, module_id: value })}
+                    required
+                  >
+                    <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
+                      <SelectValue placeholder="Select a module" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-50">
+                      {filteredModules.map((module) => (
+                        <SelectItem key={module.id} value={module.id}>
+                          {module.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">
