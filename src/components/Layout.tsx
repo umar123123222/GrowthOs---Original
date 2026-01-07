@@ -5,7 +5,7 @@ import SuccessPartner from "@/components/SuccessPartner";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route, LayoutGrid } from "lucide-react";
+import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route, LayoutGrid, Lock } from "lucide-react";
 const MetaIcon = Facebook;
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,8 +18,15 @@ import { PageSkeleton } from "./LoadingStates/PageSkeleton";
 import RouteContentLoader from "./LoadingStates/RouteContentLoader";
 import { throttle } from "@/utils/performance";
 import { safeLogger } from '@/lib/safe-logger';
+
 interface LayoutProps {
   user: any;
+}
+
+interface CourseMenuItem {
+  id: string;
+  title: string;
+  isEnrolled: boolean;
 }
 
 // Memoized navigation items to prevent unnecessary re-computations
@@ -183,6 +190,8 @@ const Layout = memo(({
     toast
   } = useToast();
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
+  const [catalogMenuOpen, setCatalogMenuOpen] = useState(false);
+  const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showSuccessPartner, setShowSuccessPartner] = useState(false);
@@ -190,6 +199,7 @@ const Layout = memo(({
     shopify: false,
     meta: false
   });
+  const [catalogCourses, setCatalogCourses] = useState<CourseMenuItem[]>([]);
 
   // Check if user is superadmin, admin, mentor, enrollment_manager, or regular user
   const isUserSuperadmin = user?.role === 'superadmin';
@@ -197,6 +207,55 @@ const Layout = memo(({
   const isUserMentor = user?.role === 'mentor';
   const isUserEnrollmentManager = user?.role === 'enrollment_manager';
   const isUserAdminOrSuperadmin = isUserSuperadmin || isUserAdmin;
+
+  // Fetch courses for catalog menu (students only)
+  useEffect(() => {
+    const fetchCatalogCourses = async () => {
+      if (!user?.id || user?.role !== 'student') return;
+      
+      try {
+        // Fetch all active courses
+        const { data: courses } = await supabase
+          .from('courses')
+          .select('id, title')
+          .eq('is_active', true)
+          .order('sequence_order', { ascending: true });
+
+        // Fetch student enrollments
+        const { data: enrollments } = await supabase
+          .from('course_enrollments')
+          .select('course_id, status')
+          .eq('student_id', user.id)
+          .eq('status', 'active');
+
+        const enrolledCourseIds = new Set(enrollments?.map(e => e.course_id) || []);
+
+        const courseItems: CourseMenuItem[] = (courses || []).map(course => ({
+          id: course.id,
+          title: course.title,
+          isEnrolled: enrolledCourseIds.has(course.id)
+        }));
+
+        setCatalogCourses(courseItems);
+      } catch (error) {
+        console.error('Error fetching catalog courses:', error);
+      }
+    };
+
+    fetchCatalogCourses();
+  }, [user?.id, user?.role]);
+
+  const toggleCourseExpand = useCallback((courseId: string) => {
+    setExpandedCourses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(courseId)) {
+        newSet.delete(courseId);
+      } else {
+        newSet.add(courseId);
+      }
+      return newSet;
+    });
+  }, []);
 
   // Check connection status on mount and when user changes
   useEffect(() => {
@@ -466,14 +525,14 @@ const Layout = memo(({
     }
 
     // Default navigation for other users (students)
-    const baseNavigation = [{
+    const baseNavigation: any[] = [{
       name: "Dashboard",
       href: "/",
       icon: Monitor
     }, {
       name: "Catalog",
-      href: "/catalog",
-      icon: LayoutGrid
+      icon: LayoutGrid,
+      isCatalogMenu: true, // Special flag for catalog expandable menu
     }, {
       name: "Videos",
       href: "/videos",
@@ -633,6 +692,83 @@ const Layout = memo(({
           <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
             <div className="space-y-2">
               {navigation.map(item => {
+              // Handle Catalog expandable menu for students
+              if (item.isCatalogMenu) {
+                const isExpanded = catalogMenuOpen && !sidebarCollapsed;
+                const Icon = item.icon;
+                return <div key={item.name}>
+                      <button onClick={() => !sidebarCollapsed && setCatalogMenuOpen(!catalogMenuOpen)} className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover-scale" title={sidebarCollapsed ? item.name : undefined}>
+                        <div className="flex items-center">
+                          <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 text-gray-400`} />
+                          {!sidebarCollapsed && item.name}
+                        </div>
+                        {!sidebarCollapsed && (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
+                      </button>
+                      
+                      {isExpanded && !sidebarCollapsed && <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
+                          {catalogCourses.map(course => {
+                            const isCourseExpanded = expandedCourses.has(course.id);
+                            const isVideosActive = location.pathname === '/videos' && location.search.includes(`courseId=${course.id}`);
+                            const isAssignmentsActive = location.pathname === '/assignments' && location.search.includes(`courseId=${course.id}`);
+                            
+                            return (
+                              <div key={course.id}>
+                                <button
+                                  onClick={() => course.isEnrolled && toggleCourseExpand(course.id)}
+                                  className={`flex items-center justify-between w-full px-3 py-2 text-sm rounded-md transition-colors ${
+                                    course.isEnrolled 
+                                      ? 'text-gray-600 hover:bg-gray-50 cursor-pointer' 
+                                      : 'text-gray-400 cursor-not-allowed'
+                                  }`}
+                                  disabled={!course.isEnrolled}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {!course.isEnrolled && <Lock className="h-3 w-3 text-gray-400" />}
+                                    <span className="truncate max-w-[160px]">{course.title}</span>
+                                  </div>
+                                  {course.isEnrolled && (
+                                    isCourseExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
+                                  )}
+                                </button>
+                                
+                                {isCourseExpanded && course.isEnrolled && (
+                                  <div className="ml-4 mt-1 space-y-1 animate-accordion-down">
+                                    <Link
+                                      to={`/videos?courseId=${course.id}`}
+                                      className={`flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                        isVideosActive 
+                                          ? 'bg-primary text-primary-foreground' 
+                                          : 'text-gray-600 hover:bg-gray-100'
+                                      }`}
+                                    >
+                                      <Video className="mr-2 h-3.5 w-3.5" />
+                                      Videos
+                                    </Link>
+                                    <Link
+                                      to={`/assignments?courseId=${course.id}`}
+                                      className={`flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                        isAssignmentsActive 
+                                          ? 'bg-primary text-primary-foreground' 
+                                          : 'text-gray-600 hover:bg-gray-100'
+                                      }`}
+                                    >
+                                      <FileText className="mr-2 h-3.5 w-3.5" />
+                                      Assignments
+                                    </Link>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          {catalogCourses.length === 0 && (
+                            <div className="px-3 py-2 text-sm text-gray-400 italic">
+                              No courses available
+                            </div>
+                          )}
+                        </div>}
+                    </div>;
+              }
+              
               if (item.isExpandable) {
                 const isExpanded = courseMenuOpen && !sidebarCollapsed;
                 const Icon = item.icon;
@@ -659,14 +795,14 @@ const Layout = memo(({
               }
               const searchParams = new URLSearchParams(location.search);
               const currentTab = searchParams.get('tab');
-              const isTabLink = item.href.includes('?tab=');
+              const isTabLink = item.href?.includes('?tab=');
               const itemTab = isTabLink ? item.href.split('=')[1] : null;
               // Active when:
               // - tab link matches current tab
               // - OR base path matches and no tab is selected (or tab=dashboard)
               const isActive = isTabLink && currentTab === itemTab || !isTabLink && location.pathname === item.href && (!currentTab || currentTab === 'dashboard');
               const Icon = item.icon;
-              return <Link key={item.name} to={item.href} onMouseEnter={() => prefetchByHref(item.href)} className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`} title={sidebarCollapsed ? item.name : undefined}>
+              return <Link key={item.name} to={item.href || '/'} onMouseEnter={() => prefetchByHref(item.href || '')} className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`} title={sidebarCollapsed ? item.name : undefined}>
                     <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
                     {!sidebarCollapsed && item.name}
                   </Link>;
