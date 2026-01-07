@@ -18,7 +18,7 @@ import { PageSkeleton } from "./LoadingStates/PageSkeleton";
 import RouteContentLoader from "./LoadingStates/RouteContentLoader";
 import { throttle } from "@/utils/performance";
 import { safeLogger } from '@/lib/safe-logger';
-import { AnnouncementBanner } from "./AnnouncementBanner";
+import { AnnouncementBanner, useAnnouncementBanner } from "./AnnouncementBanner";
 
 interface LayoutProps {
   user: any;
@@ -201,8 +201,9 @@ const Layout = memo(({
     meta: false
   });
   const [catalogCourses, setCatalogCourses] = useState<CourseMenuItem[]>([]);
-
-  // Check if user is superadmin, admin, mentor, enrollment_manager, or regular user
+  
+  // Check if announcement banner is visible
+  const { isVisible: isBannerVisible } = useAnnouncementBanner();
   const isUserSuperadmin = user?.role === 'superadmin';
   const isUserAdmin = user?.role === 'admin';
   const isUserMentor = user?.role === 'mentor';
@@ -695,8 +696,8 @@ const Layout = memo(({
       <AnnouncementBanner />
 
       <div className="flex">
-        {/* Sidebar */}
-        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg min-h-screen transition-all duration-300 fixed top-16 left-0 z-30 overflow-y-auto`}>
+        {/* Sidebar - adjust top position when banner is visible */}
+        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg min-h-screen transition-all duration-300 fixed left-0 z-30 overflow-y-auto`} style={{ top: isBannerVisible ? '112px' : '64px' }}>
           <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
             <div className="space-y-2">
               {navigation.map(item => {
@@ -835,8 +836,8 @@ const Layout = memo(({
           </nav>
         </aside>
 
-        {/* Main Content */}
-        <main className={`flex-1 w-full max-w-full overflow-x-hidden pt-24 animate-fade-in ${sidebarCollapsed ? 'pl-16' : 'pl-80'} transition-all duration-300`}>
+        {/* Main Content - adjust padding when banner is visible */}
+        <main className={`flex-1 w-full max-w-full overflow-x-hidden animate-fade-in ${sidebarCollapsed ? 'pl-16' : 'pl-80'} transition-all duration-300`} style={{ paddingTop: isBannerVisible ? '144px' : '96px' }}>
           <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 py-0 lg:px-0">
             <Suspense fallback={<RouteContentLoader path={location.pathname} />}>
               <Outlet />

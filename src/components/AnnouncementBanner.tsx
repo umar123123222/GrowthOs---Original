@@ -1,16 +1,6 @@
-import { useState, useEffect } from 'react';
 import { X, Info, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-
-interface AnnouncementBannerSettings {
-  enabled: boolean;
-  message: string;
-  start_date: string;
-  end_date: string;
-  background_color: 'blue' | 'yellow' | 'red' | 'green';
-  dismissible: boolean;
-}
+import { useAnnouncementBanner } from '@/hooks/useAnnouncementBanner';
 
 const colorStyles = {
   blue: {
@@ -39,81 +29,19 @@ const colorStyles = {
   }
 };
 
-export function AnnouncementBanner() {
-  const [settings, setSettings] = useState<AnnouncementBannerSettings | null>(null);
-  const [isDismissed, setIsDismissed] = useState(false);
-  const [loading, setLoading] = useState(true);
+interface AnnouncementBannerProps {
+  onVisibilityChange?: (isVisible: boolean) => void;
+}
 
-  useEffect(() => {
-    fetchBannerSettings();
-  }, []);
+export function AnnouncementBanner({ onVisibilityChange }: AnnouncementBannerProps) {
+  const { settings, isVisible, dismiss } = useAnnouncementBanner();
 
-  const fetchBannerSettings = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('company_settings')
-        .select('announcement_banner')
-        .maybeSingle();
+  // Notify parent about visibility changes
+  if (onVisibilityChange) {
+    onVisibilityChange(isVisible);
+  }
 
-      if (error) {
-        console.error('Error fetching banner settings:', error);
-        return;
-      }
-
-      if (data?.announcement_banner) {
-        const bannerSettings = data.announcement_banner as unknown as AnnouncementBannerSettings;
-        setSettings(bannerSettings);
-        
-        // Check if previously dismissed (using localStorage with message hash)
-        if (bannerSettings.dismissible) {
-          const dismissedKey = `announcement_dismissed_${hashMessage(bannerSettings.message)}`;
-          const dismissed = localStorage.getItem(dismissedKey);
-          if (dismissed) {
-            setIsDismissed(true);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching banner settings:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const hashMessage = (message: string): string => {
-    // Simple hash for localStorage key
-    let hash = 0;
-    for (let i = 0; i < message.length; i++) {
-      const char = message.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return hash.toString();
-  };
-
-  const handleDismiss = () => {
-    if (settings?.message) {
-      const dismissedKey = `announcement_dismissed_${hashMessage(settings.message)}`;
-      localStorage.setItem(dismissedKey, 'true');
-    }
-    setIsDismissed(true);
-  };
-
-  const isWithinDateRange = (): boolean => {
-    if (!settings?.start_date || !settings?.end_date) return false;
-    
-    const now = new Date();
-    const startDate = new Date(settings.start_date);
-    const endDate = new Date(settings.end_date);
-    
-    // Set end date to end of day
-    endDate.setHours(23, 59, 59, 999);
-    
-    return now >= startDate && now <= endDate;
-  };
-
-  // Don't render if loading, not enabled, dismissed, or outside date range
-  if (loading || !settings?.enabled || isDismissed || !isWithinDateRange()) {
+  if (!isVisible || !settings) {
     return null;
   }
 
@@ -122,10 +50,10 @@ export function AnnouncementBanner() {
 
   return (
     <div className={cn(
-      'w-full py-3 px-4',
+      'fixed top-16 left-0 right-0 py-3 px-4',
       style.bg,
       style.text
-    )}>
+    )} style={{ zIndex: 35 }}>
       <div className="max-w-7xl mx-auto flex items-center justify-center gap-3">
         <IconComponent className="h-5 w-5 flex-shrink-0" />
         <p className="text-sm font-medium text-center flex-1">
@@ -133,7 +61,7 @@ export function AnnouncementBanner() {
         </p>
         {settings.dismissible && (
           <button
-            onClick={handleDismiss}
+            onClick={dismiss}
             className={cn(
               'p-1 rounded-full transition-colors flex-shrink-0',
               style.hoverBg
@@ -147,3 +75,6 @@ export function AnnouncementBanner() {
     </div>
   );
 }
+
+// Export hook for use in Layout
+export { useAnnouncementBanner };
