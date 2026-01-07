@@ -85,6 +85,22 @@ export function useCourses(): UseCoursesReturn {
 
       // Fetch student enrollments (only for students)
       if (user.role === 'student') {
+        // First, look up the student record to get the correct students.id
+        const { data: studentData } = await supabase
+          .from('students')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const studentId = studentData?.id;
+
+        if (!studentId) {
+          logger.warn('No student record found for user', { userId: user.id });
+          setEnrolledCourses([]);
+          setLoading(false);
+          return;
+        }
+
         const { data: enrollmentsData, error: enrollmentsError } = await supabase
           .from('course_enrollments')
           .select(`
@@ -96,7 +112,7 @@ export function useCourses(): UseCoursesReturn {
             enrolled_at,
             completed_at
           `)
-          .eq('student_id', user.id);
+          .eq('student_id', studentId);
 
         if (enrollmentsError) throw enrollmentsError;
 
