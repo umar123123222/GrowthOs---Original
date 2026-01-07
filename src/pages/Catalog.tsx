@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { Lock, Unlock, Calendar, BookOpen, Clock, ChevronRight } from 'lucide-react';
+import { 
+  Lock, Unlock, Calendar, BookOpen, ChevronRight, ChevronDown,
+  Video, FileText, FolderOpen, Play
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface Course {
   id: string;
@@ -28,13 +32,39 @@ interface Enrollment {
   access_expires_at: string | null;
 }
 
+interface Module {
+  id: string;
+  title: string;
+  description: string | null;
+  order: number | null;
+  course_id: string | null;
+}
+
+interface Recording {
+  id: string;
+  recording_title: string | null;
+  module: string | null;
+  sequence_order: number | null;
+}
+
+interface Assignment {
+  id: string;
+  name: string;
+  course_id: string | null;
+}
+
 const Catalog = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [modules, setModules] = useState<Module[]>([]);
+  const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [studentId, setStudentId] = useState<string | null>(null);
+  const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
+  const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (user?.id) {
@@ -68,6 +98,33 @@ const Catalog = () => {
 
       if (coursesError) throw coursesError;
       setCourses(coursesData || []);
+
+      // Fetch all modules
+      const { data: modulesData, error: modulesError } = await supabase
+        .from('modules')
+        .select('id, title, description, order, course_id')
+        .order('order', { ascending: true });
+
+      if (modulesError) throw modulesError;
+      setModules(modulesData || []);
+
+      // Fetch all recordings
+      const { data: recordingsData, error: recordingsError } = await supabase
+        .from('available_lessons')
+        .select('id, recording_title, module, sequence_order')
+        .order('sequence_order', { ascending: true });
+
+      if (recordingsError) throw recordingsError;
+      setRecordings(recordingsData || []);
+
+      // Fetch all assignments
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('assignments')
+        .select('id, name, course_id')
+        .order('name', { ascending: true });
+
+      if (assignmentsError) throw assignmentsError;
+      setAssignments(assignmentsData || []);
 
       // Fetch user's enrollments if they have a student record
       if (currentStudentId) {
@@ -110,10 +167,51 @@ const Catalog = () => {
     return new Date(enrollment.access_expires_at);
   };
 
-  const handleCourseClick = (course: Course) => {
-    if (isUnlocked(course.id)) {
-      // Navigate to videos page (could be enhanced to filter by course)
-      navigate('/videos');
+  const getCourseModules = (courseId: string) => {
+    return modules.filter(m => m.course_id === courseId);
+  };
+
+  const getModuleRecordings = (moduleId: string) => {
+    return recordings.filter(r => r.module === moduleId);
+  };
+
+  const getCourseAssignments = (courseId: string) => {
+    return assignments.filter(a => a.course_id === courseId);
+  };
+
+  const toggleCourse = (courseId: string) => {
+    setExpandedCourses(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(courseId)) {
+        newSet.delete(courseId);
+      } else {
+        newSet.add(courseId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleModule = (moduleId: string) => {
+    setExpandedModules(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(moduleId)) {
+        newSet.delete(moduleId);
+      } else {
+        newSet.add(moduleId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleVideoClick = (recordingId: string, unlocked: boolean) => {
+    if (unlocked) {
+      navigate(`/video/${recordingId}`);
+    }
+  };
+
+  const handleAssignmentClick = (assignmentId: string, unlocked: boolean) => {
+    if (unlocked) {
+      navigate('/assignments');
     }
   };
 
@@ -124,10 +222,9 @@ const Catalog = () => {
           <h1 className="text-2xl font-bold text-foreground">Course Catalog</h1>
           <p className="text-muted-foreground mt-1">Browse all available courses</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
+        <div className="space-y-4">
+          {[1, 2, 3].map((i) => (
             <Card key={i} className="overflow-hidden">
-              <Skeleton className="h-40 w-full" />
               <CardContent className="p-4 space-y-3">
                 <Skeleton className="h-6 w-3/4" />
                 <Skeleton className="h-4 w-full" />
@@ -144,7 +241,7 @@ const Catalog = () => {
   const lockedCourses = courses.filter(c => !isUnlocked(c.id));
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Course Catalog</h1>
         <p className="text-muted-foreground mt-1">
@@ -161,105 +258,186 @@ const Catalog = () => {
           </p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="space-y-3">
           {/* Show unlocked courses first, then locked ones */}
           {[...unlockedCourses, ...lockedCourses].map((course) => {
             const unlocked = isUnlocked(course.id);
             const expiryDate = getAccessExpiry(course.id);
             const isExpiringSoon = expiryDate && 
               (expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24) <= 7;
+            const courseModules = getCourseModules(course.id);
+            const courseAssignments = getCourseAssignments(course.id);
+            const isExpanded = expandedCourses.has(course.id);
 
             return (
               <Card 
                 key={course.id} 
-                className={`overflow-hidden transition-all duration-300 ${
+                className={`overflow-hidden transition-all duration-200 ${
                   unlocked 
-                    ? 'hover:shadow-lg cursor-pointer border-primary/20' 
-                    : 'opacity-75 cursor-not-allowed'
+                    ? 'border-primary/20' 
+                    : 'opacity-75'
                 }`}
-                onClick={() => handleCourseClick(course)}
               >
-                {/* Thumbnail */}
-                <div className="relative h-40 bg-gradient-to-br from-primary/10 to-primary/5 overflow-hidden">
-                  {course.thumbnail_url ? (
-                    <img 
-                      src={course.thumbnail_url} 
-                      alt={course.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <BookOpen className="w-16 h-16 text-primary/30" />
-                    </div>
-                  )}
-                  
-                  {/* Lock/Unlock Badge */}
-                  <div className={`absolute top-3 right-3 p-2 rounded-full ${
-                    unlocked 
-                      ? 'bg-green-500 text-white' 
-                      : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {unlocked ? (
-                      <Unlock className="w-4 h-4" />
-                    ) : (
-                      <Lock className="w-4 h-4" />
-                    )}
-                  </div>
-
-                  {/* Published Badge */}
-                  {!course.is_published && (
-                    <Badge 
-                      variant="secondary" 
-                      className="absolute top-3 left-3 bg-yellow-500/90 text-yellow-950"
+                <Collapsible open={isExpanded} onOpenChange={() => unlocked && toggleCourse(course.id)}>
+                  <CollapsibleTrigger asChild>
+                    <div 
+                      className={`flex items-center justify-between p-4 ${
+                        unlocked ? 'cursor-pointer hover:bg-muted/50' : 'cursor-not-allowed'
+                      }`}
                     >
-                      Draft
-                    </Badge>
-                  )}
-                </div>
-
-                <CardContent className="p-4 space-y-3">
-                  <div>
-                    <h3 className="font-semibold text-foreground line-clamp-1">
-                      {course.title}
-                    </h3>
-                    {course.description && (
-                      <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                        {course.description}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Access Status */}
-                  <div className="flex items-center justify-between pt-2 border-t border-border">
-                    {unlocked ? (
-                      <div className="flex flex-col">
-                        <div className="flex items-center text-green-600 text-sm font-medium">
-                          <Unlock className="w-3.5 h-3.5 mr-1.5" />
-                          Unlocked
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className={`p-2 rounded-lg ${
+                          unlocked 
+                            ? 'bg-green-500/10 text-green-600' 
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {unlocked ? <Unlock className="w-5 h-5" /> : <Lock className="w-5 h-5" />}
                         </div>
-                        {expiryDate && (
-                          <div className={`flex items-center text-xs mt-1 ${
-                            isExpiringSoon ? 'text-orange-600' : 'text-muted-foreground'
-                          }`}>
-                            <Calendar className="w-3 h-3 mr-1" />
-                            Access until {format(expiryDate, 'MMM d, yyyy')}
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-semibold text-foreground truncate">
+                              {course.title}
+                            </h3>
+                            {unlocked && (
+                              <Badge variant="outline" className="text-green-600 border-green-600/30 shrink-0">
+                                Unlocked
+                              </Badge>
+                            )}
                           </div>
-                        )}
+                          
+                          {unlocked && expiryDate && (
+                            <div className={`flex items-center text-xs mt-1 ${
+                              isExpiringSoon ? 'text-orange-600' : 'text-muted-foreground'
+                            }`}>
+                              <Calendar className="w-3 h-3 mr-1" />
+                              Access until {format(expiryDate, 'MMM d, yyyy')}
+                            </div>
+                          )}
+                          
+                          {!unlocked && (
+                            <p className="text-sm text-muted-foreground">
+                              Contact admin to unlock this course
+                            </p>
+                          )}
+                        </div>
                       </div>
-                    ) : (
-                      <div className="flex items-center text-muted-foreground text-sm">
-                        <Lock className="w-3.5 h-3.5 mr-1.5" />
-                        Locked
-                      </div>
-                    )}
-                    
-                    {unlocked && (
-                      <Button variant="ghost" size="sm" className="text-primary">
-                        Start <ChevronRight className="w-4 h-4 ml-1" />
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
+
+                      {unlocked && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <span className="text-xs">
+                            {courseModules.length} modules
+                          </span>
+                          {isExpanded ? (
+                            <ChevronDown className="w-5 h-5" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent>
+                    <div className="border-t border-border">
+                      {/* Modules Section */}
+                      {courseModules.length > 0 && (
+                        <div className="p-2">
+                          {courseModules.map((module) => {
+                            const moduleRecordings = getModuleRecordings(module.id);
+                            const isModuleExpanded = expandedModules.has(module.id);
+
+                            return (
+                              <Collapsible 
+                                key={module.id} 
+                                open={isModuleExpanded} 
+                                onOpenChange={() => toggleModule(module.id)}
+                              >
+                                <CollapsibleTrigger asChild>
+                                  <div className="flex items-center justify-between p-3 ml-4 rounded-lg hover:bg-muted/50 cursor-pointer">
+                                    <div className="flex items-center gap-2">
+                                      <FolderOpen className="w-4 h-4 text-primary" />
+                                      <span className="font-medium text-sm">{module.title}</span>
+                                      <Badge variant="secondary" className="text-xs">
+                                        {moduleRecordings.length} videos
+                                      </Badge>
+                                    </div>
+                                    {isModuleExpanded ? (
+                                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                                    )}
+                                  </div>
+                                </CollapsibleTrigger>
+
+                                <CollapsibleContent>
+                                  <div className="ml-8 space-y-1 pb-2">
+                                    {/* Videos */}
+                                    {moduleRecordings.map((recording) => (
+                                      <div
+                                        key={recording.id}
+                                        onClick={() => handleVideoClick(recording.id, unlocked)}
+                                        className="flex items-center gap-2 p-2 pl-4 rounded-md hover:bg-muted/50 cursor-pointer group"
+                                      >
+                                        <Video className="w-3.5 h-3.5 text-muted-foreground group-hover:text-primary" />
+                                        <span className="text-sm text-muted-foreground group-hover:text-foreground truncate">
+                                          {recording.recording_title || 'Untitled Video'}
+                                        </span>
+                                        <Play className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 text-primary" />
+                                      </div>
+                                    ))}
+                                    
+                                    {moduleRecordings.length === 0 && (
+                                      <p className="text-xs text-muted-foreground pl-4 py-2">
+                                        No videos in this module
+                                      </p>
+                                    )}
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* Assignments Section */}
+                      {courseAssignments.length > 0 && (
+                        <div className="border-t border-border p-2">
+                          <div className="p-3 ml-4">
+                            <div className="flex items-center gap-2 mb-2">
+                              <FileText className="w-4 h-4 text-orange-500" />
+                              <span className="font-medium text-sm">Assignments</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {courseAssignments.length}
+                              </Badge>
+                            </div>
+                            <div className="ml-6 space-y-1">
+                              {courseAssignments.map((assignment) => (
+                                <div
+                                  key={assignment.id}
+                                  onClick={() => handleAssignmentClick(assignment.id, unlocked)}
+                                  className="flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 cursor-pointer group"
+                                >
+                                  <FileText className="w-3.5 h-3.5 text-muted-foreground group-hover:text-orange-500" />
+                                  <span className="text-sm text-muted-foreground group-hover:text-foreground truncate">
+                                    {assignment.name}
+                                  </span>
+                                  <ChevronRight className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 text-primary" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {courseModules.length === 0 && courseAssignments.length === 0 && (
+                        <div className="p-4 text-center text-muted-foreground text-sm">
+                          No content available for this course yet
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
               </Card>
             );
           })}
