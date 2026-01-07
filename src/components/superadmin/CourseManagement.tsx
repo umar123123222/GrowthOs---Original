@@ -439,118 +439,126 @@ export function CourseManagement() {
               Add Course
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle>{editingCourse ? 'Edit Course' : 'Create Course'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="title">Title *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Course title"
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Course description"
-                  rows={3}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="thumbnail_url">Thumbnail URL</Label>
-                <Input
-                  id="thumbnail_url"
-                  value={formData.thumbnail_url}
-                  onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
-                  placeholder="https://..."
-                />
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price</Label>
-                  <Input
-                    id="price"
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                    min={0}
-                  />
+              <div className="grid grid-cols-2 gap-4">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title">Title *</Label>
+                    <Input
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="Course title"
+                      required
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Course description"
+                      rows={3}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="thumbnail_url">Thumbnail URL</Label>
+                    <Input
+                      id="thumbnail_url"
+                      value={formData.thumbnail_url}
+                      onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
+                      placeholder="https://..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Price</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
+                      min={0}
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="max_installments">Max Installments</Label>
-                  <Input
-                    id="max_installments"
-                    type="number"
-                    value={formData.max_installments ?? ''}
-                    onChange={(e) => setFormData({ 
-                      ...formData, 
-                      max_installments: e.target.value ? parseInt(e.target.value) : null 
-                    })}
-                    min={1}
-                    max={12}
-                    placeholder="Default"
-                  />
-                  <p className="text-xs text-muted-foreground">1-12, blank for company default</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sequence_order">Order</Label>
-                  <Input
-                    id="sequence_order"
-                    type="number"
-                    value={formData.sequence_order}
-                    onChange={(e) => setFormData({ ...formData, sequence_order: parseInt(e.target.value) || 0 })}
-                    min={0}
-                  />
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="max_installments">Max Installments</Label>
+                    <Input
+                      id="max_installments"
+                      type="number"
+                      value={formData.max_installments ?? ''}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        max_installments: e.target.value ? parseInt(e.target.value) : null 
+                      })}
+                      min={1}
+                      max={12}
+                      placeholder="Default"
+                    />
+                    <p className="text-xs text-muted-foreground">1-12, blank for company default</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="sequence_order">Order</Label>
+                    <Input
+                      id="sequence_order"
+                      type="number"
+                      value={formData.sequence_order}
+                      onChange={(e) => setFormData({ ...formData, sequence_order: parseInt(e.target.value) || 0 })}
+                      min={0}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="access_duration_days">Access Duration (Days)</Label>
+                    <Input
+                      id="access_duration_days"
+                      type="number"
+                      value={formData.access_duration_days ?? ''}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        access_duration_days: e.target.value ? parseInt(e.target.value) : null 
+                      })}
+                      min={1}
+                      placeholder="Unlimited"
+                    />
+                    <p className="text-xs text-muted-foreground">Leave blank for unlimited access</p>
+                  </div>
+                  
+                  <div className="flex items-center gap-6 pt-2">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="is_active"
+                        checked={formData.is_active}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                      />
+                      <Label htmlFor="is_active">Active</Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="is_published"
+                        checked={formData.is_published}
+                        onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })}
+                      />
+                      <Label htmlFor="is_published">Published</Label>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="access_duration_days">Access Duration (Days)</Label>
-                <Input
-                  id="access_duration_days"
-                  type="number"
-                  value={formData.access_duration_days ?? ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    access_duration_days: e.target.value ? parseInt(e.target.value) : null 
-                  })}
-                  min={1}
-                  placeholder="Unlimited"
-                />
-                <p className="text-xs text-muted-foreground">Leave blank for unlimited access</p>
-              </div>
-              
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="is_active"
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  />
-                  <Label htmlFor="is_active">Active</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    id="is_published"
-                    checked={formData.is_published}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_published: checked })}
-                  />
-                  <Label htmlFor="is_published">Published</Label>
-                </div>
-              </div>
-
-              {/* Drip Content Setting */}
+              {/* Full Width - Content Drip Setting */}
               <div className="space-y-2 pt-2 border-t">
                 <Label className="flex items-center gap-2">
                   <Clock className="w-4 h-4" />
