@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { useAuth } from '@/hooks/useAuth';
+import { formatCurrency } from '@/utils/currencyFormatter';
 import jsPDF from 'jspdf';
 interface Student {
   id: string;
@@ -114,6 +115,7 @@ export function StudentsManagement() {
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
   const [accessManagementOpen, setAccessManagementOpen] = useState(false);
   const [selectedStudentForAccess, setSelectedStudentForAccess] = useState<Student | null>(null);
+  const [companyCurrency, setCompanyCurrency] = useState<string>('PKR');
   const {
     options: installmentOptions
   } = useInstallmentOptions();
@@ -122,6 +124,7 @@ export function StudentsManagement() {
   safeLogger.info('StudentsManagement component loaded - statusFilter removed');
   useEffect(() => {
     fetchStudents();
+    fetchCompanyCurrency();
   }, []);
   useEffect(() => {
     if (students.length > 0) {
@@ -149,32 +152,78 @@ export function StudentsManagement() {
       supabase.removeChannel(channel);
     };
   }, []);
+  const fetchCompanyCurrency = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('company_settings')
+        .select('currency')
+        .single();
+      if (error) throw error;
+      if (data?.currency) {
+        setCompanyCurrency(data.currency);
+      }
+    } catch (error) {
+      console.error('Error fetching company currency:', error);
+    }
+  };
   const fetchInstallmentPayments = async () => {
     try {
-      const {
-        data,
-        error
-      } = await supabase.from('invoices').select('*').order('installment_number', {
-        ascending: true
+      // Fetch invoices with their related course enrollment status
+      const { data: invoicesData, error: invoicesError } = await supabase
+        .from('invoices')
+        .select('*, course_enrollments!invoices_course_id_fkey(status)')
+        .order('installment_number', { ascending: true });
+      
+      if (invoicesError) throw invoicesError;
+
+      // Fetch active enrollments to know which courses are currently active
+      const { data: activeEnrollments, error: enrollmentsError } = await supabase
+        .from('course_enrollments')
+        .select('student_id, course_id, pathway_id, status')
+        .eq('status', 'active');
+      
+      if (enrollmentsError) throw enrollmentsError;
+
+      // Create a set of active enrollment keys for quick lookup
+      const activeEnrollmentKeys = new Set<string>();
+      activeEnrollments?.forEach(e => {
+        if (e.course_id) {
+          activeEnrollmentKeys.add(`${e.student_id}_course_${e.course_id}`);
+        }
+        if (e.pathway_id) {
+          activeEnrollmentKeys.add(`${e.student_id}_pathway_${e.pathway_id}`);
+        }
       });
-      if (error) throw error;
 
       // Group payments by student_id and transform to InstallmentPayment format
+      // Only include invoices that are either:
+      // 1. Already paid (historical record)
+      // 2. For an active enrollment (current fees)
       const paymentsMap = new Map<string, InstallmentPayment[]>();
-      data?.forEach(invoice => {
-        const payment: InstallmentPayment = {
-          id: invoice.id,
-          installment_number: invoice.installment_number,
-          amount: invoice.amount,
-          status: invoice.status,
-          created_at: invoice.created_at,
-          due_date: invoice.due_date,
-          paid_at: invoice.paid_at
-        };
-        const key = String(invoice.student_id || '');
-        const userPayments = paymentsMap.get(key) || [];
-        userPayments.push(payment);
-        paymentsMap.set(key, userPayments);
+      invoicesData?.forEach(invoice => {
+        const isPaid = invoice.status === 'paid';
+        const isForActiveEnrollment = (
+          (invoice.course_id && activeEnrollmentKeys.has(`${invoice.student_id}_course_${invoice.course_id}`)) ||
+          (invoice.pathway_id && activeEnrollmentKeys.has(`${invoice.student_id}_pathway_${invoice.pathway_id}`)) ||
+          (!invoice.course_id && !invoice.pathway_id) // Legacy invoices without course/pathway
+        );
+
+        // Only include if paid OR for active enrollment
+        if (isPaid || isForActiveEnrollment) {
+          const payment: InstallmentPayment = {
+            id: invoice.id,
+            installment_number: invoice.installment_number,
+            amount: invoice.amount,
+            status: invoice.status,
+            created_at: invoice.created_at,
+            due_date: invoice.due_date,
+            paid_at: invoice.paid_at
+          };
+          const key = String(invoice.student_id || '');
+          const userPayments = paymentsMap.get(key) || [];
+          userPayments.push(payment);
+          paymentsMap.set(key, userPayments);
+        }
       });
       setInstallmentPayments(paymentsMap);
     } catch (error) {
@@ -884,15 +933,10 @@ export function StudentsManagement() {
     // Calculate outstanding
     const outstanding = totalAmount - paidAmount;
     
-    // Format with currency symbol (using simple $ for now, can be enhanced with actual currency)
-    const formatCurrency = (amount: number) => {
-      return amount > 0 ? `$${amount.toLocaleString()}` : '$0';
-    };
-    
     return {
-      totalAmount: payments.length > 0 ? formatCurrency(totalAmount) : 'N/A',
-      paidAmount: formatCurrency(paidAmount),
-      outstanding: payments.length > 0 ? formatCurrency(outstanding) : 'N/A',
+      totalAmount: payments.length > 0 ? formatCurrency(totalAmount, companyCurrency) : 'N/A',
+      paidAmount: formatCurrency(paidAmount, companyCurrency),
+      outstanding: payments.length > 0 ? formatCurrency(outstanding, companyCurrency) : 'N/A',
       outstandingRaw: outstanding
     };
   };
@@ -1388,7 +1432,7 @@ export function StudentsManagement() {
                                     const key = student.student_record_id || '';
                                     const payments = installmentPayments.get(key) || [];
                                     const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                                    return payments.length > 0 ? `$${totalAmount.toLocaleString()}` : 'N/A';
+                                    return payments.length > 0 ? formatCurrency(totalAmount, companyCurrency) : 'N/A';
                                   })()}
                                 </p>
                               </div>
@@ -1399,7 +1443,7 @@ export function StudentsManagement() {
                                     const key = student.student_record_id || '';
                                     const payments = installmentPayments.get(key) || [];
                                     const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
-                                    return `$${paidAmount.toLocaleString()}`;
+                                    return formatCurrency(paidAmount, companyCurrency);
                                   })()}
                                 </p>
                               </div>
@@ -1418,7 +1462,7 @@ export function StudentsManagement() {
                                     const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
                                     const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
                                     const outstanding = totalAmount - paidAmount;
-                                    return payments.length > 0 ? `$${outstanding.toLocaleString()}` : 'N/A';
+                                    return payments.length > 0 ? formatCurrency(outstanding, companyCurrency) : 'N/A';
                                   })()}
                                 </p>
                               </div>
