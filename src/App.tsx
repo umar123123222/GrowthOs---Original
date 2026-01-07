@@ -87,6 +87,7 @@ const MentorAssignmentsPage = lazy(() => import("./pages/MentorAssignmentsPage")
 const MentorSubmissionsPage = lazy(() => import("./pages/MentorSubmissionsPage"));
 const AdminNotifications = lazy(() => import("./pages/AdminNotifications"));
 const DevSendNotification = lazy(() => import("./pages/DevSendNotification"));
+const Catalog = lazy(() => import("./pages/Catalog"));
 
 // Loading component
 const PageLoader = () => (
@@ -226,6 +227,7 @@ const App = () => {
                     } />
                     
                     {/* Shared routes */}
+                    <Route path="catalog" element={<Catalog />} />
                     <Route path="videos" element={<Videos />} />
                     <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
                     <Route path="video-player" element={<VideoPlayer />} />
