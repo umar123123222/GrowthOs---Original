@@ -367,6 +367,7 @@ export type Database = {
       }
       course_enrollments: {
         Row: {
+          access_expires_at: string | null
           amount_paid: number | null
           completed_at: string | null
           course_id: string
@@ -382,6 +383,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          access_expires_at?: string | null
           amount_paid?: number | null
           completed_at?: string | null
           course_id: string
@@ -397,6 +399,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          access_expires_at?: string | null
           amount_paid?: number | null
           completed_at?: string | null
           course_id?: string
@@ -458,6 +461,7 @@ export type Database = {
       }
       courses: {
         Row: {
+          access_duration_days: number | null
           created_at: string | null
           created_by: string | null
           currency: string | null
@@ -473,6 +477,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          access_duration_days?: number | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -488,6 +493,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          access_duration_days?: number | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -961,6 +967,7 @@ export type Database = {
       }
       learning_pathways: {
         Row: {
+          access_duration_days: number | null
           created_at: string | null
           created_by: string | null
           currency: string | null
@@ -976,6 +983,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          access_duration_days?: number | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
@@ -991,6 +999,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          access_duration_days?: number | null
           created_at?: string | null
           created_by?: string | null
           currency?: string | null
