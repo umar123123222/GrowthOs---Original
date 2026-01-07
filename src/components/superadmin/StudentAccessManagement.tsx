@@ -278,7 +278,7 @@ export function StudentAccessManagement({
         // Terminate access
         const { error } = await supabase
           .from('course_enrollments')
-          .update({ status: 'inactive', updated_at: new Date().toISOString() })
+          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
           .eq('id', enrollment.id);
         if (error) throw error;
 
@@ -355,7 +355,7 @@ export function StudentAccessManagement({
         // Terminate access
         const { error } = await supabase
           .from('course_enrollments')
-          .update({ status: 'inactive', updated_at: new Date().toISOString() })
+          .update({ status: 'cancelled', updated_at: new Date().toISOString() })
           .eq('id', enrollment.id);
         if (error) throw error;
 
@@ -473,7 +473,7 @@ export function StudentAccessManagement({
     try {
       const { error } = await supabase
         .from('course_enrollments')
-        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
         .in('id', enrolledCourseEnrollments.map(e => e.id));
       if (error) throw error;
 
@@ -535,7 +535,7 @@ export function StudentAccessManagement({
     try {
       const { error } = await supabase
         .from('course_enrollments')
-        .update({ status: 'inactive', updated_at: new Date().toISOString() })
+        .update({ status: 'cancelled', updated_at: new Date().toISOString() })
         .in('id', enrolledPathwayEnrollments.map(e => e.id));
       if (error) throw error;
 
