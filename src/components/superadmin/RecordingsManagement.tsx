@@ -732,14 +732,14 @@ export function RecordingsManagement() {
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">Course</label>
                   <Select
-                    value={formData.course_id}
-                    onValueChange={(value) => setFormData({ ...formData, course_id: value, module_id: '' })}
+                    value={formData.course_id || 'all'}
+                    onValueChange={(value) => setFormData({ ...formData, course_id: value === 'all' ? '' : value, module_id: '' })}
                   >
                     <SelectTrigger className="transition-all duration-200 focus:scale-[1.02]">
                       <SelectValue placeholder="Select a course (optional)" />
                     </SelectTrigger>
                     <SelectContent className="bg-white z-50">
-                      <SelectItem value="">All Courses</SelectItem>
+                      <SelectItem value="all">All Courses</SelectItem>
                       {courses.map((course) => (
                         <SelectItem key={course.id} value={course.id}>
                           {course.title}
