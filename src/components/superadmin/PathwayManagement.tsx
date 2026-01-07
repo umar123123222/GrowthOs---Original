@@ -22,6 +22,7 @@ interface LearningPathway {
   price: number | null;
   currency: string | null;
   max_installments: number | null;
+  access_duration_days: number | null;
   is_active: boolean;
   is_published: boolean;
   created_at: string | null;
@@ -64,6 +65,7 @@ export function PathwayManagement() {
     price: 0,
     currency: 'PKR',
     max_installments: null as number | null,
+    access_duration_days: null as number | null,
     is_active: true,
     is_published: false,
     drip_enabled: null as boolean | null
@@ -100,6 +102,7 @@ export function PathwayManagement() {
         ...pathway,
         drip_enabled: (pathway as any).drip_enabled ?? null,
         max_installments: (pathway as any).max_installments ?? null,
+        access_duration_days: (pathway as any).access_duration_days ?? null,
         course_count: courseCountMap.get(pathway.id) || 0
       }));
 
@@ -184,6 +187,7 @@ export function PathwayManagement() {
             price: formData.price,
             currency: formData.currency,
             max_installments: formData.max_installments,
+            access_duration_days: formData.access_duration_days,
             is_active: formData.is_active,
             is_published: formData.is_published,
             drip_enabled: formData.drip_enabled
@@ -206,6 +210,7 @@ export function PathwayManagement() {
             price: formData.price,
             currency: formData.currency,
             max_installments: formData.max_installments,
+            access_duration_days: formData.access_duration_days,
             is_active: formData.is_active,
             is_published: formData.is_published,
             drip_enabled: formData.drip_enabled
@@ -241,6 +246,7 @@ export function PathwayManagement() {
       price: pathway.price || 0,
       currency: pathway.currency || 'PKR',
       max_installments: pathway.max_installments,
+      access_duration_days: pathway.access_duration_days,
       is_active: pathway.is_active,
       is_published: pathway.is_published,
       drip_enabled: pathway.drip_enabled
@@ -417,6 +423,7 @@ export function PathwayManagement() {
       price: 0,
       currency: 'PKR',
       max_installments: null,
+      access_duration_days: null,
       is_active: true,
       is_published: false,
       drip_enabled: null
@@ -542,6 +549,22 @@ export function PathwayManagement() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="access_duration_days">Access Duration (Days)</Label>
+                <Input
+                  id="access_duration_days"
+                  type="number"
+                  value={formData.access_duration_days ?? ''}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    access_duration_days: e.target.value ? parseInt(e.target.value) : null 
+                  })}
+                  min={1}
+                  placeholder="Unlimited"
+                />
+                <p className="text-xs text-muted-foreground">Leave blank for unlimited access</p>
               </div>
               
               <div className="flex items-center gap-6">

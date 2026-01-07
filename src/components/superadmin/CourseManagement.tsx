@@ -34,6 +34,7 @@ interface Course {
   price: number | null;
   currency: string | null;
   max_installments: number | null;
+  access_duration_days: number | null;
   is_active: boolean;
   is_published: boolean;
   sequence_order: number | null;
@@ -60,6 +61,7 @@ export function CourseManagement() {
     price: 0,
     currency: 'PKR',
     max_installments: null as number | null,
+    access_duration_days: null as number | null,
     is_active: true,
     is_published: false,
     sequence_order: 0,
@@ -141,6 +143,7 @@ export function CourseManagement() {
         ...course,
         drip_enabled: (course as any).drip_enabled ?? null,
         max_installments: (course as any).max_installments ?? null,
+        access_duration_days: (course as any).access_duration_days ?? null,
         module_count: moduleCountMap.get(course.id) || 0,
         enrollment_count: enrollmentCountMap.get(course.id) || 0,
         mentors: mentorAssignmentsMap.get(course.id) || []
@@ -253,6 +256,7 @@ export function CourseManagement() {
             price: formData.price,
             currency: formData.currency,
             max_installments: formData.max_installments,
+            access_duration_days: formData.access_duration_days,
             is_active: formData.is_active,
             is_published: formData.is_published,
             sequence_order: formData.sequence_order,
@@ -276,6 +280,7 @@ export function CourseManagement() {
             price: formData.price,
             currency: formData.currency,
             max_installments: formData.max_installments,
+            access_duration_days: formData.access_duration_days,
             is_active: formData.is_active,
             is_published: formData.is_published,
             sequence_order: formData.sequence_order,
@@ -312,6 +317,7 @@ export function CourseManagement() {
       price: course.price || 0,
       currency: course.currency || 'PKR',
       max_installments: course.max_installments,
+      access_duration_days: course.access_duration_days,
       is_active: course.is_active,
       is_published: course.is_published,
       sequence_order: course.sequence_order || 0,
@@ -400,6 +406,7 @@ export function CourseManagement() {
       price: 0,
       currency: 'PKR',
       max_installments: null,
+      access_duration_days: null,
       is_active: true,
       is_published: false,
       sequence_order: courses.length + 1,
@@ -506,6 +513,22 @@ export function CourseManagement() {
                     min={0}
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="access_duration_days">Access Duration (Days)</Label>
+                <Input
+                  id="access_duration_days"
+                  type="number"
+                  value={formData.access_duration_days ?? ''}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    access_duration_days: e.target.value ? parseInt(e.target.value) : null 
+                  })}
+                  min={1}
+                  placeholder="Unlimited"
+                />
+                <p className="text-xs text-muted-foreground">Leave blank for unlimited access</p>
               </div>
               
               <div className="flex items-center gap-6">

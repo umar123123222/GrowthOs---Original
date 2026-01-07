@@ -18,6 +18,7 @@ interface Course {
   is_active: boolean;
   price?: number | null;
   max_installments?: number | null;
+  access_duration_days?: number | null;
 }
 
 interface Pathway {
@@ -27,6 +28,7 @@ interface Pathway {
   is_active: boolean;
   price?: number | null;
   max_installments?: number | null;
+  access_duration_days?: number | null;
 }
 
 interface Enrollment {
@@ -35,6 +37,7 @@ interface Enrollment {
   pathway_id: string | null;
   status: string;
   enrolled_at: string | null;
+  access_expires_at: string | null;
 }
 
 interface PathwayCourse {
@@ -98,8 +101,8 @@ export function StudentAccessManagement({
     setLoading(true);
     try {
       const [coursesRes, pathwaysRes, enrollmentsRes, pathwayCoursesRes, settingsRes] = await Promise.all([
-        supabase.from('courses').select('id, title, is_published, is_active, price, max_installments').eq('is_active', true).order('title'),
-        supabase.from('learning_pathways').select('id, name, is_published, is_active, price, max_installments').eq('is_active', true).order('name'),
+        supabase.from('courses').select('id, title, is_published, is_active, price, max_installments, access_duration_days').eq('is_active', true).order('title'),
+        supabase.from('learning_pathways').select('id, name, is_published, is_active, price, max_installments, access_duration_days').eq('is_active', true).order('name'),
         supabase.from('course_enrollments').select('*').eq('student_id', studentId),
         supabase.from('pathway_courses').select('course_id, pathway_id'),
         supabase.from('company_settings').select('invoice_send_gap_days, invoice_overdue_days').single()
@@ -296,13 +299,23 @@ export function StudentAccessManagement({
         setSelectedCourses(prev => new Set(prev).add(courseId));
         toast({ title: 'Access Granted', description: 'Course access has been restored' });
       } else {
-        // Create new enrollment with payment tracking
+        // Create new enrollment with payment tracking and access expiry
+        const enrolledAt = new Date();
+        let accessExpiresAt: string | null = null;
+        
+        if (course?.access_duration_days) {
+          const expiryDate = new Date(enrolledAt);
+          expiryDate.setDate(expiryDate.getDate() + course.access_duration_days);
+          accessExpiresAt = expiryDate.toISOString();
+        }
+
         const { error } = await supabase.from('course_enrollments').insert({
           student_id: studentId,
           course_id: courseId,
           status: 'active',
           progress_percentage: 0,
-          enrolled_at: new Date().toISOString(),
+          enrolled_at: enrolledAt.toISOString(),
+          access_expires_at: accessExpiresAt,
           total_amount: course?.price || 0,
           amount_paid: 0,
           payment_status: course?.price && course.price > 0 ? 'pending' : 'waived'
@@ -363,14 +376,24 @@ export function StudentAccessManagement({
         setSelectedPathways(prev => new Set(prev).add(pathwayId));
         toast({ title: 'Access Granted', description: 'Pathway access has been restored' });
       } else {
-        // Create new enrollment with payment tracking
+        // Create new enrollment with payment tracking and access expiry
+        const enrolledAt = new Date();
+        let accessExpiresAt: string | null = null;
+        
+        if (pathway?.access_duration_days) {
+          const expiryDate = new Date(enrolledAt);
+          expiryDate.setDate(expiryDate.getDate() + pathway.access_duration_days);
+          accessExpiresAt = expiryDate.toISOString();
+        }
+
         const { error } = await supabase.from('course_enrollments').insert({
           student_id: studentId,
           course_id: null as unknown as string,
           pathway_id: pathwayId,
           status: 'active',
           progress_percentage: 0,
-          enrolled_at: new Date().toISOString(),
+          enrolled_at: enrolledAt.toISOString(),
+          access_expires_at: accessExpiresAt,
           total_amount: pathway?.price || 0,
           amount_paid: 0,
           payment_status: pathway?.price && pathway.price > 0 ? 'pending' : 'waived'
