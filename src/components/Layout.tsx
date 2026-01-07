@@ -18,6 +18,7 @@ import { PageSkeleton } from "./LoadingStates/PageSkeleton";
 import RouteContentLoader from "./LoadingStates/RouteContentLoader";
 import { throttle } from "@/utils/performance";
 import { safeLogger } from '@/lib/safe-logger';
+import { AnnouncementBanner } from "./AnnouncementBanner";
 
 interface LayoutProps {
   user: any;
@@ -690,6 +691,8 @@ const Layout = memo(({
           </div>
         </div>
       </header>
+
+      <AnnouncementBanner />
 
       <div className="flex">
         {/* Sidebar */}
