@@ -531,16 +531,9 @@ const Layout = memo(({
       icon: Monitor
     }, {
       name: "Catalog",
+      href: "/catalog",
       icon: LayoutGrid,
-      isCatalogMenu: true, // Special flag for catalog expandable menu
-    }, {
-      name: "Videos",
-      href: "/videos",
-      icon: BookOpen
-    }, {
-      name: "Assignments",
-      href: "/assignments",
-      icon: FileText
+      isCatalogMenu: true, // Special flag for catalog expandable menu with courses
     }, {
       name: "Success Sessions",
       href: "/live-sessions",
@@ -696,14 +689,30 @@ const Layout = memo(({
               if (item.isCatalogMenu) {
                 const isExpanded = catalogMenuOpen && !sidebarCollapsed;
                 const Icon = item.icon;
+                const isCatalogActive = location.pathname === '/catalog';
                 return <div key={item.name}>
-                      <button onClick={() => !sidebarCollapsed && setCatalogMenuOpen(!catalogMenuOpen)} className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover-scale" title={sidebarCollapsed ? item.name : undefined}>
-                        <div className="flex items-center">
-                          <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 text-gray-400`} />
+                      <div className="flex items-center">
+                        <Link 
+                          to={item.href || '/catalog'} 
+                          className={`flex-1 flex items-center px-4 py-3 text-sm font-medium rounded-l-lg transition-all duration-200 ${
+                            isCatalogActive 
+                              ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" 
+                              : "text-gray-600 hover:bg-gray-50"
+                          }`}
+                          title={sidebarCollapsed ? item.name : undefined}
+                        >
+                          <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 ${isCatalogActive ? 'text-gray-900' : 'text-gray-400'}`} />
                           {!sidebarCollapsed && item.name}
-                        </div>
-                        {!sidebarCollapsed && (isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />)}
-                      </button>
+                        </Link>
+                        {!sidebarCollapsed && (
+                          <button 
+                            onClick={() => setCatalogMenuOpen(!catalogMenuOpen)} 
+                            className="px-2 py-3 text-gray-600 hover:bg-gray-50 rounded-r-lg transition-all duration-200"
+                          >
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </button>
+                        )}
+                      </div>
                       
                       {isExpanded && !sidebarCollapsed && <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
                           {catalogCourses.map(course => {
