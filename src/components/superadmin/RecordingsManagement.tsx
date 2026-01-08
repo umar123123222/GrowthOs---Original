@@ -8,12 +8,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Edit, Trash2, Video, ChevronDown, RefreshCw, GripVertical, HelpCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Video, ChevronDown, RefreshCw, GripVertical, HelpCircle, Eye } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from './RecordingRatingDetails';
 import { RecordingAttachmentsManager } from './RecordingAttachmentsManager';
 import { safeLogger } from '@/lib/safe-logger';
+import { VideoPreviewDialog } from '@/components/VideoPreviewDialog';
 import {
   DndContext,
   closestCenter,
@@ -73,7 +74,8 @@ function SortableRecordingRow({
   onToggleExpand, 
   onEdit, 
   onDelete,
-  onRefresh
+  onRefresh,
+  onView
 }: {
   recording: Recording;
   index: number;
@@ -82,6 +84,7 @@ function SortableRecordingRow({
   onEdit: (recording: Recording) => void;
   onDelete: (id: string) => void;
   onRefresh: () => void;
+  onView: (recording: Recording) => void;
 }) {
   const {
     attributes,
@@ -103,7 +106,7 @@ function SortableRecordingRow({
       <div 
         ref={setNodeRef}
         style={style}
-        className="grid grid-cols-[24px_24px_1fr_220px_100px_80px_120px] items-center gap-4 p-4 hover:bg-gray-50 transition-colors animate-fade-in"
+        className="grid grid-cols-[24px_24px_1fr_220px_100px_80px_160px] items-center gap-4 p-4 hover:bg-gray-50 transition-colors animate-fade-in"
       >
         <div
           {...attributes}
@@ -139,8 +142,18 @@ function SortableRecordingRow({
           <Button
             variant="outline"
             size="sm"
+            onClick={() => onView(recording)}
+            className="hover-scale hover:bg-green-50 hover:border-green-300"
+            title="Preview video"
+          >
+            <Eye className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => onEdit(recording)}
             className="hover-scale hover:bg-blue-50 hover:border-blue-300"
+            title="Edit recording"
           >
             <Edit className="w-4 h-4" />
           </Button>
@@ -149,6 +162,7 @@ function SortableRecordingRow({
             size="sm"
             onClick={() => onDelete(recording.id)}
             className="hover-scale hover:bg-red-50 hover:border-red-300"
+            title="Delete recording"
           >
             <Trash2 className="w-4 h-4" />
           </Button>
@@ -204,6 +218,7 @@ export function RecordingsManagement() {
   const [editingRecording, setEditingRecording] = useState<Recording | null>(null);
   const [expandedRecordings, setExpandedRecordings] = useState<Set<string>>(new Set());
   const [showUrlExamples, setShowUrlExamples] = useState(false);
+  const [previewRecording, setPreviewRecording] = useState<{ title: string; url: string } | null>(null);
   const [formData, setFormData] = useState({
     recording_title: '',
     recording_url: '',
@@ -889,6 +904,7 @@ export function RecordingsManagement() {
                         onEdit={handleEdit}
                         onDelete={handleDelete}
                         onRefresh={fetchRecordings}
+                        onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
                       />
                     ))}
                   </SortableContext>
@@ -898,6 +914,14 @@ export function RecordingsManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Video Preview Dialog */}
+      <VideoPreviewDialog
+        open={!!previewRecording}
+        onOpenChange={(open) => !open && setPreviewRecording(null)}
+        recordingTitle={previewRecording?.title || ''}
+        recordingUrl={previewRecording?.url || ''}
+      />
     </div>
   );
 }
