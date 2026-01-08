@@ -110,17 +110,29 @@ export function useCourses(): UseCoursesReturn {
             status,
             progress_percentage,
             enrolled_at,
-            completed_at
+            completed_at,
+            access_expires_at
           `)
           .eq('student_id', studentId);
 
         if (enrollmentsError) throw enrollmentsError;
 
-        // Map courses with enrollment data
+        // Map courses with enrollment data, filtering out expired access
         const enrolledCoursesData: CourseWithEnrollment[] = (coursesData || [])
           .filter(course => {
             const enrollment = enrollmentsData?.find(e => e.course_id === course.id);
-            return !!enrollment;
+            if (!enrollment) return false;
+            
+            // Check if access has expired
+            if (enrollment.access_expires_at) {
+              const expiresAt = new Date(enrollment.access_expires_at);
+              if (expiresAt < new Date()) {
+                logger.debug('Course access expired', { courseId: course.id, expiresAt });
+                return false;
+              }
+            }
+            
+            return true;
           })
           .map(course => {
             const enrollment = enrollmentsData?.find(e => e.course_id === course.id);

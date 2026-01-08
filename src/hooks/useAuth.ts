@@ -173,6 +173,7 @@ useEffect(() => {
         .select(`
           id, email, role, full_name, created_at, last_login_at, status, 
           password_display, is_temp_password, updated_at, created_by,
+          lms_status,
           students(onboarding_completed)
         `)
         .eq('id', userId)
@@ -318,7 +319,8 @@ useEffect(() => {
   const canAccessLMS = (): boolean => {
     if (!user) return false;
     if (user.role !== 'student') return true; // Non-students always have access
-    return true; // For now, all students have access
+    // Check student's LMS status - must be 'active' to access
+    return user.lms_status === 'active';
   };
 
   return {

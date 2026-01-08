@@ -67,24 +67,44 @@ export function useAnnouncementBanner() {
   };
 
   const isWithinDateRange = (): boolean => {
-    if (!settings?.start_date || !settings?.end_date) return false;
+    if (!settings?.start_date || !settings?.end_date) {
+      console.log('[Banner] Missing dates, not visible');
+      return false;
+    }
     
     const now = new Date();
-    // Handle datetime-local format (YYYY-MM-DDTHH:MM) by treating as local time
-    const startStr = settings.start_date.includes('T') ? settings.start_date : settings.start_date + 'T00:00';
-    const endStr = settings.end_date.includes('T') ? settings.end_date : settings.end_date + 'T23:59';
+    
+    // Handle datetime-local format (YYYY-MM-DDTHH:MM) - add seconds if missing
+    let startStr = settings.start_date;
+    let endStr = settings.end_date;
+    
+    // datetime-local gives YYYY-MM-DDTHH:MM (16 chars), add :00 for seconds
+    if (startStr.length === 16) startStr += ':00';
+    if (endStr.length === 16) endStr += ':00';
+    
+    // If no T present, treat as date-only
+    if (!startStr.includes('T')) startStr += 'T00:00:00';
+    if (!endStr.includes('T')) endStr += 'T23:59:59';
     
     const startDate = new Date(startStr);
     const endDate = new Date(endStr);
     
+    console.log('[Banner] Date check:', { 
+      now: now.toISOString(), 
+      start: startDate.toISOString(), 
+      end: endDate.toISOString(),
+      rawStart: settings.start_date,
+      rawEnd: settings.end_date
+    });
+    
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-      console.warn('Invalid date format in announcement banner:', { start: settings.start_date, end: settings.end_date });
+      console.warn('[Banner] Invalid date format:', { start: settings.start_date, end: settings.end_date });
       return false;
     }
     
-    endDate.setSeconds(59, 999);
-    
-    return now >= startDate && now <= endDate;
+    const inRange = now >= startDate && now <= endDate;
+    console.log('[Banner] In range:', inRange);
+    return inRange;
   };
 
   const dismiss = () => {
