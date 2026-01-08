@@ -223,6 +223,7 @@ export type Database = {
           created_at: string | null
           currency: string
           custom_domain: string | null
+          drip_enabled_default: boolean | null
           enable_student_signin: boolean | null
           id: number
           installment_plans: string[] | null
@@ -252,6 +253,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           custom_domain?: string | null
+          drip_enabled_default?: boolean | null
           enable_student_signin?: boolean | null
           id?: number
           installment_plans?: string[] | null
@@ -281,6 +283,7 @@ export type Database = {
           created_at?: string | null
           currency?: string
           custom_domain?: string | null
+          drip_enabled_default?: boolean | null
           enable_student_signin?: boolean | null
           id?: number
           installment_plans?: string[] | null

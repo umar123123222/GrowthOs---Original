@@ -28,7 +28,7 @@ export function useAnnouncementBanner() {
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchBannerSettings();
-    }, 100);
+    }, 300);
     
     return () => clearTimeout(timer);
   }, []);
@@ -70,10 +70,15 @@ export function useAnnouncementBanner() {
     if (!settings?.start_date || !settings?.end_date) return false;
     
     const now = new Date();
-    const startDate = new Date(settings.start_date);
-    const endDate = new Date(settings.end_date);
+    // Handle datetime-local format (YYYY-MM-DDTHH:MM) by treating as local time
+    const startStr = settings.start_date.includes('T') ? settings.start_date : settings.start_date + 'T00:00';
+    const endStr = settings.end_date.includes('T') ? settings.end_date : settings.end_date + 'T23:59';
+    
+    const startDate = new Date(startStr);
+    const endDate = new Date(endStr);
     
     if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      console.warn('Invalid date format in announcement banner:', { start: settings.start_date, end: settings.end_date });
       return false;
     }
     
