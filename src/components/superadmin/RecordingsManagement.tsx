@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Edit, Trash2, Video, ChevronDown, RefreshCw, GripVertical, HelpCircle, Eye } from 'lucide-react';
+import { Plus, Edit, Trash2, Video, ChevronDown, RefreshCw, GripVertical, HelpCircle, Eye, Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from './RecordingRatingDetails';
@@ -47,6 +47,10 @@ interface Recording {
     id: string;
     title: string;
     course_id: string | null;
+    course?: {
+      id: string;
+      title: string;
+    } | null;
   };
 }
 
@@ -59,6 +63,7 @@ interface Module {
 interface Course {
   id: string;
   title: string;
+  is_published?: boolean;
 }
 
 interface Assignment {
@@ -75,7 +80,8 @@ function SortableRecordingRow({
   onEdit, 
   onDelete,
   onRefresh,
-  onView
+  onView,
+  courses
 }: {
   recording: Recording;
   index: number;
@@ -85,6 +91,7 @@ function SortableRecordingRow({
   onDelete: (id: string) => void;
   onRefresh: () => void;
   onView: (recording: Recording) => void;
+  courses: Course[];
 }) {
   const {
     attributes,
@@ -128,8 +135,8 @@ function SortableRecordingRow({
         </div>
         <div className="font-medium truncate">{recording.recording_title}</div>
         <div className="text-center">
-          <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
-            {recording.module?.title || 'Unassigned'}
+          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+            {courses.find(c => c.id === recording.module?.course_id)?.title || 'No Course'}
           </Badge>
         </div>
         <div className="text-center text-sm text-muted-foreground">
@@ -171,6 +178,12 @@ function SortableRecordingRow({
       
       <CollapsibleContent>
         <div className="px-4 pb-4 space-y-4 bg-gray-50/50">
+          <div>
+            <p className="text-sm font-medium text-gray-700 mb-1">Module:</p>
+            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+              {recording.module?.title || 'Unassigned'}
+            </Badge>
+          </div>
           {recording.description && (
             <div>
               <p className="text-sm font-medium text-gray-700 mb-1">Description:</p>
@@ -219,6 +232,12 @@ export function RecordingsManagement() {
   const [expandedRecordings, setExpandedRecordings] = useState<Set<string>>(new Set());
   const [showUrlExamples, setShowUrlExamples] = useState(false);
   const [previewRecording, setPreviewRecording] = useState<{ title: string; url: string } | null>(null);
+  
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCourseId, setFilterCourseId] = useState<string>('all');
+  const [filterModuleId, setFilterModuleId] = useState<string>('all');
+  
   const [formData, setFormData] = useState({
     recording_title: '',
     recording_url: '',
@@ -283,8 +302,7 @@ export function RecordingsManagement() {
     try {
       const { data, error } = await supabase
         .from('courses')
-        .select('id, title')
-        .eq('is_active', true)
+        .select('id, title, is_published')
         .order('sequence_order');
 
       if (error) throw error;
@@ -308,10 +326,32 @@ export function RecordingsManagement() {
     }
   };
 
-  // Filter modules based on selected course
+  // Filter modules based on selected course (for form)
   const filteredModules = formData.course_id 
     ? modules.filter(m => m.course_id === formData.course_id)
     : modules;
+
+  // Filter modules based on filter course (for filter dropdown)
+  const filterModulesForCourse = filterCourseId !== 'all' 
+    ? modules.filter(m => m.course_id === filterCourseId)
+    : modules;
+
+  // Apply search and filter to recordings
+  const filteredRecordings = recordings.filter(recording => {
+    // Search filter
+    const matchesSearch = searchQuery === '' || 
+      recording.recording_title.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Course filter
+    const matchesCourse = filterCourseId === 'all' || 
+      recording.module?.course_id === filterCourseId;
+    
+    // Module filter  
+    const matchesModule = filterModuleId === 'all' || 
+      recording.module?.id === filterModuleId;
+    
+    return matchesSearch && matchesCourse && matchesModule;
+  });
 
   const fetchAssignments = async () => {
     try {
@@ -858,26 +898,102 @@ export function RecordingsManagement() {
 
       <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
         <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
-          <CardTitle className="flex items-center text-xl">
-            <Video className="w-6 h-6 mr-3 text-purple-600" />
-            All Recordings
-          </CardTitle>
+          <div className="flex flex-col gap-4">
+            <CardTitle className="flex items-center text-xl">
+              <Video className="w-6 h-6 mr-3 text-purple-600" />
+              All Recordings
+            </CardTitle>
+            
+            {/* Search and Filter Controls */}
+            <div className="flex flex-wrap gap-3 items-center">
+              {/* Search Input */}
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by title..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 bg-white"
+                />
+              </div>
+              
+              {/* Course Filter */}
+              <Select
+                value={filterCourseId}
+                onValueChange={(value) => {
+                  setFilterCourseId(value);
+                  setFilterModuleId('all'); // Reset module filter when course changes
+                }}
+              >
+                <SelectTrigger className="w-[200px] bg-white">
+                  <Filter className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Filter by course" />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-50">
+                  <SelectItem value="all">All Courses</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.title} {course.is_published === false && <span className="text-muted-foreground">(Draft)</span>}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {/* Module Filter */}
+              <Select
+                value={filterModuleId}
+                onValueChange={setFilterModuleId}
+                disabled={filterCourseId === 'all'}
+              >
+                <SelectTrigger className="w-[200px] bg-white">
+                  <SelectValue placeholder="Filter by module" />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-50">
+                  <SelectItem value="all">All Modules</SelectItem>
+                  {filterModulesForCourse.map((module) => (
+                    <SelectItem key={module.id} value={module.id}>
+                      {module.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {(searchQuery || filterCourseId !== 'all' || filterModuleId !== 'all') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setFilterCourseId('all');
+                    setFilterModuleId('all');
+                  }}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  Clear filters
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          {recordings.length === 0 ? (
+          {filteredRecordings.length === 0 ? (
             <div className="text-center py-16 animate-fade-in">
               <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-muted-foreground mb-2">No recordings found</h3>
-              <p className="text-muted-foreground">Upload your first recording to get started</p>
+              <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+                {recordings.length === 0 ? 'No recordings found' : 'No recordings match your filters'}
+              </h3>
+              <p className="text-muted-foreground">
+                {recordings.length === 0 ? 'Upload your first recording to get started' : 'Try adjusting your search or filters'}
+              </p>
             </div>
           ) : (
             <div data-testid="recordings-table" className="w-full">
               {/* Header */}
-              <div className="grid grid-cols-[24px_24px_1fr_220px_100px_80px_120px] items-center gap-4 p-4 bg-gray-50 border-b font-semibold text-sm">
+              <div className="grid grid-cols-[24px_24px_1fr_220px_100px_80px_160px] items-center gap-4 p-4 bg-gray-50 border-b font-semibold text-sm">
                 <div></div>
                 <div></div>
                 <div>Title <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span></div>
-                <div className="text-center">Module</div>
+                <div className="text-center">Course</div>
                 <div className="text-center">Duration</div>
                 <div className="text-center">Order</div>
                 <div className="text-center">Actions</div>
@@ -891,10 +1007,10 @@ export function RecordingsManagement() {
               >
                 <div className="divide-y">
                   <SortableContext
-                    items={recordings.map(r => r.id)}
+                    items={filteredRecordings.map(r => r.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {recordings.map((recording, index) => (
+                    {filteredRecordings.map((recording, index) => (
                       <SortableRecordingRow
                         key={recording.id}
                         recording={recording}
@@ -905,6 +1021,7 @@ export function RecordingsManagement() {
                         onDelete={handleDelete}
                         onRefresh={fetchRecordings}
                         onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
+                        courses={courses}
                       />
                     ))}
                   </SortableContext>
