@@ -155,7 +155,24 @@ export function CompanySettings() {
 
       if (data) {
         const settingsData = data as unknown as CompanySettingsData;
-        setSettings(settingsData);
+        // Defensive null handling for optional fields
+        setSettings(prev => ({
+          ...prev,
+          ...settingsData,
+          drip_enabled_default: settingsData.drip_enabled_default ?? false,
+          multi_course_enabled: settingsData.multi_course_enabled ?? false,
+          enable_student_signin: settingsData.enable_student_signin ?? false,
+          questionnaire: settingsData.questionnaire ?? [],
+          payment_methods: settingsData.payment_methods ?? [],
+          announcement_banner: settingsData.announcement_banner ?? {
+            enabled: false,
+            message: '',
+            start_date: '',
+            end_date: '',
+            background_color: 'blue',
+            dismissible: true
+          }
+        }));
       }
     } catch (error) {
       console.error('Error fetching company settings:', error);
