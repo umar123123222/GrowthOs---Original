@@ -6,7 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Users, Calendar, Clock, Settings, AlertTriangle } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
+import { Plus, Edit, Trash2, Users, Calendar, Clock, Settings, AlertTriangle, BookOpen, Route } from 'lucide-react';
 import { useBatches, type Batch, type BatchFormData } from '@/hooks/useBatches';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -17,14 +19,24 @@ interface Course {
   title: string;
 }
 
+interface Pathway {
+  id: string;
+  name: string;
+}
+
+type EnrollmentType = 'course' | 'pathway';
+
 export function BatchManagement() {
   const { batches, loading, createBatch, updateBatch, deleteBatch, canEditStartDate } = useBatches();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [pathways, setPathways] = useState<Pathway[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
+  const [enrollmentType, setEnrollmentType] = useState<EnrollmentType>('course');
   const [formData, setFormData] = useState<BatchFormData>({
     name: '',
     course_id: '',
+    pathway_id: '',
     start_date: '',
     timezone: 'Asia/Karachi',
     default_session_time: '20:00',
@@ -34,6 +46,7 @@ export function BatchManagement() {
 
   useEffect(() => {
     fetchCourses();
+    fetchPathways();
   }, []);
 
   const fetchCourses = async () => {
@@ -47,24 +60,41 @@ export function BatchManagement() {
     }
   };
 
+  const fetchPathways = async () => {
+    const { data, error } = await supabase
+      .from('learning_pathways')
+      .select('id, name')
+      .eq('is_active', true)
+      .order('name');
+    
+    if (!error && data) {
+      setPathways(data);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
       course_id: '',
+      pathway_id: '',
       start_date: '',
       timezone: 'Asia/Karachi',
       default_session_time: '20:00',
       status: 'draft'
     });
+    setEnrollmentType('course');
     setEditingBatch(null);
   };
 
   const handleOpenDialog = (batch?: Batch) => {
     if (batch) {
       setEditingBatch(batch);
+      const type: EnrollmentType = batch.pathway_id ? 'pathway' : 'course';
+      setEnrollmentType(type);
       setFormData({
         name: batch.name,
         course_id: batch.course_id || '',
+        pathway_id: batch.pathway_id || '',
         start_date: batch.start_date,
         timezone: batch.timezone,
         default_session_time: batch.default_session_time,
@@ -81,8 +111,21 @@ export function BatchManagement() {
     resetForm();
   };
 
+  const handleEnrollmentTypeChange = (value: EnrollmentType) => {
+    setEnrollmentType(value);
+    // Clear both fields when switching
+    setFormData({ ...formData, course_id: '', pathway_id: '' });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prepare submission data - only include the selected type
+    const submissionData: BatchFormData = {
+      ...formData,
+      course_id: enrollmentType === 'course' ? formData.course_id : '',
+      pathway_id: enrollmentType === 'pathway' ? formData.pathway_id : ''
+    };
     
     try {
       if (editingBatch) {
@@ -95,9 +138,9 @@ export function BatchManagement() {
           });
           return;
         }
-        await updateBatch(editingBatch.id, formData);
+        await updateBatch(editingBatch.id, submissionData);
       } else {
-        await createBatch(formData);
+        await createBatch(submissionData);
       }
       handleCloseDialog();
     } catch (error) {
@@ -168,24 +211,70 @@ export function BatchManagement() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium mb-1">Course *</label>
-                <Select
-                  value={formData.course_id}
-                  onValueChange={(value) => setFormData({ ...formData, course_id: value })}
-                  required
+                <label className="block text-sm font-medium mb-2">Enrollment Type *</label>
+                <RadioGroup
+                  value={enrollmentType}
+                  onValueChange={(value) => handleEnrollmentTypeChange(value as EnrollmentType)}
+                  className="flex gap-4"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a course" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background border z-50">
-                    {courses.map((course) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="course" id="course" />
+                    <Label htmlFor="course" className="flex items-center gap-1.5 cursor-pointer">
+                      <BookOpen className="w-4 h-4" />
+                      Course
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="pathway" id="pathway" />
+                    <Label htmlFor="pathway" className="flex items-center gap-1.5 cursor-pointer">
+                      <Route className="w-4 h-4" />
+                      Pathway
+                    </Label>
+                  </div>
+                </RadioGroup>
               </div>
+
+              {enrollmentType === 'course' ? (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Course *</label>
+                  <Select
+                    value={formData.course_id}
+                    onValueChange={(value) => setFormData({ ...formData, course_id: value })}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a course" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border z-50">
+                      {courses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Pathway *</label>
+                  <Select
+                    value={formData.pathway_id}
+                    onValueChange={(value) => setFormData({ ...formData, pathway_id: value })}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a pathway" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border z-50">
+                      {pathways.map((pathway) => (
+                        <SelectItem key={pathway.id} value={pathway.id}>
+                          {pathway.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -290,7 +379,7 @@ export function BatchManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Course</TableHead>
+                  <TableHead>Course / Pathway</TableHead>
                   <TableHead>Start Date</TableHead>
                   <TableHead>Students</TableHead>
                   <TableHead>Status</TableHead>
@@ -301,7 +390,21 @@ export function BatchManagement() {
                 {batches.map((batch) => (
                   <TableRow key={batch.id}>
                     <TableCell className="font-medium">{batch.name}</TableCell>
-                    <TableCell>{batch.course?.title || '-'}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {batch.pathway_id ? (
+                          <>
+                            <Route className="w-4 h-4 text-muted-foreground" />
+                            {batch.pathway?.name || '-'}
+                          </>
+                        ) : (
+                          <>
+                            <BookOpen className="w-4 h-4 text-muted-foreground" />
+                            {batch.course?.title || '-'}
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-muted-foreground" />

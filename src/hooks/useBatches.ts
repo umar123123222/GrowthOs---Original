@@ -6,6 +6,7 @@ export interface Batch {
   id: string;
   name: string;
   course_id: string | null;
+  pathway_id: string | null;
   start_date: string;
   timezone: string;
   default_session_time: string;
@@ -17,6 +18,10 @@ export interface Batch {
     id: string;
     title: string;
   } | null;
+  pathway?: {
+    id: string;
+    name: string;
+  } | null;
   _count?: {
     enrollments: number;
   };
@@ -25,6 +30,7 @@ export interface Batch {
 export interface BatchFormData {
   name: string;
   course_id: string;
+  pathway_id: string;
   start_date: string;
   timezone: string;
   default_session_time: string;
@@ -43,7 +49,8 @@ export function useBatches(courseId?: string) {
         .from('batches')
         .select(`
           *,
-          course:courses(id, title)
+          course:courses(id, title),
+          pathway:learning_pathways(id, name)
         `)
         .order('start_date', { ascending: false });
       
