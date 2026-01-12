@@ -20,6 +20,7 @@ import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
 import { ErrorLogsManagement } from '@/components/superadmin/ErrorLogsManagement';
 import { CourseManagement } from '@/components/superadmin/CourseManagement';
 import { PathwayManagement } from '@/components/superadmin/PathwayManagement';
+import { BatchManagement } from '@/components/batch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ENV_CONFIG } from '@/lib/env-config';
@@ -74,6 +75,8 @@ export default function SuperadminDashboard() {
         return <CourseManagement />;
       case 'pathways':
         return <PathwayManagement />;
+      case 'batches':
+        return <BatchManagement />;
       default:
         return <DashboardContent />;
     }
