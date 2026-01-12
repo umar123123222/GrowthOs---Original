@@ -20,6 +20,7 @@ import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAnalytics';
 import { MilestoneManagement } from '@/components/admin/MilestoneManagement';
 import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
+import { BatchManagement } from '@/components/batch';
 import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 import { formatCurrency } from '@/utils/currencyFormatter';
 export default function AdminDashboard() {
@@ -57,6 +58,8 @@ export default function AdminDashboard() {
         return <MilestoneManagement />;
       case 'analytics':
         return <StudentAnalytics />;
+      case 'batches':
+        return <BatchManagement />;
       default:
         return <DashboardContent />;
     }
