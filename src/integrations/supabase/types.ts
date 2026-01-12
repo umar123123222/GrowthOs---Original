@@ -175,6 +175,202 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_timeline_items: {
+        Row: {
+          assignment_id: string | null
+          batch_id: string
+          course_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          drip_offset_days: number
+          end_datetime: string | null
+          id: string
+          meeting_link: string | null
+          recording_id: string | null
+          recording_url: string | null
+          reminder_1h_sent_at: string | null
+          reminder_24h_sent_at: string | null
+          reminder_start_sent_at: string | null
+          sequence_order: number
+          session_status: string | null
+          start_datetime: string | null
+          title: string
+          type: string
+          updated_at: string | null
+          zoom_password: string | null
+          zoom_username: string | null
+        }
+        Insert: {
+          assignment_id?: string | null
+          batch_id: string
+          course_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          drip_offset_days?: number
+          end_datetime?: string | null
+          id?: string
+          meeting_link?: string | null
+          recording_id?: string | null
+          recording_url?: string | null
+          reminder_1h_sent_at?: string | null
+          reminder_24h_sent_at?: string | null
+          reminder_start_sent_at?: string | null
+          sequence_order?: number
+          session_status?: string | null
+          start_datetime?: string | null
+          title: string
+          type: string
+          updated_at?: string | null
+          zoom_password?: string | null
+          zoom_username?: string | null
+        }
+        Update: {
+          assignment_id?: string | null
+          batch_id?: string
+          course_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          drip_offset_days?: number
+          end_datetime?: string | null
+          id?: string
+          meeting_link?: string | null
+          recording_id?: string | null
+          recording_url?: string | null
+          reminder_1h_sent_at?: string | null
+          reminder_24h_sent_at?: string | null
+          reminder_start_sent_at?: string | null
+          sequence_order?: number
+          session_status?: string | null
+          start_datetime?: string | null
+          title?: string
+          type?: string
+          updated_at?: string | null
+          zoom_password?: string | null
+          zoom_username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_timeline_items_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_timeline_items_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_timeline_items_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_timeline_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_timeline_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_timeline_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_timeline_items_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "available_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batches: {
+        Row: {
+          course_id: string | null
+          created_at: string | null
+          created_by: string | null
+          default_session_time: string | null
+          id: string
+          name: string
+          start_date: string
+          status: string | null
+          timezone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          course_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_session_time?: string | null
+          id?: string
+          name: string
+          start_date: string
+          status?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          course_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          default_session_time?: string | null
+          id?: string
+          name?: string
+          start_date?: string
+          status?: string | null
+          timezone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bundle_courses: {
         Row: {
           bundle_id: string
@@ -375,6 +571,7 @@ export type Database = {
         Row: {
           access_expires_at: string | null
           amount_paid: number | null
+          batch_id: string | null
           completed_at: string | null
           course_id: string
           created_at: string | null
@@ -391,6 +588,7 @@ export type Database = {
         Insert: {
           access_expires_at?: string | null
           amount_paid?: number | null
+          batch_id?: string | null
           completed_at?: string | null
           course_id: string
           created_at?: string | null
@@ -407,6 +605,7 @@ export type Database = {
         Update: {
           access_expires_at?: string | null
           amount_paid?: number | null
+          batch_id?: string | null
           completed_at?: string | null
           course_id?: string
           created_at?: string | null
@@ -421,6 +620,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "course_enrollments_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "course_enrollments_course_id_fkey"
             columns: ["course_id"]
@@ -2616,6 +2822,34 @@ export type Database = {
           p_student_id: string
         }
         Returns: Json
+      }
+      get_batch_timeline_status: {
+        Args: { p_batch_id: string; p_user_id: string }
+        Returns: {
+          assignment_id: string
+          assignment_required: boolean
+          assignment_status: string
+          deployed_date: string
+          description: string
+          drip_offset_days: number
+          duration_min: number
+          end_datetime: string
+          is_deployed: boolean
+          is_unlocked: boolean
+          item_id: string
+          item_type: string
+          meeting_link: string
+          recording_id: string
+          recording_url: string
+          recording_watched: boolean
+          sequence_order: number
+          session_recording_url: string
+          session_state: string
+          session_status: string
+          start_datetime: string
+          title: string
+          unlock_reason: string
+        }[]
       }
       get_catalog_courses: {
         Args: { p_user_id?: string }
