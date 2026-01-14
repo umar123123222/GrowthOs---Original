@@ -7,6 +7,9 @@ export interface EnhancedStudentData {
   full_name: string
   phone: string
   installment_count: number
+  course_id?: string
+  pathway_id?: string
+  total_fee_amount?: number
   discount_amount?: number
   discount_percentage?: number
 }

@@ -4,8 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, BadgePercent } from 'lucide-react'
+import { Loader2, BadgePercent, BookOpen, Route } from 'lucide-react'
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions'
 import { useEnhancedStudentCreation } from '@/hooks/useEnhancedStudentCreation'
 import { useAuth } from '@/hooks/useAuth'
@@ -16,6 +17,22 @@ interface EnhancedStudentCreationDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onStudentCreated: () => void
+}
+
+type EnrollmentType = 'course' | 'pathway'
+
+interface Course {
+  id: string
+  title: string
+  price: number | null
+  currency: string | null
+}
+
+interface Pathway {
+  id: string
+  name: string
+  price: number | null
+  currency: string | null
 }
 
 export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDialogProps> = ({
@@ -38,12 +55,15 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
     email: '',
     phone: '',
     installment_count: 1,
+    enrollment_type: 'course' as EnrollmentType,
+    course_id: '',
+    pathway_id: '',
     discount_type: 'none' as 'none' | 'fixed' | 'percentage',
     discount_amount: 0,
     discount_percentage: 0
   })
 
-  // Fetch original fee amount
+  // Fetch company settings for currency
   const { data: companySettings } = useQuery({
     queryKey: ['company-settings'],
     queryFn: async () => {
@@ -57,32 +77,83 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
     }
   })
 
-  const originalFee = companySettings?.original_fee_amount || 0
+  // Fetch courses
+  const { data: courses = [] } = useQuery({
+    queryKey: ['courses-for-enrollment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, title, price, currency')
+        .eq('is_active', true)
+        .order('sequence_order')
+      if (error) throw error
+      return data as Course[]
+    }
+  })
+
+  // Fetch pathways
+  const { data: pathways = [] } = useQuery({
+    queryKey: ['pathways-for-enrollment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('learning_pathways')
+        .select('id, name, price, currency')
+        .eq('is_active', true)
+        .order('name')
+      if (error) throw error
+      return data as Pathway[]
+    }
+  })
+
   const currency = companySettings?.currency || 'PKR'
+
+  // Get selected item's price
+  const selectedPrice = useMemo(() => {
+    if (formData.enrollment_type === 'course' && formData.course_id) {
+      const course = courses.find(c => c.id === formData.course_id)
+      return course?.price || 0
+    } else if (formData.enrollment_type === 'pathway' && formData.pathway_id) {
+      const pathway = pathways.find(p => p.id === formData.pathway_id)
+      return pathway?.price || 0
+    }
+    return 0
+  }, [formData.enrollment_type, formData.course_id, formData.pathway_id, courses, pathways])
 
   // Calculate final amount with discount
   const calculatedAmounts = useMemo(() => {
-    let finalAmount = originalFee
+    let finalAmount = selectedPrice
     let discountApplied = 0
 
     if (formData.discount_type === 'percentage' && formData.discount_percentage > 0) {
-      discountApplied = originalFee * (formData.discount_percentage / 100)
-      finalAmount = originalFee - discountApplied
+      discountApplied = selectedPrice * (formData.discount_percentage / 100)
+      finalAmount = selectedPrice - discountApplied
     } else if (formData.discount_type === 'fixed' && formData.discount_amount > 0) {
       discountApplied = formData.discount_amount
-      finalAmount = originalFee - discountApplied
+      finalAmount = selectedPrice - discountApplied
     }
 
     finalAmount = Math.max(0, finalAmount)
     const perInstallment = formData.installment_count > 0 ? finalAmount / formData.installment_count : 0
 
     return {
-      originalFee,
+      originalFee: selectedPrice,
       discountApplied,
       finalAmount,
       perInstallment
     }
-  }, [originalFee, formData.discount_type, formData.discount_amount, formData.discount_percentage, formData.installment_count])
+  }, [selectedPrice, formData.discount_type, formData.discount_amount, formData.discount_percentage, formData.installment_count])
+
+  const handleEnrollmentTypeChange = (value: EnrollmentType) => {
+    setFormData(prev => ({
+      ...prev,
+      enrollment_type: value,
+      course_id: '',
+      pathway_id: '',
+      discount_amount: 0,
+      discount_percentage: 0,
+      discount_type: 'none'
+    }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -96,6 +167,14 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
         return
       }
 
+      // Validate course/pathway selection
+      if (formData.enrollment_type === 'course' && !formData.course_id) {
+        return
+      }
+      if (formData.enrollment_type === 'pathway' && !formData.pathway_id) {
+        return
+      }
+
       setCurrentStep('Creating user account...')
       await new Promise(resolve => setTimeout(resolve, 300))
       
@@ -105,6 +184,9 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
         email: formData.email,
         phone: formData.phone,
         installment_count: formData.installment_count,
+        course_id: formData.enrollment_type === 'course' ? formData.course_id : undefined,
+        pathway_id: formData.enrollment_type === 'pathway' ? formData.pathway_id : undefined,
+        total_fee_amount: selectedPrice,
         discount_amount: formData.discount_type === 'fixed' ? formData.discount_amount : 0,
         discount_percentage: formData.discount_type === 'percentage' ? formData.discount_percentage : 0
       })
@@ -124,6 +206,9 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             email: '',
             phone: '',
             installment_count: 1,
+            enrollment_type: 'course',
+            course_id: '',
+            pathway_id: '',
             discount_type: 'none',
             discount_amount: 0,
             discount_percentage: 0
@@ -146,9 +231,13 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  const isFormValid = formData.email && formData.full_name && formData.phone && 
+    ((formData.enrollment_type === 'course' && formData.course_id) || 
+     (formData.enrollment_type === 'pathway' && formData.pathway_id))
+
   return (
     <Dialog open={open} onOpenChange={(open) => !isSubmitting && onOpenChange(open)}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {showSuccess ? '✅ Student Created Successfully!' : 'Add New Student'}
@@ -247,8 +336,106 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             </div>
           </div>
 
+          {/* Course/Pathway Selection */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Enrollment *</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Enrollment Type</Label>
+                <RadioGroup
+                  value={formData.enrollment_type}
+                  onValueChange={(value) => handleEnrollmentTypeChange(value as EnrollmentType)}
+                  className="flex gap-4"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="course" id="enroll-course" />
+                    <Label htmlFor="enroll-course" className="flex items-center gap-1.5 cursor-pointer">
+                      <BookOpen className="w-4 h-4" />
+                      Course
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="pathway" id="enroll-pathway" />
+                    <Label htmlFor="enroll-pathway" className="flex items-center gap-1.5 cursor-pointer">
+                      <Route className="w-4 h-4" />
+                      Pathway
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+
+              {formData.enrollment_type === 'course' ? (
+                <div className="space-y-2">
+                  <Label>Select Course *</Label>
+                  <Select
+                    value={formData.course_id}
+                    onValueChange={(value) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        course_id: value,
+                        discount_amount: 0,
+                        discount_percentage: 0,
+                        discount_type: 'none'
+                      }))
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a course" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border z-50">
+                      {courses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title} - {currency} {(course.price || 0).toLocaleString()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Select Pathway *</Label>
+                  <Select
+                    value={formData.pathway_id}
+                    onValueChange={(value) => {
+                      setFormData(prev => ({
+                        ...prev,
+                        pathway_id: value,
+                        discount_amount: 0,
+                        discount_percentage: 0,
+                        discount_type: 'none'
+                      }))
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a pathway" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border z-50">
+                      {pathways.map((pathway) => (
+                        <SelectItem key={pathway.id} value={pathway.id}>
+                          {pathway.name} - {currency} {(pathway.price || 0).toLocaleString()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Show price info */}
+              {selectedPrice > 0 && (
+                <div className="p-3 rounded-lg bg-muted/50 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Fee:</span>
+                    <span className="font-semibold">{currency} {selectedPrice.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           {/* Admin-Only Discount Section - Full Width */}
-          {canApplyDiscount && (
+          {canApplyDiscount && selectedPrice > 0 && (
             <Card className="border-orange-200 bg-orange-50/50">
               <CardHeader className="pb-3">
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -288,12 +475,12 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                     <Input
                       type="number"
                       min="0"
-                      max={originalFee}
+                      max={selectedPrice}
                       step="0.01"
                       value={formData.discount_amount}
                       onChange={(e) => {
                         const value = parseFloat(e.target.value) || 0
-                        handleInputChange('discount_amount', Math.min(originalFee, Math.max(0, value)))
+                        handleInputChange('discount_amount', Math.min(selectedPrice, Math.max(0, value)))
                       }}
                       placeholder="0.00"
                     />
@@ -323,19 +510,19 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                   <div className="pt-2 space-y-1 border-t border-orange-200">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Original Fee:</span>
-                      <span className="font-medium">{currency} {calculatedAmounts.originalFee.toFixed(2)}</span>
+                      <span className="font-medium">{currency} {calculatedAmounts.originalFee.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-sm text-orange-600">
                       <span>Discount:</span>
-                      <span className="font-medium">- {currency} {calculatedAmounts.discountApplied.toFixed(2)}</span>
+                      <span className="font-medium">- {currency} {calculatedAmounts.discountApplied.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-base font-semibold border-t border-orange-200 pt-1">
                       <span>Final Fee:</span>
-                      <span>{currency} {calculatedAmounts.finalAmount.toFixed(2)}</span>
+                      <span>{currency} {calculatedAmounts.finalAmount.toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>Per Installment:</span>
-                      <span>{currency} {calculatedAmounts.perInstallment.toFixed(2)}</span>
+                      <span>{currency} {calculatedAmounts.perInstallment.toLocaleString()}</span>
                     </div>
                   </div>
                 )}
@@ -354,7 +541,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
               </Button>
               <Button
                 type="submit"
-                disabled={isLoading || isSubmitting || !formData.email || !formData.full_name || !formData.phone || installmentLoading}
+                disabled={isLoading || isSubmitting || !isFormValid || installmentLoading}
               >
                 {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create Student
