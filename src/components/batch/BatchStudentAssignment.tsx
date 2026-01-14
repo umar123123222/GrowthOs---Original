@@ -53,23 +53,10 @@ export function BatchStudentAssignment({
   const fetchStudents = async () => {
     setLoading(true);
     try {
-      // Fetch enrollments for this course/pathway
+      // Build query based on enrollment type
       let query = supabase
         .from('course_enrollments')
-        .select(`
-          id,
-          student_id,
-          batch_id,
-          enrolled_at,
-          students!inner(
-            id,
-            user_id,
-            users!inner(
-              full_name,
-              email
-            )
-          )
-        `);
+        .select('id, student_id, batch_id, enrolled_at');
 
       if (courseId) {
         query = query.eq('course_id', courseId);
@@ -77,19 +64,54 @@ export function BatchStudentAssignment({
         query = query.eq('pathway_id', pathwayId);
       }
 
-      const { data, error } = await query;
+      const { data: enrollments, error: enrollmentError } = await query;
 
-      if (error) throw error;
+      if (enrollmentError) throw enrollmentError;
+
+      if (!enrollments || enrollments.length === 0) {
+        setStudents([]);
+        return;
+      }
+
+      // Get unique student IDs
+      const studentIds = [...new Set(enrollments.map(e => e.student_id))];
+
+      // Fetch student details
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('id, user_id')
+        .in('id', studentIds);
+
+      if (studentsError) throw studentsError;
+
+      // Get user IDs
+      const userIds = (studentsData || []).map(s => s.user_id).filter(Boolean);
+
+      // Fetch user details
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, full_name, email')
+        .in('id', userIds);
+
+      if (usersError) throw usersError;
+
+      // Create lookup maps
+      const studentUserMap = new Map((studentsData || []).map(s => [s.id, s.user_id]));
+      const userDetailsMap = new Map((usersData || []).map(u => [u.id, u]));
 
       // Transform data
-      const transformedStudents: Student[] = (data || []).map((enrollment: any) => ({
-        id: enrollment.id,
-        student_id: enrollment.student_id,
-        user_name: enrollment.students?.users?.full_name || 'Unknown',
-        user_email: enrollment.students?.users?.email || '',
-        batch_id: enrollment.batch_id,
-        enrolled_at: enrollment.enrolled_at
-      }));
+      const transformedStudents: Student[] = (enrollments || []).map((enrollment) => {
+        const userId = studentUserMap.get(enrollment.student_id);
+        const user = userId ? userDetailsMap.get(userId) : null;
+        return {
+          id: enrollment.id,
+          student_id: enrollment.student_id,
+          user_name: user?.full_name || 'Unknown',
+          user_email: user?.email || '',
+          batch_id: enrollment.batch_id,
+          enrolled_at: enrollment.enrolled_at
+        };
+      });
 
       setStudents(transformedStudents);
 
