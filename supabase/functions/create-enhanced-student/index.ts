@@ -13,6 +13,9 @@ interface CreateEnhancedStudentRequest {
   full_name: string;
   phone: string;
   installment_count: number;
+  course_id?: string;
+  pathway_id?: string;
+  total_fee_amount?: number;
   discount_amount?: number;
   discount_percentage?: number;
 }
@@ -96,10 +99,13 @@ const handler = async (req: Request): Promise<Response> => {
       full_name, 
       phone, 
       installment_count,
+      course_id,
+      pathway_id,
+      total_fee_amount,
       discount_amount = 0,
       discount_percentage = 0
     }: CreateEnhancedStudentRequest = await req.json();
-    console.log('Request data:', { email, full_name, phone, installment_count, discount_amount, discount_percentage });
+    console.log('Request data:', { email, full_name, phone, installment_count, course_id, pathway_id, total_fee_amount, discount_amount, discount_percentage });
 
     // Generate passwords
     const loginPassword = generateSecurePassword();
@@ -295,22 +301,53 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get company settings to calculate final fee
-    const { data: companySettings } = await supabaseAdmin
-      .from('company_settings')
-      .select('original_fee_amount')
-      .eq('id', 1)
-      .single();
-
-    if (!companySettings) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'Company settings not found' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // Get the selected course or pathway price
+    let baseFeeAmount = 0;
+    let selectedCourseId: string | null = course_id || null;
+    let selectedPathwayId: string | null = pathway_id || null;
+    
+    if (course_id) {
+      // Use specific course
+      const { data: course } = await supabaseAdmin
+        .from('courses')
+        .select('id, price, title')
+        .eq('id', course_id)
+        .single();
+      
+      if (course) {
+        baseFeeAmount = course.price || 0;
+        console.log('Using selected course:', { id: course.id, title: course.title, price: baseFeeAmount });
+      }
+    } else if (pathway_id) {
+      // Use specific pathway
+      const { data: pathway } = await supabaseAdmin
+        .from('learning_pathways')
+        .select('id, price, name')
+        .eq('id', pathway_id)
+        .single();
+      
+      if (pathway) {
+        baseFeeAmount = pathway.price || 0;
+        console.log('Using selected pathway:', { id: pathway.id, name: pathway.name, price: baseFeeAmount });
+      }
+    } else if (total_fee_amount !== undefined) {
+      // Use provided total fee amount
+      baseFeeAmount = total_fee_amount;
+    } else {
+      // Fallback to company settings original_fee_amount
+      const { data: companySettings } = await supabaseAdmin
+        .from('company_settings')
+        .select('original_fee_amount')
+        .eq('id', 1)
+        .single();
+      
+      if (companySettings) {
+        baseFeeAmount = companySettings.original_fee_amount || 0;
+      }
     }
 
     // Calculate final fee with discount
-    let finalFeeAmount = companySettings.original_fee_amount;
+    let finalFeeAmount = baseFeeAmount;
     if (discount_percentage > 0) {
       finalFeeAmount = finalFeeAmount * (1 - discount_percentage / 100);
     } else if (discount_amount > 0) {
@@ -319,7 +356,7 @@ const handler = async (req: Request): Promise<Response> => {
     finalFeeAmount = Math.max(0, finalFeeAmount); // Allow 0 fee for 100% discount
 
     console.log('Fee calculation:', {
-      original: companySettings.original_fee_amount,
+      base: baseFeeAmount,
       discount_amount,
       discount_percentage,
       final: finalFeeAmount
@@ -356,48 +393,92 @@ const handler = async (req: Request): Promise<Response> => {
       fees_cleared: finalFeeAmount === 0
     });
 
-    // Auto-enroll student in default course (for backward compatibility)
-    let defaultCourseId: string | null = null;
-    let defaultCoursePrice: number | null = null;
-    let defaultCourseMaxInstallments: number | null = null;
-    
+    // Enroll student in selected course or pathway
     try {
-      const { data: defaultCourse } = await supabaseAdmin
-        .from('courses')
-        .select('id, price, max_installments')
-        .eq('is_active', true)
-        .order('sequence_order', { ascending: true })
-        .limit(1)
-        .maybeSingle();
-
-      if (defaultCourse) {
-        defaultCourseId = defaultCourse.id;
-        defaultCoursePrice = defaultCourse.price;
-        defaultCourseMaxInstallments = defaultCourse.max_installments;
-        
-        // Determine payment status based on whether there's a fee
-        const courseHasFee = defaultCourse.price && defaultCourse.price > 0 && finalFeeAmount > 0;
-        
+      const hasFee = finalFeeAmount > 0;
+      
+      if (selectedCourseId) {
         const { error: enrollError } = await supabaseAdmin
           .from('course_enrollments')
           .insert({
             student_id: studentRecord.id,
-            course_id: defaultCourse.id,
+            course_id: selectedCourseId,
+            pathway_id: null,
             status: 'active',
             progress_percentage: 0,
-            total_amount: courseHasFee ? finalFeeAmount : 0,
+            total_amount: hasFee ? finalFeeAmount : 0,
             amount_paid: 0,
-            payment_status: courseHasFee ? 'pending' : 'waived'
+            payment_status: hasFee ? 'pending' : 'waived'
           });
 
         if (enrollError) {
           console.error('Course enrollment error (non-fatal):', enrollError);
         } else {
-          console.log('Student auto-enrolled in default course:', defaultCourse.id);
+          console.log('Student enrolled in course:', selectedCourseId);
+        }
+      } else if (selectedPathwayId) {
+        // For pathway, get the first course and enroll with pathway_id
+        const { data: pathwayCourses } = await supabaseAdmin
+          .from('pathway_courses')
+          .select('course_id')
+          .eq('pathway_id', selectedPathwayId)
+          .order('step_number')
+          .limit(1);
+        
+        const firstCourseId = pathwayCourses?.[0]?.course_id || null;
+        
+        const { error: enrollError } = await supabaseAdmin
+          .from('course_enrollments')
+          .insert({
+            student_id: studentRecord.id,
+            course_id: firstCourseId,
+            pathway_id: selectedPathwayId,
+            status: 'active',
+            progress_percentage: 0,
+            total_amount: hasFee ? finalFeeAmount : 0,
+            amount_paid: 0,
+            payment_status: hasFee ? 'pending' : 'waived'
+          });
+
+        if (enrollError) {
+          console.error('Pathway enrollment error (non-fatal):', enrollError);
+        } else {
+          console.log('Student enrolled in pathway:', selectedPathwayId);
+        }
+      } else {
+        // Fallback: Auto-enroll in default course
+        const { data: defaultCourse } = await supabaseAdmin
+          .from('courses')
+          .select('id, price')
+          .eq('is_active', true)
+          .order('sequence_order', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (defaultCourse) {
+          selectedCourseId = defaultCourse.id;
+          
+          const { error: enrollError } = await supabaseAdmin
+            .from('course_enrollments')
+            .insert({
+              student_id: studentRecord.id,
+              course_id: defaultCourse.id,
+              status: 'active',
+              progress_percentage: 0,
+              total_amount: hasFee ? finalFeeAmount : 0,
+              amount_paid: 0,
+              payment_status: hasFee ? 'pending' : 'waived'
+            });
+
+          if (enrollError) {
+            console.error('Default course enrollment error (non-fatal):', enrollError);
+          } else {
+            console.log('Student auto-enrolled in default course:', defaultCourse.id);
+          }
         }
       }
     } catch (enrollError) {
-      console.error('Course enrollment failed (non-fatal):', enrollError);
+      console.error('Enrollment failed (non-fatal):', enrollError);
     }
 
     // Queue email for credential delivery (non-blocking)
@@ -449,7 +530,7 @@ const handler = async (req: Request): Promise<Response> => {
         description: `100% discount applied - total fee: ${currency} 0.00`,
         performed_by: createdBy,
         data: {
-          original_amount: companySettings.original_fee_amount,
+          original_amount: baseFeeAmount,
           discount_amount: discount_amount || 0,
           discount_percentage: discount_percentage || 0,
           final_amount: 0,
@@ -464,14 +545,14 @@ const handler = async (req: Request): Promise<Response> => {
       try {
         const { data: installmentSettings } = await supabaseAdmin
           .from('company_settings')
-          .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days, payment_methods, currency')
+          .select('invoice_overdue_days, invoice_send_gap_days')
           .single();
 
         if (installmentSettings) {
           const installmentAmount = finalFeeAmount / installment_count;
           const intervalDays = installmentSettings.invoice_send_gap_days || 30;
           
-          // Create all installments with course_id link
+          // Create all installments with course_id/pathway_id link
           const installments = [];
           for (let i = 1; i <= installment_count; i++) {
             const issueDate = new Date();
@@ -482,8 +563,8 @@ const handler = async (req: Request): Promise<Response> => {
 
             installments.push({
               student_id: studentRecord.id,
-              course_id: defaultCourseId, // Link invoice to course
-              pathway_id: null,
+              course_id: selectedCourseId, // Link invoice to selected course
+              pathway_id: selectedPathwayId, // Link invoice to selected pathway
               amount: installmentAmount,
               installment_number: i,
               due_date: dueDate.toISOString(),
@@ -510,7 +591,7 @@ const handler = async (req: Request): Promise<Response> => {
                 description: `Discount applied: ${discount_percentage > 0 ? discount_percentage + '%' : currency + ' ' + discount_amount}`,
                 performed_by: createdBy,
                 data: {
-                  original_amount: installmentSettings.original_fee_amount,
+                  original_amount: baseFeeAmount,
                   discount_amount: discount_amount || 0,
                   discount_percentage: discount_percentage || 0,
                   final_amount: finalFeeAmount,
