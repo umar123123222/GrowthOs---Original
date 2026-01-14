@@ -48,7 +48,17 @@ export function useBatches(courseId?: string) {
       let query = supabase
         .from('batches')
         .select(`
-          *,
+          id,
+          name,
+          course_id,
+          pathway_id,
+          start_date,
+          timezone,
+          default_session_time,
+          status,
+          created_by,
+          created_at,
+          updated_at,
           course:courses(id, title),
           pathway:learning_pathways(id, name)
         `)
