@@ -168,62 +168,30 @@ export function StudentsManagement() {
   };
   const fetchInstallmentPayments = async () => {
     try {
-      // Fetch invoices with their related course enrollment status
+      // Fetch all invoices - we need to show complete payment history
       const { data: invoicesData, error: invoicesError } = await supabase
         .from('invoices')
-        .select('*, course_enrollments!invoices_course_id_fkey(status)')
+        .select('*')
         .order('installment_number', { ascending: true });
       
       if (invoicesError) throw invoicesError;
 
-      // Fetch active enrollments to know which courses are currently active
-      const { data: activeEnrollments, error: enrollmentsError } = await supabase
-        .from('course_enrollments')
-        .select('student_id, course_id, pathway_id, status')
-        .eq('status', 'active');
-      
-      if (enrollmentsError) throw enrollmentsError;
-
-      // Create a set of active enrollment keys for quick lookup
-      const activeEnrollmentKeys = new Set<string>();
-      activeEnrollments?.forEach(e => {
-        if (e.course_id) {
-          activeEnrollmentKeys.add(`${e.student_id}_course_${e.course_id}`);
-        }
-        if (e.pathway_id) {
-          activeEnrollmentKeys.add(`${e.student_id}_pathway_${e.pathway_id}`);
-        }
-      });
-
       // Group payments by student_id and transform to InstallmentPayment format
-      // Only include invoices that are either:
-      // 1. Already paid (historical record)
-      // 2. For an active enrollment (current fees)
       const paymentsMap = new Map<string, InstallmentPayment[]>();
       invoicesData?.forEach(invoice => {
-        const isPaid = invoice.status === 'paid';
-        const isForActiveEnrollment = (
-          (invoice.course_id && activeEnrollmentKeys.has(`${invoice.student_id}_course_${invoice.course_id}`)) ||
-          (invoice.pathway_id && activeEnrollmentKeys.has(`${invoice.student_id}_pathway_${invoice.pathway_id}`)) ||
-          (!invoice.course_id && !invoice.pathway_id) // Legacy invoices without course/pathway
-        );
-
-        // Only include if paid OR for active enrollment
-        if (isPaid || isForActiveEnrollment) {
-          const payment: InstallmentPayment = {
-            id: invoice.id,
-            installment_number: invoice.installment_number,
-            amount: invoice.amount,
-            status: invoice.status,
-            created_at: invoice.created_at,
-            due_date: invoice.due_date,
-            paid_at: invoice.paid_at
-          };
-          const key = String(invoice.student_id || '');
-          const userPayments = paymentsMap.get(key) || [];
-          userPayments.push(payment);
-          paymentsMap.set(key, userPayments);
-        }
+        const payment: InstallmentPayment = {
+          id: invoice.id,
+          installment_number: invoice.installment_number,
+          amount: invoice.amount,
+          status: invoice.status,
+          created_at: invoice.created_at,
+          due_date: invoice.due_date,
+          paid_at: invoice.paid_at
+        };
+        const key = String(invoice.student_id || '');
+        const userPayments = paymentsMap.get(key) || [];
+        userPayments.push(payment);
+        paymentsMap.set(key, userPayments);
       });
       setInstallmentPayments(paymentsMap);
     } catch (error) {
