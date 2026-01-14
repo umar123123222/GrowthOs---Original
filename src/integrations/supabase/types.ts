@@ -311,6 +311,7 @@ export type Database = {
           default_session_time: string | null
           id: string
           name: string
+          pathway_id: string | null
           start_date: string
           status: string | null
           timezone: string | null
@@ -323,6 +324,7 @@ export type Database = {
           default_session_time?: string | null
           id?: string
           name: string
+          pathway_id?: string | null
           start_date: string
           status?: string | null
           timezone?: string | null
@@ -335,6 +337,7 @@ export type Database = {
           default_session_time?: string | null
           id?: string
           name?: string
+          pathway_id?: string | null
           start_date?: string
           status?: string | null
           timezone?: string | null
@@ -367,6 +370,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batches_pathway_id_fkey"
+            columns: ["pathway_id"]
+            isOneToOne: false
+            referencedRelation: "learning_pathways"
             referencedColumns: ["id"]
           },
         ]
