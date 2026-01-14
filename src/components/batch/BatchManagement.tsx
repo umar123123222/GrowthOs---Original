@@ -122,11 +122,11 @@ export function BatchManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Prepare submission data - only include the selected type
-    const submissionData: BatchFormData = {
+    // Prepare submission data - only include the selected type, use null for empty
+    const submissionData = {
       ...formData,
-      course_id: enrollmentType === 'course' ? formData.course_id : '',
-      pathway_id: enrollmentType === 'pathway' ? formData.pathway_id : ''
+      course_id: enrollmentType === 'course' && formData.course_id ? formData.course_id : null,
+      pathway_id: enrollmentType === 'pathway' && formData.pathway_id ? formData.pathway_id : null
     };
     
     try {
