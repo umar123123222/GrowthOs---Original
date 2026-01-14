@@ -88,6 +88,7 @@ const MentorSubmissionsPage = lazy(() => import("./pages/MentorSubmissionsPage")
 const AdminNotifications = lazy(() => import("./pages/AdminNotifications"));
 const DevSendNotification = lazy(() => import("./pages/DevSendNotification"));
 const Catalog = lazy(() => import("./pages/Catalog"));
+const BatchTimelinePage = lazy(() => import("./pages/BatchTimelinePage"));
 
 // Loading component
 const PageLoader = () => (
@@ -270,6 +271,14 @@ const App = () => {
                       element={
                         <RoleGuard allowedRoles={["superadmin"]}>
                           <DevSendNotification />
+                        </RoleGuard>
+                      }
+                    />
+                    <Route
+                      path="admin/batches/:batchId/timeline"
+                      element={
+                        <RoleGuard allowedRoles={["admin", "superadmin"]}>
+                          <BatchTimelinePage />
                         </RoleGuard>
                       }
                     />
