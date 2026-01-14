@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ConnectAccountsDialog } from '@/components/ConnectAccountsDialog';
 import { OnboardingVideoModal } from '@/components/OnboardingVideoModal';
+import { BatchTimelineView } from '@/components/batch/BatchTimelineView';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourses } from '@/hooks/useCourses';
 import { useCourseRecordings } from '@/hooks/useCourseRecordings';
@@ -31,7 +32,8 @@ import {
   Star,
   Zap,
   ShoppingBag,
-  TrendingUp
+  TrendingUp,
+  Calendar
 } from 'lucide-react';
 
 interface Assignment {
@@ -93,6 +95,9 @@ export function StudentDashboard() {
   const [userLMSStatus, setUserLMSStatus] = useState<string>('active');
   const [firstOnboardingAnswer, setFirstOnboardingAnswer] = useState<string>('');
   const [firstOnboardingRange, setFirstOnboardingRange] = useState<{ min: string; max: string } | null>(null);
+  
+  // Batch enrollment state
+  const [batchEnrollment, setBatchEnrollment] = useState<{ batchId: string; batchName: string } | null>(null);
   
   // Onboarding video state
   const [showOnboardingVideo, setShowOnboardingVideo] = useState(false);
@@ -366,6 +371,36 @@ export function StudentDashboard() {
         logger.warn('StudentDashboard: Failed to fetch leaderboard position', leaderboardErr);
       }
 
+      // Fetch batch enrollment
+      try {
+        const { data: studentData } = await supabase
+          .from('students')
+          .select('id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (studentData?.id) {
+          const { data: enrollment } = await supabase
+            .from('course_enrollments')
+            .select(`
+              batch_id,
+              batches!inner(id, name)
+            `)
+            .eq('student_id', studentData.id)
+            .not('batch_id', 'is', null)
+            .maybeSingle();
+
+          if (enrollment?.batch_id && enrollment?.batches) {
+            setBatchEnrollment({
+              batchId: enrollment.batch_id,
+              batchName: (enrollment.batches as any).name
+            });
+          }
+        }
+      } catch (batchErr) {
+        logger.warn('StudentDashboard: Failed to fetch batch enrollment', batchErr);
+      }
+
     } catch (error) {
       logger.error('Error fetching dashboard data:', error);
       console.error('StudentDashboard: Dashboard data fetch failed:', error);
@@ -503,6 +538,22 @@ export function StudentDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Batch Timeline Section - Show if enrolled in a batch */}
+      {batchEnrollment && (
+        <Card className="border-primary/20 animate-fade-in">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-primary">
+              <Calendar className="w-5 h-5" />
+              Your Learning Timeline
+              <Badge variant="secondary" className="ml-2">{batchEnrollment.batchName}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BatchTimelineView batchId={batchEnrollment.batchId} batchName={batchEnrollment.batchName} />
+          </CardContent>
+        </Card>
+      )}
 
       {/* Interactive Three-Card Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

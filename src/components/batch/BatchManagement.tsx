@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Plus, Edit, Trash2, Users, Calendar, Clock, Settings, AlertTriangle, BookOpen, Route } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Calendar, Clock, Settings, AlertTriangle, BookOpen, Route, UserPlus } from 'lucide-react';
+import { BatchStudentAssignment } from './BatchStudentAssignment';
 import { useBatches, type Batch, type BatchFormData } from '@/hooks/useBatches';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -27,11 +28,12 @@ interface Pathway {
 type EnrollmentType = 'course' | 'pathway';
 
 export function BatchManagement() {
-  const { batches, loading, createBatch, updateBatch, deleteBatch, canEditStartDate } = useBatches();
+  const { batches, loading, createBatch, updateBatch, deleteBatch, canEditStartDate, fetchBatches } = useBatches();
   const [courses, setCourses] = useState<Course[]>([]);
   const [pathways, setPathways] = useState<Pathway[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
+  const [studentAssignmentBatch, setStudentAssignmentBatch] = useState<Batch | null>(null);
   const [enrollmentType, setEnrollmentType] = useState<EnrollmentType>('course');
   const [formData, setFormData] = useState<BatchFormData>({
     name: '',
@@ -423,6 +425,14 @@ export function BatchManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setStudentAssignmentBatch(batch)}
+                          title="Manage Students"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => window.location.href = `/admin/batches/${batch.id}/timeline`}
                           title="Manage Timeline"
                         >
@@ -454,6 +464,19 @@ export function BatchManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Student Assignment Dialog */}
+      {studentAssignmentBatch && (
+        <BatchStudentAssignment
+          batchId={studentAssignmentBatch.id}
+          batchName={studentAssignmentBatch.name}
+          courseId={studentAssignmentBatch.course_id}
+          pathwayId={studentAssignmentBatch.pathway_id}
+          open={!!studentAssignmentBatch}
+          onOpenChange={(open) => !open && setStudentAssignmentBatch(null)}
+          onUpdate={() => fetchBatches()}
+        />
+      )}
     </div>
   );
 }
