@@ -23,6 +23,16 @@ interface UpdateStudentRequest {
   email: string;
   phone?: string;
   resend_credentials?: boolean;
+  // Access control settings
+  enrollment_id?: string;
+  drip_override?: boolean;
+  drip_enabled?: boolean | null;
+  sequential_override?: boolean;
+  sequential_enabled?: boolean | null;
+  // Discount settings
+  discount_type?: 'none' | 'fixed' | 'percentage';
+  discount_amount?: number;
+  discount_percentage?: number;
 }
 
 serve(async (req) => {
@@ -69,7 +79,21 @@ serve(async (req) => {
       throw new Error('Insufficient permissions');
     }
 
-    const { user_id, full_name, email, phone, resend_credentials }: UpdateStudentRequest = await req.json();
+    const { 
+      user_id, 
+      full_name, 
+      email, 
+      phone, 
+      resend_credentials,
+      enrollment_id,
+      drip_override,
+      drip_enabled,
+      sequential_override,
+      sequential_enabled,
+      discount_type,
+      discount_amount,
+      discount_percentage
+    }: UpdateStudentRequest = await req.json();
 
     if (!user_id || !full_name || !email) {
       throw new Error('Missing required fields');
@@ -118,6 +142,52 @@ serve(async (req) => {
 
     if (updateError) {
       throw new Error(`Failed to update user: ${updateError.message}`);
+    }
+
+    // Update enrollment access settings and discount if provided
+    if (enrollment_id) {
+      const enrollmentUpdate: Record<string, any> = {
+        updated_at: new Date().toISOString()
+      };
+
+      // Access settings
+      if (drip_override !== undefined) {
+        enrollmentUpdate.drip_override = drip_override;
+        enrollmentUpdate.drip_enabled = drip_override ? drip_enabled : null;
+      }
+      
+      if (sequential_override !== undefined) {
+        enrollmentUpdate.sequential_override = sequential_override;
+        enrollmentUpdate.sequential_enabled = sequential_override ? sequential_enabled : null;
+      }
+
+      // Discount settings
+      if (discount_type !== undefined) {
+        if (discount_type === 'none') {
+          enrollmentUpdate.discount_amount = null;
+          enrollmentUpdate.discount_percentage = null;
+        } else if (discount_type === 'fixed') {
+          enrollmentUpdate.discount_amount = discount_amount || 0;
+          enrollmentUpdate.discount_percentage = null;
+        } else if (discount_type === 'percentage') {
+          enrollmentUpdate.discount_amount = null;
+          enrollmentUpdate.discount_percentage = discount_percentage || 0;
+        }
+      }
+
+      console.log('Updating enrollment:', { enrollment_id, ...enrollmentUpdate });
+      
+      const { error: enrollmentError } = await supabaseAdmin
+        .from('course_enrollments')
+        .update(enrollmentUpdate)
+        .eq('id', enrollment_id);
+
+      if (enrollmentError) {
+        console.error('Failed to update enrollment:', enrollmentError);
+        // Don't throw - this is non-critical
+      } else {
+        console.log('✅ Successfully updated enrollment settings');
+      }
     }
 
     // If email changed and credentials should be resent
@@ -337,7 +407,8 @@ serve(async (req) => {
         message: 'Student details updated successfully',
         email_sent: emailSent,
         email_error: emailError,
-        password_regenerated: passwordRegenerated
+        password_regenerated: passwordRegenerated,
+        enrollment_updated: !!enrollment_id
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

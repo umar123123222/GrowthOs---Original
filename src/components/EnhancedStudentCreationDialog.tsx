@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, BadgePercent, BookOpen, Route } from 'lucide-react'
+import { Loader2, BadgePercent, BookOpen, Route, Settings2, ChevronDown, ChevronUp } from 'lucide-react'
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions'
 import { useEnhancedStudentCreation } from '@/hooks/useEnhancedStudentCreation'
 import { useAuth } from '@/hooks/useAuth'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
+import { Switch } from '@/components/ui/switch'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 
 interface EnhancedStudentCreationDialogProps {
   open: boolean
@@ -60,8 +62,15 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
     pathway_id: '',
     discount_type: 'none' as 'none' | 'fixed' | 'percentage',
     discount_amount: 0,
-    discount_percentage: 0
+    discount_percentage: 0,
+    // Access control overrides
+    drip_override: false,
+    drip_enabled: false,
+    sequential_override: false,
+    sequential_enabled: false
   })
+  
+  const [accessSettingsOpen, setAccessSettingsOpen] = useState(false)
 
   // Fetch company settings for currency
   const { data: companySettings } = useQuery({
@@ -188,7 +197,12 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
         pathway_id: formData.enrollment_type === 'pathway' ? formData.pathway_id : undefined,
         total_fee_amount: selectedPrice,
         discount_amount: formData.discount_type === 'fixed' ? formData.discount_amount : 0,
-        discount_percentage: formData.discount_type === 'percentage' ? formData.discount_percentage : 0
+        discount_percentage: formData.discount_type === 'percentage' ? formData.discount_percentage : 0,
+        // Access control overrides
+        drip_override: formData.drip_override,
+        drip_enabled: formData.drip_override ? formData.drip_enabled : undefined,
+        sequential_override: formData.sequential_override,
+        sequential_enabled: formData.sequential_override ? formData.sequential_enabled : undefined
       })
 
       if (result.success) {
@@ -211,8 +225,13 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             pathway_id: '',
             discount_type: 'none',
             discount_amount: 0,
-            discount_percentage: 0
+            discount_percentage: 0,
+            drip_override: false,
+            drip_enabled: false,
+            sequential_override: false,
+            sequential_enabled: false
           })
+          setAccessSettingsOpen(false)
           setShowSuccess(false)
           setCreatedStudentInfo(null)
           onOpenChange(false)
@@ -433,6 +452,108 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
               )}
             </CardContent>
           </Card>
+
+          {/* Access Settings Section (Drip/Sequential Override) */}
+          {canApplyDiscount && (formData.course_id || formData.pathway_id) && (
+            <Collapsible open={accessSettingsOpen} onOpenChange={setAccessSettingsOpen}>
+              <Card className="border-blue-200 bg-blue-50/50">
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="pb-3 cursor-pointer hover:bg-blue-100/50 transition-colors">
+                    <CardTitle className="text-sm flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Settings2 className="h-4 w-4" />
+                        Access Settings (Admin Only)
+                      </span>
+                      {accessSettingsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </CardTitle>
+                  </CardHeader>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <CardContent className="space-y-4 pt-0">
+                    <p className="text-xs text-muted-foreground">
+                      Override company/course settings for this specific student.
+                    </p>
+                    
+                    {/* Content Dripping Override */}
+                    <div className="space-y-3 p-3 rounded-lg border border-blue-200 bg-white/50">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="drip-override" className="flex flex-col">
+                          <span>Override Content Dripping</span>
+                          <span className="font-normal text-xs text-muted-foreground">
+                            Control when recordings become available
+                          </span>
+                        </Label>
+                        <Switch
+                          id="drip-override"
+                          checked={formData.drip_override}
+                          onCheckedChange={(checked) => handleInputChange('drip_override', checked ? 1 : 0)}
+                        />
+                      </div>
+                      
+                      {formData.drip_override && (
+                        <RadioGroup
+                          value={formData.drip_enabled ? 'enabled' : 'disabled'}
+                          onValueChange={(value) => handleInputChange('drip_enabled', value === 'enabled' ? 1 : 0)}
+                          className="pl-4 space-y-2"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="disabled" id="drip-disabled" />
+                            <Label htmlFor="drip-disabled" className="font-normal cursor-pointer">
+                              Disable dripping (all content available immediately)
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="enabled" id="drip-enabled" />
+                            <Label htmlFor="drip-enabled" className="font-normal cursor-pointer">
+                              Enable dripping (content unlocks over time)
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      )}
+                    </div>
+                    
+                    {/* Sequential Unlock Override */}
+                    <div className="space-y-3 p-3 rounded-lg border border-blue-200 bg-white/50">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="sequential-override" className="flex flex-col">
+                          <span>Override Sequential Unlock</span>
+                          <span className="font-normal text-xs text-muted-foreground">
+                            Control whether recordings must be watched in order
+                          </span>
+                        </Label>
+                        <Switch
+                          id="sequential-override"
+                          checked={formData.sequential_override}
+                          onCheckedChange={(checked) => handleInputChange('sequential_override', checked ? 1 : 0)}
+                        />
+                      </div>
+                      
+                      {formData.sequential_override && (
+                        <RadioGroup
+                          value={formData.sequential_enabled ? 'enabled' : 'disabled'}
+                          onValueChange={(value) => handleInputChange('sequential_enabled', value === 'enabled' ? 1 : 0)}
+                          className="pl-4 space-y-2"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="disabled" id="sequential-disabled" />
+                            <Label htmlFor="sequential-disabled" className="font-normal cursor-pointer">
+                              Disable sequential unlock (watch any recording)
+                            </Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <RadioGroupItem value="enabled" id="sequential-enabled" />
+                            <Label htmlFor="sequential-enabled" className="font-normal cursor-pointer">
+                              Enable sequential unlock (must watch in order)
+                            </Label>
+                          </div>
+                        </RadioGroup>
+                      )}
+                    </div>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          )}
 
           {/* Admin-Only Discount Section - Full Width */}
           {canApplyDiscount && selectedPrice > 0 && (

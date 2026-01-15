@@ -18,6 +18,11 @@ interface CreateEnhancedStudentRequest {
   total_fee_amount?: number;
   discount_amount?: number;
   discount_percentage?: number;
+  // Access control overrides
+  drip_override?: boolean;
+  drip_enabled?: boolean;
+  sequential_override?: boolean;
+  sequential_enabled?: boolean;
 }
 
 interface CreateEnhancedStudentResponse {
@@ -103,9 +108,13 @@ const handler = async (req: Request): Promise<Response> => {
       pathway_id,
       total_fee_amount,
       discount_amount = 0,
-      discount_percentage = 0
+      discount_percentage = 0,
+      drip_override = false,
+      drip_enabled,
+      sequential_override = false,
+      sequential_enabled
     }: CreateEnhancedStudentRequest = await req.json();
-    console.log('Request data:', { email, full_name, phone, installment_count, course_id, pathway_id, total_fee_amount, discount_amount, discount_percentage });
+    console.log('Request data:', { email, full_name, phone, installment_count, course_id, pathway_id, total_fee_amount, discount_amount, discount_percentage, drip_override, drip_enabled, sequential_override, sequential_enabled });
 
     // Generate passwords
     const loginPassword = generateSecurePassword();
@@ -408,7 +417,14 @@ const handler = async (req: Request): Promise<Response> => {
             progress_percentage: 0,
             total_amount: hasFee ? finalFeeAmount : 0,
             amount_paid: 0,
-            payment_status: hasFee ? 'pending' : 'waived'
+            payment_status: hasFee ? 'pending' : 'waived',
+            // Access control overrides
+            drip_override: drip_override || false,
+            drip_enabled: drip_override ? (drip_enabled ?? null) : null,
+            sequential_override: sequential_override || false,
+            sequential_enabled: sequential_override ? (sequential_enabled ?? null) : null,
+            discount_amount: discount_amount || null,
+            discount_percentage: discount_percentage || null
           });
 
         if (enrollError) {
@@ -437,7 +453,14 @@ const handler = async (req: Request): Promise<Response> => {
             progress_percentage: 0,
             total_amount: hasFee ? finalFeeAmount : 0,
             amount_paid: 0,
-            payment_status: hasFee ? 'pending' : 'waived'
+            payment_status: hasFee ? 'pending' : 'waived',
+            // Access control overrides
+            drip_override: drip_override || false,
+            drip_enabled: drip_override ? (drip_enabled ?? null) : null,
+            sequential_override: sequential_override || false,
+            sequential_enabled: sequential_override ? (sequential_enabled ?? null) : null,
+            discount_amount: discount_amount || null,
+            discount_percentage: discount_percentage || null
           });
 
         if (enrollError) {
