@@ -121,9 +121,9 @@ export const useVideosData = (user?: any) => {
         if (viewsError) throw viewsError;
         recordingViews = viewsData || [];
 
-        // Get unlock status for the user
+        // Get unlock status for the user using the correct sequential unlock function
         const { data: unlockData, error: unlockError } = await supabase
-          .rpc('get_user_unlock_status', { _user_id: user.id });
+          .rpc('get_sequential_unlock_status', { p_user_id: user.id });
         
         if (unlockError) throw unlockError;
         unlockStatus = unlockData || [];
@@ -141,8 +141,8 @@ export const useVideosData = (user?: any) => {
           const recordingView = recordingViews?.find(rv => rv.recording_id === recording.id);
           
           // Check if this recording is unlocked (also check LMS status)
-          const recordingUnlockStatus = unlockStatus.find(u => u.recording_id === recording.id);
-          const isRecordingUnlocked = user?.id ? (recordingUnlockStatus?.is_recording_unlocked ?? false) && userLMSStatus === 'active' : true;
+          const recordingUnlockStatus = unlockStatus.find((u: any) => u.recording_id === recording.id);
+          const isRecordingUnlocked = user?.id ? (recordingUnlockStatus?.is_unlocked ?? false) && userLMSStatus === 'active' : true;
           
           // Get assignment info from the recording
           const assignment = assignmentsData?.find(a => a.id === recording.assignment_id);
