@@ -98,6 +98,7 @@ export type Database = {
         Row: {
           assignment_id: string | null
           description: string | null
+          drip_days: number | null
           duration_min: number | null
           id: string
           last_assignment_completed: string | null
@@ -112,6 +113,7 @@ export type Database = {
         Insert: {
           assignment_id?: string | null
           description?: string | null
+          drip_days?: number | null
           duration_min?: number | null
           id?: string
           last_assignment_completed?: string | null
@@ -126,6 +128,7 @@ export type Database = {
         Update: {
           assignment_id?: string | null
           description?: string | null
+          drip_days?: number | null
           duration_min?: number | null
           id?: string
           last_assignment_completed?: string | null
@@ -2970,8 +2973,14 @@ export type Database = {
       get_student_unlock_sequence: {
         Args: { p_user_id: string }
         Returns: {
+          assignment_completed: boolean
+          assignment_id: string
           is_unlocked: boolean
+          is_watched: boolean
+          module_id: string
+          module_title: string
           recording_id: string
+          recording_title: string
           sequence_order: number
           unlock_reason: string
         }[]
