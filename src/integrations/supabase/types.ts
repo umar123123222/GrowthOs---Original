@@ -588,11 +588,17 @@ export type Database = {
           completed_at: string | null
           course_id: string
           created_at: string | null
+          discount_amount: number | null
+          discount_percentage: number | null
+          drip_enabled: boolean | null
+          drip_override: boolean | null
           enrolled_at: string | null
           id: string
           pathway_id: string | null
           payment_status: string | null
           progress_percentage: number | null
+          sequential_enabled: boolean | null
+          sequential_override: boolean | null
           status: string | null
           student_id: string
           total_amount: number | null
@@ -605,11 +611,17 @@ export type Database = {
           completed_at?: string | null
           course_id: string
           created_at?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
+          drip_enabled?: boolean | null
+          drip_override?: boolean | null
           enrolled_at?: string | null
           id?: string
           pathway_id?: string | null
           payment_status?: string | null
           progress_percentage?: number | null
+          sequential_enabled?: boolean | null
+          sequential_override?: boolean | null
           status?: string | null
           student_id: string
           total_amount?: number | null
@@ -622,11 +634,17 @@ export type Database = {
           completed_at?: string | null
           course_id?: string
           created_at?: string | null
+          discount_amount?: number | null
+          discount_percentage?: number | null
+          drip_enabled?: boolean | null
+          drip_override?: boolean | null
           enrolled_at?: string | null
           id?: string
           pathway_id?: string | null
           payment_status?: string | null
           progress_percentage?: number | null
+          sequential_enabled?: boolean | null
+          sequential_override?: boolean | null
           status?: string | null
           student_id?: string
           total_amount?: number | null
@@ -691,6 +709,7 @@ export type Database = {
           created_by: string | null
           currency: string | null
           description: string | null
+          drip_enabled: boolean | null
           id: string
           is_active: boolean | null
           is_published: boolean | null
@@ -707,6 +726,7 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           description?: string | null
+          drip_enabled?: boolean | null
           id?: string
           is_active?: boolean | null
           is_published?: boolean | null
@@ -723,6 +743,7 @@ export type Database = {
           created_by?: string | null
           currency?: string | null
           description?: string | null
+          drip_enabled?: boolean | null
           id?: string
           is_active?: boolean | null
           is_published?: boolean | null

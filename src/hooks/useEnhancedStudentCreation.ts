@@ -12,6 +12,11 @@ export interface EnhancedStudentData {
   total_fee_amount?: number
   discount_amount?: number
   discount_percentage?: number
+  // Access control overrides
+  drip_override?: boolean
+  drip_enabled?: boolean
+  sequential_override?: boolean
+  sequential_enabled?: boolean
 }
 
 export interface EnhancedStudentResponse {
