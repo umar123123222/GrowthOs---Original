@@ -22,6 +22,7 @@ import { useInstallmentOptions } from '@/hooks/useInstallmentOptions';
 import { useUserManagement } from '@/hooks/useUserManagement';
 import { EnhancedStudentCreationDialog } from '@/components/EnhancedStudentCreationDialog';
 import { EditStudentDialog } from '@/components/EditStudentDialog';
+import { ManageAccessDialog } from '@/components/admin/ManageAccessDialog';
 import jsPDF from 'jspdf';
 interface Student {
   id: string;
@@ -88,6 +89,8 @@ export const StudentManagement = () => {
   const [selectedStudentForPassword, setSelectedStudentForPassword] = useState<Student | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [selectedStudentForEdit, setSelectedStudentForEdit] = useState<Student | null>(null);
+  const [manageAccessDialogOpen, setManageAccessDialogOpen] = useState(false);
+  const [selectedStudentForAccess, setSelectedStudentForAccess] = useState<Student | null>(null);
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
   const [timeTick, setTimeTick] = useState(0); // triggers periodic re-render for time-based status updates
@@ -1515,14 +1518,26 @@ export const StudentManagement = () => {
                                </Button>
                              )}
                              <Button
-                               variant="outline"
-                               size="sm"
-                               onClick={() => handleStatusUpdate(student.id)}
-                               className="hover-scale hover:border-blue-300 hover:text-blue-600"
-                             >
-                               <Settings className="w-4 h-4 mr-2" />
-                               Update Status
-                             </Button>
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStatusUpdate(student.id)}
+                                className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                              >
+                                <Settings className="w-4 h-4 mr-2" />
+                                LMS Status
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedStudentForAccess(student);
+                                  setManageAccessDialogOpen(true);
+                                }}
+                                className="hover-scale hover:border-indigo-300 hover:text-indigo-600"
+                              >
+                                <Lock className="w-4 h-4 mr-2" />
+                                Manage Access
+                              </Button>
                              <Button
                                variant="outline"
                                size="sm"
@@ -1652,5 +1667,13 @@ export const StudentManagement = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Manage Access Dialog */}
+      <ManageAccessDialog
+        open={manageAccessDialogOpen}
+        onOpenChange={setManageAccessDialogOpen}
+        student={selectedStudentForAccess}
+        onUpdate={fetchStudents}
+      />
     </div>;
 };
