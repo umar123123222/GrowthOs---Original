@@ -256,7 +256,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
 
   return (
     <Dialog open={open} onOpenChange={(open) => !isSubmitting && onOpenChange(open)}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40">
         <DialogHeader>
           <DialogTitle>
             {showSuccess ? '✅ Student Created Successfully!' : 'Add New Student'}
