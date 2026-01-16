@@ -330,7 +330,7 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
             </div>
 
             {/* Batch Assignment */}
-            {enrollmentId && batches.length > 0 && (
+            {batches.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-sm flex items-center gap-2">
