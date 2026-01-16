@@ -9,6 +9,7 @@ export interface EnhancedStudentData {
   installment_count: number
   course_id?: string
   pathway_id?: string
+  batch_id?: string
   total_fee_amount?: number
   discount_amount?: number
   discount_percentage?: number

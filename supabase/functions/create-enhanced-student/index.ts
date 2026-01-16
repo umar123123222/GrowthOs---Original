@@ -15,6 +15,7 @@ interface CreateEnhancedStudentRequest {
   installment_count: number;
   course_id?: string;
   pathway_id?: string;
+  batch_id?: string;
   total_fee_amount?: number;
   discount_amount?: number;
   discount_percentage?: number;
@@ -106,6 +107,7 @@ const handler = async (req: Request): Promise<Response> => {
       installment_count,
       course_id,
       pathway_id,
+      batch_id,
       total_fee_amount,
       discount_amount = 0,
       discount_percentage = 0,
@@ -114,7 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
       sequential_override = false,
       sequential_enabled
     }: CreateEnhancedStudentRequest = await req.json();
-    console.log('Request data:', { email, full_name, phone, installment_count, course_id, pathway_id, total_fee_amount, discount_amount, discount_percentage, drip_override, drip_enabled, sequential_override, sequential_enabled });
+    console.log('Request data:', { email, full_name, phone, installment_count, course_id, pathway_id, batch_id, total_fee_amount, discount_amount, discount_percentage, drip_override, drip_enabled, sequential_override, sequential_enabled });
 
     // Generate passwords
     const loginPassword = generateSecurePassword();
@@ -413,6 +415,7 @@ const handler = async (req: Request): Promise<Response> => {
             student_id: studentRecord.id,
             course_id: selectedCourseId,
             pathway_id: null,
+            batch_id: batch_id || null,
             enrollment_source: 'direct',
             status: 'active',
             progress_percentage: 0,
@@ -431,7 +434,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (enrollError) {
           console.error('Course enrollment error (non-fatal):', enrollError);
         } else {
-          console.log('Student enrolled in course:', selectedCourseId);
+          console.log('Student enrolled in course:', selectedCourseId, 'with batch:', batch_id || 'none');
         }
       } else if (selectedPathwayId) {
         // For pathway, get the first course and enroll with pathway_id
@@ -450,6 +453,7 @@ const handler = async (req: Request): Promise<Response> => {
             student_id: studentRecord.id,
             course_id: firstCourseId,
             pathway_id: selectedPathwayId,
+            batch_id: batch_id || null,
             enrollment_source: 'pathway',
             status: 'active',
             progress_percentage: 0,
@@ -468,7 +472,7 @@ const handler = async (req: Request): Promise<Response> => {
         if (enrollError) {
           console.error('Pathway enrollment error (non-fatal):', enrollError);
         } else {
-          console.log('Student enrolled in pathway:', selectedPathwayId);
+          console.log('Student enrolled in pathway:', selectedPathwayId, 'with batch:', batch_id || 'none');
         }
       } else {
         // Fallback: Auto-enroll in default course
