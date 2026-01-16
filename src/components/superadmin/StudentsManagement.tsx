@@ -6,13 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { EnhancedStudentCreationDialog } from '@/components/EnhancedStudentCreationDialog';
-import { BulkStudentUploadDialog } from '@/components/BulkStudentUploadDialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon, BookOpen, Upload } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon, BookOpen } from 'lucide-react';
 import { StudentAccessManagement } from './StudentAccessManagement';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -79,7 +78,6 @@ export function StudentsManagement() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [totalStudents, setTotalStudents] = useState(0);
   const [activeStudents, setActiveStudents] = useState(0);
@@ -1152,10 +1150,6 @@ export function StudentsManagement() {
           <p className="text-muted-foreground mt-2 text-lg">Manage student records and track their progress</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
-          <Button onClick={() => setIsBulkUploadOpen(true)} variant="outline" className="hover-scale animate-scale-in">
-            <Upload className="w-4 h-4 mr-2" />
-            Bulk Upload
-          </Button>
           <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
             <Plus className="w-4 h-4 mr-2" />
             Add Student
@@ -1163,7 +1157,6 @@ export function StudentsManagement() {
         </div>
         
         <EnhancedStudentCreationDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} onStudentCreated={fetchStudents} />
-        <BulkStudentUploadDialog open={isBulkUploadOpen} onOpenChange={setIsBulkUploadOpen} onStudentsCreated={fetchStudents} />
       </div>
 
       {/* Stats Cards */}
