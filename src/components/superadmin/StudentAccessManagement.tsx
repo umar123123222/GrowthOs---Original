@@ -313,6 +313,7 @@ export function StudentAccessManagement({
         const { error } = await supabase.from('course_enrollments').insert({
           student_id: studentId,
           course_id: courseId,
+          enrollment_source: 'direct',
           status: 'active',
           progress_percentage: 0,
           enrolled_at: enrolledAt.toISOString(),
@@ -403,6 +404,7 @@ export function StudentAccessManagement({
           student_id: studentId,
           course_id: firstCourseId,
           pathway_id: pathwayId,
+          enrollment_source: 'pathway',
           status: 'active',
           progress_percentage: 0,
           enrolled_at: enrolledAt.toISOString(),
@@ -450,6 +452,7 @@ export function StudentAccessManagement({
         const { error } = await supabase.from('course_enrollments').insert({
           student_id: studentId,
           course_id: course.id,
+          enrollment_source: 'direct',
           status: 'active',
           progress_percentage: 0,
           enrolled_at: new Date().toISOString()
