@@ -80,21 +80,20 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         lessonsData = data || [];
       }
 
-      // Fetch unlock status (sequential unlock system)
-      // Note: get_sequential_unlock_status returns unlocks across courses, so we filter to the lessons in this course.
+      // Fetch unlock status using course-scoped function
       const { data: unlockData, error: unlockError } = await supabase
-        .rpc('get_sequential_unlock_status', {
-          p_user_id: user.id
+        .rpc('get_course_sequential_unlock_status', {
+          p_user_id: user.id,
+          p_course_id: courseId
         });
 
       if (unlockError) {
         logger.warn('Error fetching unlock status:', unlockError);
       }
 
-      const lessonIds = new Set((lessonsData || []).map(l => l.id));
       const unlockedIds = new Set(
         (unlockData || [])
-          .filter((u: any) => u.is_unlocked && lessonIds.has(u.recording_id))
+          .filter((u: any) => u.is_unlocked)
           .map((u: any) => u.recording_id)
       );
 

@@ -2911,6 +2911,16 @@ export type Database = {
           recording_count: number
         }[]
       }
+      get_course_sequential_unlock_status: {
+        Args: { p_course_id: string; p_user_id: string }
+        Returns: {
+          is_unlocked: boolean
+          recording_id: string
+          sequence_position: number
+          title: string
+          unlock_reason: string
+        }[]
+      }
       get_current_user_role: { Args: never; Returns: string }
       get_default_course_id: { Args: never; Returns: string }
       get_inactive_students: {
