@@ -2974,10 +2974,12 @@ export type Database = {
       get_course_sequential_unlock_status: {
         Args: { p_course_id: string; p_user_id: string }
         Returns: {
+          drip_unlock_date: string
           is_unlocked: boolean
+          lock_reason: string
           recording_id: string
+          recording_title: string
           sequence_position: number
-          title: string
           unlock_reason: string
         }[]
       }

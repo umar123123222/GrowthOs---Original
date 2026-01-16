@@ -17,6 +17,8 @@ export interface CourseRecording {
   hasAssignment: boolean;
   assignmentId?: string;
   assignmentSubmitted: boolean;
+  lockReason?: string | null;
+  dripUnlockDate?: string | null;
 }
 
 export interface CourseModule {
@@ -87,15 +89,14 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           p_course_id: courseId
         });
 
-      if (unlockError) {
-        logger.warn('Error fetching unlock status:', unlockError);
-      }
-
-      const unlockedIds = new Set(
-        (unlockData || [])
-          .filter((u: any) => u.is_unlocked)
-          .map((u: any) => u.recording_id)
-      );
+      const unlockStatusMap = new Map<string, { isUnlocked: boolean; lockReason?: string; dripUnlockDate?: string }>();
+      (unlockData || []).forEach((u: any) => {
+        unlockStatusMap.set(u.recording_id, {
+          isUnlocked: u.is_unlocked,
+          lockReason: u.lock_reason,
+          dripUnlockDate: u.drip_unlock_date
+        });
+      });
 
       // Fetch views
       const { data: viewsData } = await supabase
@@ -120,6 +121,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       // Process recordings
       const processedRecordings: CourseRecording[] = lessonsData.map(lesson => {
         const module = modulesData?.find(m => m.id === lesson.module);
+        const unlockStatus = unlockStatusMap.get(lesson.id);
         return {
           id: lesson.id,
           recording_title: lesson.recording_title || 'Untitled',
@@ -129,11 +131,13 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           module_id: lesson.module,
           module_title: module?.title || 'Unknown Module',
           module_order: module?.order || 0,
-          isUnlocked: unlockedIds.has(lesson.id),
+          isUnlocked: unlockStatus?.isUnlocked || false,
           isWatched: watchedMap.get(lesson.id) || false,
           hasAssignment: !!lesson.assignment_id,
           assignmentId: lesson.assignment_id,
-          assignmentSubmitted: lesson.assignment_id ? submittedAssignments.has(lesson.assignment_id) : false
+          assignmentSubmitted: lesson.assignment_id ? submittedAssignments.has(lesson.assignment_id) : false,
+          lockReason: unlockStatus?.lockReason || null,
+          dripUnlockDate: unlockStatus?.dripUnlockDate || null
         };
       });
 
