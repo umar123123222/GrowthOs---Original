@@ -233,6 +233,10 @@ const Layout = memo(({
           .maybeSingle();
 
         const studentId = studentData?.id;
+        if (!studentId) {
+          setCatalogCourses([]);
+          return;
+        }
 
         // Fetch all active courses
         const { data: courses } = await supabase
@@ -241,22 +245,48 @@ const Layout = memo(({
           .eq('is_active', true)
           .order('sequence_order', { ascending: true });
 
-        // Fetch student enrollments using the correct students.id
-        let enrolledCourseIds = new Set<string>();
-        if (studentId) {
-          const { data: enrollments } = await supabase
-            .from('course_enrollments')
-            .select('course_id, status')
-            .eq('student_id', studentId)
-            .eq('status', 'active');
+        // Fetch direct enrollments (courses enrolled directly, not via pathway)
+        const { data: directEnrollments } = await supabase
+          .from('course_enrollments')
+          .select('course_id, status, pathway_id')
+          .eq('student_id', studentId)
+          .eq('status', 'active')
+          .is('pathway_id', null);
 
-          enrolledCourseIds = new Set(enrollments?.map(e => e.course_id) || []);
+        const directEnrolledCourseIds = new Set(directEnrollments?.map(e => e.course_id) || []);
+
+        // Fetch student's active pathway
+        const { data: activePathwayData } = await supabase
+          .rpc('get_student_active_pathway', { p_user_id: user.id });
+
+        // Build a set of accessible course IDs from pathway
+        const pathwayAccessibleCourseIds = new Set<string>();
+        
+        // activePathwayData is an array, get first element
+        const activePathway = activePathwayData?.[0];
+        
+        if (activePathway?.pathway_id) {
+          // Fetch pathway course map to determine which pathway courses are accessible
+          const { data: pathwayCourseMap } = await supabase.rpc('get_student_pathway_course_map', {
+            p_user_id: user.id,
+            p_pathway_id: activePathway.pathway_id
+          });
+
+          if (pathwayCourseMap && Array.isArray(pathwayCourseMap)) {
+            for (const course of pathwayCourseMap) {
+              // Course is accessible if it's available (unlocked in pathway sequence)
+              if (course.is_available) {
+                pathwayAccessibleCourseIds.add(course.course_id);
+              }
+            }
+          }
         }
 
         const courseItems: CourseMenuItem[] = (courses || []).map(course => ({
           id: course.id,
           title: course.title,
-          isEnrolled: enrolledCourseIds.has(course.id)
+          // Course is enrolled if directly enrolled OR accessible via pathway
+          isEnrolled: directEnrolledCourseIds.has(course.id) || pathwayAccessibleCourseIds.has(course.id)
         }));
 
         setCatalogCourses(courseItems);
