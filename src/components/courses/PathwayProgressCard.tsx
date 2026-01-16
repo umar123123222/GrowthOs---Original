@@ -140,8 +140,9 @@ export function PathwayProgressCard({
                 // Single course or selected choice - render normally
                 <CourseRow 
                   course={displayItem.courses[0]} 
-                  displayStepNumber={index + 1}
+                  displayStepNumber={displayItem.stepNumber}
                   isChoiceSelected={displayItem.type === 'choice-selected'}
+                  currentStepNumber={pathwayState.currentStepNumber}
                 />
               ) : (
                 // Choice pending - show both options with OR
@@ -150,8 +151,9 @@ export function PathwayProgressCard({
                     <React.Fragment key={course.courseId}>
                       <CourseRow 
                         course={course} 
-                        displayStepNumber={index + 1}
+                        displayStepNumber={displayItem.stepNumber}
                         isChoicePending={true}
+                        currentStepNumber={pathwayState.currentStepNumber}
                       />
                       {choiceIdx < displayItem.courses.length - 1 && (
                         <div className="flex items-center justify-center py-1">
@@ -236,17 +238,22 @@ function CourseRow({
   course, 
   displayStepNumber,
   isChoicePending = false,
-  isChoiceSelected = false
+  isChoiceSelected = false,
+  currentStepNumber
 }: { 
   course: PathwayCourse; 
   displayStepNumber: number;
   isChoicePending?: boolean;
   isChoiceSelected?: boolean;
+  currentStepNumber: number;
 }) {
+  // Use stepNumber comparison for accurate current detection
+  const isCurrentStep = course.stepNumber === currentStepNumber;
+  
   return (
     <div 
       className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-        course.isCurrent 
+        isCurrentStep 
           ? 'bg-primary/10 border border-primary/30' 
           : course.isCompleted 
             ? 'bg-green-50 dark:bg-green-900/20' 
@@ -258,7 +265,7 @@ function CourseRow({
       <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
         course.isCompleted 
           ? 'bg-green-500 text-white' 
-          : course.isCurrent 
+          : isCurrentStep 
             ? 'bg-primary text-primary-foreground' 
             : isChoicePending
               ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400'
@@ -271,11 +278,11 @@ function CourseRow({
         )}
       </div>
       <span className={`flex-1 text-sm ${
-        course.isCurrent ? 'font-medium' : ''
+        isCurrentStep ? 'font-medium' : ''
       } ${!course.isAvailable && !course.isCompleted ? 'text-muted-foreground' : ''}`}>
         {course.courseTitle}
       </span>
-      {course.isCurrent && (
+      {isCurrentStep && (
         <Badge variant="outline" className="text-xs">Current</Badge>
       )}
       {isChoiceSelected && course.isCompleted && (
@@ -283,7 +290,7 @@ function CourseRow({
           Selected
         </Badge>
       )}
-      {!course.isAvailable && !course.isCompleted && !course.isCurrent && !isChoicePending && (
+      {!course.isAvailable && !course.isCompleted && !isCurrentStep && !isChoicePending && (
         <Lock className="w-4 h-4 text-muted-foreground" />
       )}
     </div>
