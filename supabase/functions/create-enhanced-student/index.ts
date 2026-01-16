@@ -221,12 +221,8 @@ const handler = async (req: Request): Promise<Response> => {
         const token = authHeader.replace('Bearer ', '');
         console.log('Auth token received:', token ? 'Present' : 'Missing');
         
-        const supabaseClient = createClient(
-          Deno.env.get('SUPABASE_URL') ?? '',
-          Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-        );
-        
-        const { data: { user }, error: userError } = await supabaseClient.auth.getUser(token);
+        // Use admin client to validate the token
+        const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
         if (userError) {
           console.log('Error getting user from token:', userError);
         } else {
