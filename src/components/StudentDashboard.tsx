@@ -573,34 +573,39 @@ export function StudentDashboard() {
             {/* Pathway step indicators - show when in pathway mode */}
             {isInPathwayMode && pathwayCourses.length > 0 && (
               <div className="flex items-center gap-2 overflow-x-auto py-2">
-                {pathwayCourses.slice(0, 8).map((course, index) => (
-                  <div 
-                    key={course.courseId}
-                    className={`flex items-center ${index < pathwayCourses.length - 1 ? 'flex-1' : ''}`}
-                  >
+                {pathwayCourses.slice(0, 8).map((course, index) => {
+                  // Use stepNumber comparison with currentStepNumber for accurate current step detection
+                  const isCurrentStep = course.stepNumber === pathwayState?.currentStepNumber;
+                  
+                  return (
                     <div 
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${
-                        course.isCompleted 
-                          ? 'bg-green-500 text-white' 
-                          : course.isCurrent 
-                            ? 'bg-primary text-primary-foreground ring-2 ring-primary/30' 
-                            : 'bg-muted text-muted-foreground'
-                      }`}
-                      title={course.courseTitle}
+                      key={course.courseId}
+                      className={`flex items-center ${index < pathwayCourses.length - 1 ? 'flex-1' : ''}`}
                     >
-                      {course.isCompleted ? (
-                        <CheckCircle className="w-4 h-4" />
-                      ) : (
-                        index + 1
+                      <div 
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${
+                          course.isCompleted 
+                            ? 'bg-green-500 text-white' 
+                            : isCurrentStep 
+                              ? 'bg-primary text-primary-foreground ring-2 ring-primary/30' 
+                              : 'bg-muted text-muted-foreground'
+                        }`}
+                        title={course.courseTitle}
+                      >
+                        {course.isCompleted ? (
+                          <CheckCircle className="w-4 h-4" />
+                        ) : (
+                          course.stepNumber
+                        )}
+                      </div>
+                      {index < pathwayCourses.slice(0, 8).length - 1 && (
+                        <div className={`h-0.5 flex-1 mx-1 min-w-4 ${
+                          course.isCompleted ? 'bg-green-500' : 'bg-muted'
+                        }`} />
                       )}
                     </div>
-                    {index < pathwayCourses.slice(0, 8).length - 1 && (
-                      <div className={`h-0.5 flex-1 mx-1 min-w-4 ${
-                        course.isCompleted ? 'bg-green-500' : 'bg-muted'
-                      }`} />
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
                 {pathwayCourses.length > 8 && (
                   <span className="text-xs text-muted-foreground flex-shrink-0">+{pathwayCourses.length - 8} more</span>
                 )}
