@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, BadgePercent, BookOpen, Route, Settings2, ChevronDown, ChevronUp } from 'lucide-react'
+import { Loader2, BadgePercent, BookOpen, Route, Settings2, ChevronDown, ChevronUp, Users } from 'lucide-react'
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions'
 import { useEnhancedStudentCreation } from '@/hooks/useEnhancedStudentCreation'
 import { useAuth } from '@/hooks/useAuth'
@@ -37,6 +37,14 @@ interface Pathway {
   currency: string | null
 }
 
+interface Batch {
+  id: string
+  name: string
+  start_date: string
+  course_id: string | null
+  pathway_id: string | null
+}
+
 export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDialogProps> = ({
   open,
   onOpenChange,
@@ -60,6 +68,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
     enrollment_type: 'course' as EnrollmentType,
     course_id: '',
     pathway_id: '',
+    batch_id: '',
     discount_type: 'none' as 'none' | 'fixed' | 'percentage',
     discount_amount: 0,
     discount_percentage: 0,
@@ -113,6 +122,27 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
       return data as Pathway[]
     }
   })
+
+  // Fetch batches (most recent first)
+  const { data: batches = [] } = useQuery({
+    queryKey: ['batches-for-enrollment'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select('id, name, start_date, course_id, pathway_id')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      return data as Batch[]
+    }
+  })
+
+  // Set default batch to most recent when batches load
+  React.useEffect(() => {
+    if (batches.length > 0 && !formData.batch_id) {
+      setFormData(prev => ({ ...prev, batch_id: batches[0].id }))
+    }
+  }, [batches, formData.batch_id])
 
   const currency = companySettings?.currency || 'PKR'
 
@@ -195,6 +225,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
         installment_count: formData.installment_count,
         course_id: formData.enrollment_type === 'course' ? formData.course_id : undefined,
         pathway_id: formData.enrollment_type === 'pathway' ? formData.pathway_id : undefined,
+        batch_id: formData.batch_id || undefined,
         total_fee_amount: selectedPrice,
         discount_amount: formData.discount_type === 'fixed' ? formData.discount_amount : 0,
         discount_percentage: formData.discount_type === 'percentage' ? formData.discount_percentage : 0,
@@ -223,6 +254,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             enrollment_type: 'course',
             course_id: '',
             pathway_id: '',
+            batch_id: batches.length > 0 ? batches[0].id : '',
             discount_type: 'none',
             discount_amount: 0,
             discount_percentage: 0,
@@ -452,6 +484,40 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
               )}
             </CardContent>
           </Card>
+
+          {/* Batch Selection (Optional) */}
+          {batches.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Batch Assignment (Optional)
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Label>Select Batch</Label>
+                <Select
+                  value={formData.batch_id}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, batch_id: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a batch" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50">
+                    <SelectItem value="">No Batch (Use LMS Access Date)</SelectItem>
+                    {batches.map((batch) => (
+                      <SelectItem key={batch.id} value={batch.id}>
+                        {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  If assigned to a batch, content drip will be calculated from the batch start date instead of LMS access date.
+                </p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Access Settings Section (Drip/Sequential Override) */}
           {canApplyDiscount && (formData.course_id || formData.pathway_id) && (
