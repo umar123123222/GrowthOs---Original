@@ -376,7 +376,7 @@ export function StudentAccessManagement({
         setSelectedPathways(prev => new Set(prev).add(pathwayId));
         toast({ title: 'Access Granted', description: 'Pathway access has been restored' });
       } else {
-        // Create new enrollment with payment tracking and access expiry
+        // Create new enrollments for each course in the pathway
         const enrolledAt = new Date();
         let accessExpiresAt: string | null = null;
         
@@ -386,19 +386,37 @@ export function StudentAccessManagement({
           accessExpiresAt = expiryDate.toISOString();
         }
 
-        const { error } = await supabase.from('course_enrollments').insert({
-          student_id: studentId,
-          course_id: null as unknown as string,
-          pathway_id: pathwayId,
-          status: 'active',
-          progress_percentage: 0,
-          enrolled_at: enrolledAt.toISOString(),
-          access_expires_at: accessExpiresAt,
-          total_amount: pathway?.price || 0,
-          amount_paid: 0,
-          payment_status: pathway?.price && pathway.price > 0 ? 'pending' : 'waived'
-        });
-        if (error) throw error;
+        // Get courses belonging to this pathway
+        const pathwayCoursesForThisPathway = pathwayCourses.filter(pc => pc.pathway_id === pathwayId);
+        
+        if (pathwayCoursesForThisPathway.length === 0) {
+          toast({ title: 'Warning', description: 'This pathway has no courses assigned', variant: 'destructive' });
+          setSaving(false);
+          return;
+        }
+
+        // Create enrollments for each course in the pathway
+        const enrollmentPromises = pathwayCoursesForThisPathway.map(pc => 
+          supabase.from('course_enrollments').insert({
+            student_id: studentId,
+            course_id: pc.course_id,
+            pathway_id: pathwayId,
+            status: 'active',
+            progress_percentage: 0,
+            enrolled_at: enrolledAt.toISOString(),
+            access_expires_at: accessExpiresAt,
+            total_amount: pathway?.price ? pathway.price / pathwayCoursesForThisPathway.length : 0,
+            amount_paid: 0,
+            payment_status: pathway?.price && pathway.price > 0 ? 'pending' : 'waived'
+          })
+        );
+        
+        const results = await Promise.all(enrollmentPromises);
+        const errors = results.filter(r => r.error);
+        if (errors.length > 0) {
+          console.error('Errors creating pathway enrollments:', errors);
+          throw errors[0].error;
+        }
 
         setSelectedPathways(prev => new Set(prev).add(pathwayId));
         
@@ -407,7 +425,7 @@ export function StudentAccessManagement({
           await createEnrollmentInvoices('pathway', pathway.id, pathway.name, pathway.price, pathway.max_installments);
         }
         
-        toast({ title: 'Access Granted', description: 'Pathway access has been added' });
+        toast({ title: 'Access Granted', description: `Pathway access granted with ${pathwayCoursesForThisPathway.length} courses` });
       }
 
       // Refresh enrollments
