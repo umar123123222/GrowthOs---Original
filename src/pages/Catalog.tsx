@@ -38,6 +38,7 @@ interface Enrollment {
   status: string;
   enrolled_at: string | null;
   access_expires_at: string | null;
+  enrollment_source: string | null;
 }
 
 const Catalog = () => {
@@ -92,10 +93,11 @@ const Catalog = () => {
       setPathways(pathwaysData || []);
 
       // Fetch user's enrollments if they have a student record
+      // Include enrollment_source to distinguish direct vs pathway enrollments
       if (currentStudentId) {
         const { data: enrollmentsData, error: enrollmentsError } = await supabase
           .from('course_enrollments')
-          .select('id, course_id, pathway_id, status, enrolled_at, access_expires_at')
+          .select('id, course_id, pathway_id, status, enrolled_at, access_expires_at, enrollment_source')
           .eq('student_id', currentStudentId)
           .eq('status', 'active');
 
@@ -109,16 +111,21 @@ const Catalog = () => {
     }
   };
 
-  const getEnrollment = (courseId: string) => {
-    return enrollments.find(e => e.course_id === courseId);
+  // Get direct course enrollment (NOT pathway-based)
+  const getDirectEnrollment = (courseId: string) => {
+    return enrollments.find(e => 
+      e.course_id === courseId && 
+      (e.enrollment_source === 'direct' || e.pathway_id === null)
+    );
   };
 
   const getPathwayEnrollment = (pathwayId: string) => {
     return enrollments.find(e => e.pathway_id === pathwayId);
   };
 
+  // Individual course is unlocked only if directly enrolled (not via pathway)
   const isUnlocked = (courseId: string) => {
-    const enrollment = getEnrollment(courseId);
+    const enrollment = getDirectEnrollment(courseId);
     if (!enrollment) return false;
     
     // Check if access has expired
@@ -143,7 +150,7 @@ const Catalog = () => {
   };
 
   const getAccessExpiry = (courseId: string) => {
-    const enrollment = getEnrollment(courseId);
+    const enrollment = getDirectEnrollment(courseId);
     if (!enrollment?.access_expires_at) return null;
     return new Date(enrollment.access_expires_at);
   };
@@ -351,6 +358,9 @@ const Catalog = () => {
             <BookOpen className="w-5 h-5 text-primary" />
             Individual Courses
           </h2>
+          <p className="text-sm text-muted-foreground -mt-2">
+            Courses you have direct access to (not via a learning pathway)
+          </p>
           
           {courses.length === 0 ? (
             <Card className="p-8 text-center">
