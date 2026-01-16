@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,14 @@ interface PathwayProgressCardProps {
   isAdvancing?: boolean;
 }
 
+// Helper to group and process courses for display
+interface DisplayCourse {
+  type: 'single' | 'choice-pending' | 'choice-selected';
+  stepNumber: number;
+  courses: PathwayCourse[];
+  choiceGroup: number | null;
+}
+
 export function PathwayProgressCard({
   pathwayState,
   pathwayCourses,
@@ -28,18 +36,71 @@ export function PathwayProgressCard({
   onMakeChoice,
   isAdvancing = false
 }: PathwayProgressCardProps) {
-  const completedSteps = pathwayCourses.filter(c => c.isCompleted).length;
-  const progressPercentage = pathwayState.totalSteps > 0 
-    ? (completedSteps / pathwayState.totalSteps) * 100 
+  
+  // Process courses into display groups - sorted by step_number, handling choices
+  const displayCourses = useMemo(() => {
+    const result: DisplayCourse[] = [];
+    const processedChoiceGroups = new Set<number>();
+    
+    // Sort by step_number first
+    const sorted = [...pathwayCourses].sort((a, b) => a.stepNumber - b.stepNumber);
+    
+    for (const course of sorted) {
+      // Regular non-choice course
+      if (!course.isChoicePoint || course.choiceGroup === null) {
+        result.push({
+          type: 'single',
+          stepNumber: course.stepNumber,
+          courses: [course],
+          choiceGroup: null
+        });
+        continue;
+      }
+      
+      // Skip if we already processed this choice group
+      if (processedChoiceGroups.has(course.choiceGroup)) {
+        continue;
+      }
+      
+      processedChoiceGroups.add(course.choiceGroup);
+      
+      // Get all courses in this choice group
+      const choiceCourses = sorted.filter(c => c.choiceGroup === course.choiceGroup);
+      
+      // Check if a choice has been made (any course in the group is selected)
+      const selectedCourse = choiceCourses.find(c => c.isSelectedChoice);
+      
+      if (selectedCourse) {
+        // Choice made - only show selected course
+        result.push({
+          type: 'choice-selected',
+          stepNumber: course.stepNumber,
+          courses: [selectedCourse],
+          choiceGroup: course.choiceGroup
+        });
+      } else {
+        // No choice made - show as choice pending (with OR)
+        result.push({
+          type: 'choice-pending',
+          stepNumber: course.stepNumber,
+          courses: choiceCourses,
+          choiceGroup: course.choiceGroup
+        });
+      }
+    }
+    
+    return result;
+  }, [pathwayCourses]);
+
+  const completedSteps = pathwayCourses.filter(c => c.isCompleted && !c.isChoicePoint).length +
+    pathwayCourses.filter(c => c.isCompleted && c.isSelectedChoice).length;
+  const totalSteps = displayCourses.length;
+  const progressPercentage = totalSteps > 0 
+    ? (completedSteps / totalSteps) * 100 
     : 0;
 
   const currentCourse = pathwayCourses.find(c => c.isCurrent);
   const canAdvance = currentCourse?.isCompleted && !pathwayState.hasPendingChoice;
-
-  // Find choice options if at a choice point
-  const choiceOptions = pathwayState.hasPendingChoice && currentCourse?.choiceOptions 
-    ? currentCourse.choiceOptions 
-    : null;
 
   return (
     <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20 overflow-hidden">
@@ -53,7 +114,7 @@ export function PathwayProgressCard({
             <div>
               <h3 className="font-semibold text-foreground">{pathwayState.pathwayName}</h3>
               <p className="text-xs text-muted-foreground">
-                Step {pathwayState.currentStepNumber} of {pathwayState.totalSteps}
+                Step {pathwayState.currentStepNumber} of {totalSteps}
               </p>
             </div>
           </div>
@@ -73,52 +134,47 @@ export function PathwayProgressCard({
 
         {/* Course Steps */}
         <div className="space-y-2">
-          {pathwayCourses.slice(0, 5).map((course, index) => (
-            <div 
-              key={course.courseId}
-              className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
-                course.isCurrent 
-                  ? 'bg-primary/10 border border-primary/30' 
-                  : course.isCompleted 
-                    ? 'bg-green-50 dark:bg-green-900/20' 
-                    : 'bg-muted/50'
-              }`}
-            >
-              <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
-                course.isCompleted 
-                  ? 'bg-green-500 text-white' 
-                  : course.isCurrent 
-                    ? 'bg-primary text-primary-foreground' 
-                    : 'bg-muted-foreground/20 text-muted-foreground'
-              }`}>
-                {course.isCompleted ? (
-                  <CheckCircle className="w-4 h-4" />
-                ) : (
-                  course.stepNumber
-                )}
-              </div>
-              <span className={`flex-1 text-sm ${
-                course.isCurrent ? 'font-medium' : ''
-              } ${!course.isAvailable && !course.isCompleted ? 'text-muted-foreground' : ''}`}>
-                {course.courseTitle}
-              </span>
-              {course.isCurrent && (
-                <Badge variant="outline" className="text-xs">Current</Badge>
+          {displayCourses.slice(0, 6).map((displayItem, index) => (
+            <React.Fragment key={`step-${displayItem.stepNumber}-${index}`}>
+              {displayItem.type === 'single' || displayItem.type === 'choice-selected' ? (
+                // Single course or selected choice - render normally
+                <CourseRow 
+                  course={displayItem.courses[0]} 
+                  displayStepNumber={index + 1}
+                  isChoiceSelected={displayItem.type === 'choice-selected'}
+                />
+              ) : (
+                // Choice pending - show both options with OR
+                <div className="space-y-1">
+                  {displayItem.courses.map((course, choiceIdx) => (
+                    <React.Fragment key={course.courseId}>
+                      <CourseRow 
+                        course={course} 
+                        displayStepNumber={index + 1}
+                        isChoicePending={true}
+                      />
+                      {choiceIdx < displayItem.courses.length - 1 && (
+                        <div className="flex items-center justify-center py-1">
+                          <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded">
+                            OR
+                          </span>
+                        </div>
+                      )}
+                    </React.Fragment>
+                  ))}
+                </div>
               )}
-              {!course.isAvailable && !course.isCompleted && !course.isCurrent && (
-                <Lock className="w-4 h-4 text-muted-foreground" />
-              )}
-            </div>
+            </React.Fragment>
           ))}
-          {pathwayCourses.length > 5 && (
+          {displayCourses.length > 6 && (
             <p className="text-xs text-muted-foreground text-center">
-              +{pathwayCourses.length - 5} more courses
+              +{displayCourses.length - 6} more courses
             </p>
           )}
         </div>
 
-        {/* Choice Point UI */}
-        {pathwayState.hasPendingChoice && choiceOptions && (
+        {/* Choice Point UI - Show when at a choice point */}
+        {pathwayState.hasPendingChoice && currentCourse?.choiceOptions && (
           <div className="space-y-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
               <Sparkles className="w-4 h-4" />
@@ -128,7 +184,7 @@ export function PathwayProgressCard({
               Complete the current course to unlock your choice. Select which track you want to pursue:
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {choiceOptions.map((option) => (
+              {currentCourse.choiceOptions.map((option) => (
                 <Button
                   key={option.course_id}
                   variant="outline"
@@ -172,5 +228,64 @@ export function PathwayProgressCard({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+// Helper component for rendering a single course row
+function CourseRow({ 
+  course, 
+  displayStepNumber,
+  isChoicePending = false,
+  isChoiceSelected = false
+}: { 
+  course: PathwayCourse; 
+  displayStepNumber: number;
+  isChoicePending?: boolean;
+  isChoiceSelected?: boolean;
+}) {
+  return (
+    <div 
+      className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${
+        course.isCurrent 
+          ? 'bg-primary/10 border border-primary/30' 
+          : course.isCompleted 
+            ? 'bg-green-50 dark:bg-green-900/20' 
+            : isChoicePending
+              ? 'bg-amber-50/50 dark:bg-amber-900/10 border border-amber-200/50 dark:border-amber-800/50'
+              : 'bg-muted/50'
+      }`}
+    >
+      <div className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+        course.isCompleted 
+          ? 'bg-green-500 text-white' 
+          : course.isCurrent 
+            ? 'bg-primary text-primary-foreground' 
+            : isChoicePending
+              ? 'bg-amber-500/20 text-amber-700 dark:text-amber-400'
+              : 'bg-muted-foreground/20 text-muted-foreground'
+      }`}>
+        {course.isCompleted ? (
+          <CheckCircle className="w-4 h-4" />
+        ) : (
+          displayStepNumber
+        )}
+      </div>
+      <span className={`flex-1 text-sm ${
+        course.isCurrent ? 'font-medium' : ''
+      } ${!course.isAvailable && !course.isCompleted ? 'text-muted-foreground' : ''}`}>
+        {course.courseTitle}
+      </span>
+      {course.isCurrent && (
+        <Badge variant="outline" className="text-xs">Current</Badge>
+      )}
+      {isChoiceSelected && course.isCompleted && (
+        <Badge variant="outline" className="text-xs bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+          Selected
+        </Badge>
+      )}
+      {!course.isAvailable && !course.isCompleted && !course.isCurrent && !isChoicePending && (
+        <Lock className="w-4 h-4 text-muted-foreground" />
+      )}
+    </div>
   );
 }

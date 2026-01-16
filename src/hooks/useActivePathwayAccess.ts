@@ -24,6 +24,8 @@ export interface PathwayCourse {
   isCurrent: boolean;
   requiresChoice: boolean;
   choiceOptions: Array<{ course_id: string; course_title: string }> | null;
+  isChoicePoint: boolean;
+  isSelectedChoice: boolean;
 }
 
 interface UseActivePathwayAccessReturn {
@@ -103,7 +105,9 @@ export function useActivePathwayAccess(): UseActivePathwayAccessReturn {
           isCompleted: c.is_completed,
           isCurrent: c.is_current,
           requiresChoice: c.requires_choice,
-          choiceOptions: c.choice_options
+          choiceOptions: c.choice_options,
+          isChoicePoint: c.is_choice_point || false,
+          isSelectedChoice: c.is_selected_choice || false
         }));
         setPathwayCourses(courses);
       }

@@ -3082,8 +3082,10 @@ export type Database = {
           course_id: string
           course_title: string
           is_available: boolean
+          is_choice_point: boolean
           is_completed: boolean
           is_current: boolean
+          is_selected_choice: boolean
           requires_choice: boolean
           step_number: number
         }[]
