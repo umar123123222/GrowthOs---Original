@@ -497,14 +497,14 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
               <CardContent className="space-y-2">
                 <Label>Select Batch</Label>
                 <Select
-                  value={formData.batch_id}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, batch_id: value }))}
+                  value={formData.batch_id || "none"}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, batch_id: value === "none" ? "" : value }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a batch" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border z-50">
-                    <SelectItem value="">No Batch (Use LMS Access Date)</SelectItem>
+                    <SelectItem value="none">No Batch (Use LMS Access Date)</SelectItem>
                     {batches.map((batch) => (
                       <SelectItem key={batch.id} value={batch.id}>
                         {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
