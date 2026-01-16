@@ -1,15 +1,17 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { 
   Route, 
   BookOpen, 
   CheckCircle, 
   Lock, 
   ArrowRight,
-  Sparkles
+  Sparkles,
+  ChevronDown
 } from 'lucide-react';
 import { PathwayState, PathwayCourse } from '@/hooks/useActivePathwayAccess';
 
@@ -36,6 +38,7 @@ export function PathwayProgressCard({
   onMakeChoice,
   isAdvancing = false
 }: PathwayProgressCardProps) {
+  const [isOpen, setIsOpen] = useState(false);
   
   // Process courses into display groups - sorted by step_number, handling choices
   const displayCourses = useMemo(() => {
@@ -103,133 +106,143 @@ export function PathwayProgressCard({
   const canAdvance = currentCourse?.isCompleted && !pathwayState.hasPendingChoice;
 
   return (
-    <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20 overflow-hidden">
-      <CardContent className="p-4 space-y-4">
-        {/* Pathway Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="p-2 rounded-full bg-primary/10">
-              <Route className="h-5 w-5 text-primary" />
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20 overflow-hidden">
+        <CardContent className="p-4 space-y-4">
+          {/* Pathway Header - Collapsible Trigger */}
+          <CollapsibleTrigger asChild>
+            <div className="flex items-center justify-between cursor-pointer hover:opacity-80 transition-opacity">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-full bg-primary/10">
+                  <Route className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-foreground">{pathwayState.pathwayName}</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Step {pathwayState.currentStepNumber} of {totalSteps}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="bg-primary/10 text-primary">
+                  Pathway Mode
+                </Badge>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+              </div>
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground">{pathwayState.pathwayName}</h3>
-              <p className="text-xs text-muted-foreground">
-                Step {pathwayState.currentStepNumber} of {totalSteps}
-              </p>
+          </CollapsibleTrigger>
+
+          {/* Progress Bar - Always visible */}
+          <div className="space-y-1">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-medium">{Math.round(progressPercentage)}%</span>
             </div>
+            <Progress value={progressPercentage} className="h-2" />
           </div>
-          <Badge variant="secondary" className="bg-primary/10 text-primary">
-            Pathway Mode
-          </Badge>
-        </div>
 
-        {/* Progress Bar */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Progress</span>
-            <span className="font-medium">{Math.round(progressPercentage)}%</span>
-          </div>
-          <Progress value={progressPercentage} className="h-2" />
-        </div>
+          {/* Collapsible Content */}
+          <CollapsibleContent className="space-y-4">
+            {/* Course Steps */}
+            <div className="space-y-2">
+              {displayCourses.slice(0, 6).map((displayItem, index) => (
+                <React.Fragment key={`step-${displayItem.stepNumber}-${index}`}>
+                  {displayItem.type === 'single' || displayItem.type === 'choice-selected' ? (
+                    // Single course or selected choice - render normally
+                    <CourseRow 
+                      course={displayItem.courses[0]} 
+                      displayStepNumber={displayItem.stepNumber}
+                      isChoiceSelected={displayItem.type === 'choice-selected'}
+                      currentStepNumber={pathwayState.currentStepNumber}
+                    />
+                  ) : (
+                    // Choice pending - show both options with OR
+                    <div className="space-y-1">
+                      {displayItem.courses.map((course, choiceIdx) => (
+                        <React.Fragment key={course.courseId}>
+                          <CourseRow 
+                            course={course} 
+                            displayStepNumber={displayItem.stepNumber}
+                            isChoicePending={true}
+                            currentStepNumber={pathwayState.currentStepNumber}
+                          />
+                          {choiceIdx < displayItem.courses.length - 1 && (
+                            <div className="flex items-center justify-center py-1">
+                              <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded">
+                                OR
+                              </span>
+                            </div>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  )}
+                </React.Fragment>
+              ))}
+              {displayCourses.length > 6 && (
+                <p className="text-xs text-muted-foreground text-center">
+                  +{displayCourses.length - 6} more courses
+                </p>
+              )}
+            </div>
 
-        {/* Course Steps */}
-        <div className="space-y-2">
-          {displayCourses.slice(0, 6).map((displayItem, index) => (
-            <React.Fragment key={`step-${displayItem.stepNumber}-${index}`}>
-              {displayItem.type === 'single' || displayItem.type === 'choice-selected' ? (
-                // Single course or selected choice - render normally
-                <CourseRow 
-                  course={displayItem.courses[0]} 
-                  displayStepNumber={displayItem.stepNumber}
-                  isChoiceSelected={displayItem.type === 'choice-selected'}
-                  currentStepNumber={pathwayState.currentStepNumber}
-                />
-              ) : (
-                // Choice pending - show both options with OR
-                <div className="space-y-1">
-                  {displayItem.courses.map((course, choiceIdx) => (
-                    <React.Fragment key={course.courseId}>
-                      <CourseRow 
-                        course={course} 
-                        displayStepNumber={displayItem.stepNumber}
-                        isChoicePending={true}
-                        currentStepNumber={pathwayState.currentStepNumber}
-                      />
-                      {choiceIdx < displayItem.courses.length - 1 && (
-                        <div className="flex items-center justify-center py-1">
-                          <span className="text-xs font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2 py-0.5 rounded">
-                            OR
-                          </span>
-                        </div>
-                      )}
-                    </React.Fragment>
+            {/* Choice Point UI - Show when at a choice point */}
+            {pathwayState.hasPendingChoice && currentCourse?.choiceOptions && (
+              <div className="space-y-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                  <Sparkles className="w-4 h-4" />
+                  <span className="font-medium text-sm">Choose Your Path</span>
+                </div>
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Complete the current course to unlock your choice. Select which track you want to pursue:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {currentCourse.choiceOptions.map((option) => (
+                    <Button
+                      key={option.course_id}
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onMakeChoice(option.course_id)}
+                      disabled={!currentCourse?.isCompleted || isAdvancing}
+                      className="justify-start"
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      {option.course_title}
+                    </Button>
                   ))}
                 </div>
-              )}
-            </React.Fragment>
-          ))}
-          {displayCourses.length > 6 && (
-            <p className="text-xs text-muted-foreground text-center">
-              +{displayCourses.length - 6} more courses
-            </p>
-          )}
-        </div>
-
-        {/* Choice Point UI - Show when at a choice point */}
-        {pathwayState.hasPendingChoice && currentCourse?.choiceOptions && (
-          <div className="space-y-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
-              <Sparkles className="w-4 h-4" />
-              <span className="font-medium text-sm">Choose Your Path</span>
-            </div>
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              Complete the current course to unlock your choice. Select which track you want to pursue:
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {currentCourse.choiceOptions.map((option) => (
-                <Button
-                  key={option.course_id}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => onMakeChoice(option.course_id)}
-                  disabled={!currentCourse?.isCompleted || isAdvancing}
-                  className="justify-start"
-                >
-                  <BookOpen className="w-4 h-4 mr-2" />
-                  {option.course_title}
-                </Button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Advance Button (when not at choice point) */}
-        {!pathwayState.hasPendingChoice && currentCourse && (
-          <div className="pt-2 border-t">
-            {canAdvance ? (
-              <Button 
-                onClick={onAdvance} 
-                disabled={isAdvancing}
-                className="w-full"
-              >
-                {isAdvancing ? (
-                  'Advancing...'
-                ) : (
-                  <>
-                    Unlock Next Course
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                )}
-              </Button>
-            ) : (
-              <div className="text-center text-sm text-muted-foreground">
-                <p>Complete all videos and get assignments approved to unlock the next course</p>
               </div>
             )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+
+            {/* Advance Button (when not at choice point) */}
+            {!pathwayState.hasPendingChoice && currentCourse && (
+              <div className="pt-2 border-t">
+                {canAdvance ? (
+                  <Button 
+                    onClick={onAdvance} 
+                    disabled={isAdvancing}
+                    className="w-full"
+                  >
+                    {isAdvancing ? (
+                      'Advancing...'
+                    ) : (
+                      <>
+                        Unlock Next Course
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <div className="text-center text-sm text-muted-foreground">
+                    <p>Complete all videos and get assignments approved to unlock the next course</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </CollapsibleContent>
+        </CardContent>
+      </Card>
+    </Collapsible>
   );
 }
 
