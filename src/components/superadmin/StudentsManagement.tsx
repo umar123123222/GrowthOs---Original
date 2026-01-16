@@ -108,8 +108,11 @@ export function StudentsManagement() {
     email: '',
     phone: '',
     lms_user_id: '',
-    lms_status: 'inactive'
+    lms_status: 'inactive',
+    batch_id: '' as string | null,
+    enrollment_id: '' as string | null
   });
+  const [editBatches, setEditBatches] = useState<{id: string; name: string; start_date: string}[]>([]);
   const [timeTick, setTimeTick] = useState(0);
   const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
@@ -1052,23 +1055,52 @@ export function StudentsManagement() {
       fetchStudents();
     }
   };
-  const handleEditStudent = (student: Student) => {
+  const handleEditStudent = async (student: Student) => {
     setEditingStudent(student);
     setEditFormData({
       full_name: student.full_name,
       email: student.email,
       phone: student.phone || '',
       lms_user_id: student.lms_user_id || '',
-      lms_status: student.lms_status
+      lms_status: student.lms_status,
+      batch_id: null,
+      enrollment_id: null
     });
+    
+    // Fetch batches
+    const { data: batchesData } = await supabase
+      .from('batches')
+      .select('id, name, start_date')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+    setEditBatches(batchesData || []);
+    
+    // Fetch enrollment with batch_id
+    if (student.student_record_id) {
+      const { data: enrollment } = await supabase
+        .from('course_enrollments')
+        .select('id, batch_id')
+        .eq('student_id', student.student_record_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (enrollment) {
+        setEditFormData(prev => ({
+          ...prev,
+          batch_id: enrollment.batch_id || null,
+          enrollment_id: enrollment.id
+        }));
+      }
+    }
+    
     setEditDialog(true);
   };
   const handleUpdateStudent = async () => {
     if (!editingStudent) return;
     try {
-      const {
-        error
-      } = await supabase.from('users').update({
+      // Update users table
+      const { error } = await supabase.from('users').update({
         full_name: editFormData.full_name,
         email: editFormData.email,
         phone: editFormData.phone,
@@ -1077,6 +1109,22 @@ export function StudentsManagement() {
         updated_at: new Date().toISOString()
       }).eq('id', editingStudent.id);
       if (error) throw error;
+      
+      // Update batch in enrollment if we have enrollment_id
+      if (editFormData.enrollment_id) {
+        const { error: enrollError } = await supabase
+          .from('course_enrollments')
+          .update({
+            batch_id: editFormData.batch_id || null,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editFormData.enrollment_id);
+        
+        if (enrollError) {
+          console.error('Failed to update batch:', enrollError);
+        }
+      }
+      
       toast({
         title: "Success",
         description: "Student details updated successfully"
@@ -1895,6 +1943,28 @@ export function StudentsManagement() {
                     <SelectItem value="suspended">Suspended</SelectItem>
                     <SelectItem value="dropout">Dropout</SelectItem>
                     <SelectItem value="complete">Complete</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit_batch">Batch Assignment</Label>
+                <Select 
+                  value={editFormData.batch_id || "none"} 
+                  onValueChange={value => setEditFormData({
+                    ...editFormData,
+                    batch_id: value === "none" ? null : value
+                  })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a batch" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    <SelectItem value="none">No Batch (Use LMS Access Date)</SelectItem>
+                    {editBatches.map((batch) => (
+                      <SelectItem key={batch.id} value={batch.id}>
+                        {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
