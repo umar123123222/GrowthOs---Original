@@ -10,6 +10,7 @@ import { BatchTimelineView } from '@/components/batch/BatchTimelineView';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourses } from '@/hooks/useCourses';
 import { useCourseRecordings } from '@/hooks/useCourseRecordings';
+import { useActivePathwayAccess } from '@/hooks/useActivePathwayAccess';
 import { supabase } from '@/integrations/supabase/client';
 import { safeLogger } from '@/lib/safe-logger';
 import { InactiveLMSBanner } from '@/components/InactiveLMSBanner';
@@ -19,6 +20,7 @@ import { safeQuery, safeMaybeSingle } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 import { CourseSelector } from '@/components/courses/CourseSelector';
 import type { UserDataResult, StudentDataResult } from '@/types/database';
+import { format } from 'date-fns';
 import { 
   Trophy, 
   Target, 
@@ -33,7 +35,12 @@ import {
   Zap,
   ShoppingBag,
   TrendingUp,
-  Calendar
+  Calendar,
+  BookOpen,
+  Route,
+  Lock,
+  Play,
+  ArrowRight
 } from 'lucide-react';
 
 interface Assignment {
@@ -71,7 +78,15 @@ export function StudentDashboard() {
     loading: recordingsLoading 
   } = useCourseRecordings(activeCourse?.id || null);
   
-  const loading = coursesLoading || recordingsLoading;
+  // Pathway awareness hook
+  const {
+    isInPathwayMode,
+    pathwayState,
+    pathwayCourses,
+    loading: pathwayLoading
+  } = useActivePathwayAccess();
+  
+  const loading = coursesLoading || recordingsLoading || pathwayLoading;
 
   // Add debug logging with better checks
   if (process.env.NODE_ENV === 'development') {
@@ -98,6 +113,13 @@ export function StudentDashboard() {
   
   // Batch enrollment state
   const [batchEnrollment, setBatchEnrollment] = useState<{ batchId: string; batchName: string } | null>(null);
+  
+  // Lock reason state for Continue Learning card
+  const [currentLockReason, setCurrentLockReason] = useState<{
+    reason: string;
+    unlockDate?: string;
+    nextLesson?: string;
+  } | null>(null);
   
   // Onboarding video state
   const [showOnboardingVideo, setShowOnboardingVideo] = useState(false);
@@ -292,6 +314,18 @@ export function StudentDashboard() {
         const totalItems = recordings.length + recordings.filter(r => r.hasAssignment).length;
         const completedItems = watchedRecordings + submittedAssignments;
         setCourseProgress(totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0);
+        
+        // Find first locked recording and its reason
+        const firstLockedRecording = recordings.find(r => !r.isUnlocked);
+        if (firstLockedRecording) {
+          setCurrentLockReason({
+            reason: firstLockedRecording.lockReason || 'locked',
+            unlockDate: firstLockedRecording.dripUnlockDate || undefined,
+            nextLesson: firstLockedRecording.recording_title
+          });
+        } else {
+          setCurrentLockReason(null);
+        }
       }
 
       // Fetch next assignment
@@ -490,8 +524,8 @@ export function StudentDashboard() {
     <div className="space-y-6">
       <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
       
-      {/* Course Selector for multi-course users */}
-      {isMultiCourseEnabled && enrolledCourses.length > 1 && (
+      {/* Course Selector for multi-course users (non-pathway mode only) */}
+      {!isInPathwayMode && isMultiCourseEnabled && enrolledCourses.length > 1 && (
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-medium">Your Courses</h2>
           <CourseSelector
@@ -503,29 +537,89 @@ export function StudentDashboard() {
         </div>
       )}
       
-      {/* Refined Financial Goal Banner */}
+      {/* Your Learning Journey Card - Unified for pathway and course mode */}
       <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
         <CardContent className="p-6">
           <div className="space-y-5">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-xl">🎯</span>
+            {/* Header with pathway/course info */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  {isInPathwayMode ? (
+                    <Route className="w-5 h-5 text-primary" />
+                  ) : (
+                    <span className="text-xl">🎯</span>
+                  )}
+                </div>
+                <div>
+                  <h2 className="text-xl font-medium text-primary mb-1">
+                    {isInPathwayMode ? 'Your Learning Journey' : 'Your Financial Goal'}
+                  </h2>
+                  <p className="text-xs text-muted-foreground">
+                    {isInPathwayMode && pathwayState 
+                      ? `${pathwayState.pathwayName} • Step ${pathwayState.currentStepNumber} of ${pathwayState.totalSteps}`
+                      : 'Track your progress towards financial freedom'
+                    }
+                  </p>
+                </div>
               </div>
-              <div>
-                <h2 className="text-xl font-medium text-primary mb-1">Your Financial Goal</h2>
-                <p className="text-xs text-muted-foreground">Track your progress towards financial freedom</p>
-              </div>
+              {isInPathwayMode && (
+                <Badge variant="secondary" className="bg-primary/10 text-primary">
+                  Pathway Mode
+                </Badge>
+              )}
             </div>
             
+            {/* Pathway step indicators - show when in pathway mode */}
+            {isInPathwayMode && pathwayCourses.length > 0 && (
+              <div className="flex items-center gap-2 overflow-x-auto py-2">
+                {pathwayCourses.slice(0, 8).map((course, index) => (
+                  <div 
+                    key={course.courseId}
+                    className={`flex items-center ${index < pathwayCourses.length - 1 ? 'flex-1' : ''}`}
+                  >
+                    <div 
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${
+                        course.isCompleted 
+                          ? 'bg-green-500 text-white' 
+                          : course.isCurrent 
+                            ? 'bg-primary text-primary-foreground ring-2 ring-primary/30' 
+                            : 'bg-muted text-muted-foreground'
+                      }`}
+                      title={course.courseTitle}
+                    >
+                      {course.isCompleted ? (
+                        <CheckCircle className="w-4 h-4" />
+                      ) : (
+                        index + 1
+                      )}
+                    </div>
+                    {index < pathwayCourses.slice(0, 8).length - 1 && (
+                      <div className={`h-0.5 flex-1 mx-1 min-w-4 ${
+                        course.isCompleted ? 'bg-green-500' : 'bg-muted'
+                      }`} />
+                    )}
+                  </div>
+                ))}
+                {pathwayCourses.length > 8 && (
+                  <span className="text-xs text-muted-foreground flex-shrink-0">+{pathwayCourses.length - 8} more</span>
+                )}
+              </div>
+            )}
+            
+            {/* Financial goal display */}
             <div className="bg-background/80 rounded-lg p-4 border border-primary/10">
               <p className="text-base font-normal text-foreground leading-relaxed">
                 {firstOnboardingAnswer || extractFinancialGoalForDisplay(dreamGoal)}
               </p>
             </div>
             
+            {/* Progress bar */}
             <div className="space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-normal text-muted-foreground">Progress toward your goal</span>
+                <span className="text-xs font-normal text-muted-foreground">
+                  {isInPathwayMode ? 'Pathway progress' : 'Progress toward your goal'}
+                </span>
                 <span className="text-sm font-medium text-primary">{courseProgress}% complete</span>
               </div>
               <div className="relative">
@@ -557,30 +651,116 @@ export function StudentDashboard() {
 
       {/* Interactive Three-Card Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Course Progress Card */}
-        <Card className="hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 border-l-blue-400 animate-fade-in group cursor-pointer relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-50/0 via-blue-50/50 to-blue-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+        {/* Continue Learning Card - Shows current course/lesson status with lock reason */}
+        <Card 
+          className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
+            currentLockReason ? 'border-l-amber-400' : 'border-l-green-400'
+          }`}
+          onClick={() => navigate('/videos')}
+        >
+          <div className={`absolute inset-0 bg-gradient-to-r transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
+            currentLockReason ? 'from-amber-50/0 via-amber-50/50 to-amber-50/0' : 'from-green-50/0 via-green-50/50 to-green-50/0'
+          }`}></div>
           <CardHeader className="pb-3 relative z-10">
-            <CardTitle className="flex items-center gap-2 text-blue-600 text-base font-medium">
-              <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center group-hover:bg-blue-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                <BarChart3 className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+            <CardTitle className={`flex items-center gap-2 text-base font-medium ${
+              currentLockReason ? 'text-amber-600' : 'text-green-600'
+            }`}>
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 ${
+                currentLockReason ? 'bg-amber-50 group-hover:bg-amber-100' : 'bg-green-50 group-hover:bg-green-100'
+              }`}>
+                {currentLockReason ? (
+                  <Lock className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+                ) : (
+                  <Play className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
+                )}
               </div>
-              <span className="group-hover:translate-x-1 transition-transform duration-300">Course Progress</span>
+              <span className="group-hover:translate-x-1 transition-transform duration-300">Continue Learning</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="space-y-3">
-              <div className="text-center">
-                <div className="text-3xl font-medium text-blue-600 mb-1 group-hover:scale-110 group-hover:text-blue-700 transition-all duration-300 relative">
-                  {courseProgress}%
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-200 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping transition-all duration-300"></div>
+              {/* Current course/lesson info */}
+              <div>
+                <p className="text-sm font-medium text-foreground line-clamp-1">
+                  {isInPathwayMode && pathwayState 
+                    ? pathwayState.currentCourseTitle 
+                    : activeCourse?.title || 'Your Course'
+                  }
+                </p>
+                {currentLockReason?.nextLesson && (
+                  <p className="text-xs text-muted-foreground line-clamp-1 mt-1">
+                    Next: {currentLockReason.nextLesson}
+                  </p>
+                )}
+              </div>
+              
+              {/* Lock reason or progress */}
+              {currentLockReason ? (
+                <div className={`flex items-center gap-2 p-2 rounded-md ${
+                  currentLockReason.reason === 'fees_not_cleared' 
+                    ? 'bg-red-50 dark:bg-red-900/20' 
+                    : 'bg-amber-50 dark:bg-amber-900/20'
+                }`}>
+                  {(() => {
+                    switch (currentLockReason.reason) {
+                      case 'previous_lesson_not_watched':
+                        return <BookOpen className="w-4 h-4 text-amber-600 flex-shrink-0" />;
+                      case 'previous_assignment_not_submitted':
+                        return <Upload className="w-4 h-4 text-amber-600 flex-shrink-0" />;
+                      case 'previous_assignment_not_approved':
+                        return <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />;
+                      case 'drip_locked':
+                        return <Calendar className="w-4 h-4 text-amber-600 flex-shrink-0" />;
+                      case 'fees_not_cleared':
+                        return <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />;
+                      default:
+                        return <Lock className="w-4 h-4 text-amber-600 flex-shrink-0" />;
+                    }
+                  })()}
+                  <span className={`text-xs font-medium ${
+                    currentLockReason.reason === 'fees_not_cleared' 
+                      ? 'text-red-700 dark:text-red-400' 
+                      : 'text-amber-700 dark:text-amber-400'
+                  }`}>
+                    {(() => {
+                      switch (currentLockReason.reason) {
+                        case 'previous_lesson_not_watched':
+                          return 'Complete previous lesson to unlock';
+                        case 'previous_assignment_not_submitted':
+                          return 'Submit previous assignment to unlock';
+                        case 'previous_assignment_not_approved':
+                          return 'Previous assignment pending approval';
+                        case 'drip_locked':
+                          return currentLockReason.unlockDate 
+                            ? `Unlocks on ${format(new Date(currentLockReason.unlockDate), 'MMM d')}`
+                            : 'Content not yet available';
+                        case 'fees_not_cleared':
+                          return 'Clear your fees to unlock';
+                        default:
+                          return 'Content locked';
+                      }
+                    })()}
+                  </span>
                 </div>
-                <p className="text-xs text-muted-foreground group-hover:text-blue-600 transition-colors duration-300">Complete</p>
-              </div>
-              <div className="relative group/bar">
-                <Progress value={courseProgress} className="h-1.5 group-hover/bar:h-2 transition-all duration-300" />
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-300/30 to-blue-500/30 rounded-full opacity-0 group-hover/bar:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-              </div>
+              ) : (
+                <div className="flex items-center gap-2 p-2 rounded-md bg-green-50 dark:bg-green-900/20">
+                  <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                  <span className="text-xs font-medium text-green-700 dark:text-green-400">
+                    All content unlocked!
+                  </span>
+                </div>
+              )}
+              
+              <Button 
+                size="sm"
+                className="w-full text-sm font-normal group-hover:scale-105 transition-all duration-300 relative overflow-hidden"
+                variant={currentLockReason?.reason === 'fees_not_cleared' ? 'destructive' : 'default'}
+              >
+                <span className="relative z-10 flex items-center gap-2">
+                  {currentLockReason?.reason === 'fees_not_cleared' ? 'View Payment' : 'Go to Videos'}
+                  <ArrowRight className="w-4 h-4" />
+                </span>
+              </Button>
             </div>
           </CardContent>
         </Card>
