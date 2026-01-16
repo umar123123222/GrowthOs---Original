@@ -374,8 +374,8 @@ const VideoPlayer = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Success Partner Assistant */}
-          <Card className="bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
+          {/* Success Partner Assistant - Hidden on mobile */}
+          <Card className="hidden sm:block bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
             <CardHeader>
               <CardTitle className="text-lg flex items-center">
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-full mr-2 flex items-center justify-center">
