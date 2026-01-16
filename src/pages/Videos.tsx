@@ -306,7 +306,14 @@ const Videos = () => {
                                   )}
                                   {userLMSStatus === 'active' && !recording.isUnlocked && (
                                     <span className="text-orange-600 font-medium text-xs">
-                                      Complete previous lessons to unlock
+                                      {recording.lockReason === 'previous_lesson_not_watched' && 'Complete previous lesson to unlock'}
+                                      {recording.lockReason === 'previous_assignment_not_submitted' && 'Submit previous assignment to unlock'}
+                                      {recording.lockReason === 'previous_assignment_not_approved' && 'Previous assignment pending approval'}
+                                      {recording.lockReason === 'drip_locked' && recording.dripUnlockDate && 
+                                        `Unlocks on ${new Date(recording.dripUnlockDate).toLocaleDateString()}`
+                                      }
+                                      {recording.lockReason === 'fees_not_cleared' && 'Clear your fees to unlock'}
+                                      {!recording.lockReason && 'Complete previous lessons to unlock'}
                                     </span>
                                   )}
                                 </div>
