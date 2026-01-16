@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Settings2, ChevronDown, ChevronUp, BadgePercent } from 'lucide-react';
+import { Loader2, Settings2, ChevronDown, ChevronUp, BadgePercent, Users } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -66,6 +66,7 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
   
   const [enrollmentId, setEnrollmentId] = useState<string | null>(null);
   const [hasEnrollmentChanges, setHasEnrollmentChanges] = useState(false);
+  const [batchId, setBatchId] = useState<string | null>(null);
 
   // Fetch company settings for currency
   const { data: companySettings } = useQuery({
@@ -76,6 +77,20 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
         .select('currency')
         .eq('id', 1)
         .single();
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  // Fetch batches
+  const { data: batches = [] } = useQuery({
+    queryKey: ['batches-for-edit'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select('id, name, start_date')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     }
@@ -108,6 +123,7 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
             id,
             course_id,
             pathway_id,
+            batch_id,
             drip_override,
             drip_enabled,
             sequential_override,
@@ -125,6 +141,7 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
         
         if (enrollment) {
           setEnrollmentId(enrollment.id);
+          setBatchId(enrollment.batch_id || null);
           setDripOverride(enrollment.drip_override || false);
           setDripEnabled(enrollment.drip_enabled || false);
           setSequentialOverride(enrollment.sequential_override || false);
@@ -176,6 +193,7 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
           resend_credentials: emailChanged,
           // Access settings
           enrollment_id: enrollmentId,
+          batch_id: batchId,
           drip_override: dripOverride,
           drip_enabled: dripOverride ? dripEnabled : null,
           sequential_override: sequentialOverride,
@@ -311,7 +329,40 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
               />
             </div>
 
-            {/* Access Settings Section (Admin Only) */}
+            {/* Batch Assignment */}
+            {enrollmentId && batches.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Batch Assignment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Label>Select Batch</Label>
+                  <Select
+                    value={batchId || "none"}
+                    onValueChange={(value) => setBatchId(value === "none" ? null : value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a batch" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-background border z-50">
+                      <SelectItem value="none">No Batch (Use LMS Access Date)</SelectItem>
+                      {batches.map((batch) => (
+                        <SelectItem key={batch.id} value={batch.id}>
+                          {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    When a batch is assigned, content drip schedule is calculated from the batch start date.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
             {canApplyDiscount && enrollmentId && (
               <Collapsible open={accessSettingsOpen} onOpenChange={setAccessSettingsOpen}>
                 <Card className="border-blue-200 bg-blue-50/50">
