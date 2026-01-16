@@ -9,32 +9,54 @@ import { useCourses } from "@/hooks/useCourses";
 import { useCourseRecordings } from "@/hooks/useCourseRecordings";
 import { useAuth } from "@/hooks/useAuth";
 import { useProgressTracker } from "@/hooks/useProgressTracker";
+import { useActivePathwayAccess } from "@/hooks/useActivePathwayAccess";
 import { RoleGuard } from "@/components/RoleGuard";
 import { InactiveLMSBanner } from "@/components/InactiveLMSBanner";
 import { CourseSelector } from "@/components/courses/CourseSelector";
+import { PathwayProgressCard } from "@/components/courses/PathwayProgressCard";
 import { Play, Lock, CheckCircle, Clock, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Videos = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  // Pathway-aware hook
+  const {
+    isInPathwayMode,
+    pathwayState,
+    pathwayCourses,
+    loading: pathwayLoading,
+    advancePathway,
+    makeChoice,
+    refreshPathwayState
+  } = useActivePathwayAccess();
+  
   // Course-aware hooks
   const { 
     enrolledCourses, 
-    activeCourse, 
+    activeCourse: defaultActiveCourse, 
     setActiveCourse, 
     loading: coursesLoading,
     isMultiCourseEnabled 
   } = useCourses();
+  
+  // In pathway mode, force active course to current pathway course
+  const activeCourseId = isInPathwayMode && pathwayState 
+    ? pathwayState.currentCourseId 
+    : defaultActiveCourse?.id || null;
+  
+  // Find the actual course object for the active course
+  const activeCourse = enrolledCourses.find(c => c.id === activeCourseId) || defaultActiveCourse;
   
   const { 
     modules, 
     courseProgress,
     loading: recordingsLoading, 
     refreshData 
-  } = useCourseRecordings(activeCourse?.id || null);
+  } = useCourseRecordings(activeCourseId);
   
   const { markRecordingWatched } = useProgressTracker(user);
   
@@ -42,6 +64,7 @@ const Videos = () => {
   const [selectedRecording, setSelectedRecording] = useState<any>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [userLMSStatus, setUserLMSStatus] = useState<string>('active');
+  const [isAdvancing, setIsAdvancing] = useState(false);
 
   // Fetch user's LMS status
   React.useEffect(() => {
@@ -84,7 +107,41 @@ const Videos = () => {
     });
   };
 
-  const loading = coursesLoading || recordingsLoading;
+  const handleAdvancePathway = async () => {
+    setIsAdvancing(true);
+    try {
+      const result = await advancePathway();
+      if (result.success) {
+        if (result.completed) {
+          toast.success('Congratulations! You have completed the pathway!');
+        } else {
+          toast.success('Next course unlocked!');
+        }
+        refreshData();
+      } else {
+        toast.error(result.error || 'Failed to advance pathway');
+      }
+    } finally {
+      setIsAdvancing(false);
+    }
+  };
+
+  const handleMakeChoice = async (courseId: string) => {
+    setIsAdvancing(true);
+    try {
+      const result = await makeChoice(courseId);
+      if (result.success) {
+        toast.success('Choice confirmed! Your selected course has been unlocked.');
+        refreshData();
+      } else {
+        toast.error(result.error || 'Failed to make choice');
+      }
+    } finally {
+      setIsAdvancing(false);
+    }
+  };
+
+  const loading = coursesLoading || recordingsLoading || pathwayLoading;
 
   if (loading) {
     return (
@@ -96,6 +153,10 @@ const Videos = () => {
 
   const totalRecordings = modules.reduce((sum, module) => sum + module.recordings.length, 0);
   const watchedRecordings = modules.reduce((sum, module) => sum + module.watchedLessons, 0);
+
+  // Determine if we should show the course selector
+  // Hide it in pathway mode - students must follow the pathway
+  const showCourseSelector = !isInPathwayMode && isMultiCourseEnabled && enrolledCourses.length > 1;
 
   return (
     <RoleGuard allowedRoles={['student', 'admin', 'mentor', 'superadmin']}>
@@ -111,8 +172,8 @@ const Videos = () => {
             </p>
           </div>
           
-          {/* Course selector - only show if multi-course enabled and more than 1 course */}
-          {isMultiCourseEnabled && enrolledCourses.length > 1 && (
+          {/* Course selector - only show if NOT in pathway mode and multi-course enabled */}
+          {showCourseSelector && (
             <CourseSelector
               courses={enrolledCourses}
               activeCourseId={activeCourse?.id || null}
@@ -122,8 +183,19 @@ const Videos = () => {
           )}
         </div>
 
-        {/* Course progress card */}
-        {activeCourse && totalRecordings > 0 && (
+        {/* Pathway Progress Card - show when in pathway mode */}
+        {isInPathwayMode && pathwayState && (
+          <PathwayProgressCard
+            pathwayState={pathwayState}
+            pathwayCourses={pathwayCourses}
+            onAdvance={handleAdvancePathway}
+            onMakeChoice={handleMakeChoice}
+            isAdvancing={isAdvancing}
+          />
+        )}
+
+        {/* Course progress card - show when NOT in pathway mode */}
+        {!isInPathwayMode && activeCourse && totalRecordings > 0 && (
           <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">

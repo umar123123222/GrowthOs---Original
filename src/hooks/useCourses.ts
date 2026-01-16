@@ -111,13 +111,22 @@ export function useCourses(): UseCoursesReturn {
             progress_percentage,
             enrolled_at,
             completed_at,
-            access_expires_at
+            access_expires_at,
+            enrollment_source,
+            pathway_id
           `)
           .eq('student_id', studentId);
 
         if (enrollmentsError) throw enrollmentsError;
 
+        // Check if user has an active pathway enrollment
+        const hasActivePathway = enrollmentsData?.some(
+          e => e.pathway_id !== null && e.enrollment_source === 'pathway' && e.status === 'active'
+        );
+
         // Map courses with enrollment data, filtering out expired access
+        // If user has active pathway, we still include pathway courses in the list
+        // but the Videos page will handle restricting access via useActivePathwayAccess
         const enrolledCoursesData: CourseWithEnrollment[] = (coursesData || [])
           .filter(course => {
             const enrollment = enrollmentsData?.find(e => e.course_id === course.id);

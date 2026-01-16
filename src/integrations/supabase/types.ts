@@ -593,6 +593,7 @@ export type Database = {
           drip_enabled: boolean | null
           drip_override: boolean | null
           enrolled_at: string | null
+          enrollment_source: string
           id: string
           pathway_id: string | null
           payment_status: string | null
@@ -616,6 +617,7 @@ export type Database = {
           drip_enabled?: boolean | null
           drip_override?: boolean | null
           enrolled_at?: string | null
+          enrollment_source?: string
           id?: string
           pathway_id?: string | null
           payment_status?: string | null
@@ -639,6 +641,7 @@ export type Database = {
           drip_enabled?: boolean | null
           drip_override?: boolean | null
           enrolled_at?: string | null
+          enrollment_source?: string
           id?: string
           pathway_id?: string | null
           payment_status?: string | null
@@ -1646,6 +1649,55 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      pathway_choice_selections: {
+        Row: {
+          choice_group: number
+          created_at: string
+          id: string
+          pathway_id: string
+          selected_course_id: string
+          student_id: string
+        }
+        Insert: {
+          choice_group: number
+          created_at?: string
+          id?: string
+          pathway_id: string
+          selected_course_id: string
+          student_id: string
+        }
+        Update: {
+          choice_group?: number
+          created_at?: string
+          id?: string
+          pathway_id?: string
+          selected_course_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pathway_choice_selections_pathway_id_fkey"
+            columns: ["pathway_id"]
+            isOneToOne: false
+            referencedRelation: "learning_pathways"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pathway_choice_selections_selected_course_id_fkey"
+            columns: ["selected_course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pathway_choice_selections_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       pathway_courses: {
         Row: {
@@ -2791,6 +2843,14 @@ export type Database = {
       }
     }
     Functions: {
+      advance_pathway: {
+        Args: {
+          p_pathway_id: string
+          p_selected_course_id?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       can_view_sensitive_user_data: { Args: never; Returns: boolean }
       check_and_award_milestone: {
         Args: { p_context?: Json; p_milestone_type: string; p_user_id: string }
@@ -2985,6 +3045,19 @@ export type Database = {
           unlock_reason: string
         }[]
       }
+      get_student_active_pathway: {
+        Args: { p_user_id: string }
+        Returns: {
+          choice_group: number
+          current_course_id: string
+          current_course_title: string
+          current_step_number: number
+          has_pending_choice: boolean
+          pathway_id: string
+          pathway_name: string
+          total_steps: number
+        }[]
+      }
       get_student_courses: {
         Args: { p_user_id: string }
         Returns: {
@@ -2999,6 +3072,20 @@ export type Database = {
           pathway_name: string
           progress_percentage: number
           thumbnail_url: string
+        }[]
+      }
+      get_student_pathway_course_map: {
+        Args: { p_pathway_id: string; p_user_id: string }
+        Returns: {
+          choice_group: number
+          choice_options: Json
+          course_id: string
+          course_title: string
+          is_available: boolean
+          is_completed: boolean
+          is_current: boolean
+          requires_choice: boolean
+          step_number: number
         }[]
       }
       get_student_unlock_sequence: {
@@ -3093,6 +3180,10 @@ export type Database = {
       interpolate_template: { Args: { t: string; vars: Json }; Returns: string }
       is_assignment_passed: {
         Args: { _assignment_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_course_fully_completed: {
+        Args: { p_course_id: string; p_user_id: string }
         Returns: boolean
       }
       is_module_completed: {
