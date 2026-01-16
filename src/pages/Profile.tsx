@@ -201,12 +201,12 @@ const Profile = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 p-6">
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 p-3 sm:p-6">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-blue-600 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-blue-600 mb-2">
           Profile Settings
         </h1>
-        <p className="text-gray-600">Manage your account information</p>
+        <p className="text-sm sm:text-base text-gray-600">Manage your account information</p>
       </div>
 
       <div className="space-y-6">

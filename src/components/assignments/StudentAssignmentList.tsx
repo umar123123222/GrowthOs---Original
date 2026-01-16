@@ -226,10 +226,10 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     // Unlocked
     availableAssignments = assignments.filter(a => isAssignmentUnlocked(a));
   }
-  return <div className="space-y-6">
+  return <div className="space-y-4 sm:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">My Assignments</h1>
-        <p className="text-muted-foreground">Complete and submit your course assignments</p>
+        <h1 className="text-xl sm:text-3xl font-bold">My Assignments</h1>
+        <p className="text-sm sm:text-base text-muted-foreground">Complete and submit your course assignments</p>
       </div>
 
       {availableAssignments.length === 0 ? <Card>

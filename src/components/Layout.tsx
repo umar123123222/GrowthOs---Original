@@ -19,6 +19,8 @@ import RouteContentLoader from "./LoadingStates/RouteContentLoader";
 import { throttle } from "@/utils/performance";
 import { safeLogger } from '@/lib/safe-logger';
 import { AnnouncementBanner, useAnnouncementBanner } from "./AnnouncementBanner";
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface LayoutProps {
   user: any;
@@ -187,6 +189,7 @@ const Layout = memo(({
 }: LayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const {
     toast
   } = useToast();
@@ -194,6 +197,7 @@ const Layout = memo(({
   const [catalogMenuOpen, setCatalogMenuOpen] = useState(false);
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [showSuccessPartner, setShowSuccessPartner] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState({
@@ -209,6 +213,11 @@ const Layout = memo(({
   const isUserMentor = user?.role === 'mentor';
   const isUserEnrollmentManager = user?.role === 'enrollment_manager';
   const isUserAdminOrSuperadmin = isUserSuperadmin || isUserAdmin;
+  
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname, location.search]);
 
   // Fetch courses for catalog menu (students only)
   useEffect(() => {
@@ -663,38 +672,210 @@ const Layout = memo(({
   return <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-sm">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
-                {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
-              </Button>
+        <div className="w-full px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-14 sm:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Mobile hamburger menu */}
+              {isMobile ? (
+                <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900 p-2">
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0 overflow-y-auto">
+                    <div className="p-4 border-b">
+                      <Link to="/" className="flex items-center gap-2" aria-label="Home" onClick={() => setMobileMenuOpen(false)}>
+                        <AppLogo className="h-10 w-auto max-w-[160px]" alt="Company logo" />
+                        <span className="text-lg font-bold text-gray-900">GrowthOS</span>
+                      </Link>
+                    </div>
+                    <nav className="p-4">
+                      <div className="space-y-2">
+                        {navigation.map(item => {
+                          // Handle Catalog expandable menu for students
+                          if (item.isCatalogMenu) {
+                            const isExpanded = catalogMenuOpen;
+                            const Icon = item.icon;
+                            const isCatalogActive = location.pathname === '/catalog';
+                            return <div key={item.name}>
+                              <div className="flex items-center">
+                                <Link 
+                                  to={item.href || '/catalog'} 
+                                  className={`flex-1 flex items-center px-4 py-3 text-sm font-medium rounded-l-lg transition-all duration-200 ${
+                                    isCatalogActive 
+                                      ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" 
+                                      : "text-gray-600 hover:bg-gray-50"
+                                  }`}
+                                  onClick={() => setMobileMenuOpen(false)}
+                                >
+                                  <Icon className={`mr-3 h-5 w-5 ${isCatalogActive ? 'text-gray-900' : 'text-gray-400'}`} />
+                                  {item.name}
+                                </Link>
+                                <button 
+                                  onClick={() => setCatalogMenuOpen(!catalogMenuOpen)} 
+                                  className="px-2 py-3 text-gray-600 hover:bg-gray-50 rounded-r-lg transition-all duration-200"
+                                >
+                                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                </button>
+                              </div>
+                              
+                              {isExpanded && <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
+                                {catalogCourses.map(course => {
+                                  const isCourseExpanded = expandedCourses.has(course.id);
+                                  const isVideosActive = location.pathname === '/videos' && location.search.includes(`courseId=${course.id}`);
+                                  const isAssignmentsActive = location.pathname === '/assignments' && location.search.includes(`courseId=${course.id}`);
+                                  
+                                  return (
+                                    <div key={course.id}>
+                                      <button
+                                        onClick={() => course.isEnrolled && toggleCourseExpand(course.id)}
+                                        className={`flex items-center justify-between w-full px-3 py-2 text-sm rounded-md transition-colors ${
+                                          course.isEnrolled 
+                                            ? 'text-gray-600 hover:bg-gray-50 cursor-pointer' 
+                                            : 'text-gray-400 cursor-not-allowed'
+                                        }`}
+                                        disabled={!course.isEnrolled}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          {!course.isEnrolled && <Lock className="h-3 w-3 text-gray-400" />}
+                                          <span className="truncate max-w-[160px]">{course.title}</span>
+                                        </div>
+                                        {course.isEnrolled && (
+                                          isCourseExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                      
+                                      {isCourseExpanded && course.isEnrolled && (
+                                        <div className="ml-4 mt-1 space-y-1 animate-accordion-down">
+                                          <Link
+                                            to={`/videos?courseId=${course.id}`}
+                                            className={`flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                              isVideosActive 
+                                                ? 'bg-primary text-primary-foreground' 
+                                                : 'text-gray-600 hover:bg-gray-100'
+                                            }`}
+                                            onClick={() => setMobileMenuOpen(false)}
+                                          >
+                                            <Video className="mr-2 h-3.5 w-3.5" />
+                                            Videos
+                                          </Link>
+                                          <Link
+                                            to={`/assignments?courseId=${course.id}`}
+                                            className={`flex items-center px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                              isAssignmentsActive 
+                                                ? 'bg-primary text-primary-foreground' 
+                                                : 'text-gray-600 hover:bg-gray-100'
+                                            }`}
+                                            onClick={() => setMobileMenuOpen(false)}
+                                          >
+                                            <FileText className="mr-2 h-3.5 w-3.5" />
+                                            Assignments
+                                          </Link>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                                {catalogCourses.length === 0 && (
+                                  <div className="px-3 py-2 text-sm text-gray-400 italic">
+                                    No courses available
+                                  </div>
+                                )}
+                              </div>}
+                            </div>;
+                          }
+                          
+                          if (item.isExpandable) {
+                            const isExpanded = courseMenuOpen;
+                            const Icon = item.icon;
+                            return <div key={item.name}>
+                              <button onClick={() => setCourseMenuOpen(!courseMenuOpen)} className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50">
+                                <div className="flex items-center">
+                                  <Icon className="mr-3 h-5 w-5 text-gray-400" />
+                                  {item.name}
+                                </div>
+                                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              </button>
+                              
+                              {isExpanded && <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
+                                {item.subItems?.map(subItem => {
+                                  const isActive = location.search.includes(`tab=${subItem.href.split('=')[1]}`);
+                                  const SubIcon = subItem.icon;
+                                  return <Link 
+                                    key={subItem.name} 
+                                    to={subItem.href} 
+                                    className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" : "text-gray-600 hover:bg-gray-100"}`}
+                                    onClick={() => setMobileMenuOpen(false)}
+                                  >
+                                    <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
+                                    {subItem.name}
+                                  </Link>;
+                                })}
+                              </div>}
+                            </div>;
+                          }
+                          
+                          const searchParams = new URLSearchParams(location.search);
+                          const currentTab = searchParams.get('tab');
+                          const isTabLink = item.href?.includes('?tab=');
+                          const itemTab = isTabLink ? item.href.split('=')[1] : null;
+                          const isActive = isTabLink && currentTab === itemTab || !isTabLink && location.pathname === item.href && (!currentTab || currentTab === 'dashboard');
+                          const Icon = item.icon;
+                          return <Link 
+                            key={item.name} 
+                            to={item.href || '/'} 
+                            className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" : "text-gray-600 hover:bg-gray-100"}`}
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            <Icon className={`mr-3 h-5 w-5 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
+                            {item.name}
+                          </Link>;
+                        })}
+                      </div>
+                    </nav>
+                  </SheetContent>
+                </Sheet>
+              ) : (
+                <Button onClick={() => setSidebarCollapsed(!sidebarCollapsed)} variant="ghost" size="sm" className="text-gray-600 hover:text-gray-900">
+                  {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+                </Button>
+              )}
               <Link to="/" className="flex items-center gap-2" aria-label="Home">
-                <AppLogo className="h-16 w-auto max-w-[240px]" alt="Company logo" />
-                <span className="text-xl font-bold text-gray-900">GrowthOS</span>
+                <AppLogo className={`${isMobile ? 'h-10 max-w-[120px]' : 'h-16 max-w-[240px]'} w-auto`} alt="Company logo" />
+                <span className={`font-bold text-gray-900 ${isMobile ? 'text-base hidden xs:block' : 'text-xl'}`}>GrowthOS</span>
               </Link>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1 sm:space-x-4">
               <NotificationDropdown />
               
               {/* Success Partner Button - Only for students */}
-              {user?.role === 'student' && <Button variant="outline" size="sm" className="text-gray-700 hover:text-blue-600 hover:border-blue-200" onClick={() => setShowSuccessPartner(true)}>
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Success Partner
-                </Button>}
+              {user?.role === 'student' && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="text-gray-700 hover:text-blue-600 hover:border-blue-200 p-2 sm:px-3" 
+                  onClick={() => setShowSuccessPartner(true)}
+                >
+                  <MessageCircle className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Success Partner</span>
+                </Button>
+              )}
               
               {/* Activity Logs Button for authorized users - Only admins and superadmins */}
-              {(isUserSuperadmin || isUserAdmin) && <ActivityLogsDialog>
+              {(isUserSuperadmin || isUserAdmin) && !isMobile && (
+                <ActivityLogsDialog>
                   <Button variant="outline" size="sm" className="text-gray-700 hover:text-blue-600 hover:border-blue-200" title="View Activity Logs">
                     <Activity className="w-4 h-4 mr-2" />
                     Activity Logs
                   </Button>
-                </ActivityLogsDialog>}
+                </ActivityLogsDialog>
+              )}
               
-              <Button onClick={handleLogout} variant="outline" className="text-gray-700 hover:text-red-600 hover:border-red-200">
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
+              <Button onClick={handleLogout} variant="outline" size="sm" className="text-gray-700 hover:text-red-600 hover:border-red-200 p-2 sm:px-3">
+                <LogOut className="w-4 h-4 sm:mr-2" />
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </div>
@@ -704,10 +885,11 @@ const Layout = memo(({
       <AnnouncementBanner />
 
       <div className="flex">
-        {/* Sidebar - adjust top position when banner is visible */}
-        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg min-h-screen transition-all duration-300 fixed left-0 z-30 overflow-y-auto`} style={{ top: isBannerVisible ? '112px' : '64px' }}>
-          <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
-            <div className="space-y-2">
+        {/* Sidebar - Desktop only, hidden on mobile */}
+        {!isMobile && (
+          <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg min-h-screen transition-all duration-300 fixed left-0 z-30 overflow-y-auto`} style={{ top: isBannerVisible ? '112px' : '64px' }}>
+            <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
+              <div className="space-y-2">
               {navigation.map(item => {
               // Handle Catalog expandable menu for students
               if (item.isCatalogMenu) {
@@ -843,10 +1025,16 @@ const Layout = memo(({
             </div>
           </nav>
         </aside>
+        )}
 
-        {/* Main Content - adjust padding when banner is visible */}
-        <main className={`flex-1 w-full max-w-full overflow-x-hidden animate-fade-in ${sidebarCollapsed ? 'pl-16' : 'pl-80'} transition-all duration-300`} style={{ paddingTop: isBannerVisible ? '144px' : '96px' }}>
-          <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 py-0 lg:px-0">
+        {/* Main Content - adjust padding based on sidebar state and mobile */}
+        <main 
+          className={`flex-1 w-full max-w-full overflow-x-hidden animate-fade-in transition-all duration-300 ${
+            isMobile ? 'pl-0' : (sidebarCollapsed ? 'pl-16' : 'pl-80')
+          }`} 
+          style={{ paddingTop: isBannerVisible ? (isMobile ? '104px' : '144px') : (isMobile ? '72px' : '96px') }}
+        >
+          <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 py-0 lg:px-4">
             <Suspense fallback={<RouteContentLoader path={location.pathname} />}>
               <Outlet />
             </Suspense>

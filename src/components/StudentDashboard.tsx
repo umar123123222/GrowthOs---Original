@@ -521,13 +521,13 @@ export function StudentDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 pb-6">
       <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
       
       {/* Course Selector for multi-course users (non-pathway mode only) */}
       {!isInPathwayMode && isMultiCourseEnabled && enrolledCourses.length > 1 && (
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">Your Courses</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h2 className="text-base sm:text-lg font-medium">Your Courses</h2>
           <CourseSelector
             courses={enrolledCourses}
             activeCourseId={activeCourse?.id || null}
@@ -539,23 +539,23 @@ export function StudentDashboard() {
       
       {/* Your Learning Journey Card - Unified for pathway and course mode */}
       <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
-        <CardContent className="p-6">
-          <div className="space-y-5">
+        <CardContent className="p-4 sm:p-6">
+          <div className="space-y-4 sm:space-y-5">
             {/* Header with pathway/course info */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
                   {isInPathwayMode ? (
-                    <Route className="w-5 h-5 text-primary" />
+                    <Route className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   ) : (
-                    <span className="text-xl">🎯</span>
+                    <span className="text-lg sm:text-xl">🎯</span>
                   )}
                 </div>
-                <div>
-                  <h2 className="text-xl font-medium text-primary mb-1">
+                <div className="min-w-0">
+                  <h2 className="text-lg sm:text-xl font-medium text-primary mb-0.5 sm:mb-1 truncate">
                     {isInPathwayMode ? 'Your Learning Journey' : 'Your Financial Goal'}
                   </h2>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate">
                     {isInPathwayMode && pathwayState 
                       ? `${pathwayState.pathwayName} • Step ${pathwayState.currentStepNumber} of ${pathwayState.totalSteps}`
                       : 'Track your progress towards financial freedom'
@@ -564,7 +564,7 @@ export function StudentDashboard() {
                 </div>
               </div>
               {isInPathwayMode && (
-                <Badge variant="secondary" className="bg-primary/10 text-primary">
+                <Badge variant="secondary" className="bg-primary/10 text-primary w-fit">
                   Pathway Mode
                 </Badge>
               )}
@@ -572,7 +572,7 @@ export function StudentDashboard() {
             
             {/* Pathway step indicators - show when in pathway mode */}
             {isInPathwayMode && pathwayCourses.length > 0 && (
-              <div className="flex items-center gap-2 overflow-x-auto py-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto py-2 -mx-1 px-1 scrollbar-thin">
                 {pathwayCourses.slice(0, 8).map((course, index) => {
                   // Use stepNumber comparison with currentStepNumber for accurate current step detection
                   const isCurrentStep = course.stepNumber === pathwayState?.currentStepNumber;
@@ -583,7 +583,7 @@ export function StudentDashboard() {
                       className={`flex items-center ${index < pathwayCourses.length - 1 ? 'flex-1' : ''}`}
                     >
                       <div 
-                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-medium flex-shrink-0 ${
+                        className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-[10px] sm:text-xs font-medium flex-shrink-0 ${
                           course.isCompleted 
                             ? 'bg-green-500 text-white' 
                             : isCurrentStep 
@@ -593,13 +593,13 @@ export function StudentDashboard() {
                         title={course.courseTitle}
                       >
                         {course.isCompleted ? (
-                          <CheckCircle className="w-4 h-4" />
+                          <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4" />
                         ) : (
                           course.stepNumber
                         )}
                       </div>
                       {index < pathwayCourses.slice(0, 8).length - 1 && (
-                        <div className={`h-0.5 flex-1 mx-1 min-w-4 ${
+                        <div className={`h-0.5 flex-1 mx-0.5 sm:mx-1 min-w-2 sm:min-w-4 ${
                           course.isCompleted ? 'bg-green-500' : 'bg-muted'
                         }`} />
                       )}
@@ -607,30 +607,30 @@ export function StudentDashboard() {
                   );
                 })}
                 {pathwayCourses.length > 8 && (
-                  <span className="text-xs text-muted-foreground flex-shrink-0">+{pathwayCourses.length - 8} more</span>
+                  <span className="text-[10px] sm:text-xs text-muted-foreground flex-shrink-0">+{pathwayCourses.length - 8} more</span>
                 )}
               </div>
             )}
             
             {/* Financial goal display */}
-            <div className="bg-background/80 rounded-lg p-4 border border-primary/10">
-              <p className="text-base font-normal text-foreground leading-relaxed">
+            <div className="bg-background/80 rounded-lg p-3 sm:p-4 border border-primary/10">
+              <p className="text-sm sm:text-base font-normal text-foreground leading-relaxed line-clamp-3 sm:line-clamp-none">
                 {firstOnboardingAnswer || extractFinancialGoalForDisplay(dreamGoal)}
               </p>
             </div>
             
             {/* Progress bar */}
-            <div className="space-y-2">
+            <div className="space-y-1.5 sm:space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-xs font-normal text-muted-foreground">
+                <span className="text-[10px] sm:text-xs font-normal text-muted-foreground">
                   {isInPathwayMode ? 'Pathway progress' : 'Progress toward your goal'}
                 </span>
-                <span className="text-sm font-medium text-primary">{courseProgress}% complete</span>
+                <span className="text-xs sm:text-sm font-medium text-primary">{courseProgress}% complete</span>
               </div>
               <div className="relative">
                 <Progress 
                   value={courseProgress} 
-                  className="h-1.5 transition-all duration-1000 ease-out"
+                  className="h-1 sm:h-1.5 transition-all duration-1000 ease-out"
                 />
               </div>
             </div>
@@ -655,7 +655,7 @@ export function StudentDashboard() {
       )}
 
       {/* Interactive Three-Card Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Continue Learning Card - Shows current course/lesson status with lock reason */}
         <Card 
           className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
