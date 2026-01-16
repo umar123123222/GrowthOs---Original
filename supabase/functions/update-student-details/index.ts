@@ -25,6 +25,7 @@ interface UpdateStudentRequest {
   resend_credentials?: boolean;
   // Access control settings
   enrollment_id?: string;
+  batch_id?: string | null;
   drip_override?: boolean;
   drip_enabled?: boolean | null;
   sequential_override?: boolean;
@@ -86,6 +87,7 @@ serve(async (req) => {
       phone, 
       resend_credentials,
       enrollment_id,
+      batch_id,
       drip_override,
       drip_enabled,
       sequential_override,
@@ -149,6 +151,11 @@ serve(async (req) => {
       const enrollmentUpdate: Record<string, any> = {
         updated_at: new Date().toISOString()
       };
+
+      // Batch assignment
+      if (batch_id !== undefined) {
+        enrollmentUpdate.batch_id = batch_id;
+      }
 
       // Access settings
       if (drip_override !== undefined) {
