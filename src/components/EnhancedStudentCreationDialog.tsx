@@ -140,12 +140,15 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
     }
   })
 
-  // Set default batch to most recent when batches load
+  // Track if user has explicitly set batch preference
+  const [batchUserSelected, setBatchUserSelected] = React.useState(false)
+  
+  // Set default batch to most recent when batches load (only if user hasn't selected yet)
   React.useEffect(() => {
-    if (batches.length > 0 && !formData.batch_id) {
+    if (batches.length > 0 && !batchUserSelected && formData.batch_id === '') {
       setFormData(prev => ({ ...prev, batch_id: batches[0].id }))
     }
-  }, [batches, formData.batch_id])
+  }, [batches, batchUserSelected])
 
   const currency = companySettings?.currency || 'PKR'
 
@@ -514,7 +517,10 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                 <Label>Select Batch</Label>
                 <Select
                   value={formData.batch_id || "none"}
-                  onValueChange={(value) => setFormData(prev => ({ ...prev, batch_id: value === "none" ? "" : value }))}
+                  onValueChange={(value) => {
+                    setBatchUserSelected(true)
+                    setFormData(prev => ({ ...prev, batch_id: value === "none" ? "" : value }))
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select a batch" />
