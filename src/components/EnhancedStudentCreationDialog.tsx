@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, BadgePercent, BookOpen, Route, Settings2, ChevronDown, ChevronUp, Users } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Loader2, BadgePercent, BookOpen, Route, Settings2, ChevronDown, ChevronUp, Users, UserPlus, Upload } from 'lucide-react'
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions'
 import { useEnhancedStudentCreation } from '@/hooks/useEnhancedStudentCreation'
 import { useAuth } from '@/hooks/useAuth'
@@ -14,6 +15,7 @@ import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { Switch } from '@/components/ui/switch'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { BulkStudentUpload } from './BulkStudentUpload'
 
 interface EnhancedStudentCreationDialogProps {
   open: boolean
@@ -80,6 +82,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
   })
   
   const [accessSettingsOpen, setAccessSettingsOpen] = useState(false)
+  const [uploadMode, setUploadMode] = useState<'single' | 'bulk'>('single')
 
   // Fetch company settings for currency
   const { data: companySettings } = useQuery({
@@ -310,6 +313,19 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             </div>
           </div>
         ) : (
+          <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as 'single' | 'bulk')} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="single" className="gap-2">
+                <UserPlus className="h-4 w-4" />
+                Single Student
+              </TabsTrigger>
+              <TabsTrigger value="bulk" className="gap-2">
+                <Upload className="h-4 w-4" />
+                Bulk Upload
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="single">
           <form onSubmit={handleSubmit} className="space-y-4">
           {/* Two-column grid for main fields */}
           <div className="grid grid-cols-2 gap-4">
@@ -749,6 +765,30 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
               </div>
             )}
           </form>
+            </TabsContent>
+            
+            <TabsContent value="bulk">
+              <BulkStudentUpload
+                sharedSettings={{
+                  installment_count: formData.installment_count,
+                  enrollment_type: formData.enrollment_type,
+                  course_id: formData.course_id,
+                  pathway_id: formData.pathway_id,
+                  batch_id: formData.batch_id,
+                  total_fee_amount: selectedPrice,
+                  discount_type: formData.discount_type,
+                  discount_amount: formData.discount_amount,
+                  discount_percentage: formData.discount_percentage,
+                  drip_override: formData.drip_override,
+                  drip_enabled: formData.drip_enabled,
+                  sequential_override: formData.sequential_override,
+                  sequential_enabled: formData.sequential_enabled
+                }}
+                onComplete={() => onStudentCreated()}
+                onClose={() => onOpenChange(false)}
+              />
+            </TabsContent>
+          </Tabs>
         )}
       </DialogContent>
     </Dialog>
