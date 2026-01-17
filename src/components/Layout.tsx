@@ -490,7 +490,15 @@ const Layout = memo(({
         href: "/admin",
         icon: Monitor
       }, {
-        name: "Course",
+        name: "Courses",
+        href: "/admin?tab=courses",
+        icon: GraduationCap
+      }, {
+        name: "Pathways",
+        href: "/admin?tab=pathways",
+        icon: Route
+      }, {
+        name: "Content",
         icon: BookOpen,
         isExpandable: true,
         subItems: [{
@@ -538,6 +546,14 @@ const Layout = memo(({
         name: "Teams",
         href: "/teams",
         icon: UserCheck
+      }, {
+        name: "Error Logs",
+        href: "/admin?tab=error-logs",
+        icon: AlertTriangle
+      }, {
+        name: "Company",
+        href: "/admin?tab=company-settings",
+        icon: Building2
       }, {
         name: "Profile",
         href: "/profile",
