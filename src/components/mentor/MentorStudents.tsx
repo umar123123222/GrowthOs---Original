@@ -75,13 +75,23 @@ export const MentorStudents = () => {
       const isGlobalMentor = mentorCourses?.some(mc => mc.is_global);
       const courseIds = mentorCourses?.map(mc => mc.course_id).filter(Boolean) || [];
 
+      console.log('[MentorStudents] Mentor courses:', mentorCourses);
+      console.log('[MentorStudents] Course IDs:', courseIds);
+      console.log('[MentorStudents] Is global mentor:', isGlobalMentor);
+
       // Get pathway courses for mentor's assigned courses
-      const { data: pathwayCourses } = await supabase
+      const { data: pathwayCourses, error: pathwayCoursesError } = await supabase
         .from('pathway_courses')
         .select('pathway_id, course_id, step_number, choice_group, is_choice_point, learning_pathways(id, name)')
-        .in('course_id', courseIds);
+        .in('course_id', courseIds.length > 0 ? courseIds : ['non-existent']);
+
+      console.log('[MentorStudents] Pathway courses for mentor:', pathwayCourses);
+      if (pathwayCoursesError) {
+        console.error('[MentorStudents] Error fetching pathway courses:', pathwayCoursesError);
+      }
 
       const pathwayIds = [...new Set(pathwayCourses?.map(pc => pc.pathway_id) || [])];
+      console.log('[MentorStudents] Pathway IDs containing mentor courses:', pathwayIds);
 
       // Get all choice point courses in these pathways to identify competing courses
       const { data: allChoicePointCourses } = await supabase
@@ -90,10 +100,14 @@ export const MentorStudents = () => {
         .in('pathway_id', pathwayIds.length > 0 ? pathwayIds : ['non-existent'])
         .eq('is_choice_point', true);
 
+      console.log('[MentorStudents] All choice point courses:', allChoicePointCourses);
+
       // Get pathway choice selections to filter out students who chose competing courses
       const { data: choiceSelections } = await supabase
         .from('pathway_choice_selections')
         .select('student_id, pathway_id, choice_group, selected_course_id');
+
+      console.log('[MentorStudents] Choice selections:', choiceSelections);
 
       // Fetch direct enrollments for mentor's courses
       let directEnrollmentsQuery = supabase
@@ -128,6 +142,7 @@ export const MentorStudents = () => {
       if (directError) {
         console.error('Error fetching direct enrollments:', directError);
       }
+      console.log('[MentorStudents] Direct enrollments:', directEnrollments?.length);
 
       // Fetch pathway enrollments - include students in pathways that contain mentor's assigned courses
       let pathwayEnrollmentsQuery = supabase
@@ -155,8 +170,15 @@ export const MentorStudents = () => {
         .not('pathway_id', 'is', null);
 
       // Filter by pathway_id (pathways that include mentor's courses) instead of course_id
-      if (!isGlobalMentor && pathwayIds.length > 0) {
-        pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.in('pathway_id', pathwayIds);
+      // Only apply filter if we have pathway IDs, otherwise skip pathway enrollments entirely
+      if (!isGlobalMentor) {
+        if (pathwayIds.length > 0) {
+          pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.in('pathway_id', pathwayIds);
+        } else {
+          // No pathways contain mentor's courses, set to impossible filter to return empty
+          console.log('[MentorStudents] No pathway IDs found for mentor courses');
+          pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.in('pathway_id', ['non-existent-pathway-id']);
+        }
       }
 
       // Helper function to check if a student chose a competing course (not the mentor's course)
@@ -192,6 +214,15 @@ export const MentorStudents = () => {
       if (pathwayError) {
         console.error('Error fetching pathway enrollments:', pathwayError);
       }
+      
+      console.log('[MentorStudents] Pathway enrollments fetched:', pathwayEnrollments?.length);
+      console.log('[MentorStudents] Pathway enrollments data:', pathwayEnrollments?.map(e => ({
+        id: e.id,
+        pathway_id: e.pathway_id,
+        pathway_name: e.learning_pathways?.name,
+        student_name: e.students?.users?.full_name,
+        student_id: e.students?.id
+      })));
 
       // Group students by course
       const courseMap = new Map<string, CourseWithStudents>();
@@ -240,15 +271,26 @@ export const MentorStudents = () => {
         const mentorCoursesInPathway = pathwayCourses?.filter(pc => 
           pc.pathway_id === pathwayId && courseIds.includes(pc.course_id)
         ) || [];
+
+        console.log(`[MentorStudents] Processing pathway student: ${student.users?.full_name}`, {
+          studentId,
+          pathwayId,
+          mentorCoursesInPathway: mentorCoursesInPathway.map(mc => mc.course_id)
+        });
         
         // If global mentor, or for each mentor course in the pathway, add the student
         const targetCourseIds = isGlobalMentor 
           ? [enrollment.course_id] // For global mentor, use actual enrollment course
           : mentorCoursesInPathway.map(pc => pc.course_id);
         
+        console.log(`[MentorStudents] Target course IDs for ${student.users?.full_name}:`, targetCourseIds);
+
         targetCourseIds.forEach(targetCourseId => {
           // Skip if student chose a competing course (e.g., chose Freelancing instead of Ecom 360)
-          if (studentChoseCompetingCourse(studentId, pathwayId, targetCourseId)) {
+          const choseCompeting = studentChoseCompetingCourse(studentId, pathwayId, targetCourseId);
+          console.log(`[MentorStudents] ${student.users?.full_name} chose competing course for ${targetCourseId}:`, choseCompeting);
+          
+          if (choseCompeting) {
             return;
           }
 
