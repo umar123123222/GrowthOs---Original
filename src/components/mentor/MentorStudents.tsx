@@ -44,6 +44,7 @@ export const MentorStudents = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [selectedLmsStatus, setSelectedLmsStatus] = useState<string>('all');
   const [selectedEnrollmentType, setSelectedEnrollmentType] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
 
   useEffect(() => {
     if (user) {
@@ -370,20 +371,28 @@ export const MentorStudents = () => {
     setDateRange(undefined);
     setSelectedLmsStatus('all');
     setSelectedEnrollmentType('all');
+    setSortOrder('newest');
   };
 
   const hasActiveFilters = searchQuery || selectedCourseId !== 'all' || selectedBatches.length > 0 || 
-    dateRange?.from || selectedLmsStatus !== 'all' || selectedEnrollmentType !== 'all';
+    dateRange?.from || selectedLmsStatus !== 'all' || selectedEnrollmentType !== 'all' || sortOrder !== 'newest';
 
-  // Flatten all students for single table display
+  // Flatten all students for single table display and sort by joining date
   const allFilteredStudents = useMemo(() => {
-    return filteredCoursesWithStudents.flatMap(course => 
+    const students = filteredCoursesWithStudents.flatMap(course => 
       course.students.map(student => ({
         ...student,
         course_title: course.course_title
       }))
     );
-  }, [filteredCoursesWithStudents]);
+    
+    // Sort by joining date
+    return students.sort((a, b) => {
+      const dateA = a.joining_date ? new Date(a.joining_date).getTime() : 0;
+      const dateB = b.joining_date ? new Date(b.joining_date).getTime() : 0;
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+  }, [filteredCoursesWithStudents, sortOrder]);
 
   if (loading) {
     return (
@@ -593,7 +602,17 @@ export const MentorStudents = () => {
               </SelectContent>
             </Select>
 
-            {/* Clear All Button */}
+            {/* Sort Order */}
+            <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'newest' | 'oldest')}>
+              <SelectTrigger className="w-[120px] h-9">
+                <SelectValue placeholder="Sort" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest</SelectItem>
+                <SelectItem value="oldest">Oldest</SelectItem>
+              </SelectContent>
+            </Select>
+
             {hasActiveFilters && (
               <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-9 text-muted-foreground">
                 <X className="h-4 w-4 mr-1" />
