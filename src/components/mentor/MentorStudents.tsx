@@ -570,7 +570,7 @@ export const MentorStudents = () => {
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="direct">Direct</SelectItem>
-                <SelectItem value="pathway">Pathway</SelectItem>
+                <SelectItem value="pathway">Affiliate</SelectItem>
               </SelectContent>
             </Select>
 
@@ -628,7 +628,7 @@ export const MentorStudents = () => {
                     <TableCell>
                       {student.enrollment_type === 'pathway' ? (
                         <Badge variant="outline" className="text-xs">
-                          via {student.pathway_name || 'Pathway'}
+                          Affiliate
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="text-xs">Direct</Badge>
