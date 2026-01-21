@@ -36,11 +36,18 @@ interface PaymentStats {
 export const PaymentReports = () => {
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tableLoading, setTableLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateRange, setDateRange] = useState<{ from: Date; to: Date }>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date())
   });
+  // Temporary date range for the picker (only applied on Apply button click)
+  const [tempDateRange, setTempDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date())
+  });
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [courseFilter, setCourseFilter] = useState<string>('all');
   const [courses, setCourses] = useState<{ id: string; title: string }[]>([]);
   const [currency, setCurrency] = useState('PKR');
@@ -51,11 +58,8 @@ export const PaymentReports = () => {
   useEffect(() => {
     fetchCurrency();
     fetchCourses();
-  }, []);
-
-  useEffect(() => {
     fetchPayments();
-  }, [dateRange]);
+  }, []);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -77,9 +81,10 @@ export const PaymentReports = () => {
     if (data) setCourses(data);
   };
 
-  const fetchPayments = async () => {
+  const fetchPayments = async (useRange?: { from: Date; to: Date }) => {
+    const range = useRange || dateRange;
     try {
-      setLoading(true);
+      setTableLoading(true);
 
       // Fetch paid invoices with student and course info
       const { data: invoices, error } = await supabase
@@ -107,8 +112,8 @@ export const PaymentReports = () => {
         `)
         .eq('status', 'paid')
         .not('paid_at', 'is', null)
-        .gte('paid_at', dateRange.from.toISOString())
-        .lte('paid_at', dateRange.to.toISOString())
+        .gte('paid_at', range.from.toISOString())
+        .lte('paid_at', range.to.toISOString())
         .order('paid_at', { ascending: false });
 
       if (error) throw error;
@@ -136,6 +141,17 @@ export const PaymentReports = () => {
       });
     } finally {
       setLoading(false);
+      setTableLoading(false);
+    }
+  };
+
+  // Apply date range and fetch data
+  const handleApplyDateRange = () => {
+    if (tempDateRange.from && tempDateRange.to) {
+      setDateRange({ from: tempDateRange.from, to: tempDateRange.to });
+      fetchPayments({ from: tempDateRange.from, to: tempDateRange.to });
+      setIsCalendarOpen(false);
+      setCurrentPage(1);
     }
   };
 
@@ -208,17 +224,23 @@ export const PaymentReports = () => {
 
   const setQuickDateRange = (range: 'thisMonth' | 'lastMonth' | 'last3Months') => {
     const now = new Date();
+    let newRange: { from: Date; to: Date };
     switch (range) {
       case 'thisMonth':
-        setDateRange({ from: startOfMonth(now), to: endOfMonth(now) });
+        newRange = { from: startOfMonth(now), to: endOfMonth(now) };
         break;
       case 'lastMonth':
-        setDateRange({ from: startOfMonth(subMonths(now, 1)), to: endOfMonth(subMonths(now, 1)) });
+        newRange = { from: startOfMonth(subMonths(now, 1)), to: endOfMonth(subMonths(now, 1)) };
         break;
       case 'last3Months':
-        setDateRange({ from: startOfMonth(subMonths(now, 2)), to: endOfMonth(now) });
+        newRange = { from: startOfMonth(subMonths(now, 2)), to: endOfMonth(now) };
         break;
     }
+    setTempDateRange(newRange);
+    setDateRange(newRange);
+    fetchPayments(newRange);
+    setIsCalendarOpen(false);
+    setCurrentPage(1);
   };
 
   if (loading) {
@@ -326,7 +348,13 @@ export const PaymentReports = () => {
             </div>
 
             {/* Date Range Picker */}
-            <Popover>
+            <Popover open={isCalendarOpen} onOpenChange={(open) => {
+              setIsCalendarOpen(open);
+              if (open) {
+                // Reset temp to current when opening
+                setTempDateRange({ from: dateRange.from, to: dateRange.to });
+              }
+            }}>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full lg:w-[280px] justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4" />
@@ -347,14 +375,29 @@ export const PaymentReports = () => {
                 </div>
                 <Calendar
                   mode="range"
-                  selected={{ from: dateRange.from, to: dateRange.to }}
+                  selected={{ from: tempDateRange.from, to: tempDateRange.to }}
                   onSelect={(range) => {
-                    if (range?.from && range?.to) {
-                      setDateRange({ from: range.from, to: range.to });
-                    }
+                    setTempDateRange({ from: range?.from, to: range?.to });
                   }}
                   numberOfMonths={2}
+                  className="pointer-events-auto"
                 />
+                <div className="p-3 border-t flex justify-end gap-2">
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => setIsCalendarOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    onClick={handleApplyDateRange}
+                    disabled={!tempDateRange.from || !tempDateRange.to}
+                  >
+                    Apply
+                  </Button>
+                </div>
               </PopoverContent>
             </Popover>
 
@@ -375,14 +418,19 @@ export const PaymentReports = () => {
       </Card>
 
       {/* Payment Table */}
-      <Card>
+      <Card className="relative">
         <CardHeader>
           <CardTitle className="text-lg">Payment Records</CardTitle>
           <p className="text-sm text-muted-foreground">
             Showing {paginatedPayments.length} of {filteredPayments.length} payments
           </p>
         </CardHeader>
-        <CardContent className="p-0 overflow-x-auto">
+        <CardContent className={cn("p-0 overflow-x-auto", tableLoading && "opacity-50 pointer-events-none")}>
+          {tableLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          )}
           <Table className="min-w-[800px]">
             <TableHeader>
               <TableRow>
