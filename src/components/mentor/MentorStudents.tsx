@@ -356,6 +356,16 @@ export const MentorStudents = () => {
   const hasActiveFilters = searchQuery || selectedCourseId !== 'all' || selectedBatches.length > 0 || 
     dateRange?.from || selectedLmsStatus !== 'all' || selectedEnrollmentType !== 'all';
 
+  // Flatten all students for single table display
+  const allFilteredStudents = useMemo(() => {
+    return filteredCoursesWithStudents.flatMap(course => 
+      course.students.map(student => ({
+        ...student,
+        course_title: course.course_title
+      }))
+    );
+  }, [filteredCoursesWithStudents]);
+
   if (loading) {
     return (
       <Card>
@@ -370,31 +380,67 @@ export const MentorStudents = () => {
 
   return (
     <div className="space-y-6">
-      {/* Filter Section */}
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{filteredTotalStudents}</div>
+            <p className="text-xs text-muted-foreground">
+              {hasActiveFilters ? 'Matching filters' : 'Across all your courses'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Courses Assigned</CardTitle>
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{coursesWithStudents.length}</div>
+            <p className="text-xs text-muted-foreground">You are mentoring</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Students</CardTitle>
+            <GraduationCap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{filteredActiveStudents}</div>
+            <p className="text-xs text-muted-foreground">Currently learning</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Student Details Card with Filters */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            Filters
-          </CardTitle>
+        <CardHeader className="pb-4">
+          <CardTitle>Student Details</CardTitle>
+          <CardDescription>
+            {allFilteredStudents.length} student{allFilteredStudents.length !== 1 ? 's' : ''} {hasActiveFilters ? 'matching filters' : 'enrolled'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* First Row: Search and Course */}
-          <div className="flex flex-wrap gap-3">
+          {/* All Filters in Single Row */}
+          <div className="flex flex-wrap items-center gap-3">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name or student ID..."
+                placeholder="Search name or ID..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-9"
               />
             </div>
 
             {/* Course Filter */}
             <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[160px] h-9">
                 <SelectValue placeholder="All Courses" />
               </SelectTrigger>
               <SelectContent>
@@ -406,20 +452,17 @@ export const MentorStudents = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
 
-          {/* Second Row: Other Filters */}
-          <div className="flex flex-wrap gap-3">
             {/* Batch Multi-Select */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="min-w-[150px] justify-start">
+                <Button variant="outline" className="h-9 min-w-[130px] justify-start">
                   {selectedBatches.length > 0 ? (
-                    <span className="truncate">
-                      {selectedBatches.length} batch{selectedBatches.length > 1 ? 'es' : ''} selected
+                    <span className="truncate text-sm">
+                      {selectedBatches.length} batch{selectedBatches.length > 1 ? 'es' : ''}
                     </span>
                   ) : (
-                    <span className="text-muted-foreground">Select Batches</span>
+                    <span className="text-muted-foreground text-sm">Batches</span>
                   )}
                 </Button>
               </PopoverTrigger>
@@ -464,21 +507,21 @@ export const MentorStudents = () => {
                 <Button
                   variant="outline"
                   className={cn(
-                    "min-w-[200px] justify-start text-left font-normal",
+                    "h-9 min-w-[160px] justify-start text-left font-normal",
                     !dateRange?.from && "text-muted-foreground"
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {dateRange?.from ? (
                     dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")}
-                      </>
+                      <span className="text-sm">
+                        {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d")}
+                      </span>
                     ) : (
-                      format(dateRange.from, "MMM d, yyyy")
+                      <span className="text-sm">{format(dateRange.from, "MMM d, yyyy")}</span>
                     )
                   ) : (
-                    <span>Joining Date Range</span>
+                    <span className="text-sm">Date Range</span>
                   )}
                 </Button>
               </PopoverTrigger>
@@ -508,8 +551,8 @@ export const MentorStudents = () => {
 
             {/* LMS Status */}
             <Select value={selectedLmsStatus} onValueChange={setSelectedLmsStatus}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="LMS Status" />
+              <SelectTrigger className="w-[130px] h-9">
+                <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
@@ -521,8 +564,8 @@ export const MentorStudents = () => {
 
             {/* Enrollment Type */}
             <Select value={selectedEnrollmentType} onValueChange={setSelectedEnrollmentType}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Enrollment Type" />
+              <SelectTrigger className="w-[130px] h-9">
+                <SelectValue placeholder="Type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
@@ -533,125 +576,71 @@ export const MentorStudents = () => {
 
             {/* Clear All Button */}
             {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-muted-foreground">
+              <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-9 text-muted-foreground">
                 <X className="h-4 w-4 mr-1" />
-                Clear All
+                Clear
               </Button>
             )}
           </div>
+
+          {/* Student Table */}
+          {coursesWithStudents.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No courses assigned yet. Contact an administrator to get course assignments.</p>
+            </div>
+          ) : allFilteredStudents.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p>No students match your filters.</p>
+              <Button variant="link" onClick={clearAllFilters}>Clear all filters</Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Student ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Batch</TableHead>
+                  <TableHead>Joining Date</TableHead>
+                  <TableHead>LMS Status</TableHead>
+                  <TableHead>Enrollment</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allFilteredStudents.map((student, idx) => (
+                  <TableRow key={`${student.student_id}-${idx}`}>
+                    <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
+                    <TableCell className="font-medium">{student.student_name}</TableCell>
+                    <TableCell>
+                      {student.student_batch ? (
+                        <Badge variant="outline">{student.student_batch}</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">No Batch</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {student.joining_date 
+                        ? format(new Date(student.joining_date), 'MMM d, yyyy')
+                        : '-'}
+                    </TableCell>
+                    <TableCell>{getStatusBadge(student.lms_status)}</TableCell>
+                    <TableCell>
+                      {student.enrollment_type === 'pathway' ? (
+                        <Badge variant="outline" className="text-xs">
+                          via {student.pathway_name || 'Pathway'}
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-xs">Direct</Badge>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Students</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredTotalStudents}</div>
-            <p className="text-xs text-muted-foreground">
-              {hasActiveFilters ? 'Matching filters' : 'Across all your courses'}
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Courses Assigned</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{coursesWithStudents.length}</div>
-            <p className="text-xs text-muted-foreground">You are mentoring</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Students</CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{filteredActiveStudents}</div>
-            <p className="text-xs text-muted-foreground">Currently learning</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Student List */}
-      {coursesWithStudents.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No courses assigned yet. Contact an administrator to get course assignments.</p>
-          </CardContent>
-        </Card>
-      ) : filteredCoursesWithStudents.length === 0 ? (
-        <Card>
-          <CardContent className="p-6 text-center text-muted-foreground">
-            <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p>No students match your filters.</p>
-            <Button variant="link" onClick={clearAllFilters}>Clear all filters</Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {filteredCoursesWithStudents.map(course => (
-            <Card key={course.course_id}>
-              <CardHeader>
-                <CardTitle>Student Details</CardTitle>
-                <CardDescription>
-                  {course.students.length} student{course.students.length !== 1 ? 's' : ''} {hasActiveFilters ? 'matching' : 'enrolled'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Batch</TableHead>
-                      <TableHead>Joining Date</TableHead>
-                      <TableHead>LMS Status</TableHead>
-                      <TableHead>Enrollment</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {course.students.map((student, idx) => (
-                      <TableRow key={`${student.student_id}-${idx}`}>
-                        <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
-                        <TableCell className="font-medium">{student.student_name}</TableCell>
-                        <TableCell>
-                          {student.student_batch ? (
-                            <Badge variant="outline">{student.student_batch}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">No Batch</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {student.joining_date 
-                            ? format(new Date(student.joining_date), 'MMM d, yyyy')
-                            : '-'}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(student.lms_status)}</TableCell>
-                        <TableCell>
-                          {student.enrollment_type === 'pathway' ? (
-                            <Badge variant="outline" className="text-xs">
-                              via {student.pathway_name || 'Pathway'}
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">Direct</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
     </div>
   );
 };
