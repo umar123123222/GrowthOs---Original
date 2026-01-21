@@ -78,10 +78,22 @@ export const MentorStudents = () => {
       // Get pathway courses for mentor's assigned courses
       const { data: pathwayCourses } = await supabase
         .from('pathway_courses')
-        .select('pathway_id, course_id, learning_pathways(id, name)')
+        .select('pathway_id, course_id, step_number, choice_group, is_choice_point, learning_pathways(id, name)')
         .in('course_id', courseIds);
 
       const pathwayIds = [...new Set(pathwayCourses?.map(pc => pc.pathway_id) || [])];
+
+      // Get all choice point courses in these pathways to identify competing courses
+      const { data: allChoicePointCourses } = await supabase
+        .from('pathway_courses')
+        .select('pathway_id, course_id, choice_group, is_choice_point')
+        .in('pathway_id', pathwayIds.length > 0 ? pathwayIds : ['non-existent'])
+        .eq('is_choice_point', true);
+
+      // Get pathway choice selections to filter out students who chose competing courses
+      const { data: choiceSelections } = await supabase
+        .from('pathway_choice_selections')
+        .select('student_id, pathway_id, choice_group, selected_course_id');
 
       // Fetch direct enrollments for mentor's courses
       let directEnrollmentsQuery = supabase
@@ -147,6 +159,34 @@ export const MentorStudents = () => {
         pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.in('pathway_id', pathwayIds);
       }
 
+      // Helper function to check if a student chose a competing course (not the mentor's course)
+      const studentChoseCompetingCourse = (studentId: string, pathwayId: string, mentorCourseId: string): boolean => {
+        // Find if mentor's course is a choice point
+        const mentorCourseChoicePoint = allChoicePointCourses?.find(
+          cp => cp.pathway_id === pathwayId && cp.course_id === mentorCourseId && cp.is_choice_point
+        );
+        
+        if (!mentorCourseChoicePoint || !mentorCourseChoicePoint.choice_group) {
+          // Mentor's course is not a choice point, so no competing courses
+          return false;
+        }
+
+        // Find student's selection for this choice group
+        const studentSelection = choiceSelections?.find(
+          cs => cs.student_id === studentId && 
+                cs.pathway_id === pathwayId && 
+                cs.choice_group === mentorCourseChoicePoint.choice_group
+        );
+
+        if (!studentSelection) {
+          // Student hasn't made a choice yet, include them
+          return false;
+        }
+
+        // If student selected a different course than mentor's course, exclude them
+        return studentSelection.selected_course_id !== mentorCourseId;
+      };
+
       const { data: pathwayEnrollments, error: pathwayError } = await pathwayEnrollmentsQuery;
 
       if (pathwayError) {
@@ -194,6 +234,7 @@ export const MentorStudents = () => {
       pathwayEnrollments?.forEach(enrollment => {
         const student = enrollment.students;
         const pathwayId = enrollment.pathway_id;
+        const studentId = student.id;
         
         // Find which of mentor's courses are in this pathway
         const mentorCoursesInPathway = pathwayCourses?.filter(pc => 
@@ -206,6 +247,11 @@ export const MentorStudents = () => {
           : mentorCoursesInPathway.map(pc => pc.course_id);
         
         targetCourseIds.forEach(targetCourseId => {
+          // Skip if student chose a competing course (e.g., chose Freelancing instead of Ecom 360)
+          if (studentChoseCompetingCourse(studentId, pathwayId, targetCourseId)) {
+            return;
+          }
+
           // Get the course title for this target course
           const targetCourse = mentorCourses?.find(mc => mc.course_id === targetCourseId);
           const courseTitle = targetCourse?.courses?.title || enrollment.courses?.title || 'Unknown Course';
