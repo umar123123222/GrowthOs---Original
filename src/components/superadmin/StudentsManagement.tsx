@@ -1353,9 +1353,8 @@ export function StudentsManagement() {
             Students Directory ({displayStudents.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="w-full p-0">
-          <div className="w-full">
-            <Table className="w-full table-auto">
+        <CardContent className="p-0 overflow-x-auto">
+            <Table className="w-full min-w-[900px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12 pl-6">
@@ -1687,7 +1686,6 @@ export function StudentsManagement() {
               })}
               </TableBody>
             </Table>
-          </div>
         </CardContent>
       </Card>
 

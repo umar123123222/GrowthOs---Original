@@ -1209,8 +1209,8 @@ export const StudentManagement = () => {
             Students Directory ({displayStudents.length})
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          <Table className="w-full">
+        <CardContent className="p-0 overflow-x-auto">
+          <Table className="w-full min-w-[900px]">
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
