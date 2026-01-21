@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Users, BookOpen, GraduationCap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,6 +29,7 @@ export const MentorStudents = () => {
   const [loading, setLoading] = useState(true);
   const [coursesWithStudents, setCoursesWithStudents] = useState<CourseWithStudents[]>([]);
   const [totalStudents, setTotalStudents] = useState(0);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('all');
 
   useEffect(() => {
     if (user) {
@@ -245,6 +246,29 @@ export const MentorStudents = () => {
     }
   };
 
+  // Filter courses based on selection - must be before any early returns
+  const filteredCourses = useMemo(() => {
+    if (selectedCourseId === 'all') {
+      return coursesWithStudents;
+    }
+    return coursesWithStudents.filter(c => c.course_id === selectedCourseId);
+  }, [coursesWithStudents, selectedCourseId]);
+
+  // Calculate stats based on filtered courses
+  const filteredTotalStudents = useMemo(() => {
+    const uniqueStudentIds = new Set<string>();
+    filteredCourses.forEach(course => {
+      course.students.forEach(s => uniqueStudentIds.add(s.student_id));
+    });
+    return uniqueStudentIds.size;
+  }, [filteredCourses]);
+
+  const filteredActiveStudents = useMemo(() => {
+    return filteredCourses.reduce((acc, course) => 
+      acc + course.students.filter(s => s.lms_status === 'active').length, 0
+    );
+  }, [filteredCourses]);
+
   if (loading) {
     return (
       <Card>
@@ -259,6 +283,26 @@ export const MentorStudents = () => {
 
   return (
     <div className="space-y-6">
+      {/* Filter Section */}
+      {coursesWithStudents.length > 1 && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-muted-foreground">Filter by Course:</span>
+          <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+            <SelectTrigger className="w-[250px]">
+              <SelectValue placeholder="All Courses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Courses</SelectItem>
+              {coursesWithStudents.map((course) => (
+                <SelectItem key={course.course_id} value={course.course_id}>
+                  {course.course_title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -267,8 +311,10 @@ export const MentorStudents = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalStudents}</div>
-            <p className="text-xs text-muted-foreground">Across all your courses</p>
+            <div className="text-2xl font-bold">{filteredTotalStudents}</div>
+            <p className="text-xs text-muted-foreground">
+              {selectedCourseId === 'all' ? 'Across all your courses' : 'In selected course'}
+            </p>
           </CardContent>
         </Card>
         <Card>
@@ -287,17 +333,13 @@ export const MentorStudents = () => {
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {coursesWithStudents.reduce((acc, course) => 
-                acc + course.students.filter(s => s.lms_status === 'active').length, 0
-              )}
-            </div>
+            <div className="text-2xl font-bold">{filteredActiveStudents}</div>
             <p className="text-xs text-muted-foreground">Currently learning</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Course Tabs */}
+      {/* Student List */}
       {coursesWithStudents.length === 0 ? (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
@@ -306,71 +348,60 @@ export const MentorStudents = () => {
           </CardContent>
         </Card>
       ) : (
-        <Tabs defaultValue={coursesWithStudents[0]?.course_id} className="w-full">
-          <TabsList className="flex flex-wrap h-auto gap-1">
-            {coursesWithStudents.map(course => (
-              <TabsTrigger key={course.course_id} value={course.course_id} className="flex items-center gap-2">
-                {course.course_title}
-                <Badge variant="secondary" className="ml-1">{course.students.length}</Badge>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {coursesWithStudents.map(course => (
-            <TabsContent key={course.course_id} value={course.course_id} className="mt-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>{course.course_title}</CardTitle>
-                  <CardDescription>
-                    {course.students.length} student{course.students.length !== 1 ? 's' : ''} enrolled
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {course.students.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-4">No students enrolled in this course yet.</p>
-                  ) : (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Student ID</TableHead>
-                          <TableHead>Name</TableHead>
-                          <TableHead>Batch</TableHead>
-                          <TableHead>Joining Date</TableHead>
-                          <TableHead>LMS Status</TableHead>
-                          <TableHead>Enrollment</TableHead>
+        <div className="space-y-4">
+          {filteredCourses.map(course => (
+            <Card key={course.course_id}>
+              <CardHeader>
+                <CardTitle>{course.course_title}</CardTitle>
+                <CardDescription>
+                  {course.students.length} student{course.students.length !== 1 ? 's' : ''} enrolled
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {course.students.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">No students enrolled in this course yet.</p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Batch</TableHead>
+                        <TableHead>Joining Date</TableHead>
+                        <TableHead>LMS Status</TableHead>
+                        <TableHead>Enrollment</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {course.students.map((student, idx) => (
+                        <TableRow key={`${student.student_id}-${idx}`}>
+                          <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
+                          <TableCell className="font-medium">{student.student_name}</TableCell>
+                          <TableCell>{student.student_batch || '-'}</TableCell>
+                          <TableCell>
+                            {student.joining_date 
+                              ? format(new Date(student.joining_date), 'MMM d, yyyy')
+                              : '-'}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(student.lms_status)}</TableCell>
+                          <TableCell>
+                            {student.enrollment_type === 'pathway' ? (
+                              <Badge variant="outline" className="text-xs">
+                                via {student.pathway_name || 'Pathway'}
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs">Direct</Badge>
+                            )}
+                          </TableCell>
                         </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {course.students.map((student, idx) => (
-                          <TableRow key={`${student.student_id}-${idx}`}>
-                            <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
-                            <TableCell className="font-medium">{student.student_name}</TableCell>
-                            <TableCell>{student.student_batch || '-'}</TableCell>
-                            <TableCell>
-                              {student.joining_date 
-                                ? format(new Date(student.joining_date), 'MMM d, yyyy')
-                                : '-'}
-                            </TableCell>
-                            <TableCell>{getStatusBadge(student.lms_status)}</TableCell>
-                            <TableCell>
-                              {student.enrollment_type === 'pathway' ? (
-                                <Badge variant="outline" className="text-xs">
-                                  via {student.pathway_name || 'Pathway'}
-                                </Badge>
-                              ) : (
-                                <Badge variant="secondary" className="text-xs">Direct</Badge>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           ))}
-        </Tabs>
+        </div>
       )}
     </div>
   );

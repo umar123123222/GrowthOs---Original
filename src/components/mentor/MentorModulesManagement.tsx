@@ -161,10 +161,17 @@ function SortableRecordingBadge({ recording, onRemove }: {
   );
 }
 
+interface Course {
+  id: string;
+  title: string;
+}
+
 export function MentorModulesManagement() {
   const [modules, setModules] = useState<Module[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [assignedCourses, setAssignedCourses] = useState<Course[]>([]);
   const [assignedCourseIds, setAssignedCourseIds] = useState<string[]>([]);
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('all');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
@@ -191,14 +198,14 @@ export function MentorModulesManagement() {
       setModules([]);
       setRecordings([]);
     }
-  }, [assignedCourseIds]);
+  }, [assignedCourseIds, selectedCourseId]);
 
   const fetchAssignedCourses = async () => {
     try {
       safeLogger.info('Fetching assigned courses for mentor...');
       const { data, error } = await supabase
         .from('mentor_course_assignments')
-        .select('course_id, is_global')
+        .select('course_id, is_global, courses(id, title)')
         .eq('mentor_id', user?.id);
 
       if (error) throw error;
@@ -207,14 +214,18 @@ export function MentorModulesManagement() {
       const hasGlobalAccess = data?.some(a => a.is_global);
       
       if (hasGlobalAccess) {
-        // Fetch all course IDs
+        // Fetch all courses
         const { data: allCourses, error: coursesError } = await supabase
           .from('courses')
-          .select('id');
+          .select('id, title')
+          .order('title');
         
         if (coursesError) throw coursesError;
+        setAssignedCourses(allCourses || []);
         setAssignedCourseIds(allCourses?.map(c => c.id) || []);
       } else {
+        const courses = data?.map(a => a.courses).filter(Boolean) as Course[] || [];
+        setAssignedCourses(courses);
         const courseIds = data?.map(a => a.course_id).filter(Boolean) as string[] || [];
         setAssignedCourseIds(courseIds);
       }
@@ -227,7 +238,11 @@ export function MentorModulesManagement() {
   };
 
   const fetchModules = async () => {
-    if (assignedCourseIds.length === 0) {
+    const filterCourseIds = selectedCourseId === 'all' 
+      ? assignedCourseIds 
+      : [selectedCourseId];
+
+    if (filterCourseIds.length === 0) {
       setModules([]);
       setLoading(false);
       return;
@@ -241,7 +256,7 @@ export function MentorModulesManagement() {
           *,
           available_lessons(count)
         `)
-        .in('course_id', assignedCourseIds)
+        .in('course_id', filterCourseIds)
         .order('order');
 
       if (error) {
@@ -270,17 +285,21 @@ export function MentorModulesManagement() {
   };
 
   const fetchRecordings = async () => {
-    if (assignedCourseIds.length === 0) {
+    const filterCourseIds = selectedCourseId === 'all' 
+      ? assignedCourseIds 
+      : [selectedCourseId];
+
+    if (filterCourseIds.length === 0) {
       setRecordings([]);
       return;
     }
 
     try {
-      // First get module IDs for assigned courses
+      // First get module IDs for selected courses
       const { data: moduleData, error: moduleError } = await supabase
         .from('modules')
         .select('id')
-        .in('course_id', assignedCourseIds);
+        .in('course_id', filterCourseIds);
 
       if (moduleError) throw moduleError;
       
@@ -531,13 +550,32 @@ export function MentorModulesManagement() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="animate-fade-in">
           <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
             Modules Management
           </h2>
           <p className="text-muted-foreground mt-1 text-lg">View and edit course modules</p>
         </div>
+        
+        {assignedCourses.length > 1 && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground">Filter by Course:</span>
+            <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+              <SelectTrigger className="w-[250px]">
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Courses</SelectItem>
+                {assignedCourses.map((course) => (
+                  <SelectItem key={course.id} value={course.id}>
+                    {course.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-2xl">
