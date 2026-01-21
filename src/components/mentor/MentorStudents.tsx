@@ -3,10 +3,17 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, BookOpen, GraduationCap } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Calendar } from '@/components/ui/calendar';
+import { Users, BookOpen, GraduationCap, Search, CalendarIcon, X, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { format } from 'date-fns';
+import { format, isWithinInterval, parseISO } from 'date-fns';
+import { DateRange } from 'react-day-picker';
+import { cn } from '@/lib/utils';
 
 interface EnrolledStudent {
   student_id: string;
@@ -29,7 +36,14 @@ export const MentorStudents = () => {
   const [loading, setLoading] = useState(true);
   const [coursesWithStudents, setCoursesWithStudents] = useState<CourseWithStudents[]>([]);
   const [totalStudents, setTotalStudents] = useState(0);
+  
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCourseId, setSelectedCourseId] = useState<string>('all');
+  const [selectedBatches, setSelectedBatches] = useState<string[]>([]);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [selectedLmsStatus, setSelectedLmsStatus] = useState<string>('all');
+  const [selectedEnrollmentType, setSelectedEnrollmentType] = useState<string>('all');
 
   useEffect(() => {
     if (user) {
@@ -224,7 +238,6 @@ export const MentorStudents = () => {
     }
   };
 
-
   const getLmsStatus = (enrollmentStatus: string | null, feesCleared: boolean | null): 'active' | 'inactive' | 'completed' => {
     if (enrollmentStatus === 'completed') return 'completed';
     if (enrollmentStatus === 'inactive' || feesCleared === false) return 'inactive';
@@ -242,7 +255,18 @@ export const MentorStudents = () => {
     }
   };
 
-  // Filter courses based on selection - must be before any early returns
+  // Extract unique batches from all students
+  const availableBatches = useMemo(() => {
+    const batches = new Set<string>();
+    coursesWithStudents.forEach(course => {
+      course.students.forEach(s => {
+        if (s.student_batch) batches.add(s.student_batch);
+      });
+    });
+    return Array.from(batches).sort();
+  }, [coursesWithStudents]);
+
+  // Filter courses based on selection
   const filteredCourses = useMemo(() => {
     if (selectedCourseId === 'all') {
       return coursesWithStudents;
@@ -250,20 +274,87 @@ export const MentorStudents = () => {
     return coursesWithStudents.filter(c => c.course_id === selectedCourseId);
   }, [coursesWithStudents, selectedCourseId]);
 
+  // Apply all filters to get filtered students per course
+  const filteredCoursesWithStudents = useMemo(() => {
+    return filteredCourses.map(course => {
+      let students = [...course.students];
+
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        students = students.filter(s => 
+          s.student_name.toLowerCase().includes(query) ||
+          s.student_id.toLowerCase().includes(query)
+        );
+      }
+
+      // Batch filter (multi-select)
+      if (selectedBatches.length > 0) {
+        students = students.filter(s => 
+          s.student_batch ? selectedBatches.includes(s.student_batch) : false
+        );
+      }
+
+      // Date range filter
+      if (dateRange?.from) {
+        students = students.filter(s => {
+          if (!s.joining_date) return false;
+          const joinDate = parseISO(s.joining_date);
+          if (dateRange.to) {
+            return isWithinInterval(joinDate, { start: dateRange.from!, end: dateRange.to });
+          }
+          return joinDate >= dateRange.from!;
+        });
+      }
+
+      // LMS status filter
+      if (selectedLmsStatus !== 'all') {
+        students = students.filter(s => s.lms_status === selectedLmsStatus);
+      }
+
+      // Enrollment type filter
+      if (selectedEnrollmentType !== 'all') {
+        students = students.filter(s => s.enrollment_type === selectedEnrollmentType);
+      }
+
+      return { ...course, students };
+    }).filter(course => course.students.length > 0);
+  }, [filteredCourses, searchQuery, selectedBatches, dateRange, selectedLmsStatus, selectedEnrollmentType]);
+
   // Calculate stats based on filtered courses
   const filteredTotalStudents = useMemo(() => {
     const uniqueStudentIds = new Set<string>();
-    filteredCourses.forEach(course => {
+    filteredCoursesWithStudents.forEach(course => {
       course.students.forEach(s => uniqueStudentIds.add(s.student_id));
     });
     return uniqueStudentIds.size;
-  }, [filteredCourses]);
+  }, [filteredCoursesWithStudents]);
 
   const filteredActiveStudents = useMemo(() => {
-    return filteredCourses.reduce((acc, course) => 
+    return filteredCoursesWithStudents.reduce((acc, course) => 
       acc + course.students.filter(s => s.lms_status === 'active').length, 0
     );
-  }, [filteredCourses]);
+  }, [filteredCoursesWithStudents]);
+
+  const handleBatchToggle = (batch: string) => {
+    setSelectedBatches(prev => 
+      prev.includes(batch) 
+        ? prev.filter(b => b !== batch)
+        : [...prev, batch]
+    );
+  };
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setSelectedCourseId('all');
+    setSelectedBatches([]);
+    setDateRange(undefined);
+    setSelectedLmsStatus('all');
+    setSelectedEnrollmentType('all');
+  };
+
+  const hasActiveFilters = searchQuery || selectedCourseId !== 'all' || selectedBatches.length > 0 || 
+    dateRange?.from || selectedLmsStatus !== 'all' || selectedEnrollmentType !== 'all';
 
   if (loading) {
     return (
@@ -280,24 +371,176 @@ export const MentorStudents = () => {
   return (
     <div className="space-y-6">
       {/* Filter Section */}
-      {coursesWithStudents.length > 1 && (
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">Filter by Course:</span>
-          <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-            <SelectTrigger className="w-[250px]">
-              <SelectValue placeholder="All Courses" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Courses</SelectItem>
-              {coursesWithStudents.map((course) => (
-                <SelectItem key={course.course_id} value={course.course_id}>
-                  {course.course_title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      )}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Filter className="h-4 w-4" />
+            Filters
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* First Row: Search and Course */}
+          <div className="flex flex-wrap gap-3">
+            {/* Search */}
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or student ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+
+            {/* Course Filter */}
+            <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All Courses" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Courses</SelectItem>
+                {coursesWithStudents.map((course) => (
+                  <SelectItem key={course.course_id} value={course.course_id}>
+                    {course.course_title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Second Row: Other Filters */}
+          <div className="flex flex-wrap gap-3">
+            {/* Batch Multi-Select */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="min-w-[150px] justify-start">
+                  {selectedBatches.length > 0 ? (
+                    <span className="truncate">
+                      {selectedBatches.length} batch{selectedBatches.length > 1 ? 'es' : ''} selected
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">Select Batches</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[200px] p-2" align="start">
+                <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                  {availableBatches.length === 0 ? (
+                    <p className="text-sm text-muted-foreground p-2">No batches available</p>
+                  ) : (
+                    availableBatches.map((batch) => (
+                      <div key={batch} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`batch-${batch}`}
+                          checked={selectedBatches.includes(batch)}
+                          onCheckedChange={() => handleBatchToggle(batch)}
+                        />
+                        <label
+                          htmlFor={`batch-${batch}`}
+                          className="text-sm cursor-pointer flex-1"
+                        >
+                          {batch}
+                        </label>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {selectedBatches.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full mt-2"
+                    onClick={() => setSelectedBatches([])}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
+
+            {/* Date Range Picker */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "min-w-[200px] justify-start text-left font-normal",
+                    !dateRange?.from && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d, yyyy")}
+                      </>
+                    ) : (
+                      format(dateRange.from, "MMM d, yyyy")
+                    )
+                  ) : (
+                    <span>Joining Date Range</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={setDateRange}
+                  numberOfMonths={2}
+                />
+                {dateRange?.from && (
+                  <div className="p-2 border-t">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setDateRange(undefined)}
+                    >
+                      Clear
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
+
+            {/* LMS Status */}
+            <Select value={selectedLmsStatus} onValueChange={setSelectedLmsStatus}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="LMS Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Enrollment Type */}
+            <Select value={selectedEnrollmentType} onValueChange={setSelectedEnrollmentType}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Enrollment Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Types</SelectItem>
+                <SelectItem value="direct">Direct</SelectItem>
+                <SelectItem value="pathway">Pathway</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Clear All Button */}
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" onClick={clearAllFilters} className="text-muted-foreground">
+                <X className="h-4 w-4 mr-1" />
+                Clear All
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -309,7 +552,7 @@ export const MentorStudents = () => {
           <CardContent>
             <div className="text-2xl font-bold">{filteredTotalStudents}</div>
             <p className="text-xs text-muted-foreground">
-              {selectedCourseId === 'all' ? 'Across all your courses' : 'In selected course'}
+              {hasActiveFilters ? 'Matching filters' : 'Across all your courses'}
             </p>
           </CardContent>
         </Card>
@@ -343,63 +586,67 @@ export const MentorStudents = () => {
             <p>No courses assigned yet. Contact an administrator to get course assignments.</p>
           </CardContent>
         </Card>
+      ) : filteredCoursesWithStudents.length === 0 ? (
+        <Card>
+          <CardContent className="p-6 text-center text-muted-foreground">
+            <Search className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No students match your filters.</p>
+            <Button variant="link" onClick={clearAllFilters}>Clear all filters</Button>
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {filteredCourses.map(course => (
+          {filteredCoursesWithStudents.map(course => (
             <Card key={course.course_id}>
               <CardHeader>
                 <CardTitle>{course.course_title}</CardTitle>
                 <CardDescription>
-                  {course.students.length} student{course.students.length !== 1 ? 's' : ''} enrolled
+                  {course.students.length} student{course.students.length !== 1 ? 's' : ''} {hasActiveFilters ? 'matching' : 'enrolled'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {course.students.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">No students enrolled in this course yet.</p>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Student ID</TableHead>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Batch</TableHead>
-                        <TableHead>Joining Date</TableHead>
-                        <TableHead>LMS Status</TableHead>
-                        <TableHead>Enrollment</TableHead>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student ID</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Batch</TableHead>
+                      <TableHead>Joining Date</TableHead>
+                      <TableHead>LMS Status</TableHead>
+                      <TableHead>Enrollment</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {course.students.map((student, idx) => (
+                      <TableRow key={`${student.student_id}-${idx}`}>
+                        <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
+                        <TableCell className="font-medium">{student.student_name}</TableCell>
+                        <TableCell>
+                          {student.student_batch ? (
+                            <Badge variant="outline">{student.student_batch}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">No Batch</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {student.joining_date 
+                            ? format(new Date(student.joining_date), 'MMM d, yyyy')
+                            : '-'}
+                        </TableCell>
+                        <TableCell>{getStatusBadge(student.lms_status)}</TableCell>
+                        <TableCell>
+                          {student.enrollment_type === 'pathway' ? (
+                            <Badge variant="outline" className="text-xs">
+                              via {student.pathway_name || 'Pathway'}
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-xs">Direct</Badge>
+                          )}
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {course.students.map((student, idx) => (
-                        <TableRow key={`${student.student_id}-${idx}`}>
-                          <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
-                          <TableCell className="font-medium">{student.student_name}</TableCell>
-                          <TableCell>
-                            {student.student_batch ? (
-                              <Badge variant="outline">{student.student_batch}</Badge>
-                            ) : (
-                              <span className="text-muted-foreground">No Batch</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {student.joining_date 
-                              ? format(new Date(student.joining_date), 'MMM d, yyyy')
-                              : '-'}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(student.lms_status)}</TableCell>
-                          <TableCell>
-                            {student.enrollment_type === 'pathway' ? (
-                              <Badge variant="outline" className="text-xs">
-                                via {student.pathway_name || 'Pathway'}
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="text-xs">Direct</Badge>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           ))}
