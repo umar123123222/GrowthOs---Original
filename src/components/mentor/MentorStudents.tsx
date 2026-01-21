@@ -145,9 +145,6 @@ export const MentorStudents = () => {
       // Filter by pathway_id (pathways that include mentor's courses) instead of course_id
       if (!isGlobalMentor && pathwayIds.length > 0) {
         pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.in('pathway_id', pathwayIds);
-      } else if (!isGlobalMentor && pathwayIds.length === 0) {
-        // No pathways contain mentor's courses, so don't fetch any pathway enrollments
-        pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.eq('pathway_id', 'non-existent-id');
       }
 
       const { data: pathwayEnrollments, error: pathwayError } = await pathwayEnrollmentsQuery;
@@ -459,7 +456,7 @@ export const MentorStudents = () => {
           {/* Search and Filter Icon */}
           <div className="flex items-center gap-3">
             {/* Search */}
-            <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search name or ID..."
