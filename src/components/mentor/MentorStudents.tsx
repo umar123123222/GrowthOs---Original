@@ -145,6 +145,8 @@ export const MentorStudents = () => {
       console.log('[MentorStudents] Direct enrollments:', directEnrollments?.length);
 
       // Fetch pathway enrollments - include students in pathways that contain mentor's assigned courses
+      // NOTE: Using learning_pathways (LEFT JOIN) instead of learning_pathways!inner because 
+      // the !inner join with RLS restrictive policies can cause data to be filtered out
       let pathwayEnrollmentsQuery = supabase
         .from('course_enrollments')
         .select(`
@@ -165,7 +167,7 @@ export const MentorStudents = () => {
             users!inner(id, full_name)
           ),
           courses(id, title),
-          learning_pathways!inner(id, name)
+          learning_pathways(id, name)
         `)
         .not('pathway_id', 'is', null);
 
