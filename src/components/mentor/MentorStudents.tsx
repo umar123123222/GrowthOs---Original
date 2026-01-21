@@ -599,7 +599,7 @@ export const MentorStudents = () => {
           {filteredCoursesWithStudents.map(course => (
             <Card key={course.course_id}>
               <CardHeader>
-                <CardTitle>{course.course_title}</CardTitle>
+                <CardTitle>Student Details</CardTitle>
                 <CardDescription>
                   {course.students.length} student{course.students.length !== 1 ? 's' : ''} {hasActiveFilters ? 'matching' : 'enrolled'}
                 </CardDescription>
