@@ -1080,7 +1080,7 @@ const Layout = memo(({
           }`} 
           style={{ paddingTop: isBannerVisible ? (isMobile ? '104px' : '144px') : (isMobile ? '72px' : '96px') }}
         >
-          <div className="mx-auto w-full max-w-7xl px-3 sm:px-6 py-0 lg:px-4">
+          <div className="mx-auto w-full max-w-[1800px] px-3 sm:px-6 py-0 lg:px-4">
             <Suspense fallback={<RouteContentLoader path={location.pathname} />}>
               <Outlet />
             </Suspense>
