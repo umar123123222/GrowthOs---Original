@@ -7,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
-import { Play, CheckCircle, Clock, FileText, Target, TrendingUp, Users, Video, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Play, CheckCircle, Clock, FileText, Target, TrendingUp, Users, Video, ChevronLeft, ChevronRight, Search, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { PaymentReports } from './PaymentReports';
 interface StudentAnalytics {
   id: string;
   full_name: string;
@@ -297,8 +298,11 @@ export const StudentAnalytics = () => {
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
-          
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
+          <TabsTrigger value="payments" className="gap-2">
+            <DollarSign className="h-4 w-4" />
+            Payments
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -498,6 +502,10 @@ export const StudentAnalytics = () => {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="payments" className="space-y-4">
+          <PaymentReports />
         </TabsContent>
       </Tabs>
     </div>;
