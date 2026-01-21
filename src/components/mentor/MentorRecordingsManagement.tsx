@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Video, ChevronDown, GripVertical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { RecordingRatingDetails } from '../superadmin/RecordingRatingDetails';
 import { RecordingAttachmentsManager } from '../superadmin/RecordingAttachmentsManager';
 import { safeLogger } from '@/lib/safe-logger';
@@ -185,6 +186,7 @@ export function MentorRecordingsManagement() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assignedCourseIds, setAssignedCourseIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecording, setEditingRecording] = useState<Recording | null>(null);
@@ -199,16 +201,85 @@ export function MentorRecordingsManagement() {
     assignment_id: ''
   });
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchRecordings();
-    fetchModules();
-    fetchAssignments();
-  }, []);
+    if (user?.id) {
+      fetchAssignedCourses();
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (assignedCourseIds.length > 0) {
+      fetchRecordings();
+      fetchModules();
+      fetchAssignments();
+    } else if (assignedCourseIds.length === 0 && !loading) {
+      setRecordings([]);
+      setModules([]);
+      setAssignments([]);
+    }
+  }, [assignedCourseIds]);
+
+  const fetchAssignedCourses = async () => {
+    try {
+      safeLogger.info('Fetching assigned courses for mentor...');
+      const { data, error } = await supabase
+        .from('mentor_course_assignments')
+        .select('course_id, is_global')
+        .eq('mentor_id', user?.id);
+
+      if (error) throw error;
+
+      // Check if mentor has global access
+      const hasGlobalAccess = data?.some(a => a.is_global);
+      
+      if (hasGlobalAccess) {
+        // Fetch all course IDs
+        const { data: allCourses, error: coursesError } = await supabase
+          .from('courses')
+          .select('id');
+        
+        if (coursesError) throw coursesError;
+        setAssignedCourseIds(allCourses?.map(c => c.id) || []);
+      } else {
+        const courseIds = data?.map(a => a.course_id).filter(Boolean) as string[] || [];
+        setAssignedCourseIds(courseIds);
+      }
+      
+      safeLogger.info('Assigned courses fetched');
+    } catch (error) {
+      safeLogger.error('Error fetching assigned courses:', error);
+      setLoading(false);
+    }
+  };
 
   const fetchRecordings = async () => {
+    if (assignedCourseIds.length === 0) {
+      setRecordings([]);
+      setLoading(false);
+      return;
+    }
+
     try {
-      safeLogger.info('Fetching recordings (mentor view)...');
+      safeLogger.info('Fetching recordings (mentor view) for assigned courses...');
+      
+      // First get module IDs for assigned courses
+      const { data: moduleData, error: moduleError } = await supabase
+        .from('modules')
+        .select('id')
+        .in('course_id', assignedCourseIds);
+
+      if (moduleError) throw moduleError;
+      
+      const moduleIds = moduleData?.map(m => m.id) || [];
+      
+      if (moduleIds.length === 0) {
+        setRecordings([]);
+        setLoading(false);
+        return;
+      }
+
       // Mentors cannot see recording_url - only superadmins/admins can
       const { data, error } = await supabase
         .from('available_lessons')
@@ -222,6 +293,7 @@ export function MentorRecordingsManagement() {
           assignment_id,
           module:modules(id, title)
         `)
+        .in('module', moduleIds)
         .order('sequence_order');
 
       if (error) {
@@ -244,10 +316,16 @@ export function MentorRecordingsManagement() {
   };
 
   const fetchModules = async () => {
+    if (assignedCourseIds.length === 0) {
+      setModules([]);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('modules')
         .select('id, title')
+        .in('course_id', assignedCourseIds)
         .order('order');
 
       if (error) throw error;
@@ -258,10 +336,16 @@ export function MentorRecordingsManagement() {
   };
 
   const fetchAssignments = async () => {
+    if (assignedCourseIds.length === 0) {
+      setAssignments([]);
+      return;
+    }
+
     try {
       const { data, error } = await supabase
         .from('assignments')
         .select('id, name')
+        .in('course_id', assignedCourseIds)
         .order('name');
 
       if (error) throw error;
