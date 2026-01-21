@@ -74,6 +74,8 @@ export const MentorStudents = () => {
           enrolled_at,
           status,
           pathway_id,
+          batch_id,
+          batches(id, name),
           students!inner(
             id,
             student_id,
@@ -106,6 +108,8 @@ export const MentorStudents = () => {
           pathway_id,
           enrolled_at,
           status,
+          batch_id,
+          batches(id, name),
           students!inner(
             id,
             student_id,
@@ -153,13 +157,13 @@ export const MentorStudents = () => {
         if (!uniqueStudentIds.has(studentKey)) {
           uniqueStudentIds.add(studentKey);
           
-          // Extract batch from goal_brief or student_id prefix if available
-          const batch = extractBatch(student.student_id, student.goal_brief);
+          // Get batch name from the batches relation
+          const batchName = enrollment.batches?.name || null;
 
           courseMap.get(courseId)!.students.push({
             student_id: student.student_id || student.id,
             student_name: student.users?.full_name || 'Unknown',
-            student_batch: batch,
+            student_batch: batchName,
             joining_date: enrollment.enrolled_at || student.enrollment_date || '',
             lms_status: getLmsStatus(enrollment.status, student.fees_cleared),
             enrollment_type: 'direct'
@@ -186,13 +190,13 @@ export const MentorStudents = () => {
         if (!uniqueStudentIds.has(studentKey)) {
           uniqueStudentIds.add(studentKey);
           
-          // Extract batch from goal_brief or student_id prefix if available
-          const batch = extractBatch(student.student_id, student.goal_brief);
+          // Get batch name from the batches relation
+          const batchName = enrollment.batches?.name || null;
 
           courseMap.get(courseId)!.students.push({
             student_id: student.student_id || student.id,
             student_name: student.users?.full_name || 'Unknown',
-            student_batch: batch,
+            student_batch: batchName,
             joining_date: enrollment.enrolled_at || student.enrollment_date || '',
             lms_status: getLmsStatus(enrollment.status, student.fees_cleared),
             enrollment_type: 'pathway',
@@ -220,14 +224,6 @@ export const MentorStudents = () => {
     }
   };
 
-  // Extract batch info from student_id format (e.g., "B12-001") or goal_brief
-  const extractBatch = (studentId: string | null, goalBrief: string | null): string | null => {
-    if (studentId) {
-      const match = studentId.match(/^([A-Z]+\d+)/i);
-      if (match) return match[1];
-    }
-    return null;
-  };
 
   const getLmsStatus = (enrollmentStatus: string | null, feesCleared: boolean | null): 'active' | 'inactive' | 'completed' => {
     if (enrollmentStatus === 'completed') return 'completed';
@@ -377,7 +373,13 @@ export const MentorStudents = () => {
                         <TableRow key={`${student.student_id}-${idx}`}>
                           <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
                           <TableCell className="font-medium">{student.student_name}</TableCell>
-                          <TableCell>{student.student_batch || '-'}</TableCell>
+                          <TableCell>
+                            {student.student_batch ? (
+                              <Badge variant="outline">{student.student_batch}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground">No Batch</span>
+                            )}
+                          </TableCell>
                           <TableCell>
                             {student.joining_date 
                               ? format(new Date(student.joining_date), 'MMM d, yyyy')
