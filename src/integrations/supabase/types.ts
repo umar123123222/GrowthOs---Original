@@ -2909,6 +2909,7 @@ export type Database = {
         }
         Returns: Json
       }
+      current_user_is_mentor: { Args: never; Returns: boolean }
       enroll_student_in_course: {
         Args: {
           p_course_id: string
@@ -3188,6 +3189,10 @@ export type Database = {
       }
       is_course_fully_completed: {
         Args: { p_course_id: string; p_user_id: string }
+        Returns: boolean
+      }
+      is_mentor_student: {
+        Args: { _mentor_id: string; _student_user_id: string }
         Returns: boolean
       }
       is_module_completed: {
