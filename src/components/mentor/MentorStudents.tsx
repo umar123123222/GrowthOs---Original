@@ -189,38 +189,53 @@ export const MentorStudents = () => {
         }
       });
 
-      // Process pathway enrollments
+      // Process pathway enrollments - associate students with mentor's assigned courses that are in the pathway
       pathwayEnrollments?.forEach(enrollment => {
-        const courseId = enrollment.course_id;
-        const courseTitle = enrollment.courses?.title || 'Unknown Course';
-        
-        if (!courseMap.has(courseId)) {
-          courseMap.set(courseId, {
-            course_id: courseId,
-            course_title: courseTitle,
-            students: []
-          });
-        }
-
         const student = enrollment.students;
-        const studentKey = `${student.user_id}-${courseId}`;
+        const pathwayId = enrollment.pathway_id;
         
-        if (!uniqueStudentIds.has(studentKey)) {
-          uniqueStudentIds.add(studentKey);
+        // Find which of mentor's courses are in this pathway
+        const mentorCoursesInPathway = pathwayCourses?.filter(pc => 
+          pc.pathway_id === pathwayId && courseIds.includes(pc.course_id)
+        ) || [];
+        
+        // If global mentor, or for each mentor course in the pathway, add the student
+        const targetCourseIds = isGlobalMentor 
+          ? [enrollment.course_id] // For global mentor, use actual enrollment course
+          : mentorCoursesInPathway.map(pc => pc.course_id);
+        
+        targetCourseIds.forEach(targetCourseId => {
+          // Get the course title for this target course
+          const targetCourse = mentorCourses?.find(mc => mc.course_id === targetCourseId);
+          const courseTitle = targetCourse?.courses?.title || enrollment.courses?.title || 'Unknown Course';
           
-          // Get batch name from the batches relation
-          const batchName = enrollment.batches?.name || null;
+          if (!courseMap.has(targetCourseId)) {
+            courseMap.set(targetCourseId, {
+              course_id: targetCourseId,
+              course_title: courseTitle,
+              students: []
+            });
+          }
 
-          courseMap.get(courseId)!.students.push({
-            student_id: student.student_id || student.id,
-            student_name: student.users?.full_name || 'Unknown',
-            student_batch: batchName,
-            joining_date: enrollment.enrolled_at || student.enrollment_date || '',
-            lms_status: getLmsStatus(enrollment.status, student.fees_cleared),
-            enrollment_type: 'pathway',
-            pathway_name: enrollment.learning_pathways?.name
-          });
-        }
+          const studentKey = `${student.user_id}-${targetCourseId}`;
+          
+          if (!uniqueStudentIds.has(studentKey)) {
+            uniqueStudentIds.add(studentKey);
+            
+            // Get batch name from the batches relation
+            const batchName = enrollment.batches?.name || null;
+
+            courseMap.get(targetCourseId)!.students.push({
+              student_id: student.student_id || student.id,
+              student_name: student.users?.full_name || 'Unknown',
+              student_batch: batchName,
+              joining_date: enrollment.enrolled_at || student.enrollment_date || '',
+              lms_status: getLmsStatus(enrollment.status, student.fees_cleared),
+              enrollment_type: 'pathway',
+              pathway_name: enrollment.learning_pathways?.name
+            });
+          }
+        });
       });
 
       const coursesArray = Array.from(courseMap.values()).sort((a, b) => 
