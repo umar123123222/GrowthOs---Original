@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface VideoPreviewDialogProps {
   open: boolean;
@@ -82,9 +83,12 @@ export function VideoPreviewDialog({
   recordingTitle, 
   recordingUrl 
 }: VideoPreviewDialogProps) {
+  const { user } = useAuth();
   const [iframeKey, setIframeKey] = useState(0);
   const [videoError, setVideoError] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  
+  const canSeeUrl = user?.role === 'superadmin' || user?.role === 'admin';
 
   useEffect(() => {
     if (open && recordingUrl && iframeRef.current) {
@@ -161,9 +165,11 @@ export function VideoPreviewDialog({
           )}
         </div>
         
-        <div className="text-xs text-muted-foreground break-all">
-          <span className="font-medium">URL:</span> {recordingUrl}
-        </div>
+        {canSeeUrl && (
+          <div className="text-xs text-muted-foreground break-all">
+            <span className="font-medium">URL:</span> {recordingUrl}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
