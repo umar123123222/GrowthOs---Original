@@ -113,7 +113,7 @@ export const MentorStudents = () => {
         console.error('Error fetching direct enrollments:', directError);
       }
 
-      // Fetch pathway enrollments
+      // Fetch pathway enrollments - include students in pathways that contain mentor's assigned courses
       let pathwayEnrollmentsQuery = supabase
         .from('course_enrollments')
         .select(`
@@ -138,8 +138,12 @@ export const MentorStudents = () => {
         `)
         .not('pathway_id', 'is', null);
 
-      if (!isGlobalMentor && courseIds.length > 0) {
-        pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.in('course_id', courseIds);
+      // Filter by pathway_id (pathways that include mentor's courses) instead of course_id
+      if (!isGlobalMentor && pathwayIds.length > 0) {
+        pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.in('pathway_id', pathwayIds);
+      } else if (!isGlobalMentor && pathwayIds.length === 0) {
+        // No pathways contain mentor's courses, so don't fetch any pathway enrollments
+        pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.eq('pathway_id', 'non-existent-id');
       }
 
       const { data: pathwayEnrollments, error: pathwayError } = await pathwayEnrollmentsQuery;
