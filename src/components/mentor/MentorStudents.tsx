@@ -639,6 +639,7 @@ export const MentorStudents = () => {
                 <TableRow>
                   <TableHead>Student ID</TableHead>
                   <TableHead>Name</TableHead>
+                  <TableHead>Enrolled In</TableHead>
                   <TableHead>Batch</TableHead>
                   <TableHead>Joining Date</TableHead>
                   <TableHead>LMS Status</TableHead>
@@ -650,6 +651,17 @@ export const MentorStudents = () => {
                   <TableRow key={`${student.student_id}-${idx}`}>
                     <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
                     <TableCell className="font-medium">{student.student_name}</TableCell>
+                    <TableCell>
+                      {student.enrollment_type === 'pathway' ? (
+                        <span className="text-sm" title={student.pathway_name}>
+                          {student.pathway_name || 'Unknown Pathway'}
+                        </span>
+                      ) : (
+                        <span className="text-sm" title={student.course_title}>
+                          {student.course_title || 'Unknown Course'}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       {student.student_batch ? (
                         <Badge variant="outline">{student.student_batch}</Badge>
