@@ -8,7 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
-import { Users, BookOpen, GraduationCap, Search, CalendarIcon, X, Filter } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Label } from '@/components/ui/label';
+import { Separator } from '@/components/ui/separator';
+import { Users, BookOpen, GraduationCap, Search, CalendarIcon, X, SlidersHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { format, isWithinInterval, parseISO } from 'date-fns';
@@ -453,10 +456,10 @@ export const MentorStudents = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* All Filters in Single Row */}
-          <div className="flex flex-wrap items-center gap-3">
+          {/* Search and Filter Icon */}
+          <div className="flex items-center gap-3">
             {/* Search */}
-            <div className="relative min-w-[180px]">
+            <div className="relative flex-1 min-w-[200px] max-w-[300px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search name or ID..."
@@ -466,158 +469,207 @@ export const MentorStudents = () => {
               />
             </div>
 
-            {/* Course Filter */}
-            <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-              <SelectTrigger className="w-[160px] h-9">
-                <SelectValue placeholder="All Courses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Courses</SelectItem>
-                {coursesWithStudents.map((course) => (
-                  <SelectItem key={course.course_id} value={course.course_id}>
-                    {course.course_title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Batch Multi-Select */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="h-9 min-w-[130px] justify-start">
-                  {selectedBatches.length > 0 ? (
-                    <span className="truncate text-sm">
-                      {selectedBatches.length} batch{selectedBatches.length > 1 ? 'es' : ''}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground text-sm">Batches</span>
+            {/* Filter Sheet Trigger */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon" className="h-9 w-9 relative">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  {hasActiveFilters && (
+                    <span className="absolute -top-1 -right-1 h-3 w-3 bg-primary rounded-full" />
                   )}
                 </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[200px] p-2" align="start">
-                <div className="space-y-2 max-h-[200px] overflow-y-auto">
-                  {availableBatches.length === 0 ? (
-                    <p className="text-sm text-muted-foreground p-2">No batches available</p>
-                  ) : (
-                    availableBatches.map((batch) => (
-                      <div key={batch} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`batch-${batch}`}
-                          checked={selectedBatches.includes(batch)}
-                          onCheckedChange={() => handleBatchToggle(batch)}
-                        />
-                        <label
-                          htmlFor={`batch-${batch}`}
-                          className="text-sm cursor-pointer flex-1"
+              </SheetTrigger>
+              <SheetContent side="right" className="w-[320px] sm:w-[400px]">
+                <SheetHeader>
+                  <SheetTitle>Filters</SheetTitle>
+                </SheetHeader>
+                <div className="mt-6 space-y-6">
+                  {/* Course Filter */}
+                  <div className="space-y-2">
+                    <Label>Course</Label>
+                    <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="All Courses" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Courses</SelectItem>
+                        {coursesWithStudents.map((course) => (
+                          <SelectItem key={course.course_id} value={course.course_id}>
+                            {course.course_title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator />
+
+                  {/* Batch Multi-Select */}
+                  <div className="space-y-2">
+                    <Label>Batches</Label>
+                    <div className="space-y-2 max-h-[150px] overflow-y-auto border rounded-md p-2">
+                      {availableBatches.length === 0 ? (
+                        <p className="text-sm text-muted-foreground p-2">No batches available</p>
+                      ) : (
+                        availableBatches.map((batch) => (
+                          <div key={batch} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`sheet-batch-${batch}`}
+                              checked={selectedBatches.includes(batch)}
+                              onCheckedChange={() => handleBatchToggle(batch)}
+                            />
+                            <label
+                              htmlFor={`sheet-batch-${batch}`}
+                              className="text-sm cursor-pointer flex-1"
+                            >
+                              {batch}
+                            </label>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    {selectedBatches.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full"
+                        onClick={() => setSelectedBatches([])}
+                      >
+                        Clear Batches
+                      </Button>
+                    )}
+                  </div>
+
+                  <Separator />
+
+                  {/* Date Range Picker */}
+                  <div className="space-y-2">
+                    <Label>Joining Date Range</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !dateRange?.from && "text-muted-foreground"
+                          )}
                         >
-                          {batch}
-                        </label>
-                      </div>
-                    ))
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {dateRange?.from ? (
+                            dateRange.to ? (
+                              <span className="text-sm">
+                                {format(dateRange.from, "MMM d, yyyy")} - {format(dateRange.to, "MMM d, yyyy")}
+                              </span>
+                            ) : (
+                              <span className="text-sm">{format(dateRange.from, "MMM d, yyyy")}</span>
+                            )
+                          ) : (
+                            <span className="text-sm">Select date range</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          initialFocus
+                          mode="range"
+                          defaultMonth={dateRange?.from}
+                          selected={dateRange}
+                          onSelect={setDateRange}
+                          numberOfMonths={1}
+                        />
+                        {dateRange?.from && (
+                          <div className="p-2 border-t">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full"
+                              onClick={() => setDateRange(undefined)}
+                            >
+                              Clear
+                            </Button>
+                          </div>
+                        )}
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <Separator />
+
+                  {/* LMS Status */}
+                  <div className="space-y-2">
+                    <Label>LMS Status</Label>
+                    <Select value={selectedLmsStatus} onValueChange={setSelectedLmsStatus}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Status</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator />
+
+                  {/* Enrollment Type */}
+                  <div className="space-y-2">
+                    <Label>Enrollment Type</Label>
+                    <Select value={selectedEnrollmentType} onValueChange={setSelectedEnrollmentType}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="direct">Direct</SelectItem>
+                        <SelectItem value="pathway">Affiliate</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <Separator />
+
+                  {/* Sort Order */}
+                  <div className="space-y-2">
+                    <Label>Sort by Joining Date</Label>
+                    <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'newest' | 'oldest')}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Sort" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="newest">Newest First</SelectItem>
+                        <SelectItem value="oldest">Oldest First</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {hasActiveFilters && (
+                    <>
+                      <Separator />
+                      <Button variant="outline" onClick={clearAllFilters} className="w-full">
+                        <X className="h-4 w-4 mr-2" />
+                        Clear All Filters
+                      </Button>
+                    </>
                   )}
                 </div>
-                {selectedBatches.length > 0 && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="w-full mt-2"
-                    onClick={() => setSelectedBatches([])}
-                  >
-                    Clear
-                  </Button>
-                )}
-              </PopoverContent>
-            </Popover>
-
-            {/* Date Range Picker */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "h-9 min-w-[160px] justify-start text-left font-normal",
-                    !dateRange?.from && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <span className="text-sm">
-                        {format(dateRange.from, "MMM d")} - {format(dateRange.to, "MMM d")}
-                      </span>
-                    ) : (
-                      <span className="text-sm">{format(dateRange.from, "MMM d, yyyy")}</span>
-                    )
-                  ) : (
-                    <span className="text-sm">Date Range</span>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  numberOfMonths={2}
-                />
-                {dateRange?.from && (
-                  <div className="p-2 border-t">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => setDateRange(undefined)}
-                    >
-                      Clear
-                    </Button>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
-
-            {/* LMS Status */}
-            <Select value={selectedLmsStatus} onValueChange={setSelectedLmsStatus}>
-              <SelectTrigger className="w-[130px] h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Enrollment Type */}
-            <Select value={selectedEnrollmentType} onValueChange={setSelectedEnrollmentType}>
-              <SelectTrigger className="w-[130px] h-9">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="direct">Direct</SelectItem>
-                <SelectItem value="pathway">Affiliate</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {/* Sort Order */}
-            <Select value={sortOrder} onValueChange={(value) => setSortOrder(value as 'newest' | 'oldest')}>
-              <SelectTrigger className="w-[120px] h-9">
-                <SelectValue placeholder="Sort" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="newest">Newest</SelectItem>
-                <SelectItem value="oldest">Oldest</SelectItem>
-              </SelectContent>
-            </Select>
+              </SheetContent>
+            </Sheet>
 
             {hasActiveFilters && (
-              <Button variant="ghost" size="sm" onClick={clearAllFilters} className="h-9 text-muted-foreground">
-                <X className="h-4 w-4 mr-1" />
-                Clear
-              </Button>
+              <Badge variant="secondary" className="text-xs">
+                {(() => {
+                  let count = 0;
+                  if (selectedCourseId !== 'all') count++;
+                  if (selectedBatches.length > 0) count++;
+                  if (dateRange?.from) count++;
+                  if (selectedLmsStatus !== 'all') count++;
+                  if (selectedEnrollmentType !== 'all') count++;
+                  if (sortOrder !== 'newest') count++;
+                  return `${count} filter${count > 1 ? 's' : ''} applied`;
+                })()}
+              </Badge>
             )}
           </div>
 
