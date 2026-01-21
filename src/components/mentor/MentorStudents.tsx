@@ -137,8 +137,8 @@ export const MentorStudents = () => {
             goal_brief,
             users!inner(id, full_name)
           ),
-          courses!inner(id, title),
-          learning_pathways(id, name)
+          courses(id, title),
+          learning_pathways!inner(id, name)
         `)
         .not('pathway_id', 'is', null);
 
