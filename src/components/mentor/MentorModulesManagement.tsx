@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, BookOpen, GripVertical } from 'lucide-react';
+import { Plus, Edit, BookOpen, GripVertical, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -172,6 +172,7 @@ export function MentorModulesManagement() {
   const [assignedCourses, setAssignedCourses] = useState<Course[]>([]);
   const [assignedCourseIds, setAssignedCourseIds] = useState<string[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
@@ -520,6 +521,11 @@ export function MentorModulesManagement() {
     }
   };
 
+  // Filter modules by search query
+  const filteredModules = modules.filter(module =>
+    module.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Handle recording reordering in dialog
   const handleRecordingDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -558,24 +564,38 @@ export function MentorModulesManagement() {
           <p className="text-muted-foreground mt-1 text-lg">View and edit course modules</p>
         </div>
         
-        {assignedCourses.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Filter by Course:</span>
-            <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="All Courses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Courses</SelectItem>
-                {assignedCourses.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          {/* Search input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search modules..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-[200px]"
+            />
           </div>
-        )}
+          
+          {/* Course filter */}
+          {assignedCourses.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Course:</span>
+              <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="All Courses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Courses</SelectItem>
+                  {assignedCourses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
         
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="max-w-2xl">
@@ -712,14 +732,23 @@ export function MentorModulesManagement() {
             <BookOpen className="w-6 h-6 mr-3 text-blue-600" />
             All Modules
             <span className="ml-3 text-sm text-muted-foreground font-normal">Drag to reorder</span>
+            {searchQuery && (
+              <span className="ml-2 text-sm text-muted-foreground font-normal">
+                ({filteredModules.length} of {modules.length} shown)
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {modules.length === 0 ? (
+          {filteredModules.length === 0 ? (
             <div className="text-center py-16 animate-fade-in">
               <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-muted-foreground mb-2">No modules found</h3>
-              <p className="text-muted-foreground">Create your first module to get started</p>
+              <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+                {searchQuery ? 'No modules match your search' : 'No modules found'}
+              </h3>
+              <p className="text-muted-foreground">
+                {searchQuery ? 'Try a different search term' : 'Create your first module to get started'}
+              </p>
             </div>
           ) : (
             <DndContext
@@ -740,10 +769,10 @@ export function MentorModulesManagement() {
                 </TableHeader>
                 <TableBody>
                   <SortableContext
-                    items={modules.map(m => m.id)}
+                    items={filteredModules.map(m => m.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {modules.map((module, index) => (
+                    {filteredModules.map((module, index) => (
                       <SortableModuleRow
                         key={module.id}
                         module={module}
