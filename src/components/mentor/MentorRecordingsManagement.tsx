@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import { Plus, Edit, Video, ChevronDown, GripVertical, Play } from 'lucide-react';
+import { Plus, Edit, Video, ChevronDown, GripVertical, Play, Search } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -212,6 +212,7 @@ export function MentorRecordingsManagement() {
   const [assignedCourses, setAssignedCourses] = useState<Course[]>([]);
   const [assignedCourseIds, setAssignedCourseIds] = useState<string[]>([]);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecording, setEditingRecording] = useState<Recording | null>(null);
@@ -555,6 +556,11 @@ export function MentorRecordingsManagement() {
     }
   };
 
+  // Filter recordings by search query
+  const filteredRecordings = recordings.filter(recording =>
+    recording.recording_title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -576,24 +582,38 @@ export function MentorRecordingsManagement() {
           <p className="text-muted-foreground mt-1 text-lg">View and edit video recordings</p>
         </div>
         
-        {assignedCourses.length > 1 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-muted-foreground">Filter by Course:</span>
-            <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
-              <SelectTrigger className="w-[250px]">
-                <SelectValue placeholder="All Courses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Courses</SelectItem>
-                {assignedCourses.map((course) => (
-                  <SelectItem key={course.id} value={course.id}>
-                    {course.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          {/* Search input */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search recordings..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-[200px]"
+            />
           </div>
-        )}
+          
+          {/* Course filter */}
+          {assignedCourses.length > 1 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Course:</span>
+              <Select value={selectedCourseId} onValueChange={setSelectedCourseId}>
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="All Courses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Courses</SelectItem>
+                  {assignedCourses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent className="w-[95vw] sm:max-w-4xl h-[85vh] sm:h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -732,14 +752,23 @@ export function MentorRecordingsManagement() {
           <CardTitle className="flex items-center text-xl">
             <Video className="w-6 h-6 mr-3 text-purple-600" />
             All Recordings
+            {searchQuery && (
+              <span className="ml-2 text-sm text-muted-foreground font-normal">
+                ({filteredRecordings.length} of {recordings.length} shown)
+              </span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          {recordings.length === 0 ? (
+          {filteredRecordings.length === 0 ? (
             <div className="text-center py-16 animate-fade-in">
               <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-muted-foreground mb-2">No recordings found</h3>
-              <p className="text-muted-foreground">Create your first recording to get started</p>
+              <h3 className="text-lg font-semibold text-muted-foreground mb-2">
+                {searchQuery ? 'No recordings match your search' : 'No recordings found'}
+              </h3>
+              <p className="text-muted-foreground">
+                {searchQuery ? 'Try a different search term' : 'Create your first recording to get started'}
+              </p>
             </div>
           ) : (
             <DndContext
@@ -762,10 +791,10 @@ export function MentorRecordingsManagement() {
                 </TableHeader>
                 <TableBody>
                   <SortableContext
-                    items={recordings.map((r) => r.id)}
+                    items={filteredRecordings.map((r) => r.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    {recordings.map((recording, index) => (
+                    {filteredRecordings.map((recording, index) => (
                       <SortableRecordingRow
                         key={recording.id}
                         recording={recording}
