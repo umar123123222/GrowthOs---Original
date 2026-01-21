@@ -23,31 +23,82 @@ export default function MentorDashboard() {
   const fetchStats = async () => {
     if (!user) return;
     try {
-      // Fetch all pending submissions
-      const { data: pendingSubmissions } = await supabase
-        .from('submissions')
-        .select('id')
-        .eq('status', 'pending');
+      // First get mentor's assigned courses
+      const { data: courseAssignments } = await supabase
+        .from('mentor_course_assignments')
+        .select('course_id, is_global')
+        .eq('mentor_id', user.id);
 
-      // Fetch all approved/checked assignments
-      const { data: checkedSubmissions } = await supabase
-        .from('submissions')
-        .select('id')
-        .eq('status', 'approved');
+      const isGlobalMentor = courseAssignments?.some(a => a.is_global) || false;
+      const assignedCourseIds = courseAssignments
+        ?.filter(a => a.course_id)
+        .map(a => a.course_id) || [];
 
-      // Fetch total students for sessions calculation (using as proxy for sessions)
-      const { data: students } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'student');
+      // If no courses assigned and not global, return zeros
+      if (!isGlobalMentor && assignedCourseIds.length === 0) {
+        setStats({ pendingReviews: 0, checkedAssignments: 0, sessionsMentored: 0 });
+        return;
+      }
 
-      // Calculate sessions mentored based on student count and activity
-      const sessionsMentored = Math.min(students?.length || 0, 15);
+      // Get assignments for mentor's courses
+      let assignmentIds: string[] = [];
+      if (isGlobalMentor) {
+        const { data: allAssignments } = await supabase
+          .from('assignments')
+          .select('id');
+        assignmentIds = allAssignments?.map(a => a.id) || [];
+      } else if (assignedCourseIds.length > 0) {
+        const { data: courseAssignmentsData } = await supabase
+          .from('assignments')
+          .select('id')
+          .in('course_id', assignedCourseIds);
+        assignmentIds = courseAssignmentsData?.map(a => a.id) || [];
+      }
+
+      // Fetch pending submissions for mentor's assignments
+      let pendingCount = 0;
+      let checkedCount = 0;
+
+      if (assignmentIds.length > 0) {
+        const { data: pendingSubmissions } = await supabase
+          .from('submissions')
+          .select('id')
+          .eq('status', 'pending')
+          .in('assignment_id', assignmentIds);
+
+        const { data: checkedSubmissions } = await supabase
+          .from('submissions')
+          .select('id')
+          .eq('status', 'approved')
+          .in('assignment_id', assignmentIds);
+
+        pendingCount = pendingSubmissions?.length || 0;
+        checkedCount = checkedSubmissions?.length || 0;
+      }
+
+      // Count live sessions from batch_timeline_items for mentor's courses
+      let sessionsCount = 0;
+      if (isGlobalMentor) {
+        const { data: sessions } = await supabase
+          .from('batch_timeline_items')
+          .select('id')
+          .eq('type', 'live_session')
+          .eq('session_status', 'completed');
+        sessionsCount = sessions?.length || 0;
+      } else if (assignedCourseIds.length > 0) {
+        const { data: sessions } = await supabase
+          .from('batch_timeline_items')
+          .select('id')
+          .eq('type', 'live_session')
+          .eq('session_status', 'completed')
+          .in('course_id', assignedCourseIds);
+        sessionsCount = sessions?.length || 0;
+      }
 
       setStats({
-        pendingReviews: pendingSubmissions?.length || 0,
-        checkedAssignments: checkedSubmissions?.length || 0,
-        sessionsMentored: sessionsMentored
+        pendingReviews: pendingCount,
+        checkedAssignments: checkedCount,
+        sessionsMentored: sessionsCount
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
