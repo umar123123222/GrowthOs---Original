@@ -8,11 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-import { Plus, Edit, Video, ChevronDown, GripVertical } from 'lucide-react';
+import { Plus, Edit, Video, ChevronDown, GripVertical, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from '../superadmin/RecordingRatingDetails';
 import { RecordingAttachmentsManager } from '../superadmin/RecordingAttachmentsManager';
+import { VideoPreviewDialog } from '../VideoPreviewDialog';
 import { safeLogger } from '@/lib/safe-logger';
 import {
   DndContext,
@@ -35,7 +36,7 @@ import { CSS } from '@dnd-kit/utilities';
 interface Recording {
   id: string;
   recording_title: string;
-  recording_url?: string; // URL not fetched for mentors
+  recording_url?: string | null;
   duration_min: number;
   sequence_order: number;
   notes: string;
@@ -64,12 +65,14 @@ function SortableRecordingRow({
   isExpanded,
   onToggle,
   onEdit,
+  onPreview,
 }: {
   recording: Recording;
   index: number;
   isExpanded: boolean;
   onToggle: () => void;
   onEdit: (recording: Recording) => void;
+  onPreview: (recording: Recording) => void;
 }) {
   const {
     attributes,
@@ -139,6 +142,20 @@ function SortableRecordingRow({
         </TableCell>
         <TableCell className="w-[10%]" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-center space-x-2">
+            {recording.recording_url && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onPreview(recording);
+                }}
+                className="hover-scale"
+                title="Preview video"
+              >
+                <Play className="w-4 h-4" />
+              </Button>
+            )}
             <Button
               variant="outline"
               size="sm"
@@ -190,6 +207,8 @@ export function MentorRecordingsManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRecording, setEditingRecording] = useState<Recording | null>(null);
   const [expandedRecordings, setExpandedRecordings] = useState<Set<string>>(new Set());
+  const [previewRecording, setPreviewRecording] = useState<Recording | null>(null);
+  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     recording_title: '',
     duration_min: 0,
@@ -210,12 +229,12 @@ export function MentorRecordingsManagement() {
   const fetchRecordings = async () => {
     try {
       safeLogger.info('Fetching recordings (mentor view)...');
-      // Mentors cannot see recording_url
       const { data, error } = await supabase
         .from('available_lessons')
         .select(`
           id,
           recording_title,
+          recording_url,
           duration_min,
           sequence_order,
           notes,
@@ -632,6 +651,10 @@ export function MentorRecordingsManagement() {
                         isExpanded={expandedRecordings.has(recording.id)}
                         onToggle={() => toggleRecordingExpansion(recording.id)}
                         onEdit={handleEdit}
+                        onPreview={(rec) => {
+                          setPreviewRecording(rec);
+                          setPreviewDialogOpen(true);
+                        }}
                       />
                     ))}
                   </SortableContext>
@@ -641,6 +664,13 @@ export function MentorRecordingsManagement() {
           )}
         </CardContent>
       </Card>
+
+      <VideoPreviewDialog
+        open={previewDialogOpen}
+        onOpenChange={setPreviewDialogOpen}
+        recordingTitle={previewRecording?.recording_title || ''}
+        recordingUrl={previewRecording?.recording_url || ''}
+      />
     </div>
   );
 }
