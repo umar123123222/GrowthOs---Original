@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, BookOpen, GripVertical } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { safeQuery } from '@/lib/database-safety';
 import type { ModuleResult } from '@/types/database';
 import { safeLogger } from '@/lib/safe-logger';
@@ -163,6 +164,7 @@ function SortableRecordingBadge({ recording, onRemove }: {
 export function MentorModulesManagement() {
   const [modules, setModules] = useState<Module[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [assignedCourseIds, setAssignedCourseIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
@@ -173,21 +175,73 @@ export function MentorModulesManagement() {
     selectedRecordings: [] as string[]
   });
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    fetchModules();
-    fetchRecordings();
-  }, []);
+    if (user?.id) {
+      fetchAssignedCourses();
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (assignedCourseIds.length > 0) {
+      fetchModules();
+      fetchRecordings();
+    } else if (assignedCourseIds.length === 0 && !loading) {
+      setModules([]);
+      setRecordings([]);
+    }
+  }, [assignedCourseIds]);
+
+  const fetchAssignedCourses = async () => {
+    try {
+      safeLogger.info('Fetching assigned courses for mentor...');
+      const { data, error } = await supabase
+        .from('mentor_course_assignments')
+        .select('course_id, is_global')
+        .eq('mentor_id', user?.id);
+
+      if (error) throw error;
+
+      // Check if mentor has global access
+      const hasGlobalAccess = data?.some(a => a.is_global);
+      
+      if (hasGlobalAccess) {
+        // Fetch all course IDs
+        const { data: allCourses, error: coursesError } = await supabase
+          .from('courses')
+          .select('id');
+        
+        if (coursesError) throw coursesError;
+        setAssignedCourseIds(allCourses?.map(c => c.id) || []);
+      } else {
+        const courseIds = data?.map(a => a.course_id).filter(Boolean) as string[] || [];
+        setAssignedCourseIds(courseIds);
+      }
+      
+      safeLogger.info('Assigned courses fetched:', { courseIds: assignedCourseIds });
+    } catch (error) {
+      safeLogger.error('Error fetching assigned courses:', error);
+      setLoading(false);
+    }
+  };
 
   const fetchModules = async () => {
+    if (assignedCourseIds.length === 0) {
+      setModules([]);
+      setLoading(false);
+      return;
+    }
+
     try {
-      safeLogger.info('Fetching modules (mentor view)...');
+      safeLogger.info('Fetching modules (mentor view) for assigned courses...');
       const { data, error } = await supabase
         .from('modules')
         .select(`
           *,
           available_lessons(count)
         `)
+        .in('course_id', assignedCourseIds)
         .order('order');
 
       if (error) {
@@ -216,10 +270,31 @@ export function MentorModulesManagement() {
   };
 
   const fetchRecordings = async () => {
+    if (assignedCourseIds.length === 0) {
+      setRecordings([]);
+      return;
+    }
+
     try {
+      // First get module IDs for assigned courses
+      const { data: moduleData, error: moduleError } = await supabase
+        .from('modules')
+        .select('id')
+        .in('course_id', assignedCourseIds);
+
+      if (moduleError) throw moduleError;
+      
+      const moduleIds = moduleData?.map(m => m.id) || [];
+      
+      if (moduleIds.length === 0) {
+        setRecordings([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('available_lessons')
         .select('id, recording_title, module')
+        .in('module', moduleIds)
         .order('sequence_order');
 
       if (error) throw error;
