@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,11 @@ interface Recording {
   recording_title: string;
   sequence_order?: number;
 }
+
+interface Course {
+  id: string;
+  title: string;
+}
 export function AssignmentManagement() {
   const {
     user
@@ -48,9 +53,14 @@ export function AssignmentManagement() {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+
+  // Filters (match Recordings page pattern)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCourseId, setFilterCourseId] = useState<string>('all');
 
   // Form state
   const [formData, setFormData] = useState({
@@ -65,7 +75,7 @@ export function AssignmentManagement() {
   }, []);
   const fetchData = async () => {
     try {
-      // Fetch assignments with recording details
+      // Fetch assignments
       const {
         data: assignmentsData,
         error: assignmentsError
@@ -73,6 +83,13 @@ export function AssignmentManagement() {
         ascending: false
       });
       if (assignmentsError) throw assignmentsError;
+
+      // Fetch courses for filter dropdown
+      const { data: coursesData, error: coursesError } = await supabase
+        .from('courses')
+        .select('id, title')
+        .order('sequence_order');
+      if (coursesError) throw coursesError;
 
       // Fetch mentors
       const {
@@ -95,6 +112,7 @@ export function AssignmentManagement() {
       })));
       setMentors(mentorsData || []);
       setRecordings(recordingsData || []);
+      setCourses(coursesData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -106,6 +124,16 @@ export function AssignmentManagement() {
       setLoading(false);
     }
   };
+
+  const filteredAssignments = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return assignments.filter((a) => {
+      const matchesSearch = !q || (a.name || '').toLowerCase().includes(q);
+      const matchesCourse =
+        filterCourseId === 'all' || ((a as any).course_id || '') === filterCourseId;
+      return matchesSearch && matchesCourse;
+    });
+  }, [assignments, searchQuery, filterCourseId]);
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) {
@@ -320,16 +348,42 @@ export function AssignmentManagement() {
       {/* All Assignments Section */}
       <div className="section-surface">
         <div className="p-6 section-header rounded-t-xl">
-          <div className="flex items-center space-x-3">
-            <div className="icon-chip">
-              <FileText className="w-4 h-4 text-primary" />
+          <div className="space-y-4">
+            <div className="flex items-center space-x-3">
+              <div className="icon-chip">
+                <FileText className="w-4 h-4 text-primary" />
+              </div>
+              <h2 className="text-xl font-semibold">All Assignments</h2>
             </div>
-            <h2 className="text-xl font-semibold">All Assignments</h2>
+
+            {/* Filters */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+              <div className="flex-1">
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by title..."
+                />
+              </div>
+              <Select value={filterCourseId} onValueChange={setFilterCourseId}>
+                <SelectTrigger className="w-full md:w-[220px]">
+                  <SelectValue placeholder="All Courses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Courses</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
         
         <div className="overflow-x-auto">
-          {assignments.length === 0 ? <div className="text-center py-12">
+          {filteredAssignments.length === 0 ? <div className="text-center py-12">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <FileText className="w-8 h-8 text-gray-400" />
               </div>
@@ -345,7 +399,7 @@ export function AssignmentManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assignments.map(assignment => <TableRow key={assignment.id} className="table-row-hover">
+                {filteredAssignments.map(assignment => <TableRow key={assignment.id} className="table-row-hover">
                     <TableCell className="font-medium bg-white">{assignment.name}</TableCell>
                     <TableCell className="bg-white">{assignment.due_days || 7} days</TableCell>
                     <TableCell className="bg-white">
