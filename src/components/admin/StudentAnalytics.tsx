@@ -191,111 +191,6 @@ export const StudentAnalytics = () => {
         <h1 className="text-3xl font-bold text-gray-900">Student Analytics</h1>
         <p className="text-gray-600 mt-2">Comprehensive overview of student progress and engagement</p>
       </div>
-
-      {/* Overview Stats (hide on Payments tab; PaymentReports has its own summary cards) */}
-      {activeTab !== 'payments' && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-        <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 via-blue-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-blue-700 flex items-center gap-2">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Users className="w-4 h-4 text-blue-600" />
-              </div>
-              Total Students
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-4xl font-bold text-blue-600 mb-1">{overviewStats.total_students}</div>
-            <p className="text-sm text-blue-500 font-medium">All enrolled</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 via-green-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-green-700 flex items-center gap-2">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <TrendingUp className="w-4 h-4 text-green-600" />
-              </div>
-              Active Students
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-4xl font-bold text-green-600 mb-1">{overviewStats.active_students}</div>
-            <p className="text-sm text-green-500 font-medium">Last 30 days</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 via-purple-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-purple-700 flex items-center gap-2">
-              <div className="p-2 bg-purple-100 rounded-lg">
-                <Target className="w-4 h-4 text-purple-600" />
-              </div>
-              Avg Progress
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-4xl font-bold text-purple-600 mb-1">{overviewStats.avg_progress}%</div>
-            <p className="text-sm text-purple-500 font-medium">Overall completion</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 via-emerald-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-emerald-700 flex items-center gap-2">
-              <div className="p-2 bg-emerald-100 rounded-lg">
-                <CheckCircle className="w-4 h-4 text-emerald-600" />
-              </div>
-              Completions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-4xl font-bold text-emerald-600 mb-1">{overviewStats.total_completions}</div>
-            <p className="text-sm text-emerald-500 font-medium">Finished courses</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 via-orange-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-orange-700 flex items-center gap-2">
-              <div className="p-2 bg-orange-100 rounded-lg">
-                <Video className="w-4 h-4 text-orange-600" />
-              </div>
-              Videos Today
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-4xl font-bold text-orange-600 mb-1">{overviewStats.videos_watched_today}</div>
-            <p className="text-sm text-orange-500 font-medium">Views today</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-br from-indigo-50 via-indigo-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
-              <div className="p-2 bg-indigo-100 rounded-lg">
-                <FileText className="w-4 h-4 text-indigo-600" />
-              </div>
-              Submissions Today
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="text-4xl font-bold text-indigo-600 mb-1">{overviewStats.assignments_submitted_today}</div>
-            <p className="text-sm text-indigo-500 font-medium">New submissions</p>
-          </CardContent>
-        </Card>
-      </div>}
-
-      {/* Search Filter (only relevant for Overview/Engagement lists) */}
-      {activeTab !== 'payments' && <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-        <Input
-          placeholder="Search students by name or email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>}
-
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -307,6 +202,110 @@ export const StudentAnalytics = () => {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
+          {/* Overview Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 via-blue-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Users className="w-4 h-4 text-blue-600" />
+                  </div>
+                  Total Students
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-blue-600 mb-1">{overviewStats.total_students}</div>
+                <p className="text-sm text-blue-500 font-medium">All enrolled</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 via-green-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-green-700 flex items-center gap-2">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                  </div>
+                  Active Students
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-green-600 mb-1">{overviewStats.active_students}</div>
+                <p className="text-sm text-green-500 font-medium">Last 30 days</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 via-purple-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-purple-700 flex items-center gap-2">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Target className="w-4 h-4 text-purple-600" />
+                  </div>
+                  Avg Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-purple-600 mb-1">{overviewStats.avg_progress}%</div>
+                <p className="text-sm text-purple-500 font-medium">Overall completion</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 via-emerald-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-emerald-700 flex items-center gap-2">
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  Completions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-emerald-600 mb-1">{overviewStats.total_completions}</div>
+                <p className="text-sm text-emerald-500 font-medium">Finished courses</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 via-orange-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-orange-700 flex items-center gap-2">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Video className="w-4 h-4 text-orange-600" />
+                  </div>
+                  Videos Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-orange-600 mb-1">{overviewStats.videos_watched_today}</div>
+                <p className="text-sm text-orange-500 font-medium">Views today</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-br from-indigo-50 via-indigo-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
+                  <div className="p-2 bg-indigo-100 rounded-lg">
+                    <FileText className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  Submissions Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-indigo-600 mb-1">{overviewStats.assignments_submitted_today}</div>
+                <p className="text-sm text-indigo-500 font-medium">New submissions</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search Filter */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search students by name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-600">
               Showing {startIndex + 1} to {Math.min(endIndex, filteredStudents.length)} of {filteredStudents.length} students
@@ -450,6 +449,110 @@ export const StudentAnalytics = () => {
         </TabsContent>
 
         <TabsContent value="engagement" className="space-y-4">
+          {/* Overview Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 via-blue-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-blue-700 flex items-center gap-2">
+                  <div className="p-2 bg-blue-100 rounded-lg">
+                    <Users className="w-4 h-4 text-blue-600" />
+                  </div>
+                  Total Students
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-blue-600 mb-1">{overviewStats.total_students}</div>
+                <p className="text-sm text-blue-500 font-medium">All enrolled</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 via-green-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-green-700 flex items-center gap-2">
+                  <div className="p-2 bg-green-100 rounded-lg">
+                    <TrendingUp className="w-4 h-4 text-green-600" />
+                  </div>
+                  Active Students
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-green-600 mb-1">{overviewStats.active_students}</div>
+                <p className="text-sm text-green-500 font-medium">Last 30 days</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 via-purple-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-purple-700 flex items-center gap-2">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <Target className="w-4 h-4 text-purple-600" />
+                  </div>
+                  Avg Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-purple-600 mb-1">{overviewStats.avg_progress}%</div>
+                <p className="text-sm text-purple-500 font-medium">Overall completion</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 via-emerald-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-emerald-700 flex items-center gap-2">
+                  <div className="p-2 bg-emerald-100 rounded-lg">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  Completions
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-emerald-600 mb-1">{overviewStats.total_completions}</div>
+                <p className="text-sm text-emerald-500 font-medium">Finished courses</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 via-orange-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-orange-700 flex items-center gap-2">
+                  <div className="p-2 bg-orange-100 rounded-lg">
+                    <Video className="w-4 h-4 text-orange-600" />
+                  </div>
+                  Videos Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-orange-600 mb-1">{overviewStats.videos_watched_today}</div>
+                <p className="text-sm text-orange-500 font-medium">Views today</p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-br from-indigo-50 via-indigo-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
+                  <div className="p-2 bg-indigo-100 rounded-lg">
+                    <FileText className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  Submissions Today
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="text-4xl font-bold text-indigo-600 mb-1">{overviewStats.assignments_submitted_today}</div>
+                <p className="text-sm text-indigo-500 font-medium">New submissions</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Search Filter */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Input
+              placeholder="Search students by name or email..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
@@ -457,7 +560,7 @@ export const StudentAnalytics = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {students.sort((a, b) => new Date(b.last_activity).getTime() - new Date(a.last_activity).getTime()).slice(0, 5).map((student, index) => <div key={student.id} className="flex items-center space-x-3">
+                  {filteredStudents.sort((a, b) => new Date(b.last_activity).getTime() - new Date(a.last_activity).getTime()).slice(0, 5).map((student, index) => <div key={student.id} className="flex items-center space-x-3">
                         <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
                           {index + 1}
                         </div>
@@ -482,7 +585,7 @@ export const StudentAnalytics = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {students.sort((a, b) => b.progress_percentage - a.progress_percentage).slice(0, 5).map((student, index) => <div key={student.id} className="flex items-center space-x-3">
+                  {filteredStudents.sort((a, b) => b.progress_percentage - a.progress_percentage).slice(0, 5).map((student, index) => <div key={student.id} className="flex items-center space-x-3">
                         <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-bold">
                           {index + 1}
                         </div>
