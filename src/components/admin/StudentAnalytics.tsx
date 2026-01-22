@@ -34,6 +34,7 @@ interface OverviewStats {
 }
 export const StudentAnalytics = () => {
   const [students, setStudents] = useState<StudentAnalytics[]>([]);
+  const [activeTab, setActiveTab] = useState<'overview' | 'engagement' | 'payments' | string>('overview');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [overviewStats, setOverviewStats] = useState<OverviewStats>({
@@ -191,8 +192,8 @@ export const StudentAnalytics = () => {
         <p className="text-gray-600 mt-2">Comprehensive overview of student progress and engagement</p>
       </div>
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
+      {/* Overview Stats (hide on Payments tab; PaymentReports has its own summary cards) */}
+      {activeTab !== 'payments' && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 via-blue-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-semibold text-blue-700 flex items-center gap-2">
@@ -282,10 +283,10 @@ export const StudentAnalytics = () => {
             <p className="text-sm text-indigo-500 font-medium">New submissions</p>
           </CardContent>
         </Card>
-      </div>
+      </div>}
 
-      {/* Search Filter */}
-      <div className="relative max-w-md">
+      {/* Search Filter (only relevant for Overview/Engagement lists) */}
+      {activeTab !== 'payments' && <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
         <Input
           placeholder="Search students by name or email..."
@@ -293,9 +294,9 @@ export const StudentAnalytics = () => {
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
         />
-      </div>
+      </div>}
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
