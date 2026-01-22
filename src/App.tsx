@@ -17,6 +17,12 @@ import { PendingInvoice } from "@/types/common";
 import { logger } from "@/lib/logger";
 import { RoleGuard } from "@/components/RoleGuard";
 
+const AdminTabRedirect = ({ user, tab }: { user: any; tab: string }) => {
+  if (user?.role === 'superadmin') return <Navigate to={`/superadmin?tab=${tab}`} replace />;
+  if (user?.role === 'admin') return <Navigate to={`/admin?tab=${tab}`} replace />;
+  return <Navigate to="/" replace />;
+};
+
 // Wrapper component to handle onboarding completion properly
 const OnboardingWrapper = ({ user }: { user: any }) => {
   const navigate = useNavigate();
@@ -248,6 +254,9 @@ const App = () => {
                     
                     {/* Role-specific routes */}
                     <Route path="admin" element={<AdminDashboard />} />
+                    {/* Admin-friendly aliases (avoid falling back to dashboard) */}
+                    <Route path="modules" element={<AdminTabRedirect user={user} tab="modules" />} />
+                    <Route path="pathways" element={<AdminTabRedirect user={user} tab="pathways" />} />
                     <Route path="mentor" element={<MentorDashboard />} />
                     <Route path="mentor/sessions" element={<MentorSessionsPage />} />
                     <Route path="mentor/recordings" element={<MentorRecordingsPage />} />

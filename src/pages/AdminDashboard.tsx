@@ -14,6 +14,7 @@ import { StudentPerformance } from '@/components/admin/StudentPerformance';
 import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
+import { PathwayManagement } from '@/components/superadmin/PathwayManagement';
 import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
@@ -28,6 +29,8 @@ export default function AdminDashboard() {
   const activeTab = searchParams.get('tab') || 'dashboard';
   const renderContent = () => {
     switch (activeTab) {
+      case 'pathways':
+        return <PathwayManagement />;
       case 'modules':
         return <ModulesManagement />;
       case 'recordings':
