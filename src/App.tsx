@@ -255,6 +255,7 @@ const App = () => {
                     {/* Role-specific routes */}
                     <Route path="admin" element={<AdminDashboard />} />
                     {/* Admin-friendly aliases (avoid falling back to dashboard) */}
+                    <Route path="courses" element={<AdminTabRedirect user={user} tab="courses" />} />
                     <Route path="modules" element={<AdminTabRedirect user={user} tab="modules" />} />
                     <Route path="pathways" element={<AdminTabRedirect user={user} tab="pathways" />} />
                     <Route path="mentor" element={<MentorDashboard />} />

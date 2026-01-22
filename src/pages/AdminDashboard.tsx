@@ -24,11 +24,14 @@ import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
 import { BatchManagement } from '@/components/batch';
 import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 import { formatCurrency } from '@/utils/currencyFormatter';
+import { CourseManagement } from '@/components/superadmin/CourseManagement';
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'dashboard';
   const renderContent = () => {
     switch (activeTab) {
+      case 'courses':
+        return <CourseManagement />;
       case 'pathways':
         return <PathwayManagement />;
       case 'modules':
