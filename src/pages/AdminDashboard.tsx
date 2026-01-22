@@ -7,7 +7,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { RoleGuard } from '@/components/RoleGuard';
 import { ContentManagement } from '@/components/admin/ContentManagement';
 import { FinancialManagement } from '@/components/admin/FinancialManagement';
-import { StudentManagement } from '@/components/admin/StudentManagement';
 import { MentorManagement } from '@/components/admin/MentorManagement';
 import { ActivityLogs } from '@/components/admin/ActivityLogs';
 import { StudentPerformance } from '@/components/admin/StudentPerformance';
@@ -15,6 +14,7 @@ import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
 import { PathwayManagement } from '@/components/superadmin/PathwayManagement';
+import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
 import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
@@ -41,7 +41,7 @@ export default function AdminDashboard() {
       case 'success-sessions':
         return <SuccessSessionsManagement />;
       case 'students':
-        return <StudentManagement />;
+        return <StudentsManagement />;
       case 'assignments':
         return <AssignmentManagement />;
       case 'submissions':
