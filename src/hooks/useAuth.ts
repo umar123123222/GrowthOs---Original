@@ -3,6 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types/common';
 import { logger } from '@/lib/logger';
 
+// Module-level throttle to prevent duplicate activity updates when `useAuth`
+// is mounted in multiple places (or when events fire rapidly).
+const lastActiveSentAtByUser = new Map<string, number>();
+const lastActiveInFlightByUser = new Map<string, boolean>();
+const LAST_ACTIVE_THROTTLE_MS = 10_000; // 10s: enough to avoid bursts; still keeps activity fresh.
+
 // Re-export User type for backwards compatibility
 export type { User };
 
@@ -26,13 +32,25 @@ export const useAuth = () => {
   // Update user activity timestamp
   const updateLastActive = async (userId: string) => {
     try {
+      const now = Date.now();
+      const lastSentAt = lastActiveSentAtByUser.get(userId) ?? 0;
+      const inFlight = lastActiveInFlightByUser.get(userId) ?? false;
+
+      // Avoid duplicate PATCH bursts across multiple hook instances.
+      if (inFlight || now - lastSentAt < LAST_ACTIVE_THROTTLE_MS) return;
+
+      lastActiveInFlightByUser.set(userId, true);
       await supabase
         .from('users')
         .update({ last_active_at: new Date().toISOString() })
         .eq('id', userId);
+
+      lastActiveSentAtByUser.set(userId, now);
     } catch (error) {
       // Log technical details only - don't show user error for activity updates
       logger.error('Error updating last active', error);
+    } finally {
+      lastActiveInFlightByUser.set(userId, false);
     }
   };
 
