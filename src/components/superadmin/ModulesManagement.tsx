@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -190,6 +190,11 @@ export function ModulesManagement() {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Filters (match Recordings page behavior)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCourseId, setFilterCourseId] = useState<string>('all');
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [formData, setFormData] = useState({
@@ -200,6 +205,17 @@ export function ModulesManagement() {
     course_id: '' as string
   });
   const { toast } = useToast();
+
+  const filteredModules = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return modules.filter((m) => {
+      const matchesSearch = !q || (m.title || '').toLowerCase().includes(q);
+      const matchesCourse = filterCourseId === 'all' || (m.course_id || '') === filterCourseId;
+      return matchesSearch && matchesCourse;
+    });
+  }, [modules, searchQuery, filterCourseId]);
+
+  const filtersActive = searchQuery.trim() !== '' || filterCourseId !== 'all';
 
   useEffect(() => {
     fetchModules();
@@ -746,25 +762,49 @@ export function ModulesManagement() {
 
       <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
         <CardHeader className="bg-gradient-to-r from-blue-50 to-purple-50 border-b">
-          <CardTitle className="flex items-center text-xl">
-            <BookOpen className="w-6 h-6 mr-3 text-blue-600" />
-            All Modules
-            <span className="ml-3 text-sm text-muted-foreground font-normal">Drag to reorder</span>
-          </CardTitle>
+          <div className="space-y-4">
+            <CardTitle className="flex items-center text-xl">
+              <BookOpen className="w-6 h-6 mr-3 text-blue-600" />
+              All Modules
+              {!filtersActive && (
+                <span className="ml-3 text-sm text-muted-foreground font-normal">Drag to reorder</span>
+              )}
+            </CardTitle>
+
+            {/* Filters */}
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
+              <div className="flex-1">
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by title..."
+                />
+              </div>
+              <Select value={filterCourseId} onValueChange={setFilterCourseId}>
+                <SelectTrigger className="w-full md:w-[220px]">
+                  <SelectValue placeholder="All Courses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Courses</SelectItem>
+                  {courses.map((course) => (
+                    <SelectItem key={course.id} value={course.id}>
+                      {course.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
-          {modules.length === 0 ? (
+          {filteredModules.length === 0 ? (
             <div className="text-center py-16 animate-fade-in">
               <BookOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-muted-foreground mb-2">No modules found</h3>
               <p className="text-muted-foreground">Create your first module to get started</p>
             </div>
           ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleModuleDragEnd}
-            >
+            filtersActive ? (
               <Table>
                 <TableHeader>
                   <TableRow className="bg-gray-50">
@@ -778,24 +818,56 @@ export function ModulesManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  <SortableContext
-                    items={modules.map(m => m.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {modules.map((module, index) => (
-                      <SortableModuleRow
-                        key={module.id}
-                        module={module}
-                        index={index}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        courses={courses}
-                      />
-                    ))}
-                  </SortableContext>
+                  {filteredModules.map((module, index) => (
+                    <SortableModuleRow
+                      key={module.id}
+                      module={module}
+                      index={index}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      courses={courses}
+                    />
+                  ))}
                 </TableBody>
               </Table>
-            </DndContext>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleModuleDragEnd}
+              >
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead className="w-[50px]"></TableHead>
+                      <TableHead className="font-semibold">Title</TableHead>
+                      <TableHead className="font-semibold">Description</TableHead>
+                      <TableHead className="font-semibold">Course</TableHead>
+                      <TableHead className="font-semibold">Order</TableHead>
+                      <TableHead className="font-semibold">Recordings</TableHead>
+                      <TableHead className="font-semibold">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <SortableContext
+                      items={modules.map(m => m.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {modules.map((module, index) => (
+                        <SortableModuleRow
+                          key={module.id}
+                          module={module}
+                          index={index}
+                          onEdit={handleEdit}
+                          onDelete={handleDelete}
+                          courses={courses}
+                        />
+                      ))}
+                    </SortableContext>
+                  </TableBody>
+                </Table>
+              </DndContext>
+            )
           )}
         </CardContent>
       </Card>
