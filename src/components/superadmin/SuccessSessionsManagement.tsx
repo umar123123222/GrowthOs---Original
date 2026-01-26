@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2 } from 'lucide-react';
+import { Calendar, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { safeQuery } from '@/lib/database-safety';
@@ -30,6 +30,8 @@ interface SuccessSession {
   zoom_passcode?: string;
   host_login_email?: string;
   host_login_pwd?: string;
+  course_id?: string;
+  batch_id?: string | null;
   created_at: string;
   created_by: string;
 }
@@ -48,6 +50,8 @@ interface SessionFormData {
   host_login_email: string;
   host_login_pwd: string;
   status: string;
+  course_id: string;
+  batch_id: string;
 }
 
 interface User {
@@ -57,9 +61,24 @@ interface User {
   role: string;
 }
 
+interface Course {
+  id: string;
+  title: string;
+}
+
+interface Batch {
+  id: string;
+  name: string;
+  course_id: string | null;
+  status: string;
+}
+
 export function SuccessSessionsManagement() {
   const [sessions, setSessions] = useState<SuccessSession[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [batches, setBatches] = useState<Batch[]>([]);
+  const [filteredBatches, setFilteredBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<SuccessSession | null>(null);
@@ -76,13 +95,17 @@ export function SuccessSessionsManagement() {
     zoom_passcode: '',
     host_login_email: '',
     host_login_pwd: '',
-    status: 'upcoming'
+    status: 'upcoming',
+    course_id: '',
+    batch_id: ''
   });
   const { toast } = useToast();
 
   useEffect(() => {
     fetchSessions();
     fetchUsers();
+    fetchCourses();
+    fetchBatches();
   }, []);
 
   const fetchSessions = async () => {
@@ -124,6 +147,46 @@ export function SuccessSessionsManagement() {
       });
     }
   };
+
+  const fetchCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('courses')
+        .select('id, title')
+        .eq('is_active', true)
+        .order('title', { ascending: true });
+
+      if (error) throw error;
+      setCourses(data || []);
+    } catch (error) {
+      console.error('Error fetching courses:', error);
+    }
+  };
+
+  const fetchBatches = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('batches')
+        .select('id, name, course_id, status')
+        .eq('status', 'active')
+        .order('name', { ascending: true });
+
+      if (error) throw error;
+      setBatches(data || []);
+    } catch (error) {
+      console.error('Error fetching batches:', error);
+    }
+  };
+
+  // Filter batches when course_id changes
+  useEffect(() => {
+    if (formData.course_id) {
+      const matching = batches.filter(b => b.course_id === formData.course_id);
+      setFilteredBatches(matching);
+    } else {
+      setFilteredBatches([]);
+    }
+  }, [formData.course_id, batches]);
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -176,7 +239,9 @@ export function SuccessSessionsManagement() {
       zoom_passcode: '',
       host_login_email: '',
       host_login_pwd: '',
-      status: 'upcoming'
+      status: 'upcoming',
+      course_id: '',
+      batch_id: ''
     });
     setEditingSession(null);
   };
@@ -188,7 +253,7 @@ export function SuccessSessionsManagement() {
         title: session.title,
         description: session.description || '',
         mentor_name: session.mentor_name || '',
-        mentor_id: '', // We'll need to find the user ID based on mentor_name
+        mentor_id: session.mentor_id || '',
         schedule_date: session.schedule_date || '',
         start_time: session.start_time || '',
         end_time: session.end_time || '',
@@ -197,7 +262,9 @@ export function SuccessSessionsManagement() {
         zoom_passcode: session.zoom_passcode || '',
         host_login_email: session.host_login_email || '',
         host_login_pwd: session.host_login_pwd || '',
-        status: session.status || 'upcoming'
+        status: session.status || 'upcoming',
+        course_id: session.course_id || '',
+        batch_id: session.batch_id || ''
       });
     } else {
       resetForm();
@@ -227,7 +294,7 @@ export function SuccessSessionsManagement() {
         title: formData.title,
         description: formData.description,
         mentor_name: selectedUser ? selectedUser.full_name : formData.mentor_name,
-        mentor_id: formData.mentor_id,
+        mentor_id: formData.mentor_id || null,
         schedule_date: formData.schedule_date,
         start_time: combineDateTime(formData.schedule_date, formData.start_time),
         end_time: formData.end_time ? combineDateTime(formData.schedule_date, formData.end_time) : null,
@@ -236,7 +303,9 @@ export function SuccessSessionsManagement() {
         zoom_passcode: formData.zoom_passcode,
         host_login_email: formData.host_login_email,
         host_login_pwd: formData.host_login_pwd,
-        status: formData.status
+        status: formData.status,
+        course_id: formData.course_id || null,
+        batch_id: formData.batch_id === '' || formData.batch_id === 'unbatched' ? null : formData.batch_id
       };
 
       if (editingSession) {
@@ -510,6 +579,55 @@ export function SuccessSessionsManagement() {
                   </Select>
                 </div>
               </div>
+
+              {/* Course & Batch Targeting */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                    <BookOpen className="w-4 h-4 text-muted-foreground" />
+                    Target Course
+                  </label>
+                  <Select
+                    value={formData.course_id}
+                    onValueChange={(value) => setFormData({ ...formData, course_id: value, batch_id: '' })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All students (no filter)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">All students (no filter)</SelectItem>
+                      {courses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1 flex items-center gap-1">
+                    <Users2 className="w-4 h-4 text-muted-foreground" />
+                    Target Batch
+                  </label>
+                  <Select
+                    value={formData.batch_id}
+                    onValueChange={(value) => setFormData({ ...formData, batch_id: value })}
+                    disabled={!formData.course_id}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={formData.course_id ? 'Select batch' : 'Select course first'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="unbatched">Unbatched students</SelectItem>
+                      {filteredBatches.map((batch) => (
+                        <SelectItem key={batch.id} value={batch.id}>
+                          {batch.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
               
               <div className="flex justify-end space-x-2">
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
@@ -542,9 +660,10 @@ export function SuccessSessionsManagement() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
+                  <TableRow className="bg-muted/40">
                     <TableHead className="font-semibold min-w-[200px]">Session Title</TableHead>
                     <TableHead className="font-semibold min-w-[140px]">Host</TableHead>
+                    <TableHead className="font-semibold min-w-[120px]">Course / Batch</TableHead>
                     <TableHead className="font-semibold min-w-[120px]">Schedule Date</TableHead>
                     <TableHead className="font-semibold min-w-[100px]">Day</TableHead>
                     <TableHead className="font-semibold min-w-[140px]">Time</TableHead>
@@ -571,27 +690,41 @@ export function SuccessSessionsManagement() {
                       </TableCell>
                       <TableCell className="min-w-[140px]">
                         <div className="flex items-center">
-                          <User className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                          <User className="w-4 h-4 mr-2 text-muted-foreground flex-shrink-0" />
                           <span className="font-medium truncate">{session.mentor_name || 'TBD'}</span>
                         </div>
                       </TableCell>
                       <TableCell className="min-w-[120px]">
+                        <div className="flex flex-col gap-1">
+                          <span className="truncate text-sm font-medium">
+                            {courses.find(c => c.id === session.course_id)?.title || '—'}
+                          </span>
+                          {session.course_id && (
+                            <Badge variant="outline" className="text-xs w-fit">
+                              {session.batch_id
+                                ? batches.find(b => b.id === session.batch_id)?.name || 'Batch'
+                                : 'Unbatched'}
+                            </Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="min-w-[120px]">
                         <div className="flex items-center">
-                          <Calendar className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                          <Calendar className="w-4 h-4 mr-2 text-muted-foreground flex-shrink-0" />
                           <span className="whitespace-nowrap">{formatDate(session.schedule_date)}</span>
                         </div>
                       </TableCell>
                       <TableCell className="min-w-[100px]">
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 whitespace-nowrap">
+                        <Badge variant="outline" className="whitespace-nowrap">
                           {getDayOfWeek(session.schedule_date)}
                         </Badge>
                       </TableCell>
                       <TableCell className="min-w-[140px]">
                         <div className="flex items-center">
-                          <Clock className="w-4 h-4 mr-2 text-gray-500 flex-shrink-0" />
+                          <Clock className="w-4 h-4 mr-2 text-muted-foreground flex-shrink-0" />
                           <span className="whitespace-nowrap">{formatTime(session.start_time)}</span>
                           {session.end_time && (
-                            <span className="text-gray-400 ml-1 whitespace-nowrap">- {formatTime(session.end_time)}</span>
+                            <span className="text-muted-foreground ml-1 whitespace-nowrap">- {formatTime(session.end_time)}</span>
                           )}
                         </div>
                       </TableCell>

@@ -28,6 +28,8 @@ interface LiveSession {
   schedule_date: string;
   created_at: string;
   created_by: string;
+  course_id?: string;
+  batch_id?: string | null;
 }
 
 interface SessionAttendance {
@@ -55,12 +57,13 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     if (user?.id) {
       fetchAttendance();
     } else {
-      fetchSessions();
+      // No user – show nothing (RLS will enforce visibility anyway)
       setLoading(false);
     }
   }, [user?.id]);
 
-  const fetchSessions = async () => {
+  // Authenticated user session fetching – relies on RLS policy for filtering
+  const fetchSessions = async (enrolledAt?: string) => {
     safeLogger.info('fetchSessions called');
     try {
       const { data, error } = await supabase
@@ -68,33 +71,31 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         .select('*')
         .order('start_time', { ascending: true });
 
-      safeLogger.info('All sessions found:', { data });
-      safeLogger.info('Query error:', { error });
+      safeLogger.info('Sessions fetched:', { count: data?.length });
       
       if (error) {
         safeLogger.error('Supabase error:', error);
         throw error;
       }
       
-      // Split sessions into upcoming and past
       const now = new Date();
+      const enrolledDate = enrolledAt ? new Date(enrolledAt) : undefined;
+
       const upcoming = (data || []).filter(session => {
         const sessionStart = new Date(session.start_time);
         return sessionStart >= now;
       });
 
+      // Past sessions – optionally filtered to after enrollment date
       const pastSessions = (data || []).filter(session => {
         const sessionEnd = new Date(session.end_time);
-        return sessionEnd < now;
+        const sessionStart = new Date(session.start_time);
+        if (sessionEnd >= now) return false;
+        if (enrolledDate && sessionStart < enrolledDate) return false;
+        return true;
       });
       
-      safeLogger.info('Upcoming sessions after filtering:', { upcoming });
-      safeLogger.info('Past sessions after filtering:', { pastSessions });
-      
-      // Set only the most upcoming session (first one)
       setNextUpcomingSession(upcoming.length > 0 ? upcoming[0] : null);
-      
-      // Set all past sessions as recorded sessions
       setRecordedSessions(pastSessions);
     } catch (error) {
       safeLogger.error('Error fetching sessions:', error);
@@ -110,20 +111,38 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     safeLogger.info('fetchAttendance called, user:', { user });
     try {
       if (!user?.id) {
-        safeLogger.info('No user ID in fetchAttendance, returning');
         setLoading(false);
         return;
       }
 
-      // Fetch user's LMS status and join date
+      // Fetch user's LMS status
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('lms_status, created_at')
+        .select('lms_status')
         .eq('id', user.id)
         .maybeSingle();
       
       if (userError) throw userError;
       setUserLMSStatus(userData?.lms_status || 'active');
+
+      // Fetch earliest enrolled_at from active enrollments (for filtering past sessions)
+      const { data: studentData } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      let earliestEnrolledAt: string | undefined;
+      if (studentData?.id) {
+        const { data: enrollments } = await supabase
+          .from('course_enrollments')
+          .select('enrolled_at')
+          .eq('student_id', studentData.id)
+          .eq('status', 'active')
+          .order('enrolled_at', { ascending: true })
+          .limit(1);
+        earliestEnrolledAt = enrollments?.[0]?.enrolled_at;
+      }
 
       // Fetch user's attendance records
       const { data: attendanceData, error: attendanceError } = await supabase
@@ -138,8 +157,8 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         setAttendance(attendanceData || []);
       }
       
-      // Fetch sessions and filter based on user join date
-      await fetchSessionsForStudent(userData?.created_at);
+      // Now fetch sessions – RLS will automatically filter to the student's enrolled courses/batches
+      await fetchSessions(earliestEnrolledAt);
     } catch (error) {
       safeLogger.error('Error fetching attendance:', error);
     } finally {
@@ -147,55 +166,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     }
   };
 
-  const fetchSessionsForStudent = async (userJoinDate: string) => {
-    safeLogger.info('fetchSessionsForStudent called, userJoinDate:', { userJoinDate });
-    try {
-      const { data, error } = await supabase
-        .from('success_sessions')
-        .select('*')
-        .order('start_time', { ascending: true });
-
-      safeLogger.info('All sessions found:', { data });
-      safeLogger.info('Query error:', { error });
-      
-      if (error) {
-        safeLogger.error('Supabase error:', error);
-        throw error;
-      }
-      
-      // Split sessions into upcoming and past
-      const now = new Date();
-      const userJoinDateTime = new Date(userJoinDate);
-      
-      const upcoming = (data || []).filter(session => {
-        const sessionStart = new Date(session.start_time);
-        return sessionStart >= now;
-      });
-
-      // Filter past sessions to only include those that happened after user joined
-      const pastSessionsAfterJoin = (data || []).filter(session => {
-        const sessionEnd = new Date(session.end_time);
-        const sessionStart = new Date(session.start_time);
-        return sessionEnd < now && sessionStart >= userJoinDateTime;
-      });
-      
-      safeLogger.info('Upcoming sessions after filtering:', { upcoming });
-      safeLogger.info('Past sessions after user join date:', { pastSessionsAfterJoin });
-      
-      // Set only the most upcoming session (first one)
-      setNextUpcomingSession(upcoming.length > 0 ? upcoming[0] : null);
-      
-      // Set filtered past sessions as recorded sessions
-      setRecordedSessions(pastSessionsAfterJoin);
-    } catch (error) {
-      safeLogger.error('Error fetching sessions:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load success sessions",
-        variant: "destructive",
-      });
-    }
-  };
+  // joinSession and helpers unchanged below
 
   const joinSession = async (sessionId: string, sessionLink: string) => {
     try {

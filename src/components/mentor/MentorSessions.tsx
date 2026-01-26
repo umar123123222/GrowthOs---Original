@@ -45,7 +45,7 @@ export function MentorSessions() {
     if (!user?.id) return;
 
     try {
-      // Fetch all sessions (mentors can see all sessions, not just assigned ones)
+      // Mentors now only see their assigned sessions due to RLS policy
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
@@ -67,7 +67,8 @@ export function MentorSessions() {
         zoom_passcode: session.zoom_passcode || '',
         host_login_email: session.host_login_email || '',
         host_login_pwd: session.host_login_pwd || '',
-        isAssignedToMe: session.mentor_id === user.id
+        // All sessions returned are assigned to this mentor (RLS ensures this)
+        isAssignedToMe: true
       }));
       
       processSessions(sessions);
