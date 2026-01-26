@@ -52,6 +52,8 @@ The Live Sessions system manages scheduled success sessions, mentorship meetings
 |-------|---------|---------|
 | `status` | Session state | 'upcoming' |
 | `mentor_id` | Assigned mentor | NULL |
+| `course_id` | Target course | NULL |
+| `batch_id` | Target batch (NULL = unbatched students) | NULL |
 | `start_time` / `end_time` | Session schedule | Required |
 | `zoom_meeting_id` | Meeting ID | NULL |
 | `zoom_passcode` | Meeting password | NULL |
@@ -69,9 +71,9 @@ const DEFAULT_SESSION_DURATION = 60; // minutes
 ## Security Considerations
 
 ### Access Control
-- Students can view all sessions but only join assigned ones
-- Mentors can manage their assigned sessions
-- Admins/Superadmins have full session management access
+- Students only see sessions matching their **active enrollment** (`course_enrollments.status = 'active'`) with matching `course_id` and `batch_id` (or unbatched status)
+- Mentors only see sessions where they are assigned as host (`mentor_id = auth.uid()`)
+- Admins/Superadmins/Enrollment Managers can view and manage all sessions
 - Session links may require authentication
 
 ### Data Protection

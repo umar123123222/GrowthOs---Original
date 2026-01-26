@@ -2208,6 +2208,7 @@ export type Database = {
       }
       success_sessions: {
         Row: {
+          batch_id: string | null
           course_id: string | null
           created_at: string | null
           created_by: string | null
@@ -2227,6 +2228,7 @@ export type Database = {
           zoom_passcode: string | null
         }
         Insert: {
+          batch_id?: string | null
           course_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -2246,6 +2248,7 @@ export type Database = {
           zoom_passcode?: string | null
         }
         Update: {
+          batch_id?: string | null
           course_id?: string | null
           created_at?: string | null
           created_by?: string | null
@@ -2265,6 +2268,13 @@ export type Database = {
           zoom_passcode?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "success_sessions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "success_sessions_course_id_fkey"
             columns: ["course_id"]
