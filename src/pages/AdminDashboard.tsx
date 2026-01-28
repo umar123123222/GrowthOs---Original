@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Video, FileText } from 'lucide-react';
+import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Video, FileText, GraduationCap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { RoleGuard } from '@/components/RoleGuard';
 import { ContentManagement } from '@/components/admin/ContentManagement';
@@ -77,9 +77,10 @@ export default function AdminDashboard() {
     </RoleGuard>;
 }
 function DashboardContent() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     totalUsers: 0,
-    totalModules: 0,
+    totalCourses: 0,
     monthlyRevenue: 0,
     activeStudents: 0,
     courseCompletion: 0,
@@ -96,8 +97,8 @@ function DashboardContent() {
       // Fetch total users
       const { data: users } = await supabase.from('users').select('id, role, status');
 
-      // Fetch total modules
-      const { data: modules } = await supabase.from('modules').select('id');
+      // Fetch total courses
+      const { data: courses } = await supabase.from('courses').select('id');
 
       // Fetch active students (status is lowercase in database)
       const activeStudents = users?.filter(user => user.role === 'student' && user.status === 'active').length || 0;
@@ -132,7 +133,7 @@ function DashboardContent() {
       
       setStats({
         totalUsers: users?.length || 0,
-        totalModules: modules?.length || 0,
+        totalCourses: courses?.length || 0,
         monthlyRevenue,
         activeStudents,
         courseCompletion,
@@ -160,7 +161,10 @@ function DashboardContent() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="border-l-4 border-l-blue-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-blue-50 to-white animate-fade-in">
+        <Card 
+          className="border-l-4 border-l-blue-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-blue-50 to-white animate-fade-in cursor-pointer"
+          onClick={() => navigate('/admin?tab=students')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-800">Total Users</CardTitle>
             <Users className="h-5 w-5 text-blue-600" />
@@ -171,18 +175,24 @@ function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-green-50 to-white animate-fade-in">
+        <Card 
+          className="border-l-4 border-l-green-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-green-50 to-white animate-fade-in cursor-pointer"
+          onClick={() => navigate('/admin?tab=courses')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-800">Content Modules</CardTitle>
-            <BookOpen className="h-5 w-5 text-green-600" />
+            <CardTitle className="text-sm font-medium text-green-800">Total Courses</CardTitle>
+            <GraduationCap className="h-5 w-5 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-900">{stats.totalModules}</div>
-            <p className="text-xs text-muted-foreground">Available modules</p>
+            <div className="text-3xl font-bold text-green-900">{stats.totalCourses}</div>
+            <p className="text-xs text-muted-foreground">Available courses</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-yellow-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-yellow-50 to-white animate-fade-in">
+        <Card 
+          className="border-l-4 border-l-yellow-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-yellow-50 to-white animate-fade-in cursor-pointer"
+          onClick={() => navigate('/admin?tab=analytics')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-yellow-800">Monthly Revenue</CardTitle>
             <DollarSign className="h-5 w-5 text-yellow-600" />
@@ -197,7 +207,10 @@ function DashboardContent() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <Card className="border-l-4 border-l-cyan-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-cyan-50 to-white animate-fade-in">
+        <Card 
+          className="border-l-4 border-l-cyan-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-cyan-50 to-white animate-fade-in cursor-pointer"
+          onClick={() => navigate('/admin?tab=students')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-cyan-800">Active Students</CardTitle>
             <Activity className="h-5 w-5 text-cyan-600" />
@@ -208,7 +221,10 @@ function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-indigo-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-indigo-50 to-white animate-fade-in">
+        <Card 
+          className="border-l-4 border-l-indigo-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-indigo-50 to-white animate-fade-in cursor-pointer"
+          onClick={() => navigate('/admin?tab=analytics')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-indigo-800">Course Completion</CardTitle>
             <Activity className="h-5 w-5 text-indigo-600" />
@@ -219,7 +235,10 @@ function DashboardContent() {
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-pink-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-pink-50 to-white animate-fade-in">
+        <Card 
+          className="border-l-4 border-l-pink-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-pink-50 to-white animate-fade-in cursor-pointer"
+          onClick={() => navigate('/admin?tab=support')}
+        >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-pink-800">Support Tickets</CardTitle>
             <Activity className="h-5 w-5 text-pink-600" />
