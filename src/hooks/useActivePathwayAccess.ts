@@ -34,7 +34,7 @@ interface UseActivePathwayAccessReturn {
   pathwayCourses: PathwayCourse[];
   loading: boolean;
   error: Error | null;
-  advancePathway: (selectedCourseId?: string) => Promise<{ success: boolean; error?: string; completed?: boolean }>;
+  advancePathway: (selectedCourseId?: string) => Promise<{ success: boolean; error?: string; completed?: boolean; awaitingChoice?: boolean }>;
   makeChoice: (courseId: string) => Promise<{ success: boolean; error?: string }>;
   refreshPathwayState: () => Promise<void>;
 }
@@ -123,7 +123,7 @@ export function useActivePathwayAccess(): UseActivePathwayAccessReturn {
     fetchPathwayState();
   }, [fetchPathwayState]);
 
-  const advancePathway = useCallback(async (selectedCourseId?: string): Promise<{ success: boolean; error?: string; completed?: boolean }> => {
+  const advancePathway = useCallback(async (selectedCourseId?: string): Promise<{ success: boolean; error?: string; completed?: boolean; awaitingChoice?: boolean }> => {
     if (!user?.id || !pathwayState) {
       return { success: false, error: 'No active pathway' };
     }
@@ -148,6 +148,15 @@ export function useActivePathwayAccess(): UseActivePathwayAccessReturn {
 
       // Refresh state after advancing
       await fetchPathwayState();
+      
+      // Check if student is now at a choice point
+      if (result.awaiting_choice) {
+        return { 
+          success: true, 
+          awaitingChoice: true,
+          completed: false 
+        };
+      }
       
       return { 
         success: true, 

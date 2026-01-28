@@ -114,6 +114,11 @@ const Videos = () => {
       if (result.success) {
         if (result.completed) {
           toast.success('Congratulations! You have completed the pathway!');
+        } else if (result.awaitingChoice) {
+          // Student moved to choice point - prompt them to select
+          toast.info('Please select your learning path to continue', {
+            description: 'Choose between the available course tracks below'
+          });
         } else {
           toast.success('Next course unlocked!');
         }
