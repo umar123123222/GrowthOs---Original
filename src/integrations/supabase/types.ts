@@ -178,6 +178,78 @@ export type Database = {
         }
         Relationships: []
       }
+      batch_courses: {
+        Row: {
+          batch_id: string
+          course_id: string
+          created_at: string | null
+          id: string
+        }
+        Insert: {
+          batch_id: string
+          course_id: string
+          created_at?: string | null
+          id?: string
+        }
+        Update: {
+          batch_id?: string
+          course_id?: string
+          created_at?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_courses_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_courses_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batch_pathways: {
+        Row: {
+          batch_id: string
+          created_at: string | null
+          id: string
+          pathway_id: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string | null
+          id?: string
+          pathway_id: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string | null
+          id?: string
+          pathway_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_pathways_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_pathways_pathway_id_fkey"
+            columns: ["pathway_id"]
+            isOneToOne: false
+            referencedRelation: "learning_pathways"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_timeline_items: {
         Row: {
           assignment_id: string | null
