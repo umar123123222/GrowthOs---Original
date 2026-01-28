@@ -1,93 +1,125 @@
 
-# Fix: Pathway Choice Point Flow
 
-## Problem Summary
-After completing the Nurturing Sessions course, students cannot choose between Freelancing and Ecommerce because the choice picker UI never appears. The system returns an error "Choice required" when they try to advance.
+## Summary
 
-## Root Cause
-The `has_pending_choice` flag only checks if the **current** course is a choice point. But after completing Step 1, the student's enrollment still points to Step 1 (Nurturing Sessions), which is NOT a choice point. The system needs to detect when the **next** step is a choice point.
+When a student is created without a batch (using LMS access date) and later assigned to a batch by an admin, the system currently recalculates ALL drip unlock dates based on the batch's start date. This can lock videos the student has already watched.
 
-## Solution
-Modify the `advance_pathway` database function to handle the transition to choice points gracefully:
+## Current Behavior (Problem)
 
-1. When next step is a choice point AND no selection provided:
-   - Instead of returning an error, temporarily move the student to that step (pick the first choice option)
-   - Return success but indicate the student needs to make a choice
-   
-2. Then `get_student_active_pathway` will correctly show `has_pending_choice = true` because the current course IS now a choice point
+The `get_course_sequential_unlock_status` function calculates unlock status like this:
 
-3. The UI will display the "Choose Your Path" picker, and the student can select their preferred track
+```sql
+-- Priority: batch start_date > enrollment_date
+IF v_batch_start_date IS NOT NULL THEN
+  v_drip_base_date := v_batch_start_date;
+ELSE
+  v_drip_base_date := v_enrollment_date;
+END IF;
+```
+
+When a batch is assigned later with a **more recent** start date, all videos become drip-locked again based on the new date — even ones the student already watched.
+
+## Proposed Behavior (Fix)
+
+1. Videos the student has **already watched** remain unlocked regardless of drip schedule
+2. Videos **not yet watched** follow the new batch-based drip schedule
+3. Sequential unlock rules still apply for assignments
+
+This ensures:
+- No regression for students who have made progress
+- Future content follows the batch timeline
+- Assignments are still required where applicable
+
+---
 
 ## Implementation Steps
 
-### Step 1: Update `advance_pathway` function
-Modify the function to handle the choice point transition:
+### Step 1: Update `get_course_sequential_unlock_status` Database Function
 
+Modify the function to check if the student has already watched each recording. If `recording_views.watched = true`, that video is always unlocked.
+
+**Changes:**
+- Add a LEFT JOIN to `recording_views` for the CURRENT lesson (not just prev lesson)
+- In the unlock calculation, add condition: `current_watched = true` → always unlocked
+- Update `unlock_reason` to show `'already_watched'` when applicable
+
+**SQL logic update:**
 ```text
-Changes in the "next step is choice point" block:
-- If p_selected_course_id IS NULL:
-  - Update enrollment to point to the first course in the choice group
-  - Return {success: true, awaiting_choice: true, choice_group: v_choice_group}
-- If p_selected_course_id IS PROVIDED:
-  - Record the choice selection (existing logic)
-  - Update enrollment to the selected course
+full_status AS (
+  SELECT 
+    ...
+    -- ADD: Check if THIS video was watched
+    COALESCE(curr_rv.watched, false) as current_watched,
+    ...
+  FROM prev_lesson_status pls
+  ...
+  -- ADD: Join for current recording's watch status
+  LEFT JOIN recording_views curr_rv 
+    ON curr_rv.recording_id = pls.id 
+    AND curr_rv.user_id = p_user_id
+)
+SELECT 
+  ...
+  (
+    fs.current_watched OR  -- NEW: Already watched = always unlocked
+    fs.manually_unlocked OR 
+    NOT v_sequential_enabled OR 
+    ... existing conditions ...
+  )::BOOLEAN as is_unlocked,
+  
+  CASE 
+    WHEN fs.current_watched THEN 'already_watched'  -- NEW
+    WHEN fs.manually_unlocked THEN 'manually_unlocked'
+    ...
+  END as unlock_reason
 ```
 
-### Step 2: Update frontend to handle awaiting_choice response
-In `src/hooks/useActivePathwayAccess.ts`:
-- After `advancePathway` returns `awaiting_choice: true`, refresh the pathway state
-- The new state will show `hasPendingChoice = true` and display the choice picker
+### Step 2: Update TypeScript Types
 
-In `src/pages/Videos.tsx`:
-- When advance returns `awaiting_choice: true`, show a different toast: "Please select your learning path"
+Update `src/integrations/supabase/types.ts` to include the new `'already_watched'` unlock reason in the return type (for type safety).
 
-### Step 3: Test the complete flow
-- Student completes Nurturing Sessions
-- Clicks "Unlock Next Course"
-- System moves them to choice point step
-- "Choose Your Path" UI appears with Ecom 360 and Freelancing options
-- Student clicks a choice → enrollment updates → next course unlocks
+### Step 3: Test Scenarios
+
+After deployment, verify:
+1. Student A (no batch) watches videos 1-3
+2. Admin assigns Student A to Batch X (start date = today)
+3. Videos 1-3 remain accessible
+4. Video 4+ follows the batch drip schedule
+
+---
 
 ## Technical Details
 
 ### Database Migration
+
 ```sql
-CREATE OR REPLACE FUNCTION advance_pathway(...)
--- Modified logic for choice point handling:
-IF v_is_choice_point AND v_choice_group IS NOT NULL THEN
-  IF p_selected_course_id IS NULL THEN
-    -- Get first course in choice group
-    SELECT course_id INTO v_next_course_id
-    FROM pathway_courses
-    WHERE pathway_id = p_pathway_id AND choice_group = v_choice_group
-    LIMIT 1;
-    
-    -- Move enrollment to choice point
-    UPDATE course_enrollments
-    SET course_id = v_next_course_id, updated_at = NOW()
-    WHERE id = v_enrollment_id;
-    
-    -- Return success with awaiting_choice flag
-    RETURN jsonb_build_object(
-      'success', true,
-      'awaiting_choice', true,
-      'choice_group', v_choice_group
-    );
-  END IF;
-  -- ... rest of existing selection logic
-END IF;
+CREATE OR REPLACE FUNCTION public.get_course_sequential_unlock_status(...)
+-- Key changes in the full_status CTE:
+-- 1. Add join to recording_views for current recording
+-- 2. Check current_watched in unlock conditions
+-- 3. Add 'already_watched' to unlock_reason CASE
 ```
 
 ### Files to Modify
-1. **New migration**: Update `advance_pathway` function
-2. **src/hooks/useActivePathwayAccess.ts**: Handle `awaiting_choice` response
-3. **src/pages/Videos.tsx**: Update toast message for choice transitions
+
+1. **New migration**: Update `get_course_sequential_unlock_status` function
+2. **src/integrations/supabase/types.ts**: Add `'already_watched'` to unlock_reason union type (auto-generated after migration)
+
+### Edge Cases Handled
+
+| Scenario | Expected Behavior |
+|----------|-------------------|
+| Student watched video, batch assigned later with newer date | Video stays unlocked |
+| Student didn't watch video, batch assigned | Video follows batch drip |
+| Batch removed from student | Falls back to LMS access date for unwatched videos; watched videos stay unlocked |
+| Video watched but assignment not submitted | Video unlocked, but next video blocked by sequential rules |
+
+---
 
 ## Expected Outcome
-- Students completing Nurturing Sessions will see the choice picker
-- They can select Ecommerce or Freelancing
-- The selected course unlocks and becomes their new current course
-- Pathway progression continues normally
 
-## Rollback
-If issues arise, the migration can be reverted. Students already at the choice point would need manual enrollment update.
+- Students who have already made progress won't lose access to content they've watched
+- The batch schedule applies only to **future** content dripping
+- Sequential unlock rules (watch previous + assignment approval) still apply
+- No changes needed to UI code — it already reads `is_unlocked` from the RPC
+
