@@ -14,6 +14,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MessageSquare, AlertCircle, Clock, CheckCircle, Reply, User, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
+interface StudentEnrollment {
+  course_title?: string;
+  pathway_name?: string;
+  batch_name?: string;
+}
+
 interface SupportTicket {
   id: string;
   user_id: string;
@@ -29,6 +35,8 @@ interface SupportTicket {
     full_name: string;
     email: string;
     student_id?: string | null;
+    batch_name?: string | null;
+    enrollments: StudentEnrollment[];
   };
 }
 
@@ -94,19 +102,50 @@ export function SupportManagement() {
           const studentResult = await safeMaybeSingle(
             supabase
             .from('students')
-            .select('student_id')
+            .select('id, student_id')
             .eq('user_id', ticket.user_id)
             .maybeSingle(),
             `fetch student data for user ${ticket.user_id}`
           );
-          const studentData = studentResult.data as { student_id: string } | null;
+          const studentData = studentResult.data as { id: string; student_id: string } | null;
+
+          // Get enrollments with batch, course, and pathway info
+          let enrollments: StudentEnrollment[] = [];
+          let batchName: string | null = null;
+          
+          if (studentData?.id) {
+            const { data: enrollmentData } = await supabase
+              .from('course_enrollments')
+              .select(`
+                course_id,
+                pathway_id,
+                batch_id,
+                courses(title),
+                learning_pathways(name),
+                batches(name)
+              `)
+              .eq('student_id', studentData.id)
+              .in('status', ['active', 'completed']);
+
+            if (enrollmentData && enrollmentData.length > 0) {
+              enrollments = enrollmentData.map((e: any) => ({
+                course_title: e.courses?.title,
+                pathway_name: e.learning_pathways?.name,
+                batch_name: e.batches?.name
+              }));
+              // Get the first batch name found
+              batchName = enrollmentData.find((e: any) => e.batches?.name)?.batches?.name || null;
+            }
+          }
 
           return {
             ...ticket,
             users: {
               full_name: userData?.full_name || 'Unknown User',
               email: userData?.email || 'No Email',
-              student_id: studentData?.student_id || null
+              student_id: studentData?.student_id || null,
+              batch_name: batchName,
+              enrollments
             }
           };
         })
@@ -404,11 +443,37 @@ export function SupportManagement() {
                         {selectedTicket && (
                           <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
-                              <div>
+                              <div className="space-y-3">
                                 <h3 className="font-semibold">Student Information</h3>
-                                <p>{selectedTicket.users.full_name}</p>
-                                <p className="text-sm text-muted-foreground">{selectedTicket.users.email}</p>
-                                <p className="text-sm text-muted-foreground">{selectedTicket.users.student_id}</p>
+                                <div className="space-y-1">
+                                  <p className="font-medium">{selectedTicket.users.full_name}</p>
+                                  <p className="text-sm text-muted-foreground">{selectedTicket.users.email}</p>
+                                  <p className="text-sm text-muted-foreground">{selectedTicket.users.student_id}</p>
+                                </div>
+                                {selectedTicket.users.batch_name && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium">Batch:</span>
+                                    <Badge variant="outline">{selectedTicket.users.batch_name}</Badge>
+                                  </div>
+                                )}
+                                {selectedTicket.users.enrollments.length > 0 && (
+                                  <div className="space-y-1">
+                                    <span className="text-sm font-medium">Enrolled In:</span>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {selectedTicket.users.enrollments.map((enrollment, idx) => (
+                                        <Badge 
+                                          key={idx} 
+                                          variant="secondary" 
+                                          className="text-xs"
+                                        >
+                                          {enrollment.pathway_name 
+                                            ? `${enrollment.pathway_name} (Pathway)` 
+                                            : enrollment.course_title || 'Unknown Course'}
+                                        </Badge>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                               <div className="space-y-2">
                                 <div className="flex items-center gap-2">
@@ -423,8 +488,16 @@ export function SupportManagement() {
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <span className="font-semibold">Status:</span>
-                                  <Badge className={`badge-pill ${getStatusColor(selectedTicket.status)}`}>
-                                    {selectedTicket.status.replace('_', ' ')}
+                                  <Badge className={`px-3 py-1 font-medium ${
+                                    selectedTicket.status === 'open' 
+                                      ? 'bg-red-100 text-red-800 border-red-200' 
+                                      : selectedTicket.status === 'in_progress'
+                                      ? 'bg-blue-100 text-blue-800 border-blue-200'
+                                      : selectedTicket.status === 'resolved'
+                                      ? 'bg-green-100 text-green-800 border-green-200'
+                                      : 'bg-gray-100 text-gray-800 border-gray-200'
+                                  }`}>
+                                    {selectedTicket.status.replace('_', ' ').toUpperCase()}
                                   </Badge>
                                 </div>
                               </div>
@@ -432,7 +505,7 @@ export function SupportManagement() {
 
                             <div>
                               <h3 className="font-semibold mb-2">Issue Description</h3>
-                              <div className="p-4 bg-gray-50 rounded-lg">
+                              <div className="p-4 bg-muted/50 rounded-lg">
                                 <h4 className="font-medium mb-2">{selectedTicket.title}</h4>
                                 <p className="whitespace-pre-wrap">{selectedTicket.description}</p>
                                 <p className="text-xs text-muted-foreground mt-2">
@@ -443,33 +516,40 @@ export function SupportManagement() {
 
                             <div className="space-y-4">
                               <h3 className="font-semibold">Conversation History</h3>
-                              <div className="max-h-60 overflow-y-auto space-y-3 p-4 bg-gray-50 rounded-lg">
+                              <div className="max-h-60 overflow-y-auto space-y-3 p-4 bg-muted/30 rounded-lg">
                                 {ticketReplies.length === 0 ? (
                                   <p className="text-muted-foreground text-sm">No replies yet</p>
                                 ) : (
                                   ticketReplies.map((reply) => (
                                     <div
                                       key={reply.id}
-                                      className={`p-3 rounded-lg ${
+                                      className={`p-3 rounded-lg max-w-[85%] ${
                                         reply.users.role !== 'student' 
-                                          ? 'bg-blue-50 border-l-4 border-blue-500 ml-4' 
-                                          : 'bg-white border-l-4 border-gray-300 mr-4'
+                                          ? 'bg-primary/10 border border-primary/20 ml-auto text-right' 
+                                          : 'bg-muted border border-border mr-auto'
                                       }`}
                                     >
-                                      <div className="flex justify-between items-start mb-2">
-                                        <span className="font-medium text-sm">
-                                          {reply.users.full_name}
-                                          {reply.users.role !== 'student' && (
-                                            <Badge variant="outline" className="ml-2 text-xs">
-                                              Staff
-                                            </Badge>
-                                          )}
-                                        </span>
+                                      <div className={`flex items-start gap-2 mb-2 ${
+                                        reply.users.role !== 'student' ? 'justify-end' : 'justify-start'
+                                      }`}>
+                                        {reply.users.role === 'student' && (
+                                          <span className="font-medium text-sm">{reply.users.full_name}</span>
+                                        )}
                                         <span className="text-xs text-muted-foreground">
                                           {new Date(reply.created_at).toLocaleString()}
                                         </span>
+                                        {reply.users.role !== 'student' && (
+                                          <>
+                                            <Badge variant="secondary" className="text-xs bg-primary/20 text-primary">
+                                              Staff
+                                            </Badge>
+                                            <span className="font-medium text-sm">{reply.users.full_name}</span>
+                                          </>
+                                        )}
                                       </div>
-                                      <p className="text-sm whitespace-pre-wrap">{reply.message}</p>
+                                      <p className={`text-sm whitespace-pre-wrap ${
+                                        reply.users.role !== 'student' ? 'text-right' : 'text-left'
+                                      }`}>{reply.message}</p>
                                     </div>
                                   ))
                                 )}
