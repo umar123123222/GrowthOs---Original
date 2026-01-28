@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CoverImageUpload } from '@/components/ui/cover-image-upload';
 import { Plus, Edit, Trash2, BookOpen, Eye, EyeOff, UserCheck, Users, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -469,15 +470,12 @@ export function CourseManagement() {
                     />
                   </div>
                   
-                  <div className="space-y-2">
-                    <Label htmlFor="thumbnail_url">Thumbnail URL</Label>
-                    <Input
-                      id="thumbnail_url"
-                      value={formData.thumbnail_url}
-                      onChange={(e) => setFormData({ ...formData, thumbnail_url: e.target.value })}
-                      placeholder="https://..."
-                    />
-                  </div>
+                  <CoverImageUpload
+                    currentImageUrl={formData.thumbnail_url}
+                    onImageChange={(url) => setFormData({ ...formData, thumbnail_url: url })}
+                    type="course"
+                    entityId={editingCourse?.id}
+                  />
 
                   <div className="space-y-2">
                     <Label htmlFor="price">Price</Label>
