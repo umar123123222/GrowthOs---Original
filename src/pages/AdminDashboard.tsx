@@ -94,39 +94,42 @@ function DashboardContent() {
       setLoading(true);
 
       // Fetch total users
-      const {
-        data: users
-      } = await supabase.from('users').select('id, role, status');
+      const { data: users } = await supabase.from('users').select('id, role, status');
 
       // Fetch total modules
-      const {
-        data: modules
-      } = await supabase.from('modules').select('id');
+      const { data: modules } = await supabase.from('modules').select('id');
 
       // Fetch active students (status is lowercase in database)
       const activeStudents = users?.filter(user => user.role === 'student' && user.status === 'active').length || 0;
 
-      // Calculate actual course completion percentage
-      const totalStudents = users?.filter(user => user.role === 'student').length || 0;
-      const { data: completedModules } = await supabase
-        .from('user_activity_logs')
-        .select('user_id')
-        .eq('activity_type', 'module_completed');
+      // Calculate course completion from enrollments
+      const { data: enrollments } = await supabase
+        .from('course_enrollments')
+        .select('status')
+        .in('status', ['active', 'completed']);
       
-      const studentsWithCompletions = new Set(completedModules?.map(log => log.user_id)).size;
-      const courseCompletion = totalStudents > 0 ? Math.round((studentsWithCompletions / totalStudents) * 100) : 0;
+      const totalEnrollments = enrollments?.length || 0;
+      const completedEnrollments = enrollments?.filter(e => e.status === 'completed').length || 0;
+      const courseCompletion = totalEnrollments > 0 ? Math.round((completedEnrollments / totalEnrollments) * 100) : 0;
 
       // Fetch open support tickets
-      const {
-        data: tickets
-      } = await supabase.from('support_tickets').select('id').eq('status', 'open');
+      const { data: tickets } = await supabase.from('support_tickets').select('id').eq('status', 'open');
 
-      // Fetch monthly revenue from invoices (sum of payments this month)
-      const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM format
-      const {
-        data: payments
-      } = await supabase.from('invoices').select('amount').gte('created_at', `${currentMonth}-01`).lt('created_at', `${currentMonth}-32`).eq('status', 'paid');
+      // Fetch monthly revenue from invoices paid this month
+      // Use proper date range with first day of current month
+      const now = new Date();
+      const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const firstDayOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString();
+      
+      const { data: payments } = await supabase
+        .from('invoices')
+        .select('amount')
+        .gte('paid_at', firstDayOfMonth)
+        .lt('paid_at', firstDayOfNextMonth)
+        .eq('status', 'paid');
+      
       const monthlyRevenue = payments?.reduce((sum, payment) => sum + (Number(payment.amount) || 0), 0) || 0;
+      
       setStats({
         totalUsers: users?.length || 0,
         totalModules: modules?.length || 0,
