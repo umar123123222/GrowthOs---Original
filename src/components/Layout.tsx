@@ -933,7 +933,7 @@ const Layout = memo(({
       <div className="flex">
         {/* Sidebar - Desktop only, hidden on mobile */}
         {!isMobile && (
-          <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg min-h-screen transition-all duration-300 fixed left-0 z-30 overflow-y-auto scrollbar-none`} style={{ top: isBannerVisible ? '112px' : '64px' }}>
+          <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg transition-all duration-300 fixed left-0 z-30 overflow-y-auto scrollbar-none`} style={{ top: isBannerVisible ? '112px' : '64px', height: isBannerVisible ? 'calc(100vh - 112px)' : 'calc(100vh - 64px)' }}>
             <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
               <div className="space-y-2">
               {navigation.map(item => {
