@@ -6,9 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { Plus, Edit, Trash2, Users, Calendar, Clock, Settings, AlertTriangle, BookOpen, Route, UserPlus } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Edit, Trash2, Users, Calendar, Clock, Settings, AlertTriangle, BookOpen, Route, UserPlus, X } from 'lucide-react';
 import { BatchStudentAssignment } from './BatchStudentAssignment';
 import { useBatches, type Batch, type BatchFormData } from '@/hooks/useBatches';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,7 +25,10 @@ interface Pathway {
   name: string;
 }
 
-type EnrollmentType = 'course' | 'pathway';
+interface BatchAssociations {
+  pathways: string[];
+  courses: string[];
+}
 
 export function BatchManagement() {
   const { batches, loading, createBatch, updateBatch, deleteBatch, canEditStartDate, fetchBatches } = useBatches();
@@ -34,7 +37,9 @@ export function BatchManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingBatch, setEditingBatch] = useState<Batch | null>(null);
   const [studentAssignmentBatch, setStudentAssignmentBatch] = useState<Batch | null>(null);
-  const [enrollmentType, setEnrollmentType] = useState<EnrollmentType>('course');
+  const [selectedPathways, setSelectedPathways] = useState<string[]>([]);
+  const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
+  const [batchAssociations, setBatchAssociations] = useState<Record<string, BatchAssociations>>({});
   const [formData, setFormData] = useState<BatchFormData>({
     name: '',
     course_id: '',
@@ -50,6 +55,12 @@ export function BatchManagement() {
     fetchCourses();
     fetchPathways();
   }, []);
+
+  useEffect(() => {
+    if (batches.length > 0) {
+      fetchAllBatchAssociations();
+    }
+  }, [batches]);
 
   const fetchCourses = async () => {
     const { data, error } = await supabase
@@ -74,6 +85,49 @@ export function BatchManagement() {
     }
   };
 
+  const fetchAllBatchAssociations = async () => {
+    const batchIds = batches.map(b => b.id);
+    
+    const [pathwaysResult, coursesResult] = await Promise.all([
+      supabase.from('batch_pathways').select('batch_id, pathway_id').in('batch_id', batchIds),
+      supabase.from('batch_courses').select('batch_id, course_id').in('batch_id', batchIds)
+    ]);
+
+    const associations: Record<string, BatchAssociations> = {};
+    
+    batchIds.forEach(id => {
+      associations[id] = { pathways: [], courses: [] };
+    });
+
+    if (pathwaysResult.data) {
+      pathwaysResult.data.forEach(row => {
+        if (associations[row.batch_id]) {
+          associations[row.batch_id].pathways.push(row.pathway_id);
+        }
+      });
+    }
+
+    if (coursesResult.data) {
+      coursesResult.data.forEach(row => {
+        if (associations[row.batch_id]) {
+          associations[row.batch_id].courses.push(row.course_id);
+        }
+      });
+    }
+
+    setBatchAssociations(associations);
+  };
+
+  const fetchBatchAssociations = async (batchId: string) => {
+    const [pathwaysResult, coursesResult] = await Promise.all([
+      supabase.from('batch_pathways').select('pathway_id').eq('batch_id', batchId),
+      supabase.from('batch_courses').select('course_id').eq('batch_id', batchId)
+    ]);
+
+    setSelectedPathways(pathwaysResult.data?.map(r => r.pathway_id) || []);
+    setSelectedCourses(coursesResult.data?.map(r => r.course_id) || []);
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -84,15 +138,14 @@ export function BatchManagement() {
       default_session_time: '20:00',
       status: 'draft'
     });
-    setEnrollmentType('course');
+    setSelectedPathways([]);
+    setSelectedCourses([]);
     setEditingBatch(null);
   };
 
-  const handleOpenDialog = (batch?: Batch) => {
+  const handleOpenDialog = async (batch?: Batch) => {
     if (batch) {
       setEditingBatch(batch);
-      const type: EnrollmentType = batch.pathway_id ? 'pathway' : 'course';
-      setEnrollmentType(type);
       setFormData({
         name: batch.name,
         course_id: batch.course_id || '',
@@ -102,6 +155,7 @@ export function BatchManagement() {
         default_session_time: batch.default_session_time,
         status: batch.status
       });
+      await fetchBatchAssociations(batch.id);
     } else {
       resetForm();
     }
@@ -113,25 +167,45 @@ export function BatchManagement() {
     resetForm();
   };
 
-  const handleEnrollmentTypeChange = (value: EnrollmentType) => {
-    setEnrollmentType(value);
-    // Clear both fields when switching
-    setFormData({ ...formData, course_id: '', pathway_id: '' });
+  const togglePathway = (pathwayId: string) => {
+    setSelectedPathways(prev => 
+      prev.includes(pathwayId) 
+        ? prev.filter(id => id !== pathwayId)
+        : [...prev, pathwayId]
+    );
+  };
+
+  const toggleCourse = (courseId: string) => {
+    setSelectedCourses(prev => 
+      prev.includes(courseId) 
+        ? prev.filter(id => id !== courseId)
+        : [...prev, courseId]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Prepare submission data - only include the selected type, use null for empty
+    if (selectedPathways.length === 0 && selectedCourses.length === 0) {
+      toast({
+        title: "Validation Error",
+        description: "Please select at least one pathway or course.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Use the first pathway or course for legacy columns
     const submissionData = {
       ...formData,
-      course_id: enrollmentType === 'course' && formData.course_id ? formData.course_id : null,
-      pathway_id: enrollmentType === 'pathway' && formData.pathway_id ? formData.pathway_id : null
+      course_id: selectedCourses.length > 0 ? selectedCourses[0] : null,
+      pathway_id: selectedPathways.length > 0 ? selectedPathways[0] : null
     };
     
     try {
+      let batchId: string;
+      
       if (editingBatch) {
-        // Check if we're trying to change start date on a started batch
         if (!canEditStartDate(editingBatch) && formData.start_date !== editingBatch.start_date) {
           toast({
             title: "Cannot Update",
@@ -141,9 +215,30 @@ export function BatchManagement() {
           return;
         }
         await updateBatch(editingBatch.id, submissionData);
+        batchId = editingBatch.id;
       } else {
-        await createBatch(submissionData);
+        const result = await createBatch(submissionData);
+        batchId = result.id;
       }
+
+      // Update junction tables
+      await supabase.from('batch_pathways').delete().eq('batch_id', batchId);
+      await supabase.from('batch_courses').delete().eq('batch_id', batchId);
+
+      if (selectedPathways.length > 0) {
+        await supabase.from('batch_pathways').insert(
+          selectedPathways.map(pathway_id => ({ batch_id: batchId, pathway_id }))
+        );
+      }
+
+      if (selectedCourses.length > 0) {
+        await supabase.from('batch_courses').insert(
+          selectedCourses.map(course_id => ({ batch_id: batchId, course_id }))
+        );
+      }
+
+      await fetchBatches();
+      await fetchAllBatchAssociations();
       handleCloseDialog();
     } catch (error) {
       // Error already handled in hook
@@ -158,13 +253,46 @@ export function BatchManagement() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
-        return <Badge className="bg-green-100 text-green-800">Active</Badge>;
+        return <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">Active</Badge>;
       case 'completed':
-        return <Badge className="bg-gray-100 text-gray-800">Completed</Badge>;
+        return <Badge variant="secondary">Completed</Badge>;
       case 'draft':
       default:
-        return <Badge className="bg-yellow-100 text-yellow-800">Draft</Badge>;
+        return <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/20">Draft</Badge>;
     }
+  };
+
+  const getAssociationDisplay = (batchId: string) => {
+    const assoc = batchAssociations[batchId];
+    if (!assoc) return '-';
+
+    const items: JSX.Element[] = [];
+
+    assoc.pathways.forEach(pId => {
+      const pathway = pathways.find(p => p.id === pId);
+      if (pathway) {
+        items.push(
+          <Badge key={`p-${pId}`} variant="outline" className="mr-1 mb-1 text-xs">
+            <Route className="w-3 h-3 mr-1" />
+            {pathway.name}
+          </Badge>
+        );
+      }
+    });
+
+    assoc.courses.forEach(cId => {
+      const course = courses.find(c => c.id === cId);
+      if (course) {
+        items.push(
+          <Badge key={`c-${cId}`} variant="secondary" className="mr-1 mb-1 text-xs">
+            <BookOpen className="w-3 h-3 mr-1" />
+            {course.title}
+          </Badge>
+        );
+      }
+    });
+
+    return items.length > 0 ? <div className="flex flex-wrap max-w-xs">{items}</div> : '-';
   };
 
   if (loading) {
@@ -197,7 +325,7 @@ export function BatchManagement() {
               Create Batch
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <DialogHeader>
               <DialogTitle>{editingBatch ? 'Edit Batch' : 'Create New Batch'}</DialogTitle>
             </DialogHeader>
@@ -212,71 +340,105 @@ export function BatchManagement() {
                 />
               </div>
 
+              {/* Pathways Selection */}
               <div>
-                <label className="block text-sm font-medium mb-2">Enrollment Type *</label>
-                <RadioGroup
-                  value={enrollmentType}
-                  onValueChange={(value) => handleEnrollmentTypeChange(value as EnrollmentType)}
-                  className="flex gap-4"
-                >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="course" id="course" />
-                    <Label htmlFor="course" className="flex items-center gap-1.5 cursor-pointer">
-                      <BookOpen className="w-4 h-4" />
-                      Course
-                    </Label>
+                <label className="block text-sm font-medium mb-2">
+                  <Route className="w-4 h-4 inline mr-1" />
+                  Pathways
+                </label>
+                <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                  {pathways.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No pathways available</p>
+                  ) : (
+                    pathways.map((pathway) => (
+                      <div key={pathway.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`pathway-${pathway.id}`}
+                          checked={selectedPathways.includes(pathway.id)}
+                          onCheckedChange={() => togglePathway(pathway.id)}
+                        />
+                        <Label 
+                          htmlFor={`pathway-${pathway.id}`} 
+                          className="text-sm cursor-pointer flex-1"
+                        >
+                          {pathway.name}
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {selectedPathways.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {selectedPathways.map(id => {
+                      const pathway = pathways.find(p => p.id === id);
+                      return pathway ? (
+                        <Badge key={id} variant="outline" className="text-xs">
+                          {pathway.name}
+                          <button 
+                            type="button" 
+                            onClick={() => togglePathway(id)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ) : null;
+                    })}
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="pathway" id="pathway" />
-                    <Label htmlFor="pathway" className="flex items-center gap-1.5 cursor-pointer">
-                      <Route className="w-4 h-4" />
-                      Pathway
-                    </Label>
-                  </div>
-                </RadioGroup>
+                )}
               </div>
 
-              {enrollmentType === 'course' ? (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Course *</label>
-                  <Select
-                    value={formData.course_id}
-                    onValueChange={(value) => setFormData({ ...formData, course_id: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a course" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border z-50">
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
+              {/* Courses Selection */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  <BookOpen className="w-4 h-4 inline mr-1" />
+                  Individual Courses
+                </label>
+                <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2">
+                  {courses.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No courses available</p>
+                  ) : (
+                    courses.map((course) => (
+                      <div key={course.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`course-${course.id}`}
+                          checked={selectedCourses.includes(course.id)}
+                          onCheckedChange={() => toggleCourse(course.id)}
+                        />
+                        <Label 
+                          htmlFor={`course-${course.id}`} 
+                          className="text-sm cursor-pointer flex-1"
+                        >
                           {course.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        </Label>
+                      </div>
+                    ))
+                  )}
                 </div>
-              ) : (
-                <div>
-                  <label className="block text-sm font-medium mb-1">Pathway *</label>
-                  <Select
-                    value={formData.pathway_id}
-                    onValueChange={(value) => setFormData({ ...formData, pathway_id: value })}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a pathway" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border z-50">
-                      {pathways.map((pathway) => (
-                        <SelectItem key={pathway.id} value={pathway.id}>
-                          {pathway.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+                {selectedCourses.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {selectedCourses.map(id => {
+                      const course = courses.find(c => c.id === id);
+                      return course ? (
+                        <Badge key={id} variant="secondary" className="text-xs">
+                          {course.title}
+                          <button 
+                            type="button" 
+                            onClick={() => toggleCourse(id)}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ) : null;
+                    })}
+                  </div>
+                )}
+              </div>
+
+              <p className="text-xs text-muted-foreground">
+                * Select at least one pathway or course for this batch
+              </p>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -381,7 +543,7 @@ export function BatchManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
-                  <TableHead>Course / Pathway</TableHead>
+                  <TableHead>Pathways / Courses</TableHead>
                   <TableHead>Start Date</TableHead>
                   <TableHead>Students</TableHead>
                   <TableHead>Status</TableHead>
@@ -393,19 +555,7 @@ export function BatchManagement() {
                   <TableRow key={batch.id}>
                     <TableCell className="font-medium">{batch.name}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {batch.pathway_id ? (
-                          <>
-                            <Route className="w-4 h-4 text-muted-foreground" />
-                            {batch.pathway?.name || '-'}
-                          </>
-                        ) : (
-                          <>
-                            <BookOpen className="w-4 h-4 text-muted-foreground" />
-                            {batch.course?.title || '-'}
-                          </>
-                        )}
-                      </div>
+                      {getAssociationDisplay(batch.id)}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -473,7 +623,12 @@ export function BatchManagement() {
           courseId={studentAssignmentBatch.course_id}
           pathwayId={studentAssignmentBatch.pathway_id}
           open={!!studentAssignmentBatch}
-          onOpenChange={(open) => !open && setStudentAssignmentBatch(null)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setStudentAssignmentBatch(null);
+              fetchBatches();
+            }
+          }}
           onUpdate={() => fetchBatches()}
         />
       )}
