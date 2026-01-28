@@ -440,7 +440,7 @@ export function CourseManagement() {
               Add Course
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <DialogHeader>
               <DialogTitle>{editingCourse ? 'Edit Course' : 'Create Course'}</DialogTitle>
             </DialogHeader>
@@ -469,13 +469,6 @@ export function CourseManagement() {
                       rows={3}
                     />
                   </div>
-                  
-                  <CoverImageUpload
-                    currentImageUrl={formData.thumbnail_url}
-                    onImageChange={(url) => setFormData({ ...formData, thumbnail_url: url })}
-                    type="course"
-                    entityId={editingCourse?.id}
-                  />
 
                   <div className="space-y-2">
                     <Label htmlFor="price">Price</Label>
@@ -581,6 +574,16 @@ export function CourseManagement() {
                 <p className="text-xs text-muted-foreground">
                   When enabled, recordings unlock based on days since enrollment
                 </p>
+              </div>
+
+              {/* Full Width - Cover Image */}
+              <div className="pt-2 border-t">
+                <CoverImageUpload
+                  currentImageUrl={formData.thumbnail_url}
+                  onImageChange={(url) => setFormData({ ...formData, thumbnail_url: url })}
+                  type="course"
+                  entityId={editingCourse?.id}
+                />
               </div>
               
               <DialogFooter>

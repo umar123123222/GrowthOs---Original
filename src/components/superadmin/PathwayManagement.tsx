@@ -480,7 +480,7 @@ export function PathwayManagement() {
               Add Pathway
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
             <DialogHeader>
               <DialogTitle>{editingPathway ? 'Edit Pathway' : 'Create Pathway'}</DialogTitle>
             </DialogHeader>
@@ -506,13 +506,6 @@ export function PathwayManagement() {
                   rows={3}
                 />
               </div>
-
-              <CoverImageUpload
-                currentImageUrl={formData.thumbnail_url}
-                onImageChange={(url) => setFormData({ ...formData, thumbnail_url: url })}
-                type="pathway"
-                entityId={editingPathway?.id}
-              />
               
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
@@ -619,6 +612,16 @@ export function PathwayManagement() {
                 <p className="text-xs text-muted-foreground">
                   When enabled, recordings unlock based on days since enrollment
                 </p>
+              </div>
+
+              {/* Full Width - Cover Image (at the end) */}
+              <div className="pt-2 border-t">
+                <CoverImageUpload
+                  currentImageUrl={formData.thumbnail_url}
+                  onImageChange={(url) => setFormData({ ...formData, thumbnail_url: url })}
+                  type="pathway"
+                  entityId={editingPathway?.id}
+                />
               </div>
               
               <DialogFooter>
