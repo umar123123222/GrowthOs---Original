@@ -51,9 +51,17 @@ export function SupportManagement() {
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyMessage, setReplyMessage] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('open');
   const [filterType, setFilterType] = useState<string>('all');
   const { toast } = useToast();
+
+  // Priority order for sorting (higher number = higher priority)
+  const priorityOrder: Record<string, number> = {
+    urgent: 4,
+    high: 3,
+    medium: 2,
+    low: 1
+  };
 
   useEffect(() => {
     fetchTickets();
@@ -265,11 +273,16 @@ export function SupportManagement() {
     }
   };
 
-  const filteredTickets = tickets.filter(ticket => {
-    const statusMatch = filterStatus === 'all' || ticket.status === filterStatus;
-    const typeMatch = filterType === 'all' || (ticket.category && ticket.category === filterType);
-    return statusMatch && typeMatch;
-  });
+  const filteredTickets = tickets
+    .filter(ticket => {
+      const statusMatch = filterStatus === 'all' || ticket.status === filterStatus;
+      const typeMatch = filterType === 'all' || (ticket.category && ticket.category === filterType);
+      return statusMatch && typeMatch;
+    })
+    .sort((a, b) => {
+      // Sort by priority (urgent > high > medium > low)
+      return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+    });
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading support tickets...</div>;
