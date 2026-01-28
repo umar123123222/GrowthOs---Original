@@ -1,122 +1,93 @@
 
-### Goal
-When a superadmin schedules a Success Session, they must be able to select:
-- the **Course**
-- the **Batch** (or an option that covers “unbatched / all batches”)
+# Fix: Pathway Choice Point Flow
 
-Then:
-- **Students** only see sessions that match the course they are currently enrolled in **and** (if specified) their batch.
-- **Mentors** only see sessions relevant to them (filtered), instead of all sessions.
+## Problem Summary
+After completing the Nurturing Sessions course, students cannot choose between Freelancing and Ecommerce because the choice picker UI never appears. The system returns an error "Choice required" when they try to advance.
 
----
+## Root Cause
+The `has_pending_choice` flag only checks if the **current** course is a choice point. But after completing Step 1, the student's enrollment still points to Step 1 (Nurturing Sessions), which is NOT a choice point. The system needs to detect when the **next** step is a choice point.
 
-## What’s currently happening (why this is needed)
-- `success_sessions` already has `course_id` in the DB types, but the UI does not select it today.
-- There is **no `batch_id`** on `success_sessions`, so you can’t target a specific batch.
-- RLS currently allows **all authenticated users** to view **all** success sessions; even if the UI filters, a student could still query other sessions if they knew how.
+## Solution
+Modify the `advance_pathway` database function to handle the transition to choice points gracefully:
 
----
+1. When next step is a choice point AND no selection provided:
+   - Instead of returning an error, temporarily move the student to that step (pick the first choice option)
+   - Return success but indicate the student needs to make a choice
+   
+2. Then `get_student_active_pathway` will correctly show `has_pending_choice = true` because the current course IS now a choice point
 
-## Proposed behavior (matches your requirement)
-### Scheduling (Superadmin)
-In **/superadmin?tab=success-sessions** (SuccessSessionsManagement):
-1. Select **Course**
-2. Select **Batch**
-   - Show batches belonging to that course
-   - Include one extra option to cover students “currently doing ecommerce” but not in a batch:
-     - **Unbatched students (no batch assigned)**
+3. The UI will display the "Choose Your Path" picker, and the student can select their preferred track
 
-### Student visibility (Live Sessions page)
-A student will see a success session if:
-- they have an **active** enrollment (`course_enrollments.status = 'active'`) in that session’s `course_id`, AND
-- either:
-  - session has a specific `batch_id` and the student’s enrollment has the same `batch_id`, OR
-  - session is marked **unbatched** (batch_id is NULL) and the student’s enrollment is also unbatched (batch_id is NULL)
+## Implementation Steps
 
-This supports your “batch number + currently doing ecommerce (course/pathway)” request because both pathways and direct course enrollments are stored in `course_enrollments` via `course_id` (and optionally `pathway_id`).
+### Step 1: Update `advance_pathway` function
+Modify the function to handle the choice point transition:
 
-### Mentor visibility (Mentor Sessions page)
-A mentor will only see sessions where:
-- `success_sessions.mentor_id = auth.uid()`
+```text
+Changes in the "next step is choice point" block:
+- If p_selected_course_id IS NULL:
+  - Update enrollment to point to the first course in the choice group
+  - Return {success: true, awaiting_choice: true, choice_group: v_choice_group}
+- If p_selected_course_id IS PROVIDED:
+  - Record the choice selection (existing logic)
+  - Update enrollment to the selected course
+```
 
-(So mentors are filtered, as you requested.)
+### Step 2: Update frontend to handle awaiting_choice response
+In `src/hooks/useActivePathwayAccess.ts`:
+- After `advancePathway` returns `awaiting_choice: true`, refresh the pathway state
+- The new state will show `hasPendingChoice = true` and display the choice picker
 
----
+In `src/pages/Videos.tsx`:
+- When advance returns `awaiting_choice: true`, show a different toast: "Please select your learning path"
 
-## Implementation steps (in order)
+### Step 3: Test the complete flow
+- Student completes Nurturing Sessions
+- Clicks "Unlock Next Course"
+- System moves them to choice point step
+- "Choose Your Path" UI appears with Ecom 360 and Freelancing options
+- Student clicks a choice → enrollment updates → next course unlocks
 
-### 1) Database: add batch targeting to success sessions
-Create a new migration:
-- Add column: `success_sessions.batch_id uuid NULL REFERENCES batches(id) ON DELETE SET NULL`
-- Add index for performance: `idx_success_sessions_batch_id`
-- (Optional but recommended) update the view `segmented_weekly_success_sessions` to include `course_id` and `batch_id` as well, so it stays consistent.
+## Technical Details
 
-### 2) Database security (RLS): enforce visibility rules server-side
-Update `success_sessions` SELECT policy so it is no longer “all authenticated users can view everything”.
+### Database Migration
+```sql
+CREATE OR REPLACE FUNCTION advance_pathway(...)
+-- Modified logic for choice point handling:
+IF v_is_choice_point AND v_choice_group IS NOT NULL THEN
+  IF p_selected_course_id IS NULL THEN
+    -- Get first course in choice group
+    SELECT course_id INTO v_next_course_id
+    FROM pathway_courses
+    WHERE pathway_id = p_pathway_id AND choice_group = v_choice_group
+    LIMIT 1;
+    
+    -- Move enrollment to choice point
+    UPDATE course_enrollments
+    SET course_id = v_next_course_id, updated_at = NOW()
+    WHERE id = v_enrollment_id;
+    
+    -- Return success with awaiting_choice flag
+    RETURN jsonb_build_object(
+      'success', true,
+      'awaiting_choice', true,
+      'choice_group', v_choice_group
+    );
+  END IF;
+  -- ... rest of existing selection logic
+END IF;
+```
 
-New SELECT logic:
-- Staff (`admin`, `superadmin`, `enrollment_manager`) can still view all
-- Mentors can view sessions where `mentor_id = auth.uid()`
-- Students can view sessions only if an active enrollment exists that matches course+batch rules
+### Files to Modify
+1. **New migration**: Update `advance_pathway` function
+2. **src/hooks/useActivePathwayAccess.ts**: Handle `awaiting_choice` response
+3. **src/pages/Videos.tsx**: Update toast message for choice transitions
 
-This prevents accidental data exposure and ensures the UI and DB agree.
+## Expected Outcome
+- Students completing Nurturing Sessions will see the choice picker
+- They can select Ecommerce or Freelancing
+- The selected course unlocks and becomes their new current course
+- Pathway progression continues normally
 
-### 3) Update Supabase TypeScript types used by the app
-Update `src/integrations/supabase/types.ts` `success_sessions` row/insert/update types to include:
-- `batch_id: string | null`
-
-This keeps the app type-safe when we store/fetch the new field.
-
-### 4) Superadmin UI: add Course + Batch selectors to “Schedule Session”
-Modify `src/components/superadmin/SuccessSessionsManagement.tsx`:
-- Add state for:
-  - list of courses (`courses`)
-  - list of batches (`batchesForSelectedCourse`)
-- Load courses via Supabase (`courses` table)
-- When `course_id` changes, load batches for that course from `batches` (probably only `status='active'`, but we can also show all if you prefer)
-- Extend `SessionFormData` with:
-  - `course_id`
-  - `batch_id` (nullable; allow “unbatched” by storing NULL)
-- Include course_id + batch_id in insert/update payload
-- Update the sessions table list to display course/batch (helps admins verify targeting)
-
-### 5) Student UI: show only relevant sessions
-Modify `src/pages/LiveSessions.tsx`:
-- In the authenticated flow (`fetchAttendance`), fetch the student’s enrollments:
-  - `students` table to get the `student_id` from `user_id`
-  - `course_enrollments` filtered to `status='active'`
-- Fetch success sessions filtered to only those matching:
-  - `course_id in enrolled course_ids`
-  - plus batch filtering rules described above
-- Pick “next upcoming session” from those results
-- Past sessions filtering can continue, but instead of using `users.created_at`, prefer:
-  - use `course_enrollments.enrolled_at` (more correct)
-  - if multiple enrollments, use the earliest relevant enrolled_at
-
-### 6) Mentor UI: filter to assigned sessions
-Modify `src/components/mentor/MentorSessions.tsx`:
-- Change query from “fetch all success_sessions” to:
-  - `.eq('mentor_id', user.id)`
-- Keep the rest of the UI the same.
-
-### 7) Validate end-to-end
-Manual test checklist:
-- Superadmin: create a session with Course A + Batch 1 → only students in Batch 1 see it
-- Superadmin: create a session with Course A + Unbatched → only unbatched students in Course A see it
-- Student in Course B → should not see Course A sessions
-- Mentor assigned as host → sees their sessions; other mentors do not
-
----
-
-## Decisions already inferred from your answers
-- Enrollment status qualifying visibility: **Active only**
-- Visibility: **Students filtered and mentors filtered**
-- Targeting must support both “batch number” and “currently doing ecommerce” across pathway or direct enrollment: handled via `course_enrollments.course_id` + optional `batch_id`
-
----
-
-## Small clarifications (we can proceed without blocking, but these affect details)
-1) Should admins/enrollment managers see all sessions in management pages? (Recommended: yes.)
-2) For the batch selector, should we show only `status='active'` batches or include archived/inactive too?
-
-If you approve this plan, I’ll implement the DB migration + RLS + UI changes together so everything stays consistent.
+## Rollback
+If issues arise, the migration can be reverted. Students already at the choice point would need manual enrollment update.
