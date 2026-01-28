@@ -59,7 +59,7 @@ export function SupportManagement() {
   const [loading, setLoading] = useState(true);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
   const [replyMessage, setReplyMessage] = useState('');
-  const [filterStatus, setFilterStatus] = useState<string>('open');
+  const [filterStatus, setFilterStatus] = useState<string>('active');
   const [filterType, setFilterType] = useState<string>('all');
   const { toast } = useToast();
 
@@ -285,21 +285,25 @@ export function SupportManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'open': return 'badge-soft-destructive';
-      case 'in_progress': return 'badge-soft-primary';
-      case 'resolved': return 'badge-soft-success';
-      case 'closed': return 'badge-soft-muted';
-      default: return 'badge-soft-muted';
+      case 'open': 
+      case 'in_progress': 
+        return 'bg-blue-100 text-blue-800 hover:bg-blue-100';
+      case 'resolved': 
+        return 'bg-green-100 text-green-800 hover:bg-green-100';
+      case 'closed': 
+        return 'bg-gray-100 text-gray-800 hover:bg-gray-100';
+      default: 
+        return 'bg-gray-100 text-gray-800 hover:bg-gray-100';
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return 'badge-soft-destructive';
-      case 'high': return 'badge-soft-warning';
-      case 'medium': return 'badge-soft-primary';
-      case 'low': return 'badge-soft-success';
-      default: return 'badge-soft-muted';
+      case 'urgent': return 'bg-red-100 text-red-800 hover:bg-red-100';
+      case 'high': return 'bg-orange-100 text-orange-800 hover:bg-orange-100';
+      case 'medium': return 'bg-blue-100 text-blue-800 hover:bg-blue-100';
+      case 'low': return 'bg-green-100 text-green-800 hover:bg-green-100';
+      default: return 'bg-gray-100 text-gray-800 hover:bg-gray-100';
     }
   };
   const getTypeIcon = (type: string | null) => {
@@ -314,7 +318,10 @@ export function SupportManagement() {
 
   const filteredTickets = tickets
     .filter(ticket => {
-      const statusMatch = filterStatus === 'all' || ticket.status === filterStatus;
+      // Combine open and in_progress as "active" tickets
+      const statusMatch = filterStatus === 'all' 
+        || (filterStatus === 'active' && (ticket.status === 'open' || ticket.status === 'in_progress'))
+        || ticket.status === filterStatus;
       const typeMatch = filterType === 'all' || (ticket.category && ticket.category === filterType);
       return statusMatch && typeMatch;
     })
@@ -343,8 +350,7 @@ export function SupportManagement() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="open">Open</SelectItem>
-            <SelectItem value="in_progress">In Progress</SelectItem>
+            <SelectItem value="active">Active (Open/In Progress)</SelectItem>
             <SelectItem value="resolved">Resolved</SelectItem>
             <SelectItem value="closed">Closed</SelectItem>
           </SelectContent>
