@@ -729,7 +729,7 @@ const Layout = memo(({
                       <Menu className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0 overflow-y-auto">
+                  <SheetContent side="left" className="w-[280px] sm:w-[320px] p-0 overflow-y-auto scrollbar-none">
                     <div className="p-4 border-b">
                       <Link to="/" className="flex items-center gap-2" aria-label="Home" onClick={() => setMobileMenuOpen(false)}>
                         <AppLogo className="h-10 w-auto max-w-[160px]" alt="Company logo" />
@@ -933,7 +933,7 @@ const Layout = memo(({
       <div className="flex">
         {/* Sidebar - Desktop only, hidden on mobile */}
         {!isMobile && (
-          <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg min-h-screen transition-all duration-300 fixed left-0 z-30 overflow-y-auto`} style={{ top: isBannerVisible ? '112px' : '64px' }}>
+          <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg min-h-screen transition-all duration-300 fixed left-0 z-30 overflow-y-auto scrollbar-none`} style={{ top: isBannerVisible ? '112px' : '64px' }}>
             <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
               <div className="space-y-2">
               {navigation.map(item => {

@@ -390,6 +390,16 @@ All colors MUST be HSL.
   background-color: hsl(var(--muted-foreground) / 0.4);
 }
 
+/* Hide scrollbar while maintaining scroll functionality */
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari, Opera */
+}
+
 /* Accessibility and animation preferences */
 @media (prefers-reduced-motion: reduce) {
   * {
