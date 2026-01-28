@@ -178,12 +178,12 @@ export function SupportManagement() {
       // Then get user data for each reply
       const repliesWithUsers = await Promise.all(
         (repliesData || []).map(async (reply) => {
-          const userResult = await safeQuery<UserWithRoleResult>(
+          const userResult = await safeMaybeSingle<UserWithRoleResult>(
             supabase
               .from('users')
               .select('full_name, role')
               .eq('id', reply.user_id)
-              .single(),
+              .maybeSingle(),
             `fetch user data for reply ${reply.id}`
           );
           const userData = userResult.data;
@@ -191,8 +191,8 @@ export function SupportManagement() {
           return {
             ...reply,
             users: {
-              full_name: userData?.full_name || 'Unknown User',
-              role: userData?.role || 'user'
+              full_name: userData?.full_name || 'Deleted User',
+              role: userData?.role || 'staff'
             }
           };
         })
