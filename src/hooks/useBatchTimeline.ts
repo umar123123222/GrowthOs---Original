@@ -104,6 +104,40 @@ export function useBatchTimeline(batchId: string | null) {
     }
   }, [batchId, toast]);
 
+  const triggerNotification = async (
+    batchId: string,
+    itemType: TimelineItemType,
+    itemId: string,
+    title: string,
+    description?: string,
+    meetingLink?: string,
+    startDatetime?: string,
+    timelineItemId?: string
+  ) => {
+    try {
+      const { error } = await supabase.functions.invoke('send-batch-content-notification', {
+        body: {
+          batch_id: batchId,
+          item_type: itemType,
+          item_id: itemId,
+          title,
+          description,
+          meeting_link: meetingLink,
+          start_datetime: startDatetime,
+          timeline_item_id: timelineItemId,
+        },
+      });
+
+      if (error) {
+        console.error('Error triggering notification:', error);
+      } else {
+        console.log('Notification triggered successfully');
+      }
+    } catch (error) {
+      console.error('Error calling notification function:', error);
+    }
+  };
+
   const createTimelineItem = async (formData: TimelineItemFormData) => {
     if (!batchId) return null;
 
@@ -134,6 +168,20 @@ export function useBatchTimeline(batchId: string | null) {
         title: "Success",
         description: `${formData.type === 'RECORDING' ? 'Recording' : 'Live Session'} added to timeline`
       });
+
+      // Trigger immediate notification if drip_offset_days is 0
+      if (formData.drip_offset_days === 0) {
+        triggerNotification(
+          batchId,
+          formData.type,
+          formData.recording_id || formData.assignment_id || data.id,
+          formData.title,
+          formData.description,
+          formData.meeting_link,
+          formData.start_datetime,
+          data.id
+        );
+      }
 
       await fetchTimeline();
       return data;
