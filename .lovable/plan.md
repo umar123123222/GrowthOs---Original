@@ -1,125 +1,222 @@
 
 
-## Summary
+## Batch Content Notification System
 
-When a student is created without a batch (using LMS access date) and later assigned to a batch by an admin, the system currently recalculates ALL drip unlock dates based on the batch's start date. This can lock videos the student has already watched.
-
-## Current Behavior (Problem)
-
-The `get_course_sequential_unlock_status` function calculates unlock status like this:
-
-```sql
--- Priority: batch start_date > enrollment_date
-IF v_batch_start_date IS NOT NULL THEN
-  v_drip_base_date := v_batch_start_date;
-ELSE
-  v_drip_base_date := v_enrollment_date;
-END IF;
-```
-
-When a batch is assigned later with a **more recent** start date, all videos become drip-locked again based on the new date — even ones the student already watched.
-
-## Proposed Behavior (Fix)
-
-1. Videos the student has **already watched** remain unlocked regardless of drip schedule
-2. Videos **not yet watched** follow the new batch-based drip schedule
-3. Sequential unlock rules still apply for assignments
-
-This ensures:
-- No regression for students who have made progress
-- Future content follows the batch timeline
-- Assignments are still required where applicable
+This plan implements automated email notifications to students enrolled in a batch whenever:
+- A **recording** is dropped/unlocked (based on drip date)
+- An **assignment** is deployed/unlocked  
+- A **live session** is scheduled
 
 ---
 
-## Implementation Steps
+### Overview
 
-### Step 1: Update `get_course_sequential_unlock_status` Database Function
+When content becomes available for a batch (either immediately upon creation or when a drip date arrives), all students enrolled in that batch will receive a custom email notification informing them about the new content.
 
-Modify the function to check if the student has already watched each recording. If `recording_views.watched = true`, that video is always unlocked.
+---
 
-**Changes:**
-- Add a LEFT JOIN to `recording_views` for the CURRENT lesson (not just prev lesson)
-- In the unlock calculation, add condition: `current_watched = true` → always unlocked
-- Update `unlock_reason` to show `'already_watched'` when applicable
+### Implementation Components
 
-**SQL logic update:**
+#### 1. New Edge Function: `send-batch-content-notification`
+
+A dedicated edge function that:
+- Accepts batch_id, content type (recording/assignment/live_session), and item details
+- Fetches all students enrolled in the batch via `course_enrollments`
+- Sends personalized emails to each student using the existing SMTP client
+- Logs notifications to the `notifications` table for in-app display
+- Uses the existing CC functionality (`NOTIFICATION_EMAIL_CC` secret)
+
+**Email Templates:**
+- **Recording Unlocked**: "New Recording Available: {title}"
+- **Assignment Available**: "New Assignment: {name} - Due in {days} days"
+- **Live Session Scheduled**: "Live Session Scheduled: {title} on {date}"
+
+---
+
+#### 2. Database: Add Tracking Column
+
+Add a column to `batch_timeline_items` to track notification status:
+
 ```text
-full_status AS (
-  SELECT 
-    ...
-    -- ADD: Check if THIS video was watched
-    COALESCE(curr_rv.watched, false) as current_watched,
-    ...
-  FROM prev_lesson_status pls
-  ...
-  -- ADD: Join for current recording's watch status
-  LEFT JOIN recording_views curr_rv 
-    ON curr_rv.recording_id = pls.id 
-    AND curr_rv.user_id = p_user_id
-)
-SELECT 
-  ...
-  (
-    fs.current_watched OR  -- NEW: Already watched = always unlocked
-    fs.manually_unlocked OR 
-    NOT v_sequential_enabled OR 
-    ... existing conditions ...
-  )::BOOLEAN as is_unlocked,
-  
-  CASE 
-    WHEN fs.current_watched THEN 'already_watched'  -- NEW
-    WHEN fs.manually_unlocked THEN 'manually_unlocked'
-    ...
-  END as unlock_reason
+notification_sent_at: timestamp (nullable)
 ```
 
-### Step 2: Update TypeScript Types
-
-Update `src/integrations/supabase/types.ts` to include the new `'already_watched'` unlock reason in the return type (for type safety).
-
-### Step 3: Test Scenarios
-
-After deployment, verify:
-1. Student A (no batch) watches videos 1-3
-2. Admin assigns Student A to Batch X (start date = today)
-3. Videos 1-3 remain accessible
-4. Video 4+ follows the batch drip schedule
+This prevents duplicate notifications if the scheduler runs multiple times.
 
 ---
 
-## Technical Details
+#### 3. New Edge Function: `batch-content-drip-processor`
 
-### Database Migration
+A scheduled function (runs daily or hourly) that:
+- Checks `batch_timeline_items` for content that has reached its drip date
+- Filters items where `notification_sent_at IS NULL`
+- Calculates the deploy date: `batch.start_date + drip_offset_days`
+- For each item where deploy date is today or in the past:
+  - Calls `send-batch-content-notification`
+  - Updates `notification_sent_at`
+
+---
+
+#### 4. Immediate Notification on Creation (Optional Enhancement)
+
+When creating timeline items with `drip_offset_days = 0`:
+- Trigger notification immediately after successful insert
+- Update the `useBatchTimeline` hook to call the notification function
+
+---
+
+### Technical Details
+
+#### Edge Function: `send-batch-content-notification`
+
+```text
+Location: supabase/functions/send-batch-content-notification/index.ts
+
+Input Parameters:
+- batch_id: string
+- item_type: 'RECORDING' | 'LIVE_SESSION' | 'ASSIGNMENT'
+- item_id: string
+- title: string
+- description?: string
+- meeting_link?: string (for live sessions)
+- start_datetime?: string (for live sessions)
+
+Process:
+1. Validate input
+2. Fetch batch details (name, start_date)
+3. Query course_enrollments for batch_id → get students
+4. Join with users table to get email addresses
+5. For each student:
+   - Queue email in email_queue OR send directly via SMTP
+   - Insert in-app notification
+6. Return success/failure counts
+```
+
+#### Edge Function: `batch-content-drip-processor`
+
+```text
+Location: supabase/functions/batch-content-drip-processor/index.ts
+
+Scheduled via pg_cron (daily at midnight or hourly)
+
+Process:
+1. Get all batch_timeline_items where:
+   - notification_sent_at IS NULL
+   - Has a linked batch with start_date
+2. For each item:
+   - Calculate deploy_date = batch.start_date + drip_offset_days
+   - If deploy_date <= NOW():
+     - Call send-batch-content-notification
+     - Update notification_sent_at = NOW()
+3. Return processed count
+```
+
+#### Database Migration
 
 ```sql
-CREATE OR REPLACE FUNCTION public.get_course_sequential_unlock_status(...)
--- Key changes in the full_status CTE:
--- 1. Add join to recording_views for current recording
--- 2. Check current_watched in unlock conditions
--- 3. Add 'already_watched' to unlock_reason CASE
+-- Add notification tracking to batch_timeline_items
+ALTER TABLE public.batch_timeline_items
+ADD COLUMN notification_sent_at timestamptz;
+
+-- Index for efficient querying by processor
+CREATE INDEX idx_batch_timeline_notification_pending 
+ON public.batch_timeline_items(notification_sent_at) 
+WHERE notification_sent_at IS NULL;
 ```
-
-### Files to Modify
-
-1. **New migration**: Update `get_course_sequential_unlock_status` function
-2. **src/integrations/supabase/types.ts**: Add `'already_watched'` to unlock_reason union type (auto-generated after migration)
-
-### Edge Cases Handled
-
-| Scenario | Expected Behavior |
-|----------|-------------------|
-| Student watched video, batch assigned later with newer date | Video stays unlocked |
-| Student didn't watch video, batch assigned | Video follows batch drip |
-| Batch removed from student | Falls back to LMS access date for unwatched videos; watched videos stay unlocked |
-| Video watched but assignment not submitted | Video unlocked, but next video blocked by sequential rules |
 
 ---
 
-## Expected Outcome
+### Email Templates
 
-- Students who have already made progress won't lose access to content they've watched
-- The batch schedule applies only to **future** content dripping
-- Sequential unlock rules (watch previous + assignment approval) still apply
-- No changes needed to UI code — it already reads `is_unlocked` from the RPC
+**Recording Unlocked:**
+```text
+Subject: New Recording Available: {title}
+
+Body:
+Hi {student_name},
+
+A new recording is now available in your course!
+
+Recording: {title}
+{description if available}
+
+Login to start watching now.
+
+[Start Learning Button → LMS URL]
+```
+
+**Live Session Scheduled:**
+```text
+Subject: Live Session Scheduled: {title}
+
+Body:
+Hi {student_name},
+
+A live session has been scheduled for your batch!
+
+Session: {title}
+Date & Time: {formatted_datetime}
+{Meeting link if provided}
+
+Mark your calendar and join on time.
+
+[View Details Button → LMS URL]
+```
+
+**Assignment Available:**
+```text
+Subject: New Assignment Available: {title}
+
+Body:
+Hi {student_name},
+
+A new assignment has been unlocked for you!
+
+Assignment: {title}
+{description if available}
+
+Complete this before the next recording unlocks.
+
+[View Assignment Button → LMS URL]
+```
+
+---
+
+### Files to Create/Modify
+
+| File | Action |
+|------|--------|
+| `supabase/functions/send-batch-content-notification/index.ts` | Create |
+| `supabase/functions/batch-content-drip-processor/index.ts` | Create |
+| `supabase/config.toml` | Add function configs |
+| `src/hooks/useBatchTimeline.ts` | Modify to trigger notifications on item creation |
+| Migration file | Add `notification_sent_at` column |
+| `src/integrations/supabase/types.ts` | Auto-updated |
+
+---
+
+### Scheduling Setup
+
+After implementation, a cron job needs to be configured:
+
+```sql
+-- Run drip processor every hour
+SELECT cron.schedule(
+  'batch-content-drip-processor',
+  '0 * * * *',  -- Every hour
+  $$ SELECT net.http_post(...) $$
+);
+```
+
+---
+
+### Summary
+
+This implementation provides:
+1. Automated email notifications when batch content is deployed
+2. Support for recordings, assignments, and live sessions
+3. Drip-based scheduling with daily/hourly processing
+4. Duplicate prevention via `notification_sent_at` tracking
+5. Both email and in-app notifications
+6. Reuse of existing SMTP infrastructure and CC functionality
 
