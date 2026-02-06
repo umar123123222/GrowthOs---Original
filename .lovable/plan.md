@@ -1,222 +1,71 @@
 
+# Amend Email Client to Support Both SMTP and Resend
 
-## Batch Content Notification System
+## Overview
+Instead of replacing the existing SMTP setup, we'll modify the shared email client so it **automatically detects** which provider to use based on which secrets are configured. If `RESEND_API_KEY` is present, it uses Resend. Otherwise, it falls back to the existing SMTP secrets. This gives you flexibility -- you can use either provider without changing any code.
 
-This plan implements automated email notifications to students enrolled in a batch whenever:
-- A **recording** is dropped/unlocked (based on drip date)
-- An **assignment** is deployed/unlocked  
-- A **live session** is scheduled
+## How It Will Work
 
----
+- If `RESEND_API_KEY` secret is set --> emails are sent via Resend API
+- If `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` secrets are set --> emails are sent via the existing SMTP logic
+- If both are set --> Resend takes priority (more reliable), SMTP is the fallback
+- If neither is set --> error is thrown (same as today)
 
-### Overview
+No other Edge Functions need to change. They all call `SMTPClient.fromEnv()` and `.sendEmail()` the same way.
 
-When content becomes available for a batch (either immediately upon creation or when a drip date arrives), all students enrolled in that batch will receive a custom email notification informing them about the new content.
+## What You Need to Do First
 
----
+1. Go to https://resend.com and sign up (free -- 100 emails/day)
+2. Verify your sending domain at https://resend.com/domains (add the DNS records they provide)
+3. Generate an API key at https://resend.com/api-keys
+4. Add the secret `RESEND_API_KEY` in your Supabase Dashboard under **Settings > Edge Functions > Secrets**
 
-### Implementation Components
+You can keep your existing SMTP secrets in place as a fallback.
 
-#### 1. New Edge Function: `send-batch-content-notification`
+## Technical Changes
 
-A dedicated edge function that:
-- Accepts batch_id, content type (recording/assignment/live_session), and item details
-- Fetches all students enrolled in the batch via `course_enrollments`
-- Sends personalized emails to each student using the existing SMTP client
-- Logs notifications to the `notifications` table for in-app display
-- Uses the existing CC functionality (`NOTIFICATION_EMAIL_CC` secret)
+### 1. Amend `supabase/functions/_shared/smtp-client.ts`
 
-**Email Templates:**
-- **Recording Unlocked**: "New Recording Available: {title}"
-- **Assignment Available**: "New Assignment: {name} - Due in {days} days"
-- **Live Session Scheduled**: "Live Session Scheduled: {title} on {date}"
+Add a Resend-based sending path alongside the existing SMTP code:
 
----
+- Import `Resend` from `npm:resend@2.0.0`
+- Add a private `resendApiKey` field and a `useResend` flag to the class
+- Modify `fromEnv()` to check for `RESEND_API_KEY` first, then fall back to SMTP secrets
+- Add a private `sendViaResend()` method that uses the Resend API (supports HTML, CC, and attachments)
+- Modify `sendEmail()` to route to `sendViaResend()` when Resend is configured, otherwise use the existing SMTP logic (untouched)
 
-#### 2. Database: Add Tracking Column
+The existing SMTP code (the full TCP/TLS conversation) stays exactly as-is -- it just becomes one of two possible paths.
 
-Add a column to `batch_timeline_items` to track notification status:
+### 2. Update `supabase/functions/process-email-queue/index.ts`
 
-```text
-notification_sent_at: timestamp (nullable)
-```
+This function currently simulates sending (it just marks emails as "sent" without actually sending them). We'll wire it up to actually send:
 
-This prevents duplicate notifications if the scheduler runs multiple times.
+- Import and use `SMTPClient.fromEnv()` (which will auto-detect Resend or SMTP)
+- Replace the simulated delay with a real `.sendEmail()` call using the queued email's recipient, subject, and HTML content
+- Keep all the existing retry logic and error handling intact
 
----
+### 3. Functions That Need Zero Changes
 
-#### 3. New Edge Function: `batch-content-drip-processor`
+These 5 functions already use `SMTPClient.fromEnv()` and `.sendEmail()`, so they'll automatically benefit from the Resend option without any code modifications:
 
-A scheduled function (runs daily or hourly) that:
-- Checks `batch_timeline_items` for content that has reached its drip date
-- Filters items where `notification_sent_at IS NULL`
-- Calculates the deploy date: `batch.start_date + drip_offset_days`
-- For each item where deploy date is today or in the past:
-  - Calls `send-batch-content-notification`
-  - Updates `notification_sent_at`
+- `create-enhanced-student` (welcome emails and first invoice)
+- `create-enhanced-team-member` (welcome emails)
+- `update-student-details` (credential update emails)
+- `installment-reminder-scheduler` (billing reminders, overdue notices with PDF attachments)
+- `send-batch-content-notification` (content drip notifications)
 
----
+### Required Secret
 
-#### 4. Immediate Notification on Creation (Optional Enhancement)
+| Secret | Value | Where to Add |
+|--------|-------|--------------|
+| `RESEND_API_KEY` | Your Resend API key (starts with `re_...`) | Supabase Dashboard > Settings > Edge Functions > Secrets |
 
-When creating timeline items with `drip_offset_days = 0`:
-- Trigger notification immediately after successful insert
-- Update the `useBatchTimeline` hook to call the notification function
+### Supabase Auth Emails (Separate Configuration)
 
----
+For magic links and password resets (the error you saw earlier), you still need to configure SMTP in the Supabase Dashboard under **Authentication > Email Templates > SMTP Settings**. Resend works there too:
 
-### Technical Details
-
-#### Edge Function: `send-batch-content-notification`
-
-```text
-Location: supabase/functions/send-batch-content-notification/index.ts
-
-Input Parameters:
-- batch_id: string
-- item_type: 'RECORDING' | 'LIVE_SESSION' | 'ASSIGNMENT'
-- item_id: string
-- title: string
-- description?: string
-- meeting_link?: string (for live sessions)
-- start_datetime?: string (for live sessions)
-
-Process:
-1. Validate input
-2. Fetch batch details (name, start_date)
-3. Query course_enrollments for batch_id → get students
-4. Join with users table to get email addresses
-5. For each student:
-   - Queue email in email_queue OR send directly via SMTP
-   - Insert in-app notification
-6. Return success/failure counts
-```
-
-#### Edge Function: `batch-content-drip-processor`
-
-```text
-Location: supabase/functions/batch-content-drip-processor/index.ts
-
-Scheduled via pg_cron (daily at midnight or hourly)
-
-Process:
-1. Get all batch_timeline_items where:
-   - notification_sent_at IS NULL
-   - Has a linked batch with start_date
-2. For each item:
-   - Calculate deploy_date = batch.start_date + drip_offset_days
-   - If deploy_date <= NOW():
-     - Call send-batch-content-notification
-     - Update notification_sent_at = NOW()
-3. Return processed count
-```
-
-#### Database Migration
-
-```sql
--- Add notification tracking to batch_timeline_items
-ALTER TABLE public.batch_timeline_items
-ADD COLUMN notification_sent_at timestamptz;
-
--- Index for efficient querying by processor
-CREATE INDEX idx_batch_timeline_notification_pending 
-ON public.batch_timeline_items(notification_sent_at) 
-WHERE notification_sent_at IS NULL;
-```
-
----
-
-### Email Templates
-
-**Recording Unlocked:**
-```text
-Subject: New Recording Available: {title}
-
-Body:
-Hi {student_name},
-
-A new recording is now available in your course!
-
-Recording: {title}
-{description if available}
-
-Login to start watching now.
-
-[Start Learning Button → LMS URL]
-```
-
-**Live Session Scheduled:**
-```text
-Subject: Live Session Scheduled: {title}
-
-Body:
-Hi {student_name},
-
-A live session has been scheduled for your batch!
-
-Session: {title}
-Date & Time: {formatted_datetime}
-{Meeting link if provided}
-
-Mark your calendar and join on time.
-
-[View Details Button → LMS URL]
-```
-
-**Assignment Available:**
-```text
-Subject: New Assignment Available: {title}
-
-Body:
-Hi {student_name},
-
-A new assignment has been unlocked for you!
-
-Assignment: {title}
-{description if available}
-
-Complete this before the next recording unlocks.
-
-[View Assignment Button → LMS URL]
-```
-
----
-
-### Files to Create/Modify
-
-| File | Action |
-|------|--------|
-| `supabase/functions/send-batch-content-notification/index.ts` | Create |
-| `supabase/functions/batch-content-drip-processor/index.ts` | Create |
-| `supabase/config.toml` | Add function configs |
-| `src/hooks/useBatchTimeline.ts` | Modify to trigger notifications on item creation |
-| Migration file | Add `notification_sent_at` column |
-| `src/integrations/supabase/types.ts` | Auto-updated |
-
----
-
-### Scheduling Setup
-
-After implementation, a cron job needs to be configured:
-
-```sql
--- Run drip processor every hour
-SELECT cron.schedule(
-  'batch-content-drip-processor',
-  '0 * * * *',  -- Every hour
-  $$ SELECT net.http_post(...) $$
-);
-```
-
----
-
-### Summary
-
-This implementation provides:
-1. Automated email notifications when batch content is deployed
-2. Support for recordings, assignments, and live sessions
-3. Drip-based scheduling with daily/hourly processing
-4. Duplicate prevention via `notification_sent_at` tracking
-5. Both email and in-app notifications
-6. Reuse of existing SMTP infrastructure and CC functionality
-
+- **Host**: `smtp.resend.com`
+- **Port**: `587`
+- **Username**: `resend`
+- **Password**: Your Resend API key (`re_...`)
+- **Sender email**: Must be from your verified domain
