@@ -43,3 +43,57 @@ verify_jwt = false
 [functions.batch-content-drip-processor]
 verify_jwt = false
 schedule = "0 * * * *"
+
+[functions.delete-user-with-role]
+verify_jwt = false
+
+[functions.create-enhanced-team-member]
+verify_jwt = true
+
+[functions.create-student-v2]
+verify_jwt = true
+
+[functions.create-team-member]
+verify_jwt = true
+
+[functions.create-user-with-role]
+verify_jwt = false
+
+[functions.cleanup-inactive-students]
+verify_jwt = false
+
+[functions.encrypt-token]
+verify_jwt = true
+
+[functions.mark-invoice-paid]
+verify_jwt = true
+
+[functions.motivational-notifications]
+verify_jwt = false
+
+[functions.notification-scheduler]
+verify_jwt = false
+
+[functions.process-email-queue]
+verify_jwt = false
+
+[functions.process-onboarding-jobs]
+verify_jwt = false
+
+[functions.secure-encrypt-token]
+verify_jwt = true
+
+[functions.secure-user-creation]
+verify_jwt = true
+
+[functions.update-student-details]
+verify_jwt = true
+
+[functions.validate-shopify]
+verify_jwt = true
+
+[functions.sync-shopify-metrics]
+verify_jwt = false
+
+[functions.whoami]
+verify_jwt = true
