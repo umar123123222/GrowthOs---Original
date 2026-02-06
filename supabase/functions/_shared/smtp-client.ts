@@ -1,5 +1,8 @@
-// This file defines an SMTPClient class for sending emails using the SMTP protocol. 
-// It uses environment variables for configuration and handles the SMTP conversation, including TLS and authentication.
+// This file defines an EmailClient class that supports both Resend API and SMTP for sending emails.
+// It auto-detects which provider to use based on configured environment variables.
+// If RESEND_API_KEY is set, Resend is used. Otherwise, it falls back to SMTP secrets.
+
+import { Resend } from "npm:resend@2.0.0";
 
 interface SMTPConfig {
   host: string;
@@ -26,59 +29,150 @@ interface EmailAttachment {
 }
 
 export class SMTPClient {
-  private config: SMTPConfig;
+  private smtpConfig: SMTPConfig | null;
+  private resendApiKey: string | null;
+  private fromEmail: string;
+  private fromName: string;
+  private useResend: boolean;
 
-  constructor(config: SMTPConfig) {
-    this.config = config;
+  constructor(options: {
+    smtpConfig?: SMTPConfig;
+    resendApiKey?: string;
+    fromEmail: string;
+    fromName: string;
+  }) {
+    this.smtpConfig = options.smtpConfig || null;
+    this.resendApiKey = options.resendApiKey || null;
+    this.fromEmail = options.fromEmail;
+    this.fromName = options.fromName;
+    this.useResend = !!this.resendApiKey;
   }
 
   static fromEnv(): SMTPClient {
+    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const fromEmail = Deno.env.get('SMTP_FROM_EMAIL');
+    const fromName = Deno.env.get('SMTP_FROM_NAME') || 'Growth OS';
+
+    // Try Resend first
+    if (resendApiKey) {
+      if (!fromEmail) {
+        throw new Error('SMTP_FROM_EMAIL is required even when using Resend');
+      }
+      console.log('Email provider: Resend API');
+      return new SMTPClient({
+        resendApiKey,
+        fromEmail,
+        fromName,
+      });
+    }
+
+    // Fall back to SMTP
     const host = Deno.env.get('SMTP_HOST');
     const port = parseInt(Deno.env.get('SMTP_PORT') || '587');
     const username = Deno.env.get('SMTP_USER');
     const password = Deno.env.get('SMTP_PASSWORD');
-    const fromEmail = Deno.env.get('SMTP_FROM_EMAIL');
-    const fromName = Deno.env.get('SMTP_FROM_NAME') || 'Growth OS';
 
     if (!host || !username || !password || !fromEmail) {
-      throw new Error('Missing required SMTP configuration');
+      throw new Error(
+        'Missing email configuration. Set RESEND_API_KEY for Resend, or SMTP_HOST/SMTP_USER/SMTP_PASSWORD/SMTP_FROM_EMAIL for SMTP.'
+      );
     }
 
+    console.log('Email provider: SMTP');
     return new SMTPClient({
-      host,
-      port,
-      username,
-      password: password.replace(/\s/g, ''), // Remove spaces for Gmail app passwords
+      smtpConfig: {
+        host,
+        port,
+        username,
+        password: password.replace(/\s/g, ''),
+        fromEmail,
+        fromName,
+      },
       fromEmail,
       fromName,
     });
   }
 
   async sendEmail(options: EmailOptions): Promise<void> {
+    if (this.useResend) {
+      return this.sendViaResend(options);
+    }
+    return this.sendViaSMTP(options);
+  }
+
+  // ──────────────────────────────────────────────
+  // Resend path
+  // ──────────────────────────────────────────────
+
+  private async sendViaResend(options: EmailOptions): Promise<void> {
     const { to, subject, html, text, attachments, cc } = options;
+
+    try {
+      console.log(`[Resend] Sending email to: ${to}`);
+      const resend = new Resend(this.resendApiKey!);
+
+      const payload: Record<string, unknown> = {
+        from: `${this.fromName} <${this.fromEmail}>`,
+        to: [to],
+        subject,
+        html,
+      };
+
+      if (text) payload.text = text;
+      if (cc) payload.cc = [cc];
+
+      if (attachments && attachments.length > 0) {
+        payload.attachments = attachments.map((att) => ({
+          filename: att.filename,
+          content: Array.from(att.content), // Resend accepts number[]
+          content_type: att.contentType,
+        }));
+      }
+
+      const { data, error } = await resend.emails.send(payload as any);
+
+      if (error) {
+        console.error('[Resend] API error:', error);
+        throw new Error(`Resend API error: ${error.message}`);
+      }
+
+      console.log(`[Resend] Email sent successfully to: ${to}`, data);
+    } catch (error) {
+      console.error('[Resend] Error:', error);
+      throw new Error(`Failed to send email to ${to} via Resend: ${error.message}`);
+    }
+  }
+
+  // ──────────────────────────────────────────────
+  // SMTP path (existing logic, untouched)
+  // ──────────────────────────────────────────────
+
+  private async sendViaSMTP(options: EmailOptions): Promise<void> {
+    const { to, subject, html, text, attachments, cc } = options;
+    const config = this.smtpConfig!;
     let conn: Deno.TcpConn | null = null;
     let tlsConn: Deno.TlsConn | null = null;
 
     try {
-      console.log(`Attempting to send email to: ${to}`);
-      
+      console.log(`[SMTP] Attempting to send email to: ${to}`);
+
       // Create SMTP connection with timeout
       conn = await Promise.race([
         Deno.connect({
-          hostname: this.config.host,
-          port: this.config.port,
+          hostname: config.host,
+          port: config.port,
         }),
-        new Promise<never>((_, reject) => 
+        new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('Connection timeout')), 10000)
-        )
+        ),
       ]);
 
-      console.log('SMTP connection established');
+      console.log('[SMTP] Connection established');
 
       // Convert connection to TLS if needed
-      if (this.config.port === 587 || this.config.port === 465) {
-        tlsConn = await Deno.startTls(conn, { hostname: this.config.host });
-        console.log('TLS connection established');
+      if (config.port === 587 || config.port === 465) {
+        tlsConn = await Deno.startTls(conn, { hostname: config.host });
+        console.log('[SMTP] TLS connection established');
       } else {
         tlsConn = conn as any;
       }
@@ -98,7 +192,7 @@ export class SMTPClient {
           clearTimeout(timeout);
           if (chunk.value) {
             const response = decoder.decode(chunk.value);
-            console.log('SMTP Response:', response.trim());
+            console.log('[SMTP] Response:', response.trim());
             return response;
           }
           return '';
@@ -111,7 +205,7 @@ export class SMTPClient {
       // Helper function to send SMTP command
       const sendCommand = async (command: string) => {
         const encoder = new TextEncoder();
-        console.log('SMTP Command:', command.replace(/^AUTH LOGIN$|^[A-Za-z0-9+/=]+$/, '[REDACTED]'));
+        console.log('[SMTP] Command:', command.replace(/^AUTH LOGIN$|^[A-Za-z0-9+/=]+$/, '[REDACTED]'));
         await writer.write(encoder.encode(command + '\r\n'));
       };
 
@@ -122,7 +216,7 @@ export class SMTPClient {
       }
 
       // Extract domain from fromEmail or use localhost as fallback
-      const domain = this.config.fromEmail.split('@')[1] || 'localhost';
+      const domain = config.fromEmail.split('@')[1] || 'localhost';
       await sendCommand(`EHLO ${domain}`);
       const ehloResponse = await readResponse();
       if (!ehloResponse.startsWith('250')) {
@@ -130,7 +224,7 @@ export class SMTPClient {
       }
 
       // Start TLS if on port 587
-      if (this.config.port === 587) {
+      if (config.port === 587) {
         await sendCommand('STARTTLS');
         const tlsResponse = await readResponse();
         if (!tlsResponse.startsWith('220')) {
@@ -145,20 +239,20 @@ export class SMTPClient {
         throw new Error(`AUTH LOGIN failed: ${authResponse}`);
       }
 
-      await sendCommand(btoa(this.config.username));
+      await sendCommand(btoa(config.username));
       const userResponse = await readResponse();
       if (!userResponse.startsWith('334')) {
         throw new Error(`Username authentication failed: ${userResponse}`);
       }
 
-      await sendCommand(btoa(this.config.password));
+      await sendCommand(btoa(config.password));
       const passResponse = await readResponse();
       if (!passResponse.startsWith('235')) {
         throw new Error(`Password authentication failed: ${passResponse}`);
       }
 
       // Send email
-      await sendCommand(`MAIL FROM:<${this.config.fromEmail}>`);
+      await sendCommand(`MAIL FROM:<${config.fromEmail}>`);
       const mailResponse = await readResponse();
       if (!mailResponse.startsWith('250')) {
         throw new Error(`MAIL FROM failed: ${mailResponse}`);
@@ -187,15 +281,15 @@ export class SMTPClient {
 
       // Email headers and body
       const boundary = `boundary_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-      const messageId = `<${Date.now()}.${Math.random().toString(36).substring(2)}@${this.config.fromEmail.split('@')[1]}>`;
-      
+      const messageId = `<${Date.now()}.${Math.random().toString(36).substring(2)}@${config.fromEmail.split('@')[1]}>`;
+
       let emailContent: string;
-      
+
       if (attachments && attachments.length > 0) {
-        console.log(`Preparing email with ${attachments.length} attachments`);
+        console.log(`[SMTP] Preparing email with ${attachments.length} attachments`);
         // Multipart email with attachments
         const emailParts = [
-          `From: ${this.config.fromName} <${this.config.fromEmail}>`,
+          `From: ${config.fromName} <${config.fromEmail}>`,
           `To: ${to}`,
           ...(cc ? [`Cc: ${cc}`] : []),
           `Subject: ${subject}`,
@@ -211,7 +305,7 @@ export class SMTPClient {
           'Content-Transfer-Encoding: 8bit',
           '',
           html,
-          ''
+          '',
         ];
 
         // Add attachments
@@ -233,7 +327,7 @@ export class SMTPClient {
       } else {
         // Simple HTML email
         emailContent = [
-          `From: ${this.config.fromName} <${this.config.fromEmail}>`,
+          `From: ${config.fromName} <${config.fromEmail}>`,
           `To: ${to}`,
           ...(cc ? [`Cc: ${cc}`] : []),
           `Subject: ${subject}`,
@@ -259,11 +353,10 @@ export class SMTPClient {
       await sendCommand('QUIT');
       await readResponse();
 
-      console.log(`Email sent successfully via SMTP to: ${to}`);
-
+      console.log(`[SMTP] Email sent successfully to: ${to}`);
     } catch (error) {
-      console.error('SMTP Error:', error);
-      throw new Error(`Failed to send email to ${to}: ${error.message}`);
+      console.error('[SMTP] Error:', error);
+      throw new Error(`Failed to send email to ${to} via SMTP: ${error.message}`);
     } finally {
       // Clean up connections in reverse order
       try {
@@ -271,15 +364,15 @@ export class SMTPClient {
           tlsConn.close();
         }
       } catch (e) {
-        console.warn('Error closing TLS connection:', e.message);
+        console.warn('[SMTP] Error closing TLS connection:', e.message);
       }
-      
+
       try {
         if (conn) {
           conn.close();
         }
       } catch (e) {
-        console.warn('Error closing TCP connection:', e.message);
+        console.warn('[SMTP] Error closing TCP connection:', e.message);
       }
     }
   }

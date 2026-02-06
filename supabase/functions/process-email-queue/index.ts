@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.55.0";
+import { SMTPClient } from "../_shared/smtp-client.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,7 +13,6 @@ const supabase = createClient(
 );
 
 serve(async (req: Request) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -20,14 +20,17 @@ serve(async (req: Request) => {
   try {
     console.log('Processing email queue...');
 
+    // Initialise email client (auto-detects Resend vs SMTP)
+    const emailClient = SMTPClient.fromEnv();
+
     // Get pending emails from queue
     const { data: pendingEmails, error: fetchError } = await supabase
       .from('email_queue')
       .select('*')
       .eq('status', 'pending')
-      .lt('retry_count', 3) // Don't process emails that have failed too many times
+      .lt('retry_count', 3)
       .order('created_at', { ascending: true })
-      .limit(50); // Process max 50 emails per batch
+      .limit(50);
 
     if (fetchError) {
       console.error('Error fetching pending emails:', fetchError);
@@ -40,14 +43,15 @@ serve(async (req: Request) => {
     let errorCount = 0;
     const processedEmails = [];
 
-    // Process each email
     for (const email of pendingEmails || []) {
       try {
-        // Here you would integrate with your email service (SMTP, Resend, etc.)
-        // For now, we'll simulate email processing and mark as sent
-
-        // Simulate email sending delay
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Send via the configured provider (Resend or SMTP)
+        await emailClient.sendEmail({
+          to: email.recipient_email,
+          subject: email.subject || 'Notification',
+          html: email.html_content || email.body || '<p>No content</p>',
+          ...(email.cc_email ? { cc: email.cc_email } : {}),
+        });
 
         // Update email status to sent
         const { error: updateError } = await supabase
@@ -70,14 +74,13 @@ serve(async (req: Request) => {
           recipient: email.recipient_email,
           type: email.email_type
         });
-        
+
         processedCount++;
         console.log(`Processed email: ${email.email_type} to ${email.recipient_email}`);
 
       } catch (error) {
         console.error(`Failed to process email ${email.id}:`, error);
-        
-        // Update retry count and error message
+
         const { error: retryError } = await supabase
           .from('email_queue')
           .update({
