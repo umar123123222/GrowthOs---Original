@@ -41,6 +41,8 @@ interface CreateEnhancedStudentResponse {
     generated_password: string;
     created_at: string;
   };
+  email_sent?: boolean;
+  email_error?: string;
   error?: string;
 }
 
@@ -86,6 +88,17 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     console.log('Enhanced student creation started');
+
+    // Email secret diagnostic logging (values not logged for security)
+    const emailDiag = {
+      RESEND_API_KEY: Deno.env.get('RESEND_API_KEY') ? 'configured' : 'not set',
+      SMTP_FROM_EMAIL: Deno.env.get('SMTP_FROM_EMAIL') ? 'configured' : 'not set',
+      SMTP_FROM_NAME: Deno.env.get('SMTP_FROM_NAME') ? 'configured' : 'not set',
+      SMTP_HOST: Deno.env.get('SMTP_HOST') ? 'configured' : 'not set',
+      SMTP_USER: Deno.env.get('SMTP_USER') ? 'configured' : 'not set',
+      provider: Deno.env.get('RESEND_API_KEY') ? 'resend' : (Deno.env.get('SMTP_HOST') ? 'smtp' : 'none'),
+    };
+    console.log('Email config check:', JSON.stringify(emailDiag));
 
     // Initialize Supabase client with service role key
     const supabaseAdmin = createClient(
@@ -636,69 +649,75 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
-    // Send emails in background (non-blocking using EdgeRuntime.waitUntil)
-    const sendEmailsInBackground = async () => {
-      try {
-        const smtpClient = SMTPClient.fromEnv();
-        
-        // Send welcome email
-        try {
-          const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
-          await smtpClient.sendEmail({
-            to: email,
-            subject: 'Welcome to Growth OS - Your LMS Access Credentials',
-            ...(notificationCc ? { cc: notificationCc } : {}),
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                <h2>Welcome to Growth OS, ${full_name}!</h2>
-                
-                <p>Your student account has been created successfully. Here are your login credentials:</p>
-                
-                <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <h3>LMS Access Credentials</h3>
-                  <p><strong>Student ID:</strong> ${studentRecord.student_id}</p>
-                  <p><strong>Installments:</strong> ${installment_count} installment${installment_count > 1 ? 's' : ''}</p>
-                  <p><strong>User ID:</strong> ${email}</p>
-                  <p><strong>Current Password:</strong> ${loginPassword}</p>
-                </div>
-                
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="${loginUrl}" 
-                     style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
-                    Start Your Learning Journey
-                  </a>
-                </div>
-                
-                <p>Please keep these credentials secure. You can change your password after logging in.</p>
-                
-                <p>If you have any questions, please contact our support team.</p>
-                
-                <p>Best regards,<br>Growth OS Team</p>
-              </div>
-            `,
-          });
+    // ── Send welcome email INLINE (before response) so failures are visible ──
+    let emailSent = false;
+    let emailError: string | undefined;
 
-          console.log('Welcome email sent successfully to:', email);
-
-          await supabaseAdmin
-            .from('email_queue')
-            .update({ status: 'sent', sent_at: new Date().toISOString() })
-            .eq('user_id', authUser.user.id)
-            .eq('email_type', 'student_credentials');
+    try {
+      const smtpClient = SMTPClient.fromEnv();
+      const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
+      
+      await smtpClient.sendEmail({
+        to: email,
+        subject: 'Welcome to Growth OS - Your LMS Access Credentials',
+        ...(notificationCc ? { cc: notificationCc } : {}),
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2>Welcome to Growth OS, ${full_name}!</h2>
             
-        } catch (emailError) {
-          console.error('Welcome email error:', emailError);
-          await supabaseAdmin
-            .from('email_queue')
-            .update({ 
-              status: 'failed', 
-              error_message: emailError instanceof Error ? emailError.message : 'Unknown SMTP error'
-            })
-            .eq('user_id', authUser.user.id)
-            .eq('email_type', 'student_credentials');
-        }
+            <p>Your student account has been created successfully. Here are your login credentials:</p>
+            
+            <div style="background-color: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3>LMS Access Credentials</h3>
+              <p><strong>Student ID:</strong> ${studentRecord.student_id}</p>
+              <p><strong>Installments:</strong> ${installment_count} installment${installment_count > 1 ? 's' : ''}</p>
+              <p><strong>User ID:</strong> ${email}</p>
+              <p><strong>Current Password:</strong> ${loginPassword}</p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${loginUrl}" 
+                 style="background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+                Start Your Learning Journey
+              </a>
+            </div>
+            
+            <p>Please keep these credentials secure. You can change your password after logging in.</p>
+            
+            <p>If you have any questions, please contact our support team.</p>
+            
+            <p>Best regards,<br>Growth OS Team</p>
+          </div>
+        `,
+      });
 
-        // Send first invoice email if installments were created
+      emailSent = true;
+      console.log('Welcome email sent successfully to:', email);
+
+      await supabaseAdmin
+        .from('email_queue')
+        .update({ status: 'sent', sent_at: new Date().toISOString() })
+        .eq('user_id', authUser.user.id)
+        .eq('email_type', 'student_credentials');
+
+    } catch (welcomeEmailErr) {
+      emailSent = false;
+      emailError = welcomeEmailErr instanceof Error ? welcomeEmailErr.message : 'Unknown email error';
+      console.error('Welcome email FAILED:', emailError);
+
+      await supabaseAdmin
+        .from('email_queue')
+        .update({ 
+          status: 'failed', 
+          error_message: emailError
+        })
+        .eq('user_id', authUser.user.id)
+        .eq('email_type', 'student_credentials');
+    }
+
+    // ── Send invoice email in background (non-critical) ──
+    const sendInvoiceInBackground = async () => {
+      try {
         const { data: invoiceSettings } = await supabaseAdmin
           .from('company_settings')
           .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days, payment_methods, currency')
@@ -713,27 +732,23 @@ const handler = async (req: Request): Promise<Response> => {
             .maybeSingle();
 
           if (firstInvoice) {
-            try {
-              await sendFirstInvoiceEmail({
-                installment_number: firstInvoice.installment_number,
-                amount: firstInvoice.amount,
-                due_date: firstInvoice.due_date,
-                student_email: email,
-                student_name: full_name
-              }, loginUrl, currency, companyDetails, invoiceSettings?.payment_methods || []);
-              console.log('First invoice email sent successfully');
-            } catch (invoiceEmailError) {
-              console.error('Invoice email error:', invoiceEmailError);
-            }
+            await sendFirstInvoiceEmail({
+              installment_number: firstInvoice.installment_number,
+              amount: firstInvoice.amount,
+              due_date: firstInvoice.due_date,
+              student_email: email,
+              student_name: full_name
+            }, loginUrl, currency, companyDetails, invoiceSettings?.payment_methods || []);
+            console.log('First invoice email sent successfully');
           }
         }
       } catch (error) {
-        console.error('Background email processing error:', error);
+        console.error('Background invoice email error:', error);
       }
     };
 
-    // Start background email processing (non-blocking)
-    EdgeRuntime.waitUntil(sendEmailsInBackground());
+    // Invoice email stays in background (non-blocking)
+    EdgeRuntime.waitUntil(sendInvoiceInBackground());
 
     const response: CreateEnhancedStudentResponse = {
       success: true,
@@ -749,7 +764,9 @@ const handler = async (req: Request): Promise<Response> => {
         },
         generated_password: loginPassword,
         created_at: userProfile.created_at
-      }
+      },
+      email_sent: emailSent,
+      email_error: emailError,
     };
 
     console.log('Enhanced student creation completed successfully');
