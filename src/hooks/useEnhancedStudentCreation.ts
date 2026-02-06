@@ -94,10 +94,20 @@ export const useEnhancedStudentCreation = () => {
       }
 
       if (data?.success) {
+        const emailStatus = data.email_sent
+          ? 'Welcome email sent with LMS credentials.'
+          : 'Welcome email could not be sent. Please check email configuration.';
+        
         toast({
-          title: "Success",
-          description: `Student ${data.data.full_name} created successfully! Welcome email sent with LMS credentials.`,
+          title: "Student Created",
+          description: `Student ${data.data.full_name} created successfully! ${emailStatus}`,
+          variant: data.email_sent ? "default" : "destructive",
         })
+
+        if (!data.email_sent && data.email_error) {
+          console.warn('Email delivery failed:', data.email_error);
+        }
+
         return data
       } else {
         const errorCode = data?.error_code
