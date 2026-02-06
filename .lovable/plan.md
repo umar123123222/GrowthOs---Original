@@ -1,71 +1,40 @@
 
-# Amend Email Client to Support Both SMTP and Resend
+# Fix Missing Edge Function Registrations in config.toml
 
-## Overview
-Instead of replacing the existing SMTP setup, we'll modify the shared email client so it **automatically detects** which provider to use based on which secrets are configured. If `RESEND_API_KEY` is present, it uses Resend. Otherwise, it falls back to the existing SMTP secrets. This gives you flexibility -- you can use either provider without changing any code.
+## Problem
+18 Edge Functions exist in the codebase but are not registered in `supabase/config.toml`. Without registration, Supabase returns **404 Not Found** when any of them are invoked. This directly caused:
+- The `delete-user-with-role` 404 error you reported
+- Potential failures in other unregistered functions like `process-email-queue`, `create-user-with-role`, `update-student-details`, etc.
 
-## How It Will Work
+## Solution
+Add all 18 missing functions to `supabase/config.toml` with the correct JWT verification settings.
 
-- If `RESEND_API_KEY` secret is set --> emails are sent via Resend API
-- If `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` secrets are set --> emails are sent via the existing SMTP logic
-- If both are set --> Resend takes priority (more reliable), SMTP is the fallback
-- If neither is set --> error is thrown (same as today)
+## Technical Details
 
-No other Edge Functions need to change. They all call `SMTPClient.fromEnv()` and `.sendEmail()` the same way.
+### Changes to `supabase/config.toml`
 
-## What You Need to Do First
+Add the following entries. Functions that require an authenticated user (create, delete, update operations) will have `verify_jwt = true`. Background/scheduled/webhook functions will have `verify_jwt = false`.
 
-1. Go to https://resend.com and sign up (free -- 100 emails/day)
-2. Verify your sending domain at https://resend.com/domains (add the DNS records they provide)
-3. Generate an API key at https://resend.com/api-keys
-4. Add the secret `RESEND_API_KEY` in your Supabase Dashboard under **Settings > Edge Functions > Secrets**
+| Function | verify_jwt | Reason |
+|---|---|---|
+| `delete-user-with-role` | `false` | Validates auth in code (line 20-31) |
+| `create-enhanced-team-member` | `true` | Requires authenticated admin |
+| `create-student-v2` | `true` | Requires authenticated admin |
+| `create-team-member` | `true` | Requires authenticated admin |
+| `create-user-with-role` | `false` | Supports bootstrap (first user) |
+| `cleanup-inactive-students` | `false` | Background/cron job |
+| `encrypt-token` | `true` | Requires authenticated user |
+| `mark-invoice-paid` | `true` | Requires authenticated admin |
+| `motivational-notifications` | `false` | Background/cron job |
+| `notification-scheduler` | `false` | Background/cron job |
+| `process-email-queue` | `false` | Background/cron job |
+| `process-onboarding-jobs` | `false` | Background/cron job |
+| `secure-encrypt-token` | `true` | Requires authenticated user |
+| `secure-user-creation` | `true` | Requires authenticated admin |
+| `update-student-details` | `true` | Requires authenticated admin |
+| `validate-shopify` | `true` | Requires authenticated user |
+| `sync-shopify-metrics` | `false` | Background/cron job |
+| `whoami` | `true` | Returns current user info |
 
-You can keep your existing SMTP secrets in place as a fallback.
-
-## Technical Changes
-
-### 1. Amend `supabase/functions/_shared/smtp-client.ts`
-
-Add a Resend-based sending path alongside the existing SMTP code:
-
-- Import `Resend` from `npm:resend@2.0.0`
-- Add a private `resendApiKey` field and a `useResend` flag to the class
-- Modify `fromEnv()` to check for `RESEND_API_KEY` first, then fall back to SMTP secrets
-- Add a private `sendViaResend()` method that uses the Resend API (supports HTML, CC, and attachments)
-- Modify `sendEmail()` to route to `sendViaResend()` when Resend is configured, otherwise use the existing SMTP logic (untouched)
-
-The existing SMTP code (the full TCP/TLS conversation) stays exactly as-is -- it just becomes one of two possible paths.
-
-### 2. Update `supabase/functions/process-email-queue/index.ts`
-
-This function currently simulates sending (it just marks emails as "sent" without actually sending them). We'll wire it up to actually send:
-
-- Import and use `SMTPClient.fromEnv()` (which will auto-detect Resend or SMTP)
-- Replace the simulated delay with a real `.sendEmail()` call using the queued email's recipient, subject, and HTML content
-- Keep all the existing retry logic and error handling intact
-
-### 3. Functions That Need Zero Changes
-
-These 5 functions already use `SMTPClient.fromEnv()` and `.sendEmail()`, so they'll automatically benefit from the Resend option without any code modifications:
-
-- `create-enhanced-student` (welcome emails and first invoice)
-- `create-enhanced-team-member` (welcome emails)
-- `update-student-details` (credential update emails)
-- `installment-reminder-scheduler` (billing reminders, overdue notices with PDF attachments)
-- `send-batch-content-notification` (content drip notifications)
-
-### Required Secret
-
-| Secret | Value | Where to Add |
-|--------|-------|--------------|
-| `RESEND_API_KEY` | Your Resend API key (starts with `re_...`) | Supabase Dashboard > Settings > Edge Functions > Secrets |
-
-### Supabase Auth Emails (Separate Configuration)
-
-For magic links and password resets (the error you saw earlier), you still need to configure SMTP in the Supabase Dashboard under **Authentication > Email Templates > SMTP Settings**. Resend works there too:
-
-- **Host**: `smtp.resend.com`
-- **Port**: `587`
-- **Username**: `resend`
-- **Password**: Your Resend API key (`re_...`)
-- **Sender email**: Must be from your verified domain
+### Important Note About Email Delivery
+This fix ensures functions are deployed and reachable (no more 404 errors). However, for emails to actually send, you still need to add the `RESEND_API_KEY` secret to your Supabase Edge Function secrets as discussed earlier. The code changes we made to `smtp-client.ts` are ready -- they just need the API key to work.
