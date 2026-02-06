@@ -35,6 +35,24 @@ export class SMTPClient {
   private fromName: string;
   private useResend: boolean;
 
+  /**
+   * Extracts a bare email address from formats like:
+   * - "noreply@domain.com" → "noreply@domain.com"
+   * - "Name <noreply@domain.com>" → "noreply@domain.com"
+   * - "<noreply@domain.com>" → "noreply@domain.com"
+   */
+  static sanitizeEmail(value: string): string {
+    const trimmed = value.trim();
+    const match = trimmed.match(/<([^>]+)>/);
+    const email = match ? match[1].trim() : trimmed;
+    if (!email.includes('@')) {
+      throw new Error(
+        `Invalid email address: "${value}". Expected format: "email@example.com" or "Name <email@example.com>"`
+      );
+    }
+    return email;
+  }
+
   constructor(options: {
     smtpConfig?: SMTPConfig;
     resendApiKey?: string;
@@ -50,8 +68,13 @@ export class SMTPClient {
 
   static fromEnv(): SMTPClient {
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    const fromEmail = Deno.env.get('SMTP_FROM_EMAIL');
+    const rawFromEmail = Deno.env.get('SMTP_FROM_EMAIL');
+    const fromEmail = rawFromEmail ? SMTPClient.sanitizeEmail(rawFromEmail) : undefined;
     const fromName = Deno.env.get('SMTP_FROM_NAME') || 'Growth OS';
+
+    if (rawFromEmail && rawFromEmail !== fromEmail) {
+      console.log(`[EmailClient] Sanitized SMTP_FROM_EMAIL: "${rawFromEmail}" → "${fromEmail}"`);
+    }
 
     // Try Resend first
     if (resendApiKey) {
@@ -252,7 +275,8 @@ export class SMTPClient {
       }
 
       // Send email
-      await sendCommand(`MAIL FROM:<${config.fromEmail}>`);
+      const sanitizedFrom = SMTPClient.sanitizeEmail(config.fromEmail);
+      await sendCommand(`MAIL FROM:<${sanitizedFrom}>`);
       const mailResponse = await readResponse();
       if (!mailResponse.startsWith('250')) {
         throw new Error(`MAIL FROM failed: ${mailResponse}`);
