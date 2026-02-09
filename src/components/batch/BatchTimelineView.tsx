@@ -30,7 +30,7 @@ export function BatchTimelineView({ batchId, batchName, limit, showViewAll }: Ba
 
   const handleWatchRecording = (recordingId: string | null, recordingUrl: string | null) => {
     if (recordingId) {
-      navigate(`/videos/${recordingId}`);
+      navigate(`/video-player?id=${recordingId}`);
     } else if (recordingUrl) {
       window.open(recordingUrl, '_blank');
     }
