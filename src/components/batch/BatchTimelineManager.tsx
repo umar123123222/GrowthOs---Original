@@ -204,6 +204,7 @@ export function BatchTimelineManager({ batchId, onBack }: BatchTimelineManagerPr
         onImport={handleImportCourse}
         existingRecordingIds={existingRecordingIds}
         currentItemCount={timelineItems.length}
+        timelineItems={timelineItems}
       />
 
       {/* Add/Edit Item Dialog */}
