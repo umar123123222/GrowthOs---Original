@@ -14,9 +14,11 @@ import { useNavigate } from 'react-router-dom';
 interface BatchTimelineViewProps {
   batchId: string;
   batchName?: string;
+  limit?: number;
+  showViewAll?: boolean;
 }
 
-export function BatchTimelineView({ batchId, batchName }: BatchTimelineViewProps) {
+export function BatchTimelineView({ batchId, batchName, limit, showViewAll }: BatchTimelineViewProps) {
   const { timelineStatus, loading, getSessionState } = useBatchTimelineStatus(batchId);
   const navigate = useNavigate();
 
@@ -148,7 +150,7 @@ export function BatchTimelineView({ batchId, batchName }: BatchTimelineViewProps
 
       {/* Timeline Items */}
       <div className="space-y-4">
-        {timelineStatus.map((item, index) => {
+        {(limit ? timelineStatus.slice(0, limit) : timelineStatus).map((item, index) => {
           const isRecording = item.item_type === 'RECORDING';
           const sessionUI = !isRecording ? getSessionStateUI(item) : null;
           
@@ -260,6 +262,20 @@ export function BatchTimelineView({ batchId, batchName }: BatchTimelineViewProps
           );
         })}
       </div>
+
+      {/* View All button */}
+      {showViewAll && limit && timelineStatus.length > limit && (
+        <div className="text-center pt-2">
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/videos')}
+            className="w-full sm:w-auto"
+          >
+            View All {timelineStatus.length} Items
+            <ExternalLink className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

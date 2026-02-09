@@ -724,7 +724,7 @@ export function StudentDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <BatchTimelineView batchId={batchEnrollment.batchId} batchName={batchEnrollment.batchName} />
+            <BatchTimelineView batchId={batchEnrollment.batchId} batchName={batchEnrollment.batchName} limit={3} showViewAll />
           </CardContent>
         </Card>
       )}
