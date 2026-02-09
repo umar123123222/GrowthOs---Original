@@ -39,6 +39,7 @@ interface TimelineGroupedListProps {
   onDelete: (itemId: string) => void;
   onDeleteGroup: (items: TimelineItem[]) => void;
   onReorderGroups: (groupOrder: string[], groups: GroupData[]) => void;
+  deletingProgress?: { total: number; deleted: number } | null;
 }
 
 export function TimelineGroupedList({
@@ -48,6 +49,7 @@ export function TimelineGroupedList({
   onDelete,
   onDeleteGroup,
   onReorderGroups,
+  deletingProgress,
 }: TimelineGroupedListProps) {
   const [courses, setCourses] = useState<Record<string, CourseInfo>>({});
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
@@ -226,7 +228,28 @@ export function TimelineGroupedList({
   }
 
   return (
-    <Card>
+    <Card className="relative">
+      {/* Deleting progress overlay */}
+      {deletingProgress && (
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-20 flex flex-col items-center justify-center rounded-lg">
+          <div className="text-center space-y-3">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="font-medium">Deleting items...</p>
+            <div className="w-48 mx-auto">
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${(deletingProgress.deleted / deletingProgress.total) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {deletingProgress.deleted} / {deletingProgress.total}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Calendar className="w-5 h-5" />
