@@ -1,78 +1,75 @@
 
 
-# Fix Session Scheduling Crash + Add Student Notifications & Homepage Visibility
+# Show All Pathway Courses on Videos Page for Batch Students
 
-## Problem 1: Page Crash (The Error in Screenshot)
+## Overview
+For students enrolled in a batch with a pathway, the Videos page will display **all courses in pathway order** (e.g., Nurturing Sessions -> Ecom 360 -> Google Ads -> ...) on a single page, with drip/unlock dates driven by the **batch timeline settings**.
 
-The "Oops! Something went wrong" error is caused by `<SelectItem value="">` on line 598 of `SuccessSessionsManagement.tsx`. Radix UI's Select component does not allow empty string values -- this throws a runtime error that crashes the entire component via the ErrorBoundary.
+## Current Behavior
+- Videos page shows only **one course at a time** (the current pathway step)
+- `useCourseRecordings` fetches recordings for a single `courseId`
+- Batch timeline drip override was recently added but only applies to the single active course
 
-**Fix:** Change `value=""` to `value="__all__"` for the "All students" option, and update the submit handler to treat `"__all__"` as null (no course filter).
+## Planned Changes
 
-**File:** `src/components/superadmin/SuccessSessionsManagement.tsx`
-- Line 98: Change default `course_id` from `''` to `'__all__'`
-- Line 231: Change `resetForm` to use `'__all__'` 
-- Line 266: Map `'__all__'` back to `''` in `handleOpenDialog`
-- Line 307: In `handleSubmit`, treat `course_id === '__all__'` as `null`
-- Line 592: Change `onValueChange` to reset `batch_id` when course changes
-- Line 598: Change `<SelectItem value="">` to `<SelectItem value="__all__">`
+### 1. Create a new hook: `useBatchPathwayRecordings`
+A new hook that fetches recordings across **all courses in pathway order** for batch students:
+- Accept `batchId` and `pathwayId` as parameters
+- Fetch pathway courses in step order from `pathway_courses`
+- For each course, fetch its modules and recordings (ordered by module order, then sequence order)
+- Fetch batch timeline items (`batch_timeline_items`) for the batch to get `drip_offset_days` per recording
+- Fetch the batch `start_date` to calculate unlock dates
+- Fetch `recording_views` and `submissions` for watched/assignment status
+- Return data grouped by **course** (with course title, step number) then by **module** within each course
+- Calculate unlock status: `unlockDate = batch start_date + drip_offset_days`; if today >= unlockDate, unlocked
 
-## Problem 2: Students Don't See Scheduled Session on Homepage
+### 2. Update `src/pages/Videos.tsx`
+- Detect if the student is in a batch (check `course_enrollments` for a `batch_id`)
+- If in a batch with a pathway:
+  - Use `useBatchPathwayRecordings` instead of `useCourseRecordings`
+  - Render all courses in pathway step order, each as a collapsible section
+  - Within each course section, show modules and recordings as currently done
+  - Show drip dates from batch timeline on locked recordings
+  - Show overall pathway progress (total watched / total recordings)
+- If NOT in a batch: keep existing behavior unchanged
 
-The Student Dashboard (`StudentDashboard.tsx`) currently has no widget showing upcoming success sessions. Students can only see them if they navigate to the Live Sessions page.
-
-**Fix:** Add an "Upcoming Live Session" card to the Student Dashboard that queries `success_sessions` for the next upcoming session matching the student's course/batch enrollment.
-
-**File:** `src/components/StudentDashboard.tsx`
-- Add state for `upcomingSession`
-- In `fetchDashboardData`, query `success_sessions` for upcoming sessions filtered by the student's active course and batch
-- Add a prominent card in the dashboard grid showing the next session with title, date/time, mentor name, and a "Join Session" button
-
-## Problem 3: Email Reminder Not Sent When Session Is Scheduled
-
-Currently, when a success session is created in `SuccessSessionsManagement`, only an in-app notification is sent to the assigned mentor. No email or in-app notification goes to batch students.
-
-**Fix:** After successfully creating a session with a `batch_id`, call the existing `send-batch-content-notification` Edge Function (which already has a LIVE_SESSION email template) to notify all enrolled students.
-
-**File:** `src/components/superadmin/SuccessSessionsManagement.tsx`
-- After the session is created successfully (line 334), if a `batch_id` is set, invoke the `send-batch-content-notification` function with `item_type: "LIVE_SESSION"`, passing the session title, description, meeting link, and start time
-- Add the Supabase functions import for this call
-- Show a toast confirming notifications were sent to students
-
-## Technical Details
-
-### Change 1: Fix SelectItem crash
+### 3. UI Structure for Batch Students
 ```text
-SuccessSessionsManagement.tsx:
-- Replace value="" with value="__all__" in SelectItem (line 598)
-- Update formData defaults, resetForm, handleOpenDialog, and handleSubmit
-  to map "__all__" <-> null for course_id
++--------------------------------------------+
+| Pathway Progress: 5/35 lessons (14%)       |
+| [========================                ] |
++--------------------------------------------+
+|                                            |
+| Step 1: Nurturing Sessions                 |
+|   > Chapter 1                              |
+|     - Welcome to IDMPakistan  [Watched]    |
+|   > Chapter 2                              |
+|     - What is Marketing       [Watch Now]  |
+|   > Chapter 3                              |
+|     - Where to Work?          [Locked]     |
+|                                            |
+| Step 2: Ecom 360                           |
+|   > Chapter 1                              |
+|     - Meet Your Mentor     [Locked Day 5]  |
+|   > Chapter 2                              |
+|     - E-commerce Models    [Locked Day 6]  |
+|   ...                                      |
+|                                            |
+| Step 3: Google Ads                         |
+|   (All locked - future drip dates)         |
++--------------------------------------------+
 ```
 
-### Change 2: Upcoming session on Student Dashboard
-```text
-StudentDashboard.tsx:
-- Add upcomingSession state
-- In fetchDashboardData, query success_sessions where start_time > now,
-  filtered by active course enrollment's course_id and batch_id
-- Render a card before the existing grid showing the next session
-  with date, time, mentor, and Join button
-```
+### Technical Details
 
-### Change 3: Student email notifications on session creation
-```text
-SuccessSessionsManagement.tsx:
-- After creating a session (line 351), if batch_id exists:
-  invoke supabase.functions.invoke('send-batch-content-notification', {
-    body: {
-      batch_id: sessionData.batch_id,
-      item_type: 'LIVE_SESSION',
-      item_id: newSession.id,
-      title: sessionData.title,
-      description: sessionData.description,
-      meeting_link: sessionData.link,
-      start_datetime: sessionData.start_time
-    }
-  })
-- Also create in-app notifications for batch students directly
-```
+**New file**: `src/hooks/useBatchPathwayRecordings.ts`
+- Queries: `pathway_courses` (ordered by step_number), `modules` (per course, ordered), `available_lessons` (per module, ordered by sequence_order), `batch_timeline_items` (for drip offsets), `batches` (for start_date), `recording_views`, `submissions`
+- Returns: `{ courseGroups: CourseGroup[], totalProgress: number, loading, error, refreshData }`
+- Each `CourseGroup` contains: `courseId, courseTitle, stepNumber, modules: CourseModule[]`
+
+**Modified file**: `src/pages/Videos.tsx`
+- Add batch enrollment detection (query `course_enrollments` for `batch_id`)
+- Conditional rendering: batch pathway view vs current single-course view
+- Course-level collapsible sections with step numbers
+- Reuse existing recording row UI (lock reasons, watch buttons, assignment badges)
 
