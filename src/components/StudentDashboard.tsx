@@ -417,6 +417,7 @@ export function StudentDashboard() {
       }
 
       // Fetch batch enrollment
+      let fetchedBatchId: string | null = null;
       try {
         const { data: studentData } = await supabase
           .from('students')
@@ -436,6 +437,7 @@ export function StudentDashboard() {
             .maybeSingle();
 
           if (enrollment?.batch_id && enrollment?.batches) {
+            fetchedBatchId = enrollment.batch_id;
             setBatchEnrollment({
               batchId: enrollment.batch_id,
               batchName: (enrollment.batches as any).name
@@ -447,6 +449,7 @@ export function StudentDashboard() {
       }
 
       // Fetch upcoming live session for this student's batch/course
+      const currentBatchId = fetchedBatchId;
       try {
         const now = new Date().toISOString();
         // Build query for upcoming sessions matching student's enrollment
@@ -459,14 +462,10 @@ export function StudentDashboard() {
           .limit(1);
 
         // Filter by batch if enrolled, otherwise by course
-        if (batchEnrollment?.batchId || (activeCourse?.id)) {
-          // Try to get enrollment info we just fetched
-          const enrollBatchId = batchEnrollment?.batchId;
-          if (enrollBatchId) {
-            sessionQuery = sessionQuery.eq('batch_id', enrollBatchId);
-          } else if (activeCourse?.id) {
-            sessionQuery = sessionQuery.eq('course_id', activeCourse.id);
-          }
+        if (currentBatchId) {
+          sessionQuery = sessionQuery.eq('batch_id', currentBatchId);
+        } else if (activeCourse?.id) {
+          sessionQuery = sessionQuery.eq('course_id', activeCourse.id);
         }
 
         const { data: sessionData } = await sessionQuery;
