@@ -34,13 +34,14 @@ interface BatchTimelineManagerProps {
 }
 
 export function BatchTimelineManager({ batchId, onBack }: BatchTimelineManagerProps) {
-  const { timelineItems, loading, createTimelineItem, updateTimelineItem, deleteTimelineItem } = useBatchTimeline(batchId);
+  const { timelineItems, loading, createTimelineItem, updateTimelineItem, deleteTimelineItem, deleteTimelineItemSilent, fetchTimeline } = useBatchTimeline(batchId);
   const { batches } = useBatches();
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TimelineItem | null>(null);
+  const [deletingGroup, setDeletingGroup] = useState<{ total: number; deleted: number } | null>(null);
   const [formData, setFormData] = useState<TimelineItemFormData>({
     type: 'RECORDING',
     title: '',
@@ -135,8 +136,18 @@ export function BatchTimelineManager({ batchId, onBack }: BatchTimelineManagerPr
 
   const handleDeleteGroup = async (items: import('@/hooks/useBatchTimeline').TimelineItem[]) => {
     if (!confirm(`Delete all ${items.length} items in this group? This cannot be undone.`)) return;
-    for (const item of items) {
-      await deleteTimelineItem(item.id);
+    setDeletingGroup({ total: items.length, deleted: 0 });
+    try {
+      for (let i = 0; i < items.length; i++) {
+        await deleteTimelineItemSilent(items[i].id);
+        setDeletingGroup({ total: items.length, deleted: i + 1 });
+      }
+      toast({ title: "Success", description: `${items.length} items deleted successfully` });
+      await fetchTimeline();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to delete some items", variant: "destructive" });
+    } finally {
+      setDeletingGroup(null);
     }
   };
 
@@ -225,6 +236,7 @@ export function BatchTimelineManager({ batchId, onBack }: BatchTimelineManagerPr
         onDelete={handleDelete}
         onDeleteGroup={handleDeleteGroup}
         onReorderGroups={handleReorderGroups}
+        deletingProgress={deletingGroup}
       />
 
       {/* Import Course Dialog */}

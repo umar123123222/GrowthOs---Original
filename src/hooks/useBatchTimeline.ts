@@ -251,6 +251,16 @@ export function useBatchTimeline(batchId: string | null) {
     }
   };
 
+  // Silent delete - no toast, no refetch (for bulk operations)
+  const deleteTimelineItemSilent = async (id: string) => {
+    const { error } = await supabase
+      .from('batch_timeline_items')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+  };
+
   const updateSessionRecordingUrl = async (id: string, recordingUrl: string) => {
     return updateTimelineItem(id, { 
       recording_url: recordingUrl,
@@ -268,6 +278,7 @@ export function useBatchTimeline(batchId: string | null) {
     createTimelineItem,
     updateTimelineItem,
     deleteTimelineItem,
+    deleteTimelineItemSilent,
     updateSessionRecordingUrl
   };
 }
