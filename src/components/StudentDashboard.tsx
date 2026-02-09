@@ -40,7 +40,8 @@ import {
   Route,
   Lock,
   Play,
-  ArrowRight
+  ArrowRight,
+  Video
 } from 'lucide-react';
 
 interface Assignment {
@@ -113,6 +114,16 @@ export function StudentDashboard() {
   
   // Batch enrollment state
   const [batchEnrollment, setBatchEnrollment] = useState<{ batchId: string; batchName: string } | null>(null);
+  
+  // Upcoming live session state
+  const [upcomingSession, setUpcomingSession] = useState<{
+    id: string;
+    title: string;
+    start_time: string;
+    mentor_name: string;
+    link?: string;
+    description?: string;
+  } | null>(null);
   
   // Lock reason state for Continue Learning card
   const [currentLockReason, setCurrentLockReason] = useState<{
@@ -435,6 +446,39 @@ export function StudentDashboard() {
         logger.warn('StudentDashboard: Failed to fetch batch enrollment', batchErr);
       }
 
+      // Fetch upcoming live session for this student's batch/course
+      try {
+        const now = new Date().toISOString();
+        // Build query for upcoming sessions matching student's enrollment
+        let sessionQuery = supabase
+          .from('success_sessions')
+          .select('id, title, start_time, mentor_name, link, description')
+          .gt('start_time', now)
+          .eq('status', 'upcoming')
+          .order('start_time', { ascending: true })
+          .limit(1);
+
+        // Filter by batch if enrolled, otherwise by course
+        if (batchEnrollment?.batchId || (activeCourse?.id)) {
+          // Try to get enrollment info we just fetched
+          const enrollBatchId = batchEnrollment?.batchId;
+          if (enrollBatchId) {
+            sessionQuery = sessionQuery.eq('batch_id', enrollBatchId);
+          } else if (activeCourse?.id) {
+            sessionQuery = sessionQuery.eq('course_id', activeCourse.id);
+          }
+        }
+
+        const { data: sessionData } = await sessionQuery;
+        if (sessionData && sessionData.length > 0) {
+          setUpcomingSession(sessionData[0]);
+        } else {
+          setUpcomingSession(null);
+        }
+      } catch (sessionErr) {
+        logger.warn('StudentDashboard: Failed to fetch upcoming session', sessionErr);
+      }
+
     } catch (error) {
       logger.error('Error fetching dashboard data:', error);
       console.error('StudentDashboard: Dashboard data fetch failed:', error);
@@ -523,7 +567,39 @@ export function StudentDashboard() {
   return (
     <div className="space-y-4 sm:space-y-6 pb-6">
       <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
-      
+
+      {/* Upcoming Live Session Banner */}
+      {upcomingSession && (
+        <Card className="border-primary/30 bg-gradient-to-r from-violet-500/10 via-primary/5 to-background shadow-md animate-fade-in">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-violet-500/15 flex items-center justify-center flex-shrink-0">
+                  <Video className="w-5 h-5 text-violet-600" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-violet-600 uppercase tracking-wide">Upcoming Live Session</p>
+                  <h3 className="text-base sm:text-lg font-semibold truncate">{upcomingSession.title}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(upcomingSession.start_time), 'EEEE, MMM dd · h:mm a')}
+                    {upcomingSession.mentor_name && ` · Host: ${upcomingSession.mentor_name}`}
+                  </p>
+                </div>
+              </div>
+              {upcomingSession.link && (
+                <Button
+                  size="sm"
+                  className="bg-violet-600 hover:bg-violet-700 text-white flex-shrink-0"
+                  onClick={() => window.open(upcomingSession.link, '_blank')}
+                >
+                  <Video className="w-4 h-4 mr-1.5" />
+                  Join Session
+                </Button>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {/* Course Selector for multi-course users (non-pathway mode only) */}
       {!isInPathwayMode && isMultiCourseEnabled && enrolledCourses.length > 1 && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

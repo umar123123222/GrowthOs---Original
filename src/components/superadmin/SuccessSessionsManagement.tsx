@@ -96,7 +96,7 @@ export function SuccessSessionsManagement() {
     host_login_email: '',
     host_login_pwd: '',
     status: 'upcoming',
-    course_id: '',
+    course_id: '__all__',
     batch_id: ''
   });
   const { toast } = useToast();
@@ -240,7 +240,7 @@ export function SuccessSessionsManagement() {
       host_login_email: '',
       host_login_pwd: '',
       status: 'upcoming',
-      course_id: '',
+      course_id: '__all__',
       batch_id: ''
     });
     setEditingSession(null);
@@ -263,7 +263,7 @@ export function SuccessSessionsManagement() {
         host_login_email: session.host_login_email || '',
         host_login_pwd: session.host_login_pwd || '',
         status: session.status || 'upcoming',
-        course_id: session.course_id || '',
+        course_id: session.course_id || '__all__',
         batch_id: session.batch_id || ''
       });
     } else {
@@ -304,7 +304,7 @@ export function SuccessSessionsManagement() {
         host_login_email: formData.host_login_email,
         host_login_pwd: formData.host_login_pwd,
         status: formData.status,
-        course_id: formData.course_id || null,
+        course_id: formData.course_id === '__all__' ? null : (formData.course_id || null),
         batch_id: formData.batch_id === '' || formData.batch_id === 'unbatched' ? null : formData.batch_id
       };
 
@@ -349,10 +349,37 @@ export function SuccessSessionsManagement() {
           }
         }
 
-        toast({
-          title: "Success",
-          description: "Session created successfully",
-        });
+        // Notify batch students via email + in-app notifications
+        if (sessionData.batch_id && newSession) {
+          try {
+            await supabase.functions.invoke('send-batch-content-notification', {
+              body: {
+                batch_id: sessionData.batch_id,
+                item_type: 'LIVE_SESSION',
+                item_id: newSession.id,
+                title: sessionData.title,
+                description: sessionData.description,
+                meeting_link: sessionData.link,
+                start_datetime: sessionData.start_time
+              }
+            });
+            toast({
+              title: "Success",
+              description: "Session created and students notified successfully",
+            });
+          } catch (notifyError) {
+            console.error('Failed to notify batch students:', notifyError);
+            toast({
+              title: "Success",
+              description: "Session created, but student notifications may have failed",
+            });
+          }
+        } else {
+          toast({
+            title: "Success",
+            description: "Session created successfully",
+          });
+        }
       }
 
       fetchSessions();
@@ -595,7 +622,7 @@ export function SuccessSessionsManagement() {
                       <SelectValue placeholder="All students (no filter)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All students (no filter)</SelectItem>
+                      <SelectItem value="__all__">All students (no filter)</SelectItem>
                       {courses.map((course) => (
                         <SelectItem key={course.id} value={course.id}>
                           {course.title}
@@ -612,7 +639,7 @@ export function SuccessSessionsManagement() {
                   <Select
                     value={formData.batch_id}
                     onValueChange={(value) => setFormData({ ...formData, batch_id: value })}
-                    disabled={!formData.course_id}
+                    disabled={!formData.course_id || formData.course_id === '__all__'}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder={formData.course_id ? 'Select batch' : 'Select course first'} />
