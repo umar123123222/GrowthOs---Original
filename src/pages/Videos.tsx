@@ -8,6 +8,7 @@ import { useActivePathwayAccess } from "@/hooks/useActivePathwayAccess";
 import { useCourses } from "@/hooks/useCourses";
 import { useCourseRecordings } from "@/hooks/useCourseRecordings";
 import { useBatchPathwayRecordings } from "@/hooks/useBatchPathwayRecordings";
+import { usePathwayGroupedRecordings } from "@/hooks/usePathwayGroupedRecordings";
 import { RoleGuard } from "@/components/RoleGuard";
 import { InactiveLMSBanner } from "@/components/InactiveLMSBanner";
 import { CourseSelector } from "@/components/courses/CourseSelector";
@@ -107,7 +108,7 @@ const Videos = () => {
 
   // Batch pathway recordings hook (only fetches when batchInfo is set)
   const {
-    courseGroups,
+    courseGroups: batchCourseGroups,
     totalRecordings: batchTotalRecordings,
     totalWatched: batchTotalWatched,
     totalProgress: batchTotalProgress,
@@ -116,6 +117,24 @@ const Videos = () => {
   } = useBatchPathwayRecordings(batchInfo?.batchId || null, batchInfo?.pathwayId || null);
 
   const isBatchPathwayMode = !!batchInfo;
+
+  // Pathway-grouped recordings for non-batch pathway students
+  const {
+    courseGroups: pathwayCourseGroups,
+    totalRecordings: pathwayTotalRecordings,
+    totalWatched: pathwayTotalWatched,
+    totalProgress: pathwayTotalProgress,
+    loading: pathwayRecordingsLoading,
+    refreshData: refreshPathwayRecordings,
+  } = usePathwayGroupedRecordings(
+    !isBatchPathwayMode && isInPathwayMode && pathwayState ? pathwayState.pathwayId : null
+  );
+
+  // Unified course groups - prefer batch, then pathway
+  const courseGroups = isBatchPathwayMode ? batchCourseGroups : pathwayCourseGroups;
+  const groupedTotalRecordings = isBatchPathwayMode ? batchTotalRecordings : pathwayTotalRecordings;
+  const groupedTotalWatched = isBatchPathwayMode ? batchTotalWatched : pathwayTotalWatched;
+  const groupedTotalProgress = isBatchPathwayMode ? batchTotalProgress : pathwayTotalProgress;
 
   // Fetch user's LMS status
   React.useEffect(() => {
@@ -187,7 +206,7 @@ const Videos = () => {
     }
   };
 
-  const loading = !batchDetectionDone || coursesLoading || recordingsLoading || pathwayLoading || (isBatchPathwayMode && batchLoading);
+  const loading = !batchDetectionDone || coursesLoading || recordingsLoading || pathwayLoading || (isBatchPathwayMode && batchLoading) || (!isBatchPathwayMode && isInPathwayMode && pathwayRecordingsLoading);
 
   if (loading) {
     return (
@@ -201,6 +220,7 @@ const Videos = () => {
   const watchedRecordings = modules.reduce((sum, module) => sum + module.watchedLessons, 0);
 
   const showCourseSelector = !isInPathwayMode && !isBatchPathwayMode && isMultiCourseEnabled && enrolledCourses.length > 1;
+  const showCourseGroupedView = isBatchPathwayMode || (isInPathwayMode && courseGroups.length > 0);
 
   return (
     <RoleGuard allowedRoles={["student", "admin", "mentor", "superadmin"]}>
@@ -226,20 +246,11 @@ const Videos = () => {
           )}
         </div>
 
-        {/* BATCH PATHWAY MODE: Show all courses from pathway with batch timeline drip */}
-        {isBatchPathwayMode ? (
-          <BatchPathwayView
-            courseGroups={courseGroups}
-            totalRecordings={batchTotalRecordings}
-            totalWatched={batchTotalWatched}
-            totalProgress={batchTotalProgress}
-            userLMSStatus={userLMSStatus}
-            onWatch={handleWatchRecording}
-          />
-        ) : (
+        {/* COURSE-GROUPED VIEW: Show Course > Module > Recording for all pathway students */}
+        {showCourseGroupedView ? (
           <>
-            {/* Pathway Progress Card - show when in pathway mode (non-batch) */}
-            {isInPathwayMode && pathwayState && (
+            {/* Pathway Progress Card */}
+            {isInPathwayMode && pathwayState && !isBatchPathwayMode && (
               <PathwayProgressCard
                 pathwayState={pathwayState}
                 pathwayCourses={pathwayCourses}
@@ -249,8 +260,19 @@ const Videos = () => {
               />
             )}
 
+            <BatchPathwayView
+              courseGroups={courseGroups}
+              totalRecordings={groupedTotalRecordings}
+              totalWatched={groupedTotalWatched}
+              totalProgress={groupedTotalProgress}
+              userLMSStatus={userLMSStatus}
+              onWatch={handleWatchRecording}
+            />
+          </>
+        ) : (
+          <>
             {/* Course progress card - show when NOT in pathway mode */}
-            {!isInPathwayMode && activeCourse && totalRecordings > 0 && (
+            {activeCourse && totalRecordings > 0 && (
               <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20">
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-2">
