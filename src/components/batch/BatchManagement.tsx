@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ interface BatchAssociations {
 
 export function BatchManagement() {
   const { batches, loading, createBatch, updateBatch, deleteBatch, canEditStartDate, fetchBatches } = useBatches();
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [pathways, setPathways] = useState<Pathway[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -583,7 +585,7 @@ export function BatchManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => window.location.href = `/admin/batches/${batch.id}/timeline`}
+                          onClick={() => navigate(`/admin/batches/${batch.id}/timeline`)}
                           title="Manage Timeline"
                         >
                           <Settings className="w-4 h-4" />
