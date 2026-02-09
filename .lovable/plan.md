@@ -1,61 +1,78 @@
 
-# Fix "Invalid from field" Email Error
 
-## Root Cause
+# Fix Session Scheduling Crash + Add Student Notifications & Homepage Visibility
 
-The error `550 Invalid 'from' field` is coming from Resend's SMTP relay server. Your system is using the **SMTP path** (not the Resend API), which means either:
+## Problem 1: Page Crash (The Error in Screenshot)
 
-- `RESEND_API_KEY` is not set in Edge Function Secrets (only in Auth SMTP settings, which is a separate config), OR
-- `SMTP_FROM_EMAIL` contains a display name like `Growth OS <noreply@domain.com>` instead of just the plain email address `noreply@domain.com`
+The "Oops! Something went wrong" error is caused by `<SelectItem value="">` on line 598 of `SuccessSessionsManagement.tsx`. Radix UI's Select component does not allow empty string values -- this throws a runtime error that crashes the entire component via the ErrorBoundary.
 
-In the SMTP code, the sender is sent as `MAIL FROM:<your-from-email-value>`. If the value already includes angle brackets or a name, it becomes malformed: `MAIL FROM:<Growth OS <noreply@domain.com>>` — which Resend rejects.
+**Fix:** Change `value=""` to `value="__all__"` for the "All students" option, and update the submit handler to treat `"__all__"` as null (no course filter).
 
-## The Fix (Two Parts)
+**File:** `src/components/superadmin/SuccessSessionsManagement.tsx`
+- Line 98: Change default `course_id` from `''` to `'__all__'`
+- Line 231: Change `resetForm` to use `'__all__'` 
+- Line 266: Map `'__all__'` back to `''` in `handleOpenDialog`
+- Line 307: In `handleSubmit`, treat `course_id === '__all__'` as `null`
+- Line 592: Change `onValueChange` to reset `batch_id` when course changes
+- Line 598: Change `<SelectItem value="">` to `<SelectItem value="__all__">`
 
-### Part 1: Configuration Check (No Code Change)
+## Problem 2: Students Don't See Scheduled Session on Homepage
 
-Please verify these in your **Supabase Dashboard > Settings > Edge Functions > Secrets**:
+The Student Dashboard (`StudentDashboard.tsx`) currently has no widget showing upcoming success sessions. Students can only see them if they navigate to the Live Sessions page.
 
-| Secret | Correct Value | Common Mistake |
-|--------|--------------|----------------|
-| `RESEND_API_KEY` | `re_xxxxxxxxx` | Not set in Edge Function secrets (only set in Auth SMTP) |
-| `SMTP_FROM_EMAIL` | `noreply@yourdomain.com` | `Growth OS <noreply@yourdomain.com>` (name included) |
+**Fix:** Add an "Upcoming Live Session" card to the Student Dashboard that queries `success_sessions` for the next upcoming session matching the student's course/batch enrollment.
 
-**Important distinction:** Auth SMTP settings (under Authentication > SMTP) and Edge Function secrets are completely separate configurations. The SMTP settings you configured for password resets do NOT automatically apply to Edge Functions.
+**File:** `src/components/StudentDashboard.tsx`
+- Add state for `upcomingSession`
+- In `fetchDashboardData`, query `success_sessions` for upcoming sessions filtered by the student's active course and batch
+- Add a prominent card in the dashboard grid showing the next session with title, date/time, mentor name, and a "Join Session" button
 
-### Part 2: Code Fix — Make SMTP Path Robust
+## Problem 3: Email Reminder Not Sent When Session Is Scheduled
 
-Even after fixing the configuration, we should make the code defensive so this error can never happen again.
+Currently, when a success session is created in `SuccessSessionsManagement`, only an in-app notification is sent to the assigned mentor. No email or in-app notification goes to batch students.
 
-**File:** `supabase/functions/_shared/smtp-client.ts`
+**Fix:** After successfully creating a session with a `batch_id`, call the existing `send-batch-content-notification` Edge Function (which already has a LIVE_SESSION email template) to notify all enrolled students.
 
-Add a `sanitizeEmail()` helper method to the `SMTPClient` class that extracts just the email address from any format:
-- `noreply@domain.com` stays as-is
-- `Name <noreply@domain.com>` extracts `noreply@domain.com`
-- `<noreply@domain.com>` extracts `noreply@domain.com`
+**File:** `src/components/superadmin/SuccessSessionsManagement.tsx`
+- After the session is created successfully (line 334), if a `batch_id` is set, invoke the `send-batch-content-notification` function with `item_type: "LIVE_SESSION"`, passing the session title, description, meeting link, and start time
+- Add the Supabase functions import for this call
+- Show a toast confirming notifications were sent to students
 
-Apply this sanitization in two places:
-1. In `fromEnv()` — sanitize the `SMTP_FROM_EMAIL` value when reading it from environment
-2. In the `sendViaSMTP()` method — sanitize `config.fromEmail` before using it in `MAIL FROM` command (line 255)
+## Technical Details
 
-This ensures that no matter how the user sets `SMTP_FROM_EMAIL`, the SMTP conversation always uses a clean email address while the display name is preserved separately for email headers.
-
-### Technical Details
-
-Changes to `smtp-client.ts`:
-
+### Change 1: Fix SelectItem crash
 ```text
-1. Add static helper: sanitizeEmail(value: string): string
-   - Regex extracts email from "Name <email>" or "<email>" format
-   - Falls back to trimmed input if no angle brackets found
-   - Validates result contains @ symbol, throws descriptive error if not
-
-2. In fromEnv() (around line 53):
-   - After reading SMTP_FROM_EMAIL, run it through sanitizeEmail()
-   - Log the sanitized value for debugging
-
-3. In sendViaSMTP() (line 255):
-   - Use sanitized fromEmail in MAIL FROM command (defensive)
+SuccessSessionsManagement.tsx:
+- Replace value="" with value="__all__" in SelectItem (line 598)
+- Update formData defaults, resetForm, handleOpenDialog, and handleSubmit
+  to map "__all__" <-> null for course_id
 ```
 
-No changes needed to any other files. The `sendViaResend()` path already formats the from field correctly.
+### Change 2: Upcoming session on Student Dashboard
+```text
+StudentDashboard.tsx:
+- Add upcomingSession state
+- In fetchDashboardData, query success_sessions where start_time > now,
+  filtered by active course enrollment's course_id and batch_id
+- Render a card before the existing grid showing the next session
+  with date, time, mentor, and Join button
+```
+
+### Change 3: Student email notifications on session creation
+```text
+SuccessSessionsManagement.tsx:
+- After creating a session (line 351), if batch_id exists:
+  invoke supabase.functions.invoke('send-batch-content-notification', {
+    body: {
+      batch_id: sessionData.batch_id,
+      item_type: 'LIVE_SESSION',
+      item_id: newSession.id,
+      title: sessionData.title,
+      description: sessionData.description,
+      meeting_link: sessionData.link,
+      start_datetime: sessionData.start_time
+    }
+  })
+- Also create in-app notifications for batch students directly
+```
+
