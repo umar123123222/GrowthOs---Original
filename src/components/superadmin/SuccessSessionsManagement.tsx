@@ -180,11 +180,11 @@ export function SuccessSessionsManagement() {
 
   // Filter batches when course_id changes
   useEffect(() => {
-    if (formData.course_id) {
+    if (formData.course_id && formData.course_id !== '__all__') {
       const matching = batches.filter(b => b.course_id === formData.course_id);
       setFilteredBatches(matching);
     } else {
-      setFilteredBatches([]);
+      setFilteredBatches(batches);
     }
   }, [formData.course_id, batches]);
 
@@ -639,10 +639,9 @@ export function SuccessSessionsManagement() {
                   <Select
                     value={formData.batch_id}
                     onValueChange={(value) => setFormData({ ...formData, batch_id: value })}
-                    disabled={!formData.course_id || formData.course_id === '__all__'}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={formData.course_id ? 'Select batch' : 'Select course first'} />
+                      <SelectValue placeholder="Select batch" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unbatched">Unbatched students</SelectItem>
