@@ -133,9 +133,37 @@ export function BatchTimelineManager({ batchId, onBack }: BatchTimelineManagerPr
     await deleteTimelineItem(itemId);
   };
 
-  const handleImportCourse = async (items: TimelineItemFormData[]) => {
+  const handleDeleteGroup = async (items: import('@/hooks/useBatchTimeline').TimelineItem[]) => {
+    if (!confirm(`Delete all ${items.length} items in this group? This cannot be undone.`)) return;
     for (const item of items) {
-      await createTimelineItem(item);
+      await deleteTimelineItem(item.id);
+    }
+  };
+
+  const handleReorderGroups = async (
+    _groupOrder: string[],
+    groups: { id: string; items: import('@/hooks/useBatchTimeline').TimelineItem[] }[]
+  ) => {
+    // Recalculate drip_offset_days sequentially across groups
+    let currentDay = 0;
+    for (const group of groups) {
+      const sortedItems = [...group.items].sort(
+        (a, b) => a.drip_offset_days - b.drip_offset_days || a.sequence_order - b.sequence_order
+      );
+
+      // Find the interval used within this group (default 1)
+      let interval = 1;
+      if (sortedItems.length >= 2) {
+        interval = Math.max(1, sortedItems[1].drip_offset_days - sortedItems[0].drip_offset_days);
+      }
+
+      for (let i = 0; i < sortedItems.length; i++) {
+        const newDay = currentDay + (i * interval);
+        if (sortedItems[i].drip_offset_days !== newDay) {
+          await updateTimelineItem(sortedItems[i].id, { drip_offset_days: newDay, sequence_order: i });
+        }
+      }
+      currentDay += sortedItems.length * interval;
     }
   };
 
@@ -195,13 +223,19 @@ export function BatchTimelineManager({ batchId, onBack }: BatchTimelineManagerPr
         batchStartDate={batch?.start_date}
         onEdit={(item) => handleOpenDialog(item)}
         onDelete={handleDelete}
+        onDeleteGroup={handleDeleteGroup}
+        onReorderGroups={handleReorderGroups}
       />
 
       {/* Import Course Dialog */}
       <ImportCourseDialog
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
-        onImport={handleImportCourse}
+        onImport={async (items) => {
+          for (const item of items) {
+            await createTimelineItem(item);
+          }
+        }}
         existingRecordingIds={existingRecordingIds}
         currentItemCount={timelineItems.length}
         timelineItems={timelineItems}
