@@ -34,7 +34,7 @@ interface BatchTimelineManagerProps {
 }
 
 export function BatchTimelineManager({ batchId, onBack }: BatchTimelineManagerProps) {
-  const { timelineItems, loading, createTimelineItem, updateTimelineItem, deleteTimelineItem, deleteTimelineItemSilent, fetchTimeline } = useBatchTimeline(batchId);
+  const { timelineItems, loading, createTimelineItem, createTimelineItemSilent, updateTimelineItem, deleteTimelineItem, deleteTimelineItemSilent, fetchTimeline } = useBatchTimeline(batchId);
   const { batches } = useBatches();
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -42,6 +42,7 @@ export function BatchTimelineManager({ batchId, onBack }: BatchTimelineManagerPr
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<TimelineItem | null>(null);
   const [deletingGroup, setDeletingGroup] = useState<{ total: number; deleted: number } | null>(null);
+  const [addingProgress, setAddingProgress] = useState<{ total: number; added: number } | null>(null);
   const [formData, setFormData] = useState<TimelineItemFormData>({
     type: 'RECORDING',
     title: '',
@@ -237,6 +238,7 @@ export function BatchTimelineManager({ batchId, onBack }: BatchTimelineManagerPr
         onDeleteGroup={handleDeleteGroup}
         onReorderGroups={handleReorderGroups}
         deletingProgress={deletingGroup}
+        addingProgress={addingProgress}
       />
 
       {/* Import Course Dialog */}
@@ -244,8 +246,18 @@ export function BatchTimelineManager({ batchId, onBack }: BatchTimelineManagerPr
         open={importDialogOpen}
         onOpenChange={setImportDialogOpen}
         onImport={async (items) => {
-          for (const item of items) {
-            await createTimelineItem(item);
+          setAddingProgress({ total: items.length, added: 0 });
+          try {
+            for (let i = 0; i < items.length; i++) {
+              await createTimelineItemSilent(items[i]);
+              setAddingProgress({ total: items.length, added: i + 1 });
+            }
+            toast({ title: "Success", description: `${items.length} recordings imported to timeline` });
+            await fetchTimeline();
+          } catch (error: any) {
+            toast({ title: "Error", description: error.message || "Failed to import some items", variant: "destructive" });
+          } finally {
+            setAddingProgress(null);
           }
         }}
         existingRecordingIds={existingRecordingIds}

@@ -196,6 +196,32 @@ export function useBatchTimeline(batchId: string | null) {
     }
   };
 
+  // Silent create - no toast, no refetch (for bulk import)
+  const createTimelineItemSilent = async (formData: TimelineItemFormData) => {
+    if (!batchId) return null;
+
+    const { data: userData } = await supabase.auth.getUser();
+    const { data: batch } = await supabase
+      .from('batches')
+      .select('course_id')
+      .eq('id', batchId)
+      .single();
+
+    const { data, error } = await supabase
+      .from('batch_timeline_items')
+      .insert({
+        batch_id: batchId,
+        course_id: batch?.course_id,
+        ...formData,
+        created_by: userData?.user?.id
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  };
+
   const updateTimelineItem = async (id: string, formData: Partial<TimelineItemFormData>) => {
     try {
       const { data, error } = await supabase
@@ -276,6 +302,7 @@ export function useBatchTimeline(batchId: string | null) {
     loading,
     fetchTimeline,
     createTimelineItem,
+    createTimelineItemSilent,
     updateTimelineItem,
     deleteTimelineItem,
     deleteTimelineItemSilent,
