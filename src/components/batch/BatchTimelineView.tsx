@@ -196,7 +196,10 @@ export function BatchTimelineView({ batchId, batchName, limit, showViewAll }: Ba
                         <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            Day {item.drip_offset_days}
+                            {item.deployed_date 
+                              ? format(new Date(item.deployed_date), 'MMM dd, yyyy')
+                              : `Day ${item.drip_offset_days}`
+                            }
                           </span>
                           {item.duration_min && (
                             <span className="flex items-center gap-1">
