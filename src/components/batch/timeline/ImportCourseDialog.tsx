@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { BookOpen, Download, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { TimelineItemFormData } from '@/hooks/useBatchTimeline';
+import type { TimelineItemFormData, TimelineItem } from '@/hooks/useBatchTimeline';
 
 interface CourseWithModules {
   id: string;
@@ -31,9 +31,10 @@ interface ImportCourseDialogProps {
   onImport: (items: TimelineItemFormData[]) => Promise<void>;
   existingRecordingIds: string[];
   currentItemCount: number;
+  timelineItems: TimelineItem[];
 }
 
-export function ImportCourseDialog({ open, onOpenChange, onImport, existingRecordingIds, currentItemCount }: ImportCourseDialogProps) {
+export function ImportCourseDialog({ open, onOpenChange, onImport, existingRecordingIds, currentItemCount, timelineItems }: ImportCourseDialogProps) {
   const [courses, setCourses] = useState<CourseWithModules[]>([]);
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -43,9 +44,17 @@ export function ImportCourseDialog({ open, onOpenChange, onImport, existingRecor
   const [dripInterval, setDripInterval] = useState(1);
   const { toast } = useToast();
 
+  // Auto-calculate the start day based on existing timeline items
+  const getNextAvailableDay = () => {
+    if (timelineItems.length === 0) return 0;
+    const maxOffset = Math.max(...timelineItems.map(item => item.drip_offset_days));
+    return maxOffset + 1; // Start the day after the last item
+  };
+
   useEffect(() => {
     if (open) {
       fetchCoursesWithRecordings();
+      setBaseDripOffset(getNextAvailableDay());
     }
   }, [open]);
 
