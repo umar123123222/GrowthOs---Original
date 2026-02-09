@@ -98,6 +98,67 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         });
       });
 
+      // Check if student is in a batch and override drip dates with batch timeline
+      const { data: enrollment } = await supabase
+        .from('course_enrollments')
+        .select('batch_id')
+        .eq('student_id', user.id)
+        .eq('course_id', courseId)
+        .not('batch_id', 'is', null)
+        .maybeSingle();
+
+      if (enrollment?.batch_id) {
+        // Fetch batch start_date and timeline items
+        const [{ data: batchData }, { data: timelineItems }] = await Promise.all([
+          supabase
+            .from('batches')
+            .select('start_date')
+            .eq('id', enrollment.batch_id)
+            .single(),
+          supabase
+            .from('batch_timeline_items')
+            .select('recording_id, drip_offset_days')
+            .eq('batch_id', enrollment.batch_id)
+            .not('recording_id', 'is', null)
+        ]);
+
+        if (batchData?.start_date && timelineItems?.length) {
+          const batchStart = new Date(batchData.start_date);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          for (const item of timelineItems) {
+            if (!item.recording_id) continue;
+            const unlockDate = new Date(batchStart);
+            unlockDate.setDate(unlockDate.getDate() + item.drip_offset_days);
+            unlockDate.setHours(0, 0, 0, 0);
+
+            const existing = unlockStatusMap.get(item.recording_id);
+            // Check if already watched (don't re-lock watched content)
+            const alreadyWatched = existing?.lockReason === 'already_watched' || existing?.isUnlocked;
+            
+            if (today >= unlockDate) {
+              // Batch timeline says it should be unlocked by now
+              // Only override if not already unlocked for a better reason
+              if (!existing?.isUnlocked) {
+                unlockStatusMap.set(item.recording_id, {
+                  isUnlocked: true,
+                  lockReason: undefined,
+                  dripUnlockDate: undefined
+                });
+              }
+            } else if (!alreadyWatched) {
+              // Batch timeline says still locked - override with batch drip date
+              unlockStatusMap.set(item.recording_id, {
+                isUnlocked: false,
+                lockReason: 'drip_locked',
+                dripUnlockDate: unlockDate.toISOString()
+              });
+            }
+          }
+        }
+      }
+
       // Fetch views
       const { data: viewsData } = await supabase
         .from('recording_views')
