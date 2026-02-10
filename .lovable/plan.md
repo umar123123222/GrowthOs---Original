@@ -1,39 +1,39 @@
 
 
-## Improvements Plan: Auto schedule_date, Logger Cleanup, and Type Safety
+## Live Sessions - Student View Fixes
 
-### 1. Auto-calculate schedule_date for new sessions (ContentTimelineDialog)
+Several issues in the student-facing Live Sessions page hurt the user experience. Here's what needs fixing:
 
-When a session is created via the Content Timeline dialog with a `drip_days` value, the system currently does not set `schedule_date`. This means newly created sessions are invisible in the "This Week's Live Sessions" view.
+### Issue 1: Missing Inactive LMS Banner
+Students with suspended/inactive accounts see buttons saying "Locked - Payment Required" but get no explanation banner. The `InactiveLMSBanner` component already exists in the project but is not used on this page.
 
-**Fix**: In the `handleConfirmAddSession` function, after creating a session with `drip_days`, calculate the `schedule_date` for each batch associated with the course. Since a session can belong to multiple batches, the schedule_date will be set based on the earliest associated batch's start_date + drip_days. If no batch is found, `schedule_date` remains null.
+**Fix**: Import and render `InactiveLMSBanner` at the top of the page content when `userLMSStatus !== 'active'`.
 
-Similarly, when saving edited `drip_days` via `handleSave`, the `schedule_date` should be recalculated for affected sessions.
+### Issue 2: "Join Now" crashes on empty links
+Upcoming sessions may not have a `link` set yet. Clicking "Join Now" with no link opens a blank tab or errors out.
 
-**Technical details**:
-- In `handleConfirmAddSession`: query `batch_courses` (or `batch_pathways`) to find batches for the course, pick the earliest `start_date`, and compute `schedule_date = start_date + drip_days` days.
-- In `handleSave`: for each session with edited `drip_days`, recalculate `schedule_date` using the same logic.
-- File: `src/components/superadmin/ContentTimelineDialog.tsx`
+**Fix**: Disable the "Join Now" button when `session.link` is empty/null, and show a tooltip or label like "Link not available yet".
 
----
+### Issue 3: SessionCard defined inside render (performance)
+`SessionCard` is declared inside the component body, causing it to be recreated on every render. This loses internal state and hurts performance.
 
-### 2. Replace console.error with logger in ContentScheduleCalendar
+**Fix**: Move `SessionCard` outside the `LiveSessions` component, passing the needed callbacks and state as props.
 
-Two `console.error` calls in the calendar component will be replaced with the project's `logger.error` utility for consistency.
+### Issue 4: Unused imports
+`ExternalLink` and `Play` from lucide-react are imported but never used.
 
-**Technical details**:
-- Import `logger` from `@/lib/logger`
-- Replace `console.error(...)` at lines ~335 and ~374
-- File: `src/components/admin/ContentScheduleCalendar.tsx`
+**Fix**: Remove them.
 
 ---
 
-### 3. Add drip_days to Supabase TypeScript types for success_sessions
+### Technical Summary
 
-The `drip_days` column exists in the database but is missing from the generated types, forcing `as any` casts throughout the codebase.
+**File**: `src/pages/LiveSessions.tsx`
 
-**Technical details**:
-- Add `drip_days: number | null` to `Row`, `Insert` (optional), and `Update` (optional) for `success_sessions` in `src/integrations/supabase/types.ts`
-- Remove `as any` casts in `ContentTimelineDialog.tsx` and `ContentScheduleCalendar.tsx` where `drip_days` is referenced
-- Files: `src/integrations/supabase/types.ts`, `src/components/superadmin/ContentTimelineDialog.tsx`, `src/components/admin/ContentScheduleCalendar.tsx`
+| Change | Lines affected |
+|--------|---------------|
+| Import + render `InactiveLMSBanner` | Top of file + inside JSX before sessions list |
+| Guard "Join Now" against empty `session.link` | Lines 323-337 |
+| Move `SessionCard` outside component | Lines 230-343 become a standalone component |
+| Remove unused `ExternalLink`, `Play` imports | Line 15-16 |
 
