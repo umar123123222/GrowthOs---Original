@@ -79,7 +79,7 @@ export function ContentScheduleCalendar() {
       // Fetch all sessions with drip_days
       const { data: sessionsData } = await supabase
         .from('success_sessions')
-        .select('id, title, course_id, mentor_name, status, schedule_date');
+        .select('id, title, course_id, batch_id, mentor_name, status, schedule_date') as { data: any[] | null };
 
       // Fetch mentor assignments for courses
       const { data: mentorAssignments } = await supabase
@@ -154,7 +154,12 @@ export function ContentScheduleCalendar() {
 
         // Map sessions to events
         (sessionsData || []).forEach(session => {
-          if (!session.course_id || !courseIds.includes(session.course_id)) return;
+          // Match session to batch: by batch_id, by course_id, or global (no course_id)
+          const sessionMatchesBatch = 
+            (session.batch_id && session.batch_id === batch.id) ||
+            (!session.batch_id && session.course_id && courseIds.includes(session.course_id)) ||
+            (!session.batch_id && !session.course_id); // global session
+          if (!sessionMatchesBatch) return;
           
           const dripDays = (session as any).drip_days;
           let eventDate: Date;
