@@ -1,52 +1,48 @@
 
 
-# Add Live Sessions to Content Timeline Dialog
+# Add "Create Live Session" from Content Timeline
 
 ## Overview
-
-Add a `drip_days` column to the `success_sessions` table and display live sessions inside the Content Timeline dialog alongside recordings. Each course section will show its recordings grouped by module, followed by a "Live Sessions" subsection with editable drip days for each session.
+Add an inline "Add Session" button in the Content Timeline's Live Sessions section for each course. Users enter just a title and drip days. The system auto-assigns the course's primary mentor and uses placeholder defaults for required database fields (link, start_time).
 
 ## What Changes
 
-### 1. Database Migration -- Add `drip_days` to `success_sessions`
-- Add a nullable `drip_days integer` column (default `NULL`) to the `success_sessions` table
-- This allows sessions to be scheduled relative to a batch's start date, just like recordings
+### `src/components/superadmin/ContentTimelineDialog.tsx`
 
-### 2. Update `ContentTimelineDialog.tsx`
-- Add a `SessionItem` interface (id, title, schedule_date, drip_days, course_id, course_title, step_number)
-- Fetch `success_sessions` filtered by `course_id` for course mode, or by all course IDs in the pathway for pathway mode
-- Display sessions in a separate "LIVE SESSIONS" subsection under each course's recordings, with the same inline editable drip_days input
-- Track session drip_days edits in a separate `editedSessionDripDays` state
-- Save session drip_days updates to `success_sessions` table alongside recording saves
+1. **Add "+" button** below the Live Sessions list (or as first item if no sessions exist yet) for each course section
+2. **Inline creation row**: When clicked, show an inline row with:
+   - A text input for the session title
+   - A number input for drip days
+   - A confirm (checkmark) and cancel (X) button
+3. **Auto-resolve mentor**: Query `mentor_course_assignments` for the course to find the primary mentor (`is_primary = true`), falling back to the first assigned mentor. Set `mentor_id` and `mentor_name` on the created session.
+4. **Insert with defaults**: Create the session in `success_sessions` with:
+   - `title` from user input
+   - `drip_days` from user input (cast via `as any` since column not yet in generated types)
+   - `course_id` from the current course context
+   - `mentor_id` / `mentor_name` auto-resolved
+   - `link` = `"TBD"` (placeholder -- can be updated later in Session Management)
+   - `start_time` = current timestamp (placeholder)
+   - `status` = `"upcoming"`
+5. **Refresh list** after successful insert to show the new session inline
 
-### 3. Visual Layout (per course section)
+### UI Layout
+
 ```text
-CHAPTER 1 (module)
-  1  Recording Title        13m   [0] days
-  2  Recording Title        24m   [1] days
-
 LIVE SESSIONS
-  Session Title     2026-02-15   [5] days
-  Session Title     2026-02-20   [10] days
+  [Video icon] Session Title     2026-02-15   [5] days
+  [Video icon] Session Title     2026-02-20   [10] days
+  [+ Add Live Session]
+
+-- When adding: --
+  [text: Session title...] [drip: 0] days  [checkmark] [X]
 ```
 
-- Sessions are visually distinguished with a "Video" icon and a different subsection header
-- The scheduled date is shown for reference but drip_days controls when the session becomes visible/accessible
+### No Database Changes Needed
+The `drip_days` column migration was already planned in the previous step. The `success_sessions` table already has all other required fields with acceptable defaults.
 
-## Technical Details
-
-### Migration
-```sql
-ALTER TABLE success_sessions ADD COLUMN drip_days integer DEFAULT NULL;
-```
-
-### Files Modified
-- **`src/components/superadmin/ContentTimelineDialog.tsx`** -- Add session fetching, display, and save logic
-  - New state: `sessions`, `editedSessionDripDays`
-  - New fetch: query `success_sessions` by `course_id`
-  - Grouped display: sessions appended after modules within each course group
-  - Save handler: update both `available_lessons` and `success_sessions` drip_days
-
-### No Other Files Affected
-- The `SuccessSessionsManagement.tsx` and student-facing pages don't need changes for this feature -- they can continue using `schedule_date` for display. The `drip_days` on sessions will be used by the sequential unlock system in a future step if needed.
-
+## Technical Notes
+- New state: `addingSessionForCourse` (string | null) to track which course is in "add mode"
+- New state: `newSessionTitle` (string) and `newSessionDripDays` (number | null)
+- Mentor lookup is done once when the "+" is clicked, cached in a local ref/state
+- Input validation: title must be non-empty, trimmed, max 200 chars
+- The session will appear in Session Management for full editing (link, time, description, etc.)
