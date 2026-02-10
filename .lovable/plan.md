@@ -1,75 +1,93 @@
 
 
-# Show All Pathway Courses on Videos Page for Batch Students
+# Remove Batch Timeline, Use Pathway/Course Drip Settings Instead
 
-## Overview
-For students enrolled in a batch with a pathway, the Videos page will display **all courses in pathway order** (e.g., Nurturing Sessions -> Ecom 360 -> Google Ads -> ...) on a single page, with drip/unlock dates driven by the **batch timeline settings**.
+## What's Changing
 
-## Current Behavior
-- Videos page shows only **one course at a time** (the current pathway step)
-- `useCourseRecordings` fetches recordings for a single `courseId`
-- Batch timeline drip override was recently added but only applies to the single active course
+Batches will become **grouping-only** -- they group students together and provide a shared `start_date` for drip calculations. All content scheduling (which recordings unlock when, live sessions, etc.) will come from the **pathway and course settings** (specifically the `drip_days` field on each recording and the `get_course_sequential_unlock_status` RPC).
 
-## Planned Changes
+The entire `batch_timeline_items` system and its admin UI will be removed.
 
-### 1. Create a new hook: `useBatchPathwayRecordings`
-A new hook that fetches recordings across **all courses in pathway order** for batch students:
-- Accept `batchId` and `pathwayId` as parameters
-- Fetch pathway courses in step order from `pathway_courses`
-- For each course, fetch its modules and recordings (ordered by module order, then sequence order)
-- Fetch batch timeline items (`batch_timeline_items`) for the batch to get `drip_offset_days` per recording
-- Fetch the batch `start_date` to calculate unlock dates
-- Fetch `recording_views` and `submissions` for watched/assignment status
-- Return data grouped by **course** (with course title, step number) then by **module** within each course
-- Calculate unlock status: `unlockDate = batch start_date + drip_offset_days`; if today >= unlockDate, unlocked
+## Summary of Changes
 
-### 2. Update `src/pages/Videos.tsx`
-- Detect if the student is in a batch (check `course_enrollments` for a `batch_id`)
-- If in a batch with a pathway:
-  - Use `useBatchPathwayRecordings` instead of `useCourseRecordings`
-  - Render all courses in pathway step order, each as a collapsible section
-  - Within each course section, show modules and recordings as currently done
-  - Show drip dates from batch timeline on locked recordings
-  - Show overall pathway progress (total watched / total recordings)
-- If NOT in a batch: keep existing behavior unchanged
+### 1. Remove Batch Timeline Components and Hooks
+Delete these files entirely:
+- `src/components/batch/BatchTimelineView.tsx` -- student-facing timeline cards
+- `src/components/batch/BatchTimelineManager.tsx` -- admin timeline manager
+- `src/components/batch/timeline/ImportCourseDialog.tsx` -- course import into timeline
+- `src/components/batch/timeline/TimelineGroupItem.tsx` -- timeline drag items
+- `src/components/batch/timeline/TimelineGroupedList.tsx` -- grouped timeline list
+- `src/hooks/useBatchTimelineStatus.ts` -- RPC-based timeline status hook
+- `src/hooks/useBatchTimeline.ts` -- admin timeline CRUD hook
+- `src/hooks/useBatchPathwayRecordings.ts` -- batch-specific pathway hook (replaced by pathway hook)
+- `src/pages/BatchTimelinePage.tsx` -- standalone timeline page
 
-### 3. UI Structure for Batch Students
-```text
-+--------------------------------------------+
-| Pathway Progress: 5/35 lessons (14%)       |
-| [========================                ] |
-+--------------------------------------------+
-|                                            |
-| Step 1: Nurturing Sessions                 |
-|   > Chapter 1                              |
-|     - Welcome to IDMPakistan  [Watched]    |
-|   > Chapter 2                              |
-|     - What is Marketing       [Watch Now]  |
-|   > Chapter 3                              |
-|     - Where to Work?          [Locked]     |
-|                                            |
-| Step 2: Ecom 360                           |
-|   > Chapter 1                              |
-|     - Meet Your Mentor     [Locked Day 5]  |
-|   > Chapter 2                              |
-|     - E-commerce Models    [Locked Day 6]  |
-|   ...                                      |
-|                                            |
-| Step 3: Google Ads                         |
-|   (All locked - future drip dates)         |
-+--------------------------------------------+
-```
+### 2. Update `src/components/batch/index.ts`
+Remove exports for `BatchTimelineManager` and `BatchTimelineView`.
 
-### Technical Details
+### 3. Update Student Dashboard (`src/components/StudentDashboard.tsx`)
+- Remove the "Your Learning Timeline" section that uses `BatchTimelineView`
+- Replace with a simpler "Upcoming Lessons" preview that reads from the pathway/course drip schedule (using `usePathwayGroupedRecordings` or `useCourseRecordings`)
+- Show next 3 upcoming/unlockable recordings with their drip unlock dates, plus a "View All" link to `/videos`
 
-**New file**: `src/hooks/useBatchPathwayRecordings.ts`
-- Queries: `pathway_courses` (ordered by step_number), `modules` (per course, ordered), `available_lessons` (per module, ordered by sequence_order), `batch_timeline_items` (for drip offsets), `batches` (for start_date), `recording_views`, `submissions`
-- Returns: `{ courseGroups: CourseGroup[], totalProgress: number, loading, error, refreshData }`
-- Each `CourseGroup` contains: `courseId, courseTitle, stepNumber, modules: CourseModule[]`
+### 4. Update Videos Page (`src/pages/Videos.tsx`)
+- Remove `useBatchPathwayRecordings` import and usage
+- Remove batch detection logic (the `detectBatch` useEffect)
+- Keep `usePathwayGroupedRecordings` as the primary hook for pathway students -- it already supports both batch and non-batch students via `get_course_sequential_unlock_status`
+- Remove `isBatchPathwayMode` flag; just use `isInPathwayMode` with the pathway grouped view
 
-**Modified file**: `src/pages/Videos.tsx`
-- Add batch enrollment detection (query `course_enrollments` for `batch_id`)
-- Conditional rendering: batch pathway view vs current single-course view
-- Course-level collapsible sections with step numbers
-- Reuse existing recording row UI (lock reasons, watch buttons, assignment badges)
+### 5. Update `src/hooks/usePathwayGroupedRecordings.ts`
+- Remove the batch drip override logic (lines ~90-110 that fetch `batch_timeline_items`)
+- Rely entirely on `get_course_sequential_unlock_status` RPC which already handles drip using `drip_days` from `available_lessons` and the enrollment/batch start date
+
+### 6. Update `src/hooks/useCourseRecordings.ts`
+- Remove the batch timeline override logic (lines ~101-160 that fetch `batch_timeline_items` and override unlock status)
+- Keep only the `get_course_sequential_unlock_status` RPC call which handles all unlock logic
+
+### 7. Update `src/pages/MentorDashboard.tsx`
+- Remove live session count that queries `batch_timeline_items`
+- Replace with a query against `success_sessions` table instead
+
+### 8. Update `src/components/batch/BatchManagement.tsx`
+- Remove the Settings/Timeline icon button that navigates to `BatchTimelinePage`
+
+### 9. Update Router (`src/App.tsx`)
+- Remove the `/batch-timeline/:batchId` route
+
+### 10. Update `src/components/batch/BatchStudentAssignment.tsx`
+- Check if it references batch timeline; remove any such references
+
+## What Stays the Same
+- Batches still exist for grouping students
+- `batch_id` stays on `course_enrollments` for identifying which group a student belongs to
+- Batch `start_date` is still used as the reference date for drip calculations (via the `get_course_sequential_unlock_status` RPC)
+- The `drip_days` field on each recording controls when it unlocks relative to the start date
+- Sequential unlock logic remains unchanged
+- Live sessions continue via `success_sessions` table
+
+## Technical Details
+
+### Files to Delete (9 files)
+- `src/components/batch/BatchTimelineView.tsx`
+- `src/components/batch/BatchTimelineManager.tsx`
+- `src/components/batch/timeline/ImportCourseDialog.tsx`
+- `src/components/batch/timeline/TimelineGroupItem.tsx`
+- `src/components/batch/timeline/TimelineGroupedList.tsx`
+- `src/hooks/useBatchTimelineStatus.ts`
+- `src/hooks/useBatchTimeline.ts`
+- `src/hooks/useBatchPathwayRecordings.ts`
+- `src/pages/BatchTimelinePage.tsx`
+
+### Files to Modify (8 files)
+- `src/components/batch/index.ts` -- remove 2 exports
+- `src/components/StudentDashboard.tsx` -- remove BatchTimelineView, add simple upcoming lessons
+- `src/pages/Videos.tsx` -- remove batch detection, simplify to pathway-only grouped view
+- `src/hooks/usePathwayGroupedRecordings.ts` -- remove batch_timeline_items override
+- `src/hooks/useCourseRecordings.ts` -- remove batch_timeline_items override
+- `src/pages/MentorDashboard.tsx` -- replace batch_timeline_items query with success_sessions
+- `src/components/batch/BatchManagement.tsx` -- remove timeline settings button
+- `src/App.tsx` -- remove BatchTimelinePage route
+
+### Database Note
+The `batch_timeline_items` table can remain in the database for now (no schema migration needed). It will simply no longer be read by the frontend. You can clean it up later if desired.
 
