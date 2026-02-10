@@ -163,7 +163,6 @@ export function SuccessSessionsManagement() {
       const { data, error } = await supabase
         .from('courses')
         .select('id, title')
-        .eq('is_active', true)
         .order('title', { ascending: true });
 
       if (error) throw error;
@@ -178,7 +177,6 @@ export function SuccessSessionsManagement() {
       const { data, error } = await supabase
         .from('batches')
         .select('id, name, course_id, status')
-        .eq('status', 'active')
         .order('name', { ascending: true });
 
       if (error) throw error;
