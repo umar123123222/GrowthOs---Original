@@ -19,6 +19,7 @@ interface CalendarEvent {
   courseName: string;
   hostName?: string;
   status: 'done' | 'upcoming' | 'cancelled';
+  assignmentName?: string;
 }
 
 interface BatchInfo {
@@ -76,6 +77,16 @@ export function ContentScheduleCalendar() {
       const { data: recordingsData } = await supabase
         .from('available_lessons')
         .select('id, recording_title, drip_days, module, sequence_order');
+
+      // Fetch assignments linked to recordings
+      const { data: assignmentsData } = await supabase
+        .from('assignments')
+        .select('id, name, recording_id')
+        .not('recording_id', 'is', null);
+      const assignmentByRecording = new Map<string, string>();
+      (assignmentsData || []).forEach((a: any) => {
+        if (a.recording_id) assignmentByRecording.set(a.recording_id, a.name);
+      });
 
       // Fetch all sessions with drip_days
       const { data: sessionsData } = await supabase
@@ -150,6 +161,7 @@ export function ContentScheduleCalendar() {
             courseName: courseMap.get(courseId) || 'Unknown Course',
             hostName: courseMentorMap.get(courseId),
             status: eventDate < now ? 'done' : 'upcoming',
+            assignmentName: assignmentByRecording.get(rec.id),
           });
         });
 
@@ -383,7 +395,13 @@ export function ContentScheduleCalendar() {
                                 <span>Host: <span className="text-foreground font-medium">{event.hostName}</span></span>
                               </div>
                             )}
-                            <div className="flex items-center gap-1.5">
+                            {event.assignmentName && (
+                              <div className="flex items-center gap-1.5 text-amber-600">
+                                <BookOpen className="w-3 h-3 shrink-0" />
+                                <span>Assignment: <span className="font-medium">{event.assignmentName}</span></span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBg(event.status)}`}>
                                 {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
                               </Badge>
