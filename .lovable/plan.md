@@ -1,39 +1,29 @@
 
 
-## Live Sessions - Student View Fixes
+## Show All Scheduled Sessions for Mentor
 
-Several issues in the student-facing Live Sessions page hurt the user experience. Here's what needs fixing:
+The Mentor Sessions page currently shows 0 sessions because it relies on an RLS (Row Level Security) policy that may be filtering too aggressively. The fix is to explicitly query sessions assigned to the logged-in mentor by matching the `mentor_id` column.
 
-### Issue 1: Missing Inactive LMS Banner
-Students with suspended/inactive accounts see buttons saying "Locked - Payment Required" but get no explanation banner. The `InactiveLMSBanner` component already exists in the project but is not used on this page.
+### What changes
 
-**Fix**: Import and render `InactiveLMSBanner` at the top of the page content when `userLMSStatus !== 'active'`.
+**File**: `src/components/mentor/MentorSessions.tsx`
 
-### Issue 2: "Join Now" crashes on empty links
-Upcoming sessions may not have a `link` set yet. Clicking "Join Now" with no link opens a blank tab or errors out.
+1. **Update the query** (line 49-52): Instead of relying solely on RLS, explicitly filter by `mentor_id` equal to the current user's ID. This ensures all sessions where the mentor is the host appear, whether or not they have Zoom details configured.
 
-**Fix**: Disable the "Join Now" button when `session.link` is empty/null, and show a tooltip or label like "Link not available yet".
+2. **Remove the "upcoming only" filter for scheduled sessions**: Currently, `processSessions` splits by date into upcoming vs completed. The upcoming section will show all sessions with `start_time >= today`, and completed will show past ones -- no changes needed there.
 
-### Issue 3: SessionCard defined inside render (performance)
-`SessionCard` is declared inside the component body, causing it to be recreated on every render. This loses internal state and hurts performance.
+3. **Add a visual indicator for incomplete sessions**: Sessions missing Zoom details (meeting ID, passcode, or link) will get a "Needs Setup" warning badge so the mentor knows which sessions still need configuration by the admin.
 
-**Fix**: Move `SessionCard` outside the `LiveSessions` component, passing the needed callbacks and state as props.
+### Technical Details
 
-### Issue 4: Unused imports
-`ExternalLink` and `Play` from lucide-react are imported but never used.
+- Change query from:
+  ```ts
+  supabase.from('success_sessions').select('*').order(...)
+  ```
+  to:
+  ```ts
+  supabase.from('success_sessions').select('*').eq('mentor_id', user.id).order(...)
+  ```
 
-**Fix**: Remove them.
-
----
-
-### Technical Summary
-
-**File**: `src/pages/LiveSessions.tsx`
-
-| Change | Lines affected |
-|--------|---------------|
-| Import + render `InactiveLMSBanner` | Top of file + inside JSX before sessions list |
-| Guard "Join Now" against empty `session.link` | Lines 323-337 |
-| Move `SessionCard` outside component | Lines 230-343 become a standalone component |
-| Remove unused `ExternalLink`, `Play` imports | Line 15-16 |
+- Add a "Needs Setup" badge on sessions where `zoom_meeting_id`, `zoom_passcode`, or `link` are empty, so the mentor can see which sessions aren't fully configured yet.
 
