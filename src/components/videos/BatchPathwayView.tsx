@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { BookOpen, ChevronDown, ChevronRight, Lock, GraduationCap } from "lucide-react";
 import { RecordingRow } from "./RecordingRow";
-import type { CourseGroup } from "@/hooks/useBatchPathwayRecordings";
+import type { CourseGroup } from "@/hooks/usePathwayGroupedRecordings";
 import type { CourseRecording } from "@/hooks/useCourseRecordings";
 
 interface BatchPathwayViewProps {

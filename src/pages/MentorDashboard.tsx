@@ -76,21 +76,19 @@ export default function MentorDashboard() {
         checkedCount = checkedSubmissions?.length || 0;
       }
 
-      // Count live sessions from batch_timeline_items for mentor's courses
+      // Count completed sessions from success_sessions
       let sessionsCount = 0;
       if (isGlobalMentor) {
         const { data: sessions } = await supabase
-          .from('batch_timeline_items')
+          .from('success_sessions')
           .select('id')
-          .eq('type', 'live_session')
-          .eq('session_status', 'completed');
+          .eq('status', 'completed');
         sessionsCount = sessions?.length || 0;
       } else if (assignedCourseIds.length > 0) {
         const { data: sessions } = await supabase
-          .from('batch_timeline_items')
+          .from('success_sessions')
           .select('id')
-          .eq('type', 'live_session')
-          .eq('session_status', 'completed')
+          .eq('status', 'completed')
           .in('course_id', assignedCourseIds);
         sessionsCount = sessions?.length || 0;
       }

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ConnectAccountsDialog } from '@/components/ConnectAccountsDialog';
 import { OnboardingVideoModal } from '@/components/OnboardingVideoModal';
-import { BatchTimelineView } from '@/components/batch/BatchTimelineView';
+
 import { useAuth } from '@/hooks/useAuth';
 import { useCourses } from '@/hooks/useCourses';
 import { useCourseRecordings } from '@/hooks/useCourseRecordings';
@@ -713,21 +713,6 @@ export function StudentDashboard() {
         </CardContent>
       </Card>
 
-      {/* Batch Timeline Section - Show if enrolled in a batch */}
-      {batchEnrollment && (
-        <Card className="border-primary/20 animate-fade-in">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-primary">
-              <Calendar className="w-5 h-5" />
-              Your Learning Timeline
-              <Badge variant="secondary" className="ml-2">{batchEnrollment.batchName}</Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <BatchTimelineView batchId={batchEnrollment.batchId} batchName={batchEnrollment.batchName} limit={3} showViewAll />
-          </CardContent>
-        </Card>
-      )}
 
       {/* Interactive Three-Card Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
