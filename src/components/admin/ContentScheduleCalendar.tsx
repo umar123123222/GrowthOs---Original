@@ -3,8 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, CalendarDays, Video, BookOpen, User, Clock, Layers, GripVertical } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Video, BookOpen, User, Clock, Layers, GripVertical, AlertTriangle } from 'lucide-react';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addWeeks, subWeeks, isSameDay, isSameMonth, isToday, differenceInCalendarDays } from 'date-fns';
@@ -37,7 +38,7 @@ interface BatchInfo {
 
 // Draggable event pill
 function DraggableEvent({ event, getStatusBg }: { event: CalendarEvent; getStatusBg: (s: string) => string }) {
-  const canDrag = event.type === 'recording' || (event.type === 'session' && event.status !== 'done');
+  const canDrag = event.type === 'recording' || event.type === 'session';
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     data: event,
@@ -148,6 +149,12 @@ export function ContentScheduleCalendar() {
   const [batches, setBatches] = useState<BatchInfo[]>([]);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+  const [pendingReschedule, setPendingReschedule] = useState<{
+    event: CalendarEvent;
+    targetDate: Date;
+    newDripDays: number;
+    batchName: string;
+  } | null>(null);
   const { toast } = useToast();
 
   const sensors = useSensors(
@@ -335,6 +342,40 @@ export function ContentScheduleCalendar() {
     setActiveEvent(event.active.data.current as CalendarEvent);
   }, []);
 
+  // Extracted reschedule logic used by both normal drag and confirmed completed-session drag
+  const executeReschedule = useCallback(async (draggedEvent: CalendarEvent, targetDate: Date, newDripDays: number) => {
+    try {
+      if (draggedEvent.type === 'recording') {
+        const { error } = await supabase
+          .from('available_lessons')
+          .update({ drip_days: newDripDays })
+          .eq('id', draggedEvent.entityId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('success_sessions')
+          .update({ drip_days: newDripDays } as any)
+          .eq('id', draggedEvent.entityId);
+        if (error) throw error;
+      }
+
+      setEvents(prev => prev.map(e => {
+        if (e.entityId === draggedEvent.entityId && e.batchId === draggedEvent.batchId) {
+          return { ...e, date: targetDate, originalDripDays: newDripDays, status: targetDate < new Date() ? 'done' : 'upcoming' };
+        }
+        return e;
+      }));
+
+      toast({
+        title: "Rescheduled",
+        description: `"${draggedEvent.title}" moved to ${format(targetDate, 'MMM d, yyyy')} (Day ${newDripDays})`,
+      });
+    } catch (error) {
+      console.error('Error updating drip days:', error);
+      toast({ title: "Error", description: "Failed to reschedule", variant: "destructive" });
+    }
+  }, [toast]);
+
   const handleDragEnd = useCallback(async (event: DragEndEvent) => {
     setActiveEvent(null);
     const { active, over } = event;
@@ -363,50 +404,34 @@ export function ContentScheduleCalendar() {
       return;
     }
 
-    // Validation for sessions: only forward, not completed
+    // Validation for sessions
     if (draggedEvent.type === 'session') {
-      if (draggedEvent.status === 'done') {
-        toast({ title: "Cannot move", description: "Completed sessions cannot be rescheduled", variant: "destructive" });
-        return;
-      }
       if (targetDate < draggedEvent.date) {
         toast({ title: "Cannot move backward", description: "Live sessions can only be moved to a later date", variant: "destructive" });
         return;
       }
-    }
-
-    try {
-      if (draggedEvent.type === 'recording') {
-        const { error } = await supabase
-          .from('available_lessons')
-          .update({ drip_days: newDripDays })
-          .eq('id', draggedEvent.entityId);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('success_sessions')
-          .update({ drip_days: newDripDays } as any)
-          .eq('id', draggedEvent.entityId);
-        if (error) throw error;
+      // Show confirmation dialog for completed sessions
+      if (draggedEvent.status === 'done') {
+        setPendingReschedule({
+          event: draggedEvent,
+          targetDate,
+          newDripDays,
+          batchName: batch.name,
+        });
+        return;
       }
-
-      // Optimistically update local state instead of full refetch
-      setEvents(prev => prev.map(e => {
-        if (e.entityId === draggedEvent.entityId && e.batchId === draggedEvent.batchId) {
-          return { ...e, date: targetDate, originalDripDays: newDripDays, status: targetDate < new Date() ? 'done' : 'upcoming' };
-        }
-        return e;
-      }));
-
-      toast({
-        title: "Rescheduled",
-        description: `"${draggedEvent.title}" moved to ${format(targetDate, 'MMM d, yyyy')} (Day ${newDripDays})`,
-      });
-    } catch (error) {
-      console.error('Error updating drip days:', error);
-      toast({ title: "Error", description: "Failed to reschedule", variant: "destructive" });
     }
-  }, [batches, selectedBatch, toast]);
+
+    // Execute the reschedule
+    await executeReschedule(draggedEvent, targetDate, newDripDays);
+  }, [batches, selectedBatch, toast, executeReschedule]);
+
+  const handleConfirmCompletedReschedule = useCallback(async () => {
+    if (!pendingReschedule) return;
+    const { event, targetDate, newDripDays } = pendingReschedule;
+    setPendingReschedule(null);
+    await executeReschedule(event, targetDate, newDripDays);
+  }, [pendingReschedule, executeReschedule]);
 
   const filteredEvents = useMemo(() => {
     if (selectedBatch === 'all') return events;
@@ -470,6 +495,7 @@ export function ContentScheduleCalendar() {
   }
 
   return (
+    <>
     <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50">
       <CardHeader className="pb-3">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
@@ -603,5 +629,35 @@ export function ContentScheduleCalendar() {
         </div>
       </CardContent>
     </Card>
+
+    {/* Confirmation dialog for rescheduling completed sessions */}
+    <AlertDialog open={!!pendingReschedule} onOpenChange={(open) => { if (!open) setPendingReschedule(null); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            Reschedule Completed Session
+          </AlertDialogTitle>
+          <AlertDialogDescription className="space-y-2 text-sm">
+            <p>
+              You are rescheduling <strong>"{pendingReschedule?.event.title}"</strong> which has already been completed and its date has passed.
+            </p>
+            <p>
+              This change will apply for batch <strong>{pendingReschedule?.batchName}</strong>.
+            </p>
+            <p>
+              New date: <strong>{pendingReschedule ? format(pendingReschedule.targetDate, 'EEEE, MMM d, yyyy') : ''}</strong> (Day {pendingReschedule?.newDripDays})
+            </p>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmCompletedReschedule}>
+            Yes, Reschedule
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
