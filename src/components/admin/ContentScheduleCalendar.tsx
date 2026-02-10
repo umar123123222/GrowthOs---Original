@@ -1,12 +1,14 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, CalendarDays, Video, BookOpen, User, Clock, Layers } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Video, BookOpen, User, Clock, Layers, GripVertical } from 'lucide-react';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { supabase } from '@/integrations/supabase/client';
-import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addWeeks, subWeeks, isSameDay, isSameMonth, isToday } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addWeeks, subWeeks, isSameDay, isSameMonth, isToday, differenceInCalendarDays } from 'date-fns';
+import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 
 interface CalendarEvent {
   id: string;
@@ -20,6 +22,9 @@ interface CalendarEvent {
   hostName?: string;
   status: 'done' | 'upcoming' | 'cancelled';
   assignmentName?: string;
+  // For drag: original entity id and original date
+  entityId: string;
+  originalDripDays: number | null;
 }
 
 interface BatchInfo {
@@ -30,6 +35,110 @@ interface BatchInfo {
   pathway_id: string | null;
 }
 
+// Draggable event pill
+function DraggableEvent({ event, getStatusBg }: { event: CalendarEvent; getStatusBg: (s: string) => string }) {
+  const canDrag = event.type === 'recording' || (event.type === 'session' && event.status !== 'done');
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: event.id,
+    data: event,
+    disabled: !canDrag,
+  });
+
+  return (
+    <HoverCard openDelay={300} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <div
+          ref={setNodeRef}
+          {...(canDrag ? { ...listeners, ...attributes } : {})}
+          className={`text-[10px] leading-tight px-1 py-0.5 rounded border truncate ${getStatusBg(event.status)} ${
+            canDrag ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+          } ${isDragging ? 'opacity-30' : ''}`}
+        >
+          {canDrag && <GripVertical className="w-2.5 h-2.5 inline-block mr-0.5 text-muted-foreground/50" />}
+          <span className="mr-0.5">{event.type === 'session' ? '🎥' : '📖'}</span>
+          {event.title}
+        </div>
+      </HoverCardTrigger>
+      <HoverCardContent side="top" align="start" className="w-64 p-3 text-xs z-50">
+        <EventDetails event={event} getStatusBg={getStatusBg} />
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
+// Event detail popover content
+function EventDetails({ event, getStatusBg }: { event: CalendarEvent; getStatusBg: (s: string) => string }) {
+  return (
+    <div className="space-y-2">
+      <div className="font-semibold text-sm flex items-center gap-1.5">
+        {event.type === 'session' ? <Video className="w-3.5 h-3.5 text-primary shrink-0" /> : <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />}
+        {event.title}
+      </div>
+      <div className="space-y-1.5 text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <CalendarDays className="w-3 h-3 shrink-0" />
+          <span>{format(event.date, 'EEEE, MMM d, yyyy')}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Layers className="w-3 h-3 shrink-0" />
+          <span>Batch: <span className="text-foreground font-medium">{event.batchName}</span></span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <BookOpen className="w-3 h-3 shrink-0" />
+          <span>Course: <span className="text-foreground font-medium">{event.courseName}</span></span>
+        </div>
+        {event.moduleName && (
+          <div className="flex items-center gap-1.5">
+            <Layers className="w-3 h-3 shrink-0" />
+            <span>Module: <span className="text-foreground font-medium">{event.moduleName}</span></span>
+          </div>
+        )}
+        {event.hostName && (
+          <div className="flex items-center gap-1.5">
+            <User className="w-3 h-3 shrink-0" />
+            <span>Host: <span className="text-foreground font-medium">{event.hostName}</span></span>
+          </div>
+        )}
+        {event.assignmentName && (
+          <div className="flex items-center gap-1.5 text-amber-600">
+            <BookOpen className="w-3 h-3 shrink-0" />
+            <span>Assignment: <span className="font-medium">{event.assignmentName}</span></span>
+          </div>
+        )}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBg(event.status)}`}>
+            {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+          </Badge>
+          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+            {event.type === 'session' ? 'Live Session' : 'Recording'}
+          </Badge>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Droppable day cell
+function DroppableDay({ day, isCurrentMonth, isCurrentDay, viewMode, children }: {
+  day: Date; isCurrentMonth: boolean; isCurrentDay: boolean; viewMode: string; children: React.ReactNode;
+}) {
+  const dayId = format(day, 'yyyy-MM-dd');
+  const { setNodeRef, isOver } = useDroppable({ id: dayId, data: { date: day } });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`bg-background ${viewMode === 'weekly' ? 'min-h-[140px]' : 'min-h-[90px]'} p-1 ${
+        !isCurrentMonth && viewMode === 'monthly' ? 'opacity-40' : ''
+      } ${isCurrentDay ? 'ring-2 ring-primary/30 ring-inset' : ''} ${
+        isOver ? 'bg-primary/10 ring-2 ring-primary/50 ring-inset' : ''
+      } transition-colors`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function ContentScheduleCalendar() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
@@ -38,6 +147,12 @@ export function ContentScheduleCalendar() {
   const [selectedBatch, setSelectedBatch] = useState<string>('all');
   const [batches, setBatches] = useState<BatchInfo[]>([]);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
+  const [activeEvent, setActiveEvent] = useState<CalendarEvent | null>(null);
+  const { toast } = useToast();
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   useEffect(() => {
     fetchCalendarData();
@@ -162,16 +277,17 @@ export function ContentScheduleCalendar() {
             hostName: courseMentorMap.get(courseId),
             status: eventDate < now ? 'done' : 'upcoming',
             assignmentName: assignmentByRecording.get(rec.id),
+            entityId: rec.id,
+            originalDripDays: rec.drip_days,
           });
         });
 
         // Map sessions to events
         (sessionsData || []).forEach(session => {
-          // Match session to batch: by batch_id, by course_id, or global (no course_id)
           const sessionMatchesBatch = 
             (session.batch_id && session.batch_id === batch.id) ||
             (!session.batch_id && session.course_id && courseIds.includes(session.course_id)) ||
-            (!session.batch_id && !session.course_id); // global session
+            (!session.batch_id && !session.course_id);
           if (!sessionMatchesBatch) return;
           
           const dripDays = (session as any).drip_days;
@@ -201,6 +317,8 @@ export function ContentScheduleCalendar() {
             courseName: courseMap.get(session.course_id) || 'Unknown Course',
             hostName: session.mentor_name || courseMentorMap.get(session.course_id),
             status,
+            entityId: session.id,
+            originalDripDays: dripDays ?? null,
           });
         });
       }
@@ -212,6 +330,72 @@ export function ContentScheduleCalendar() {
       setLoading(false);
     }
   };
+
+  const handleDragStart = useCallback((event: DragStartEvent) => {
+    setActiveEvent(event.active.data.current as CalendarEvent);
+  }, []);
+
+  const handleDragEnd = useCallback(async (event: DragEndEvent) => {
+    setActiveEvent(null);
+    const { active, over } = event;
+    if (!over) return;
+
+    const draggedEvent = active.data.current as CalendarEvent;
+    const targetDateStr = over.id as string;
+    const targetDate = new Date(targetDateStr + 'T00:00:00');
+
+    if (isSameDay(draggedEvent.date, targetDate)) return;
+
+    // Find batch start date
+    const batch = batches.find(b => b.id === draggedEvent.batchId);
+    if (!batch) return;
+    const batchStart = new Date(batch.start_date);
+    const newDripDays = differenceInCalendarDays(targetDate, batchStart);
+
+    if (newDripDays < 0) {
+      toast({ title: "Invalid", description: "Cannot schedule before batch start date", variant: "destructive" });
+      return;
+    }
+
+    // Validation for sessions: only forward, not completed
+    if (draggedEvent.type === 'session') {
+      if (draggedEvent.status === 'done') {
+        toast({ title: "Cannot move", description: "Completed sessions cannot be rescheduled", variant: "destructive" });
+        return;
+      }
+      if (targetDate < draggedEvent.date) {
+        toast({ title: "Cannot move backward", description: "Live sessions can only be moved to a later date", variant: "destructive" });
+        return;
+      }
+    }
+
+    try {
+      if (draggedEvent.type === 'recording') {
+        const { error } = await supabase
+          .from('available_lessons')
+          .update({ drip_days: newDripDays })
+          .eq('id', draggedEvent.entityId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('success_sessions')
+          .update({ drip_days: newDripDays } as any)
+          .eq('id', draggedEvent.entityId);
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Rescheduled",
+        description: `"${draggedEvent.title}" moved to ${format(targetDate, 'MMM d, yyyy')} (Day ${newDripDays})`,
+      });
+
+      // Refresh data
+      await fetchCalendarData();
+    } catch (error) {
+      console.error('Error updating drip days:', error);
+      toast({ title: "Error", description: "Failed to reschedule", variant: "destructive" });
+    }
+  }, [batches, toast]);
 
   const filteredEvents = useMemo(() => {
     if (selectedBatch === 'all') return events;
@@ -226,8 +410,6 @@ export function ContentScheduleCalendar() {
     } else {
       const start = startOfMonth(currentDate);
       const end = endOfMonth(currentDate);
-      const monthDays = eachDayOfInterval({ start, end });
-      // Pad to start of week
       const firstDay = startOfWeek(start, { weekStartsOn: 1 });
       const lastDay = endOfWeek(end, { weekStartsOn: 1 });
       return eachDayOfInterval({ start: firstDay, end: lastDay });
@@ -334,99 +516,57 @@ export function ContentScheduleCalendar() {
           ))}
         </div>
 
-        {/* Calendar grid */}
-        <div className="grid grid-cols-7 gap-px bg-border rounded-md overflow-hidden">
-          {daysToDisplay.map(day => {
-            const dayEvents = getEventsForDay(day);
-            const isCurrentMonth = isSameMonth(day, currentDate);
-            const isExpanded = expandedDay === format(day, 'yyyy-MM-dd');
-            const maxVisible = viewMode === 'weekly' ? 8 : 3;
+        {/* Calendar grid with DnD */}
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div className="grid grid-cols-7 gap-px bg-border rounded-md overflow-hidden">
+            {daysToDisplay.map(day => {
+              const dayEvents = getEventsForDay(day);
+              const isCurrentMonth = isSameMonth(day, currentDate);
+              const isExpanded = expandedDay === format(day, 'yyyy-MM-dd');
+              const maxVisible = viewMode === 'weekly' ? 8 : 3;
 
-            return (
-              <div
-                key={day.toISOString()}
-                className={`bg-background ${viewMode === 'weekly' ? 'min-h-[140px]' : 'min-h-[90px]'} p-1 ${
-                  !isCurrentMonth && viewMode === 'monthly' ? 'opacity-40' : ''
-                } ${isToday(day) ? 'ring-2 ring-primary/30 ring-inset' : ''}`}
-                onClick={() => dayEvents.length > maxVisible && setExpandedDay(isExpanded ? null : format(day, 'yyyy-MM-dd'))}
-              >
-                <div className={`text-xs font-medium mb-0.5 ${isToday(day) ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
-                  {format(day, 'd')}
-                </div>
-                <div className="space-y-0.5">
-                  {dayEvents.slice(0, isExpanded ? undefined : maxVisible).map(event => (
-                    <HoverCard key={event.id} openDelay={200} closeDelay={100}>
-                      <HoverCardTrigger asChild>
-                        <div
-                          className={`text-[10px] leading-tight px-1 py-0.5 rounded border truncate cursor-default ${getStatusBg(event.status)}`}
-                        >
-                          <span className="mr-0.5">{event.type === 'session' ? '🎥' : '📖'}</span>
-                          {event.title}
-                        </div>
-                      </HoverCardTrigger>
-                      <HoverCardContent side="top" align="start" className="w-64 p-3 text-xs z-50">
-                        <div className="space-y-2">
-                          <div className="font-semibold text-sm flex items-center gap-1.5">
-                            {event.type === 'session' ? <Video className="w-3.5 h-3.5 text-primary shrink-0" /> : <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />}
-                            {event.title}
-                          </div>
-                          <div className="space-y-1.5 text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                              <CalendarDays className="w-3 h-3 shrink-0" />
-                              <span>{format(event.date, 'EEEE, MMM d, yyyy')}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <Layers className="w-3 h-3 shrink-0" />
-                              <span>Batch: <span className="text-foreground font-medium">{event.batchName}</span></span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                              <BookOpen className="w-3 h-3 shrink-0" />
-                              <span>Course: <span className="text-foreground font-medium">{event.courseName}</span></span>
-                            </div>
-                            {event.moduleName && (
-                              <div className="flex items-center gap-1.5">
-                                <Layers className="w-3 h-3 shrink-0" />
-                                <span>Module: <span className="text-foreground font-medium">{event.moduleName}</span></span>
-                              </div>
-                            )}
-                            {event.hostName && (
-                              <div className="flex items-center gap-1.5">
-                                <User className="w-3 h-3 shrink-0" />
-                                <span>Host: <span className="text-foreground font-medium">{event.hostName}</span></span>
-                              </div>
-                            )}
-                            {event.assignmentName && (
-                              <div className="flex items-center gap-1.5 text-amber-600">
-                                <BookOpen className="w-3 h-3 shrink-0" />
-                                <span>Assignment: <span className="font-medium">{event.assignmentName}</span></span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBg(event.status)}`}>
-                                {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
-                              </Badge>
-                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                                {event.type === 'session' ? 'Live Session' : 'Recording'}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                      </HoverCardContent>
-                    </HoverCard>
-                  ))}
-                  {dayEvents.length > maxVisible && !isExpanded && (
-                    <div className="text-[10px] text-primary font-medium cursor-pointer px-1">
-                      +{dayEvents.length - maxVisible} more
-                    </div>
-                  )}
-                </div>
+              return (
+                <DroppableDay
+                  key={day.toISOString()}
+                  day={day}
+                  isCurrentMonth={isCurrentMonth}
+                  isCurrentDay={isToday(day)}
+                  viewMode={viewMode}
+                >
+                  <div className={`text-xs font-medium mb-0.5 ${isToday(day) ? 'text-primary font-bold' : 'text-muted-foreground'}`}>
+                    {format(day, 'd')}
+                  </div>
+                  <div className="space-y-0.5">
+                    {dayEvents.slice(0, isExpanded ? undefined : maxVisible).map(event => (
+                      <DraggableEvent key={event.id} event={event} getStatusBg={getStatusBg} />
+                    ))}
+                    {dayEvents.length > maxVisible && !isExpanded && (
+                      <div
+                        className="text-[10px] text-primary font-medium cursor-pointer px-1"
+                        onClick={() => setExpandedDay(isExpanded ? null : format(day, 'yyyy-MM-dd'))}
+                      >
+                        +{dayEvents.length - maxVisible} more
+                      </div>
+                    )}
+                  </div>
+                </DroppableDay>
+              );
+            })}
+          </div>
+
+          {/* Drag overlay */}
+          <DragOverlay>
+            {activeEvent && (
+              <div className={`text-[10px] leading-tight px-1 py-0.5 rounded border truncate shadow-lg ${getStatusBg(activeEvent.status)} max-w-[150px]`}>
+                <span className="mr-0.5">{activeEvent.type === 'session' ? '🎥' : '📖'}</span>
+                {activeEvent.title}
               </div>
-            );
-          })}
-        </div>
+            )}
+          </DragOverlay>
+        </DndContext>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground flex-wrap">
           <div className="flex items-center gap-1">
             <div className={`w-2.5 h-2.5 rounded-full ${getStatusDot('done')}`} />
             <span>Done</span>
@@ -444,6 +584,10 @@ export function ContentScheduleCalendar() {
           </div>
           <div className="flex items-center gap-1">
             <span>🎥 Live Session</span>
+          </div>
+          <div className="flex items-center gap-1 ml-2 text-muted-foreground/70">
+            <GripVertical className="w-3 h-3" />
+            <span>Drag to reschedule</span>
           </div>
         </div>
       </CardContent>
