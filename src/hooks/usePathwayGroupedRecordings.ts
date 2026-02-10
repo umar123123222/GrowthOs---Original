@@ -3,7 +3,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
 import type { CourseRecording, CourseModule } from '@/hooks/useCourseRecordings';
-import type { CourseGroup } from '@/hooks/useBatchPathwayRecordings';
+
+export interface CourseGroup {
+  courseId: string;
+  courseTitle: string;
+  stepNumber: number;
+  modules: CourseModule[];
+  totalLessons: number;
+  watchedLessons: number;
+}
 
 interface UsePathwayGroupedRecordingsReturn {
   courseGroups: CourseGroup[];
@@ -84,52 +92,22 @@ export function usePathwayGroupedRecordings(
 
       // Fetch unlock status for each course using sequential unlock RPC
       const unlockStatusMap = new Map<string, { isUnlocked: boolean; lockReason?: string; dripUnlockDate?: string }>();
-      
-      // Check for batch enrollment to use batch drip dates
-      const { data: batchEnrollment } = await supabase
-        .from('course_enrollments')
-        .select('batch_id')
-        .eq('student_id', user.id)
-        .not('batch_id', 'is', null)
-        .limit(1)
-        .maybeSingle();
 
-      let batchDripMap: Map<string, number> | null = null;
-      let batchStartDate: Date | null = null;
-
-      if (batchEnrollment?.batch_id) {
-        const [{ data: batchData }, { data: timelineItems }] = await Promise.all([
-          supabase.from('batches').select('start_date').eq('id', batchEnrollment.batch_id).single(),
-          supabase.from('batch_timeline_items').select('recording_id, drip_offset_days').eq('batch_id', batchEnrollment.batch_id).not('recording_id', 'is', null),
-        ]);
-
-        if (batchData?.start_date && timelineItems?.length) {
-          batchStartDate = new Date(batchData.start_date);
-          batchDripMap = new Map();
-          for (const item of timelineItems) {
-            if (item.recording_id) batchDripMap.set(item.recording_id, item.drip_offset_days);
-          }
-        }
-      }
-
-      // If no batch drip, use sequential unlock per course
-      if (!batchDripMap) {
-        for (const pc of pathwayCourses) {
-          try {
-            const { data: unlockData } = await supabase.rpc('get_course_sequential_unlock_status', {
-              p_user_id: user.id,
-              p_course_id: pc.course_id,
+      for (const pc of pathwayCourses) {
+        try {
+          const { data: unlockData } = await supabase.rpc('get_course_sequential_unlock_status', {
+            p_user_id: user.id,
+            p_course_id: pc.course_id,
+          });
+          (unlockData || []).forEach((u: any) => {
+            unlockStatusMap.set(u.recording_id, {
+              isUnlocked: u.is_unlocked,
+              lockReason: u.lock_reason,
+              dripUnlockDate: u.drip_unlock_date,
             });
-            (unlockData || []).forEach((u: any) => {
-              unlockStatusMap.set(u.recording_id, {
-                isUnlocked: u.is_unlocked,
-                lockReason: u.lock_reason,
-                dripUnlockDate: u.drip_unlock_date,
-              });
-            });
-          } catch {
-            // Non-critical
-          }
+          });
+        } catch {
+          // Non-critical
         }
       }
 
@@ -162,30 +140,11 @@ export function usePathwayGroupedRecordings(
             let lockReason: string | null = null;
             let dripUnlockDate: string | null = null;
 
-            if (batchDripMap && batchStartDate) {
-              // Use batch drip logic
-              const dripOffset = batchDripMap.get(lesson.id);
-              if (dripOffset !== undefined) {
-                const unlockDate = new Date(batchStartDate);
-                unlockDate.setDate(unlockDate.getDate() + dripOffset);
-                unlockDate.setHours(0, 0, 0, 0);
-                if (today >= unlockDate || isWatched) {
-                  isUnlocked = true;
-                } else {
-                  lockReason = 'drip_locked';
-                  dripUnlockDate = unlockDate.toISOString();
-                }
-              } else {
-                isUnlocked = isWatched;
-                if (!isUnlocked) lockReason = 'drip_locked';
-              }
-            } else {
-              // Use sequential unlock status
-              const status = unlockStatusMap.get(lesson.id);
-              isUnlocked = status?.isUnlocked || false;
-              lockReason = status?.lockReason || null;
-              dripUnlockDate = status?.dripUnlockDate || null;
-            }
+            // Use sequential unlock status from RPC
+            const status = unlockStatusMap.get(lesson.id);
+            isUnlocked = status?.isUnlocked || false;
+            lockReason = status?.lockReason || null;
+            dripUnlockDate = status?.dripUnlockDate || null;
 
             if (isWatched) courseWatchedLessons++;
             courseTotalLessons++;
