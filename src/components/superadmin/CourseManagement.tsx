@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ContentTimelineDialog } from './ContentTimelineDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -55,6 +56,7 @@ export function CourseManagement() {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [selectedMentorId, setSelectedMentorId] = useState<string>('');
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
+  const [timelineCourse, setTimelineCourse] = useState<Course | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -716,6 +718,14 @@ export function CourseManagement() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => setTimelineCourse(course)}
+                          title="Content Timeline"
+                        >
+                          <Clock className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => togglePublished(course)}
                           title={course.is_published ? 'Unpublish' : 'Publish'}
                         >
@@ -802,6 +812,14 @@ export function CourseManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Content Timeline Dialog */}
+      <ContentTimelineDialog
+        type="course"
+        entityId={timelineCourse?.id || ''}
+        entityName={timelineCourse?.title || ''}
+        open={!!timelineCourse}
+        onOpenChange={(open) => { if (!open) setTimelineCourse(null); }}
+      />
     </div>
   );
 }
