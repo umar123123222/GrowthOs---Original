@@ -950,9 +950,9 @@ function ThisWeekSessions({ sessions, courses, batches, onEdit }: ThisWeekSessio
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
   const thisWeekSessions = sessions.filter(s => {
-    if (!s.schedule_date && !s.start_time) return false;
+    if (!s.schedule_date) return false;
     try {
-      const sessionDate = new Date(s.schedule_date || s.start_time);
+      const sessionDate = new Date(s.schedule_date);
       return isWithinInterval(sessionDate, { start: weekStart, end: weekEnd });
     } catch {
       return false;
