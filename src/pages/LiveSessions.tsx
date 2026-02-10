@@ -7,13 +7,13 @@ import { useToast } from "@/hooks/use-toast";
 import { RoleGuard } from "@/components/RoleGuard";
 import { safeLogger } from '@/lib/safe-logger';
 import { VideoPreviewDialog } from '@/components/VideoPreviewDialog';
+import { InactiveLMSBanner } from '@/components/InactiveLMSBanner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { 
   Video, 
   Calendar, 
   Clock, 
   Users, 
-  ExternalLink,
-  Play,
   CheckCircle
 } from "lucide-react";
 
@@ -41,6 +41,144 @@ interface SessionAttendance {
   created_at: string;
 }
 
+interface SessionCardProps {
+  session: LiveSession;
+  isUpcoming?: boolean;
+  userLMSStatus: string;
+  hasAttended: boolean;
+  onJoin: (sessionId: string, sessionLink: string) => void;
+  onWatchRecording: (title: string, url: string) => void;
+}
+
+const getSessionStatus = (session: LiveSession) => {
+  const now = new Date();
+  const startTime = new Date(session.start_time);
+  const endTime = new Date(session.end_time);
+  
+  if (now < startTime) return { status: 'upcoming', color: 'bg-blue-100 text-blue-800' };
+  if (now >= startTime && now <= endTime) return { status: 'live', color: 'bg-red-100 text-red-800' };
+  return { status: 'completed', color: 'bg-gray-100 text-gray-800' };
+};
+
+const SessionCard = ({ session, isUpcoming, userLMSStatus, hasAttended, onJoin, onWatchRecording }: SessionCardProps) => {
+  const sessionStatus = getSessionStatus(session);
+  const hasLink = !!session.link;
+  
+  return (
+    <Card className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-l-4 border-l-primary/20 hover:border-l-primary/60">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div className="space-y-2">
+            <CardTitle className="text-xl group-hover:text-primary transition-colors">
+              {session.title}
+            </CardTitle>
+            <p className="text-muted-foreground leading-relaxed">{session.description}</p>
+          </div>
+          <Badge variant={
+            sessionStatus.status === 'live' ? 'destructive' : 
+            sessionStatus.status === 'upcoming' ? 'default' : 
+            'secondary'
+          } className="shrink-0">
+            {sessionStatus.status}
+          </Badge>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+            <Calendar className="w-5 h-5 text-primary" />
+            <div>
+              <div className="font-medium text-sm">Date</div>
+              <div className="text-sm text-muted-foreground">
+                {new Date(session.start_time).toLocaleDateString('en-US', { 
+                  weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' 
+                })}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+            <Clock className="w-5 h-5 text-primary" />
+            <div>
+              <div className="font-medium text-sm">Time</div>
+              <div className="text-sm text-muted-foreground">
+                {new Date(session.start_time).toLocaleTimeString('en-US', { 
+                  hour: '2-digit', minute: '2-digit', hour12: true 
+                })} - {new Date(session.end_time).toLocaleTimeString('en-US', { 
+                  hour: '2-digit', minute: '2-digit', hour12: true 
+                })}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+            <Users className="w-5 h-5 text-primary" />
+            <div>
+              <div className="font-medium text-sm">Mentor</div>
+              <div className="text-sm text-muted-foreground">{session.mentor_name || "TBA"}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between pt-4 border-t">
+          <div className="flex items-center gap-2">
+            {hasAttended && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm">
+                <CheckCircle className="w-4 h-4" />
+                <span>Attended</span>
+              </div>
+            )}
+          </div>
+          
+          {sessionStatus.status === 'completed' && hasLink ? (
+            <Button
+              onClick={() => onWatchRecording(session.title, session.link)}
+              disabled={userLMSStatus !== 'active'}
+              variant="default"
+            >
+              {userLMSStatus !== 'active' ? (
+                'Locked - Payment Required'
+              ) : (
+                <>
+                  <Video className="w-4 h-4 mr-2" />
+                  Watch Now
+                </>
+              )}
+            </Button>
+          ) : (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <span>
+                    <Button
+                      onClick={() => onJoin(session.id, session.link)}
+                      disabled={userLMSStatus !== 'active' || !hasLink}
+                      variant="default"
+                    >
+                      {userLMSStatus !== 'active' ? (
+                        'Locked - Payment Required'
+                      ) : (
+                        <>
+                          <Calendar className="w-4 h-4 mr-2" />
+                          Join Now
+                        </>
+                      )}
+                    </Button>
+                  </span>
+                </TooltipTrigger>
+                {!hasLink && userLMSStatus === 'active' && (
+                  <TooltipContent>Link not available yet</TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 interface LiveSessionsProps {
   user?: any;
 }
@@ -59,12 +197,10 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     if (user?.id) {
       fetchAttendance();
     } else {
-      // No user – show nothing (RLS will enforce visibility anyway)
       setLoading(false);
     }
   }, [user?.id]);
 
-  // Authenticated user session fetching – relies on RLS policy for filtering
   const fetchSessions = async (enrolledAt?: string) => {
     safeLogger.info('fetchSessions called');
     try {
@@ -74,7 +210,6 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         .order('start_time', { ascending: true });
 
       safeLogger.info('Sessions fetched:', { count: data?.length });
-      
       if (error) {
         safeLogger.error('Supabase error:', error);
         throw error;
@@ -83,12 +218,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       const now = new Date();
       const enrolledDate = enrolledAt ? new Date(enrolledAt) : undefined;
 
-      const upcoming = (data || []).filter(session => {
-        const sessionStart = new Date(session.start_time);
-        return sessionStart >= now;
-      });
-
-      // Past sessions – optionally filtered to after enrollment date
+      const upcoming = (data || []).filter(session => new Date(session.start_time) >= now);
       const pastSessions = (data || []).filter(session => {
         const sessionEnd = new Date(session.end_time);
         const sessionStart = new Date(session.start_time);
@@ -101,56 +231,34 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       setRecordedSessions(pastSessions);
     } catch (error) {
       safeLogger.error('Error fetching sessions:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load success sessions",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to load success sessions", variant: "destructive" });
     }
   };
 
   const fetchAttendance = async () => {
     safeLogger.info('fetchAttendance called, user:', { user });
     try {
-      if (!user?.id) {
-        setLoading(false);
-        return;
-      }
+      if (!user?.id) { setLoading(false); return; }
 
-      // Fetch user's LMS status
       const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('lms_status')
-        .eq('id', user.id)
-        .maybeSingle();
-      
+        .from('users').select('lms_status').eq('id', user.id).maybeSingle();
       if (userError) throw userError;
       setUserLMSStatus(userData?.lms_status || 'active');
 
-      // Fetch earliest enrolled_at from active enrollments (for filtering past sessions)
       const { data: studentData } = await supabase
-        .from('students')
-        .select('id')
-        .eq('user_id', user.id)
-        .maybeSingle();
+        .from('students').select('id').eq('user_id', user.id).maybeSingle();
 
       let earliestEnrolledAt: string | undefined;
       if (studentData?.id) {
         const { data: enrollments } = await supabase
-          .from('course_enrollments')
-          .select('enrolled_at')
-          .eq('student_id', studentData.id)
-          .eq('status', 'active')
-          .order('enrolled_at', { ascending: true })
-          .limit(1);
+          .from('course_enrollments').select('enrolled_at')
+          .eq('student_id', studentData.id).eq('status', 'active')
+          .order('enrolled_at', { ascending: true }).limit(1);
         earliestEnrolledAt = enrollments?.[0]?.enrolled_at;
       }
 
-      // Fetch user's attendance records
       const { data: attendanceData, error: attendanceError } = await supabase
-        .from('session_attendance')
-        .select('*')
-        .eq('user_id', user.id);
+        .from('session_attendance').select('*').eq('user_id', user.id);
       
       if (attendanceError) {
         safeLogger.error('Error fetching attendance:', attendanceError);
@@ -159,7 +267,6 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         setAttendance(attendanceData || []);
       }
       
-      // Now fetch sessions – RLS will automatically filter to the student's enrolled courses/batches
       await fetchSessions(earliestEnrolledAt);
     } catch (error) {
       safeLogger.error('Error fetching attendance:', error);
@@ -168,56 +275,22 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     }
   };
 
-  // joinSession and helpers unchanged below
-
   const joinSession = async (sessionId: string, sessionLink: string) => {
     try {
       if (!user?.id) throw new Error('No authenticated user');
-
-      // Record attendance in session_attendance table
       const { error } = await supabase
-        .from('session_attendance')
-        .insert({
-          user_id: user.id,
-          session_id: sessionId
-        });
-
-      if (error && error.code !== '23505') { // Ignore duplicate key errors
-        throw error;
-      }
-
-      // Open session link
+        .from('session_attendance').insert({ user_id: user.id, session_id: sessionId });
+      if (error && error.code !== '23505') throw error;
       window.open(sessionLink, '_blank');
-      
       await fetchAttendance();
-      
-      toast({
-        title: "Joined Session",
-        description: "Attendance recorded successfully",
-      });
+      toast({ title: "Joined Session", description: "Attendance recorded successfully" });
     } catch (error) {
       safeLogger.error('Error joining session:', error);
-      toast({
-        title: "Error",
-        description: "Failed to join session",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to join session", variant: "destructive" });
     }
   };
 
-  const getSessionStatus = (session: LiveSession) => {
-    const now = new Date();
-    const startTime = new Date(session.start_time);
-    const endTime = new Date(session.end_time);
-    
-    if (now < startTime) return { status: 'upcoming', color: 'bg-blue-100 text-blue-800' };
-    if (now >= startTime && now <= endTime) return { status: 'live', color: 'bg-red-100 text-red-800' };
-    return { status: 'completed', color: 'bg-gray-100 text-gray-800' };
-  };
-
-  const hasAttended = (sessionId: string) => {
-    return attendance.some(a => a.session_id === sessionId);
-  };
+  const hasAttended = (sessionId: string) => attendance.some(a => a.session_id === sessionId);
 
   if (loading) {
     return (
@@ -226,121 +299,6 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       </div>
     );
   }
-
-  const SessionCard = ({ session, isUpcoming = false }: { session: LiveSession; isUpcoming?: boolean }) => {
-    const sessionStatus = getSessionStatus(session);
-    const attended = hasAttended(session.id);
-    
-    return (
-      <Card className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-l-4 border-l-primary/20 hover:border-l-primary/60">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <CardTitle className="text-xl group-hover:text-primary transition-colors">
-                {session.title}
-              </CardTitle>
-              <p className="text-muted-foreground leading-relaxed">{session.description}</p>
-            </div>
-            <Badge variant={
-              sessionStatus.status === 'live' ? 'destructive' : 
-              sessionStatus.status === 'upcoming' ? 'default' : 
-              'secondary'
-            } className="shrink-0">
-              {sessionStatus.status}
-            </Badge>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-              <Calendar className="w-5 h-5 text-primary" />
-              <div>
-                <div className="font-medium text-sm">Date</div>
-                <div className="text-sm text-muted-foreground">
-                  {new Date(session.start_time).toLocaleDateString('en-US', { 
-                    weekday: 'short', 
-                    month: 'short', 
-                    day: 'numeric',
-                    year: 'numeric' 
-                  })}
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-              <Clock className="w-5 h-5 text-primary" />
-              <div>
-                <div className="font-medium text-sm">Time</div>
-                <div className="text-sm text-muted-foreground">
-                  {new Date(session.start_time).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    hour12: true 
-                  })} - {new Date(session.end_time).toLocaleTimeString('en-US', { 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    hour12: true 
-                  })}
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
-              <Users className="w-5 h-5 text-primary" />
-              <div>
-                <div className="font-medium text-sm">Mentor</div>
-                <div className="text-sm text-muted-foreground">{session.mentor_name || "TBA"}</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between pt-4 border-t">
-            <div className="flex items-center gap-2">
-              {attended && (
-                <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Attended</span>
-                </div>
-              )}
-            </div>
-            
-            {sessionStatus.status === 'completed' && session.link ? (
-              <Button
-                onClick={() => setVideoPreview({ title: session.title, url: session.link })}
-                disabled={userLMSStatus !== 'active'}
-                variant="default"
-              >
-                {userLMSStatus !== 'active' ? (
-                  'Locked - Payment Required'
-                ) : (
-                  <>
-                    <Video className="w-4 h-4 mr-2" />
-                    Watch Now
-                  </>
-                )}
-              </Button>
-            ) : (
-              <Button
-                onClick={() => joinSession(session.id, session.link)}
-                disabled={userLMSStatus !== 'active'}
-                variant="default"
-              >
-                {userLMSStatus !== 'active' ? (
-                  'Locked - Payment Required'
-                ) : (
-                  <>
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Join Now
-                  </>
-                )}
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
 
   return (
     <RoleGuard allowedRoles={['student', 'admin', 'mentor', 'superadmin']}>
@@ -352,53 +310,71 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
           </p>
         </div>
 
-      {/* Upcoming Sessions */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <div className="w-1 h-6 bg-primary rounded-full"></div>
-          <h2 className="text-xl font-semibold">Upcoming Sessions</h2>
-          {upcomingSessions.length > 0 && (
-            <Badge variant="default" className="ml-auto">
-              {upcomingSessions.length} session{upcomingSessions.length !== 1 ? 's' : ''} scheduled
-            </Badge>
-          )}
-        </div>
-        {upcomingSessions.length > 0 ? (
-          <div className="grid gap-6">
-            {upcomingSessions.map((session) => (
-              <SessionCard key={session.id} session={session} isUpcoming={true} />
-            ))}
-          </div>
-        ) : (
-          <Card className="border-dashed">
-            <CardContent className="text-center py-12">
-              <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
-              <h3 className="text-lg font-medium mb-2">No Upcoming Sessions</h3>
-              <p className="text-muted-foreground">
-                Check back soon for newly scheduled success sessions
-              </p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-      {/* Recorded Sessions - Show all sessions after user joined */}
-      {recordedSessions.length > 0 && (
+        <InactiveLMSBanner show={userLMSStatus !== 'active'} />
+
+        {/* Upcoming Sessions */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <div className="w-1 h-6 bg-secondary rounded-full"></div>
-            <h2 className="text-xl font-semibold">Recorded Sessions</h2>
-            <Badge variant="secondary" className="ml-auto">
-              {recordedSessions.length} recording{recordedSessions.length !== 1 ? 's' : ''} available
-            </Badge>
+            <div className="w-1 h-6 bg-primary rounded-full"></div>
+            <h2 className="text-xl font-semibold">Upcoming Sessions</h2>
+            {upcomingSessions.length > 0 && (
+              <Badge variant="default" className="ml-auto">
+                {upcomingSessions.length} session{upcomingSessions.length !== 1 ? 's' : ''} scheduled
+              </Badge>
+            )}
           </div>
-          
-          <div className="grid gap-6">
-            {recordedSessions.map((session) => (
-              <SessionCard key={session.id} session={session} isUpcoming={false} />
-            ))}
-          </div>
+          {upcomingSessions.length > 0 ? (
+            <div className="grid gap-6">
+              {upcomingSessions.map((session) => (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  isUpcoming={true}
+                  userLMSStatus={userLMSStatus}
+                  hasAttended={hasAttended(session.id)}
+                  onJoin={joinSession}
+                  onWatchRecording={(title, url) => setVideoPreview({ title, url })}
+                />
+              ))}
+            </div>
+          ) : (
+            <Card className="border-dashed">
+              <CardContent className="text-center py-12">
+                <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
+                <h3 className="text-lg font-medium mb-2">No Upcoming Sessions</h3>
+                <p className="text-muted-foreground">
+                  Check back soon for newly scheduled success sessions
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </div>
-      )}
+
+        {/* Recorded Sessions */}
+        {recordedSessions.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-1 h-6 bg-secondary rounded-full"></div>
+              <h2 className="text-xl font-semibold">Recorded Sessions</h2>
+              <Badge variant="secondary" className="ml-auto">
+                {recordedSessions.length} recording{recordedSessions.length !== 1 ? 's' : ''} available
+              </Badge>
+            </div>
+            <div className="grid gap-6">
+              {recordedSessions.map((session) => (
+                <SessionCard
+                  key={session.id}
+                  session={session}
+                  isUpcoming={false}
+                  userLMSStatus={userLMSStatus}
+                  hasAttended={hasAttended(session.id)}
+                  onJoin={joinSession}
+                  onWatchRecording={(title, url) => setVideoPreview({ title, url })}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <VideoPreviewDialog
