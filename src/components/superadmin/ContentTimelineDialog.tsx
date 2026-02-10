@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Save, Loader2 } from 'lucide-react';
+import { Clock, Save, Loader2, Video } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -29,45 +29,58 @@ interface RecordingItem {
   step_number: number | null;
 }
 
+interface SessionItem {
+  id: string;
+  title: string;
+  schedule_date: string | null;
+  drip_days: number | null;
+  course_id: string | null;
+  course_title: string;
+  step_number: number | null;
+}
+
 export function ContentTimelineDialog({ type, entityId, entityName, open, onOpenChange }: ContentTimelineDialogProps) {
   const [recordings, setRecordings] = useState<RecordingItem[]>([]);
+  const [sessions, setSessions] = useState<SessionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedDripDays, setEditedDripDays] = useState<Record<string, number | null>>({});
+  const [editedSessionDripDays, setEditedSessionDripDays] = useState<Record<string, number | null>>({});
   const { toast } = useToast();
 
   useEffect(() => {
     if (open && entityId) {
-      fetchRecordings();
+      fetchAll();
       setEditedDripDays({});
+      setEditedSessionDripDays({});
     }
   }, [open, entityId]);
 
-  const fetchRecordings = async () => {
+  const fetchAll = async () => {
     setLoading(true);
     try {
       if (type === 'course') {
-        await fetchCourseRecordings(entityId);
+        const items = await fetchCourseRecordings(entityId);
+        setRecordings(items || []);
+        await fetchCourseSessions([{ courseId: entityId, courseTitle: entityName, stepNumber: null }]);
       } else {
-        await fetchPathwayRecordings(entityId);
+        await fetchPathwayAll(entityId);
       }
     } catch (error) {
-      logger.error('Error fetching recordings for timeline:', error);
-      toast({ title: "Error", description: "Failed to load recordings", variant: "destructive" });
+      logger.error('Error fetching timeline data:', error);
+      toast({ title: "Error", description: "Failed to load timeline", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCourseRecordings = async (courseId: string, courseTitle?: string, stepNumber?: number) => {
-    console.log('[Timeline] Fetching modules for courseId:', courseId, 'courseTitle:', courseTitle || entityName);
+  const fetchCourseRecordings = async (courseId: string, courseTitle?: string, stepNumber?: number | null): Promise<RecordingItem[]> => {
     const { data: modules } = await supabase
       .from('modules')
       .select('id, title, order')
       .eq('course_id', courseId)
       .order('order', { ascending: true });
 
-    console.log('[Timeline] Modules found:', modules?.map(m => ({ id: m.id, title: m.title })));
     if (!modules?.length) return [];
 
     const moduleIds = modules.map(m => m.id);
@@ -77,7 +90,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
       .in('module', moduleIds)
       .order('sequence_order', { ascending: true });
 
-    const items: RecordingItem[] = (lessons || []).map(l => {
+    return (lessons || []).map(l => {
       const mod = modules.find(m => m.id === l.module);
       return {
         id: l.id,
@@ -92,14 +105,32 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
         step_number: stepNumber ?? null,
       };
     });
-
-    if (type === 'course') {
-      setRecordings(items);
-    }
-    return items;
   };
 
-  const fetchPathwayRecordings = async (pathwayId: string) => {
+  const fetchCourseSessions = async (courses: { courseId: string; courseTitle: string; stepNumber: number | null }[]) => {
+    const courseIds = courses.map(c => c.courseId);
+    const { data } = await supabase
+      .from('success_sessions')
+      .select('id, title, schedule_date, course_id')
+      .in('course_id', courseIds)
+      .order('schedule_date', { ascending: true });
+
+    const items: SessionItem[] = (data || []).map(s => {
+      const course = courses.find(c => c.courseId === s.course_id);
+      return {
+        id: s.id,
+        title: s.title,
+        schedule_date: s.schedule_date,
+        drip_days: (s as any).drip_days ?? null,
+        course_id: s.course_id,
+        course_title: course?.courseTitle || 'Unknown Course',
+        step_number: course?.stepNumber ?? null,
+      };
+    });
+    setSessions(items);
+  };
+
+  const fetchPathwayAll = async (pathwayId: string) => {
     const { data: pathwayCourses } = await supabase
       .from('pathway_courses')
       .select('course_id, step_number, courses(title)')
@@ -108,16 +139,23 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
 
     if (!pathwayCourses?.length) {
       setRecordings([]);
+      setSessions([]);
       return;
     }
 
+    const courses = pathwayCourses.map(pc => ({
+      courseId: pc.course_id,
+      courseTitle: (pc.courses as any)?.title || 'Unknown Course',
+      stepNumber: pc.step_number,
+    }));
+
     const allItems: RecordingItem[] = [];
-    for (const pc of pathwayCourses) {
-      const courseTitle = (pc.courses as any)?.title || 'Unknown Course';
-      const items = await fetchCourseRecordings(pc.course_id, courseTitle, pc.step_number);
-      if (items) allItems.push(...items);
+    for (const c of courses) {
+      const items = await fetchCourseRecordings(c.courseId, c.courseTitle, c.stepNumber);
+      allItems.push(...items);
     }
     setRecordings(allItems);
+    await fetchCourseSessions(courses);
   };
 
   const handleDripDaysChange = (recordingId: string, value: string) => {
@@ -125,29 +163,49 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     setEditedDripDays(prev => ({ ...prev, [recordingId]: numValue }));
   };
 
+  const handleSessionDripDaysChange = (sessionId: string, value: string) => {
+    const numValue = value === '' ? null : parseInt(value);
+    setEditedSessionDripDays(prev => ({ ...prev, [sessionId]: numValue }));
+  };
+
   const getDripDaysValue = (recording: RecordingItem): number | null => {
     if (recording.id in editedDripDays) return editedDripDays[recording.id];
     return recording.drip_days;
   };
 
-  const hasChanges = Object.keys(editedDripDays).length > 0;
+  const getSessionDripDaysValue = (session: SessionItem): number | null => {
+    if (session.id in editedSessionDripDays) return editedSessionDripDays[session.id];
+    return session.drip_days;
+  };
+
+  const hasChanges = Object.keys(editedDripDays).length > 0 || Object.keys(editedSessionDripDays).length > 0;
 
   const handleSave = async () => {
     if (!hasChanges) return;
     setSaving(true);
     try {
-      const updates = Object.entries(editedDripDays);
-      for (const [id, drip_days] of updates) {
+      // Save recording drip days
+      for (const [id, drip_days] of Object.entries(editedDripDays)) {
         const { error } = await supabase
           .from('available_lessons')
           .update({ drip_days })
           .eq('id', id);
         if (error) throw error;
       }
+      // Save session drip days
+      for (const [id, drip_days] of Object.entries(editedSessionDripDays)) {
+        const { error } = await supabase
+          .from('success_sessions')
+          .update({ drip_days } as any)
+          .eq('id', id);
+        if (error) throw error;
+      }
 
-      toast({ title: "Success", description: `Updated drip days for ${updates.length} recording(s)` });
+      const totalUpdates = Object.keys(editedDripDays).length + Object.keys(editedSessionDripDays).length;
+      toast({ title: "Success", description: `Updated drip days for ${totalUpdates} item(s)` });
       setEditedDripDays({});
-      await fetchRecordings();
+      setEditedSessionDripDays({});
+      await fetchAll();
     } catch (error) {
       logger.error('Error saving drip days:', error);
       toast({ title: "Error", description: "Failed to save changes", variant: "destructive" });
@@ -156,7 +214,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     }
   };
 
-  // Group recordings by course (for pathway) then by module
+  // Group recordings by course then by module
   const groupedByCourse = recordings.reduce((acc, r) => {
     const courseKey = r.course_id || 'unknown';
     if (!acc[courseKey]) {
@@ -170,9 +228,30 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     return acc;
   }, {} as Record<string, { title: string; stepNumber: number | null; modules: Record<string, { title: string; recordings: RecordingItem[] }> }>);
 
-  const courseEntries = Object.entries(groupedByCourse).sort(
-    ([, a], [, b]) => (a.stepNumber ?? 0) - (b.stepNumber ?? 0)
-  );
+  // Group sessions by course
+  const sessionsByCourse = sessions.reduce((acc, s) => {
+    const courseKey = s.course_id || 'unknown';
+    if (!acc[courseKey]) acc[courseKey] = [];
+    acc[courseKey].push(s);
+    return acc;
+  }, {} as Record<string, SessionItem[]>);
+
+  // Merge course keys from both recordings and sessions
+  const allCourseKeys = new Set([...Object.keys(groupedByCourse), ...Object.keys(sessionsByCourse)]);
+  
+  const courseEntries = Array.from(allCourseKeys).map(key => {
+    const recData = groupedByCourse[key];
+    const sesData = sessionsByCourse[key] || [];
+    return {
+      courseId: key,
+      title: recData?.title || sesData[0]?.course_title || 'Unknown Course',
+      stepNumber: recData?.stepNumber ?? sesData[0]?.step_number ?? null,
+      modules: recData?.modules || {},
+      sessions: sesData,
+    };
+  }).sort((a, b) => (a.stepNumber ?? 0) - (b.stepNumber ?? 0));
+
+  const hasContent = recordings.length > 0 || sessions.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -189,14 +268,14 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
           </div>
-        ) : recordings.length === 0 ? (
+        ) : !hasContent ? (
           <p className="text-center text-muted-foreground py-8">
-            No recordings found. Add modules and recordings first.
+            No recordings or sessions found. Add modules, recordings, or live sessions first.
           </p>
         ) : (
           <div className="space-y-4">
-            {courseEntries.map(([courseId, courseData]) => (
-              <div key={courseId} className="space-y-3">
+            {courseEntries.map((courseData) => (
+              <div key={courseData.courseId} className="space-y-3">
                 {type === 'pathway' && (
                   <div className="flex items-center gap-2 pt-2 border-t first:border-t-0 first:pt-0">
                     <Badge variant="outline" className="text-xs">
@@ -243,6 +322,43 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                     </div>
                   </div>
                 ))}
+
+                {courseData.sessions.length > 0 && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pl-1 flex items-center gap-1.5">
+                      <Video className="w-3.5 h-3.5" />
+                      Live Sessions
+                    </p>
+                    <div className="border rounded-md divide-y">
+                      {courseData.sessions.map((session) => {
+                        const currentValue = getSessionDripDaysValue(session);
+                        const isEdited = session.id in editedSessionDripDays;
+                        return (
+                          <div key={session.id} className="flex items-center gap-3 px-3 py-2">
+                            <Video className="w-4 h-4 text-muted-foreground shrink-0" />
+                            <span className="text-sm flex-1 truncate">{session.title || 'Untitled Session'}</span>
+                            {session.schedule_date && (
+                              <span className="text-xs text-muted-foreground shrink-0">
+                                {new Date(session.schedule_date).toLocaleDateString()}
+                              </span>
+                            )}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <Input
+                                type="number"
+                                min={0}
+                                value={currentValue ?? ''}
+                                onChange={(e) => handleSessionDripDaysChange(session.id, e.target.value)}
+                                className={`w-20 h-8 text-sm ${isEdited ? 'border-primary ring-1 ring-primary/30' : ''}`}
+                                placeholder="0"
+                              />
+                              <span className="text-xs text-muted-foreground">days</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
