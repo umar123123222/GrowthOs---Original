@@ -7,6 +7,7 @@ import { Clock, Save, Loader2, Video, Plus, Check, X, Trash2 } from 'lucide-reac
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { addDays, format } from 'date-fns';
 
 interface ContentTimelineDialogProps {
   type: 'course' | 'pathway';
@@ -192,6 +193,66 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
 
   const hasChanges = Object.keys(editedDripDays).length > 0 || Object.keys(editedSessionDripDays).length > 0 || Object.keys(editedSessionTitles).length > 0;
 
+  /**
+   * Compute schedule_date for a session based on earliest batch start_date + drip_days.
+   * Returns ISO date string or null if no batch found or drip_days is null.
+   */
+  const computeScheduleDate = async (courseId: string, dripDays: number | null): Promise<string | null> => {
+    if (dripDays == null) return null;
+
+    try {
+      // Check batch_courses for direct course associations
+      const { data: batchCourses } = await supabase
+        .from('batch_courses')
+        .select('batch_id, batches!inner(start_date)')
+        .eq('course_id', courseId);
+
+      // Check batch_pathways for pathway associations containing this course
+      const { data: pathwayCourses } = await supabase
+        .from('pathway_courses')
+        .select('pathway_id')
+        .eq('course_id', courseId);
+
+      let batchStartDates: string[] = (batchCourses || [])
+        .map((bc: any) => bc.batches?.start_date)
+        .filter(Boolean);
+
+      if (pathwayCourses?.length) {
+        const pathwayIds = pathwayCourses.map(pc => pc.pathway_id);
+        const { data: batchPathways } = await supabase
+          .from('batch_pathways')
+          .select('batch_id, batches!inner(start_date)')
+          .in('pathway_id', pathwayIds);
+
+        const pathwayBatchDates = (batchPathways || [])
+          .map((bp: any) => bp.batches?.start_date)
+          .filter(Boolean);
+        batchStartDates = [...batchStartDates, ...pathwayBatchDates];
+      }
+
+      // Also check legacy batch.course_id direct link
+      const { data: legacyBatches } = await supabase
+        .from('batches')
+        .select('start_date')
+        .eq('course_id', courseId)
+        .eq('status', 'active');
+
+      if (legacyBatches?.length) {
+        batchStartDates = [...batchStartDates, ...legacyBatches.map(b => b.start_date).filter(Boolean)];
+      }
+
+      if (!batchStartDates.length) return null;
+
+      // Pick earliest start date
+      const earliest = batchStartDates.sort()[0];
+      const scheduleDate = addDays(new Date(earliest), dripDays);
+      return format(scheduleDate, 'yyyy-MM-dd');
+    } catch (error) {
+      logger.error('Error computing schedule_date:', error);
+      return null;
+    }
+  };
+
   const handleSave = async () => {
     if (!hasChanges) return;
     setSaving(true);
@@ -204,10 +265,14 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
           .eq('id', id);
         if (error) throw error;
       }
-      // Save session drip days and titles
+      // Save session drip days, titles, and auto-calculate schedule_date
       for (const [id, drip_days] of Object.entries(editedSessionDripDays)) {
+        const session = sessions.find(s => s.id === id);
+        const courseId = session?.course_id;
+        const schedule_date = courseId ? await computeScheduleDate(courseId, drip_days) : null;
+
         const titleUpdate = editedSessionTitles[id];
-        const updatePayload: any = { drip_days };
+        const updatePayload: any = { drip_days, schedule_date };
         if (titleUpdate !== undefined) updatePayload.title = titleUpdate;
         const { error } = await supabase
           .from('success_sessions')
@@ -272,6 +337,9 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
       const mentorId = mentorAssignment?.mentor_id || null;
       const mentorName = (mentorAssignment?.profiles as any)?.full_name || null;
 
+      // Auto-calculate schedule_date from batch start_date + drip_days
+      const schedule_date = await computeScheduleDate(courseId, newSessionDripDays);
+
       const { error } = await supabase
         .from('success_sessions')
         .insert({
@@ -283,6 +351,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
           start_time: new Date().toISOString(),
           status: 'upcoming',
           drip_days: newSessionDripDays,
+          schedule_date,
         } as any);
 
       if (error) throw error;

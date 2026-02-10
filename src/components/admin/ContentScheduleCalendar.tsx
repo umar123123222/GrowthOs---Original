@@ -8,6 +8,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/h
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from '@/lib/logger';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addWeeks, subWeeks, isSameDay, isSameMonth, isToday, differenceInCalendarDays } from 'date-fns';
 import { DndContext, DragEndEvent, DragStartEvent, DragOverlay, useDraggable, useDroppable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 
@@ -332,7 +333,7 @@ export function ContentScheduleCalendar() {
 
       setEvents(allEvents);
     } catch (error) {
-      console.error('Error fetching calendar data:', error);
+      logger.error('Error fetching calendar data:', error);
     } finally {
       setLoading(false);
     }
@@ -371,7 +372,7 @@ export function ContentScheduleCalendar() {
         description: `"${draggedEvent.title}" moved to ${format(targetDate, 'MMM d, yyyy')} (Day ${newDripDays})`,
       });
     } catch (error) {
-      console.error('Error updating drip days:', error);
+      logger.error('Error updating drip days:', error);
       toast({ title: "Error", description: "Failed to reschedule", variant: "destructive" });
     }
   }, [toast]);
