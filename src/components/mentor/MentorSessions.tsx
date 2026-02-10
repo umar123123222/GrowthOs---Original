@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Calendar, Clock, Video, Users, Eye, EyeOff, Play, ExternalLink } from 'lucide-react';
+import { Calendar, Clock, Video, Users, Eye, EyeOff, Play, ExternalLink, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -49,6 +49,7 @@ export function MentorSessions() {
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
+        .eq('mentor_id', user.id)
         .order('start_time', { ascending: true });
 
       if (error) throw error;
@@ -219,6 +220,7 @@ export function MentorSessions() {
   const SessionCard = ({ session, isUpcoming = true }: { session: MentorSession; isUpcoming?: boolean }) => {
     const canStart = canStartSession(session);
     const showCreds = showCredentials[session.id];
+    const needsSetup = !session.zoom_meeting_id && !session.zoom_passcode && !session.link;
 
     return (
       <Card className="hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary/60">
@@ -236,9 +238,17 @@ export function MentorSessions() {
                 </p>
               )}
             </div>
-            <Badge variant={isUpcoming ? "default" : "secondary"} className="shrink-0">
-              {session.status}
-            </Badge>
+            <div className="flex items-center gap-2 shrink-0">
+              {needsSetup && (
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  Needs Setup
+                </Badge>
+              )}
+              <Badge variant={isUpcoming ? "default" : "secondary"}>
+                {session.status}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         
