@@ -340,6 +340,12 @@ export function ContentScheduleCalendar() {
     const { active, over } = event;
     if (!over) return;
 
+    // Block rescheduling when "All Batches" is selected
+    if (selectedBatch === 'all') {
+      toast({ title: "Select a batch", description: "Please select a specific batch before rescheduling content", variant: "destructive" });
+      return;
+    }
+
     const draggedEvent = active.data.current as CalendarEvent;
     const targetDateStr = over.id as string;
     const targetDate = new Date(targetDateStr + 'T00:00:00');
@@ -400,7 +406,7 @@ export function ContentScheduleCalendar() {
       console.error('Error updating drip days:', error);
       toast({ title: "Error", description: "Failed to reschedule", variant: "destructive" });
     }
-  }, [batches, toast]);
+  }, [batches, selectedBatch, toast]);
 
   const filteredEvents = useMemo(() => {
     if (selectedBatch === 'all') return events;
