@@ -1,48 +1,39 @@
 
 
-# Add "Create Live Session" from Content Timeline
+## Improvements Plan: Auto schedule_date, Logger Cleanup, and Type Safety
 
-## Overview
-Add an inline "Add Session" button in the Content Timeline's Live Sessions section for each course. Users enter just a title and drip days. The system auto-assigns the course's primary mentor and uses placeholder defaults for required database fields (link, start_time).
+### 1. Auto-calculate schedule_date for new sessions (ContentTimelineDialog)
 
-## What Changes
+When a session is created via the Content Timeline dialog with a `drip_days` value, the system currently does not set `schedule_date`. This means newly created sessions are invisible in the "This Week's Live Sessions" view.
 
-### `src/components/superadmin/ContentTimelineDialog.tsx`
+**Fix**: In the `handleConfirmAddSession` function, after creating a session with `drip_days`, calculate the `schedule_date` for each batch associated with the course. Since a session can belong to multiple batches, the schedule_date will be set based on the earliest associated batch's start_date + drip_days. If no batch is found, `schedule_date` remains null.
 
-1. **Add "+" button** below the Live Sessions list (or as first item if no sessions exist yet) for each course section
-2. **Inline creation row**: When clicked, show an inline row with:
-   - A text input for the session title
-   - A number input for drip days
-   - A confirm (checkmark) and cancel (X) button
-3. **Auto-resolve mentor**: Query `mentor_course_assignments` for the course to find the primary mentor (`is_primary = true`), falling back to the first assigned mentor. Set `mentor_id` and `mentor_name` on the created session.
-4. **Insert with defaults**: Create the session in `success_sessions` with:
-   - `title` from user input
-   - `drip_days` from user input (cast via `as any` since column not yet in generated types)
-   - `course_id` from the current course context
-   - `mentor_id` / `mentor_name` auto-resolved
-   - `link` = `"TBD"` (placeholder -- can be updated later in Session Management)
-   - `start_time` = current timestamp (placeholder)
-   - `status` = `"upcoming"`
-5. **Refresh list** after successful insert to show the new session inline
+Similarly, when saving edited `drip_days` via `handleSave`, the `schedule_date` should be recalculated for affected sessions.
 
-### UI Layout
+**Technical details**:
+- In `handleConfirmAddSession`: query `batch_courses` (or `batch_pathways`) to find batches for the course, pick the earliest `start_date`, and compute `schedule_date = start_date + drip_days` days.
+- In `handleSave`: for each session with edited `drip_days`, recalculate `schedule_date` using the same logic.
+- File: `src/components/superadmin/ContentTimelineDialog.tsx`
 
-```text
-LIVE SESSIONS
-  [Video icon] Session Title     2026-02-15   [5] days
-  [Video icon] Session Title     2026-02-20   [10] days
-  [+ Add Live Session]
+---
 
--- When adding: --
-  [text: Session title...] [drip: 0] days  [checkmark] [X]
-```
+### 2. Replace console.error with logger in ContentScheduleCalendar
 
-### No Database Changes Needed
-The `drip_days` column migration was already planned in the previous step. The `success_sessions` table already has all other required fields with acceptable defaults.
+Two `console.error` calls in the calendar component will be replaced with the project's `logger.error` utility for consistency.
 
-## Technical Notes
-- New state: `addingSessionForCourse` (string | null) to track which course is in "add mode"
-- New state: `newSessionTitle` (string) and `newSessionDripDays` (number | null)
-- Mentor lookup is done once when the "+" is clicked, cached in a local ref/state
-- Input validation: title must be non-empty, trimmed, max 200 chars
-- The session will appear in Session Management for full editing (link, time, description, etc.)
+**Technical details**:
+- Import `logger` from `@/lib/logger`
+- Replace `console.error(...)` at lines ~335 and ~374
+- File: `src/components/admin/ContentScheduleCalendar.tsx`
+
+---
+
+### 3. Add drip_days to Supabase TypeScript types for success_sessions
+
+The `drip_days` column exists in the database but is missing from the generated types, forcing `as any` casts throughout the codebase.
+
+**Technical details**:
+- Add `drip_days: number | null` to `Row`, `Insert` (optional), and `Update` (optional) for `success_sessions` in `src/integrations/supabase/types.ts`
+- Remove `as any` casts in `ContentTimelineDialog.tsx` and `ContentScheduleCalendar.tsx` where `drip_days` is referenced
+- Files: `src/integrations/supabase/types.ts`, `src/components/superadmin/ContentTimelineDialog.tsx`, `src/components/admin/ContentScheduleCalendar.tsx`
+
