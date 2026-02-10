@@ -25,6 +25,7 @@ import { BatchManagement } from '@/components/batch';
 import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 import { formatCurrency } from '@/utils/currencyFormatter';
 import { CourseManagement } from '@/components/superadmin/CourseManagement';
+import { ContentScheduleCalendar } from '@/components/admin/ContentScheduleCalendar';
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'dashboard';
@@ -249,5 +250,7 @@ function DashboardContent() {
           </CardContent>
         </Card>
       </div>
+
+      <ContentScheduleCalendar />
     </div>;
 }
