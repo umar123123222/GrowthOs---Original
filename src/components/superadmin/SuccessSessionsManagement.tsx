@@ -7,13 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2 } from 'lucide-react';
+import { Calendar, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { safeQuery } from '@/lib/database-safety';
 import type { SuccessSessionResult } from '@/types/database';
-import { format } from 'date-fns';
+import { format, startOfWeek, endOfWeek, isWithinInterval } from 'date-fns';
 import { notifyMentorOfSuccessSessionScheduled } from '@/lib/notification-service';
+import { AlertTriangle } from 'lucide-react';
 
 interface SuccessSession {
   id: string;
@@ -668,6 +669,14 @@ export function SuccessSessionsManagement() {
         </Dialog>
       </div>
 
+      {/* This Week's Sessions */}
+      <ThisWeekSessions
+        sessions={sessions}
+        courses={courses}
+        batches={batches}
+        onEdit={handleOpenDialog}
+      />
+
       <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
         <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 border-b">
           <CardTitle className="flex items-center text-xl">
@@ -813,5 +822,91 @@ export function SuccessSessionsManagement() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+interface ThisWeekSessionsProps {
+  sessions: SuccessSession[];
+  courses: Course[];
+  batches: Batch[];
+  onEdit: (session: SuccessSession) => void;
+}
+
+function ThisWeekSessions({ sessions, courses, batches, onEdit }: ThisWeekSessionsProps) {
+  const now = new Date();
+  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+
+  const thisWeekSessions = sessions.filter(s => {
+    if (!s.schedule_date && !s.start_time) return false;
+    try {
+      const sessionDate = new Date(s.schedule_date || s.start_time);
+      return isWithinInterval(sessionDate, { start: weekStart, end: weekEnd });
+    } catch {
+      return false;
+    }
+  });
+
+  if (thisWeekSessions.length === 0) return null;
+
+  const needsAttention = (session: SuccessSession) => {
+    return !session.zoom_meeting_id || !session.zoom_passcode || session.link === 'TBD' || !session.link;
+  };
+
+  return (
+    <Card className="shadow-lg border-0 bg-gradient-to-br from-amber-50 to-orange-50 animate-fade-in">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center text-lg">
+          <CalendarDays className="w-5 h-5 mr-2 text-amber-600" />
+          This Week's Live Sessions
+          <Badge variant="secondary" className="ml-2">{thisWeekSessions.length}</Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-2">
+          {thisWeekSessions.map(session => {
+            const missing = needsAttention(session);
+            const courseName = courses.find(c => c.id === session.course_id)?.title;
+            const batchName = session.batch_id ? batches.find(b => b.id === session.batch_id)?.name : null;
+
+            return (
+              <div
+                key={session.id}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors hover:bg-background/80 ${
+                  missing ? 'border-amber-300 bg-amber-50/50' : 'border-green-300 bg-green-50/50'
+                }`}
+                onClick={() => onEdit(session)}
+              >
+                {missing ? (
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                ) : (
+                  <Video className="w-4 h-4 text-green-500 shrink-0" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{session.title}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-2">
+                    {session.schedule_date && <span>{format(new Date(session.schedule_date), 'EEE, MMM d')}</span>}
+                    {session.start_time && <span>• {format(new Date(session.start_time), 'h:mm a')}</span>}
+                    {courseName && <span>• {courseName}</span>}
+                    {batchName && <span>• {batchName}</span>}
+                  </div>
+                </div>
+                {missing && (
+                  <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 shrink-0">
+                    Needs Zoom Details
+                  </Badge>
+                )}
+                {session.mentor_name && (
+                  <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    {session.mentor_name}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
