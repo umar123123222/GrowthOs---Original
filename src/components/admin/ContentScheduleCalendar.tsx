@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, CalendarDays, Video, BookOpen, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, Video, BookOpen, User, Clock, Layers } from 'lucide-react';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, subMonths, addWeeks, subWeeks, isSameDay, isSameMonth, isToday } from 'date-fns';
 
@@ -342,14 +343,58 @@ export function ContentScheduleCalendar() {
                 </div>
                 <div className="space-y-0.5">
                   {dayEvents.slice(0, isExpanded ? undefined : maxVisible).map(event => (
-                    <div
-                      key={event.id}
-                      className={`text-[10px] leading-tight px-1 py-0.5 rounded border truncate ${getStatusBg(event.status)}`}
-                      title={`${event.type === 'session' ? '🎥' : '📖'} ${event.title}\nBatch: ${event.batchName}\nCourse: ${event.courseName}${event.moduleName ? `\nModule: ${event.moduleName}` : ''}${event.hostName ? `\nHost: ${event.hostName}` : ''}\nStatus: ${event.status}`}
-                    >
-                      <span className="mr-0.5">{event.type === 'session' ? '🎥' : '📖'}</span>
-                      {event.title}
-                    </div>
+                    <HoverCard key={event.id} openDelay={200} closeDelay={100}>
+                      <HoverCardTrigger asChild>
+                        <div
+                          className={`text-[10px] leading-tight px-1 py-0.5 rounded border truncate cursor-default ${getStatusBg(event.status)}`}
+                        >
+                          <span className="mr-0.5">{event.type === 'session' ? '🎥' : '📖'}</span>
+                          {event.title}
+                        </div>
+                      </HoverCardTrigger>
+                      <HoverCardContent side="top" align="start" className="w-64 p-3 text-xs z-50">
+                        <div className="space-y-2">
+                          <div className="font-semibold text-sm flex items-center gap-1.5">
+                            {event.type === 'session' ? <Video className="w-3.5 h-3.5 text-primary shrink-0" /> : <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />}
+                            {event.title}
+                          </div>
+                          <div className="space-y-1.5 text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                              <CalendarDays className="w-3 h-3 shrink-0" />
+                              <span>{format(event.date, 'EEEE, MMM d, yyyy')}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Layers className="w-3 h-3 shrink-0" />
+                              <span>Batch: <span className="text-foreground font-medium">{event.batchName}</span></span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <BookOpen className="w-3 h-3 shrink-0" />
+                              <span>Course: <span className="text-foreground font-medium">{event.courseName}</span></span>
+                            </div>
+                            {event.moduleName && (
+                              <div className="flex items-center gap-1.5">
+                                <Layers className="w-3 h-3 shrink-0" />
+                                <span>Module: <span className="text-foreground font-medium">{event.moduleName}</span></span>
+                              </div>
+                            )}
+                            {event.hostName && (
+                              <div className="flex items-center gap-1.5">
+                                <User className="w-3 h-3 shrink-0" />
+                                <span>Host: <span className="text-foreground font-medium">{event.hostName}</span></span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${getStatusBg(event.status)}`}>
+                                {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+                              </Badge>
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                {event.type === 'session' ? 'Live Session' : 'Recording'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </HoverCardContent>
+                    </HoverCard>
                   ))}
                   {dayEvents.length > maxVisible && !isExpanded && (
                     <div className="text-[10px] text-primary font-medium cursor-pointer px-1">
