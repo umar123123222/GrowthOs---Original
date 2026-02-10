@@ -119,7 +119,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     const courseIds = courses.map(c => c.courseId);
     const { data } = await supabase
       .from('success_sessions')
-      .select('id, title, schedule_date, course_id')
+      .select('id, title, schedule_date, course_id, drip_days' as any)
       .in('course_id', courseIds)
       .order('schedule_date', { ascending: true }) as { data: any[] | null };
 
