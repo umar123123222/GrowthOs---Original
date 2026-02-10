@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ContentTimelineDialog } from './ContentTimelineDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -56,6 +57,7 @@ export function PathwayManagement() {
   const [choiceDialogOpen, setChoiceDialogOpen] = useState(false);
   const [editingPathway, setEditingPathway] = useState<LearningPathway | null>(null);
   const [selectedPathway, setSelectedPathway] = useState<LearningPathway | null>(null);
+  const [timelinePathway, setTimelinePathway] = useState<LearningPathway | null>(null);
   const [pathwayCourses, setPathwayCourses] = useState<PathwayCourse[]>([]);
   const [choiceCourse1, setChoiceCourse1] = useState<string>('');
   const [choiceCourse2, setChoiceCourse2] = useState<string>('');
@@ -691,6 +693,14 @@ export function PathwayManagement() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          onClick={() => setTimelinePathway(pathway)}
+                          title="Content Timeline"
+                        >
+                          <Clock className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleManageCourses(pathway)}
                           title="Manage Courses"
                         >
@@ -936,6 +946,15 @@ export function PathwayManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Content Timeline Dialog */}
+      <ContentTimelineDialog
+        type="pathway"
+        entityId={timelinePathway?.id || ''}
+        entityName={timelinePathway?.name || ''}
+        open={!!timelinePathway}
+        onOpenChange={(open) => { if (!open) setTimelinePathway(null); }}
+      />
     </div>
   );
 }
