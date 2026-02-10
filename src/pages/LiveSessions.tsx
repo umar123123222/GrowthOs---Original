@@ -81,19 +81,23 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       }
       
       const now = new Date();
+      const today = now.toISOString().split('T')[0];
       const enrolledDate = enrolledAt ? new Date(enrolledAt) : undefined;
 
+      // Upcoming = status is 'upcoming' OR start_time is in the future
       const upcoming = (data || []).filter(session => {
+        if (session.status === 'upcoming') return true;
         const sessionStart = new Date(session.start_time);
-        return sessionStart >= now;
+        return sessionStart >= now && session.status !== 'completed' && session.status !== 'cancelled';
       });
 
-      // Past sessions – optionally filtered to after enrollment date
+      // Past/completed sessions
       const pastSessions = (data || []).filter(session => {
-        const sessionEnd = new Date(session.end_time);
-        const sessionStart = new Date(session.start_time);
-        if (sessionEnd >= now) return false;
-        if (enrolledDate && sessionStart < enrolledDate) return false;
+        if (session.status !== 'completed') return false;
+        if (enrolledDate) {
+          const sessionStart = new Date(session.start_time);
+          if (sessionStart < enrolledDate) return false;
+        }
         return true;
       });
       
