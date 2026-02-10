@@ -60,12 +60,14 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
   };
 
   const fetchCourseRecordings = async (courseId: string, courseTitle?: string, stepNumber?: number) => {
+    console.log('[Timeline] Fetching modules for courseId:', courseId, 'courseTitle:', courseTitle || entityName);
     const { data: modules } = await supabase
       .from('modules')
       .select('id, title, order')
       .eq('course_id', courseId)
       .order('order', { ascending: true });
 
+    console.log('[Timeline] Modules found:', modules?.map(m => ({ id: m.id, title: m.title })));
     if (!modules?.length) return [];
 
     const moduleIds = modules.map(m => m.id);
