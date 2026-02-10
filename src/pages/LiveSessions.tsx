@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { RoleGuard } from "@/components/RoleGuard";
 import { safeLogger } from '@/lib/safe-logger';
+import { VideoPreviewDialog } from '@/components/VideoPreviewDialog';
 import { 
   Video, 
   Calendar, 
@@ -50,6 +51,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
   const [loading, setLoading] = useState(true);
   const [userLMSStatus, setUserLMSStatus] = useState('active');
+  const [videoPreview, setVideoPreview] = useState<{ title: string; url: string } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -303,25 +305,37 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
               )}
             </div>
             
-            <Button
-              onClick={() => joinSession(session.id, session.link)}
-              disabled={userLMSStatus !== 'active'}
-              variant="default"
-            >
-              {userLMSStatus !== 'active' ? (
-                'Locked - Payment Required'
-              ) : sessionStatus.status === 'upcoming' ? (
-                <>
-                  <Calendar className="w-4 h-4 mr-2" />
-                  Join Now
-                </>
-              ) : (
-                <>
-                  <Video className="w-4 h-4 mr-2" />
-                  Watch Now
-                </>
-              )}
-            </Button>
+            {sessionStatus.status === 'completed' && session.link ? (
+              <Button
+                onClick={() => setVideoPreview({ title: session.title, url: session.link })}
+                disabled={userLMSStatus !== 'active'}
+                variant="default"
+              >
+                {userLMSStatus !== 'active' ? (
+                  'Locked - Payment Required'
+                ) : (
+                  <>
+                    <Video className="w-4 h-4 mr-2" />
+                    Watch Now
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                onClick={() => joinSession(session.id, session.link)}
+                disabled={userLMSStatus !== 'active'}
+                variant="default"
+              >
+                {userLMSStatus !== 'active' ? (
+                  'Locked - Payment Required'
+                ) : (
+                  <>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Join Now
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -384,6 +398,13 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         </div>
       )}
       </div>
+
+      <VideoPreviewDialog
+        open={!!videoPreview}
+        onOpenChange={(open) => { if (!open) setVideoPreview(null); }}
+        recordingTitle={videoPreview?.title || ''}
+        recordingUrl={videoPreview?.url || ''}
+      />
     </RoleGuard>
   );
 };
