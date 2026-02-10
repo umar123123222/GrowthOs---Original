@@ -384,13 +384,18 @@ export function ContentScheduleCalendar() {
         if (error) throw error;
       }
 
+      // Optimistically update local state instead of full refetch
+      setEvents(prev => prev.map(e => {
+        if (e.entityId === draggedEvent.entityId && e.batchId === draggedEvent.batchId) {
+          return { ...e, date: targetDate, originalDripDays: newDripDays, status: targetDate < new Date() ? 'done' : 'upcoming' };
+        }
+        return e;
+      }));
+
       toast({
         title: "Rescheduled",
         description: `"${draggedEvent.title}" moved to ${format(targetDate, 'MMM d, yyyy')} (Day ${newDripDays})`,
       });
-
-      // Refresh data
-      await fetchCalendarData();
     } catch (error) {
       console.error('Error updating drip days:', error);
       toast({ title: "Error", description: "Failed to reschedule", variant: "destructive" });
