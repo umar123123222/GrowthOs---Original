@@ -46,7 +46,7 @@ interface LiveSessionsProps {
 }
 
 const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
-  const [nextUpcomingSession, setNextUpcomingSession] = useState<LiveSession | null>(null);
+  const [upcomingSessions, setUpcomingSessions] = useState<LiveSession[]>([]);
   const [recordedSessions, setRecordedSessions] = useState<LiveSession[]>([]);
   const [attendance, setAttendance] = useState<SessionAttendance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,7 +97,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         return true;
       });
       
-      setNextUpcomingSession(upcoming.length > 0 ? upcoming[0] : null);
+      setUpcomingSessions(upcoming);
       setRecordedSessions(pastSessions);
     } catch (error) {
       safeLogger.error('Error fetching sessions:', error);
@@ -352,21 +352,24 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
           </p>
         </div>
 
-      {/* Next Upcoming Session */}
-      {nextUpcomingSession ? (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-6 bg-primary rounded-full"></div>
-            <h2 className="text-xl font-semibold">Next Session</h2>
-          </div>
-          <SessionCard session={nextUpcomingSession} isUpcoming={true} />
+      {/* Upcoming Sessions */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="w-1 h-6 bg-primary rounded-full"></div>
+          <h2 className="text-xl font-semibold">Upcoming Sessions</h2>
+          {upcomingSessions.length > 0 && (
+            <Badge variant="default" className="ml-auto">
+              {upcomingSessions.length} session{upcomingSessions.length !== 1 ? 's' : ''} scheduled
+            </Badge>
+          )}
         </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="w-1 h-6 bg-primary rounded-full"></div>
-            <h2 className="text-xl font-semibold">Next Session</h2>
+        {upcomingSessions.length > 0 ? (
+          <div className="grid gap-6">
+            {upcomingSessions.map((session) => (
+              <SessionCard key={session.id} session={session} isUpcoming={true} />
+            ))}
           </div>
+        ) : (
           <Card className="border-dashed">
             <CardContent className="text-center py-12">
               <Calendar className="w-12 h-12 mx-auto mb-4 text-muted-foreground/50" />
@@ -376,9 +379,8 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
               </p>
             </CardContent>
           </Card>
-        </div>
-      )}
-
+        )}
+      </div>
       {/* Recorded Sessions - Show all sessions after user joined */}
       {recordedSessions.length > 0 && (
         <div className="space-y-4">
