@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Save, Loader2, Video, Plus, Check, X } from 'lucide-react';
+import { Clock, Save, Loader2, Video, Plus, Check, X, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -50,6 +50,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
   const [newSessionTitle, setNewSessionTitle] = useState('');
   const [newSessionDripDays, setNewSessionDripDays] = useState<number | null>(null);
   const [creatingSession, setCreatingSession] = useState(false);
+  const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -280,6 +281,24 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     }
   };
 
+  const handleDeleteSession = async (sessionId: string) => {
+    setDeletingSessionId(sessionId);
+    try {
+      const { error } = await supabase
+        .from('success_sessions')
+        .delete()
+        .eq('id', sessionId);
+      if (error) throw error;
+      toast({ title: "Deleted", description: "Live session removed" });
+      await fetchAll();
+    } catch (error) {
+      logger.error('Error deleting session:', error);
+      toast({ title: "Error", description: "Failed to delete session", variant: "destructive" });
+    } finally {
+      setDeletingSessionId(null);
+    }
+  };
+
   // Group recordings by course then by module
   const groupedByCourse = recordings.reduce((acc, r) => {
     const courseKey = r.course_id || 'unknown';
@@ -419,6 +438,15 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                               />
                               <span className="text-xs text-muted-foreground">days</span>
                             </div>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDeleteSession(session.id)}
+                              disabled={deletingSessionId === session.id}
+                            >
+                              {deletingSessionId === session.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                            </Button>
                           </div>
                         );
                       })}
