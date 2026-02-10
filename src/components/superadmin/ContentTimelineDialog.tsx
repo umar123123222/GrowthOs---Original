@@ -121,7 +121,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
       .from('success_sessions')
       .select('id, title, schedule_date, course_id')
       .in('course_id', courseIds)
-      .order('schedule_date', { ascending: true });
+      .order('schedule_date', { ascending: true }) as { data: any[] | null };
 
     const items: SessionItem[] = (data || []).map(s => {
       const course = courses.find(c => c.courseId === s.course_id);

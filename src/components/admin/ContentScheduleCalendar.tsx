@@ -206,7 +206,7 @@ export function ContentScheduleCalendar() {
       // Fetch all sessions with drip_days
       const { data: sessionsData } = await supabase
         .from('success_sessions')
-        .select('id, title, course_id, batch_id, mentor_name, status, schedule_date') as { data: any[] | null };
+        .select('id, title, course_id, batch_id, mentor_name, status, schedule_date, drip_days' as any) as { data: any[] | null };
 
       // Fetch mentor assignments for courses
       const { data: mentorAssignments } = await supabase
