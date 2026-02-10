@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Save, Loader2, Video } from 'lucide-react';
+import { Clock, Save, Loader2, Video, Plus, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -46,6 +46,10 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
   const [saving, setSaving] = useState(false);
   const [editedDripDays, setEditedDripDays] = useState<Record<string, number | null>>({});
   const [editedSessionDripDays, setEditedSessionDripDays] = useState<Record<string, number | null>>({});
+  const [addingSessionForCourse, setAddingSessionForCourse] = useState<string | null>(null);
+  const [newSessionTitle, setNewSessionTitle] = useState('');
+  const [newSessionDripDays, setNewSessionDripDays] = useState<number | null>(null);
+  const [creatingSession, setCreatingSession] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -53,6 +57,9 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
       fetchAll();
       setEditedDripDays({});
       setEditedSessionDripDays({});
+      setAddingSessionForCourse(null);
+      setNewSessionTitle('');
+      setNewSessionDripDays(null);
     }
   }, [open, entityId]);
 
@@ -214,6 +221,65 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     }
   };
 
+  const handleStartAddSession = (courseId: string) => {
+    setAddingSessionForCourse(courseId);
+    setNewSessionTitle('');
+    setNewSessionDripDays(null);
+  };
+
+  const handleCancelAddSession = () => {
+    setAddingSessionForCourse(null);
+    setNewSessionTitle('');
+    setNewSessionDripDays(null);
+  };
+
+  const handleConfirmAddSession = async (courseId: string) => {
+    const trimmedTitle = newSessionTitle.trim();
+    if (!trimmedTitle || trimmedTitle.length > 200) {
+      toast({ title: "Validation", description: "Title is required (max 200 chars)", variant: "destructive" });
+      return;
+    }
+
+    setCreatingSession(true);
+    try {
+      // Auto-resolve mentor for this course
+      const { data: mentorAssignment } = await supabase
+        .from('mentor_course_assignments')
+        .select('mentor_id, profiles!mentor_course_assignments_mentor_id_fkey(full_name)')
+        .eq('course_id', courseId)
+        .order('is_primary', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const mentorId = mentorAssignment?.mentor_id || null;
+      const mentorName = (mentorAssignment?.profiles as any)?.full_name || null;
+
+      const { error } = await supabase
+        .from('success_sessions')
+        .insert({
+          title: trimmedTitle,
+          course_id: courseId,
+          mentor_id: mentorId,
+          mentor_name: mentorName,
+          link: 'TBD',
+          start_time: new Date().toISOString(),
+          status: 'upcoming',
+          drip_days: newSessionDripDays,
+        } as any);
+
+      if (error) throw error;
+
+      toast({ title: "Success", description: `Live session "${trimmedTitle}" created` });
+      handleCancelAddSession();
+      await fetchAll();
+    } catch (error) {
+      logger.error('Error creating session:', error);
+      toast({ title: "Error", description: "Failed to create session", variant: "destructive" });
+    } finally {
+      setCreatingSession(false);
+    }
+  };
+
   // Group recordings by course then by module
   const groupedByCourse = recordings.reduce((acc, r) => {
     const courseKey = r.course_id || 'unknown';
@@ -323,7 +389,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                   </div>
                 ))}
 
-                {courseData.sessions.length > 0 && (
+                {(courseData.sessions.length > 0 || true) && (
                   <div className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pl-1 flex items-center gap-1.5">
                       <Video className="w-3.5 h-3.5" />
@@ -356,6 +422,63 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                           </div>
                         );
                       })}
+
+                      {/* Inline add session row */}
+                      {addingSessionForCourse === courseData.courseId ? (
+                        <div className="flex items-center gap-2 px-3 py-2">
+                          <Video className="w-4 h-4 text-muted-foreground shrink-0" />
+                          <Input
+                            type="text"
+                            value={newSessionTitle}
+                            onChange={(e) => setNewSessionTitle(e.target.value)}
+                            className="h-8 text-sm flex-1"
+                            placeholder="Session title..."
+                            maxLength={200}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleConfirmAddSession(courseData.courseId);
+                              if (e.key === 'Escape') handleCancelAddSession();
+                            }}
+                          />
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <Input
+                              type="number"
+                              min={0}
+                              value={newSessionDripDays ?? ''}
+                              onChange={(e) => setNewSessionDripDays(e.target.value === '' ? null : parseInt(e.target.value))}
+                              className="w-20 h-8 text-sm"
+                              placeholder="0"
+                            />
+                            <span className="text-xs text-muted-foreground">days</span>
+                          </div>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 shrink-0"
+                            onClick={() => handleConfirmAddSession(courseData.courseId)}
+                            disabled={creatingSession}
+                          >
+                            {creatingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4 text-primary" />}
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 shrink-0"
+                            onClick={handleCancelAddSession}
+                            disabled={creatingSession}
+                          >
+                            <X className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => handleStartAddSession(courseData.courseId)}
+                          className="flex items-center gap-2 px-3 py-2 w-full text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Live Session
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}
