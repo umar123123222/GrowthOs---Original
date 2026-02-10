@@ -845,15 +845,13 @@ export function SuccessSessionsManagement() {
                       <TableCell className="min-w-[120px]">
                         <div className="flex flex-col gap-1">
                           <span className="truncate text-sm font-medium">
-                            {courses.find(c => c.id === session.course_id)?.title || '—'}
+                            {courses.find(c => c.id === session.course_id)?.title || 'All Courses'}
                           </span>
-                          {session.course_id && (
-                            <Badge variant="outline" className="text-xs w-fit">
-                              {session.batch_id
-                                ? batches.find(b => b.id === session.batch_id)?.name || 'Batch'
-                                : 'Unbatched'}
-                            </Badge>
-                          )}
+                          <Badge variant="outline" className="text-xs w-fit">
+                            {session.batch_id
+                              ? batches.find(b => b.id === session.batch_id)?.name || 'Unknown Batch'
+                              : 'All Batches'}
+                          </Badge>
                         </div>
                       </TableCell>
                       <TableCell className="min-w-[120px]">
