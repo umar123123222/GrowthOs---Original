@@ -46,6 +46,8 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
   const [saving, setSaving] = useState(false);
   const [editedDripDays, setEditedDripDays] = useState<Record<string, number | null>>({});
   const [editedSessionDripDays, setEditedSessionDripDays] = useState<Record<string, number | null>>({});
+  const [editedSessionTitles, setEditedSessionTitles] = useState<Record<string, string>>({});
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
   const [addingSessionForCourse, setAddingSessionForCourse] = useState<string | null>(null);
   const [newSessionTitle, setNewSessionTitle] = useState('');
   const [newSessionDripDays, setNewSessionDripDays] = useState<number | null>(null);
@@ -58,6 +60,8 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
       fetchAll();
       setEditedDripDays({});
       setEditedSessionDripDays({});
+      setEditedSessionTitles({});
+      setEditingTitleId(null);
       setAddingSessionForCourse(null);
       setNewSessionTitle('');
       setNewSessionDripDays(null);
@@ -186,7 +190,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     return session.drip_days;
   };
 
-  const hasChanges = Object.keys(editedDripDays).length > 0 || Object.keys(editedSessionDripDays).length > 0;
+  const hasChanges = Object.keys(editedDripDays).length > 0 || Object.keys(editedSessionDripDays).length > 0 || Object.keys(editedSessionTitles).length > 0;
 
   const handleSave = async () => {
     if (!hasChanges) return;
@@ -200,19 +204,32 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
           .eq('id', id);
         if (error) throw error;
       }
-      // Save session drip days
+      // Save session drip days and titles
       for (const [id, drip_days] of Object.entries(editedSessionDripDays)) {
+        const titleUpdate = editedSessionTitles[id];
+        const updatePayload: any = { drip_days };
+        if (titleUpdate !== undefined) updatePayload.title = titleUpdate;
         const { error } = await supabase
           .from('success_sessions')
-          .update({ drip_days } as any)
+          .update(updatePayload)
+          .eq('id', id);
+        if (error) throw error;
+      }
+      // Save session titles that weren't already saved with drip days
+      for (const [id, title] of Object.entries(editedSessionTitles)) {
+        if (id in editedSessionDripDays) continue; // already handled
+        const { error } = await supabase
+          .from('success_sessions')
+          .update({ title } as any)
           .eq('id', id);
         if (error) throw error;
       }
 
-      const totalUpdates = Object.keys(editedDripDays).length + Object.keys(editedSessionDripDays).length;
-      toast({ title: "Success", description: `Updated drip days for ${totalUpdates} item(s)` });
+      const totalUpdates = Object.keys(editedDripDays).length + Object.keys(editedSessionDripDays).length + Object.keys(editedSessionTitles).length;
+      toast({ title: "Success", description: `Updated ${totalUpdates} item(s)` });
       setEditedDripDays({});
       setEditedSessionDripDays({});
+      setEditedSessionTitles({});
       await fetchAll();
     } catch (error) {
       logger.error('Error saving drip days:', error);
@@ -421,7 +438,28 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                         return (
                           <div key={session.id} className="flex items-center gap-3 px-3 py-2">
                             <Video className="w-4 h-4 text-muted-foreground shrink-0" />
-                            <span className="text-sm flex-1 truncate">{session.title || 'Untitled Session'}</span>
+                            {editingTitleId === session.id ? (
+                              <Input
+                                type="text"
+                                value={editedSessionTitles[session.id] ?? session.title}
+                                onChange={(e) => setEditedSessionTitles(prev => ({ ...prev, [session.id]: e.target.value }))}
+                                onBlur={() => setEditingTitleId(null)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === 'Escape') setEditingTitleId(null);
+                                }}
+                                className="h-7 text-sm flex-1"
+                                autoFocus
+                                maxLength={200}
+                              />
+                            ) : (
+                              <span
+                                className="text-sm flex-1 truncate cursor-pointer hover:text-primary transition-colors"
+                                onClick={() => setEditingTitleId(session.id)}
+                                title="Click to edit title"
+                              >
+                                {editedSessionTitles[session.id] ?? session.title ?? 'Untitled Session'}
+                              </span>
+                            )}
                             {session.schedule_date && (
                               <span className="text-xs text-muted-foreground shrink-0">
                                 {new Date(session.schedule_date).toLocaleDateString()}
