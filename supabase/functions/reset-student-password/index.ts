@@ -1,12 +1,16 @@
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.55.0';
 
+const FUNCTION_VERSION = '2.0.0';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 serve(async (req) => {
+  console.log(`[reset-student-password v${FUNCTION_VERSION}] ${req.method} request received`);
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -70,7 +74,7 @@ serve(async (req) => {
 
     console.log('Password reset successfully for user:', user_id);
 
-    return new Response(JSON.stringify({ success: true, message: 'Password reset successfully' }), {
+    return new Response(JSON.stringify({ success: true, message: 'Password reset successfully', _version: FUNCTION_VERSION }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
