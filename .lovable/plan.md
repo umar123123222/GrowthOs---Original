@@ -1,29 +1,50 @@
 
 
-## Show All Scheduled Sessions for Mentor
+## Fix Video Popup Not Playing on Live Sessions Page
 
-The Mentor Sessions page currently shows 0 sessions because it relies on an RLS (Row Level Security) policy that may be filtering too aggressively. The fix is to explicitly query sessions assigned to the logged-in mentor by matching the `mentor_id` column.
+### Problem
+When clicking "Watch Now" on a completed live session, the video opens in a new tab instead of playing in the popup dialog. The code logic is correct but has a reliability issue: the iframe `src` is set via a `ref` in a `useEffect`, which can fail due to timing (ref not attached when effect runs).
 
-### What changes
+### Solution
+Change `VideoPreviewDialog.tsx` to set the iframe `src` directly as a prop instead of relying on `useEffect` + `ref`. This is more reliable and follows standard React patterns.
 
-**File**: `src/components/mentor/MentorSessions.tsx`
+### Changes
 
-1. **Update the query** (line 49-52): Instead of relying solely on RLS, explicitly filter by `mentor_id` equal to the current user's ID. This ensures all sessions where the mentor is the host appear, whether or not they have Zoom details configured.
+**File: `src/components/VideoPreviewDialog.tsx`**
 
-2. **Remove the "upcoming only" filter for scheduled sessions**: Currently, `processSessions` splits by date into upcoming vs completed. The upcoming section will show all sessions with `start_time >= today`, and completed will show past ones -- no changes needed there.
+1. Compute the embed URL as a derived value (not in useEffect)
+2. Pass it directly as the iframe `src` attribute instead of using `iframeRef.current.src`
+3. Remove the `useRef` and the useEffect that sets `src` -- simplify the component
+4. Keep the sanitization, embed conversion, and error handling logic as-is
 
-3. **Add a visual indicator for incomplete sessions**: Sessions missing Zoom details (meeting ID, passcode, or link) will get a "Needs Setup" warning badge so the mentor knows which sessions still need configuration by the admin.
+The key change is replacing:
+```tsx
+// OLD: setting src via ref in useEffect (unreliable)
+useEffect(() => {
+  if (open && recordingUrl && iframeRef.current) {
+    const embedUrl = convertToEmbedUrl(sanitizeVideoUrl(recordingUrl));
+    iframeRef.current.src = embedUrl;
+  }
+}, [open, recordingUrl, iframeKey]);
+```
+
+With:
+```tsx
+// NEW: compute embed URL directly, pass as prop
+const embedUrl = open && recordingUrl 
+  ? convertToEmbedUrl(sanitizeVideoUrl(recordingUrl)) 
+  : '';
+
+// In JSX:
+<iframe src={embedUrl} ... />
+```
+
+This ensures the iframe always gets the correct embed URL when the dialog opens, eliminating the timing issue.
 
 ### Technical Details
-
-- Change query from:
-  ```ts
-  supabase.from('success_sessions').select('*').order(...)
-  ```
-  to:
-  ```ts
-  supabase.from('success_sessions').select('*').eq('mentor_id', user.id).order(...)
-  ```
-
-- Add a "Needs Setup" badge on sessions where `zoom_meeting_id`, `zoom_passcode`, or `link` are empty, so the mentor can see which sessions aren't fully configured yet.
+- Remove `useRef` for iframe
+- Remove the `useEffect` that sets iframe src
+- Keep the error-handling `useEffect` that checks for invalid URLs
+- Keep `iframeKey` for the reload button functionality
+- The `convertToEmbedUrl` function correctly handles YouTube URLs (converts to `/embed/` format which allows iframe embedding)
 
