@@ -638,6 +638,38 @@ export function StudentsManagement() {
       });
     }
   };
+
+  const handleResetPassword = async (studentId: string, studentName: string, storedPassword: string) => {
+    if (!storedPassword) {
+      toast({
+        title: 'Error',
+        description: 'No stored password found for this student',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('update-student-details', {
+        body: { user_id: studentId, reset_password: storedPassword }
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      toast({
+        title: 'Password Reset',
+        description: `${studentName}'s password has been reset to the original stored password`,
+      });
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to reset password',
+        variant: 'destructive'
+      });
+    }
+  };
   const getLMSStatusColor = (lmsStatus: string) => {
     switch (lmsStatus) {
       case 'active':
@@ -2114,9 +2146,37 @@ export function StudentsManagement() {
                                  className="hover-scale hover:border-yellow-300 hover:text-yellow-600"
                                >
                                  <RefreshCw className="w-4 h-4 mr-2" />
-                                 Reset SP Credits
-                               </Button>
-                               
+                                  Reset SP Credits
+                                </Button>
+
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="hover-scale hover:border-blue-300 hover:text-blue-600"
+                                      disabled={!student.password_display}
+                                    >
+                                      <Key className="w-4 h-4 mr-2" />
+                                      Reset Password
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>Reset Password</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        This will reset {student.full_name}'s login password to the original stored password ({student.password_display || 'N/A'}). The student will need to use this password to log in.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                      <AlertDialogAction onClick={() => handleResetPassword(student.id, student.full_name, student.password_display)}>
+                                        Reset Password
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                                
                                <AlertDialog>
                                  <AlertDialogTrigger asChild>
                                    <Button variant="outline" size="sm" className="hover-scale text-red-600 hover:text-red-700 hover:border-red-300">
