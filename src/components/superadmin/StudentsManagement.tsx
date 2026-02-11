@@ -1353,7 +1353,7 @@ export function StudentsManagement() {
         <span className="ml-2 text-muted-foreground">Loading students...</span>
       </div>;
   }
-  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all';
+  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || Boolean(joinDateRange.from || joinDateRange.to);
   const displayStudents = hasActiveFilters ? filteredStudents : students;
   return <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden px-0 bg-transparent">
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
