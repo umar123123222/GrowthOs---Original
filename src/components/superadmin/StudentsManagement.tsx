@@ -118,6 +118,7 @@ export function StudentsManagement() {
   const [bulkBatchDialogOpen, setBulkBatchDialogOpen] = useState(false);
   const [bulkBatchId, setBulkBatchId] = useState<string>('none');
   const [bulkBatches, setBulkBatches] = useState<{id: string; name: string; start_date: string}[]>([]);
+  const [bulkBatchLoading, setBulkBatchLoading] = useState(false);
   const [timeTick, setTimeTick] = useState(0);
   const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
@@ -1160,38 +1161,44 @@ export function StudentsManagement() {
       toast({ title: 'Error', description: 'Please select at least one student', variant: 'destructive' });
       return;
     }
+    setBulkBatchLoading(true);
     try {
       const selectedIds = Array.from(selectedStudents);
-      // Get student_record_ids for selected users
-      const { data: studentRecords } = await supabase
-        .from('students')
-        .select('id, user_id')
-        .in('user_id', selectedIds);
-
-      if (!studentRecords || studentRecords.length === 0) {
-        toast({ title: 'Error', description: 'No student records found for selected users', variant: 'destructive' });
-        return;
-      }
-
       const batchValue = bulkBatchId === 'none' ? null : bulkBatchId;
       let updatedCount = 0;
 
-      for (const record of studentRecords) {
-        // Find existing enrollment
-        const { data: enrollment } = await supabase
-          .from('course_enrollments')
-          .select('id')
-          .eq('student_id', record.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+      // Process in batches of 50 to avoid URL length limits
+      const chunkSize = 50;
+      for (let i = 0; i < selectedIds.length; i += chunkSize) {
+        const chunk = selectedIds.slice(i, i + chunkSize);
+        
+        const { data: studentRecords, error: recError } = await supabase
+          .from('students')
+          .select('id, user_id')
+          .in('user_id', chunk);
 
-        if (enrollment) {
-          await supabase
+        if (recError) {
+          console.error('Error fetching student records chunk:', recError);
+          continue;
+        }
+        if (!studentRecords || studentRecords.length === 0) continue;
+
+        for (const record of studentRecords) {
+          const { data: enrollment } = await supabase
             .from('course_enrollments')
-            .update({ batch_id: batchValue, updated_at: new Date().toISOString() })
-            .eq('id', enrollment.id);
-          updatedCount++;
+            .select('id')
+            .eq('student_id', record.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (enrollment) {
+            const { error: updateError } = await supabase
+              .from('course_enrollments')
+              .update({ batch_id: batchValue, updated_at: new Date().toISOString() })
+              .eq('id', enrollment.id);
+            if (!updateError) updatedCount++;
+          }
         }
       }
 
@@ -1206,6 +1213,8 @@ export function StudentsManagement() {
     } catch (error) {
       console.error('Error bulk assigning batch:', error);
       toast({ title: 'Error', description: 'Failed to assign batch', variant: 'destructive' });
+    } finally {
+      setBulkBatchLoading(false);
     }
   };
 
@@ -2315,8 +2324,10 @@ export function StudentsManagement() {
               </Select>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setBulkBatchDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleBulkBatchAssign}>Assign Batch</Button>
+              <Button variant="outline" onClick={() => setBulkBatchDialogOpen(false)} disabled={bulkBatchLoading}>Cancel</Button>
+              <Button onClick={handleBulkBatchAssign} disabled={bulkBatchLoading}>
+                {bulkBatchLoading ? 'Assigning...' : 'Assign Batch'}
+              </Button>
             </div>
           </div>
         </DialogContent>
