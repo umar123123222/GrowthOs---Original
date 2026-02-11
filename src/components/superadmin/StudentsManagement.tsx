@@ -1468,64 +1468,96 @@ export function StudentsManagement() {
         </Select>
       </div>
 
-      {/* Bulk Actions */}
-      {selectedStudents.size > 0 && <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <span className="text-sm font-medium text-blue-800">
-                    {selectedStudents.size} student(s) selected
-                  </span>
-                  <Button variant="outline" size="sm" onClick={() => setSelectedStudents(new Set())} className="text-blue-600 border-blue-300 hover:bg-blue-100">
-                    Clear Selection
-                  </Button>
-                </div>
-                <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={userManagementLoading} className="hover:bg-red-600">
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Delete Students
-                </Button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="text-xs font-semibold text-blue-700 self-center mr-1">Mark Paid:</span>
-                <Button variant="outline" size="sm" onClick={() => handleBulkMarkInstallmentPaid(1)} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-                  <DollarSign className="w-3 h-3 mr-1" />
-                  1st Installment
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkMarkInstallmentPaid(2)} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-                  <DollarSign className="w-3 h-3 mr-1" />
-                  2nd Installment
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkMarkInstallmentPaid(3)} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
-                  <DollarSign className="w-3 h-3 mr-1" />
-                  3rd Installment
-                </Button>
-                <span className="text-xs font-semibold text-blue-700 self-center ml-3 mr-1">Course Access:</span>
-                <Button variant="outline" size="sm" onClick={() => handleBulkCourseAccess('grant')} className="text-green-600 border-green-300 hover:bg-green-50">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Grant Access
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkCourseAccess('revoke')} className="text-red-600 border-red-300 hover:bg-red-50">
-                  <Ban className="w-3 h-3 mr-1" />
-                  Revoke Access
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('suspend')} className="text-red-600 border-red-300 hover:bg-red-50">
-                  <Ban className="w-3 h-3 mr-1" />
-                  Suspend LMS
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('activate')} className="text-green-600 border-green-300 hover:bg-green-50">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Activate LMS
-                </Button>
-                <span className="text-xs font-semibold text-blue-700 self-center ml-3 mr-1">Batch:</span>
-                <Button variant="outline" size="sm" onClick={openBulkBatchDialog} className="text-purple-600 border-purple-300 hover:bg-purple-50">
-                  <Users className="w-3 h-3 mr-1" />
-                  Assign Batch
-                </Button>
-              </div>
+      {/* Bulk Actions - Sticky toolbar */}
+      {selectedStudents.size > 0 && (
+        <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border border-border rounded-lg shadow-lg p-3 sm:p-4 animate-fade-in">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            {/* Left: Selection info */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Badge variant="secondary" className="bg-primary/10 text-primary font-semibold px-3 py-1 text-sm">
+                {selectedStudents.size} selected
+              </Badge>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedStudents(new Set())} className="text-muted-foreground hover:text-foreground text-xs h-7">
+                Clear
+              </Button>
             </div>
-          </CardContent>
-        </Card>}
+
+            {/* Right: Action groups */}
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+              {/* Mark Paid Dropdown */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm gap-1.5">
+                    <DollarSign className="w-3.5 h-3.5" />
+                    <span className="hidden xs:inline">Mark</span> Paid
+                    <ChevronDown className="w-3 h-3 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-44 p-1.5" align="end">
+                  <div className="flex flex-col gap-0.5">
+                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => handleBulkMarkInstallmentPaid(1)}>
+                      <DollarSign className="w-3.5 h-3.5 mr-2 text-emerald-600" />
+                      1st Installment
+                    </Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => handleBulkMarkInstallmentPaid(2)}>
+                      <DollarSign className="w-3.5 h-3.5 mr-2 text-emerald-600" />
+                      2nd Installment
+                    </Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => handleBulkMarkInstallmentPaid(3)}>
+                      <DollarSign className="w-3.5 h-3.5 mr-2 text-emerald-600" />
+                      3rd Installment
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Course Access Dropdown */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm gap-1.5">
+                    <BookOpen className="w-3.5 h-3.5" />
+                    Access
+                    <ChevronDown className="w-3 h-3 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-44 p-1.5" align="end">
+                  <div className="flex flex-col gap-0.5">
+                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => handleBulkCourseAccess('grant')}>
+                      <CheckCircle className="w-3.5 h-3.5 mr-2 text-green-600" />
+                      Grant Access
+                    </Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => handleBulkCourseAccess('revoke')}>
+                      <Ban className="w-3.5 h-3.5 mr-2 text-red-500" />
+                      Revoke Access
+                    </Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => handleBulkLMSAction('activate')}>
+                      <CheckCircle className="w-3.5 h-3.5 mr-2 text-green-600" />
+                      Activate LMS
+                    </Button>
+                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => handleBulkLMSAction('suspend')}>
+                      <Ban className="w-3.5 h-3.5 mr-2 text-red-500" />
+                      Suspend LMS
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Batch Assignment */}
+              <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm gap-1.5" onClick={openBulkBatchDialog}>
+                <Users className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">Assign</span> Batch
+              </Button>
+
+              {/* Delete - separated with divider */}
+              <div className="hidden sm:block w-px h-6 bg-border mx-1" />
+              <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleBulkDelete} disabled={userManagementLoading}>
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Delete</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Students Table */}
       <Card className="w-full animate-fade-in">
