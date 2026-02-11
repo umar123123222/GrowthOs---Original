@@ -89,7 +89,7 @@ export function StudentsManagement() {
   const [lmsStatusFilter, setLmsStatusFilter] = useState('all');
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
-  const [totalFeeFilter, setTotalFeeFilter] = useState('all');
+  const [totalFeeSort, setTotalFeeSort] = useState('none');
   const [joinDateRange, setJoinDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
@@ -150,7 +150,7 @@ export function StudentsManagement() {
   }, [students]);
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeFilter, installmentPayments, joinDateRange]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, installmentPayments, joinDateRange]);
 
   // Re-render periodically so time-based invoice statuses update without refresh
   useEffect(() => {
@@ -338,19 +338,16 @@ export function StudentsManagement() {
       });
     }
 
-    // Apply total fee amount filter
-    if (totalFeeFilter !== 'all') {
-      filtered = filtered.filter(student => {
-        const key = String(student.student_record_id || '');
-        const payments = installmentPayments.get(key) || [];
-        const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-        if (totalFeeFilter === 'no_fee') return payments.length === 0 || totalAmount === 0;
-        if (totalFeeFilter === 'under_10k') return totalAmount > 0 && totalAmount < 10000;
-        if (totalFeeFilter === '10k_25k') return totalAmount >= 10000 && totalAmount <= 25000;
-        if (totalFeeFilter === '25k_50k') return totalAmount > 25000 && totalAmount <= 50000;
-        if (totalFeeFilter === '50k_100k') return totalAmount > 50000 && totalAmount <= 100000;
-        if (totalFeeFilter === 'above_100k') return totalAmount > 100000;
-        return true;
+    // Apply total fee amount sort
+    if (totalFeeSort !== 'none') {
+      filtered = [...filtered].sort((a, b) => {
+        const keyA = String(a.student_record_id || '');
+        const keyB = String(b.student_record_id || '');
+        const paymentsA = installmentPayments.get(keyA) || [];
+        const paymentsB = installmentPayments.get(keyB) || [];
+        const totalA = paymentsA.reduce((sum, p) => sum + (p.amount || 0), 0);
+        const totalB = paymentsB.reduce((sum, p) => sum + (p.amount || 0), 0);
+        return totalFeeSort === 'low_to_high' ? totalA - totalB : totalB - totalA;
       });
     }
 
@@ -1482,7 +1479,7 @@ export function StudentsManagement() {
         <span className="ml-2 text-muted-foreground">Loading students...</span>
       </div>;
   }
-  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeFilter !== 'all' || Boolean(joinDateRange.from || joinDateRange.to);
+  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(joinDateRange.from || joinDateRange.to);
   const displayStudents = hasActiveFilters ? filteredStudents : students;
   return <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden px-0 bg-transparent">
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
@@ -1609,18 +1606,14 @@ export function StudentsManagement() {
           </SelectContent>
         </Select>
 
-        <Select value={totalFeeFilter} onValueChange={setTotalFeeFilter}>
-          <SelectTrigger className="w-44">
-            <SelectValue placeholder="Total Fee Amount" />
+        <Select value={totalFeeSort} onValueChange={setTotalFeeSort}>
+          <SelectTrigger className="w-48">
+            <SelectValue placeholder="Sort by Fee Amount" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
-            <SelectItem value="all">All Fee Amounts</SelectItem>
-            <SelectItem value="no_fee">No Fee</SelectItem>
-            <SelectItem value="under_10k">Under 10,000</SelectItem>
-            <SelectItem value="10k_25k">10,000 – 25,000</SelectItem>
-            <SelectItem value="25k_50k">25,000 – 50,000</SelectItem>
-            <SelectItem value="50k_100k">50,000 – 1,00,000</SelectItem>
-            <SelectItem value="above_100k">Above 1,00,000</SelectItem>
+            <SelectItem value="none">Total Fee Amount</SelectItem>
+            <SelectItem value="low_to_high">Lowest to Highest</SelectItem>
+            <SelectItem value="high_to_low">Highest to Lowest</SelectItem>
           </SelectContent>
         </Select>
 
