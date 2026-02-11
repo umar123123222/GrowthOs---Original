@@ -104,7 +104,7 @@ serve(async (req) => {
       throw new Error('Missing required field: user_id');
     }
 
-    // Handle simple password reset
+    // Handle simple password reset (resets auth password to stored value)
     if (reset_password) {
       console.log('Resetting password for user:', user_id);
       const { error: pwResetError } = await supabaseAdmin.auth.admin.updateUserById(
