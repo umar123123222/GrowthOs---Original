@@ -650,12 +650,25 @@ export function StudentsManagement() {
     }
 
     try {
-      console.log('Resetting auth password via admin-reset-password:', { user_id: studentId, passwordLength: storedPassword.length });
+      console.log('Resetting password:', { user_id: studentId, passwordLength: storedPassword.length });
       
-      // Use dedicated admin-reset-password function that updates Supabase Auth password
-      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
-        body: { user_id: studentId, password: storedPassword }
-      });
+      // Try admin-reset-password first (new dedicated function), fall back to update-student-details
+      let data, error;
+      
+      try {
+        const result = await supabase.functions.invoke('admin-reset-password', {
+          body: { user_id: studentId, password: storedPassword }
+        });
+        data = result.data;
+        error = result.error;
+      } catch (fnError) {
+        console.log('admin-reset-password not available, falling back to update-student-details');
+        const result = await supabase.functions.invoke('update-student-details', {
+          body: { user_id: studentId, full_name: studentName, email: studentEmail || '', reset_password: storedPassword }
+        });
+        data = result.data;
+        error = result.error;
+      }
 
       console.log('Reset password response:', JSON.stringify(data));
       if (error) throw error;
