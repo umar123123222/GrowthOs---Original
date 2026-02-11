@@ -119,6 +119,13 @@ export function StudentsManagement() {
   const [bulkBatchId, setBulkBatchId] = useState<string>('none');
   const [bulkBatches, setBulkBatches] = useState<{id: string; name: string; start_date: string}[]>([]);
   const [bulkBatchLoading, setBulkBatchLoading] = useState(false);
+  const [bulkAccessDialogOpen, setBulkAccessDialogOpen] = useState(false);
+  const [bulkAccessAction, setBulkAccessAction] = useState<'grant' | 'revoke'>('grant');
+  const [bulkAccessCourses, setBulkAccessCourses] = useState<{id: string; title: string}[]>([]);
+  const [bulkAccessPathways, setBulkAccessPathways] = useState<{id: string; name: string}[]>([]);
+  const [bulkAccessSelectedId, setBulkAccessSelectedId] = useState<string>('');
+  const [bulkAccessType, setBulkAccessType] = useState<'course' | 'pathway'>('course');
+  const [bulkAccessLoading, setBulkAccessLoading] = useState(false);
   const [timeTick, setTimeTick] = useState(0);
   const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
@@ -1130,29 +1137,125 @@ export function StudentsManagement() {
     }
   };
 
-  const handleBulkCourseAccess = async (action: 'grant' | 'revoke') => {
+  const openBulkAccessDialog = async (action: 'grant' | 'revoke') => {
     if (selectedStudents.size === 0) {
       toast({ title: 'Error', description: 'Please select at least one student', variant: 'destructive' });
       return;
     }
-    try {
-      const lms_status = action === 'grant' ? 'active' : 'inactive';
-      const { error } = await supabase
-        .from('users')
-        .update({ lms_status })
-        .in('id', Array.from(selectedStudents));
-      if (error) throw error;
+    setBulkAccessAction(action);
+    setBulkAccessSelectedId('');
+    setBulkAccessType('course');
+    // Fetch courses and pathways
+    const [coursesRes, pathwaysRes] = await Promise.all([
+      supabase.from('courses').select('id, title').eq('is_active', true).order('title'),
+      supabase.from('learning_pathways').select('id, name').eq('is_active', true).order('name')
+    ]);
+    setBulkAccessCourses(coursesRes.data || []);
+    setBulkAccessPathways(pathwaysRes.data || []);
+    setBulkAccessDialogOpen(true);
+  };
 
-      setStudents(prev => prev.map(s => (selectedStudents.has(s.id) ? { ...s, lms_status } as Student : s)));
-      toast({
-        title: 'Success',
-        description: `Course access ${action === 'grant' ? 'granted' : 'revoked'} for ${selectedStudents.size} student(s)`
-      });
+  const handleBulkAccessConfirm = async () => {
+    if (!bulkAccessSelectedId) {
+      toast({ title: 'Error', description: 'Please select a course or pathway', variant: 'destructive' });
+      return;
+    }
+    setBulkAccessLoading(true);
+    try {
+      const selectedIds = Array.from(selectedStudents);
+      const chunkSize = 50;
+
+      if (bulkAccessAction === 'grant') {
+        // Get student records for selected users
+        for (let i = 0; i < selectedIds.length; i += chunkSize) {
+          const chunk = selectedIds.slice(i, i + chunkSize);
+          const { data: studentRecords } = await supabase
+            .from('students')
+            .select('id, user_id')
+            .in('user_id', chunk);
+
+          if (!studentRecords) continue;
+
+          for (const record of studentRecords) {
+            // Check if enrollment already exists
+            const query = supabase
+              .from('course_enrollments')
+              .select('id')
+              .eq('student_id', record.id);
+
+            if (bulkAccessType === 'course') {
+              query.eq('course_id', bulkAccessSelectedId).is('pathway_id', null);
+            } else {
+              query.eq('pathway_id', bulkAccessSelectedId);
+            }
+
+            const { data: existing } = await query.maybeSingle();
+            if (existing) continue; // Already enrolled
+
+            // Create enrollment
+            const enrollmentData: any = {
+              student_id: record.id,
+              status: 'active',
+              enrolled_at: new Date().toISOString(),
+            };
+            if (bulkAccessType === 'course') {
+              enrollmentData.course_id = bulkAccessSelectedId;
+            } else {
+              // For pathway, use first course in pathway as anchor
+              const { data: firstStep } = await supabase
+                .from('pathway_courses')
+                .select('course_id')
+                .eq('pathway_id', bulkAccessSelectedId)
+                .order('step_number', { ascending: true })
+                .limit(1)
+                .maybeSingle();
+              enrollmentData.course_id = firstStep?.course_id || bulkAccessSelectedId;
+              enrollmentData.pathway_id = bulkAccessSelectedId;
+            }
+            await supabase.from('course_enrollments').insert(enrollmentData);
+          }
+        }
+
+        // Also activate LMS
+        await supabase.from('users').update({ lms_status: 'active' }).in('id', selectedIds);
+        setStudents(prev => prev.map(s => (selectedStudents.has(s.id) ? { ...s, lms_status: 'active' } as Student : s)));
+
+        toast({ title: 'Success', description: `Access granted to ${selectedStudents.size} student(s)` });
+      } else {
+        // Revoke: cancel enrollments for the selected course/pathway
+        for (let i = 0; i < selectedIds.length; i += chunkSize) {
+          const chunk = selectedIds.slice(i, i + chunkSize);
+          const { data: studentRecords } = await supabase
+            .from('students')
+            .select('id')
+            .in('user_id', chunk);
+
+          if (!studentRecords) continue;
+          const studentRecordIds = studentRecords.map(r => r.id);
+
+          const query = supabase
+            .from('course_enrollments')
+            .update({ status: 'cancelled' })
+            .in('student_id', studentRecordIds);
+
+          if (bulkAccessType === 'course') {
+            query.eq('course_id', bulkAccessSelectedId);
+          } else {
+            query.eq('pathway_id', bulkAccessSelectedId);
+          }
+          await query;
+        }
+        toast({ title: 'Success', description: `Access revoked for ${selectedStudents.size} student(s)` });
+      }
+
+      setBulkAccessDialogOpen(false);
       setSelectedStudents(new Set());
       await fetchStudents();
     } catch (error) {
       console.error('Error updating course access:', error);
-      toast({ title: 'Error', description: 'Failed to update course access', variant: 'destructive' });
+      toast({ title: 'Error', description: 'Failed to update access', variant: 'destructive' });
+    } finally {
+      setBulkAccessLoading(false);
     }
   };
 
@@ -1583,11 +1686,11 @@ export function StudentsManagement() {
                 </PopoverTrigger>
                 <PopoverContent className="w-44 p-1.5" align="end">
                   <div className="flex flex-col gap-0.5">
-                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => handleBulkCourseAccess('grant')}>
+                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => openBulkAccessDialog('grant')}>
                       <CheckCircle className="w-3.5 h-3.5 mr-2 text-green-600" />
                       Grant Access
                     </Button>
-                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => handleBulkCourseAccess('revoke')}>
+                    <Button variant="ghost" size="sm" className="justify-start text-sm h-9" onClick={() => openBulkAccessDialog('revoke')}>
                       <Ban className="w-3.5 h-3.5 mr-2 text-red-500" />
                       Revoke Access
                     </Button>
@@ -2327,6 +2430,71 @@ export function StudentsManagement() {
               <Button variant="outline" onClick={() => setBulkBatchDialogOpen(false)} disabled={bulkBatchLoading}>Cancel</Button>
               <Button onClick={handleBulkBatchAssign} disabled={bulkBatchLoading}>
                 {bulkBatchLoading ? 'Assigning...' : 'Assign Batch'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Access Grant/Revoke Dialog */}
+      <Dialog open={bulkAccessDialogOpen} onOpenChange={setBulkAccessDialogOpen}>
+        <DialogContent className="bg-white sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {bulkAccessAction === 'grant' ? 'Grant' : 'Revoke'} Access for {selectedStudents.size} Student(s)
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="flex gap-2">
+              <Button
+                variant={bulkAccessType === 'course' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => { setBulkAccessType('course'); setBulkAccessSelectedId(''); }}
+              >
+                <BookOpen className="w-4 h-4 mr-1" />
+                Course
+              </Button>
+              <Button
+                variant={bulkAccessType === 'pathway' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => { setBulkAccessType('pathway'); setBulkAccessSelectedId(''); }}
+              >
+                <Activity className="w-4 h-4 mr-1" />
+                Pathway
+              </Button>
+            </div>
+            <div>
+              <Label className="text-sm font-medium">
+                Select {bulkAccessType === 'course' ? 'Course' : 'Pathway'}
+              </Label>
+              <Select value={bulkAccessSelectedId} onValueChange={setBulkAccessSelectedId}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder={`Choose a ${bulkAccessType}...`} />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-50">
+                  {bulkAccessType === 'course'
+                    ? bulkAccessCourses.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.title}</SelectItem>
+                      ))
+                    : bulkAccessPathways.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setBulkAccessDialogOpen(false)} disabled={bulkAccessLoading}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkAccessConfirm}
+                disabled={bulkAccessLoading || !bulkAccessSelectedId}
+                variant={bulkAccessAction === 'revoke' ? 'destructive' : 'default'}
+              >
+                {bulkAccessLoading
+                  ? (bulkAccessAction === 'grant' ? 'Granting...' : 'Revoking...')
+                  : (bulkAccessAction === 'grant' ? 'Grant Access' : 'Revoke Access')}
               </Button>
             </div>
           </div>
