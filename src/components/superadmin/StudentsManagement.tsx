@@ -639,7 +639,7 @@ export function StudentsManagement() {
     }
   };
 
-  const handleResetPassword = async (studentId: string, studentName: string, storedPassword: string) => {
+  const handleResetPassword = async (studentId: string, studentName: string, storedPassword: string, studentEmail?: string) => {
     if (!storedPassword) {
       toast({
         title: 'Error',
@@ -651,7 +651,7 @@ export function StudentsManagement() {
 
     try {
       const { data, error } = await supabase.functions.invoke('update-student-details', {
-        body: { user_id: studentId, reset_password: storedPassword }
+        body: { user_id: studentId, full_name: studentName, email: studentEmail || '', reset_password: storedPassword }
       });
 
       if (error) throw error;
@@ -2170,7 +2170,7 @@ export function StudentsManagement() {
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleResetPassword(student.id, student.full_name, student.password_display)}>
+                                      <AlertDialogAction onClick={() => handleResetPassword(student.id, student.full_name, student.password_display, student.email)}>
                                         Reset Password
                                       </AlertDialogAction>
                                     </AlertDialogFooter>
