@@ -1055,6 +1055,90 @@ export function StudentsManagement() {
       fetchStudents();
     }
   };
+
+  const handleBulkMarkInstallmentPaid = async (installmentNumber: number) => {
+    if (selectedStudents.size === 0) {
+      toast({ title: 'Error', description: 'Please select at least one student', variant: 'destructive' });
+      return;
+    }
+    try {
+      let successCount = 0;
+      let skipCount = 0;
+      for (const studentId of Array.from(selectedStudents)) {
+        const student = students.find(s => s.id === studentId);
+        if (!student?.student_record_id) { skipCount++; continue; }
+
+        const { data: invoiceRow } = await supabase
+          .from('invoices')
+          .select('id, status')
+          .eq('student_id', student.student_record_id)
+          .eq('installment_number', installmentNumber)
+          .maybeSingle();
+
+        if (invoiceRow?.status === 'paid') { skipCount++; continue; }
+
+        if (invoiceRow) {
+          await supabase.from('invoices').update({
+            status: 'paid',
+            paid_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          }).eq('id', invoiceRow.id);
+        } else {
+          await supabase.from('invoices').insert({
+            student_id: student.student_record_id,
+            installment_number: installmentNumber,
+            amount: 0,
+            status: 'paid',
+            due_date: new Date().toISOString(),
+            paid_at: new Date().toISOString()
+          });
+        }
+
+        // Activate LMS on first installment
+        if (installmentNumber === 1) {
+          await supabase.from('users').update({ lms_status: 'active' }).eq('id', studentId);
+        }
+        successCount++;
+      }
+      toast({
+        title: 'Success',
+        description: `Installment ${installmentNumber} marked paid for ${successCount} student(s)${skipCount > 0 ? `, ${skipCount} skipped` : ''}`
+      });
+      setSelectedStudents(new Set());
+      fetchInstallmentPayments();
+      fetchStudents();
+    } catch (error) {
+      console.error('Error bulk marking installments:', error);
+      toast({ title: 'Error', description: 'Failed to mark installments as paid', variant: 'destructive' });
+    }
+  };
+
+  const handleBulkCourseAccess = async (action: 'grant' | 'revoke') => {
+    if (selectedStudents.size === 0) {
+      toast({ title: 'Error', description: 'Please select at least one student', variant: 'destructive' });
+      return;
+    }
+    try {
+      const lms_status = action === 'grant' ? 'active' : 'inactive';
+      const { error } = await supabase
+        .from('users')
+        .update({ lms_status })
+        .in('id', Array.from(selectedStudents));
+      if (error) throw error;
+
+      setStudents(prev => prev.map(s => (selectedStudents.has(s.id) ? { ...s, lms_status } as Student : s)));
+      toast({
+        title: 'Success',
+        description: `Course access ${action === 'grant' ? 'granted' : 'revoked'} for ${selectedStudents.size} student(s)`
+      });
+      setSelectedStudents(new Set());
+      await fetchStudents();
+    } catch (error) {
+      console.error('Error updating course access:', error);
+      toast({ title: 'Error', description: 'Failed to update course access', variant: 'destructive' });
+    }
+  };
+
   const handleEditStudent = async (student: Student) => {
     setEditingStudent(student);
     setEditFormData({
@@ -1318,27 +1402,51 @@ export function StudentsManagement() {
       {/* Bulk Actions */}
       {selectedStudents.size > 0 && <Card className="bg-blue-50 border-blue-200">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <span className="text-sm font-medium text-blue-800">
-                  {selectedStudents.size} student(s) selected
-                </span>
-                <Button variant="outline" size="sm" onClick={() => setSelectedStudents(new Set())} className="text-blue-600 border-blue-300 hover:bg-blue-100">
-                  Clear Selection
-                </Button>
-              </div>
-              <div className="flex space-x-2">
-                <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('suspend')} className="text-red-600 border-red-300 hover:bg-red-50">
-                  <Ban className="w-4 h-4 mr-2" />
-                  Suspend LMS
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('activate')} className="text-green-600 border-green-300 hover:bg-green-50">
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  Activate LMS
-                </Button>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm font-medium text-blue-800">
+                    {selectedStudents.size} student(s) selected
+                  </span>
+                  <Button variant="outline" size="sm" onClick={() => setSelectedStudents(new Set())} className="text-blue-600 border-blue-300 hover:bg-blue-100">
+                    Clear Selection
+                  </Button>
+                </div>
                 <Button variant="destructive" size="sm" onClick={handleBulkDelete} disabled={userManagementLoading} className="hover:bg-red-600">
                   <Trash2 className="w-4 h-4 mr-2" />
                   Delete Students
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="text-xs font-semibold text-blue-700 self-center mr-1">Mark Paid:</span>
+                <Button variant="outline" size="sm" onClick={() => handleBulkMarkInstallmentPaid(1)} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                  <DollarSign className="w-3 h-3 mr-1" />
+                  1st Installment
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleBulkMarkInstallmentPaid(2)} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                  <DollarSign className="w-3 h-3 mr-1" />
+                  2nd Installment
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleBulkMarkInstallmentPaid(3)} className="text-emerald-700 border-emerald-300 hover:bg-emerald-50">
+                  <DollarSign className="w-3 h-3 mr-1" />
+                  3rd Installment
+                </Button>
+                <span className="text-xs font-semibold text-blue-700 self-center ml-3 mr-1">Course Access:</span>
+                <Button variant="outline" size="sm" onClick={() => handleBulkCourseAccess('grant')} className="text-green-600 border-green-300 hover:bg-green-50">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Grant Access
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleBulkCourseAccess('revoke')} className="text-red-600 border-red-300 hover:bg-red-50">
+                  <Ban className="w-3 h-3 mr-1" />
+                  Revoke Access
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('suspend')} className="text-red-600 border-red-300 hover:bg-red-50">
+                  <Ban className="w-3 h-3 mr-1" />
+                  Suspend LMS
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('activate')} className="text-green-600 border-green-300 hover:bg-green-50">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Activate LMS
                 </Button>
               </div>
             </div>
