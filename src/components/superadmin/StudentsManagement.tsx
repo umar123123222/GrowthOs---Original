@@ -90,6 +90,8 @@ export function StudentsManagement() {
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
   const [totalFeeSort, setTotalFeeSort] = useState('none');
+  const [feeRangeFrom, setFeeRangeFrom] = useState('');
+  const [feeRangeTo, setFeeRangeTo] = useState('');
   const [joinDateRange, setJoinDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
@@ -150,7 +152,7 @@ export function StudentsManagement() {
   }, [students]);
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, installmentPayments, joinDateRange]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, feeRangeFrom, feeRangeTo, installmentPayments, joinDateRange]);
 
   // Re-render periodically so time-based invoice statuses update without refresh
   useEffect(() => {
@@ -334,6 +336,20 @@ export function StudentsManagement() {
           // All invoices are paid
           return invs.length > 0 && invs.every(inv => inv.status === 'paid');
         }
+        return true;
+      });
+    }
+
+    // Apply total fee amount range filter
+    const feeFrom = feeRangeFrom ? parseFloat(feeRangeFrom) : null;
+    const feeTo = feeRangeTo ? parseFloat(feeRangeTo) : null;
+    if (feeFrom !== null || feeTo !== null) {
+      filtered = filtered.filter(student => {
+        const key = String(student.student_record_id || '');
+        const payments = installmentPayments.get(key) || [];
+        const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+        if (feeFrom !== null && totalAmount < feeFrom) return false;
+        if (feeTo !== null && totalAmount > feeTo) return false;
         return true;
       });
     }
@@ -1479,7 +1495,7 @@ export function StudentsManagement() {
         <span className="ml-2 text-muted-foreground">Loading students...</span>
       </div>;
   }
-  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(joinDateRange.from || joinDateRange.to);
+  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo) || Boolean(joinDateRange.from || joinDateRange.to);
   const displayStudents = hasActiveFilters ? filteredStudents : students;
   return <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden px-0 bg-transparent">
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
@@ -1606,18 +1622,61 @@ export function StudentsManagement() {
           </SelectContent>
         </Select>
 
-        <Select value={totalFeeSort} onValueChange={setTotalFeeSort}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Sort by Fee Amount" />
-          </SelectTrigger>
-          <SelectContent className="bg-white z-50">
-            <SelectItem value="none">Total Fee Amount</SelectItem>
-            <SelectItem value="low_to_high">Lowest to Highest</SelectItem>
-            <SelectItem value="high_to_low">Highest to Lowest</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Joining Date Range Filter */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-auto justify-start text-left font-normal h-10 text-sm", !(feeRangeFrom || feeRangeTo || totalFeeSort !== 'none') && "text-muted-foreground")}>
+              <DollarSign className="mr-2 h-4 w-4" />
+              {feeRangeFrom || feeRangeTo
+                ? `${feeRangeFrom || '0'} – ${feeRangeTo || '∞'}`
+                : totalFeeSort !== 'none'
+                  ? totalFeeSort === 'low_to_high' ? 'Low → High' : 'High → Low'
+                  : 'Fee Amount'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-64 p-4 pointer-events-auto space-y-3" align="start" sideOffset={4}>
+            <p className="text-sm font-medium text-foreground">Fee Amount Range</p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                placeholder="From"
+                value={feeRangeFrom}
+                onChange={(e) => setFeeRangeFrom(e.target.value)}
+                className="h-9 text-sm"
+                min="0"
+              />
+              <span className="text-muted-foreground text-sm">–</span>
+              <Input
+                type="number"
+                placeholder="To"
+                value={feeRangeTo}
+                onChange={(e) => setFeeRangeTo(e.target.value)}
+                className="h-9 text-sm"
+                min="0"
+              />
+            </div>
+            <div className="border-t pt-2">
+              <p className="text-sm font-medium text-foreground mb-2">Sort</p>
+              <Select value={totalFeeSort} onValueChange={setTotalFeeSort}>
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Sort order" />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-50">
+                  <SelectItem value="none">No sorting</SelectItem>
+                  <SelectItem value="low_to_high">Lowest to Highest</SelectItem>
+                  <SelectItem value="high_to_low">Highest to Lowest</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs"
+              onClick={() => { setFeeRangeFrom(''); setFeeRangeTo(''); setTotalFeeSort('none'); }}
+            >
+              Clear
+            </Button>
+          </PopoverContent>
+        </Popover>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" className={cn("w-auto justify-start text-left font-normal h-10 text-sm", !(joinDateRange.from || joinDateRange.to) && "text-muted-foreground")}>
