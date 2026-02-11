@@ -1,50 +1,36 @@
 
 
-## Fix Video Popup Not Playing on Live Sessions Page
+# Fix: Reset Student Password Edge Function
 
-### Problem
-When clicking "Watch Now" on a completed live session, the video opens in a new tab instead of playing in the popup dialog. The code logic is correct but has a reliability issue: the iframe `src` is set via a `ref` in a `useEffect`, which can fail due to timing (ref not attached when effect runs).
+## Root Cause
 
-### Solution
-Change `VideoPreviewDialog.tsx` to set the iframe `src` directly as a prop instead of relying on `useEffect` + `ref`. This is more reliable and follows standard React patterns.
+The `reset-student-password` Edge Function is configured with `verify_jwt = true` in `supabase/config.toml`. With Supabase's signing-keys system, this setting causes the request to be rejected at the infrastructure level *before* the function code executes. That is why the error message (`"Missing required fields"`) does not match any code path in the new function -- an older cached version or gateway rejection is responding instead.
 
-### Changes
+## Solution
 
-**File: `src/components/VideoPreviewDialog.tsx`**
+Two changes are needed:
 
-1. Compute the embed URL as a derived value (not in useEffect)
-2. Pass it directly as the iframe `src` attribute instead of using `iframeRef.current.src`
-3. Remove the `useRef` and the useEffect that sets `src` -- simplify the component
-4. Keep the sanitization, embed conversion, and error handling logic as-is
+### 1. Set `verify_jwt = false` in `supabase/config.toml`
 
-The key change is replacing:
-```tsx
-// OLD: setting src via ref in useEffect (unreliable)
-useEffect(() => {
-  if (open && recordingUrl && iframeRef.current) {
-    const embedUrl = convertToEmbedUrl(sanitizeVideoUrl(recordingUrl));
-    iframeRef.current.src = embedUrl;
-  }
-}, [open, recordingUrl, iframeKey]);
+Change the configuration so the request reaches the function code, which already performs its own authorization (checks the caller is superadmin/admin).
+
+```toml
+[functions.reset-student-password]
+verify_jwt = false
 ```
 
-With:
-```tsx
-// NEW: compute embed URL directly, pass as prop
-const embedUrl = open && recordingUrl 
-  ? convertToEmbedUrl(sanitizeVideoUrl(recordingUrl)) 
-  : '';
+### 2. Add version logging to `reset-student-password/index.ts`
 
-// In JSX:
-<iframe src={embedUrl} ... />
-```
+Add a version constant and include it in all responses. This confirms the correct version of the function is deployed and running.
 
-This ensures the iframe always gets the correct embed URL when the dialog opens, eliminating the timing issue.
+- Log the version on every request
+- Include `_version` in the JSON response body
+- This ensures we can verify the deployed code matches expectations
 
-### Technical Details
-- Remove `useRef` for iframe
-- Remove the `useEffect` that sets iframe src
-- Keep the error-handling `useEffect` that checks for invalid URLs
-- Keep `iframeKey` for the reload button functionality
-- The `convertToEmbedUrl` function correctly handles YouTube URLs (converts to `/embed/` format which allows iframe embedding)
+## Technical Details
+
+- **File 1**: `supabase/config.toml` -- change `verify_jwt` from `true` to `false`
+- **File 2**: `supabase/functions/reset-student-password/index.ts` -- add version logging constant and include in responses
+
+The function's internal auth logic (checking Authorization header, verifying user role) remains unchanged and provides the necessary security.
 
