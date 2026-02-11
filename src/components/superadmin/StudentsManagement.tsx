@@ -650,10 +650,12 @@ export function StudentsManagement() {
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('reset-student-password', {
-        body: { user_id: studentId, password: storedPassword }
+      console.log('Resetting password via update-student-details:', { user_id: studentId, passwordLength: storedPassword.length });
+      const { data, error } = await supabase.functions.invoke('update-student-details', {
+        body: { user_id: studentId, full_name: studentName, email: studentEmail || '', reset_password: storedPassword }
       });
 
+      console.log('Reset password response:', JSON.stringify(data));
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 

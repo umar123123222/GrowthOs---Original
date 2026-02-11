@@ -2,7 +2,7 @@ import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.55.0';
 import { SMTPClient } from '../_shared/smtp-client.ts';
 
-const FUNCTION_VERSION = '2.1.0';
+const FUNCTION_VERSION = '2.2.0'; // includes reset_password handler
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
