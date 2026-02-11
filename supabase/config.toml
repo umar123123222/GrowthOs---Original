@@ -87,7 +87,7 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.update-student-details]
-verify_jwt = true
+verify_jwt = false
 
 [functions.validate-shopify]
 verify_jwt = true
