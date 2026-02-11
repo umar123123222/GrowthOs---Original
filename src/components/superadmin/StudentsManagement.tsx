@@ -89,8 +89,7 @@ export function StudentsManagement() {
   const [lmsStatusFilter, setLmsStatusFilter] = useState('all');
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
-  const [joinDateFrom, setJoinDateFrom] = useState<Date | undefined>(undefined);
-  const [joinDateTo, setJoinDateTo] = useState<Date | undefined>(undefined);
+  const [joinDateRange, setJoinDateRange] = useState<{ from?: Date; to?: Date }>({});
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [activityLogsDialog, setActivityLogsDialog] = useState(false);
@@ -142,7 +141,7 @@ export function StudentsManagement() {
   }, [students]);
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, installmentPayments, joinDateFrom, joinDateTo]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, installmentPayments, joinDateRange]);
 
   // Re-render periodically so time-based invoice statuses update without refresh
   useEffect(() => {
@@ -331,11 +330,11 @@ export function StudentsManagement() {
     }
 
     // Apply joining date range filter
-    if (joinDateFrom) {
-      filtered = filtered.filter(student => new Date(student.created_at) >= joinDateFrom);
+    if (joinDateRange.from) {
+      filtered = filtered.filter(student => new Date(student.created_at) >= joinDateRange.from!);
     }
-    if (joinDateTo) {
-      const endOfDay = new Date(joinDateTo);
+    if (joinDateRange.to) {
+      const endOfDay = new Date(joinDateRange.to);
       endOfDay.setHours(23, 59, 59, 999);
       filtered = filtered.filter(student => new Date(student.created_at) <= endOfDay);
     }
@@ -1484,45 +1483,29 @@ export function StudentsManagement() {
         {/* Joining Date Range Filter */}
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("w-auto justify-start text-left font-normal h-10 text-sm", !(joinDateFrom || joinDateTo) && "text-muted-foreground")}>
+            <Button variant="outline" className={cn("w-auto justify-start text-left font-normal h-10 text-sm", !(joinDateRange.from || joinDateRange.to) && "text-muted-foreground")}>
               <CalendarIcon className="mr-2 h-4 w-4" />
-              {joinDateFrom && joinDateTo
-                ? `${format(joinDateFrom, 'dd MMM')} – ${format(joinDateTo, 'dd MMM yyyy')}`
-                : joinDateFrom
-                  ? `From ${format(joinDateFrom, 'dd MMM yyyy')}`
-                  : joinDateTo
-                    ? `Until ${format(joinDateTo, 'dd MMM yyyy')}`
-                    : 'Joining Date'}
+              {joinDateRange.from && joinDateRange.to
+                ? `${format(joinDateRange.from, 'dd MMM')} – ${format(joinDateRange.to, 'dd MMM yyyy')}`
+                : joinDateRange.from
+                  ? `From ${format(joinDateRange.from, 'dd MMM yyyy')}`
+                  : 'Joining Date'}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-auto p-3 pointer-events-auto" align="start">
-            <div className="space-y-3">
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">From</Label>
-                <Calendar
-                  mode="single"
-                  selected={joinDateFrom}
-                  onSelect={setJoinDateFrom}
-                  disabled={(date) => date > new Date() || (joinDateTo ? date > joinDateTo : false)}
-                  className="p-2 pointer-events-auto"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-medium">To</Label>
-                <Calendar
-                  mode="single"
-                  selected={joinDateTo}
-                  onSelect={setJoinDateTo}
-                  disabled={(date) => date > new Date() || (joinDateFrom ? date < joinDateFrom : false)}
-                  className="p-2 pointer-events-auto"
-                />
-              </div>
-              {(joinDateFrom || joinDateTo) && (
-                <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => { setJoinDateFrom(undefined); setJoinDateTo(undefined); }}>
-                  Clear dates
-                </Button>
-              )}
-            </div>
+            <Calendar
+              mode="range"
+              selected={joinDateRange.from ? { from: joinDateRange.from, to: joinDateRange.to } : undefined}
+              onSelect={(range) => setJoinDateRange({ from: range?.from, to: range?.to })}
+              disabled={(date) => date > new Date()}
+              numberOfMonths={1}
+              className="p-2 pointer-events-auto"
+            />
+            {(joinDateRange.from || joinDateRange.to) && (
+              <Button variant="ghost" size="sm" className="w-full text-xs mt-2" onClick={() => setJoinDateRange({})}>
+                Clear dates
+              </Button>
+            )}
           </PopoverContent>
         </Popover>
       </div>
