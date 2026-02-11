@@ -97,3 +97,6 @@ verify_jwt = false
 
 [functions.whoami]
 verify_jwt = true
+
+[functions.reset-student-password]
+verify_jwt = true
