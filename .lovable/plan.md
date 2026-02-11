@@ -1,36 +1,46 @@
 
 
-# Fix: Reset Student Password Edge Function
+# Fix: Password Reset - Dual Approach
 
 ## Root Cause
 
-The `reset-student-password` Edge Function is configured with `verify_jwt = true` in `supabase/config.toml`. With Supabase's signing-keys system, this setting causes the request to be rejected at the infrastructure level *before* the function code executes. That is why the error message (`"Missing required fields"`) does not match any code path in the new function -- an older cached version or gateway rejection is responding instead.
+The `update-student-details` Edge Function has `verify_jwt = true` in `config.toml`. With Supabase's signing-keys system, this prevents the latest code (which includes the `reset_password` handler) from being served. The deployed version lacks the password reset logic and falls through to the `if (!full_name || !email)` check, which fails because the frontend sends an empty string for email.
 
-## Solution
+## Solution: Two Changes
 
-Two changes are needed:
+### 1. Set `verify_jwt = false` for `update-student-details` in `config.toml`
 
-### 1. Set `verify_jwt = false` in `supabase/config.toml`
-
-Change the configuration so the request reaches the function code, which already performs its own authorization (checks the caller is superadmin/admin).
+This is needed regardless of the password reset issue -- it aligns with the signing-keys system and may trigger a proper redeployment of the function.
 
 ```toml
-[functions.reset-student-password]
+[functions.update-student-details]
 verify_jwt = false
 ```
 
-### 2. Add version logging to `reset-student-password/index.ts`
+The function already has its own internal authorization (checks caller is superadmin/admin), so security is maintained.
 
-Add a version constant and include it in all responses. This confirms the correct version of the function is deployed and running.
+### 2. Switch frontend to use the dedicated `reset-student-password` function
 
-- Log the version on every request
-- Include `_version` in the JSON response body
-- This ensures we can verify the deployed code matches expectations
+Since `reset-student-password` already has `verify_jwt = false` and contains clean, focused password-reset code, the frontend should call it directly instead of piggybacking on the general `update-student-details` function.
 
-## Technical Details
+In `src/components/superadmin/StudentsManagement.tsx`, update `handleResetPassword` to call:
 
-- **File 1**: `supabase/config.toml` -- change `verify_jwt` from `true` to `false`
-- **File 2**: `supabase/functions/reset-student-password/index.ts` -- add version logging constant and include in responses
+```typescript
+const { data, error } = await supabase.functions.invoke('reset-student-password', {
+  body: { user_id: studentId, password: storedPassword }
+});
+```
 
-The function's internal auth logic (checking Authorization header, verifying user role) remains unchanged and provides the necessary security.
+This is a simpler, more reliable call -- it only needs `user_id` and `password`, avoiding any issues with missing `full_name` or `email` fields.
+
+## Why This Will Work
+
+- The `reset-student-password` function has had `verify_jwt = false` since the earlier fix, so the infrastructure will not block requests
+- The function code is simple and focused -- it validates auth internally, then calls `supabaseAdmin.auth.admin.updateUserById()` to set the password
+- Changing `update-student-details` to `verify_jwt = false` fixes it for all future operations too
+
+## Files to Change
+
+1. **`supabase/config.toml`** -- set `verify_jwt = false` for `update-student-details`
+2. **`src/components/superadmin/StudentsManagement.tsx`** -- switch `handleResetPassword` to invoke `reset-student-password` with just `user_id` and `password`
 
