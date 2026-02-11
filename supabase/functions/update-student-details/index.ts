@@ -2,6 +2,8 @@ import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.55.0';
 import { SMTPClient } from '../_shared/smtp-client.ts';
 
+const FUNCTION_VERSION = '2.1.0';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -38,6 +40,7 @@ interface UpdateStudentRequest {
 }
 
 serve(async (req) => {
+  console.log(`update-student-details v${FUNCTION_VERSION} invoked`);
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -116,7 +119,7 @@ serve(async (req) => {
       }
       console.log('Password reset successfully for user:', user_id);
       return new Response(
-        JSON.stringify({ success: true, message: 'Password reset successfully' }),
+        JSON.stringify({ success: true, message: 'Password reset successfully', _version: FUNCTION_VERSION }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
