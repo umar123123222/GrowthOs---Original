@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, AlertCircle } from 'lucide-react';
@@ -86,24 +86,13 @@ export function VideoPreviewDialog({
   const { user } = useAuth();
   const [iframeKey, setIframeKey] = useState(0);
   const [videoError, setVideoError] = useState(false);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
   
   const canSeeUrl = user?.role === 'superadmin' || user?.role === 'admin';
 
-  useEffect(() => {
-    if (open && recordingUrl && iframeRef.current) {
-      const sanitizedUrl = sanitizeVideoUrl(recordingUrl);
-      
-      if (!sanitizedUrl) {
-        setVideoError(true);
-        return;
-      }
-      
-      setVideoError(false);
-      const embedUrl = convertToEmbedUrl(sanitizedUrl);
-      iframeRef.current.src = embedUrl;
-    }
-  }, [open, recordingUrl, iframeKey]);
+  // Compute embed URL directly
+  const sanitizedUrl = sanitizeVideoUrl(recordingUrl);
+  const embedUrl = open && sanitizedUrl ? convertToEmbedUrl(sanitizedUrl) : '';
+  const isInvalidUrl = open && recordingUrl && !sanitizedUrl;
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -125,8 +114,8 @@ export function VideoPreviewDialog({
         </DialogHeader>
         
         <div className="relative">
-          <div className="aspect-video bg-gray-900 rounded-lg overflow-hidden">
-            {videoError ? (
+          <div className="aspect-video bg-muted rounded-lg overflow-hidden">
+            {isInvalidUrl || videoError ? (
               <div className="w-full h-full flex items-center justify-center bg-muted">
                 <div className="text-center p-6">
                   <AlertCircle className="w-12 h-12 text-destructive mx-auto mb-3" />
@@ -142,7 +131,7 @@ export function VideoPreviewDialog({
             ) : (
               <iframe
                 key={`preview-${iframeKey}`}
-                ref={iframeRef}
+                src={embedUrl}
                 className="w-full h-full"
                 allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture"
                 allowFullScreen
@@ -152,7 +141,7 @@ export function VideoPreviewDialog({
             )}
           </div>
           
-          {!videoError && (
+          {!isInvalidUrl && !videoError && (
             <Button
               variant="secondary"
               size="sm"
