@@ -650,8 +650,8 @@ export function StudentsManagement() {
     }
 
     try {
-      const { data, error } = await supabase.functions.invoke('update-student-details', {
-        body: { user_id: studentId, reset_password: storedPassword }
+      const { data, error } = await supabase.functions.invoke('reset-student-password', {
+        body: { user_id: studentId, password: storedPassword }
       });
 
       if (error) throw error;
