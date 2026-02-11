@@ -113,6 +113,9 @@ export function StudentsManagement() {
     enrollment_id: '' as string | null
   });
   const [editBatches, setEditBatches] = useState<{id: string; name: string; start_date: string}[]>([]);
+  const [bulkBatchDialogOpen, setBulkBatchDialogOpen] = useState(false);
+  const [bulkBatchId, setBulkBatchId] = useState<string>('none');
+  const [bulkBatches, setBulkBatches] = useState<{id: string; name: string; start_date: string}[]>([]);
   const [timeTick, setTimeTick] = useState(0);
   const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
@@ -1139,6 +1142,72 @@ export function StudentsManagement() {
     }
   };
 
+  const handleBulkBatchAssign = async () => {
+    if (selectedStudents.size === 0) {
+      toast({ title: 'Error', description: 'Please select at least one student', variant: 'destructive' });
+      return;
+    }
+    try {
+      const selectedIds = Array.from(selectedStudents);
+      // Get student_record_ids for selected users
+      const { data: studentRecords } = await supabase
+        .from('students')
+        .select('id, user_id')
+        .in('user_id', selectedIds);
+
+      if (!studentRecords || studentRecords.length === 0) {
+        toast({ title: 'Error', description: 'No student records found for selected users', variant: 'destructive' });
+        return;
+      }
+
+      const batchValue = bulkBatchId === 'none' ? null : bulkBatchId;
+      let updatedCount = 0;
+
+      for (const record of studentRecords) {
+        // Find existing enrollment
+        const { data: enrollment } = await supabase
+          .from('course_enrollments')
+          .select('id')
+          .eq('student_id', record.id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (enrollment) {
+          await supabase
+            .from('course_enrollments')
+            .update({ batch_id: batchValue, updated_at: new Date().toISOString() })
+            .eq('id', enrollment.id);
+          updatedCount++;
+        }
+      }
+
+      toast({
+        title: 'Success',
+        description: `Batch updated for ${updatedCount} student(s)`
+      });
+      setBulkBatchDialogOpen(false);
+      setBulkBatchId('none');
+      setSelectedStudents(new Set());
+      await fetchStudents();
+    } catch (error) {
+      console.error('Error bulk assigning batch:', error);
+      toast({ title: 'Error', description: 'Failed to assign batch', variant: 'destructive' });
+    }
+  };
+
+  const openBulkBatchDialog = async () => {
+    // Fetch active batches
+    const { data: batchesData } = await supabase
+      .from('batches')
+      .select('id, name, start_date')
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+    setBulkBatches(batchesData || []);
+    setBulkBatchId('none');
+    setBulkBatchDialogOpen(true);
+  };
+
   const handleEditStudent = async (student: Student) => {
     setEditingStudent(student);
     setEditFormData({
@@ -1447,6 +1516,11 @@ export function StudentsManagement() {
                 <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('activate')} className="text-green-600 border-green-300 hover:bg-green-50">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Activate LMS
+                </Button>
+                <span className="text-xs font-semibold text-blue-700 self-center ml-3 mr-1">Batch:</span>
+                <Button variant="outline" size="sm" onClick={openBulkBatchDialog} className="text-purple-600 border-purple-300 hover:bg-purple-50">
+                  <Users className="w-3 h-3 mr-1" />
+                  Assign Batch
                 </Button>
               </div>
             </div>
@@ -2132,5 +2206,36 @@ export function StudentsManagement() {
           onAccessUpdated={fetchStudents}
         />
       )}
+
+      {/* Bulk Batch Assignment Dialog */}
+      <Dialog open={bulkBatchDialogOpen} onOpenChange={setBulkBatchDialogOpen}>
+        <DialogContent className="bg-white">
+          <DialogHeader>
+            <DialogTitle>Assign Batch to {selectedStudents.size} Student(s)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>Select Batch</Label>
+              <Select value={bulkBatchId} onValueChange={setBulkBatchId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a batch" />
+                </SelectTrigger>
+                <SelectContent className="bg-white z-50">
+                  <SelectItem value="none">No Batch</SelectItem>
+                  {bulkBatches.map((batch) => (
+                    <SelectItem key={batch.id} value={batch.id}>
+                      {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setBulkBatchDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleBulkBatchAssign}>Assign Batch</Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>;
 }
