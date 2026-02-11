@@ -1492,19 +1492,29 @@ export function StudentsManagement() {
                   : 'Joining Date'}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-3 pointer-events-auto" align="start">
+          <PopoverContent className="w-auto p-0 pointer-events-auto" align="start" sideOffset={4}>
             <Calendar
               mode="range"
+              defaultMonth={joinDateRange.from}
               selected={joinDateRange.from ? { from: joinDateRange.from, to: joinDateRange.to } : undefined}
-              onSelect={(range) => setJoinDateRange({ from: range?.from, to: range?.to })}
+              onSelect={(range: any) => {
+                if (!range) {
+                  setJoinDateRange({});
+                } else {
+                  setJoinDateRange({ from: range.from, to: range.to });
+                }
+              }}
               disabled={(date) => date > new Date()}
               numberOfMonths={1}
-              className="p-2 pointer-events-auto"
+              initialFocus
+              className="p-3 pointer-events-auto"
             />
             {(joinDateRange.from || joinDateRange.to) && (
-              <Button variant="ghost" size="sm" className="w-full text-xs mt-2" onClick={() => setJoinDateRange({})}>
-                Clear dates
-              </Button>
+              <div className="p-3 pt-0">
+                <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setJoinDateRange({})}>
+                  Clear dates
+                </Button>
+              </div>
             )}
           </PopoverContent>
         </Popover>
