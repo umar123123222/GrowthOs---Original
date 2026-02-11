@@ -650,18 +650,11 @@ export function StudentsManagement() {
     }
 
     try {
-      console.log('Resetting password for:', { user_id: studentId, passwordLength: storedPassword.length });
+      console.log('Resetting auth password via admin-reset-password:', { user_id: studentId, passwordLength: storedPassword.length });
       
-      // Send all required fields to work with both old and new versions of the edge function
-      // Old version: needs full_name + email to not error, ignores reset_password
-      // New version: sees reset_password and returns early (password reset only)
-      const { data, error } = await supabase.functions.invoke('update-student-details', {
-        body: { 
-          user_id: studentId, 
-          full_name: studentName, 
-          email: studentEmail || '', 
-          reset_password: storedPassword 
-        }
+      // Use dedicated admin-reset-password function that updates Supabase Auth password
+      const { data, error } = await supabase.functions.invoke('admin-reset-password', {
+        body: { user_id: studentId, password: storedPassword }
       });
 
       console.log('Reset password response:', JSON.stringify(data));
