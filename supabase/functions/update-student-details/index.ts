@@ -19,10 +19,11 @@ function generateSecurePassword(): string {
 
 interface UpdateStudentRequest {
   user_id: string;
-  full_name: string;
-  email: string;
+  full_name?: string;
+  email?: string;
   phone?: string;
   resend_credentials?: boolean;
+  reset_password?: string;
   // Access control settings
   enrollment_id?: string;
   batch_id?: string | null;
@@ -80,12 +81,14 @@ serve(async (req) => {
       throw new Error('Insufficient permissions');
     }
 
+    const body: UpdateStudentRequest = await req.json();
     const { 
       user_id, 
       full_name, 
       email, 
       phone, 
       resend_credentials,
+      reset_password,
       enrollment_id,
       batch_id,
       drip_override,
@@ -95,9 +98,30 @@ serve(async (req) => {
       discount_type,
       discount_amount,
       discount_percentage
-    }: UpdateStudentRequest = await req.json();
+    } = body;
 
-    if (!user_id || !full_name || !email) {
+    if (!user_id) {
+      throw new Error('Missing required field: user_id');
+    }
+
+    // Handle simple password reset
+    if (reset_password) {
+      console.log('Resetting password for user:', user_id);
+      const { error: pwResetError } = await supabaseAdmin.auth.admin.updateUserById(
+        user_id,
+        { password: reset_password }
+      );
+      if (pwResetError) {
+        throw new Error(`Failed to reset password: ${pwResetError.message}`);
+      }
+      console.log('Password reset successfully for user:', user_id);
+      return new Response(
+        JSON.stringify({ success: true, message: 'Password reset successfully' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!full_name || !email) {
       throw new Error('Missing required fields');
     }
 
