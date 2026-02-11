@@ -100,6 +100,14 @@ serve(async (req) => {
         deletionSteps.push('✓ Deleted invoices')
       }
 
+      // Step 2b: Delete installment_payments (via user_id)
+      const { error: installmentsError } = await supabaseClient
+        .from('installment_payments')
+        .delete()
+        .eq('user_id', target_user_id)
+      if (installmentsError) throw new Error(`Failed to delete installment payments: ${installmentsError.message}`)
+      deletionSteps.push('✓ Deleted installment_payments')
+
       // Step 3: Delete submissions (references user_id directly via student_id)
       const { error: submissionsError } = await supabaseClient
         .from('submissions')
