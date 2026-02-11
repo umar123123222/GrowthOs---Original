@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'npm:@supabase/supabase-js@2.55.0';
 
-const FUNCTION_VERSION = '2.0.0';
+const FUNCTION_VERSION = '2.1.0'; // force redeploy
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
