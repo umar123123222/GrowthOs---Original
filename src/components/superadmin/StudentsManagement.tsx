@@ -641,45 +641,50 @@ export function StudentsManagement() {
 
   const handleResetPassword = async (studentId: string, studentName: string, storedPassword: string, studentEmail?: string) => {
     if (!storedPassword) {
-      toast({
-        title: 'Error',
-        description: 'No stored password found for this student',
-        variant: 'destructive'
-      });
+      toast({ title: 'Error', description: 'No stored password found for this student', variant: 'destructive' });
       return;
     }
 
     try {
-      console.log('Resetting password:', { user_id: studentId, passwordLength: storedPassword.length });
-      
-      // Try admin-reset-password first (new dedicated function), fall back to update-student-details
-      let data, error;
-      
-      try {
-        const result = await supabase.functions.invoke('admin-reset-password', {
+      console.log('Resetting auth password for:', studentId);
+
+      // Attempt 1: dedicated admin-reset-password function
+      let result = await supabase.functions.invoke('admin-reset-password', {
+        body: { user_id: studentId, password: storedPassword }
+      });
+
+      // Attempt 2: if first failed, try reset-student-password
+      if (result.error || result.data?.error) {
+        console.log('admin-reset-password failed, trying reset-student-password...');
+        result = await supabase.functions.invoke('reset-student-password', {
           body: { user_id: studentId, password: storedPassword }
         });
-        data = result.data;
-        error = result.error;
-      } catch (fnError) {
-        console.log('admin-reset-password not available, falling back to update-student-details');
-        const result = await supabase.functions.invoke('update-student-details', {
-          body: { user_id: studentId, full_name: studentName, email: studentEmail || '', reset_password: storedPassword }
-        });
-        data = result.data;
-        error = result.error;
       }
 
-      console.log('Reset password response:', JSON.stringify(data));
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      // Attempt 3: if still failed, try update-student-details
+      if (result.error || result.data?.error) {
+        console.log('reset-student-password failed, trying update-student-details...');
+        result = await supabase.functions.invoke('update-student-details', {
+          body: {
+            user_id: studentId,
+            full_name: studentName,
+            email: studentEmail || '',
+            reset_password: storedPassword
+          }
+        });
+      }
+
+      console.log('Final reset response:', JSON.stringify(result.data));
+
+      if (result.error) throw result.error;
+      if (result.data?.error) throw new Error(result.data.error);
 
       toast({
         title: 'Password Reset',
-        description: `${studentName}'s password has been reset to the original stored password`,
+        description: `${studentName}'s authentication password has been reset successfully`,
       });
     } catch (error) {
-      console.error('Error resetting password:', error);
+      console.error('All password reset attempts failed:', error);
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'Failed to reset password',
