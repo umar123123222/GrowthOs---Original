@@ -32,6 +32,29 @@ const Login = () => {
   } = useAuth();
   const navigate = useNavigate();
 
+  // Redirect to reset-password page if this is a password recovery flow
+  useEffect(() => {
+    // Check hash params for recovery token (legacy format)
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get('type');
+    const accessToken = hashParams.get('access_token');
+    
+    if (type === 'recovery' && accessToken) {
+      // Preserve the hash and redirect to reset-password
+      navigate('/reset-password' + window.location.hash, { replace: true });
+      return;
+    }
+
+    // Also listen for PASSWORD_RECOVERY auth event
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        navigate('/reset-password', { replace: true });
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   // Check for suspension error on mount (persisted from previous login attempt)
   useEffect(() => {
     const suspensionError = sessionStorage.getItem('suspension_error');
