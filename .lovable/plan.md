@@ -1,94 +1,62 @@
 
 
-# Fix: Password Reset from Student Management Portal
+# Fix: Forgot Password Link Not Working
 
 ## Problem
 
-The current password reset code tries to call `admin-reset-password` first, with a `try/catch` fallback to `update-student-details`. However, `supabase.functions.invoke()` does **not throw exceptions** on failure -- it returns errors in the `{ data, error }` response object. This means the fallback in the `catch` block never executes, and the first call silently fails.
+The reset password email is being sent successfully (as shown in the screenshot), but when the user clicks the "Reset Password" link in the email, the flow breaks. This is caused by two issues:
 
-Additionally, the `admin-reset-password` function may not be deployed yet, causing a "Failed to send request" error.
+1. **Supabase Redirect URL not whitelisted**: Supabase requires the app's URL to be listed in its "Redirect URLs" configuration. Without this, the password reset link silently fails to redirect back to the app.
+
+2. **Inconsistent redirect URL**: The code uses `window.location.origin` which changes depending on whether the user is on the preview URL vs the published URL, potentially causing mismatches.
 
 ## Solution
 
-Rewrite `handleResetPassword` in `StudentsManagement.tsx` to use proper error-checking (not try/catch) for the fallback logic:
+### Step 1: Supabase Dashboard Configuration (Manual - Required)
 
-1. Call `admin-reset-password` first
-2. Check if the response has an error (using `if` checks, not `catch`)
-3. If it fails, fall back to `update-student-details` with the full payload
-4. Also fall back to `reset-student-password` as a third option
+You need to add your published URL to the Supabase project's allowed redirect URLs:
 
-This ensures at least one of the three deployed functions handles the password reset.
+1. Go to **Supabase Dashboard** > your project (`majqoqagohicjigmsilu`)
+2. Navigate to **Authentication** > **URL Configuration**
+3. Set **Site URL** to: `https://growthos-final.lovable.app`
+4. Under **Redirect URLs**, add:
+   - `https://growthos-final.lovable.app/reset-password`
+   - `https://growthos-final.lovable.app/**`
+   - Any other domains where the app is hosted
 
-## Technical Details
+Without this step, Supabase will refuse to redirect users back to your app after they click the email link.
 
-**File: `src/components/superadmin/StudentsManagement.tsx`**
+### Step 2: Code Fix - Use Published URL for Redirect
 
-Replace the `handleResetPassword` function (lines 642-689) with:
+Update the `redirectTo` in `ResetPassword.tsx` to prefer the published/configured site URL over `window.location.origin`, and add a `VITE_SITE_URL` environment variable pointing to the published domain.
 
-```typescript
-const handleResetPassword = async (studentId: string, studentName: string, storedPassword: string, studentEmail?: string) => {
-  if (!storedPassword) {
-    toast({ title: 'Error', description: 'No stored password found for this student', variant: 'destructive' });
-    return;
-  }
+**File: `.env`**
+- Add `VITE_SITE_URL=https://growthos-final.lovable.app`
 
-  try {
-    console.log('Resetting auth password for:', studentId);
+**File: `src/pages/ResetPassword.tsx`**
+- Import `ENV_CONFIG` from env-config
+- Change `redirectTo` from `window.location.origin` to use `ENV_CONFIG.SITE_URL` with a fallback to `window.location.origin`
+- Add console logging when code exchange fails so issues are visible in the browser console
 
-    // Attempt 1: dedicated admin-reset-password function
-    let result = await supabase.functions.invoke('admin-reset-password', {
-      body: { user_id: studentId, password: storedPassword }
-    });
+### Technical Details
 
-    // Attempt 2: if first failed, try reset-student-password
-    if (result.error || result.data?.error) {
-      console.log('admin-reset-password failed, trying reset-student-password...');
-      result = await supabase.functions.invoke('reset-student-password', {
-        body: { user_id: studentId, password: storedPassword }
-      });
-    }
+```text
+Current code (line 127):
+  redirectTo: `${window.location.origin}/reset-password`
 
-    // Attempt 3: if still failed, try update-student-details
-    if (result.error || result.data?.error) {
-      console.log('reset-student-password failed, trying update-student-details...');
-      result = await supabase.functions.invoke('update-student-details', {
-        body: {
-          user_id: studentId,
-          full_name: studentName,
-          email: studentEmail || '',
-          reset_password: storedPassword
-        }
-      });
-    }
-
-    console.log('Final reset response:', JSON.stringify(result.data));
-
-    if (result.error) throw result.error;
-    if (result.data?.error) throw new Error(result.data.error);
-
-    toast({
-      title: 'Password Reset',
-      description: `${studentName}'s authentication password has been reset successfully`,
-    });
-  } catch (error) {
-    console.error('All password reset attempts failed:', error);
-    toast({
-      title: 'Error',
-      description: error instanceof Error ? error.message : 'Failed to reset password',
-      variant: 'destructive'
-    });
-  }
-};
+Updated code:
+  const siteUrl = ENV_CONFIG.SITE_URL || window.location.origin;
+  redirectTo: `${siteUrl}/reset-password`
 ```
 
-## Why This Will Work
-
-- Uses proper conditional checks (`result.error || result.data?.error`) instead of relying on exceptions
-- Tries three different Edge Functions in sequence, so whichever one is actually deployed will handle the request
-- All three functions contain the same core logic: `supabaseAdmin.auth.admin.updateUserById(user_id, { password })` which updates the **authentication** password (not just the database field)
-- The fallback chain is transparent -- console logs show which function succeeded
+This ensures the redirect URL always matches what's configured in Supabase, regardless of whether the user initiated the reset from the preview or published domain.
 
 ## Files to Change
 
-1. **`src/components/superadmin/StudentsManagement.tsx`** -- rewrite `handleResetPassword` with proper fallback chain using conditional checks instead of try/catch
+1. **`.env`** -- Add `VITE_SITE_URL=https://growthos-final.lovable.app`
+2. **`src/pages/ResetPassword.tsx`** -- Import `ENV_CONFIG`, use `ENV_CONFIG.SITE_URL` for `redirectTo`, add debug logging
+
+## Important Note
+
+The **Supabase Dashboard configuration (Step 1) is critical** and must be done manually by you. The code changes alone will not fix the issue if the URL is not whitelisted in Supabase.
 
