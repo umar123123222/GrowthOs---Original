@@ -82,12 +82,19 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         lessonsData = data || [];
       }
 
-      // Fetch unlock status using course-scoped function
-      const { data: unlockData, error: unlockError } = await supabase
-        .rpc('get_course_sequential_unlock_status', {
+      // Fetch unlock status, student LMS status, views, and submissions in parallel
+      const [unlockResult, studentResult, viewsResult, submissionsResult] = await Promise.all([
+        supabase.rpc('get_course_sequential_unlock_status', {
           p_user_id: user.id,
           p_course_id: courseId
-        });
+        }),
+        supabase.from('users').select('lms_status').eq('id', user.id).maybeSingle(),
+        supabase.from('recording_views').select('recording_id, watched').eq('user_id', user.id),
+        supabase.from('submissions').select('assignment_id, status').eq('student_id', user.id),
+      ]);
+
+      const unlockData = unlockResult.data;
+      const studentLMSStatus = studentResult.data?.lms_status || 'active';
 
       const unlockStatusMap = new Map<string, { isUnlocked: boolean; lockReason?: string; dripUnlockDate?: string }>();
       (unlockData || []).forEach((u: any) => {
@@ -98,23 +105,17 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         });
       });
 
-      // Fetch views
-      const { data: viewsData } = await supabase
-        .from('recording_views')
-        .select('recording_id, watched')
-        .eq('user_id', user.id);
-
-      const watchedMap = new Map((viewsData || []).map(v => [v.recording_id, v.watched]));
-
-      // Fetch submissions
-      const { data: submissionsData } = await supabase
-        .from('submissions')
-        .select('assignment_id, status')
-        .eq('student_id', user.id);
+      const watchedMap = new Map((viewsResult.data || []).map(v => [v.recording_id, v.watched]));
 
       const submittedAssignments = new Set(
-        (submissionsData || [])
+        (submissionsResult.data || [])
           .filter(s => s.status !== 'declined')
+          .map(s => s.assignment_id)
+      );
+
+      const approvedAssignments = new Set(
+        (submissionsResult.data || [])
+          .filter(s => s.status === 'approved')
           .map(s => s.assignment_id)
       );
 
@@ -140,6 +141,36 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           dripUnlockDate: unlockStatus?.dripUnlockDate || null
         };
       });
+
+      // Frontend override: if LMS is active but RPC returns fees_not_cleared, apply sequential logic
+      if (studentLMSStatus === 'active') {
+        const sortedBySequence = [...processedRecordings].sort((a, b) => {
+          if (a.module_order !== b.module_order) return a.module_order - b.module_order;
+          return a.sequence_order - b.sequence_order;
+        });
+        
+        const hasFeesNotCleared = sortedBySequence.some(r => r.lockReason === 'fees_not_cleared');
+        if (hasFeesNotCleared) {
+          let canUnlockNext = true;
+          for (const rec of sortedBySequence) {
+            if (rec.lockReason !== 'fees_not_cleared' && rec.lockReason !== 'fees_cleared') continue;
+            const original = processedRecordings.find(r => r.id === rec.id)!;
+            if (canUnlockNext) {
+              original.isUnlocked = true;
+              original.lockReason = null;
+              // Determine if this blocks the next one
+              if (!original.isWatched) {
+                canUnlockNext = false;
+              } else if (original.hasAssignment && !approvedAssignments.has(original.assignmentId)) {
+                canUnlockNext = false;
+              }
+            } else {
+              // Keep locked but fix the reason
+              original.lockReason = 'previous_lesson_not_watched';
+            }
+          }
+        }
+      }
 
       setRecordings(processedRecordings);
 

@@ -65,18 +65,22 @@ export function usePathwayGroupedRecordings(
 
       const courseIds = pathwayCourses.map(pc => pc.course_id);
 
-      // Fetch courses, modules, views, submissions in parallel
+      // Fetch courses, modules, views, submissions, and student LMS status in parallel
       const [
         { data: coursesData },
         { data: modulesData },
         { data: viewsData },
         { data: submissionsData },
+        { data: studentData },
       ] = await Promise.all([
         supabase.from('courses').select('id, title').in('id', courseIds),
         supabase.from('modules').select('id, title, order, course_id').in('course_id', courseIds).order('order', { ascending: true }),
         supabase.from('recording_views').select('recording_id, watched').eq('user_id', user.id),
         supabase.from('submissions').select('assignment_id, status').eq('student_id', user.id),
+        supabase.from('users').select('lms_status').eq('id', user.id).maybeSingle(),
       ]);
+
+      const studentLMSStatus = studentData?.lms_status || 'active';
 
       // Fetch lessons for all modules
       const moduleIds = modulesData?.map(m => m.id) || [];
@@ -116,6 +120,9 @@ export function usePathwayGroupedRecordings(
       const watchedMap = new Map((viewsData || []).map(v => [v.recording_id, v.watched]));
       const submittedAssignments = new Set(
         (submissionsData || []).filter(s => s.status !== 'declined').map(s => s.assignment_id)
+      );
+      const approvedAssignments = new Set(
+        (submissionsData || []).filter(s => s.status === 'approved').map(s => s.assignment_id)
       );
 
       const today = new Date();
@@ -194,6 +201,44 @@ export function usePathwayGroupedRecordings(
           watchedLessons: courseWatchedLessons,
         };
       });
+
+      // Frontend override: if LMS is active but RPC returns fees_not_cleared, apply sequential logic
+      if (studentLMSStatus === 'active') {
+        for (const group of groups) {
+          // Collect all recordings in this course, sorted by module order then sequence
+          const allCourseRecordings: CourseRecording[] = [];
+          for (const mod of group.modules.sort((a, b) => a.order - b.order)) {
+            for (const rec of mod.recordings.sort((a, b) => a.sequence_order - b.sequence_order)) {
+              allCourseRecordings.push(rec);
+            }
+          }
+
+          const hasFeesNotCleared = allCourseRecordings.some(r => r.lockReason === 'fees_not_cleared');
+          if (hasFeesNotCleared) {
+            let canUnlockNext = true;
+            for (const rec of allCourseRecordings) {
+              if (rec.lockReason !== 'fees_not_cleared' && rec.lockReason !== 'fees_cleared') continue;
+              if (canUnlockNext) {
+                rec.isUnlocked = true;
+                rec.lockReason = null;
+                if (!rec.isWatched) {
+                  canUnlockNext = false;
+                } else if (rec.hasAssignment && !approvedAssignments.has(rec.assignmentId)) {
+                  canUnlockNext = false;
+                }
+              } else {
+                rec.lockReason = 'previous_lesson_not_watched';
+              }
+            }
+
+            // Recalculate module lock status
+            for (const mod of group.modules) {
+              mod.isLocked = mod.recordings.length > 0 && mod.recordings.every(r => !r.isUnlocked);
+              mod.watchedLessons = mod.recordings.filter(r => r.isWatched).length;
+            }
+          }
+        }
+      }
 
       setCourseGroups(groups);
       setTotalRecordings(allRecordingsCount);
