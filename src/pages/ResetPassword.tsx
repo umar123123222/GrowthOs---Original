@@ -57,11 +57,31 @@ const ResetPassword = () => {
         const code = urlParams.get('code');
         
         if (code) {
-          // Exchange the code for a session
+          // The Supabase client with detectSessionInUrl:true may already be exchanging
+          // the code automatically. First check if a session already exists.
+          const { data: sessionData } = await supabase.auth.getSession();
+          
+          if (sessionData.session) {
+            // Session was already established by auto-detection
+            setIsResetMode(true);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            setIsCheckingToken(false);
+            return;
+          }
+          
+          // Try manual exchange as fallback
           const { data, error } = await supabase.auth.exchangeCodeForSession(code);
           
           if (error) {
             console.error('Code exchange error:', error);
+            // One more check - session might have been set by onAuthStateChange
+            const { data: retrySession } = await supabase.auth.getSession();
+            if (retrySession.session) {
+              setIsResetMode(true);
+              window.history.replaceState({}, document.title, window.location.pathname);
+              setIsCheckingToken(false);
+              return;
+            }
             setLinkError("This password reset link has expired or is invalid. Please request a new one.");
             setIsCheckingToken(false);
             return;
@@ -69,7 +89,6 @@ const ResetPassword = () => {
           
           if (data.session) {
             setIsResetMode(true);
-            // Clean up URL by removing the code parameter
             window.history.replaceState({}, document.title, window.location.pathname);
           }
           setIsCheckingToken(false);
