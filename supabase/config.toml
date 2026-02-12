@@ -103,3 +103,6 @@ verify_jwt = false
 
 [functions.admin-reset-password]
 verify_jwt = false
+
+[functions.notify-content-unlocked]
+verify_jwt = false
