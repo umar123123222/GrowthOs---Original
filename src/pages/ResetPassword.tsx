@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { ENV_CONFIG } from "@/lib/env-config";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2, ArrowLeft, Mail, Lock, CheckCircle2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
@@ -124,7 +125,7 @@ const ResetPassword = () => {
       const {
         error
       } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`
+        redirectTo: `${ENV_CONFIG.SITE_URL || window.location.origin}/reset-password`
       });
       if (error) {
         console.error('Reset password error:', error);
