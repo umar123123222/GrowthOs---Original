@@ -1,46 +1,94 @@
 
 
-# Fix: Password Reset - Dual Approach
+# Fix: Password Reset from Student Management Portal
 
-## Root Cause
+## Problem
 
-The `update-student-details` Edge Function has `verify_jwt = true` in `config.toml`. With Supabase's signing-keys system, this prevents the latest code (which includes the `reset_password` handler) from being served. The deployed version lacks the password reset logic and falls through to the `if (!full_name || !email)` check, which fails because the frontend sends an empty string for email.
+The current password reset code tries to call `admin-reset-password` first, with a `try/catch` fallback to `update-student-details`. However, `supabase.functions.invoke()` does **not throw exceptions** on failure -- it returns errors in the `{ data, error }` response object. This means the fallback in the `catch` block never executes, and the first call silently fails.
 
-## Solution: Two Changes
+Additionally, the `admin-reset-password` function may not be deployed yet, causing a "Failed to send request" error.
 
-### 1. Set `verify_jwt = false` for `update-student-details` in `config.toml`
+## Solution
 
-This is needed regardless of the password reset issue -- it aligns with the signing-keys system and may trigger a proper redeployment of the function.
+Rewrite `handleResetPassword` in `StudentsManagement.tsx` to use proper error-checking (not try/catch) for the fallback logic:
 
-```toml
-[functions.update-student-details]
-verify_jwt = false
-```
+1. Call `admin-reset-password` first
+2. Check if the response has an error (using `if` checks, not `catch`)
+3. If it fails, fall back to `update-student-details` with the full payload
+4. Also fall back to `reset-student-password` as a third option
 
-The function already has its own internal authorization (checks caller is superadmin/admin), so security is maintained.
+This ensures at least one of the three deployed functions handles the password reset.
 
-### 2. Switch frontend to use the dedicated `reset-student-password` function
+## Technical Details
 
-Since `reset-student-password` already has `verify_jwt = false` and contains clean, focused password-reset code, the frontend should call it directly instead of piggybacking on the general `update-student-details` function.
+**File: `src/components/superadmin/StudentsManagement.tsx`**
 
-In `src/components/superadmin/StudentsManagement.tsx`, update `handleResetPassword` to call:
+Replace the `handleResetPassword` function (lines 642-689) with:
 
 ```typescript
-const { data, error } = await supabase.functions.invoke('reset-student-password', {
-  body: { user_id: studentId, password: storedPassword }
-});
-```
+const handleResetPassword = async (studentId: string, studentName: string, storedPassword: string, studentEmail?: string) => {
+  if (!storedPassword) {
+    toast({ title: 'Error', description: 'No stored password found for this student', variant: 'destructive' });
+    return;
+  }
 
-This is a simpler, more reliable call -- it only needs `user_id` and `password`, avoiding any issues with missing `full_name` or `email` fields.
+  try {
+    console.log('Resetting auth password for:', studentId);
+
+    // Attempt 1: dedicated admin-reset-password function
+    let result = await supabase.functions.invoke('admin-reset-password', {
+      body: { user_id: studentId, password: storedPassword }
+    });
+
+    // Attempt 2: if first failed, try reset-student-password
+    if (result.error || result.data?.error) {
+      console.log('admin-reset-password failed, trying reset-student-password...');
+      result = await supabase.functions.invoke('reset-student-password', {
+        body: { user_id: studentId, password: storedPassword }
+      });
+    }
+
+    // Attempt 3: if still failed, try update-student-details
+    if (result.error || result.data?.error) {
+      console.log('reset-student-password failed, trying update-student-details...');
+      result = await supabase.functions.invoke('update-student-details', {
+        body: {
+          user_id: studentId,
+          full_name: studentName,
+          email: studentEmail || '',
+          reset_password: storedPassword
+        }
+      });
+    }
+
+    console.log('Final reset response:', JSON.stringify(result.data));
+
+    if (result.error) throw result.error;
+    if (result.data?.error) throw new Error(result.data.error);
+
+    toast({
+      title: 'Password Reset',
+      description: `${studentName}'s authentication password has been reset successfully`,
+    });
+  } catch (error) {
+    console.error('All password reset attempts failed:', error);
+    toast({
+      title: 'Error',
+      description: error instanceof Error ? error.message : 'Failed to reset password',
+      variant: 'destructive'
+    });
+  }
+};
+```
 
 ## Why This Will Work
 
-- The `reset-student-password` function has had `verify_jwt = false` since the earlier fix, so the infrastructure will not block requests
-- The function code is simple and focused -- it validates auth internally, then calls `supabaseAdmin.auth.admin.updateUserById()` to set the password
-- Changing `update-student-details` to `verify_jwt = false` fixes it for all future operations too
+- Uses proper conditional checks (`result.error || result.data?.error`) instead of relying on exceptions
+- Tries three different Edge Functions in sequence, so whichever one is actually deployed will handle the request
+- All three functions contain the same core logic: `supabaseAdmin.auth.admin.updateUserById(user_id, { password })` which updates the **authentication** password (not just the database field)
+- The fallback chain is transparent -- console logs show which function succeeded
 
 ## Files to Change
 
-1. **`supabase/config.toml`** -- set `verify_jwt = false` for `update-student-details`
-2. **`src/components/superadmin/StudentsManagement.tsx`** -- switch `handleResetPassword` to invoke `reset-student-password` with just `user_id` and `password`
+1. **`src/components/superadmin/StudentsManagement.tsx`** -- rewrite `handleResetPassword` with proper fallback chain using conditional checks instead of try/catch
 
