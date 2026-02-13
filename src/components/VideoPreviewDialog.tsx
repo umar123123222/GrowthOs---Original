@@ -46,7 +46,7 @@ const convertToEmbedUrl = (url: string): string => {
   // Handle BunnyStream URLs
   if (url.includes('iframe.mediadelivery.net/embed/')) {
     const hasParams = url.includes('?');
-    const bunnyParams = 'autoplay=false&loop=false&muted=false&preload=true&responsive=true';
+    const bunnyParams = 'autoplay=true&loop=false&muted=false&preload=true&responsive=true';
     return hasParams ? `${url}&${bunnyParams}` : `${url}?${bunnyParams}`;
   }
   
