@@ -207,6 +207,8 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
+        .not('link', 'is', null)
+        .neq('link', '')
         .order('start_time', { ascending: true });
 
       safeLogger.info('Sessions fetched:', { count: data?.length });

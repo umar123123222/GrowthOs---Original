@@ -458,6 +458,8 @@ export function StudentDashboard() {
           .select('id, title, start_time, mentor_name, link, description')
           .gt('start_time', now)
           .eq('status', 'upcoming')
+          .not('link', 'is', null)
+          .neq('link', '')
           .order('start_time', { ascending: true })
           .limit(1);
 
