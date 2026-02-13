@@ -1095,9 +1095,13 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
   const computedSessions: ComputedWeekSession[] = [];
 
   for (const session of sessions) {
-    if (session.status === 'completed' || session.status === 'cancelled') continue;
+    if (session.status === 'cancelled') continue;
 
     const dripDays = (session as any).drip_days as number | null;
+
+    // For drip-based sessions, compute date per batch regardless of status
+    // (a session can be "completed" for one batch but upcoming for another)
+    const skipNonDrip = session.status === 'completed' && dripDays == null;
 
     if (dripDays != null) {
       let relevantBatches: Batch[];
@@ -1127,7 +1131,7 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
           });
         }
       }
-    } else if (session.schedule_date) {
+    } else if (!skipNonDrip && session.schedule_date) {
       try {
         const sessionDate = new Date(session.schedule_date);
         if (sessionDate >= now && sessionDate <= sevenDaysLater) {
@@ -1159,7 +1163,7 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
     return !session.zoom_meeting_id || !session.zoom_passcode || session.link === 'TBD' || !session.link;
   };
 
-  if (computedSessions.length === 0) return null;
+  // Always show the section, even if empty
 
   return (
     <Card className="shadow-lg border-0 bg-gradient-to-br from-amber-50 to-orange-50 animate-fade-in">
@@ -1185,7 +1189,11 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
       </CardHeader>
       <CardContent className="pt-0">
         {filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No upcoming sessions for this batch in the next 7 days.</p>
+          <div className="text-center py-8">
+            <CalendarDays className="w-10 h-10 mx-auto mb-2 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No live classes scheduled in the next 7 days</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">Sessions will appear here based on course timelines and batch start dates</p>
+          </div>
         ) : (
           <div className="space-y-2">
             {filtered.map((cs, idx) => {
