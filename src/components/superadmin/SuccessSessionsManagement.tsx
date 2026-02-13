@@ -36,6 +36,7 @@ interface SuccessSession {
   host_login_pwd?: string;
   course_id?: string;
   batch_id?: string | null;
+  pathway_id?: string | null;
   drip_days?: number | null;
   created_at: string;
   created_by: string;
@@ -371,7 +372,8 @@ export function SuccessSessionsManagement() {
         host_login_pwd: formData.host_login_pwd,
         status: formData.status,
         course_id: formData.course_id === '__all__' ? null : (formData.course_id || null),
-        batch_id: formData.batch_id === '' || formData.batch_id === 'unbatched' ? null : formData.batch_id
+        batch_id: formData.batch_id === '' || formData.batch_id === 'unbatched' ? null : formData.batch_id,
+        pathway_id: null as string | null
       };
 
       if (editingSession) {
@@ -387,64 +389,96 @@ export function SuccessSessionsManagement() {
           description: "Session updated successfully",
         });
       } else {
-        const result = await safeQuery<SuccessSessionResult>(
-          supabase
-            .from('success_sessions')
-            .insert([sessionData])
-            .select()
-            .single(),
-          'create new success session'
-        );
+        // Auto-clone: if the course belongs to multiple pathways, create one session per pathway
+        const courseId = sessionData.course_id;
+        const relevantPathwayIds = courseId
+          ? pathwayCourses.filter(pc => pc.course_id === courseId).map(pc => pc.pathway_id)
+          : [];
 
-        if (!result.success) throw result.error;
-        const newSession = result.data;
+        if (relevantPathwayIds.length > 1) {
+          // Create separate session per pathway
+          const sessionsToInsert = relevantPathwayIds.map(pid => ({
+            ...sessionData,
+            pathway_id: pid
+          }));
 
+          const result = await safeQuery<SuccessSessionResult[]>(
+            supabase
+              .from('success_sessions')
+              .insert(sessionsToInsert as any)
+              .select(),
+            'create cloned success sessions'
+          );
 
-        // Notify the assigned mentor about the new session
-        if (formData.mentor_id && newSession) {
-          try {
-            await notifyMentorOfSuccessSessionScheduled(
-              formData.mentor_id,
-              formData.title,
-              sessionData.start_time || formData.schedule_date,
-              newSession.id
-            );
-          } catch (notificationError) {
-            console.error('Failed to notify mentor:', notificationError);
-            // Don't fail the session creation if notification fails
-          }
-        }
+          if (!result.success) throw result.error;
 
-        // Notify batch students via email + in-app notifications
-        if (sessionData.batch_id && newSession) {
-          try {
-            await supabase.functions.invoke('send-batch-content-notification', {
-              body: {
-                batch_id: sessionData.batch_id,
-                item_type: 'LIVE_SESSION',
-                item_id: newSession.id,
-                title: sessionData.title,
-                description: sessionData.description,
-                meeting_link: sessionData.link,
-                start_datetime: sessionData.start_time
-              }
-            });
-            toast({
-              title: "Success",
-              description: "Session created and students notified successfully",
-            });
-          } catch (notifyError) {
-            console.error('Failed to notify batch students:', notifyError);
-            toast({
-              title: "Success",
-              description: "Session created, but student notifications may have failed",
-            });
-          }
-        } else {
           toast({
             title: "Success",
-            description: "Session created successfully",
+            description: `Created ${relevantPathwayIds.length} sessions (one per pathway)`,
           });
+        } else {
+          // Single pathway or no pathway
+          if (relevantPathwayIds.length === 1) {
+            sessionData.pathway_id = relevantPathwayIds[0];
+          }
+
+          const result = await safeQuery<SuccessSessionResult>(
+            supabase
+              .from('success_sessions')
+              .insert([sessionData as any])
+              .select()
+              .single(),
+            'create new success session'
+          );
+
+          if (!result.success) throw result.error;
+          const newSession = result.data;
+
+          // Notify the assigned mentor about the new session
+          if (formData.mentor_id && newSession) {
+            try {
+              await notifyMentorOfSuccessSessionScheduled(
+                formData.mentor_id,
+                formData.title,
+                sessionData.start_time || formData.schedule_date,
+                newSession.id
+              );
+            } catch (notificationError) {
+              console.error('Failed to notify mentor:', notificationError);
+            }
+          }
+
+          // Notify batch students via email + in-app notifications
+          if (sessionData.batch_id && newSession) {
+            try {
+              await supabase.functions.invoke('send-batch-content-notification', {
+                body: {
+                  batch_id: sessionData.batch_id,
+                  item_type: 'LIVE_SESSION',
+                  item_id: newSession.id,
+                  title: sessionData.title,
+                  description: sessionData.description,
+                  meeting_link: sessionData.link,
+                  start_datetime: sessionData.start_time
+                }
+              });
+              toast({
+                title: "Success",
+                description: "Session created and students notified successfully",
+              });
+            } catch (notifyError) {
+              console.error('Failed to notify batch students:', notifyError);
+              toast({
+                title: "Success",
+                description: "Session created, but student notifications may have failed",
+              });
+            }
+          } else {
+            toast({
+              title: "Success",
+              description: "Session created successfully",
+            });
+          }
         }
       }
 
@@ -523,6 +557,60 @@ export function SuccessSessionsManagement() {
         description: "Failed to delete session",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleToggleShared = async (session: SuccessSession) => {
+    try {
+      if (session.pathway_id) {
+        // Currently scoped to a pathway — make it shared (null pathway_id)
+        const { error } = await supabase
+          .from('success_sessions')
+          .update({ pathway_id: null } as any)
+          .eq('id', session.id);
+        if (error) throw error;
+        toast({ title: "Shared", description: "Session is now shared across all pathways" });
+      } else {
+        // Currently shared — scope it to pathways (clone per pathway)
+        const courseId = session.course_id;
+        if (!courseId) {
+          toast({ title: "Cannot scope", description: "Session has no course assigned", variant: "destructive" });
+          return;
+        }
+        const relevantPathwayIds = pathwayCourses
+          .filter(pc => pc.course_id === courseId)
+          .map(pc => pc.pathway_id);
+
+        if (relevantPathwayIds.length === 0) {
+          toast({ title: "No pathways", description: "This course is not part of any pathway", variant: "destructive" });
+          return;
+        }
+
+        // Update original to first pathway
+        const { error: updateError } = await supabase
+          .from('success_sessions')
+          .update({ pathway_id: relevantPathwayIds[0] } as any)
+          .eq('id', session.id);
+        if (updateError) throw updateError;
+
+        // Clone for remaining pathways
+        if (relevantPathwayIds.length > 1) {
+          const { id, created_at, created_by, ...sessionBase } = session;
+          const clones = relevantPathwayIds.slice(1).map(pid => ({
+            ...sessionBase,
+            pathway_id: pid
+          }));
+          const { error: insertError } = await supabase
+            .from('success_sessions')
+            .insert(clones as any);
+          if (insertError) throw insertError;
+        }
+
+        toast({ title: "Separated", description: `Session split into ${relevantPathwayIds.length} pathway-specific sessions` });
+      }
+      fetchSessions();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to update session sharing", variant: "destructive" });
     }
   };
 
@@ -949,10 +1037,16 @@ export function SuccessSessionsManagement() {
                       <TableCell className="min-w-[160px]">
                         <div className="flex flex-col gap-1">
                           {(() => {
-                            const pathwayName = getPathwayForCourse(session.course_id);
+                            const pathwayName = session.pathway_id 
+                              ? pathways.find(p => p.id === session.pathway_id)?.name
+                              : getPathwayForCourse(session.course_id);
                             return pathwayName ? (
                               <Badge variant="secondary" className="text-[10px] w-fit">
                                 🎯 {pathwayName}
+                              </Badge>
+                            ) : !session.pathway_id && session.course_id && pathwayCourses.filter(pc => pc.course_id === session.course_id).length > 0 ? (
+                              <Badge variant="outline" className="text-[10px] w-fit border-primary/30 text-primary">
+                                🔗 Shared
                               </Badge>
                             ) : null;
                           })()}
@@ -1038,6 +1132,17 @@ export function SuccessSessionsManagement() {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                          {session.course_id && pathwayCourses.some(pc => pc.course_id === session.course_id) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleShared(session)}
+                              className={`hover-scale ${session.pathway_id ? 'hover:bg-blue-50 hover:border-blue-300' : 'hover:bg-purple-50 hover:border-purple-300'}`}
+                              title={session.pathway_id ? 'Make shared across pathways' : 'Separate per pathway'}
+                            >
+                              {session.pathway_id ? <LinkIcon className="w-4 h-4" /> : <Users2 className="w-4 h-4" />}
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -1086,9 +1191,14 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
   const sevenDaysLater = new Date(now);
   sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
 
-  const getPathway = (courseId?: string) => {
-    if (!courseId) return null;
-    const pc = pathwayCourses.find(p => p.course_id === courseId);
+  const getPathway = (session: SuccessSession) => {
+    // Use pathway_id directly if available
+    if (session.pathway_id) {
+      return pathways.find(p => p.id === session.pathway_id)?.name || null;
+    }
+    // Fallback: look up via course
+    if (!session.course_id) return null;
+    const pc = pathwayCourses.find(p => p.course_id === session.course_id);
     if (!pc) return null;
     return pathways.find(p => p.id === pc.pathway_id)?.name || null;
   };
@@ -1159,6 +1269,11 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
   for (const cs of computedSessions) {
     if (cs.session.course_id) {
       coursesInSessions.add(cs.session.course_id);
+    }
+    if (cs.session.pathway_id) {
+      pathwaysInSessions.add(cs.session.pathway_id);
+    } else if (cs.session.course_id) {
+      // Fallback for sessions without pathway_id
       const pcs = pathwayCourses.filter(pc => pc.course_id === cs.session.course_id);
       pcs.forEach(pc => pathwaysInSessions.add(pc.pathway_id));
     }
@@ -1184,16 +1299,28 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
 
   // Apply pathway/course multi-select filter
   if (selectedFilters.length > 0) {
+    const selectedPathwayIds = new Set<string>();
     const selectedCourseIds = new Set<string>();
     for (const f of selectedFilters) {
       if (f.startsWith('pathway:')) {
-        const pathwayId = f.replace('pathway:', '');
-        pathwayCourses.filter(pc => pc.pathway_id === pathwayId).forEach(pc => selectedCourseIds.add(pc.course_id));
+        selectedPathwayIds.add(f.replace('pathway:', ''));
       } else if (f.startsWith('course:')) {
         selectedCourseIds.add(f.replace('course:', ''));
       }
     }
-    filtered = filtered.filter(cs => cs.session.course_id && selectedCourseIds.has(cs.session.course_id));
+    filtered = filtered.filter(cs => {
+      // Match by pathway_id directly
+      if (cs.session.pathway_id && selectedPathwayIds.has(cs.session.pathway_id)) return true;
+      // Match by course_id
+      if (cs.session.course_id && selectedCourseIds.has(cs.session.course_id)) return true;
+      // Fallback: match course via pathway_courses junction
+      if (cs.session.course_id && selectedPathwayIds.size > 0) {
+        return pathwayCourses.some(pc => 
+          pc.course_id === cs.session.course_id && selectedPathwayIds.has(pc.pathway_id)
+        );
+      }
+      return false;
+    });
   }
 
   filtered.sort((a, b) => a.computedDate.getTime() - b.computedDate.getTime());
@@ -1277,7 +1404,7 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
               const { session, computedDate, batchName } = cs;
               const missing = needsAttention(session);
               const courseName = courses.find(c => c.id === session.course_id)?.title;
-              const pathwayName = getPathway(session.course_id);
+              const pathwayName = getPathway(session);
 
               return (
                 <div
