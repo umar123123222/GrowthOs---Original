@@ -12,7 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { safeQuery } from '@/lib/database-safety';
 import type { SuccessSessionResult } from '@/types/database';
-import { format, startOfWeek, endOfWeek, isWithinInterval, isSameDay } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { notifyMentorOfSuccessSessionScheduled } from '@/lib/notification-service';
 import { AlertTriangle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
@@ -78,11 +78,23 @@ interface Batch {
   start_date?: string;
 }
 
+interface Pathway {
+  id: string;
+  name: string;
+}
+
+interface PathwayCourse {
+  course_id: string;
+  pathway_id: string;
+}
+
 export function SuccessSessionsManagement() {
   const [sessions, setSessions] = useState<SuccessSession[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [pathways, setPathways] = useState<Pathway[]>([]);
+  const [pathwayCourses, setPathwayCourses] = useState<PathwayCourse[]>([]);
   const [filteredBatches, setFilteredBatches] = useState<Batch[]>([]);
   const [batchCourseMap, setBatchCourseMap] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
@@ -121,6 +133,7 @@ export function SuccessSessionsManagement() {
     fetchCourses();
     fetchBatches();
     fetchBatchCourses();
+    fetchPathways();
   }, []);
 
   const fetchSessions = async () => {
@@ -206,6 +219,26 @@ export function SuccessSessionsManagement() {
     } catch (error) {
       console.error('Error fetching batch_courses:', error);
     }
+  };
+
+  const fetchPathways = async () => {
+    try {
+      const [{ data: pathData }, { data: pcData }] = await Promise.all([
+        supabase.from('learning_pathways').select('id, name').order('name'),
+        supabase.from('pathway_courses').select('course_id, pathway_id')
+      ]);
+      setPathways(pathData || []);
+      setPathwayCourses(pcData || []);
+    } catch (error) {
+      console.error('Error fetching pathways:', error);
+    }
+  };
+
+  const getPathwayForCourse = (courseId?: string) => {
+    if (!courseId) return null;
+    const pc = pathwayCourses.find(p => p.course_id === courseId);
+    if (!pc) return null;
+    return pathways.find(p => p.id === pc.pathway_id)?.name || null;
   };
 
   // Filter batches when course_id changes
@@ -742,12 +775,14 @@ export function SuccessSessionsManagement() {
         </Dialog>
       </div>
 
-      {/* This Week's Sessions */}
-      <ThisWeekSessions
+      {/* Upcoming 7 Days Sessions */}
+      <UpcomingSessionsPreview
         sessions={sessions}
         courses={courses}
         batches={batches}
         batchCourseMap={batchCourseMap}
+        pathways={pathways}
+        pathwayCourses={pathwayCourses}
         onEdit={handleOpenDialog}
       />
 
@@ -879,7 +914,7 @@ export function SuccessSessionsManagement() {
                   <TableRow className="bg-muted/40">
                     <TableHead className="font-semibold min-w-[200px]">Session Title</TableHead>
                     <TableHead className="font-semibold min-w-[140px]">Host</TableHead>
-                    <TableHead className="font-semibold min-w-[120px]">Course / Batch</TableHead>
+                    <TableHead className="font-semibold min-w-[160px]">Pathway / Course / Batch</TableHead>
                     <TableHead className="font-semibold min-w-[120px]">Schedule Date</TableHead>
                     <TableHead className="font-semibold min-w-[100px]">Day</TableHead>
                     <TableHead className="font-semibold min-w-[140px]">Time</TableHead>
@@ -910,8 +945,16 @@ export function SuccessSessionsManagement() {
                           <span className="font-medium truncate">{session.mentor_name || 'TBD'}</span>
                         </div>
                       </TableCell>
-                      <TableCell className="min-w-[120px]">
+                      <TableCell className="min-w-[160px]">
                         <div className="flex flex-col gap-1">
+                          {(() => {
+                            const pathwayName = getPathwayForCourse(session.course_id);
+                            return pathwayName ? (
+                              <Badge variant="secondary" className="text-[10px] w-fit">
+                                🎯 {pathwayName}
+                              </Badge>
+                            ) : null;
+                          })()}
                           <span className="truncate text-sm font-medium">
                             {courses.find(c => c.id === session.course_id)?.title || 'All Courses'}
                           </span>
@@ -1018,11 +1061,13 @@ export function SuccessSessionsManagement() {
   );
 }
 
-interface ThisWeekSessionsProps {
+interface UpcomingSessionsPreviewProps {
   sessions: SuccessSession[];
   courses: Course[];
   batches: Batch[];
   batchCourseMap: Record<string, string[]>;
+  pathways: Pathway[];
+  pathwayCourses: PathwayCourse[];
   onEdit: (session: SuccessSession) => void;
 }
 
@@ -1033,27 +1078,32 @@ interface ComputedWeekSession {
   batchName: string;
 }
 
-function ThisWeekSessions({ sessions, courses, batches, batchCourseMap, onEdit }: ThisWeekSessionsProps) {
+function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, pathways, pathwayCourses, onEdit }: UpcomingSessionsPreviewProps) {
   const [selectedBatch, setSelectedBatch] = useState('__all__');
   const now = new Date();
-  const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
+  const sevenDaysLater = new Date(now);
+  sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+
+  const getPathway = (courseId?: string) => {
+    if (!courseId) return null;
+    const pc = pathwayCourses.find(p => p.course_id === courseId);
+    if (!pc) return null;
+    return pathways.find(p => p.id === pc.pathway_id)?.name || null;
+  };
 
   // Compute per-batch schedule dates using drip_days + batch start_date
   const computedSessions: ComputedWeekSession[] = [];
 
   for (const session of sessions) {
-    if (session.status === 'completed') continue;
+    if (session.status === 'completed' || session.status === 'cancelled') continue;
 
     const dripDays = (session as any).drip_days as number | null;
 
     if (dripDays != null) {
-      // Session has drip_days — compute date per relevant batch
       let relevantBatches: Batch[];
       if (session.batch_id) {
         relevantBatches = batches.filter(b => b.id === session.batch_id);
       } else if (session.course_id) {
-        // Match via direct course_id OR via batch_courses junction table
         const junctionBatchIds = batchCourseMap[session.course_id] || [];
         relevantBatches = batches.filter(b =>
           b.start_date && (b.course_id === session.course_id || junctionBatchIds.includes(b.id))
@@ -1068,7 +1118,7 @@ function ThisWeekSessions({ sessions, courses, batches, batchCourseMap, onEdit }
         const computedDate = new Date(batchStart);
         computedDate.setDate(computedDate.getDate() + dripDays);
 
-        if (isWithinInterval(computedDate, { start: weekStart, end: weekEnd })) {
+        if (computedDate >= now && computedDate <= sevenDaysLater) {
           computedSessions.push({
             session,
             computedDate,
@@ -1078,10 +1128,9 @@ function ThisWeekSessions({ sessions, courses, batches, batchCourseMap, onEdit }
         }
       }
     } else if (session.schedule_date) {
-      // Fallback: use existing schedule_date
       try {
         const sessionDate = new Date(session.schedule_date);
-        if (isWithinInterval(sessionDate, { start: weekStart, end: weekEnd })) {
+        if (sessionDate >= now && sessionDate <= sevenDaysLater) {
           const batchName = session.batch_id
             ? batches.find(b => b.id === session.batch_id)?.name || 'Unknown'
             : 'All Batches';
@@ -1096,15 +1145,12 @@ function ThisWeekSessions({ sessions, courses, batches, batchCourseMap, onEdit }
     }
   }
 
-  // Apply batch filter
   const filtered = selectedBatch === '__all__'
     ? computedSessions
     : computedSessions.filter(cs => cs.batchId === selectedBatch);
 
-  // Sort by computed date
   filtered.sort((a, b) => a.computedDate.getTime() - b.computedDate.getTime());
 
-  // Get unique batches that have sessions this week for the filter
   const batchesWithSessions = Array.from(
     new Map(computedSessions.map(cs => [cs.batchId, cs.batchName])).entries()
   );
@@ -1121,7 +1167,7 @@ function ThisWeekSessions({ sessions, courses, batches, batchCourseMap, onEdit }
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center text-lg">
             <CalendarDays className="w-5 h-5 mr-2 text-amber-600" />
-            This Week's Live Sessions
+            Upcoming Live Classes — Next 7 Days
             <Badge variant="secondary" className="ml-2">{filtered.length}</Badge>
           </CardTitle>
           <Select value={selectedBatch} onValueChange={setSelectedBatch}>
@@ -1139,13 +1185,14 @@ function ThisWeekSessions({ sessions, courses, batches, batchCourseMap, onEdit }
       </CardHeader>
       <CardContent className="pt-0">
         {filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">No sessions for this batch this week.</p>
+          <p className="text-sm text-muted-foreground text-center py-4">No upcoming sessions for this batch in the next 7 days.</p>
         ) : (
           <div className="space-y-2">
             {filtered.map((cs, idx) => {
               const { session, computedDate, batchName } = cs;
               const missing = needsAttention(session);
               const courseName = courses.find(c => c.id === session.course_id)?.title;
+              const pathwayName = getPathway(session.course_id);
 
               return (
                 <div
@@ -1165,6 +1212,7 @@ function ThisWeekSessions({ sessions, courses, batches, batchCourseMap, onEdit }
                     <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
                       <span>{format(computedDate, 'EEE, MMM d')}</span>
                       {session.start_time && <span>• {format(new Date(session.start_time), 'h:mm a')}</span>}
+                      {pathwayName && <span>• 🎯 {pathwayName}</span>}
                       {courseName && <span>• {courseName}</span>}
                       <Badge variant="outline" className="text-[10px] px-1.5 py-0">{batchName}</Badge>
                     </div>
@@ -1172,6 +1220,11 @@ function ThisWeekSessions({ sessions, courses, batches, batchCourseMap, onEdit }
                   {missing && (
                     <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 shrink-0">
                       Needs Zoom Details
+                    </Badge>
+                  )}
+                  {session.status === 'draft' && (
+                    <Badge variant="outline" className="text-[10px] border-yellow-400 text-yellow-700 shrink-0">
+                      Draft
                     </Badge>
                   )}
                   {session.mentor_name && (
