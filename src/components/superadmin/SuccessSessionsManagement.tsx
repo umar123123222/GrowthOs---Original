@@ -84,6 +84,7 @@ export function SuccessSessionsManagement() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [filteredBatches, setFilteredBatches] = useState<Batch[]>([]);
+  const [batchCourseMap, setBatchCourseMap] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<SuccessSession | null>(null);
@@ -118,6 +119,7 @@ export function SuccessSessionsManagement() {
     fetchUsers();
     fetchCourses();
     fetchBatches();
+    fetchBatchCourses();
   }, []);
 
   const fetchSessions = async () => {
@@ -185,6 +187,23 @@ export function SuccessSessionsManagement() {
       setBatches(data || []);
     } catch (error) {
       console.error('Error fetching batches:', error);
+    }
+  };
+
+  const fetchBatchCourses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('batch_courses')
+        .select('batch_id, course_id');
+      if (error) throw error;
+      const map: Record<string, string[]> = {};
+      for (const row of data || []) {
+        if (!map[row.course_id]) map[row.course_id] = [];
+        map[row.course_id].push(row.batch_id);
+      }
+      setBatchCourseMap(map);
+    } catch (error) {
+      console.error('Error fetching batch_courses:', error);
     }
   };
 
@@ -683,6 +702,7 @@ export function SuccessSessionsManagement() {
         sessions={sessions}
         courses={courses}
         batches={batches}
+        batchCourseMap={batchCourseMap}
         onEdit={handleOpenDialog}
       />
 
@@ -943,6 +963,7 @@ interface ThisWeekSessionsProps {
   sessions: SuccessSession[];
   courses: Course[];
   batches: Batch[];
+  batchCourseMap: Record<string, string[]>;
   onEdit: (session: SuccessSession) => void;
 }
 
@@ -953,7 +974,7 @@ interface ComputedWeekSession {
   batchName: string;
 }
 
-function ThisWeekSessions({ sessions, courses, batches, onEdit }: ThisWeekSessionsProps) {
+function ThisWeekSessions({ sessions, courses, batches, batchCourseMap, onEdit }: ThisWeekSessionsProps) {
   const [selectedBatch, setSelectedBatch] = useState('__all__');
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -969,11 +990,18 @@ function ThisWeekSessions({ sessions, courses, batches, onEdit }: ThisWeekSessio
 
     if (dripDays != null) {
       // Session has drip_days — compute date per relevant batch
-      const relevantBatches = session.batch_id
-        ? batches.filter(b => b.id === session.batch_id)
-        : session.course_id
-          ? batches.filter(b => b.course_id === session.course_id && b.start_date)
-          : batches.filter(b => b.start_date);
+      let relevantBatches: Batch[];
+      if (session.batch_id) {
+        relevantBatches = batches.filter(b => b.id === session.batch_id);
+      } else if (session.course_id) {
+        // Match via direct course_id OR via batch_courses junction table
+        const junctionBatchIds = batchCourseMap[session.course_id] || [];
+        relevantBatches = batches.filter(b =>
+          b.start_date && (b.course_id === session.course_id || junctionBatchIds.includes(b.id))
+        );
+      } else {
+        relevantBatches = batches.filter(b => b.start_date);
+      }
 
       for (const batch of relevantBatches) {
         if (!batch.start_date) continue;
