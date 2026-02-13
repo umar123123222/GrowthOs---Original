@@ -951,6 +951,7 @@ function ThisWeekSessions({ sessions, courses, batches, onEdit }: ThisWeekSessio
 
   const thisWeekSessions = sessions.filter(s => {
     if (!s.schedule_date) return false;
+    if (s.status === 'completed') return false;
     try {
       const sessionDate = new Date(s.schedule_date);
       return isWithinInterval(sessionDate, { start: weekStart, end: weekEnd });
