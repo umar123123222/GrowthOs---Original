@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send } from 'lucide-react';
+import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send, Filter } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { safeQuery } from '@/lib/database-safety';
@@ -1080,6 +1081,7 @@ interface ComputedWeekSession {
 
 function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, pathways, pathwayCourses, onEdit }: UpcomingSessionsPreviewProps) {
   const [selectedBatch, setSelectedBatch] = useState('__all__');
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const now = new Date();
   const sevenDaysLater = new Date(now);
   sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
@@ -1149,9 +1151,50 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
     }
   }
 
-  const filtered = selectedBatch === '__all__'
+  // Build pathway/course filter options
+  const filterOptions: { id: string; label: string; type: 'pathway' | 'course' }[] = [];
+  const pathwaysInSessions = new Set<string>();
+  const coursesInSessions = new Set<string>();
+
+  for (const cs of computedSessions) {
+    if (cs.session.course_id) {
+      coursesInSessions.add(cs.session.course_id);
+      const pcs = pathwayCourses.filter(pc => pc.course_id === cs.session.course_id);
+      pcs.forEach(pc => pathwaysInSessions.add(pc.pathway_id));
+    }
+  }
+
+  pathways.filter(p => pathwaysInSessions.has(p.id)).forEach(p => {
+    filterOptions.push({ id: `pathway:${p.id}`, label: `🎯 ${p.name}`, type: 'pathway' });
+  });
+  courses.filter(c => coursesInSessions.has(c.id)).forEach(c => {
+    filterOptions.push({ id: `course:${c.id}`, label: c.title, type: 'course' });
+  });
+
+  const toggleFilter = (filterId: string) => {
+    setSelectedFilters(prev =>
+      prev.includes(filterId) ? prev.filter(f => f !== filterId) : [...prev, filterId]
+    );
+  };
+
+  // Apply batch filter
+  let filtered = selectedBatch === '__all__'
     ? computedSessions
     : computedSessions.filter(cs => cs.batchId === selectedBatch);
+
+  // Apply pathway/course multi-select filter
+  if (selectedFilters.length > 0) {
+    const selectedCourseIds = new Set<string>();
+    for (const f of selectedFilters) {
+      if (f.startsWith('pathway:')) {
+        const pathwayId = f.replace('pathway:', '');
+        pathwayCourses.filter(pc => pc.pathway_id === pathwayId).forEach(pc => selectedCourseIds.add(pc.course_id));
+      } else if (f.startsWith('course:')) {
+        selectedCourseIds.add(f.replace('course:', ''));
+      }
+    }
+    filtered = filtered.filter(cs => cs.session.course_id && selectedCourseIds.has(cs.session.course_id));
+  }
 
   filtered.sort((a, b) => a.computedDate.getTime() - b.computedDate.getTime());
 
@@ -1174,17 +1217,51 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
             Upcoming Live Classes — Next 7 Days
             <Badge variant="secondary" className="ml-2">{filtered.length}</Badge>
           </CardTitle>
-          <Select value={selectedBatch} onValueChange={setSelectedBatch}>
-            <SelectTrigger className="w-[200px] h-8 text-xs">
-              <SelectValue placeholder="Filter by batch" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All Batches</SelectItem>
-              {batchesWithSessions.map(([id, name]) => (
-                <SelectItem key={id} value={id}>{name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2">
+            {filterOptions.length > 0 && (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-8 text-xs gap-1">
+                    <Filter className="w-3 h-3" />
+                    Pathway / Course
+                    {selectedFilters.length > 0 && (
+                      <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">{selectedFilters.length}</Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64 p-3 bg-popover z-50" align="end">
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground mb-2">Filter by pathway or course</p>
+                    {filterOptions.map(opt => (
+                      <label key={opt.id} className="flex items-center gap-2 cursor-pointer text-sm hover:bg-accent/50 rounded px-1 py-0.5">
+                        <Checkbox
+                          checked={selectedFilters.includes(opt.id)}
+                          onCheckedChange={() => toggleFilter(opt.id)}
+                        />
+                        <span className="truncate">{opt.label}</span>
+                      </label>
+                    ))}
+                    {selectedFilters.length > 0 && (
+                      <Button variant="ghost" size="sm" className="w-full text-xs mt-1" onClick={() => setSelectedFilters([])}>
+                        Clear all
+                      </Button>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+            <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+              <SelectTrigger className="w-[200px] h-8 text-xs">
+                <SelectValue placeholder="Filter by batch" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All Batches</SelectItem>
+                {batchesWithSessions.map(([id, name]) => (
+                  <SelectItem key={id} value={id}>{name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="pt-0">
