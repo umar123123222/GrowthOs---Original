@@ -207,6 +207,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
+        .in('status', ['upcoming', 'completed'])
         .not('link', 'is', null)
         .neq('link', '')
         .order('start_time', { ascending: true });

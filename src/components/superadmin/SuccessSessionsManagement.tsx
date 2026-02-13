@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search } from 'lucide-react';
+import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { safeQuery } from '@/lib/database-safety';
@@ -108,10 +108,11 @@ export function SuccessSessionsManagement() {
     zoom_passcode: '',
     host_login_email: '',
     host_login_pwd: '',
-    status: 'upcoming',
+    status: 'draft',
     course_id: '__all__',
     batch_id: ''
   });
+  const [publishing, setPublishing] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -219,6 +220,8 @@ export function SuccessSessionsManagement() {
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
+      case 'draft':
+        return 'bg-yellow-100 text-yellow-800';
       case 'upcoming':
         return 'bg-blue-100 text-blue-800';
       case 'completed':
@@ -268,7 +271,7 @@ export function SuccessSessionsManagement() {
       zoom_passcode: '',
       host_login_email: '',
       host_login_pwd: '',
-      status: 'upcoming',
+      status: 'draft',
       course_id: '__all__',
       batch_id: ''
     });
@@ -419,6 +422,47 @@ export function SuccessSessionsManagement() {
         description: editingSession ? "Failed to update session" : "Failed to create session",
         variant: "destructive"
       });
+    }
+  };
+
+  const handlePublish = async (session: SuccessSession) => {
+    if (!session.link || !session.start_time) {
+      toast({ title: "Cannot Publish", description: "Session must have a Zoom link and start time before publishing.", variant: "destructive" });
+      return;
+    }
+    setPublishing(session.id);
+    try {
+      const { error } = await supabase
+        .from('success_sessions')
+        .update({ status: 'upcoming' })
+        .eq('id', session.id);
+      if (error) throw error;
+
+      // Notify batch students via email + in-app
+      if (session.batch_id) {
+        try {
+          await supabase.functions.invoke('send-batch-content-notification', {
+            body: {
+              batch_id: session.batch_id,
+              item_type: 'LIVE_SESSION',
+              item_id: session.id,
+              title: session.title,
+              description: session.description,
+              meeting_link: session.link,
+              start_datetime: session.start_time
+            }
+          });
+        } catch (notifyError) {
+          console.error('Failed to notify batch students:', notifyError);
+        }
+      }
+
+      toast({ title: "Published!", description: "Session is now visible to students and notifications have been sent." });
+      fetchSessions();
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to publish session", variant: "destructive" });
+    } finally {
+      setPublishing(null);
     }
   };
 
@@ -628,6 +672,7 @@ export function SuccessSessionsManagement() {
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
                       <SelectItem value="upcoming">Upcoming</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -763,6 +808,7 @@ export function SuccessSessionsManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All Statuses</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="upcoming">Upcoming</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="cancelled">Cancelled</SelectItem>
@@ -904,8 +950,21 @@ export function SuccessSessionsManagement() {
                           {session.status || 'Unknown'}
                         </Badge>
                       </TableCell>
-                      <TableCell className="min-w-[140px]">
+                      <TableCell className="min-w-[180px]">
                         <div className="flex space-x-2">
+                          {session.status === 'draft' && (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handlePublish(session)}
+                              disabled={!session.link || !session.start_time || publishing === session.id}
+                              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+                              title={!session.link || !session.start_time ? "Add Zoom link & start time first" : "Publish & notify students"}
+                            >
+                              <Send className="w-4 h-4 mr-1" />
+                              {publishing === session.id ? 'Publishing...' : 'Publish'}
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
