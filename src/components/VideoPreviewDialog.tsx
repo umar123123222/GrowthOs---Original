@@ -94,13 +94,14 @@ export function VideoPreviewDialog({
   const embedUrl = open && sanitizedUrl ? convertToEmbedUrl(sanitizedUrl) : '';
   const isInvalidUrl = open && recordingUrl && !sanitizedUrl;
 
-  // Reset state when dialog closes
+  // Reset state and force iframe recreation when dialog opens/closes
   useEffect(() => {
-    if (!open) {
+    if (open) {
+      // Force a fresh iframe when dialog opens
       setVideoError(false);
       setIframeKey(prev => prev + 1);
     }
-  }, [open]);
+  }, [open, recordingUrl]);
 
   const handleReload = () => {
     setIframeKey(prev => prev + 1);
