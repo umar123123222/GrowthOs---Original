@@ -340,9 +340,48 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
       // Auto-calculate schedule_date from batch start_date + drip_days
       const schedule_date = await computeScheduleDate(courseId, newSessionDripDays);
 
-      const { error } = await supabase
-        .from('success_sessions')
-        .insert({
+      // When opened from a pathway context, set pathway_id
+      const pathwayId = type === 'pathway' ? entityId : null;
+
+      // If opened from course context, check if course belongs to multiple pathways and clone
+      let sessionsToInsert: any[] = [];
+      if (type === 'course') {
+        const { data: pcLinks } = await supabase
+          .from('pathway_courses')
+          .select('pathway_id')
+          .eq('course_id', courseId);
+        const pathwayIds = (pcLinks || []).map(pc => pc.pathway_id);
+        
+        if (pathwayIds.length > 1) {
+          // Clone per pathway
+          sessionsToInsert = pathwayIds.map(pid => ({
+            title: trimmedTitle,
+            course_id: courseId,
+            mentor_id: mentorId,
+            mentor_name: mentorName,
+            link: 'TBD',
+            start_time: new Date().toISOString(),
+            status: 'upcoming',
+            drip_days: newSessionDripDays,
+            schedule_date,
+            pathway_id: pid,
+          }));
+        } else {
+          sessionsToInsert = [{
+            title: trimmedTitle,
+            course_id: courseId,
+            mentor_id: mentorId,
+            mentor_name: mentorName,
+            link: 'TBD',
+            start_time: new Date().toISOString(),
+            status: 'upcoming',
+            drip_days: newSessionDripDays,
+            schedule_date,
+            pathway_id: pathwayIds[0] || null,
+          }];
+        }
+      } else {
+        sessionsToInsert = [{
           title: trimmedTitle,
           course_id: courseId,
           mentor_id: mentorId,
@@ -352,7 +391,13 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
           status: 'upcoming',
           drip_days: newSessionDripDays,
           schedule_date,
-        } as any);
+          pathway_id: pathwayId,
+        }];
+      }
+
+      const { error } = await supabase
+        .from('success_sessions')
+        .insert(sessionsToInsert as any);
 
       if (error) throw error;
 
