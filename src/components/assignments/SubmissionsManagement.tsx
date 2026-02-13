@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { notifyContentUnlocked } from '@/utils/notifyContentUnlocked';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -220,6 +221,32 @@ export function SubmissionsManagement({
           event: 'submission_approved',
           payload: { submissionId, timestamp: Date.now() }
         });
+
+        // Find the submission to get student and assignment info
+        const approvedSubmission = submissions.find(s => s.id === submissionId);
+        if (approvedSubmission) {
+          // Find the recording linked to this assignment, then find the NEXT recording that just got unlocked
+          const { data: assignmentRecording } = await supabase
+            .from('available_lessons')
+            .select('id, sequence_order')
+            .eq('assignment_id', approvedSubmission.assignment_id)
+            .single();
+
+          if (assignmentRecording) {
+            // Get the next recording in sequence (the one that just got unlocked)
+            const { data: nextRecording } = await supabase
+              .from('available_lessons')
+              .select('id')
+              .gt('sequence_order', assignmentRecording.sequence_order)
+              .order('sequence_order', { ascending: true })
+              .limit(1)
+              .single();
+
+            if (nextRecording) {
+              notifyContentUnlocked(approvedSubmission.student_id, nextRecording.id);
+            }
+          }
+        }
       }
       
       setSelectedSubmission(null);

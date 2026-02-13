@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { notifyContentUnlocked } from '@/utils/notifyContentUnlocked';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
@@ -138,6 +139,11 @@ export const SequentialUnlockAdmin: React.FC = () => {
       );
 
       await Promise.all(unlockPromises);
+
+      // Send unlock notification to each student
+      for (const student of eligibleStudents) {
+        notifyContentUnlocked(student.user_id, settings.firstRecordingId!);
+      }
 
       toast({
         title: 'Initialization Complete',
