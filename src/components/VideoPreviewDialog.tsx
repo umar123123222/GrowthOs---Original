@@ -71,7 +71,7 @@ const convertToEmbedUrl = (url: string): string => {
   
   if (videoId) {
     videoId = videoId.split('&')[0].split('?')[0];
-    return `https://www.youtube.com/embed/${videoId}`;
+    return `https://www.youtube.com/embed/${videoId}?autoplay=1`;
   }
   
   return url;
