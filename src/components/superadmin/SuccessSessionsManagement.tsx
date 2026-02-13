@@ -35,6 +35,7 @@ interface SuccessSession {
   host_login_pwd?: string;
   course_id?: string;
   batch_id?: string | null;
+  drip_days?: number | null;
   created_at: string;
   created_by: string;
 }
@@ -74,6 +75,7 @@ interface Batch {
   name: string;
   course_id: string | null;
   status: string;
+  start_date?: string;
 }
 
 export function SuccessSessionsManagement() {
@@ -126,7 +128,7 @@ export function SuccessSessionsManagement() {
         .order('start_time', { ascending: false });
 
       if (error) throw error;
-      setSessions(data || []);
+      setSessions((data as any as SuccessSession[]) || []);
     } catch (error) {
       toast({
         title: "Error",
@@ -176,7 +178,7 @@ export function SuccessSessionsManagement() {
     try {
       const { data, error } = await supabase
         .from('batches')
-        .select('id, name, course_id, status')
+        .select('id, name, course_id, status, start_date')
         .order('name', { ascending: true });
 
       if (error) throw error;
@@ -944,81 +946,158 @@ interface ThisWeekSessionsProps {
   onEdit: (session: SuccessSession) => void;
 }
 
+interface ComputedWeekSession {
+  session: SuccessSession;
+  computedDate: Date;
+  batchId: string;
+  batchName: string;
+}
+
 function ThisWeekSessions({ sessions, courses, batches, onEdit }: ThisWeekSessionsProps) {
+  const [selectedBatch, setSelectedBatch] = useState('__all__');
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
 
-  const thisWeekSessions = sessions.filter(s => {
-    if (!s.schedule_date) return false;
-    if (s.status === 'completed') return false;
-    try {
-      const sessionDate = new Date(s.schedule_date);
-      return isWithinInterval(sessionDate, { start: weekStart, end: weekEnd });
-    } catch {
-      return false;
-    }
-  });
+  // Compute per-batch schedule dates using drip_days + batch start_date
+  const computedSessions: ComputedWeekSession[] = [];
 
-  if (thisWeekSessions.length === 0) return null;
+  for (const session of sessions) {
+    if (session.status === 'completed') continue;
+
+    const dripDays = (session as any).drip_days as number | null;
+
+    if (dripDays != null) {
+      // Session has drip_days — compute date per relevant batch
+      const relevantBatches = session.batch_id
+        ? batches.filter(b => b.id === session.batch_id)
+        : session.course_id
+          ? batches.filter(b => b.course_id === session.course_id && b.start_date)
+          : batches.filter(b => b.start_date);
+
+      for (const batch of relevantBatches) {
+        if (!batch.start_date) continue;
+        const batchStart = new Date(batch.start_date);
+        const computedDate = new Date(batchStart);
+        computedDate.setDate(computedDate.getDate() + dripDays);
+
+        if (isWithinInterval(computedDate, { start: weekStart, end: weekEnd })) {
+          computedSessions.push({
+            session,
+            computedDate,
+            batchId: batch.id,
+            batchName: batch.name,
+          });
+        }
+      }
+    } else if (session.schedule_date) {
+      // Fallback: use existing schedule_date
+      try {
+        const sessionDate = new Date(session.schedule_date);
+        if (isWithinInterval(sessionDate, { start: weekStart, end: weekEnd })) {
+          const batchName = session.batch_id
+            ? batches.find(b => b.id === session.batch_id)?.name || 'Unknown'
+            : 'All Batches';
+          computedSessions.push({
+            session,
+            computedDate: sessionDate,
+            batchId: session.batch_id || '__all__',
+            batchName,
+          });
+        }
+      } catch { /* skip invalid dates */ }
+    }
+  }
+
+  // Apply batch filter
+  const filtered = selectedBatch === '__all__'
+    ? computedSessions
+    : computedSessions.filter(cs => cs.batchId === selectedBatch);
+
+  // Sort by computed date
+  filtered.sort((a, b) => a.computedDate.getTime() - b.computedDate.getTime());
+
+  // Get unique batches that have sessions this week for the filter
+  const batchesWithSessions = Array.from(
+    new Map(computedSessions.map(cs => [cs.batchId, cs.batchName])).entries()
+  );
 
   const needsAttention = (session: SuccessSession) => {
     return !session.zoom_meeting_id || !session.zoom_passcode || session.link === 'TBD' || !session.link;
   };
 
+  if (computedSessions.length === 0) return null;
+
   return (
     <Card className="shadow-lg border-0 bg-gradient-to-br from-amber-50 to-orange-50 animate-fade-in">
       <CardHeader className="pb-3">
-        <CardTitle className="flex items-center text-lg">
-          <CalendarDays className="w-5 h-5 mr-2 text-amber-600" />
-          This Week's Live Sessions
-          <Badge variant="secondary" className="ml-2">{thisWeekSessions.length}</Badge>
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center text-lg">
+            <CalendarDays className="w-5 h-5 mr-2 text-amber-600" />
+            This Week's Live Sessions
+            <Badge variant="secondary" className="ml-2">{filtered.length}</Badge>
+          </CardTitle>
+          <Select value={selectedBatch} onValueChange={setSelectedBatch}>
+            <SelectTrigger className="w-[200px] h-8 text-xs">
+              <SelectValue placeholder="Filter by batch" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All Batches</SelectItem>
+              {batchesWithSessions.map(([id, name]) => (
+                <SelectItem key={id} value={id}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </CardHeader>
       <CardContent className="pt-0">
-        <div className="space-y-2">
-          {thisWeekSessions.map(session => {
-            const missing = needsAttention(session);
-            const courseName = courses.find(c => c.id === session.course_id)?.title;
-            const batchName = session.batch_id ? batches.find(b => b.id === session.batch_id)?.name : null;
+        {filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No sessions for this batch this week.</p>
+        ) : (
+          <div className="space-y-2">
+            {filtered.map((cs, idx) => {
+              const { session, computedDate, batchName } = cs;
+              const missing = needsAttention(session);
+              const courseName = courses.find(c => c.id === session.course_id)?.title;
 
-            return (
-              <div
-                key={session.id}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors hover:bg-background/80 ${
-                  missing ? 'border-amber-300 bg-amber-50/50' : 'border-green-300 bg-green-50/50'
-                }`}
-                onClick={() => onEdit(session)}
-              >
-                {missing ? (
-                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                ) : (
-                  <Video className="w-4 h-4 text-green-500 shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{session.title}</div>
-                  <div className="text-xs text-muted-foreground flex items-center gap-2">
-                    {session.schedule_date && <span>{format(new Date(session.schedule_date), 'EEE, MMM d')}</span>}
-                    {session.start_time && <span>• {format(new Date(session.start_time), 'h:mm a')}</span>}
-                    {courseName && <span>• {courseName}</span>}
-                    {batchName && <span>• {batchName}</span>}
+              return (
+                <div
+                  key={`${session.id}-${cs.batchId}-${idx}`}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors hover:bg-background/80 ${
+                    missing ? 'border-amber-300 bg-amber-50/50' : 'border-green-300 bg-green-50/50'
+                  }`}
+                  onClick={() => onEdit(session)}
+                >
+                  {missing ? (
+                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                  ) : (
+                    <Video className="w-4 h-4 text-green-500 shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{session.title}</div>
+                    <div className="text-xs text-muted-foreground flex items-center gap-2 flex-wrap">
+                      <span>{format(computedDate, 'EEE, MMM d')}</span>
+                      {session.start_time && <span>• {format(new Date(session.start_time), 'h:mm a')}</span>}
+                      {courseName && <span>• {courseName}</span>}
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{batchName}</Badge>
+                    </div>
                   </div>
+                  {missing && (
+                    <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 shrink-0">
+                      Needs Zoom Details
+                    </Badge>
+                  )}
+                  {session.mentor_name && (
+                    <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      {session.mentor_name}
+                    </span>
+                  )}
                 </div>
-                {missing && (
-                  <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 shrink-0">
-                    Needs Zoom Details
-                  </Badge>
-                )}
-                {session.mentor_name && (
-                  <span className="text-xs text-muted-foreground shrink-0 flex items-center gap-1">
-                    <User className="w-3 h-3" />
-                    {session.mentor_name}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
