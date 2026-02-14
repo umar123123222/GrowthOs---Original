@@ -1029,7 +1029,7 @@ export function StudentsManagement() {
         return;
       }
 
-      // Check for existing invoice for this student record and installment
+      // Check if already paid
       const {
         data: invoiceRow,
         error: fetchInvErr
@@ -1044,45 +1044,18 @@ export function StudentsManagement() {
         return;
       }
 
-      // Update existing invoice to paid, or insert a new paid invoice if missing
-      if (invoiceRow) {
-        const {
-          error: updateErr
-        } = await supabase.from('invoices').update({
-          status: 'paid',
-          paid_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        }).eq('id', invoiceRow.id);
-        if (updateErr) throw updateErr;
-      } else {
-        const {
-          error: insertErr
-        } = await supabase.from('invoices').insert({
+      // Use the edge function to mark as paid (avoids trigger issues)
+      const { data, error } = await supabase.functions.invoke('mark-invoice-paid', {
+        body: {
           student_id: student.student_record_id,
           installment_number: installmentNumber,
-          amount: 0,
-          status: 'paid',
-          due_date: new Date().toISOString(),
-          paid_at: new Date().toISOString()
-        });
-        if (insertErr) throw insertErr;
-      }
-      // Determine total installments for this student
-      const totalInstallments = student.fees_structure === '2_installments' ? 2 : student.fees_structure === '3_installments' ? 3 : 1;
+          ...(invoiceRow ? { invoice_id: invoiceRow.id } : {})
+        }
+      });
 
-      // If this is the first installment, activate LMS status
-      if (installmentNumber === 1) {
-        await supabase.from('users').update({
-          lms_status: 'active'
-        }).eq('id', studentId);
-      }
+      if (error) throw error;
+      if (data && !data.success) throw new Error(data.error || 'Failed to mark installment as paid');
 
-      // If this is the last installment, update the user's status  
-      if (installmentNumber === totalInstallments) {
-        await supabase.from('users').update({
-          updated_at: new Date().toISOString()
-        }).eq('id', studentId);
-      }
       toast({
         title: 'Success',
         description: `Installment ${installmentNumber} marked as paid`
