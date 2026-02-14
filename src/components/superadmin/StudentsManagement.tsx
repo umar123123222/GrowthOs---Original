@@ -1024,6 +1024,11 @@ export function StudentsManagement() {
       const student = students.find(s => s.id === studentId);
       if (!student) return;
 
+      if (!student.student_record_id) {
+        toast({ title: 'Error', description: 'Student record not found. Please refresh and try again.', variant: 'destructive' });
+        return;
+      }
+
       // Check for existing invoice for this student record and installment
       const {
         data: invoiceRow,
@@ -1084,11 +1089,11 @@ export function StudentsManagement() {
       });
       fetchInstallmentPayments();
       fetchStudents();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error marking installment as paid:', error);
       toast({
         title: 'Error',
-        description: 'Failed to mark installment as paid',
+        description: error?.message || 'Failed to mark installment as paid',
         variant: 'destructive'
       });
     }
