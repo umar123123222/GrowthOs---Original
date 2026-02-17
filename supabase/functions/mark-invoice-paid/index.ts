@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.55.0";
-import postgres from "npm:postgres@3.4.5";
+import { Client } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,23 +20,16 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Use direct Postgres connection to bypass triggers
-  const dbUrl = Deno.env.get("SUPABASE_DB_URL");
-  let sql: ReturnType<typeof postgres> | null = null;
+  let pgClient: Client | null = null;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const dbUrl = Deno.env.get("SUPABASE_DB_URL");
 
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error("Missing Supabase configuration");
     }
-
-    if (!dbUrl) {
-      throw new Error("Missing SUPABASE_DB_URL");
-    }
-
-    sql = postgres(dbUrl, { prepare: false });
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { persistSession: false }
@@ -48,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
     let invoice: any;
     let invoiceId: string;
 
-    // Find or create invoice using Supabase client (reads don't trigger the issue)
+    // Find or create invoice using Supabase client (reads are fine)
     if (requestData.invoice_id) {
       const { data, error } = await supabase
         .from("invoices")
@@ -77,26 +70,58 @@ const handler = async (req: Request): Promise<Response> => {
         invoice = existing;
         invoiceId = existing.id;
       } else {
-        // Insert new invoice using direct SQL to bypass trigger
-        const now = new Date().toISOString();
-        const amount = requestData.amount || 100;
-        const dueDate = requestData.due_date || now;
-        
-        const result = await sql`
+        // Need to create - will use direct SQL below
+        invoice = null;
+        invoiceId = "";
+      }
+    } else {
+      throw new Error("Must provide either invoice_id or (student_id + installment_number)");
+    }
+
+    // Connect to Postgres directly to bypass the http_post trigger
+    if (dbUrl) {
+      pgClient = new Client(dbUrl);
+      await pgClient.connect();
+      console.log("Connected to Postgres directly");
+    } else {
+      console.warn("SUPABASE_DB_URL not available, falling back to Supabase client");
+    }
+
+    const now = new Date().toISOString();
+
+    // Create invoice if it doesn't exist
+    if (!invoice && requestData.student_id && requestData.installment_number) {
+      const amount = requestData.amount || 100;
+      const dueDate = requestData.due_date || now;
+
+      if (pgClient) {
+        const result = await pgClient.queryObject`
           INSERT INTO invoices (student_id, installment_number, amount, due_date, status)
           VALUES (${requestData.student_id}, ${requestData.installment_number}, ${amount}, ${dueDate}, 'issued')
           RETURNING *
         `;
-        
-        if (!result || result.length === 0) {
+        if (!result.rows || result.rows.length === 0) {
           throw new Error("Failed to create invoice");
         }
-        invoice = result[0];
-        invoiceId = invoice.id;
-        console.log("Created new invoice:", invoiceId);
+        invoice = result.rows[0];
+        invoiceId = (invoice as any).id;
+      } else {
+        const { data: newInvoice, error: createError } = await supabase
+          .from("invoices")
+          .insert({
+            student_id: requestData.student_id,
+            installment_number: requestData.installment_number,
+            amount: requestData.amount || 100,
+            due_date: requestData.due_date || now,
+            status: "issued"
+          })
+          .select()
+          .single();
+        if (createError || !newInvoice) throw new Error(`Failed to create invoice: ${createError?.message}`);
+        invoice = newInvoice;
+        invoiceId = newInvoice.id;
       }
-    } else {
-      throw new Error("Must provide either invoice_id or (student_id + installment_number)");
+      console.log("Created new invoice:", invoiceId);
     }
 
     // Get user_id from students table
@@ -113,110 +138,125 @@ const handler = async (req: Request): Promise<Response> => {
     const userId = studentData.user_id;
     console.log("Found user_id:", userId);
 
-    // Mark invoice as paid using DIRECT SQL to bypass the http_post trigger
-    const now = new Date().toISOString();
-    await sql`
-      UPDATE invoices 
-      SET status = 'paid', paid_at = ${now}, updated_at = ${now}
-      WHERE id = ${invoiceId}
-    `;
-    console.log("Invoice marked as paid successfully (direct SQL, trigger bypassed)");
+    // Mark invoice as paid - use direct SQL to bypass http_post trigger
+    if (pgClient) {
+      await pgClient.queryObject`
+        UPDATE invoices SET status = 'paid', paid_at = ${now}, updated_at = ${now}
+        WHERE id = ${invoiceId}
+      `;
+      console.log("Invoice marked as paid (direct SQL)");
+    } else {
+      const { error: updateErr } = await supabase
+        .from("invoices")
+        .update({ status: "paid", paid_at: now, updated_at: now })
+        .eq("id", invoiceId);
+      if (updateErr) throw new Error(`Failed to update invoice: ${updateErr.message}`);
+    }
 
-    // Update enrollment payment status if invoice is linked to a course/pathway
+    // Update enrollment payment status if linked to course/pathway
     if (invoice.course_id || invoice.pathway_id) {
-      let enrollmentInvoices;
+      let enrollmentQuery = supabase
+        .from("invoices")
+        .select("id, status, amount")
+        .eq("student_id", invoice.student_id);
+
       if (invoice.course_id) {
-        enrollmentInvoices = await sql`
-          SELECT id, status, amount FROM invoices 
-          WHERE student_id = ${invoice.student_id} AND course_id = ${invoice.course_id}
-        `;
-      } else {
-        enrollmentInvoices = await sql`
-          SELECT id, status, amount FROM invoices 
-          WHERE student_id = ${invoice.student_id} AND pathway_id = ${invoice.pathway_id}
-        `;
+        enrollmentQuery = enrollmentQuery.eq("course_id", invoice.course_id);
+      } else if (invoice.pathway_id) {
+        enrollmentQuery = enrollmentQuery.eq("pathway_id", invoice.pathway_id);
       }
 
-      if (enrollmentInvoices && enrollmentInvoices.length > 0) {
+      const { data: enrollmentInvoices, error: fetchError } = await enrollmentQuery;
+
+      if (!fetchError && enrollmentInvoices) {
         const totalInvoices = enrollmentInvoices.length;
-        const paidInvoices = enrollmentInvoices.filter((inv: any) => inv.status === "paid").length;
-        const totalAmount = enrollmentInvoices.reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
+        const paidInvoices = enrollmentInvoices.filter(inv => inv.status === "paid").length;
+        const totalAmount = enrollmentInvoices.reduce((sum, inv) => sum + (inv.amount || 0), 0);
         const paidAmount = enrollmentInvoices
-          .filter((inv: any) => inv.status === "paid")
-          .reduce((sum: number, inv: any) => sum + (Number(inv.amount) || 0), 0);
+          .filter(inv => inv.status === "paid")
+          .reduce((sum, inv) => sum + (inv.amount || 0), 0);
 
         let paymentStatus: string;
-        if (paidInvoices === 0) {
-          paymentStatus = "pending";
-        } else if (paidInvoices === totalInvoices) {
-          paymentStatus = "paid";
-        } else {
-          paymentStatus = "partial";
-        }
+        if (paidInvoices === 0) paymentStatus = "pending";
+        else if (paidInvoices === totalInvoices) paymentStatus = "paid";
+        else paymentStatus = "partial";
 
-        // Update course enrollment
-        if (invoice.course_id) {
-          await sql`
-            UPDATE course_enrollments 
-            SET payment_status = ${paymentStatus}, amount_paid = ${paidAmount}, total_amount = ${totalAmount}, updated_at = ${now}
-            WHERE student_id = ${invoice.student_id} AND course_id = ${invoice.course_id}
-          `;
+        // Update enrollment - use direct SQL
+        if (pgClient) {
+          if (invoice.course_id) {
+            await pgClient.queryObject`
+              UPDATE course_enrollments 
+              SET payment_status = ${paymentStatus}, amount_paid = ${paidAmount}, total_amount = ${totalAmount}, updated_at = ${now}
+              WHERE student_id = ${invoice.student_id} AND course_id = ${invoice.course_id}
+            `;
+          } else {
+            await pgClient.queryObject`
+              UPDATE course_enrollments 
+              SET payment_status = ${paymentStatus}, amount_paid = ${paidAmount}, total_amount = ${totalAmount}, updated_at = ${now}
+              WHERE student_id = ${invoice.student_id} AND pathway_id = ${invoice.pathway_id}
+            `;
+          }
         } else {
-          await sql`
-            UPDATE course_enrollments 
-            SET payment_status = ${paymentStatus}, amount_paid = ${paidAmount}, total_amount = ${totalAmount}, updated_at = ${now}
-            WHERE student_id = ${invoice.student_id} AND pathway_id = ${invoice.pathway_id}
-          `;
+          let updateQuery = supabase.from("course_enrollments").update({
+            payment_status: paymentStatus, amount_paid: paidAmount, total_amount: totalAmount, updated_at: now
+          }).eq("student_id", invoice.student_id);
+          if (invoice.course_id) updateQuery = updateQuery.eq("course_id", invoice.course_id);
+          else updateQuery = updateQuery.eq("pathway_id", invoice.pathway_id);
+          await updateQuery;
         }
         console.log(`Enrollment payment status updated to ${paymentStatus}`);
 
         if (paymentStatus === "paid") {
-          const allEnrollments = await sql`
-            SELECT payment_status FROM course_enrollments 
-            WHERE student_id = ${invoice.student_id} AND status = 'active'
-          `;
-          const allPaid = allEnrollments?.every((e: any) => e.payment_status === "paid" || e.payment_status === "waived");
+          const { data: allEnrollments } = await supabase
+            .from("course_enrollments")
+            .select("payment_status")
+            .eq("student_id", invoice.student_id)
+            .eq("status", "active");
 
+          const allPaid = allEnrollments?.every(e => e.payment_status === "paid" || e.payment_status === "waived");
           if (allPaid) {
-            await sql`
-              UPDATE students SET fees_cleared = true, updated_at = ${now}
-              WHERE id = ${invoice.student_id}
-            `;
+            if (pgClient) {
+              await pgClient.queryObject`UPDATE students SET fees_cleared = true, updated_at = ${now} WHERE id = ${invoice.student_id}`;
+            } else {
+              await supabase.from("students").update({ fees_cleared: true, updated_at: now }).eq("id", invoice.student_id);
+            }
           }
         }
       }
     } else {
       // Legacy behavior
-      await sql`
-        UPDATE students SET fees_cleared = true, updated_at = ${now}
-        WHERE id = ${invoice.student_id}
-      `;
-      console.log("Student fees_cleared updated successfully");
+      if (pgClient) {
+        await pgClient.queryObject`UPDATE students SET fees_cleared = true, updated_at = ${now} WHERE id = ${invoice.student_id}`;
+      } else {
+        await supabase.from("students").update({ fees_cleared: true, updated_at: now }).eq("id", invoice.student_id);
+      }
+      console.log("Student fees_cleared updated");
     }
 
     // Activate user account
-    await sql`
-      UPDATE users SET status = 'active', lms_status = 'active', last_active_at = ${now}
-      WHERE id = ${userId}
-    `;
+    if (pgClient) {
+      await pgClient.queryObject`
+        UPDATE users SET status = 'active', lms_status = 'active', last_active_at = ${now}
+        WHERE id = ${userId}
+      `;
+    } else {
+      await supabase.from("users").update({ status: "active", lms_status: "active", last_active_at: now }).eq("id", userId);
+    }
     console.log("User activated successfully");
 
-    console.log(`✅ Payment processed successfully - Invoice: ${invoiceId}, Student: ${invoice.student_id}, User: ${userId}`);
+    console.log(`✅ Payment processed - Invoice: ${invoiceId}, Student: ${invoice.student_id}, User: ${userId}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: "Payment recorded, enrollment payment status updated, and user account activated",
+        message: "Payment recorded and user account activated",
         invoice_id: invoiceId,
         student_id: invoice.student_id,
         user_id: userId,
         course_id: invoice.course_id || null,
         pathway_id: invoice.pathway_id || null
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
 
   } catch (error) {
@@ -226,14 +266,11 @@ const handler = async (req: Request): Promise<Response> => {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error occurred"
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
     );
   } finally {
-    if (sql) {
-      await sql.end();
+    if (pgClient) {
+      try { await pgClient.end(); } catch (_) { /* ignore */ }
     }
   }
 };
