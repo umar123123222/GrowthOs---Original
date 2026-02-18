@@ -38,8 +38,8 @@ interface BatchInfo {
 }
 
 // Draggable event pill
-function DraggableEvent({ event, getStatusBg }: { event: CalendarEvent; getStatusBg: (s: string) => string }) {
-  const canDrag = event.type === 'recording' || event.type === 'session';
+function DraggableEvent({ event, getStatusBg, readOnly }: { event: CalendarEvent; getStatusBg: (s: string) => string; readOnly?: boolean }) {
+  const canDrag = !readOnly && (event.type === 'recording' || event.type === 'session');
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: event.id,
     data: event,
@@ -141,7 +141,7 @@ function DroppableDay({ day, isCurrentMonth, isCurrentDay, viewMode, children }:
   );
 }
 
-export function ContentScheduleCalendar() {
+export function ContentScheduleCalendar({ readOnly = false }: { readOnly?: boolean }) {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'monthly' | 'weekly'>('monthly');
@@ -576,7 +576,7 @@ export function ContentScheduleCalendar() {
                   </div>
                   <div className="space-y-0.5">
                     {dayEvents.slice(0, isExpanded ? undefined : maxVisible).map(event => (
-                      <DraggableEvent key={event.id} event={event} getStatusBg={getStatusBg} />
+                      <DraggableEvent key={event.id} event={event} getStatusBg={getStatusBg} readOnly={readOnly} />
                     ))}
                     {dayEvents.length > maxVisible && !isExpanded && (
                       <div

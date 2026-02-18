@@ -9,7 +9,7 @@ export default function MentorCalendarPage() {
           <h1 className="text-3xl font-bold text-foreground">📅 Content Calendar</h1>
           <p className="text-muted-foreground">View the schedule of recordings, sessions, and assignments</p>
         </div>
-        <ContentScheduleCalendar />
+        <ContentScheduleCalendar readOnly />
       </div>
     </RoleGuard>
   );
