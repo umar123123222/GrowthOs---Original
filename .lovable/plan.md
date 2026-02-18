@@ -1,62 +1,57 @@
 
 
-# Fix: Forgot Password Link Not Working
+## Enhance Mentor Sessions with Batch, Pathway/Course, and Unlock Info
 
-## Problem
+### Goal
+Each session card on the Mentor Sessions page will display:
+1. **Batch name** -- which batch this session is for
+2. **Pathway or Course name** -- the learning track associated with the session
+3. **Unlocked content summary** -- how many recordings and assignments have been unlocked for students in that batch/course by now (based on drip schedule)
 
-The reset password email is being sent successfully (as shown in the screenshot), but when the user clicks the "Reset Password" link in the email, the flow breaks. This is caused by two issues:
+### Current State
+- Sessions are fetched with `select('*')` from `success_sessions`, which already returns `batch_id`, `course_id`, and `pathway_id` columns
+- However, batch name, course title, and pathway name are not resolved or displayed
+- No unlock information is shown
 
-1. **Supabase Redirect URL not whitelisted**: Supabase requires the app's URL to be listed in its "Redirect URLs" configuration. Without this, the password reset link silently fails to redirect back to the app.
+### Implementation Steps
 
-2. **Inconsistent redirect URL**: The code uses `window.location.origin` which changes depending on whether the user is on the preview URL vs the published URL, potentially causing mismatches.
+**1. Update the data fetching in `MentorSessions.tsx`**
 
-## Solution
+- After fetching sessions, collect all unique `batch_id`, `course_id`, and `pathway_id` values
+- Fetch batch names from `batches` table, course titles from `courses` table, and pathway names from `learning_pathways` table in parallel
+- Build lookup maps for quick resolution
 
-### Step 1: Supabase Dashboard Configuration (Manual - Required)
+**2. Extend the `MentorSession` interface**
 
-You need to add your published URL to the Supabase project's allowed redirect URLs:
+Add these fields:
+- `batch_id`, `batch_name` (resolved from batches table)
+- `course_id`, `course_title` (resolved from courses table)
+- `pathway_id`, `pathway_name` (resolved from learning_pathways table, or derived via `pathway_courses` junction)
 
-1. Go to **Supabase Dashboard** > your project (`majqoqagohicjigmsilu`)
-2. Navigate to **Authentication** > **URL Configuration**
-3. Set **Site URL** to: `https://growthos-final.lovable.app`
-4. Under **Redirect URLs**, add:
-   - `https://growthos-final.lovable.app/reset-password`
-   - `https://growthos-final.lovable.app/**`
-   - Any other domains where the app is hosted
+**3. Calculate unlocked content per session**
 
-Without this step, Supabase will refuse to redirect users back to your app after they click the email link.
+For each session's `course_id` + batch `start_date`:
+- Query `available_lessons` for the course's modules to get all recordings with their `drip_days`
+- Calculate which lessons are unlocked by comparing `batch.start_date + drip_days <= today`
+- Count unlocked recordings and unlocked assignments (lessons that have an `assignment_id`)
+- Display as "X/Y Recordings unlocked, Z Assignments unlocked"
 
-### Step 2: Code Fix - Use Published URL for Redirect
+**4. Update the SessionCard UI**
 
-Update the `redirectTo` in `ResetPassword.tsx` to prefer the published/configured site URL over `window.location.origin`, and add a `VITE_SITE_URL` environment variable pointing to the published domain.
-
-**File: `.env`**
-- Add `VITE_SITE_URL=https://growthos-final.lovable.app`
-
-**File: `src/pages/ResetPassword.tsx`**
-- Import `ENV_CONFIG` from env-config
-- Change `redirectTo` from `window.location.origin` to use `ENV_CONFIG.SITE_URL` with a fallback to `window.location.origin`
-- Add console logging when code exchange fails so issues are visible in the browser console
+Add a new info section below the session title showing:
+- **Batch badge**: e.g., "Batch: January 2026" or "No Batch"
+- **Pathway/Course badge**: e.g., "Pathway: Ecommerce Mastery" or "Course: SEO Basics"
+- **Unlock summary row**: e.g., "5/12 Recordings unlocked -- 3 Assignments available"
 
 ### Technical Details
 
-```text
-Current code (line 127):
-  redirectTo: `${window.location.origin}/reset-password`
+**Data Flow:**
+1. Fetch sessions (existing)
+2. Extract unique IDs for batch, course, pathway
+3. Parallel fetch: `batches`, `courses`, `learning_pathways`, `pathway_courses`, `available_lessons` (filtered by course modules)
+4. For each session, calculate drip-based unlocks using `batch.start_date + lesson.drip_days <= today`
+5. Render enriched cards
 
-Updated code:
-  const siteUrl = ENV_CONFIG.SITE_URL || window.location.origin;
-  redirectTo: `${siteUrl}/reset-password`
-```
-
-This ensures the redirect URL always matches what's configured in Supabase, regardless of whether the user initiated the reset from the preview or published domain.
-
-## Files to Change
-
-1. **`.env`** -- Add `VITE_SITE_URL=https://growthos-final.lovable.app`
-2. **`src/pages/ResetPassword.tsx`** -- Import `ENV_CONFIG`, use `ENV_CONFIG.SITE_URL` for `redirectTo`, add debug logging
-
-## Important Note
-
-The **Supabase Dashboard configuration (Step 1) is critical** and must be done manually by you. The code changes alone will not fix the issue if the URL is not whitelisted in Supabase.
+**Files Modified:**
+- `src/components/mentor/MentorSessions.tsx` -- main changes to fetching, interface, and rendering
 
