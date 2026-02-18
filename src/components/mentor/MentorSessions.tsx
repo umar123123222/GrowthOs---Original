@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Calendar, Clock, Video, Users, Eye, EyeOff, Play, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Calendar, Clock, Video, Users, Eye, EyeOff, Play, ExternalLink, AlertTriangle, Copy, Check } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,6 +33,7 @@ export function MentorSessions() {
   const [completedSessions, setCompletedSessions] = useState<MentorSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCredentials, setShowCredentials] = useState<{ [key: string]: boolean }>({});
+  const [copiedField, setCopiedField] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -217,6 +218,27 @@ export function MentorSessions() {
     );
   }
 
+
+  const copyToClipboard = (value: string, fieldId: string) => {
+    navigator.clipboard.writeText(value);
+    setCopiedField(fieldId);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const CopyableField = ({ label, value, fieldId, isMasked = false }: { label: string; value: string; fieldId: string; isMasked?: boolean }) => (
+    <div>
+      <label className="block text-sm font-medium mb-1">{label}</label>
+      <div className="flex items-center gap-2 p-2 bg-muted/50 rounded">
+        <p className="font-mono text-sm flex-1">{value ? (isMasked ? '••••••••' : value) : 'Not provided'}</p>
+        {value && (
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={() => copyToClipboard(value, fieldId)}>
+            {copiedField === fieldId ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+
   const SessionCard = ({ session, isUpcoming = true }: { session: MentorSession; isUpcoming?: boolean }) => {
     const canStart = canStartSession(session);
     const showCreds = showCredentials[session.id];
@@ -375,32 +397,12 @@ export function MentorSessions() {
                   </DialogHeader>
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Meeting ID</label>
-                        <p className="font-mono text-sm p-2 bg-gray-50 rounded">
-                          {session.zoom_meeting_id || 'Not provided'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Passcode</label>
-                        <p className="font-mono text-sm p-2 bg-gray-50 rounded">
-                          {session.zoom_passcode || 'Not provided'}
-                        </p>
-                      </div>
+                      <CopyableField label="Meeting ID" value={session.zoom_meeting_id || ''} fieldId={`mid-${session.id}`} />
+                      <CopyableField label="Passcode" value={session.zoom_passcode || ''} fieldId={`pass-${session.id}`} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Host Email</label>
-                        <p className="text-sm p-2 bg-gray-50 rounded">
-                          {session.host_login_email || 'Not provided'}
-                        </p>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-1">Host Password</label>
-                        <p className="font-mono text-sm p-2 bg-gray-50 rounded">
-                          {session.host_login_pwd ? '••••••••' : 'Not provided'}
-                        </p>
-                      </div>
+                      <CopyableField label="Host Email" value={session.host_login_email || ''} fieldId={`email-${session.id}`} />
+                      <CopyableField label="Host Password" value={session.host_login_pwd || ''} fieldId={`pwd-${session.id}`} isMasked={true} />
                     </div>
                     {isUpcoming && canStart && (
                       <div className="pt-4 border-t">
