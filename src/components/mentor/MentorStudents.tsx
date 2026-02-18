@@ -70,356 +70,83 @@ export const MentorStudents = () => {
     setLoading(true);
 
     try {
-      // Get mentor's assigned courses
-      const { data: mentorCourses, error: mentorError } = await supabase
-        .from('mentor_course_assignments')
-        .select('course_id, is_global, courses(id, title)')
-        .eq('mentor_id', user.id);
-
-      if (mentorError) {
-        console.error('Error fetching mentor courses:', mentorError);
-        setLoading(false);
-        return;
-      }
-
-      const isGlobalMentor = mentorCourses?.some(mc => mc.is_global);
-      const courseIds = mentorCourses?.map(mc => mc.course_id).filter(Boolean) || [];
-
-      console.log('[MentorStudents] Mentor courses:', mentorCourses);
-      console.log('[MentorStudents] Course IDs:', courseIds);
-      console.log('[MentorStudents] Is global mentor:', isGlobalMentor);
-
-      // Get pathway courses for mentor's assigned courses
-      const { data: pathwayCourses, error: pathwayCoursesError } = await supabase
-        .from('pathway_courses')
-        .select('pathway_id, course_id, step_number, choice_group, is_choice_point, learning_pathways(id, name)')
-        .in('course_id', courseIds.length > 0 ? courseIds : ['non-existent']);
-
-      console.log('[MentorStudents] Pathway courses for mentor:', pathwayCourses);
-      if (pathwayCoursesError) {
-        console.error('[MentorStudents] Error fetching pathway courses:', pathwayCoursesError);
-      }
-
-      const pathwayIds = [...new Set(pathwayCourses?.map(pc => pc.pathway_id) || [])];
-      console.log('[MentorStudents] Pathway IDs containing mentor courses:', pathwayIds);
-
-      // Get all choice point courses in these pathways to identify competing courses
-      const { data: allChoicePointCourses } = await supabase
-        .from('pathway_courses')
-        .select('pathway_id, course_id, choice_group, is_choice_point')
-        .in('pathway_id', pathwayIds.length > 0 ? pathwayIds : ['non-existent'])
-        .eq('is_choice_point', true);
-
-      console.log('[MentorStudents] All choice point courses:', allChoicePointCourses);
-
-      // Get pathway choice selections to filter out students who chose competing courses
-      const { data: choiceSelections } = await supabase
-        .from('pathway_choice_selections')
-        .select('student_id, pathway_id, choice_group, selected_course_id');
-
-      console.log('[MentorStudents] Choice selections:', choiceSelections);
-
-      // Fetch direct enrollments for mentor's courses
-      let directEnrollmentsQuery = supabase
-        .from('course_enrollments')
-        .select(`
-          id,
-          course_id,
-          enrolled_at,
-          status,
-          pathway_id,
-          batch_id,
-          batches(id, name),
-          students!inner(
-            id,
-            student_id,
-            user_id,
-            enrollment_date,
-            fees_cleared,
-            goal_brief,
-            users!inner(id, full_name)
-          ),
-          courses!inner(id, title)
-        `)
-        .is('pathway_id', null);
-
-      if (!isGlobalMentor && courseIds.length > 0) {
-        directEnrollmentsQuery = directEnrollmentsQuery.in('course_id', courseIds);
-      }
-
-      const { data: directEnrollments, error: directError } = await directEnrollmentsQuery;
-
-      if (directError) {
-        console.error('Error fetching direct enrollments:', directError);
-      }
-      console.log('[MentorStudents] Direct enrollments:', directEnrollments?.length);
-
-      // Fetch pathway enrollments - include students in pathways that contain mentor's assigned courses
-      // NOTE: Using learning_pathways (LEFT JOIN) instead of learning_pathways!inner because 
-      // the !inner join with RLS restrictive policies can cause data to be filtered out
-      let pathwayEnrollmentsQuery = supabase
-        .from('course_enrollments')
-        .select(`
-          id,
-          course_id,
-          pathway_id,
-          enrolled_at,
-          status,
-          batch_id,
-          batches(id, name),
-          students!inner(
-            id,
-            student_id,
-            user_id,
-            enrollment_date,
-            fees_cleared,
-            goal_brief,
-            users!inner(id, full_name)
-          ),
-          courses(id, title),
-          learning_pathways(id, name)
-        `)
-        .not('pathway_id', 'is', null);
-
-      // Filter by pathway_id (pathways that include mentor's courses) instead of course_id
-      // Only apply filter if we have pathway IDs, otherwise skip pathway enrollments entirely
-      if (!isGlobalMentor) {
-        if (pathwayIds.length > 0) {
-          pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.in('pathway_id', pathwayIds);
-        } else {
-          // No pathways contain mentor's courses, set to impossible filter to return empty
-          console.log('[MentorStudents] No pathway IDs found for mentor courses');
-          pathwayEnrollmentsQuery = pathwayEnrollmentsQuery.in('pathway_id', ['non-existent-pathway-id']);
-        }
-      }
-
-      // Helper function to check if a student chose a competing course (not the mentor's course)
-      const studentChoseCompetingCourse = (studentId: string, pathwayId: string, mentorCourseId: string): boolean => {
-        // Find if mentor's course is a choice point
-        const mentorCourseChoicePoint = allChoicePointCourses?.find(
-          cp => cp.pathway_id === pathwayId && cp.course_id === mentorCourseId && cp.is_choice_point
-        );
-        
-        if (!mentorCourseChoicePoint || !mentorCourseChoicePoint.choice_group) {
-          // Mentor's course is not a choice point, so no competing courses
-          return false;
-        }
-
-        // Find student's selection for this choice group
-        const studentSelection = choiceSelections?.find(
-          cs => cs.student_id === studentId && 
-                cs.pathway_id === pathwayId && 
-                cs.choice_group === mentorCourseChoicePoint.choice_group
-        );
-
-        if (!studentSelection) {
-          // Student hasn't made a choice yet, include them
-          return false;
-        }
-
-        // If student selected a different course than mentor's course, exclude them
-        return studentSelection.selected_course_id !== mentorCourseId;
-      };
-
-      const { data: pathwayEnrollments, error: pathwayError } = await pathwayEnrollmentsQuery;
-
-      if (pathwayError) {
-        console.error('Error fetching pathway enrollments:', pathwayError);
-      }
-      
-      console.log('[MentorStudents] Pathway enrollments fetched:', pathwayEnrollments?.length);
-      console.log('[MentorStudents] Pathway enrollments data:', pathwayEnrollments?.map(e => ({
-        id: e.id,
-        pathway_id: e.pathway_id,
-        pathway_name: e.learning_pathways?.name,
-        student_name: e.students?.users?.full_name,
-        student_id: e.students?.id
-      })));
-
-      // Group students by course
-      const courseMap = new Map<string, CourseWithStudents>();
-      const uniqueStudentIds = new Set<string>();
-
-      // Process direct enrollments
-      directEnrollments?.forEach(enrollment => {
-        const courseId = enrollment.course_id;
-        const courseTitle = enrollment.courses?.title || 'Unknown Course';
-        
-        if (!courseMap.has(courseId)) {
-          courseMap.set(courseId, {
-            course_id: courseId,
-            course_title: courseTitle,
-            students: []
-          });
-        }
-
-        const student = enrollment.students;
-        const studentKey = `${student.user_id}-${courseId}`;
-        
-        if (!uniqueStudentIds.has(studentKey)) {
-          uniqueStudentIds.add(studentKey);
-          
-          // Get batch name from the batches relation
-          const batchName = enrollment.batches?.name || null;
-
-          courseMap.get(courseId)!.students.push({
-            student_id: student.student_id || student.id,
-            student_name: student.users?.full_name || 'Unknown',
-            student_batch: batchName,
-            joining_date: enrollment.enrolled_at || student.enrollment_date || '',
-            lms_status: getLmsStatus(enrollment.status, student.fees_cleared),
-            enrollment_type: 'direct'
-          });
-        }
-      });
-
-      // Process pathway enrollments - associate students with mentor's assigned courses that are in the pathway
-      pathwayEnrollments?.forEach(enrollment => {
-        const student = enrollment.students;
-        const pathwayId = enrollment.pathway_id;
-        const studentId = student.id;
-        
-        // Find which of mentor's courses are in this pathway
-        const mentorCoursesInPathway = pathwayCourses?.filter(pc => 
-          pc.pathway_id === pathwayId && courseIds.includes(pc.course_id)
-        ) || [];
-
-        console.log(`[MentorStudents] Processing pathway student: ${student.users?.full_name}`, {
-          studentId,
-          pathwayId,
-          mentorCoursesInPathway: mentorCoursesInPathway.map(mc => mc.course_id)
-        });
-        
-        // If global mentor, or for each mentor course in the pathway, add the student
-        const targetCourseIds = isGlobalMentor 
-          ? [enrollment.course_id] // For global mentor, use actual enrollment course
-          : mentorCoursesInPathway.map(pc => pc.course_id);
-        
-        console.log(`[MentorStudents] Target course IDs for ${student.users?.full_name}:`, targetCourseIds);
-
-        targetCourseIds.forEach(targetCourseId => {
-          // Skip if student chose a competing course (e.g., chose Freelancing instead of Ecom 360)
-          const choseCompeting = studentChoseCompetingCourse(studentId, pathwayId, targetCourseId);
-          console.log(`[MentorStudents] ${student.users?.full_name} chose competing course for ${targetCourseId}:`, choseCompeting);
-          
-          if (choseCompeting) {
-            return;
-          }
-
-          // Get the course title for this target course
-          const targetCourse = mentorCourses?.find(mc => mc.course_id === targetCourseId);
-          const courseTitle = targetCourse?.courses?.title || enrollment.courses?.title || 'Unknown Course';
-          
-          if (!courseMap.has(targetCourseId)) {
-            courseMap.set(targetCourseId, {
-              course_id: targetCourseId,
-              course_title: courseTitle,
-              students: []
-            });
-          }
-
-          const studentKey = `${student.user_id}-${targetCourseId}`;
-          
-          if (!uniqueStudentIds.has(studentKey)) {
-            uniqueStudentIds.add(studentKey);
-            
-            // Get batch name from the batches relation
-            const batchName = enrollment.batches?.name || null;
-
-            courseMap.get(targetCourseId)!.students.push({
-              student_id: student.student_id || student.id,
-              student_name: student.users?.full_name || 'Unknown',
-              student_batch: batchName,
-              joining_date: enrollment.enrolled_at || student.enrollment_date || '',
-              lms_status: getLmsStatus(enrollment.status, student.fees_cleared),
-              enrollment_type: 'pathway',
-              pathway_name: enrollment.learning_pathways?.name
-            });
-          }
-        });
-      });
-
-      // Fetch ALL batch enrollments to show complete batch membership
-      const { data: allBatchEnrollments } = await supabase
-        .from('course_enrollments')
-        .select(`
-          id,
-          course_id,
-          pathway_id,
-          enrolled_at,
-          status,
-          batch_id,
-          batches(id, name),
-          students!inner(
-            id,
-            student_id,
-            user_id,
-            enrollment_date,
-            fees_cleared,
-            users!inner(id, full_name)
-          ),
-          courses(id, title),
-          learning_pathways(id, name)
-        `)
-        .not('batch_id', 'is', null);
-
-      // Merge batch students not already in courseMap
-      allBatchEnrollments?.forEach(enrollment => {
-        const student = enrollment.students;
-        const courseId = enrollment.course_id;
-        const courseTitle = enrollment.courses?.title || 'Unknown Course';
-        const studentKey = `${student.user_id}-${courseId}`;
-
-        if (!uniqueStudentIds.has(studentKey)) {
-          uniqueStudentIds.add(studentKey);
-
-          if (!courseMap.has(courseId)) {
-            courseMap.set(courseId, {
-              course_id: courseId,
-              course_title: courseTitle,
-              students: []
-            });
-          }
-
-          const batchName = enrollment.batches?.name || null;
-          courseMap.get(courseId)!.students.push({
-            student_id: student.student_id || student.id,
-            student_name: student.users?.full_name || 'Unknown',
-            student_batch: batchName,
-            joining_date: enrollment.enrolled_at || student.enrollment_date || '',
-            lms_status: getLmsStatus(enrollment.status, student.fees_cleared),
-            enrollment_type: enrollment.pathway_id ? 'pathway' : 'direct',
-            pathway_name: enrollment.learning_pathways?.name
-          });
-        }
-      });
-
-      // Fetch ALL users with student role to include those without enrollments
+      // 1. Fetch ALL users with student role - this is the primary data source
+      //    (avoids RLS issues with students!inner join on course_enrollments)
       const { data: allStudentUsers } = await supabase
         .from('users')
         .select('id, full_name, role, created_at, lms_status, status')
         .eq('role', 'student');
 
-      // Also get student records for student_id mapping
+      // 2. Fetch all student records for student_id mapping
       const { data: allStudentRecords } = await supabase
         .from('students')
-        .select('id, student_id, user_id, enrollment_date');
+        .select('id, student_id, user_id, enrollment_date, fees_cleared');
 
-      const studentRecordMap = new Map<string, { student_id: string; enrollment_date: string | null }>();
+      // 3. Fetch all course enrollments WITHOUT students!inner join
+      const { data: allEnrollments } = await supabase
+        .from('course_enrollments')
+        .select(`
+          id,
+          student_id,
+          course_id,
+          pathway_id,
+          enrolled_at,
+          status,
+          batch_id,
+          batches(id, name),
+          courses(id, title),
+          learning_pathways(id, name)
+        `);
+
+      // 4. Get mentor's assigned courses
+      const { data: mentorCourses } = await supabase
+        .from('mentor_course_assignments')
+        .select('course_id, is_global, courses(id, title)')
+        .eq('mentor_id', user.id);
+
+      const isGlobalMentor = mentorCourses?.some(mc => mc.is_global);
+      const courseIds = mentorCourses?.map(mc => mc.course_id).filter(Boolean) || [];
+
+      // Build lookup maps
+      const studentRecordMap = new Map<string, { id: string; student_id: string; enrollment_date: string | null; fees_cleared: boolean | null; user_id: string }>();
+      const studentRecordByIdMap = new Map<string, { user_id: string; student_id: string; fees_cleared: boolean | null }>();
       allStudentRecords?.forEach(sr => {
-        studentRecordMap.set(sr.user_id, { student_id: sr.student_id || sr.id, enrollment_date: sr.enrollment_date });
+        studentRecordMap.set(sr.user_id, { id: sr.id, student_id: sr.student_id || sr.id, enrollment_date: sr.enrollment_date, fees_cleared: sr.fees_cleared, user_id: sr.user_id });
+        studentRecordByIdMap.set(sr.id, { user_id: sr.user_id, student_id: sr.student_id || sr.id, fees_cleared: sr.fees_cleared });
       });
 
-      // Add a synthetic "All Students" course for students not yet in any course
-      const unassignedCourseId = '__all_students__';
-      
+      const userMap = new Map<string, { id: string; full_name: string | null; lms_status: string | null }>();
+      allStudentUsers?.forEach(u => {
+        userMap.set(u.id, { id: u.id, full_name: u.full_name, lms_status: u.lms_status });
+      });
+
+      // Link enrollments to users via student records
+      // course_enrollments.student_id -> students.id -> students.user_id -> users
+      const enrollmentsByUserId = new Map<string, typeof allEnrollments>();
+      allEnrollments?.forEach(enrollment => {
+        const studentRecord = studentRecordByIdMap.get(enrollment.student_id);
+        if (studentRecord) {
+          const userId = studentRecord.user_id;
+          if (!enrollmentsByUserId.has(userId)) {
+            enrollmentsByUserId.set(userId, []);
+          }
+          enrollmentsByUserId.get(userId)!.push(enrollment);
+        }
+      });
+
+      // Group students by course
+      const courseMap = new Map<string, CourseWithStudents>();
+      const uniqueStudentIds = new Set<string>();
+
+      // Process each student user
       allStudentUsers?.forEach(studentUser => {
-        // Check if this user is already in any course via uniqueStudentIds
-        const alreadyTracked = Array.from(uniqueStudentIds).some(key => key.startsWith(`${studentUser.id}-`));
-        
-        if (!alreadyTracked) {
-          const record = studentRecordMap.get(studentUser.id);
-          
+        const record = studentRecordMap.get(studentUser.id);
+        const userEnrollments = enrollmentsByUserId.get(studentUser.id) || [];
+        const displayStudentId = record?.student_id || studentUser.id;
+
+        if (userEnrollments.length === 0) {
+          // Student has no enrollments - add to Unassigned
+          const unassignedCourseId = '__all_students__';
           if (!courseMap.has(unassignedCourseId)) {
             courseMap.set(unassignedCourseId, {
               course_id: unassignedCourseId,
@@ -429,15 +156,46 @@ export const MentorStudents = () => {
           }
 
           const studentKey = `${studentUser.id}-${unassignedCourseId}`;
-          uniqueStudentIds.add(studentKey);
+          if (!uniqueStudentIds.has(studentKey)) {
+            uniqueStudentIds.add(studentKey);
+            courseMap.get(unassignedCourseId)!.students.push({
+              student_id: displayStudentId,
+              student_name: studentUser.full_name || 'Unknown',
+              student_batch: null,
+              joining_date: record?.enrollment_date || studentUser.created_at || '',
+              lms_status: studentUser.lms_status || 'inactive',
+              enrollment_type: 'direct'
+            });
+          }
+        } else {
+          // Student has enrollments - add to each course
+          userEnrollments.forEach(enrollment => {
+            const courseId = enrollment.course_id;
+            const courseTitle = enrollment.courses?.title || 'Unknown Course';
+            const batchName = enrollment.batches?.name || null;
+            const isPathway = !!enrollment.pathway_id;
 
-          courseMap.get(unassignedCourseId)!.students.push({
-            student_id: record?.student_id || studentUser.id,
-            student_name: studentUser.full_name || 'Unknown',
-            student_batch: null,
-            joining_date: record?.enrollment_date || studentUser.created_at || '',
-            lms_status: studentUser.lms_status || 'inactive',
-            enrollment_type: 'direct'
+            if (!courseMap.has(courseId)) {
+              courseMap.set(courseId, {
+                course_id: courseId,
+                course_title: courseTitle,
+                students: []
+              });
+            }
+
+            const studentKey = `${studentUser.id}-${courseId}`;
+            if (!uniqueStudentIds.has(studentKey)) {
+              uniqueStudentIds.add(studentKey);
+              courseMap.get(courseId)!.students.push({
+                student_id: displayStudentId,
+                student_name: studentUser.full_name || 'Unknown',
+                student_batch: batchName,
+                joining_date: enrollment.enrolled_at || record?.enrollment_date || '',
+                lms_status: getLmsStatus(enrollment.status, record?.fees_cleared ?? null),
+                enrollment_type: isPathway ? 'pathway' : 'direct',
+                pathway_name: enrollment.learning_pathways?.name
+              });
+            }
           });
         }
       });
