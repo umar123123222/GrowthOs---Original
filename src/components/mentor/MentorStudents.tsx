@@ -394,6 +394,54 @@ export const MentorStudents = () => {
         }
       });
 
+      // Fetch ALL users with student role to include those without enrollments
+      const { data: allStudentUsers } = await supabase
+        .from('users')
+        .select('id, full_name, role, created_at, lms_status, status')
+        .eq('role', 'student');
+
+      // Also get student records for student_id mapping
+      const { data: allStudentRecords } = await supabase
+        .from('students')
+        .select('id, student_id, user_id, enrollment_date');
+
+      const studentRecordMap = new Map<string, { student_id: string; enrollment_date: string | null }>();
+      allStudentRecords?.forEach(sr => {
+        studentRecordMap.set(sr.user_id, { student_id: sr.student_id || sr.id, enrollment_date: sr.enrollment_date });
+      });
+
+      // Add a synthetic "All Students" course for students not yet in any course
+      const unassignedCourseId = '__all_students__';
+      
+      allStudentUsers?.forEach(studentUser => {
+        // Check if this user is already in any course via uniqueStudentIds
+        const alreadyTracked = Array.from(uniqueStudentIds).some(key => key.startsWith(`${studentUser.id}-`));
+        
+        if (!alreadyTracked) {
+          const record = studentRecordMap.get(studentUser.id);
+          
+          if (!courseMap.has(unassignedCourseId)) {
+            courseMap.set(unassignedCourseId, {
+              course_id: unassignedCourseId,
+              course_title: 'Unassigned',
+              students: []
+            });
+          }
+
+          const studentKey = `${studentUser.id}-${unassignedCourseId}`;
+          uniqueStudentIds.add(studentKey);
+
+          courseMap.get(unassignedCourseId)!.students.push({
+            student_id: record?.student_id || studentUser.id,
+            student_name: studentUser.full_name || 'Unknown',
+            student_batch: null,
+            joining_date: record?.enrollment_date || studentUser.created_at || '',
+            lms_status: studentUser.lms_status || 'inactive',
+            enrollment_type: 'direct'
+          });
+        }
+      });
+
       const coursesArray = Array.from(courseMap.values()).sort((a, b) => 
         a.course_title.localeCompare(b.course_title)
       );
