@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       const batch = user_ids.slice(i, i + batchSize);
       const { data, error } = await serviceClient
         .from("users")
-        .select("id, full_name, lms_status, created_at")
+        .select("id, full_name, lms_status, created_at, created_by")
         .in("id", batch);
       if (!error && data) {
         allUsers.push(...data);
