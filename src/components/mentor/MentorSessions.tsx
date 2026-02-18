@@ -108,8 +108,12 @@ export function MentorSessions() {
       const pathwayMap = new Map<string, string>();
       (pathwaysRes.data || []).forEach((p: any) => pathwayMap.set(p.id, p.name));
 
-      // Collect all course IDs we need unlock info for (from sessions + batches)
+      // Collect all course IDs we need unlock info for
+      // For pathway-based sessions, resolve courses via pathway_courses
       const allCourseIds = new Set<string>();
+      const pathwayCourseMap = new Map<string, string[]>();
+
+      // Collect direct course IDs
       rawSessions.forEach(s => {
         if (s.course_id) allCourseIds.add(s.course_id);
         if (s.batch_id) {
@@ -118,15 +122,56 @@ export function MentorSessions() {
         }
       });
 
-      // Fetch available_lessons for all relevant courses via get_course_modules RPC + available_lessons
-      const unlockData = await fetchUnlockInfo([...allCourseIds], batchMap, rawSessions);
+      // Also resolve courses from pathways
+      if (uniquePathwayIds.length > 0) {
+        const { data: pathwayCourses } = await supabase
+          .from('pathway_courses')
+          .select('pathway_id, course_id')
+          .in('pathway_id', uniquePathwayIds)
+          .order('step_number');
+
+        (pathwayCourses || []).forEach(pc => {
+          allCourseIds.add(pc.course_id);
+          if (!pathwayCourseMap.has(pc.pathway_id)) pathwayCourseMap.set(pc.pathway_id, []);
+          pathwayCourseMap.get(pc.pathway_id)!.push(pc.course_id);
+        });
+
+        // Also fetch titles for these newly discovered courses
+        const newCourseIds = [...allCourseIds].filter(id => !courseMap.has(id));
+        if (newCourseIds.length > 0) {
+          const { data: extraCourses } = await supabase.from('courses').select('id, title').in('id', newCourseIds);
+          (extraCourses || []).forEach((c: any) => courseMap.set(c.id, c.title));
+        }
+      }
+
+      // Fetch unlock info
+      const unlockData = await fetchUnlockInfo([...allCourseIds], batchMap, rawSessions, pathwayCourseMap);
 
       const sessions: MentorSession[] = rawSessions.map(session => {
         const batch = session.batch_id ? batchMap.get(session.batch_id) : null;
         const effectiveCourseId = session.course_id || batch?.course_id || null;
         const effectivePathwayId = (session as any).pathway_id || batch?.pathway_id || null;
 
-        const unlockKey = `${session.batch_id || ''}_${effectiveCourseId || ''}`;
+        // For pathway sessions, aggregate unlock info across all pathway courses
+        let unlockInfo: UnlockInfo | undefined;
+        if (effectivePathwayId && pathwayCourseMap.has(effectivePathwayId)) {
+          const pCourseIds = pathwayCourseMap.get(effectivePathwayId)!;
+          const aggregated: UnlockInfo = { unlockedRecordings: 0, totalRecordings: 0, unlockedAssignments: 0, totalAssignments: 0 };
+          pCourseIds.forEach(cid => {
+            const key = `${session.batch_id || ''}_${cid}`;
+            const info = unlockData.get(key);
+            if (info) {
+              aggregated.unlockedRecordings += info.unlockedRecordings;
+              aggregated.totalRecordings += info.totalRecordings;
+              aggregated.unlockedAssignments += info.unlockedAssignments;
+              aggregated.totalAssignments += info.totalAssignments;
+            }
+          });
+          if (aggregated.totalRecordings > 0) unlockInfo = aggregated;
+        } else {
+          const unlockKey = `${session.batch_id || ''}_${effectiveCourseId || ''}`;
+          unlockInfo = unlockData.get(unlockKey);
+        }
 
         return {
           id: session.id,
@@ -149,7 +194,7 @@ export function MentorSessions() {
           course_title: effectiveCourseId ? courseMap.get(effectiveCourseId) : undefined,
           pathway_id: effectivePathwayId || undefined,
           pathway_name: effectivePathwayId ? pathwayMap.get(effectivePathwayId) : undefined,
-          unlockInfo: unlockData.get(unlockKey),
+          unlockInfo,
         };
       });
       
@@ -169,7 +214,8 @@ export function MentorSessions() {
   const fetchUnlockInfo = async (
     courseIds: string[],
     batchMap: Map<string, { name: string; start_date: string; course_id: string | null; pathway_id: string | null }>,
-    rawSessions: any[]
+    rawSessions: any[],
+    pathwayCourseMap: Map<string, string[]>
   ): Promise<Map<string, UnlockInfo>> => {
     const result = new Map<string, UnlockInfo>();
     if (courseIds.length === 0) return result;
@@ -184,26 +230,26 @@ export function MentorSessions() {
       );
       const moduleResults = await Promise.all(modulePromises);
 
-      // Build course -> module titles map
-      const courseModules = new Map<string, string[]>();
+      // Build course -> module IDs map (available_lessons.module is a FK to modules.id)
+      const courseModuleIds = new Map<string, string[]>();
       moduleResults.forEach(({ courseId, modules }) => {
-        courseModules.set(courseId, modules.map(m => m.module_title));
+        courseModuleIds.set(courseId, modules.map(m => m.module_id));
       });
 
-      // Get all module titles we need
-      const allModuleTitles = [...new Set(moduleResults.flatMap(r => r.modules.map(m => m.module_title)))];
+      // Get all module IDs we need
+      const allModuleIds = [...new Set(moduleResults.flatMap(r => r.modules.map(m => m.module_id)))];
       
-      if (allModuleTitles.length === 0) return result;
+      if (allModuleIds.length === 0) return result;
 
-      // Fetch available_lessons for these modules
+      // Fetch available_lessons for these modules using module ID
       const { data: lessons } = await supabase
         .from('available_lessons')
         .select('id, module, drip_days, assignment_id')
-        .in('module', allModuleTitles);
+        .in('module', allModuleIds);
 
       if (!lessons) return result;
 
-      // Group lessons by module
+      // Group lessons by module ID
       const lessonsByModule = new Map<string, typeof lessons>();
       lessons.forEach(l => {
         const mod = l.module || '';
@@ -211,20 +257,34 @@ export function MentorSessions() {
         lessonsByModule.get(mod)!.push(l);
       });
 
-      // For each session's batch+course combo, calculate unlocks
+      // For each batch+course combo, calculate unlocks
       const today = new Date();
       today.setHours(23, 59, 59, 999);
 
+      // Build all batch+course combos we need
+      const combos = new Set<string>();
       rawSessions.forEach(session => {
         const batch = session.batch_id ? batchMap.get(session.batch_id) : null;
-        const effectiveCourseId = session.course_id || batch?.course_id;
-        if (!effectiveCourseId) return;
+        const effectivePathwayId = session.pathway_id || batch?.pathway_id;
 
-        const unlockKey = `${session.batch_id || ''}_${effectiveCourseId}`;
-        if (result.has(unlockKey)) return; // Already calculated
+        if (effectivePathwayId && pathwayCourseMap.has(effectivePathwayId)) {
+          // Add combos for all courses in the pathway
+          pathwayCourseMap.get(effectivePathwayId)!.forEach(cid => {
+            combos.add(`${session.batch_id || ''}_${cid}`);
+          });
+        } else {
+          const effectiveCourseId = session.course_id || batch?.course_id;
+          if (effectiveCourseId) combos.add(`${session.batch_id || ''}_${effectiveCourseId}`);
+        }
+      });
 
-        const moduleTitles = courseModules.get(effectiveCourseId) || [];
-        const courseLessons = moduleTitles.flatMap(mt => lessonsByModule.get(mt) || []);
+      combos.forEach(combo => {
+        const [batchId, courseId] = combo.split('_');
+        if (!courseId) return;
+
+        const batch = batchId ? batchMap.get(batchId) : null;
+        const moduleIds = courseModuleIds.get(courseId) || [];
+        const courseLessons = moduleIds.flatMap(mid => lessonsByModule.get(mid) || []);
 
         const startDate = batch?.start_date ? new Date(batch.start_date) : null;
 
@@ -244,13 +304,12 @@ export function MentorSessions() {
               if (hasAssignment) unlockedAssignments++;
             }
           } else {
-            // No batch start date = assume all unlocked
             unlockedRecordings++;
             if (hasAssignment) unlockedAssignments++;
           }
         });
 
-        result.set(unlockKey, {
+        result.set(combo, {
           unlockedRecordings,
           totalRecordings: courseLessons.length,
           unlockedAssignments,
