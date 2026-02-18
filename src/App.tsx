@@ -95,6 +95,7 @@ const MentorCalendarPage = lazy(() => import("./pages/MentorCalendarPage"));
 const AdminNotifications = lazy(() => import("./pages/AdminNotifications"));
 const DevSendNotification = lazy(() => import("./pages/DevSendNotification"));
 const Catalog = lazy(() => import("./pages/Catalog"));
+const SupportDetails = lazy(() => import("./pages/SupportDetails"));
 
 
 // Loading component
@@ -245,6 +246,7 @@ const App = () => {
                     
                     <Route path="messages" element={<Messages />} />
                     <Route path="support" element={<Support />} />
+                    <Route path="support-details" element={<SupportDetails />} />
                     <Route path="connect" element={<Connect />} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="notifications" element={<Notifications />} />

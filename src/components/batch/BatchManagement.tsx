@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Edit, Trash2, Users, Calendar, Clock, AlertTriangle, BookOpen, Route, UserPlus, X } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Calendar, Clock, AlertTriangle, BookOpen, Route, UserPlus, X, MessageCircle } from 'lucide-react';
 import { BatchStudentAssignment } from './BatchStudentAssignment';
 import { useBatches, type Batch, type BatchFormData } from '@/hooks/useBatches';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,7 +49,9 @@ export function BatchManagement() {
     start_date: '',
     timezone: 'Asia/Karachi',
     default_session_time: '20:00',
-    status: 'draft'
+    status: 'draft',
+    whatsapp_group_link: '',
+    facebook_community_link: ''
   });
   const { toast } = useToast();
 
@@ -138,7 +140,9 @@ export function BatchManagement() {
       start_date: '',
       timezone: 'Asia/Karachi',
       default_session_time: '20:00',
-      status: 'draft'
+      status: 'draft',
+      whatsapp_group_link: '',
+      facebook_community_link: ''
     });
     setSelectedPathways([]);
     setSelectedCourses([]);
@@ -155,7 +159,9 @@ export function BatchManagement() {
         start_date: batch.start_date,
         timezone: batch.timezone,
         default_session_time: batch.default_session_time,
-        status: batch.status
+        status: batch.status,
+        whatsapp_group_link: (batch as any).whatsapp_group_link || '',
+        facebook_community_link: (batch as any).facebook_community_link || ''
       });
       await fetchBatchAssociations(batch.id);
     } else {
@@ -507,6 +513,34 @@ export function BatchManagement() {
                       <SelectItem value="completed">Completed</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              </div>
+
+              {/* Support Links */}
+              <div className="border-t pt-4 mt-2">
+                <label className="block text-sm font-medium mb-3">
+                  <MessageCircle className="w-4 h-4 inline mr-1" />
+                  Support Links (optional)
+                </label>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="whatsapp_group_link" className="text-sm">WhatsApp Group Link</Label>
+                    <Input
+                      id="whatsapp_group_link"
+                      value={formData.whatsapp_group_link || ''}
+                      onChange={(e) => setFormData({ ...formData, whatsapp_group_link: e.target.value })}
+                      placeholder="https://chat.whatsapp.com/..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="facebook_community_link" className="text-sm">Facebook Community Link</Label>
+                    <Input
+                      id="facebook_community_link"
+                      value={formData.facebook_community_link || ''}
+                      onChange={(e) => setFormData({ ...formData, facebook_community_link: e.target.value })}
+                      placeholder="https://facebook.com/groups/..."
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -627,6 +627,10 @@ const Layout = memo(({
       name: "Support",
       href: "/support",
       icon: MessageSquare
+    }, {
+      name: "Support Details",
+      href: "/support-details",
+      icon: MessageCircle
     }];
 
     // Insert dynamic integrations right after Connect Accounts
