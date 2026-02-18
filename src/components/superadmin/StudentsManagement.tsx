@@ -135,6 +135,8 @@ export function StudentsManagement() {
   const [accessManagementOpen, setAccessManagementOpen] = useState(false);
   const [selectedStudentForAccess, setSelectedStudentForAccess] = useState<Student | null>(null);
   const [companyCurrency, setCompanyCurrency] = useState<string>('PKR');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
   const {
     options: installmentOptions
   } = useInstallmentOptions();
@@ -152,6 +154,7 @@ export function StudentsManagement() {
   }, [students]);
   useEffect(() => {
     filterStudents();
+    setCurrentPage(1);
   }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, feeRangeFrom, feeRangeTo, installmentPayments, joinDateRange]);
 
   // Re-render periodically so time-based invoice statuses update without refresh
@@ -1529,6 +1532,8 @@ export function StudentsManagement() {
   }
   const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo) || Boolean(joinDateRange.from || joinDateRange.to);
   const displayStudents = hasActiveFilters ? filteredStudents : students;
+  const totalPages = Math.ceil(displayStudents.length / pageSize);
+  const paginatedStudents = displayStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   return <div className="flex-1 min-w-0 p-6 space-y-6 animate-fade-in overflow-x-hidden px-0 bg-transparent">
       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4">
         <div className="animate-fade-in">
@@ -1865,7 +1870,7 @@ export function StudentsManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayStudents.map(student => {
+                {paginatedStudents.map(student => {
                 const rowElements = [<TableRow key={`main-${student.id}`}>
                     <TableCell className="pl-6">
                         <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
@@ -2208,6 +2213,19 @@ export function StudentsManagement() {
               })}
               </TableBody>
             </Table>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-4 px-2">
+                <p className="text-sm text-muted-foreground">
+                  Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, displayStudents.length)} of {displayStudents.length} students
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>Previous</Button>
+                  <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
+                  <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</Button>
+                </div>
+              </div>
+            )}
         </CardContent>
       </Card>
 
