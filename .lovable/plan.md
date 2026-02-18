@@ -1,57 +1,45 @@
 
 
-## Enhance Mentor Sessions with Batch, Pathway/Course, and Unlock Info
+## Fix Mentor Dashboard: Unknown Names, Incorrect LMS Status, and Enrollment Type
 
-### Goal
-Each session card on the Mentor Sessions page will display:
-1. **Batch name** -- which batch this session is for
-2. **Pathway or Course name** -- the learning track associated with the session
-3. **Unlocked content summary** -- how many recordings and assignments have been unlocked for students in that batch/course by now (based on drip schedule)
+### Root Cause Analysis
 
-### Current State
-- Sessions are fetched with `select('*')` from `success_sessions`, which already returns `batch_id`, `course_id`, and `pathway_id` columns
-- However, batch name, course title, and pathway name are not resolved or displayed
-- No unlock information is shown
+Three issues are causing incorrect data in the mentor dashboard:
 
-### Implementation Steps
+1. **"Unknown" names**: The `get-user-details` Edge Function was created but **never registered** in `supabase/config.toml`. Without registration, the function call fails silently ("Failed to fetch"), so no user data is returned and all names default to "Unknown".
 
-**1. Update the data fetching in `MentorSessions.tsx`**
+2. **"Inactive" LMS status**: Because the Edge Function fails, the user data map is empty. The code falls back to `userInfo?.lms_status || 'inactive'`, making every student appear as "Inactive".
 
-- After fetching sessions, collect all unique `batch_id`, `course_id`, and `pathway_id` values
-- Fetch batch names from `batches` table, course titles from `courses` table, and pathway names from `learning_pathways` table in parallel
-- Build lookup maps for quick resolution
+3. **"Affiliate" enrollment type**: Many enrollment records have a `pathway_id` value set even when no meaningful pathway association exists. The current check `!!enrollment.pathway_id` triggers too broadly, incorrectly labeling students as "Affiliate" instead of "Direct".
 
-**2. Extend the `MentorSession` interface**
+The admin dashboard works fine because admin/superadmin users have RLS policies allowing direct access to the `users` table.
 
-Add these fields:
-- `batch_id`, `batch_name` (resolved from batches table)
-- `course_id`, `course_title` (resolved from courses table)
-- `pathway_id`, `pathway_name` (resolved from learning_pathways table, or derived via `pathway_courses` junction)
+### Fix Plan
 
-**3. Calculate unlocked content per session**
+#### Step 1: Register the Edge Function
+Add `get-user-details` to `supabase/config.toml` so it gets deployed and is callable. It will use `verify_jwt = true` since it already validates the caller's auth token internally.
 
-For each session's `course_id` + batch `start_date`:
-- Query `available_lessons` for the course's modules to get all recordings with their `drip_days`
-- Calculate which lessons are unlocked by comparing `batch.start_date + drip_days <= today`
-- Count unlocked recordings and unlocked assignments (lessons that have an `assignment_id`)
-- Display as "X/Y Recordings unlocked, Z Assignments unlocked"
+#### Step 2: Add error handling with fallback
+Update the Edge Function call in `MentorStudents.tsx` to log errors visibly when the function fails, so issues are easier to diagnose in the future.
 
-**4. Update the SessionCard UI**
-
-Add a new info section below the session title showing:
-- **Batch badge**: e.g., "Batch: January 2026" or "No Batch"
-- **Pathway/Course badge**: e.g., "Pathway: Ecommerce Mastery" or "Course: SEO Basics"
-- **Unlock summary row**: e.g., "5/12 Recordings unlocked -- 3 Assignments available"
+#### Step 3: Strengthen enrollment type logic
+Tighten the "pathway" detection to require both a non-null `pathway_id` AND a valid `learning_pathways` record with a non-empty `name`. This ensures enrollment type defaults to "Direct" unless there's a genuine pathway association.
 
 ### Technical Details
 
-**Data Flow:**
-1. Fetch sessions (existing)
-2. Extract unique IDs for batch, course, pathway
-3. Parallel fetch: `batches`, `courses`, `learning_pathways`, `pathway_courses`, `available_lessons` (filtered by course modules)
-4. For each session, calculate drip-based unlocks using `batch.start_date + lesson.drip_days <= today`
-5. Render enriched cards
+**File changes:**
 
-**Files Modified:**
-- `src/components/mentor/MentorSessions.tsx` -- main changes to fetching, interface, and rendering
+1. **`supabase/config.toml`** -- Add:
+```toml
+[functions.get-user-details]
+verify_jwt = true
+```
+
+2. **`src/components/mentor/MentorStudents.tsx`** -- Add console error logging when edge function fails, so the mentor dashboard shows a warning toast if data couldn't be loaded. Also ensure the `hasPathway` check remains strict (already correct in current code, just needs the function to work).
+
+### Expected Outcome
+Once the Edge Function is registered and deployed, the mentor dashboard will:
+- Show actual student names from the `users` table
+- Display correct LMS statuses (active, inactive, suspended, etc.) from the database
+- Default enrollment type to "Direct" unless a genuine pathway exists
 
