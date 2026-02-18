@@ -24,7 +24,7 @@ interface EnrolledStudent {
   student_batch: string | null;
   joining_date: string;
   lms_status: string;
-  enrollment_type: 'direct' | 'pathway';
+  enrollment_type: 'direct' | 'affiliate';
   pathway_name?: string;
 }
 
@@ -77,7 +77,7 @@ export const MentorStudents = () => {
 
       // 2. Fetch user details via edge function to bypass RLS restrictions
       const studentUserIds = [...new Set(allStudentRecords?.map(sr => sr.user_id).filter(Boolean) || [])];
-      const userMap = new Map<string, { id: string; full_name: string | null; lms_status: string | null; created_at: string | null }>();
+      const userMap = new Map<string, { id: string; full_name: string | null; lms_status: string | null; created_at: string | null; created_by: string | null }>();
       
       if (studentUserIds.length > 0) {
         const { data: fnData, error: fnError } = await supabase.functions.invoke('get-user-details', {
@@ -89,7 +89,7 @@ export const MentorStudents = () => {
           console.error('get-user-details returned error:', fnData.error);
         } else if (fnData?.users) {
           fnData.users.forEach((u: any) => {
-            userMap.set(u.id, { id: u.id, full_name: u.full_name, lms_status: u.lms_status, created_at: u.created_at });
+            userMap.set(u.id, { id: u.id, full_name: u.full_name, lms_status: u.lms_status, created_at: u.created_at, created_by: u.created_by || null });
           });
         }
       }
@@ -180,8 +180,8 @@ export const MentorStudents = () => {
             const courseId = enrollment.course_id;
             const courseTitle = enrollment.courses?.title || 'Unknown Course';
             const batchName = enrollment.batches?.name || null;
-            // Only mark as pathway/affiliate if there's an actual learning pathway with a name
-            const hasPathway = !!enrollment.pathway_id && !!enrollment.learning_pathways?.name;
+            // Only mark as affiliate if the logged-in mentor created this student
+            const isAffiliate = userInfo?.created_by === user.id;
 
             if (!courseMap.has(courseId)) {
               courseMap.set(courseId, {
@@ -200,7 +200,7 @@ export const MentorStudents = () => {
                 student_batch: batchName,
                 joining_date: enrollment.enrolled_at || studentRecord.enrollment_date || '',
                 lms_status: userLmsStatus,
-                enrollment_type: hasPathway ? 'pathway' : 'direct',
+                enrollment_type: isAffiliate ? 'affiliate' : 'direct',
                 pathway_name: enrollment.learning_pathways?.name
               });
             }
@@ -593,7 +593,7 @@ export const MentorStudents = () => {
                       <SelectContent>
                         <SelectItem value="all">All Types</SelectItem>
                         <SelectItem value="direct">Direct</SelectItem>
-                        <SelectItem value="pathway">Affiliate</SelectItem>
+                        <SelectItem value="affiliate">Affiliate</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -686,9 +686,9 @@ export const MentorStudents = () => {
                     </TableCell>
                     <TableCell>{getStatusBadge(student.lms_status)}</TableCell>
                     <TableCell>
-                      {student.enrollment_type === 'pathway' ? (
-                        <Badge variant="outline" className="text-xs">
-                          Affiliate
+                      {student.enrollment_type === 'affiliate' ? (
+                        <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                          Your Affiliate
                         </Badge>
                       ) : (
                         <Badge variant="secondary" className="text-xs">Direct</Badge>
