@@ -83,7 +83,11 @@ export const MentorStudents = () => {
         const { data: fnData, error: fnError } = await supabase.functions.invoke('get-user-details', {
           body: { user_ids: studentUserIds }
         });
-        if (!fnError && fnData?.users) {
+        if (fnError) {
+          console.error('get-user-details edge function error:', fnError);
+        } else if (fnData?.error) {
+          console.error('get-user-details returned error:', fnData.error);
+        } else if (fnData?.users) {
           fnData.users.forEach((u: any) => {
             userMap.set(u.id, { id: u.id, full_name: u.full_name, lms_status: u.lms_status, created_at: u.created_at });
           });
