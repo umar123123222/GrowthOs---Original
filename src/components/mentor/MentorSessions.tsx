@@ -4,11 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Calendar, Clock, Video, Users, Eye, EyeOff, Play, ExternalLink, AlertTriangle, Copy, Check } from 'lucide-react';
+import { Calendar, Clock, Video, Users, Eye, EyeOff, Play, ExternalLink, AlertTriangle, Copy, Check, BookOpen, GraduationCap, Unlock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { format } from 'date-fns';
+
+interface UnlockInfo {
+  unlockedRecordings: number;
+  totalRecordings: number;
+  unlockedAssignments: number;
+  totalAssignments: number;
+}
 
 interface MentorSession {
   id: string;
@@ -25,6 +32,13 @@ interface MentorSession {
   host_login_email?: string;
   host_login_pwd?: string;
   isAssignedToMe?: boolean;
+  batch_id?: string;
+  batch_name?: string;
+  course_id?: string;
+  course_title?: string;
+  pathway_id?: string;
+  pathway_name?: string;
+  unlockInfo?: UnlockInfo;
 }
 
 export function MentorSessions() {
@@ -46,7 +60,6 @@ export function MentorSessions() {
     if (!user?.id) return;
 
     try {
-      // Mentors now only see their assigned sessions due to RLS policy
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
@@ -55,26 +68,94 @@ export function MentorSessions() {
 
       if (error) throw error;
 
-      const sessions: MentorSession[] = (data || []).map(session => ({
-        id: session.id,
-        title: session.title,
-        description: session.description || '',
-        mentor_name: session.mentor_name || 'Unassigned',
-        schedule_date: session.schedule_date || '',
-        start_time: session.start_time,
-        end_time: session.end_time || '',
-        link: session.link,
-        status: session.status || 'upcoming',
-        zoom_meeting_id: session.zoom_meeting_id || '',
-        zoom_passcode: session.zoom_passcode || '',
-        host_login_email: session.host_login_email || '',
-        host_login_pwd: session.host_login_pwd || '',
-        // All sessions returned are assigned to this mentor (RLS ensures this)
-        isAssignedToMe: true
-      }));
+      const rawSessions = data || [];
+
+      // Collect unique IDs
+      const batchIds = [...new Set(rawSessions.map(s => s.batch_id).filter(Boolean))] as string[];
+      const courseIds = [...new Set(rawSessions.map(s => s.course_id).filter(Boolean))] as string[];
+      const pathwayIds: string[] = [];
+
+      // Parallel fetches for batch, course, pathway names
+      const [batchesRes, coursesRes] = await Promise.all([
+        batchIds.length > 0
+          ? supabase.from('batches').select('id, name, start_date, course_id, pathway_id').in('id', batchIds)
+          : Promise.resolve({ data: [], error: null }),
+        courseIds.length > 0
+          ? supabase.from('courses').select('id, title').in('id', courseIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      const batchMap = new Map<string, { name: string; start_date: string; course_id: string | null; pathway_id: string | null }>();
+      (batchesRes.data || []).forEach((b: any) => {
+        batchMap.set(b.id, { name: b.name, start_date: b.start_date, course_id: b.course_id, pathway_id: b.pathway_id });
+        if (b.pathway_id) pathwayIds.push(b.pathway_id);
+      });
+
+      // Also collect pathway_ids from sessions themselves (if stored directly)
+      rawSessions.forEach(s => {
+        if ((s as any).pathway_id) pathwayIds.push((s as any).pathway_id);
+      });
+
+      const uniquePathwayIds = [...new Set(pathwayIds)];
+
+      const pathwaysRes = uniquePathwayIds.length > 0
+        ? await supabase.from('learning_pathways').select('id, name').in('id', uniquePathwayIds)
+        : { data: [], error: null };
+
+      const courseMap = new Map<string, string>();
+      (coursesRes.data || []).forEach((c: any) => courseMap.set(c.id, c.title));
+
+      const pathwayMap = new Map<string, string>();
+      (pathwaysRes.data || []).forEach((p: any) => pathwayMap.set(p.id, p.name));
+
+      // Collect all course IDs we need unlock info for (from sessions + batches)
+      const allCourseIds = new Set<string>();
+      rawSessions.forEach(s => {
+        if (s.course_id) allCourseIds.add(s.course_id);
+        if (s.batch_id) {
+          const batch = batchMap.get(s.batch_id);
+          if (batch?.course_id) allCourseIds.add(batch.course_id);
+        }
+      });
+
+      // Fetch available_lessons for all relevant courses via get_course_modules RPC + available_lessons
+      const unlockData = await fetchUnlockInfo([...allCourseIds], batchMap, rawSessions);
+
+      const sessions: MentorSession[] = rawSessions.map(session => {
+        const batch = session.batch_id ? batchMap.get(session.batch_id) : null;
+        const effectiveCourseId = session.course_id || batch?.course_id || null;
+        const effectivePathwayId = (session as any).pathway_id || batch?.pathway_id || null;
+
+        const unlockKey = `${session.batch_id || ''}_${effectiveCourseId || ''}`;
+
+        return {
+          id: session.id,
+          title: session.title,
+          description: session.description || '',
+          mentor_name: session.mentor_name || 'Unassigned',
+          schedule_date: session.schedule_date || '',
+          start_time: session.start_time,
+          end_time: session.end_time || '',
+          link: session.link,
+          status: session.status || 'upcoming',
+          zoom_meeting_id: session.zoom_meeting_id || '',
+          zoom_passcode: session.zoom_passcode || '',
+          host_login_email: session.host_login_email || '',
+          host_login_pwd: session.host_login_pwd || '',
+          isAssignedToMe: true,
+          batch_id: session.batch_id || undefined,
+          batch_name: batch?.name,
+          course_id: effectiveCourseId || undefined,
+          course_title: effectiveCourseId ? courseMap.get(effectiveCourseId) : undefined,
+          pathway_id: effectivePathwayId || undefined,
+          pathway_name: effectivePathwayId ? pathwayMap.get(effectivePathwayId) : undefined,
+          unlockInfo: unlockData.get(unlockKey),
+        };
+      });
       
       processSessions(sessions);
     } catch (error: any) {
+      safeLogger.error('Error fetching mentor sessions', error);
       toast({
         title: "Error", 
         description: "Failed to fetch your sessions",
@@ -85,21 +166,117 @@ export function MentorSessions() {
     }
   };
 
+  const fetchUnlockInfo = async (
+    courseIds: string[],
+    batchMap: Map<string, { name: string; start_date: string; course_id: string | null; pathway_id: string | null }>,
+    rawSessions: any[]
+  ): Promise<Map<string, UnlockInfo>> => {
+    const result = new Map<string, UnlockInfo>();
+    if (courseIds.length === 0) return result;
+
+    try {
+      // Get modules for each course using the RPC
+      const modulePromises = courseIds.map(cid =>
+        supabase.rpc('get_course_modules', { p_course_id: cid }).then(res => ({
+          courseId: cid,
+          modules: (res.data || []) as { module_title: string; module_id: string; recording_count: number; assignment_count: number }[]
+        }))
+      );
+      const moduleResults = await Promise.all(modulePromises);
+
+      // Build course -> module titles map
+      const courseModules = new Map<string, string[]>();
+      moduleResults.forEach(({ courseId, modules }) => {
+        courseModules.set(courseId, modules.map(m => m.module_title));
+      });
+
+      // Get all module titles we need
+      const allModuleTitles = [...new Set(moduleResults.flatMap(r => r.modules.map(m => m.module_title)))];
+      
+      if (allModuleTitles.length === 0) return result;
+
+      // Fetch available_lessons for these modules
+      const { data: lessons } = await supabase
+        .from('available_lessons')
+        .select('id, module, drip_days, assignment_id')
+        .in('module', allModuleTitles);
+
+      if (!lessons) return result;
+
+      // Group lessons by module
+      const lessonsByModule = new Map<string, typeof lessons>();
+      lessons.forEach(l => {
+        const mod = l.module || '';
+        if (!lessonsByModule.has(mod)) lessonsByModule.set(mod, []);
+        lessonsByModule.get(mod)!.push(l);
+      });
+
+      // For each session's batch+course combo, calculate unlocks
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+
+      rawSessions.forEach(session => {
+        const batch = session.batch_id ? batchMap.get(session.batch_id) : null;
+        const effectiveCourseId = session.course_id || batch?.course_id;
+        if (!effectiveCourseId) return;
+
+        const unlockKey = `${session.batch_id || ''}_${effectiveCourseId}`;
+        if (result.has(unlockKey)) return; // Already calculated
+
+        const moduleTitles = courseModules.get(effectiveCourseId) || [];
+        const courseLessons = moduleTitles.flatMap(mt => lessonsByModule.get(mt) || []);
+
+        const startDate = batch?.start_date ? new Date(batch.start_date) : null;
+
+        let unlockedRecordings = 0;
+        let unlockedAssignments = 0;
+        let totalAssignments = 0;
+
+        courseLessons.forEach(lesson => {
+          const hasAssignment = !!lesson.assignment_id;
+          if (hasAssignment) totalAssignments++;
+
+          if (startDate) {
+            const unlockDate = new Date(startDate);
+            unlockDate.setDate(unlockDate.getDate() + (lesson.drip_days || 0));
+            if (unlockDate <= today) {
+              unlockedRecordings++;
+              if (hasAssignment) unlockedAssignments++;
+            }
+          } else {
+            // No batch start date = assume all unlocked
+            unlockedRecordings++;
+            if (hasAssignment) unlockedAssignments++;
+          }
+        });
+
+        result.set(unlockKey, {
+          unlockedRecordings,
+          totalRecordings: courseLessons.length,
+          unlockedAssignments,
+          totalAssignments,
+        });
+      });
+    } catch (error) {
+      safeLogger.error('Error fetching unlock info', error);
+    }
+
+    return result;
+  };
+
   const processSessions = (sessions: MentorSession[]) => {
     const now = new Date();
-    now.setHours(0, 0, 0, 0); // Start of today
+    now.setHours(0, 0, 0, 0);
     
     const upcoming = sessions.filter(session => {
       const sessionStart = new Date(session.start_time);
-      sessionStart.setHours(0, 0, 0, 0); // Start of session day
-      // Only show if session is today or in the future
+      sessionStart.setHours(0, 0, 0, 0);
       return sessionStart >= now;
     });
     
     const completed = sessions.filter(session => {
       const sessionStart = new Date(session.start_time);
       sessionStart.setHours(0, 0, 0, 0);
-      // Show as completed if session was before today
       return sessionStart < now;
     });
 
@@ -111,15 +288,13 @@ export function MentorSessions() {
     const now = new Date();
     const sessionStart = new Date(session.start_time);
     
-    // If no end time, allow starting 15 minutes before start time
     if (!session.end_time) {
       return session.isAssignedToMe && session.status === 'upcoming' && now >= new Date(sessionStart.getTime() - 15 * 60 * 1000);
     }
     
     const sessionEnd = new Date(session.end_time);
-    const cutoffTime = new Date(sessionEnd.getTime() + 60 * 60 * 1000); // 60 minutes after end
+    const cutoffTime = new Date(sessionEnd.getTime() + 60 * 60 * 1000);
     
-    // Can start if session is upcoming, assigned to me, and within the time window
     return session.isAssignedToMe && session.status === 'upcoming' && now >= new Date(sessionStart.getTime() - 15 * 60 * 1000) && now <= cutoffTime;
   };
 
@@ -134,27 +309,23 @@ export function MentorSessions() {
         return;
       }
 
-      // Create a form to POST to Zoom with auto-login
       const form = document.createElement('form');
       form.method = 'POST';
       form.action = 'https://zoom.us/signin';
       form.target = '_blank';
 
-      // Add email field
       const emailField = document.createElement('input');
       emailField.type = 'hidden';
       emailField.name = 'email';
       emailField.value = session.host_login_email;
       form.appendChild(emailField);
 
-      // Add password field  
       const passwordField = document.createElement('input');
       passwordField.type = 'hidden';
       passwordField.name = 'password';
       passwordField.value = session.host_login_pwd;
       form.appendChild(passwordField);
 
-      // Add redirect URL to join meeting
       if (session.zoom_meeting_id) {
         const redirectField = document.createElement('input');
         redirectField.type = 'hidden';
@@ -172,7 +343,6 @@ export function MentorSessions() {
         description: `Opening Zoom for: ${session.title}`,
       });
 
-      // Log the session start
       safeLogger.activity('Session started', { 
         sessionTitle: session.title, 
         mentorId: user?.id 
@@ -218,7 +388,6 @@ export function MentorSessions() {
     );
   }
 
-
   const copyToClipboard = (value: string, fieldId: string) => {
     navigator.clipboard.writeText(value);
     setCopiedField(fieldId);
@@ -236,6 +405,34 @@ export function MentorSessions() {
           </Button>
         )}
       </div>
+    </div>
+  );
+
+  const SessionContextBadges = ({ session }: { session: MentorSession }) => (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {session.batch_name && (
+        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+          <Users className="w-3 h-3 mr-1" />
+          Batch: {session.batch_name}
+        </Badge>
+      )}
+      {session.pathway_name ? (
+        <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200">
+          🎯 Pathway: {session.pathway_name}
+        </Badge>
+      ) : session.course_title ? (
+        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+          <BookOpen className="w-3 h-3 mr-1" />
+          Course: {session.course_title}
+        </Badge>
+      ) : null}
+      {session.unlockInfo && (
+        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+          <Unlock className="w-3 h-3 mr-1" />
+          {session.unlockInfo.unlockedRecordings}/{session.unlockInfo.totalRecordings} Recordings
+          {session.unlockInfo.totalAssignments > 0 && ` · ${session.unlockInfo.unlockedAssignments} Assignments`}
+        </Badge>
+      )}
     </div>
   );
 
@@ -259,6 +456,7 @@ export function MentorSessions() {
                   {session.isAssignedToMe && <Badge variant="outline" className="ml-2 bg-primary/10">Assigned to you</Badge>}
                 </p>
               )}
+              <SessionContextBadges session={session} />
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {needsSetup && (
@@ -396,6 +594,7 @@ export function MentorSessions() {
                     <DialogTitle>{session.title}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
+                    <SessionContextBadges session={session} />
                     <div className="grid grid-cols-2 gap-4">
                       <CopyableField label="Meeting ID" value={session.zoom_meeting_id || ''} fieldId={`mid-${session.id}`} />
                       <CopyableField label="Passcode" value={session.zoom_passcode || ''} fieldId={`pass-${session.id}`} />
