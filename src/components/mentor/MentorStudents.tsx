@@ -70,11 +70,25 @@ export const MentorStudents = () => {
     setLoading(true);
 
     try {
-      // 1. Fetch ALL student records with user details via join
-      //    Using left join for users to avoid RLS filtering issues
+      // 1. Fetch ALL student records (primary source - matches admin count)
       const { data: allStudentRecords } = await supabase
         .from('students')
-        .select('id, student_id, user_id, enrollment_date, fees_cleared, users(id, full_name, lms_status, created_at)');
+        .select('id, student_id, user_id, enrollment_date, fees_cleared');
+
+      // 2. Fetch user details separately to avoid RLS join issues
+      const studentUserIds = [...new Set(allStudentRecords?.map(sr => sr.user_id).filter(Boolean) || [])];
+      const userMap = new Map<string, { id: string; full_name: string | null; lms_status: string | null; created_at: string | null }>();
+      const batchSize = 50;
+      for (let i = 0; i < studentUserIds.length; i += batchSize) {
+        const batch = studentUserIds.slice(i, i + batchSize);
+        const { data: batchUsers } = await supabase
+          .from('users')
+          .select('id, full_name, lms_status, created_at')
+          .in('id', batch);
+        batchUsers?.forEach(u => {
+          userMap.set(u.id, { id: u.id, full_name: u.full_name, lms_status: u.lms_status, created_at: u.created_at });
+        });
+      }
 
       // 3. Fetch all course enrollments WITHOUT students!inner join
       const { data: allEnrollments } = await supabase
@@ -127,7 +141,7 @@ export const MentorStudents = () => {
       // Process each student record (from students table - matches admin count)
       allStudentRecords?.forEach(studentRecord => {
         const userId = studentRecord.user_id;
-        const userInfo = studentRecord.users as any;
+        const userInfo = userMap.get(userId);
         const userEnrollments = enrollmentsByUserId.get(userId) || [];
         const displayStudentId = studentRecord.student_id || studentRecord.id;
         const displayName = userInfo?.full_name || 'Unknown';
