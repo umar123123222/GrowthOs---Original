@@ -339,6 +339,61 @@ export const MentorStudents = () => {
         });
       });
 
+      // Fetch ALL batch enrollments to show complete batch membership
+      const { data: allBatchEnrollments } = await supabase
+        .from('course_enrollments')
+        .select(`
+          id,
+          course_id,
+          pathway_id,
+          enrolled_at,
+          status,
+          batch_id,
+          batches(id, name),
+          students!inner(
+            id,
+            student_id,
+            user_id,
+            enrollment_date,
+            fees_cleared,
+            users!inner(id, full_name)
+          ),
+          courses(id, title),
+          learning_pathways(id, name)
+        `)
+        .not('batch_id', 'is', null);
+
+      // Merge batch students not already in courseMap
+      allBatchEnrollments?.forEach(enrollment => {
+        const student = enrollment.students;
+        const courseId = enrollment.course_id;
+        const courseTitle = enrollment.courses?.title || 'Unknown Course';
+        const studentKey = `${student.user_id}-${courseId}`;
+
+        if (!uniqueStudentIds.has(studentKey)) {
+          uniqueStudentIds.add(studentKey);
+
+          if (!courseMap.has(courseId)) {
+            courseMap.set(courseId, {
+              course_id: courseId,
+              course_title: courseTitle,
+              students: []
+            });
+          }
+
+          const batchName = enrollment.batches?.name || null;
+          courseMap.get(courseId)!.students.push({
+            student_id: student.student_id || student.id,
+            student_name: student.users?.full_name || 'Unknown',
+            student_batch: batchName,
+            joining_date: enrollment.enrolled_at || student.enrollment_date || '',
+            lms_status: getLmsStatus(enrollment.status, student.fees_cleared),
+            enrollment_type: enrollment.pathway_id ? 'pathway' : 'direct',
+            pathway_name: enrollment.learning_pathways?.name
+          });
+        }
+      });
+
       const coursesArray = Array.from(courseMap.values()).sort((a, b) => 
         a.course_title.localeCompare(b.course_title)
       );
