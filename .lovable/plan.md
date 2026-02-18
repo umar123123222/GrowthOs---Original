@@ -1,45 +1,37 @@
 
 
-## Fix Mentor Dashboard: Unknown Names, Incorrect LMS Status, and Enrollment Type
+## Fix Enrollment Type: Default to "Direct", Show "Your Affiliate" Only for Mentor-Created Students
 
-### Root Cause Analysis
+### Problem
+Currently, the enrollment type column shows "Affiliate" for every student who has a `pathway_id` in their enrollment record. This is incorrect -- most students enrolled via pathways are not affiliates.
 
-Three issues are causing incorrect data in the mentor dashboard:
+The correct logic: A student should show as **"Your Affiliate"** only when **the logged-in mentor created that student** (i.e., `users.created_by === current_mentor_id`). All other students should default to **"Direct"**.
 
-1. **"Unknown" names**: The `get-user-details` Edge Function was created but **never registered** in `supabase/config.toml`. Without registration, the function call fails silently ("Failed to fetch"), so no user data is returned and all names default to "Unknown".
+### Changes
 
-2. **"Inactive" LMS status**: Because the Edge Function fails, the user data map is empty. The code falls back to `userInfo?.lms_status || 'inactive'`, making every student appear as "Inactive".
+#### 1. Update `get-user-details` Edge Function to return `created_by`
+**File:** `supabase/functions/get-user-details/index.ts`
 
-3. **"Affiliate" enrollment type**: Many enrollment records have a `pathway_id` value set even when no meaningful pathway association exists. The current check `!!enrollment.pathway_id` triggers too broadly, incorrectly labeling students as "Affiliate" instead of "Direct".
-
-The admin dashboard works fine because admin/superadmin users have RLS policies allowing direct access to the `users` table.
-
-### Fix Plan
-
-#### Step 1: Register the Edge Function
-Add `get-user-details` to `supabase/config.toml` so it gets deployed and is callable. It will use `verify_jwt = true` since it already validates the caller's auth token internally.
-
-#### Step 2: Add error handling with fallback
-Update the Edge Function call in `MentorStudents.tsx` to log errors visibly when the function fails, so issues are easier to diagnose in the future.
-
-#### Step 3: Strengthen enrollment type logic
-Tighten the "pathway" detection to require both a non-null `pathway_id` AND a valid `learning_pathways` record with a non-empty `name`. This ensures enrollment type defaults to "Direct" unless there's a genuine pathway association.
-
-### Technical Details
-
-**File changes:**
-
-1. **`supabase/config.toml`** -- Add:
-```toml
-[functions.get-user-details]
-verify_jwt = true
+Add `created_by` to the SELECT query so the mentor dashboard can determine who created each student:
+```
+.select("id, full_name, lms_status, created_at, created_by")
 ```
 
-2. **`src/components/mentor/MentorStudents.tsx`** -- Add console error logging when edge function fails, so the mentor dashboard shows a warning toast if data couldn't be loaded. Also ensure the `hasPathway` check remains strict (already correct in current code, just needs the function to work).
+#### 2. Update MentorStudents enrollment type logic
+**File:** `src/components/mentor/MentorStudents.tsx`
 
-### Expected Outcome
-Once the Edge Function is registered and deployed, the mentor dashboard will:
-- Show actual student names from the `users` table
-- Display correct LMS statuses (active, inactive, suspended, etc.) from the database
-- Default enrollment type to "Direct" unless a genuine pathway exists
+- Change the `enrollment_type` field type from `'direct' | 'pathway'` to `'direct' | 'affiliate'`
+- Store `created_by` from the user data map
+- Set `enrollment_type` to `'affiliate'` only when `userInfo.created_by === current_mentor_id`
+- Otherwise default to `'direct'`
+- Update the display label from "Affiliate" to "Your Affiliate"
+- Update the filter dropdown to use the new value
 
+#### 3. Update filter values
+- Change filter option value from `'pathway'` to `'affiliate'`
+- Display label remains "Affiliate" in filter, "Your Affiliate" in the table badge
+
+### Expected Result
+- All students default to showing **"Direct"** enrollment type
+- Only students whose `created_by` matches the logged-in mentor show **"Your Affiliate"**
+- Filter still works correctly with the updated values
