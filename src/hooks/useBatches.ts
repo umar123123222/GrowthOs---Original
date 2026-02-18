@@ -35,6 +35,8 @@ export interface BatchFormData {
   timezone: string;
   default_session_time: string;
   status: 'draft' | 'active' | 'completed';
+  whatsapp_group_link?: string;
+  facebook_community_link?: string;
 }
 
 export function useBatches(courseId?: string) {
