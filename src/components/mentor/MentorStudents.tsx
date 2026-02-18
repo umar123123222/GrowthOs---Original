@@ -70,17 +70,27 @@ export const MentorStudents = () => {
     setLoading(true);
 
     try {
-      // 1. Fetch ALL users with student role - this is the primary data source
-      //    (avoids RLS issues with students!inner join on course_enrollments)
-      const { data: allStudentUsers } = await supabase
-        .from('users')
-        .select('id, full_name, role, created_at, lms_status, status')
-        .eq('role', 'student');
-
-      // 2. Fetch all student records for student_id mapping
+      // 1. Fetch ALL student records - primary source (matches admin view which uses students table)
       const { data: allStudentRecords } = await supabase
         .from('students')
         .select('id, student_id, user_id, enrollment_date, fees_cleared');
+
+      // 2. Fetch user details for all student user_ids
+      const studentUserIds = [...new Set(allStudentRecords?.map(sr => sr.user_id) || [])];
+      
+      // Fetch users in batches to avoid URL length limits
+      const userMap = new Map<string, { id: string; full_name: string | null; lms_status: string | null; created_at: string | null }>();
+      const batchSize = 50;
+      for (let i = 0; i < studentUserIds.length; i += batchSize) {
+        const batch = studentUserIds.slice(i, i + batchSize);
+        const { data: batchUsers } = await supabase
+          .from('users')
+          .select('id, full_name, lms_status, created_at')
+          .in('id', batch);
+        batchUsers?.forEach(u => {
+          userMap.set(u.id, { id: u.id, full_name: u.full_name, lms_status: u.lms_status, created_at: u.created_at });
+        });
+      }
 
       // 3. Fetch all course enrollments WITHOUT students!inner join
       const { data: allEnrollments } = await supabase
@@ -115,11 +125,6 @@ export const MentorStudents = () => {
         studentRecordByIdMap.set(sr.id, { user_id: sr.user_id, student_id: sr.student_id || sr.id, fees_cleared: sr.fees_cleared });
       });
 
-      const userMap = new Map<string, { id: string; full_name: string | null; lms_status: string | null }>();
-      allStudentUsers?.forEach(u => {
-        userMap.set(u.id, { id: u.id, full_name: u.full_name, lms_status: u.lms_status });
-      });
-
       // Link enrollments to users via student records
       // course_enrollments.student_id -> students.id -> students.user_id -> users
       const enrollmentsByUserId = new Map<string, typeof allEnrollments>();
@@ -138,11 +143,13 @@ export const MentorStudents = () => {
       const courseMap = new Map<string, CourseWithStudents>();
       const uniqueStudentIds = new Set<string>();
 
-      // Process each student user
-      allStudentUsers?.forEach(studentUser => {
-        const record = studentRecordMap.get(studentUser.id);
-        const userEnrollments = enrollmentsByUserId.get(studentUser.id) || [];
-        const displayStudentId = record?.student_id || studentUser.id;
+      // Process each student record (from students table - matches admin count)
+      allStudentRecords?.forEach(studentRecord => {
+        const userId = studentRecord.user_id;
+        const userInfo = userMap.get(userId);
+        const userEnrollments = enrollmentsByUserId.get(userId) || [];
+        const displayStudentId = studentRecord.student_id || studentRecord.id;
+        const displayName = userInfo?.full_name || 'Unknown';
 
         if (userEnrollments.length === 0) {
           // Student has no enrollments - add to Unassigned
@@ -155,15 +162,15 @@ export const MentorStudents = () => {
             });
           }
 
-          const studentKey = `${studentUser.id}-${unassignedCourseId}`;
+          const studentKey = `${userId}-${unassignedCourseId}`;
           if (!uniqueStudentIds.has(studentKey)) {
             uniqueStudentIds.add(studentKey);
             courseMap.get(unassignedCourseId)!.students.push({
               student_id: displayStudentId,
-              student_name: studentUser.full_name || 'Unknown',
+              student_name: displayName,
               student_batch: null,
-              joining_date: record?.enrollment_date || studentUser.created_at || '',
-              lms_status: studentUser.lms_status || 'inactive',
+              joining_date: studentRecord.enrollment_date || userInfo?.created_at || '',
+              lms_status: userInfo?.lms_status || 'inactive',
               enrollment_type: 'direct'
             });
           }
@@ -183,15 +190,15 @@ export const MentorStudents = () => {
               });
             }
 
-            const studentKey = `${studentUser.id}-${courseId}`;
+            const studentKey = `${userId}-${courseId}`;
             if (!uniqueStudentIds.has(studentKey)) {
               uniqueStudentIds.add(studentKey);
               courseMap.get(courseId)!.students.push({
                 student_id: displayStudentId,
-                student_name: studentUser.full_name || 'Unknown',
+                student_name: displayName,
                 student_batch: batchName,
-                joining_date: enrollment.enrolled_at || record?.enrollment_date || '',
-                lms_status: getLmsStatus(enrollment.status, record?.fees_cleared ?? null),
+                joining_date: enrollment.enrolled_at || studentRecord.enrollment_date || '',
+                lms_status: getLmsStatus(enrollment.status, studentRecord.fees_cleared ?? null),
                 enrollment_type: isPathway ? 'pathway' : 'direct',
                 pathway_name: enrollment.learning_pathways?.name
               });
