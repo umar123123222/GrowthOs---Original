@@ -75,19 +75,19 @@ export const MentorStudents = () => {
         .from('students')
         .select('id, student_id, user_id, enrollment_date, fees_cleared');
 
-      // 2. Fetch user details separately to avoid RLS join issues
+      // 2. Fetch user details via edge function to bypass RLS restrictions
       const studentUserIds = [...new Set(allStudentRecords?.map(sr => sr.user_id).filter(Boolean) || [])];
       const userMap = new Map<string, { id: string; full_name: string | null; lms_status: string | null; created_at: string | null }>();
-      const batchSize = 50;
-      for (let i = 0; i < studentUserIds.length; i += batchSize) {
-        const batch = studentUserIds.slice(i, i + batchSize);
-        const { data: batchUsers } = await supabase
-          .from('users')
-          .select('id, full_name, lms_status, created_at')
-          .in('id', batch);
-        batchUsers?.forEach(u => {
-          userMap.set(u.id, { id: u.id, full_name: u.full_name, lms_status: u.lms_status, created_at: u.created_at });
+      
+      if (studentUserIds.length > 0) {
+        const { data: fnData, error: fnError } = await supabase.functions.invoke('get-user-details', {
+          body: { user_ids: studentUserIds }
         });
+        if (!fnError && fnData?.users) {
+          fnData.users.forEach((u: any) => {
+            userMap.set(u.id, { id: u.id, full_name: u.full_name, lms_status: u.lms_status, created_at: u.created_at });
+          });
+        }
       }
 
       // 3. Fetch all course enrollments WITHOUT students!inner join
