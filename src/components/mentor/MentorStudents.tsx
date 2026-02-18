@@ -23,7 +23,7 @@ interface EnrolledStudent {
   student_name: string;
   student_batch: string | null;
   joining_date: string;
-  lms_status: 'active' | 'inactive' | 'completed';
+  lms_status: string;
   enrollment_type: 'direct' | 'pathway';
   pathway_name?: string;
 }
@@ -48,12 +48,22 @@ export const MentorStudents = () => {
   const [selectedLmsStatus, setSelectedLmsStatus] = useState<string>('all');
   const [selectedEnrollmentType, setSelectedEnrollmentType] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [allBatches, setAllBatches] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
     if (user) {
       fetchMentorStudents();
+      fetchAllBatches();
     }
   }, [user]);
+
+  const fetchAllBatches = async () => {
+    const { data } = await supabase
+      .from('batches')
+      .select('id, name')
+      .order('name');
+    setAllBatches(data || []);
+  };
 
   const fetchMentorStudents = async () => {
     if (!user) return;
@@ -348,33 +358,35 @@ export const MentorStudents = () => {
     }
   };
 
-  const getLmsStatus = (enrollmentStatus: string | null, feesCleared: boolean | null): 'active' | 'inactive' | 'completed' => {
-    if (enrollmentStatus === 'completed') return 'completed';
+  const getLmsStatus = (enrollmentStatus: string | null, feesCleared: boolean | null): string => {
+    if (enrollmentStatus === 'completed' || enrollmentStatus === 'complete') return 'completed';
+    if (enrollmentStatus === 'suspended') return 'suspended';
+    if (enrollmentStatus === 'dropout') return 'dropout';
     if (enrollmentStatus === 'inactive' || feesCleared === false) return 'inactive';
     return 'active';
   };
 
-  const getStatusBadge = (status: 'active' | 'inactive' | 'completed') => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
         return <Badge className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>;
       case 'inactive':
         return <Badge variant="destructive">Inactive</Badge>;
+      case 'suspended':
+        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-100">Suspended</Badge>;
+      case 'dropout':
+        return <Badge className="bg-red-100 text-red-800 hover:bg-red-100">Dropout</Badge>;
       case 'completed':
         return <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-100">Completed</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  // Extract unique batches from all students
+  // Use all batches from DB for the filter
   const availableBatches = useMemo(() => {
-    const batches = new Set<string>();
-    coursesWithStudents.forEach(course => {
-      course.students.forEach(s => {
-        if (s.student_batch) batches.add(s.student_batch);
-      });
-    });
-    return Array.from(batches).sort();
-  }, [coursesWithStudents]);
+    return allBatches.map(b => b.name);
+  }, [allBatches]);
 
   // Filter courses based on selection
   const filteredCourses = useMemo(() => {
@@ -693,6 +705,8 @@ export const MentorStudents = () => {
                         <SelectItem value="all">All Status</SelectItem>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="inactive">Inactive</SelectItem>
+                        <SelectItem value="suspended">Suspended</SelectItem>
+                        <SelectItem value="dropout">Dropout</SelectItem>
                         <SelectItem value="completed">Completed</SelectItem>
                       </SelectContent>
                     </Select>
