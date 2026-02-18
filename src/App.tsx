@@ -91,6 +91,7 @@ const MentorRecordingsPage = lazy(() => import("./pages/MentorRecordingsPage"));
 const MentorModulesPage = lazy(() => import("./pages/MentorModulesPage"));
 const MentorAssignmentsPage = lazy(() => import("./pages/MentorAssignmentsPage"));
 const MentorSubmissionsPage = lazy(() => import("./pages/MentorSubmissionsPage"));
+const MentorCalendarPage = lazy(() => import("./pages/MentorCalendarPage"));
 const AdminNotifications = lazy(() => import("./pages/AdminNotifications"));
 const DevSendNotification = lazy(() => import("./pages/DevSendNotification"));
 const Catalog = lazy(() => import("./pages/Catalog"));
@@ -264,6 +265,7 @@ const App = () => {
                     <Route path="mentor/modules" element={<MentorModulesPage />} />
                     <Route path="mentor/assignments" element={<MentorAssignmentsPage />} />
                     <Route path="mentor/submissions" element={<MentorSubmissionsPage />} />
+                    <Route path="mentor/calendar" element={<MentorCalendarPage />} />
                     <Route path="superadmin" element={<SuperadminDashboard />} />
                     <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
 

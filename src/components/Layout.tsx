@@ -565,6 +565,10 @@ const Layout = memo(({
         href: "/mentor",
         icon: Monitor
       }, {
+        name: "Calendar",
+        href: "/mentor/calendar",
+        icon: Calendar
+      }, {
         name: "Success Sessions",
         href: "/mentor/sessions",
         icon: Calendar
