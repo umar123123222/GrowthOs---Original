@@ -32,6 +32,7 @@ interface Submission {
     full_name: string;
     email: string;
     student_id?: string;
+    phone?: string;
   } | null;
 }
 
@@ -105,9 +106,10 @@ export function SubmissionsManagement({
 
         // Get assignment and user data separately
         const studentIds = [...new Set(submissionsData.map(s => s.student_id))];
-        const [assignmentsData, usersData] = await Promise.all([
+        const [assignmentsData, usersData, studentsData] = await Promise.all([
           supabase.from('assignments').select('id, name, description, mentor_id').in('id', assignmentIds),
-          supabase.from('users').select('id, full_name, email').in('id', studentIds)
+          supabase.from('users').select('id, full_name, email, phone').in('id', studentIds),
+          supabase.from('students').select('user_id, student_id').in('user_id', studentIds)
         ]);
 
         // Map the data to match the expected format
@@ -117,17 +119,20 @@ export function SubmissionsManagement({
             description: ''
           };
           const user = usersData.data?.find(u => u.id === submission.student_id);
+          const studentRecord = studentsData.data?.find(s => s.user_id === submission.student_id);
           return {
             ...submission,
             assignment,
             student: user ? {
               full_name: user.full_name || 'Unknown Student',
               email: user.email || '',
-              student_id: user.id
+              student_id: studentRecord?.student_id || undefined,
+              phone: user.phone || undefined
             } : {
               full_name: 'Unknown Student',
               email: '',
-              student_id: submission.student_id
+              student_id: undefined,
+              phone: undefined
             }
           };
         });
@@ -162,7 +167,11 @@ export function SubmissionsManagement({
       // Get assignment and user data separately
       const assignmentIds = [...new Set(submissionsData.map(s => s.assignment_id))];
       const studentIds = [...new Set(submissionsData.map(s => s.student_id))];
-      const [assignmentsData, usersData] = await Promise.all([supabase.from('assignments').select('id, name, description, mentor_id').in('id', assignmentIds), supabase.from('users').select('id, full_name, email').in('id', studentIds)]);
+      const [assignmentsData, usersData, studentsData] = await Promise.all([
+        supabase.from('assignments').select('id, name, description, mentor_id').in('id', assignmentIds),
+        supabase.from('users').select('id, full_name, email, phone').in('id', studentIds),
+        supabase.from('students').select('user_id, student_id').in('user_id', studentIds)
+      ]);
 
       // Map the data to match the expected format
       const mappedSubmissions = submissionsData.map(submission => {
@@ -171,17 +180,20 @@ export function SubmissionsManagement({
           description: ''
         };
         const user = usersData.data?.find(u => u.id === submission.student_id);
+        const studentRecord = studentsData.data?.find(s => s.user_id === submission.student_id);
         return {
           ...submission,
           assignment,
           student: user ? {
             full_name: user.full_name || 'Unknown Student',
             email: user.email || '',
-            student_id: user.id
+            student_id: studentRecord?.student_id || undefined,
+            phone: user.phone || undefined
           } : {
             full_name: 'Unknown Student',
             email: '',
-            student_id: submission.student_id
+            student_id: undefined,
+            phone: undefined
           }
         };
       });
@@ -433,7 +445,12 @@ export function SubmissionsManagement({
                                   <div className="space-y-2">
                                     <p className="font-medium">{selectedSubmission.student.full_name}</p>
                                     <p className="text-sm text-muted-foreground">{selectedSubmission.student.email}</p>
-                                    <p className="text-sm text-muted-foreground">{selectedSubmission.student.student_id}</p>
+                                    {selectedSubmission.student.student_id && (
+                                      <p className="text-sm text-muted-foreground">ID: {selectedSubmission.student.student_id}</p>
+                                    )}
+                                    {selectedSubmission.student.phone && (
+                                      <p className="text-sm text-muted-foreground">Phone: {selectedSubmission.student.phone}</p>
+                                    )}
                                   </div>
                                 </div>
                                 <div className="bg-muted/30 rounded-xl p-5">
