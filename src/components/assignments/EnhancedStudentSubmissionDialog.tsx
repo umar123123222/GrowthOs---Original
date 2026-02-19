@@ -139,10 +139,24 @@ export const EnhancedStudentSubmissionDialog = ({
     setIsSubmitting(true);
 
     try {
+      // Query the latest version to prevent conflicts on resubmission
+      const { data: existingSubmissions, error: queryError } = await supabase
+        .from('submissions')
+        .select('version')
+        .eq('student_id', userId)
+        .eq('assignment_id', assignment.id)
+        .order('version', { ascending: false })
+        .limit(1);
+
+      if (queryError) throw queryError;
+
+      const nextVersion = ((existingSubmissions?.[0]?.version) || 0) + 1;
+
       let submissionData: any = {
         assignment_id: assignment.id,
         student_id: userId,
-        status: 'pending'
+        status: 'pending',
+        version: nextVersion
       };
 
       switch (assignment.submission_type) {
