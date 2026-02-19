@@ -11,9 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon, BookOpen } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon, BookOpen, MessageSquare } from 'lucide-react';
 import { StudentAccessManagement } from './StudentAccessManagement';
 import { SuspensionDialog } from '@/components/SuspensionDialog';
+import { StudentNotesDialog } from '@/components/StudentNotesDialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -140,6 +141,8 @@ export function StudentsManagement() {
   const [suspensionDialogOpen, setSuspensionDialogOpen] = useState(false);
   const [studentForSuspension, setStudentForSuspension] = useState<Student | null>(null);
   const [suspensionLoading, setSuspensionLoading] = useState(false);
+  const [notesDialogOpen, setNotesDialogOpen] = useState(false);
+  const [selectedStudentForNotes, setSelectedStudentForNotes] = useState<Student | null>(null);
   const pageSize = 25;
   const {
     options: installmentOptions
@@ -2091,6 +2094,10 @@ export function StudentsManagement() {
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Activity Logs
                               </Button>
+                              <Button variant="outline" size="sm" onClick={() => { setSelectedStudentForNotes(student); setNotesDialogOpen(true); }} className="hover-scale hover:border-amber-300 hover:text-amber-600">
+                                <MessageSquare className="w-4 h-4 mr-2" />
+                                Notes
+                              </Button>
                               <Button variant="outline" size="sm" onClick={() => handleResendInvoice(student)} className="hover-scale hover:border-purple-300 hover:text-purple-600">
                                 <FileText className="w-4 h-4 mr-2" />
                                 Resend Invoice
@@ -2731,6 +2738,14 @@ export function StudentsManagement() {
         studentName={studentForSuspension?.full_name || ''}
         onConfirm={handleSuspendStudent}
         loading={suspensionLoading}
+      />
+
+      {/* Student Notes Dialog */}
+      <StudentNotesDialog
+        open={notesDialogOpen}
+        onOpenChange={setNotesDialogOpen}
+        studentId={selectedStudentForNotes?.id || ''}
+        studentName={selectedStudentForNotes?.full_name || ''}
       />
     </div>;
 }
