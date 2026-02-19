@@ -97,7 +97,7 @@ const Videos = () => {
     if (userLMSStatus !== "active") return;
     if (!recording.isUnlocked || !recording.recording_url) return;
     await markRecordingWatched(recording.id);
-    navigate(`/video-player?id=${recording.id}`);
+    navigate(`/video-player?id=${recording.id}&title=${encodeURIComponent(recording.title || '')}`);
   };
 
   const toggleModule = (moduleId: string) => {
