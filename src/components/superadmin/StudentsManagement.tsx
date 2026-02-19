@@ -2310,38 +2310,24 @@ export function StudentsManagement() {
               <ScrollArea className="h-[50vh] border rounded-lg bg-background">
                 <Table>
                   <TableHeader className="sticky top-0 bg-muted/50 z-10">
-                    <TableRow className="border-b">
-                      <TableHead className="w-36 font-semibold">Timestamp</TableHead>
-                      <TableHead className="w-64 font-semibold">User</TableHead>
-                      <TableHead className="w-48 font-semibold">Name</TableHead>
-                      <TableHead className="w-20 font-semibold">Role</TableHead>
-                      <TableHead className="w-32 font-semibold">Activity</TableHead>
-                      <TableHead className="font-semibold">Details</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {activityLogs.length === 0 ? <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-12">
-                          <div className="flex flex-col items-center space-y-2">
-                            <Activity className="w-8 h-8 text-muted-foreground/50" />
-                            <p>No activity logs found for this student.</p>
-                          </div>
-                        </TableCell>
-                      </TableRow> : activityLogs.map((log, index) => <TableRow key={log.id} className={index % 2 === 0 ? "bg-muted/20" : "bg-background"}>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {formatDateTime(log.occurred_at)}
-                          </TableCell>
-                          <TableCell className="text-sm font-mono text-primary/80">
-                            {selectedStudentForLogs?.email}
-                          </TableCell>
-                          <TableCell className="text-sm font-medium">
-                            {selectedStudentForLogs?.full_name}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                              student
-                            </Badge>
-                          </TableCell>
+                     <TableRow className="border-b">
+                       <TableHead className="w-44 font-semibold">Timestamp</TableHead>
+                       <TableHead className="w-36 font-semibold">Activity</TableHead>
+                       <TableHead className="font-semibold">Details</TableHead>
+                     </TableRow>
+                   </TableHeader>
+                   <TableBody>
+                     {activityLogs.length === 0 ? <TableRow>
+                         <TableCell colSpan={3} className="text-center text-muted-foreground py-12">
+                           <div className="flex flex-col items-center space-y-2">
+                             <Activity className="w-8 h-8 text-muted-foreground/50" />
+                             <p>No activity logs found for this student.</p>
+                           </div>
+                         </TableCell>
+                       </TableRow> : activityLogs.map((log, index) => <TableRow key={log.id} className={index % 2 === 0 ? "bg-muted/20" : "bg-background"}>
+                           <TableCell className="text-xs text-muted-foreground">
+                             {formatDateTime(log.occurred_at)}
+                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className={`text-xs ${
                               log.activity_type === 'login' ? 'bg-green-100 text-green-800 border-green-200' : 
@@ -2362,15 +2348,18 @@ export function StudentsManagement() {
                               {log.activity_type.replace(/_/g, ' ')}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-sm max-w-md">
-                            <div className="truncate">
+                          <TableCell className="text-sm">
+                            <div className="whitespace-normal">
                               {(() => {
                           const metadata = log.metadata || {};
                           switch (log.activity_type) {
                             case 'page_visit':
+                              if (metadata.video_title) {
+                                return `Visited video player: "${metadata.video_title}"`;
+                              }
                               return `Visited page: ${metadata.page || metadata.url || 'Unknown page'}`;
                             case 'video_watched':
-                              return `Watched video: "${metadata.video_title || metadata.title || 'Unknown video'}"${metadata.module_name ? ` in module "${metadata.module_name}"` : ''}`;
+                              return `Watched video: "${metadata.video_title || metadata.title || 'Unknown video'}"${metadata.module_name ? ` — Module: "${metadata.module_name}"` : ''}${metadata.course_name && metadata.course_name !== 'N/A' ? ` — Course: "${metadata.course_name}"` : ''}`;
                             case 'assignment_submitted':
                               return `Submitted assignment: "${metadata.assignment_name || metadata.assignment_title || 'Unknown'}"${metadata.version ? ` (v${metadata.version})` : ''}`;
                             case 'assignment_approved':
@@ -2386,9 +2375,9 @@ export function StudentsManagement() {
                             case 'support_ticket_replied':
                               return `Replied to support ticket${metadata.ticket_id ? ` #${metadata.ticket_id.substring(0, 8)}` : ''}`;
                             case 'success_session_scheduled':
-                              return `Success session scheduled${metadata.session_date ? ` for ${metadata.session_date}` : ''}`;
+                              return `Success session scheduled: "${metadata.session_title || 'Unknown'}"${metadata.session_date ? ` for ${metadata.session_date}` : ''}${metadata.scheduled_by ? ` by ${metadata.scheduled_by}` : ''}`;
                             case 'success_session_attended':
-                              return `Attended success session${metadata.session_title ? `: "${metadata.session_title}"` : ''}`;
+                              return `Attended success session: "${metadata.session_title || 'Unknown'}"${metadata.session_date ? ` on ${metadata.session_date}` : ''}`;
                             case 'certificate_generated':
                               return `Generated certificate for: "${metadata.course_title || metadata.title || 'Unknown course'}"`;
                             case 'login':

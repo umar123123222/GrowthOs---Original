@@ -684,13 +684,22 @@ const Layout = memo(({
 
       // Debounce activity logging to prevent spam
       logActivityRef.current = setTimeout(() => {
+        const searchParams = new URLSearchParams(location.search);
+        const pageMetadata: Record<string, string> = {
+          page: location.pathname,
+          timestamp: new Date().toISOString()
+        };
+        // Enrich page visit with context from URL params
+        if (searchParams.get('title')) {
+          pageMetadata.video_title = decodeURIComponent(searchParams.get('title') || '');
+        }
+        if (searchParams.get('id')) {
+          pageMetadata.reference_id = searchParams.get('id') || '';
+        }
         logUserActivity({
           user_id: user.id,
           activity_type: ACTIVITY_TYPES.PAGE_VISIT,
-          metadata: {
-            page: location.pathname,
-            timestamp: new Date().toISOString()
-          }
+          metadata: pageMetadata
         }).catch(error => {
           // Silently handle activity logging errors
           console.warn('Page visit logging failed:', error);

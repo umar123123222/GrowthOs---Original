@@ -15,6 +15,8 @@ import { safeQuery } from '@/lib/database-safety';
 import type { SuccessSessionResult } from '@/types/database';
 import { format, isSameDay } from 'date-fns';
 import { notifyMentorOfSuccessSessionScheduled } from '@/lib/notification-service';
+import { logUserActivity, ACTIVITY_TYPES } from '@/lib/activity-logger';
+import { useAuth } from '@/hooks/useAuth';
 import { AlertTriangle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -128,6 +130,7 @@ export function SuccessSessionsManagement() {
   });
   const [publishing, setPublishing] = useState<string | null>(null);
   const { toast } = useToast();
+  const { user: authUser } = useAuth();
 
   useEffect(() => {
     fetchSessions();
@@ -384,6 +387,20 @@ export function SuccessSessionsManagement() {
 
         if (error) throw error;
 
+        // Log session update activity
+        if (authUser?.id) {
+          logUserActivity({
+            user_id: authUser.id,
+            activity_type: ACTIVITY_TYPES.SUCCESS_SESSION_SCHEDULED,
+            metadata: {
+              session_title: sessionData.title,
+              session_date: sessionData.start_time || formData.schedule_date,
+              scheduled_by: authUser.full_name || 'Admin',
+              action: 'updated'
+            }
+          });
+        }
+
         toast({
           title: "Success",
           description: "Session updated successfully",
@@ -412,6 +429,21 @@ export function SuccessSessionsManagement() {
 
           if (!result.success) throw result.error;
 
+          // Log session creation
+          if (authUser?.id) {
+            logUserActivity({
+              user_id: authUser.id,
+              activity_type: ACTIVITY_TYPES.SUCCESS_SESSION_SCHEDULED,
+              metadata: {
+                session_title: sessionData.title,
+                session_date: sessionData.start_time || formData.schedule_date,
+                scheduled_by: authUser.full_name || 'Admin',
+                action: 'created',
+                cloned_count: relevantPathwayIds.length
+              }
+            });
+          }
+
           toast({
             title: "Success",
             description: `Created ${relevantPathwayIds.length} sessions (one per pathway)`,
@@ -433,6 +465,20 @@ export function SuccessSessionsManagement() {
 
           if (!result.success) throw result.error;
           const newSession = result.data;
+
+          // Log session creation
+          if (authUser?.id) {
+            logUserActivity({
+              user_id: authUser.id,
+              activity_type: ACTIVITY_TYPES.SUCCESS_SESSION_SCHEDULED,
+              metadata: {
+                session_title: sessionData.title,
+                session_date: sessionData.start_time || formData.schedule_date,
+                scheduled_by: authUser.full_name || 'Admin',
+                action: 'created'
+              }
+            });
+          }
 
           // Notify the assigned mentor about the new session
           if (formData.mentor_id && newSession) {
