@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { RoleGuard } from "@/components/RoleGuard";
 import { MessageSquare, Plus, Calendar, User, MessageCircle, AlertCircle, CheckCircle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -148,6 +149,19 @@ const Support = () => {
         user_id: user.id
       });
       if (error) throw error;
+
+      // Log support ticket creation
+      logUserActivity({
+        user_id: user.id,
+        activity_type: ACTIVITY_TYPES.SUPPORT_TICKET_CREATED,
+        metadata: {
+          ticket_title: newTicket.title,
+          ticket_type: newTicket.type,
+          priority: newTicket.priority,
+          timestamp: new Date().toISOString()
+        }
+      });
+
       toast({
         title: "Success",
         description: "Support ticket created successfully"
@@ -189,6 +203,18 @@ const Support = () => {
         user_id: user.id
       });
       if (error) throw error;
+
+      // Log support ticket reply
+      logUserActivity({
+        user_id: user.id,
+        activity_type: ACTIVITY_TYPES.SUPPORT_TICKET_REPLIED,
+        reference_id: ticketId,
+        metadata: {
+          ticket_id: ticketId,
+          timestamp: new Date().toISOString()
+        }
+      });
+
       setNewReply("");
       fetchTickets();
       toast({

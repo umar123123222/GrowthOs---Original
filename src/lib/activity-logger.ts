@@ -65,7 +65,12 @@ export const ACTIVITY_TYPES = {
   CONTENT_UPDATED: 'content_updated',
   CONTENT_DELETED: 'content_deleted',
   ROLE_CHANGED: 'role_changed',
-  SETTINGS_UPDATED: 'settings_updated'
+  SETTINGS_UPDATED: 'settings_updated',
+  ASSIGNMENT_APPROVED: 'assignment_approved',
+  ASSIGNMENT_DECLINED: 'assignment_declined',
+  RECORDING_UNLOCKED: 'recording_unlocked',
+  SUCCESS_SESSION_SCHEDULED: 'success_session_scheduled',
+  SUCCESS_SESSION_ATTENDED: 'success_session_attended',
 } as const;
 
 // Helper function to log specific activities with common patterns

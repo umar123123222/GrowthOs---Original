@@ -2282,17 +2282,18 @@ export function StudentsManagement() {
                   <SelectItem value="login">Login</SelectItem>
                   <SelectItem value="logout">Logout</SelectItem>
                   <SelectItem value="page_visit">Page Visit</SelectItem>
-                  <SelectItem value="profile_updated">Profile Updated</SelectItem>
-                  <SelectItem value="module_completed">Module Completed</SelectItem>
                   <SelectItem value="video_watched">Video Watched</SelectItem>
                   <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
+                  <SelectItem value="assignment_approved">Assignment Approved</SelectItem>
+                  <SelectItem value="assignment_declined">Assignment Declined</SelectItem>
+                  <SelectItem value="recording_unlocked">Recording Unlocked</SelectItem>
+                  <SelectItem value="support_ticket_created">Support Ticket Created</SelectItem>
+                  <SelectItem value="support_ticket_replied">Support Ticket Reply</SelectItem>
+                  <SelectItem value="success_session_scheduled">Success Session Scheduled</SelectItem>
+                  <SelectItem value="success_session_attended">Success Session Attended</SelectItem>
+                  <SelectItem value="module_completed">Module Completed</SelectItem>
+                  <SelectItem value="profile_updated">Profile Updated</SelectItem>
                   <SelectItem value="certificate_generated">Certificate Generated</SelectItem>
-                  <SelectItem value="fees_recorded">Fees Recorded</SelectItem>
-                  <SelectItem value="invoice_generated">Invoice Generated</SelectItem>
-                  <SelectItem value="invoice_downloaded">Invoice Downloaded</SelectItem>
-                  <SelectItem value="file_download">File Download</SelectItem>
-                  <SelectItem value="dashboard_access">Dashboard Access</SelectItem>
-                  <SelectItem value="session_joined">Session Joined</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2342,7 +2343,22 @@ export function StudentsManagement() {
                             </Badge>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={`text-xs ${log.activity_type === 'login' ? 'bg-green-100 text-green-800 border-green-200' : log.activity_type === 'logout' ? 'bg-red-100 text-red-800 border-red-200' : log.activity_type === 'page_visit' ? 'bg-blue-100 text-blue-800 border-blue-200' : log.activity_type === 'video_watched' ? 'bg-purple-100 text-purple-800 border-purple-200' : log.activity_type === 'assignment_submitted' ? 'bg-orange-100 text-orange-800 border-orange-200' : log.activity_type === 'module_completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 'bg-gray-100 text-gray-800 border-gray-200'}`}>
+                            <Badge variant="outline" className={`text-xs ${
+                              log.activity_type === 'login' ? 'bg-green-100 text-green-800 border-green-200' : 
+                              log.activity_type === 'logout' ? 'bg-red-100 text-red-800 border-red-200' : 
+                              log.activity_type === 'page_visit' ? 'bg-blue-100 text-blue-800 border-blue-200' : 
+                              log.activity_type === 'video_watched' ? 'bg-purple-100 text-purple-800 border-purple-200' : 
+                              log.activity_type === 'assignment_submitted' ? 'bg-orange-100 text-orange-800 border-orange-200' : 
+                              log.activity_type === 'assignment_approved' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
+                              log.activity_type === 'assignment_declined' ? 'bg-rose-100 text-rose-800 border-rose-200' : 
+                              log.activity_type === 'recording_unlocked' ? 'bg-cyan-100 text-cyan-800 border-cyan-200' : 
+                              log.activity_type === 'module_completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
+                              log.activity_type === 'support_ticket_created' ? 'bg-amber-100 text-amber-800 border-amber-200' : 
+                              log.activity_type === 'support_ticket_replied' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 
+                              log.activity_type === 'success_session_scheduled' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 
+                              log.activity_type === 'success_session_attended' ? 'bg-teal-100 text-teal-800 border-teal-200' : 
+                              'bg-gray-100 text-gray-800 border-gray-200'
+                            }`}>
                               {log.activity_type.replace(/_/g, ' ')}
                             </Badge>
                           </TableCell>
@@ -2354,29 +2370,33 @@ export function StudentsManagement() {
                             case 'page_visit':
                               return `Visited page: ${metadata.page || metadata.url || 'Unknown page'}`;
                             case 'video_watched':
-                              return `Watched video: "${metadata.video_title || metadata.title || 'Unknown video'}" ${metadata.duration ? `(${metadata.duration})` : ''}`;
+                              return `Watched video: "${metadata.video_title || metadata.title || 'Unknown video'}"${metadata.module_name ? ` in module "${metadata.module_name}"` : ''}`;
                             case 'assignment_submitted':
-                              return `Submitted assignment: "${metadata.assignment_title || metadata.title || 'Unknown assignment'}" ${metadata.score ? `(Score: ${metadata.score})` : ''}`;
+                              return `Submitted assignment: "${metadata.assignment_name || metadata.assignment_title || 'Unknown'}"${metadata.version ? ` (v${metadata.version})` : ''}`;
+                            case 'assignment_approved':
+                              return `Assignment approved: "${metadata.assignment_name || 'Unknown'}"${metadata.reviewed_by ? ` by ${metadata.reviewed_by}` : ''}${metadata.notes ? ` — "${metadata.notes}"` : ''}`;
+                            case 'assignment_declined':
+                              return `Assignment declined: "${metadata.assignment_name || 'Unknown'}"${metadata.reviewed_by ? ` by ${metadata.reviewed_by}` : ''}${metadata.notes ? ` — "${metadata.notes}"` : ''}`;
+                            case 'recording_unlocked':
+                              return `Recording unlocked: "${metadata.recording_title || 'Unknown'}"${metadata.module_name ? ` in "${metadata.module_name}"` : ''}`;
                             case 'module_completed':
-                              return `Completed module: "${metadata.module_title || metadata.title || 'Unknown module'}" ${metadata.completion_percentage ? `(${metadata.completion_percentage}%)` : ''}`;
+                              return `Completed module: "${metadata.module_title || metadata.title || 'Unknown module'}"`;
+                            case 'support_ticket_created':
+                              return `Created support ticket: "${metadata.ticket_title || 'Unknown'}" (${metadata.ticket_type || 'general'})`;
+                            case 'support_ticket_replied':
+                              return `Replied to support ticket${metadata.ticket_id ? ` #${metadata.ticket_id.substring(0, 8)}` : ''}`;
+                            case 'success_session_scheduled':
+                              return `Success session scheduled${metadata.session_date ? ` for ${metadata.session_date}` : ''}`;
+                            case 'success_session_attended':
+                              return `Attended success session${metadata.session_title ? `: "${metadata.session_title}"` : ''}`;
                             case 'certificate_generated':
                               return `Generated certificate for: "${metadata.course_title || metadata.title || 'Unknown course'}"`;
-                            case 'fees_recorded':
-                              return `Fees recorded: ${metadata.amount ? `$${metadata.amount}` : 'Amount not specified'} ${metadata.type ? `(${metadata.type})` : ''}`;
-                            case 'invoice_generated':
-                              return `Invoice generated: ${metadata.invoice_id || 'ID not specified'} ${metadata.amount ? `for $${metadata.amount}` : ''}`;
-                            case 'file_download':
-                              return `Downloaded file: "${metadata.filename || metadata.file_name || 'Unknown file'}" ${metadata.file_size ? `(${metadata.file_size})` : ''}`;
-                            case 'session_joined':
-                              return `Joined session: "${metadata.session_title || metadata.title || 'Unknown session'}" ${metadata.duration ? `(Duration: ${metadata.duration})` : ''}`;
                             case 'login':
-                              return `Logged in ${metadata.ip_address ? `from ${metadata.ip_address}` : ''} ${metadata.device ? `on ${metadata.device}` : ''}`;
+                              return `Logged in${metadata.email ? ` (${metadata.email})` : ''}`;
                             case 'logout':
-                              return `Logged out ${metadata.session_duration ? `(Session: ${metadata.session_duration})` : ''}`;
+                              return `Logged out`;
                             case 'profile_updated':
                               return `Updated profile ${metadata.fields_changed ? `(Changed: ${metadata.fields_changed.join(', ')})` : ''}`;
-                            case 'dashboard_access':
-                              return `Accessed dashboard ${metadata.section ? `(Section: ${metadata.section})` : ''}`;
                             default:
                               return formatActivityType(log.activity_type);
                           }

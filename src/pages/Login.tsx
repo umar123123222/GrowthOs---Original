@@ -16,6 +16,7 @@ import { safeQuery } from '@/lib/database-safety';
 import type { CreatedUserResult } from '@/types/database';
 import { ENV_CONFIG } from '@/lib/env-config';
 import { TEXT_CONTENT } from '@/config/text-content';
+import { logUserActivity, ACTIVITY_TYPES } from '@/lib/activity-logger';
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -201,6 +202,13 @@ const Login = () => {
 
       // Clear any stored suspension errors on successful login
       sessionStorage.removeItem('suspension_error');
+
+      // Log login activity
+      logUserActivity({
+        user_id: authData.user.id,
+        activity_type: ACTIVITY_TYPES.LOGIN,
+        metadata: { email: authData.user.email, timestamp: new Date().toISOString() }
+      });
 
       // Refresh the user data in our auth hook and navigate to dashboard
       const tRefreshStart = performance.now();

@@ -13,6 +13,7 @@ import { safeMaybeSingle } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 import CurrentModuleCard from "@/components/CurrentModuleCard";
 import { obfuscateUrl, deobfuscateUrl } from "@/lib/utils";
+import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 
 // Sanitize video URLs by removing garbage prefixes
 const sanitizeVideoUrl = (url: string): string => {
@@ -277,6 +278,18 @@ const VideoPlayer = () => {
         watched_at: new Date().toISOString()
       });
       setVideoWatched(true);
+
+      // Log video watched activity
+      logUserActivity({
+        user_id: user.id,
+        activity_type: ACTIVITY_TYPES.VIDEO_WATCHED,
+        reference_id: currentVideo.id,
+        metadata: {
+          video_title: currentVideo.title,
+          module_name: currentVideo.module,
+          timestamp: new Date().toISOString()
+        }
+      });
 
       // Check if should show rating
       setTimeout(() => {

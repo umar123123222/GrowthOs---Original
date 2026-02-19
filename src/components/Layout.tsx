@@ -706,6 +706,14 @@ const Layout = memo(({
   }, [location.pathname, user?.id]);
   const handleLogout = async () => {
     try {
+      // Log logout activity before signing out
+      if (user?.id) {
+        await logUserActivity({
+          user_id: user.id,
+          activity_type: ACTIVITY_TYPES.LOGOUT,
+          metadata: { timestamp: new Date().toISOString() }
+        });
+      }
       const {
         error
       } = await supabase.auth.signOut();

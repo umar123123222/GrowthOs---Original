@@ -12,6 +12,7 @@ import { CheckCircle, XCircle, Eye, MessageSquare, Clock, FileText, BookOpen } f
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourses } from '@/hooks/useCourses';
+import { logUserActivity, ACTIVITY_TYPES } from '@/lib/activity-logger';
 
 interface Submission {
   id: string;
@@ -220,6 +221,22 @@ export function SubmissionsManagement({
       }).eq('id', submissionId);
       if (error) throw error;
       
+      // Log approval/decline activity to the student's activity feed
+      const reviewedSubmission = submissions.find(s => s.id === submissionId);
+      if (reviewedSubmission) {
+        logUserActivity({
+          user_id: reviewedSubmission.student_id,
+          activity_type: status === 'approved' ? ACTIVITY_TYPES.ASSIGNMENT_APPROVED : ACTIVITY_TYPES.ASSIGNMENT_DECLINED,
+          reference_id: reviewedSubmission.assignment_id,
+          metadata: {
+            assignment_name: reviewedSubmission.assignment.name,
+            reviewed_by: user?.full_name || user?.email || 'Admin',
+            notes: reviewNotes.trim() || undefined,
+            timestamp: new Date().toISOString()
+          }
+        });
+      }
+
       toast({
         title: 'Success',
         description: `Submission ${status} successfully`
