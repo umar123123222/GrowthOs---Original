@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Upload, Link, FileText, X, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 
 interface Assignment {
   id: string;
@@ -184,6 +185,19 @@ export const EnhancedStudentSubmissionDialog = ({
         .insert(submissionData);
 
       if (error) throw error;
+
+      // Log assignment submission activity
+      logUserActivity({
+        user_id: userId,
+        activity_type: ACTIVITY_TYPES.ASSIGNMENT_SUBMITTED,
+        reference_id: assignment.id,
+        metadata: {
+          assignment_name: assignment.name,
+          version: nextVersion,
+          submission_type: assignment.submission_type,
+          timestamp: new Date().toISOString()
+        }
+      });
 
       toast({
         title: "Assignment Submitted",
