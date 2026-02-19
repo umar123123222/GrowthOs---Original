@@ -34,7 +34,7 @@ const CurrentModuleCard: React.FC<CurrentModuleCardProps> = ({
   const progress = Math.round(watchedCount / total * 100);
   const handleLessonClick = (lesson: any) => {
     if (lesson?.locked) return;
-    navigate(`/video-player?id=${lesson.id}`);
+    navigate(`/video-player?id=${lesson.id}&title=${encodeURIComponent(lesson.title || '')}`);
   };
   return <Card key={currentModule.id}>
       <CardHeader className="bg-white">

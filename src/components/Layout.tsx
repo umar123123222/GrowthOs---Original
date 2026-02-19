@@ -712,7 +712,7 @@ const Layout = memo(({
         }
       };
     }
-  }, [location.pathname, user?.id]);
+  }, [location.pathname, location.search, user?.id]);
   const handleLogout = async () => {
     try {
       // Log logout activity before signing out
