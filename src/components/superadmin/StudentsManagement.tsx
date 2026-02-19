@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { safeLogger } from '@/lib/safe-logger';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon, BookOpen } from 'lucide-react';
 import { StudentAccessManagement } from './StudentAccessManagement';
+import { SuspensionDialog } from '@/components/SuspensionDialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -136,6 +137,9 @@ export function StudentsManagement() {
   const [selectedStudentForAccess, setSelectedStudentForAccess] = useState<Student | null>(null);
   const [companyCurrency, setCompanyCurrency] = useState<string>('PKR');
   const [currentPage, setCurrentPage] = useState(1);
+  const [suspensionDialogOpen, setSuspensionDialogOpen] = useState(false);
+  const [studentForSuspension, setStudentForSuspension] = useState<Student | null>(null);
+  const [suspensionLoading, setSuspensionLoading] = useState(false);
   const pageSize = 25;
   const {
     options: installmentOptions
@@ -188,6 +192,48 @@ export function StudentsManagement() {
       console.error('Error fetching company currency:', error);
     }
   };
+
+  const handleSuspendStudent = async (data: { note: string; autoUnsuspendDate?: Date }) => {
+    if (!studentForSuspension) return;
+    setSuspensionLoading(true);
+    try {
+      const { error } = await supabase.from('users').update({
+        lms_status: 'suspended',
+        updated_at: new Date().toISOString()
+      }).eq('id', studentForSuspension.id);
+      if (error) throw error;
+
+      // Log suspension with metadata
+      await supabase.from('user_activity_logs').insert({
+        user_id: studentForSuspension.id,
+        activity_type: 'lms_suspended',
+        occurred_at: new Date().toISOString(),
+        metadata: {
+          suspension_note: data.note || null,
+          auto_unsuspend_date: data.autoUnsuspendDate ? data.autoUnsuspendDate.toISOString() : null,
+          suspended_by: user?.id || null
+        }
+      });
+
+      toast({
+        title: 'Student Suspended',
+        description: `${studentForSuspension.full_name} has been suspended${data.autoUnsuspendDate ? `. Auto-unsuspend: ${format(data.autoUnsuspendDate, 'PPP')}` : ''}`
+      });
+      setSuspensionDialogOpen(false);
+      setStudentForSuspension(null);
+      fetchStudents();
+    } catch (error) {
+      console.error('Error suspending student:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to suspend student',
+        variant: 'destructive'
+      });
+    } finally {
+      setSuspensionLoading(false);
+    }
+  };
+
   const fetchInstallmentPayments = async () => {
     try {
       // Fetch all invoices - we need to show complete payment history
@@ -2097,6 +2143,12 @@ export function StudentsManagement() {
                                         className="w-full justify-start text-sm"
                                         onClick={async () => {
                                           if (student.lms_status !== status) {
+                                            // For suspension, open the dialog
+                                            if (status === 'suspended') {
+                                              setStudentForSuspension(student);
+                                              setSuspensionDialogOpen(true);
+                                              return;
+                                            }
                                             try {
                                               const { error } = await supabase.from('users').update({
                                                 lms_status: status,
@@ -2671,5 +2723,14 @@ export function StudentsManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Suspension Dialog */}
+      <SuspensionDialog
+        open={suspensionDialogOpen}
+        onOpenChange={setSuspensionDialogOpen}
+        studentName={studentForSuspension?.full_name || ''}
+        onConfirm={handleSuspendStudent}
+        loading={suspensionLoading}
+      />
     </div>;
 }

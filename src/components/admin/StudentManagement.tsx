@@ -23,6 +23,8 @@ import { useUserManagement } from '@/hooks/useUserManagement';
 import { EnhancedStudentCreationDialog } from '@/components/EnhancedStudentCreationDialog';
 import { EditStudentDialog } from '@/components/EditStudentDialog';
 import { ManageAccessDialog } from '@/components/admin/ManageAccessDialog';
+import { SuspensionDialog } from '@/components/SuspensionDialog';
+import { useAuth } from '@/hooks/useAuth';
 import jsPDF from 'jspdf';
 interface Student {
   id: string;
@@ -96,9 +98,13 @@ export const StudentManagement = () => {
   const [timeTick, setTimeTick] = useState(0); // triggers periodic re-render for time-based status updates
   const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
+  const [suspensionDialogOpen, setSuspensionDialogOpen] = useState(false);
+  const [studentForSuspension, setStudentForSuspension] = useState<Student | null>(null);
+  const [suspensionLoading, setSuspensionLoading] = useState(false);
   const { toast } = useToast();
   const { options: installmentOptions } = useInstallmentOptions();
   const { deleteUser, loading: deleteLoading } = useUserManagement();
+  const { user } = useAuth();
   useEffect(() => {
     fetchStudents();
   }, []);
@@ -407,45 +413,70 @@ export const StudentManagement = () => {
       });
     }
   };
-  const handleToggleLMSSuspension = async (studentId: string, currentStatus: string) => {
-    const newLMSStatus = currentStatus === 'suspended' ? 'active' : 'suspended';
-    
-    // Optimistic UI update
-    setStudents(prev => prev.map(s => 
-      s.id === studentId ? { ...s, lms_status: newLMSStatus } : s
-    ));
-    
-    try {
-      const {
-        error
-      } = await supabase.from('users').update({
-        lms_status: newLMSStatus,
-        updated_at: new Date().toISOString()
-      }).eq('id', studentId);
-      if (error) throw error;
-      
-      // Wait for fetchStudents to complete before showing success toast
-      await fetchStudents();
-      
-      toast({
-        title: 'Success',
-        description: `LMS account ${newLMSStatus === 'suspended' ? 'suspended' : 'activated'} successfully`
-      });
-    } catch (error) {
-      console.error('Error updating LMS suspension status:', error);
-      
-      // Rollback optimistic update
+  const handleToggleLMSSuspension = async (student: Student) => {
+    if (student.lms_status === 'suspended') {
+      // Unsuspend directly
       setStudents(prev => prev.map(s => 
-        s.id === studentId ? { ...s, lms_status: currentStatus } : s
+        s.id === student.id ? { ...s, lms_status: 'active' } : s
       ));
-      
-      toast({
-        title: 'Error',
-        description: 'Failed to update LMS suspension status',
-        variant: 'destructive'
-      });
+      try {
+        const { error } = await supabase.from('users').update({
+          lms_status: 'active',
+          updated_at: new Date().toISOString()
+        }).eq('id', student.id);
+        if (error) throw error;
+        await fetchStudents();
+        toast({ title: 'Success', description: 'LMS account activated successfully' });
+      } catch (error) {
+        console.error('Error updating LMS suspension status:', error);
+        setStudents(prev => prev.map(s => 
+          s.id === student.id ? { ...s, lms_status: 'suspended' } : s
+        ));
+        toast({ title: 'Error', description: 'Failed to update LMS suspension status', variant: 'destructive' });
+      }
+    } else {
+      // Open suspension dialog
+      setStudentForSuspension(student);
+      setSuspensionDialogOpen(true);
     }
   };
+
+  const handleSuspendStudent = async (data: { note: string; autoUnsuspendDate?: Date }) => {
+    if (!studentForSuspension) return;
+    setSuspensionLoading(true);
+    try {
+      const { error } = await supabase.from('users').update({
+        lms_status: 'suspended',
+        updated_at: new Date().toISOString()
+      }).eq('id', studentForSuspension.id);
+      if (error) throw error;
+
+      await supabase.from('user_activity_logs').insert({
+        user_id: studentForSuspension.id,
+        activity_type: 'lms_suspended',
+        occurred_at: new Date().toISOString(),
+        metadata: {
+          suspension_note: data.note || null,
+          auto_unsuspend_date: data.autoUnsuspendDate ? data.autoUnsuspendDate.toISOString() : null,
+          suspended_by: user?.id || null
+        }
+      });
+
+      toast({
+        title: 'Student Suspended',
+        description: `${studentForSuspension.full_name} has been suspended${data.autoUnsuspendDate ? `. Auto-unsuspend: ${format(data.autoUnsuspendDate, 'PPP')}` : ''}`
+      });
+      setSuspensionDialogOpen(false);
+      setStudentForSuspension(null);
+      fetchStudents();
+    } catch (error) {
+      console.error('Error suspending student:', error);
+      toast({ title: 'Error', description: 'Failed to suspend student', variant: 'destructive' });
+    } finally {
+      setSuspensionLoading(false);
+    }
+  };
+
   const grantExtension = async (student: Student, newDueDate: Date) => {
     try {
       if (!student.student_record_id) {
@@ -1542,7 +1573,7 @@ export const StudentManagement = () => {
                                variant="outline"
                                size="sm"
                                onClick={() =>
-                                 handleToggleLMSSuspension(student.id, student.lms_status)}
+                                 handleToggleLMSSuspension(student)}
                                className={`hover-scale ${
                                  student.lms_status === 'suspended'
                                    ? 'text-green-600 hover:text-green-700 hover:border-green-300'
@@ -1674,6 +1705,15 @@ export const StudentManagement = () => {
         onOpenChange={setManageAccessDialogOpen}
         student={selectedStudentForAccess}
         onUpdate={fetchStudents}
+      />
+
+      {/* Suspension Dialog */}
+      <SuspensionDialog
+        open={suspensionDialogOpen}
+        onOpenChange={setSuspensionDialogOpen}
+        studentName={studentForSuspension?.full_name || ''}
+        onConfirm={handleSuspendStudent}
+        loading={suspensionLoading}
       />
     </div>;
 };
