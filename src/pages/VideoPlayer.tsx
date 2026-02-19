@@ -279,7 +279,8 @@ const VideoPlayer = () => {
       });
       setVideoWatched(true);
 
-      // Log video watched activity
+      // Log video watched activity with course context
+      const courseName = searchParams.get('course') ? decodeURIComponent(searchParams.get('course') || '') : undefined;
       logUserActivity({
         user_id: user.id,
         activity_type: ACTIVITY_TYPES.VIDEO_WATCHED,
@@ -287,6 +288,7 @@ const VideoPlayer = () => {
         metadata: {
           video_title: currentVideo.title,
           module_name: currentVideo.module,
+          course_name: courseName || 'N/A',
           timestamp: new Date().toISOString()
         }
       });
