@@ -200,45 +200,46 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
     return roleColors[role as keyof typeof roleColors] || 'bg-gray-100 text-gray-800';
   };
 
-  const formatLogDetails = (log: ActivityLog): React.ReactNode => {
+  const formatLogDetails = (log: ActivityLog): string => {
+    return log.description || log.action.replace(/_/g, ' ');
+  };
+
+  const formatSubDetails = (log: ActivityLog): React.ReactNode => {
     const data = log.data || {};
     
     if (log.action === 'lms_suspended') {
       const note = data.suspension_note || data.note || data.reason;
       return (
         <div className="space-y-0.5">
-          <div>{log.description || 'Student Suspended'}</div>
           {note && <div className="text-xs text-destructive font-medium">Reason: {note}</div>}
           {data.auto_unsuspend_date && (
             <div className="text-xs">Auto-unsuspend: {new Date(data.auto_unsuspend_date).toLocaleDateString()}</div>
           )}
+          {log.users?.full_name && <div className="text-xs">By: {log.users.full_name}</div>}
         </div>
       );
     }
     
     if (log.action === 'admin_note') {
       const note = data.note || data.suspension_note;
-      const addedByName = log.users?.full_name || 'Unknown';
       return (
         <div className="space-y-0.5">
-          <div>Admin Note</div>
           {note && <div className="text-xs italic">"{note}"</div>}
-          <div className="text-xs">By: {addedByName}</div>
+          {log.users?.full_name && <div className="text-xs">By: {log.users.full_name}</div>}
         </div>
       );
     }
 
-    // Default
-    return (
-      <>
-        {log.description || log.action}
-        {data && Object.keys(data).length > 0 && (
-          <div className="text-xs mt-1 opacity-60">
-            {JSON.stringify(data)}
-          </div>
-        )}
-      </>
-    );
+    // Default: show metadata if any
+    if (data && Object.keys(data).length > 0) {
+      return (
+        <div className="text-xs opacity-60 max-w-[250px] truncate">
+          {JSON.stringify(data)}
+        </div>
+      );
+    }
+
+    return <span className="text-xs text-muted-foreground">—</span>;
   };
 
   const filteredLogs = logs.filter(log => {
@@ -357,6 +358,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                         <TableHead className="font-medium h-12">Role</TableHead>
                         <TableHead className="font-medium h-12">Activity</TableHead>
                         <TableHead className="font-medium h-12">Details</TableHead>
+                        <TableHead className="font-medium h-12">Sub Details</TableHead>
                       </TableRow>
                     </TableHeader>
                   </Table>
@@ -395,10 +397,13 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                                {log.action.replace('_', ' ')}
                              </Badge>
                            </TableCell>
-                           <TableCell className="max-w-[300px]">
+                           <TableCell className="max-w-[200px]">
                              <div className="text-sm text-muted-foreground">
                                {formatLogDetails(log)}
                              </div>
+                           </TableCell>
+                           <TableCell className="max-w-[250px]">
+                             {formatSubDetails(log)}
                            </TableCell>
                          </TableRow>
                       ))}
