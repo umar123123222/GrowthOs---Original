@@ -19,7 +19,7 @@ import RouteContentLoader from "./LoadingStates/RouteContentLoader";
 import { throttle } from "@/utils/performance";
 import { safeLogger } from '@/lib/safe-logger';
 import { AnnouncementBanner } from "./AnnouncementBanner";
-import { useAnnouncementBanner } from "@/hooks/useAnnouncementBanner";
+
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -207,10 +207,8 @@ const Layout = memo(({
   });
   const [catalogCourses, setCatalogCourses] = useState<CourseMenuItem[]>([]);
   
-  // Track announcement banner visibility - hook for initial state, dismiss callback to remove padding
-  const { isVisible: bannerHookVisible } = useAnnouncementBanner();
-  const [bannerDismissed, setBannerDismissed] = useState(false);
-  const isBannerVisible = bannerHookVisible && !bannerDismissed;
+  // Track announcement banner visibility via callback from the component
+  const [isBannerVisible, setIsBannerVisible] = useState(false);
   const isUserSuperadmin = user?.role === 'superadmin';
   const isUserAdmin = user?.role === 'admin';
   const isUserMentor = user?.role === 'mentor';
@@ -956,7 +954,7 @@ const Layout = memo(({
         </div>
       </header>
 
-      <AnnouncementBanner onDismiss={() => setBannerDismissed(true)} />
+      <AnnouncementBanner onVisibilityChange={setIsBannerVisible} />
 
       <div className="flex">
         {/* Sidebar - Desktop only, hidden on mobile */}

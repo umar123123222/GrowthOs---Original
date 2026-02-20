@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { X, Info, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAnnouncementBanner } from '@/hooks/useAnnouncementBanner';
@@ -30,15 +31,18 @@ const colorStyles = {
 };
 
 interface AnnouncementBannerProps {
-  onDismiss?: () => void;
+  onVisibilityChange?: (visible: boolean) => void;
 }
 
-export function AnnouncementBanner({ onDismiss }: AnnouncementBannerProps) {
+export function AnnouncementBanner({ onVisibilityChange }: AnnouncementBannerProps) {
   const { settings, isVisible, dismiss } = useAnnouncementBanner();
+
+  useEffect(() => {
+    onVisibilityChange?.(isVisible);
+  }, [isVisible, onVisibilityChange]);
 
   const handleDismiss = () => {
     dismiss();
-    onDismiss?.();
   };
 
   if (!isVisible || !settings) {
