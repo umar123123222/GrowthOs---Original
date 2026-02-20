@@ -70,7 +70,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
         const isSuspension = d.activity_type === 'lms_suspended';
         return {
           id: d.id,
-          note: isSuspension ? (meta?.reason || 'No reason provided') : (meta?.note || ''),
+          note: isSuspension ? (meta?.suspension_note || meta?.reason || 'No reason provided') : (meta?.note || ''),
           created_at: d.occurred_at,
           created_by_name: creatorMap[meta?.created_by || meta?.suspended_by] || 'System',
           type: isSuspension ? 'suspension' as const : 'note' as const,
