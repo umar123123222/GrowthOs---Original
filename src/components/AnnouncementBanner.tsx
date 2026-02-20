@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { X, Info, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAnnouncementBanner } from '@/hooks/useAnnouncementBanner';
@@ -31,16 +30,16 @@ const colorStyles = {
 };
 
 interface AnnouncementBannerProps {
-  onVisibilityChange?: (isVisible: boolean) => void;
+  onDismiss?: () => void;
 }
 
-export function AnnouncementBanner({ onVisibilityChange }: AnnouncementBannerProps) {
+export function AnnouncementBanner({ onDismiss }: AnnouncementBannerProps) {
   const { settings, isVisible, dismiss } = useAnnouncementBanner();
 
-  // Notify parent about visibility changes
-  useEffect(() => {
-    onVisibilityChange?.(isVisible);
-  }, [isVisible, onVisibilityChange]);
+  const handleDismiss = () => {
+    dismiss();
+    onDismiss?.();
+  };
 
   if (!isVisible || !settings) {
     return null;
@@ -62,7 +61,7 @@ export function AnnouncementBanner({ onVisibilityChange }: AnnouncementBannerPro
         </p>
         {settings.dismissible && (
           <button
-            onClick={dismiss}
+            onClick={handleDismiss}
             className={cn(
               'p-1 rounded-full transition-colors flex-shrink-0',
               style.hoverBg
