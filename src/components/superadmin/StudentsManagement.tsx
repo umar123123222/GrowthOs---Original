@@ -2470,11 +2470,12 @@ export function StudentsManagement() {
                        <TableHead className="w-44 font-semibold">Timestamp</TableHead>
                        <TableHead className="w-36 font-semibold">Activity</TableHead>
                        <TableHead className="font-semibold">Details</TableHead>
+                       <TableHead className="w-64 font-semibold">Sub Details</TableHead>
                      </TableRow>
                    </TableHeader>
                    <TableBody>
                      {activityLogs.length === 0 ? <TableRow>
-                         <TableCell colSpan={3} className="text-center text-muted-foreground py-12">
+                         <TableCell colSpan={4} className="text-center text-muted-foreground py-12">
                            <div className="flex flex-col items-center space-y-2">
                              <Activity className="w-8 h-8 text-muted-foreground/50" />
                              <p>No activity logs found for this student.</p>
@@ -2546,9 +2547,43 @@ export function StudentsManagement() {
                               return formatActivityType(log.activity_type);
                           }
                         })()}
-                            </div>
-                          </TableCell>
-                        </TableRow>)}
+                             </div>
+                           </TableCell>
+                           <TableCell className="text-sm">
+                             {(() => {
+                               const metadata = log.metadata || {};
+                               if (log.activity_type === 'lms_suspended') {
+                                 const note = metadata.suspension_note || metadata.note || metadata.reason;
+                                 return (
+                                   <div className="space-y-0.5">
+                                     {note && <div className="text-xs text-destructive font-medium">Reason: {note}</div>}
+                                     {metadata.auto_unsuspend_date && (
+                                       <div className="text-xs">Auto-unsuspend: {new Date(metadata.auto_unsuspend_date).toLocaleDateString()}</div>
+                                     )}
+                                     {metadata.suspended_by_name && <div className="text-xs">By: {metadata.suspended_by_name}</div>}
+                                   </div>
+                                 );
+                               }
+                               if (log.activity_type === 'admin_note') {
+                                 const note = metadata.note || metadata.suspension_note;
+                                 return (
+                                   <div className="space-y-0.5">
+                                     {note && <div className="text-xs italic">"{note}"</div>}
+                                     {metadata.added_by_name && <div className="text-xs">By: {metadata.added_by_name}</div>}
+                                   </div>
+                                 );
+                               }
+                               if (metadata && Object.keys(metadata).length > 0) {
+                                 return (
+                                   <div className="text-xs opacity-60 max-w-[250px] truncate">
+                                     {JSON.stringify(metadata)}
+                                   </div>
+                                 );
+                               }
+                               return <span className="text-xs text-muted-foreground">—</span>;
+                             })()}
+                           </TableCell>
+                         </TableRow>)}
                   </TableBody>
                 </Table>
               </ScrollArea>
