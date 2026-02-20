@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { X, Info, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAnnouncementBanner } from '@/hooks/useAnnouncementBanner';
@@ -37,9 +38,9 @@ export function AnnouncementBanner({ onVisibilityChange }: AnnouncementBannerPro
   const { settings, isVisible, dismiss } = useAnnouncementBanner();
 
   // Notify parent about visibility changes
-  if (onVisibilityChange) {
-    onVisibilityChange(isVisible);
-  }
+  useEffect(() => {
+    onVisibilityChange?.(isVisible);
+  }, [isVisible, onVisibilityChange]);
 
   if (!isVisible || !settings) {
     return null;

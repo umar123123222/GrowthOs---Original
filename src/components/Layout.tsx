@@ -18,7 +18,7 @@ import { PageSkeleton } from "./LoadingStates/PageSkeleton";
 import RouteContentLoader from "./LoadingStates/RouteContentLoader";
 import { throttle } from "@/utils/performance";
 import { safeLogger } from '@/lib/safe-logger';
-import { AnnouncementBanner, useAnnouncementBanner } from "./AnnouncementBanner";
+import { AnnouncementBanner } from "./AnnouncementBanner";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -206,8 +206,8 @@ const Layout = memo(({
   });
   const [catalogCourses, setCatalogCourses] = useState<CourseMenuItem[]>([]);
   
-  // Check if announcement banner is visible
-  const { isVisible: isBannerVisible } = useAnnouncementBanner();
+  // Track announcement banner visibility via callback from the component
+  const [isBannerVisible, setIsBannerVisible] = useState(false);
   const isUserSuperadmin = user?.role === 'superadmin';
   const isUserAdmin = user?.role === 'admin';
   const isUserMentor = user?.role === 'mentor';
@@ -953,7 +953,7 @@ const Layout = memo(({
         </div>
       </header>
 
-      <AnnouncementBanner />
+      <AnnouncementBanner onVisibilityChange={setIsBannerVisible} />
 
       <div className="flex">
         {/* Sidebar - Desktop only, hidden on mobile */}
