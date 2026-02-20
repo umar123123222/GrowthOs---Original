@@ -187,17 +187,24 @@ export function StudentsManagement() {
   }, []);
   const fetchBatchOptions = async () => {
     try {
-      const [batchesRes, enrollmentsRes] = await Promise.all([
+      const [batchesRes, enrollmentsRes, studentsTableRes] = await Promise.all([
         supabase.from('batches').select('id, name').order('start_date', { ascending: false }),
-        supabase.from('course_enrollments').select('user_id, batch_id').not('batch_id', 'is', null)
+        supabase.from('course_enrollments').select('student_id, batch_id').not('batch_id', 'is', null),
+        supabase.from('students').select('id, user_id')
       ]);
       if (batchesRes.data) setBatchOptions(batchesRes.data);
-      if (enrollmentsRes.data) {
+      if (enrollmentsRes.data && studentsTableRes.data) {
+        // Build student_record_id -> user_id map
+        const recordToUser = new Map<string, string>();
+        studentsTableRes.data.forEach((s: any) => recordToUser.set(s.id, s.user_id));
+        
         const map = new Map<string, string[]>();
         enrollmentsRes.data.forEach((e: any) => {
-          const batches = map.get(e.user_id) || [];
+          const userId = recordToUser.get(e.student_id);
+          if (!userId) return;
+          const batches = map.get(userId) || [];
           if (!batches.includes(e.batch_id)) batches.push(e.batch_id);
-          map.set(e.user_id, batches);
+          map.set(userId, batches);
         });
         setStudentBatchMap(map);
       }
