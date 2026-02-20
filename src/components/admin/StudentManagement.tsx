@@ -78,6 +78,9 @@ export const StudentManagement = () => {
   const [lmsStatusFilter, setLmsStatusFilter] = useState('all');
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
+  const [batchFilter, setBatchFilter] = useState('all');
+  const [batchOptions, setBatchOptions] = useState<{id: string; name: string}[]>([]);
+  const [studentBatchMap, setStudentBatchMap] = useState<Map<string, string[]>>(new Map());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [activityLogsDialog, setActivityLogsDialog] = useState(false);
@@ -110,6 +113,7 @@ export const StudentManagement = () => {
   const { user } = useAuth();
   useEffect(() => {
     fetchStudents();
+    fetchBatchOptions();
   }, []);
   useEffect(() => {
     if (students.length > 0) {
@@ -118,7 +122,7 @@ export const StudentManagement = () => {
   }, [students]);
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, installmentPayments, timeTick]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, installmentPayments, timeTick, batchFilter, studentBatchMap]);
 
   // Re-render periodically so time-based invoice statuses (due/overdue) update without refresh
   useEffect(() => {
@@ -174,6 +178,26 @@ export const StudentManagement = () => {
       setInstallmentPayments(paymentsMap);
     } catch (error) {
       console.error('Error fetching installment payments:', error);
+    }
+  };
+  const fetchBatchOptions = async () => {
+    try {
+      const [batchesRes, enrollmentsRes] = await Promise.all([
+        supabase.from('batches').select('id, name').order('start_date', { ascending: false }),
+        supabase.from('course_enrollments').select('user_id, batch_id').not('batch_id', 'is', null)
+      ]);
+      if (batchesRes.data) setBatchOptions(batchesRes.data);
+      if (enrollmentsRes.data) {
+        const map = new Map<string, string[]>();
+        enrollmentsRes.data.forEach((e: any) => {
+          const batches = map.get(e.user_id) || [];
+          if (!batches.includes(e.batch_id)) batches.push(e.batch_id);
+          map.set(e.user_id, batches);
+        });
+        setStudentBatchMap(map);
+      }
+    } catch (error) {
+      console.error('Error fetching batch options:', error);
     }
   };
   const fetchStudents = async () => {
@@ -341,6 +365,18 @@ export const StudentManagement = () => {
         return true;
       });
     }
+    // Apply batch filter
+    if (batchFilter !== 'all') {
+      if (batchFilter === 'unassigned') {
+        filtered = filtered.filter(student => !studentBatchMap.has(student.id));
+      } else {
+        filtered = filtered.filter(student => {
+          const batches = studentBatchMap.get(student.id) || [];
+          return batches.includes(batchFilter);
+        });
+      }
+    }
+
     setFilteredStudents(filtered);
   };
   const handleViewActivityLogs = async (studentId: string) => {
@@ -1074,7 +1110,8 @@ export const StudentManagement = () => {
     searchTerm ||
     lmsStatusFilter !== 'all' ||
     feesStructureFilter !== 'all' ||
-    invoiceFilter !== 'all'
+    invoiceFilter !== 'all' ||
+    batchFilter !== 'all'
   );
   const displayStudents = hasActiveFilters ? filteredStudents : students;
   return <div className="space-y-6 animate-fade-in px-0 mx-0">
@@ -1205,6 +1242,19 @@ export const StudentManagement = () => {
             <SelectItem value="fees_due">Fees Due</SelectItem>
             <SelectItem value="fees_overdue">Fees Overdue</SelectItem>
             <SelectItem value="no_invoice">No Invoice</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={batchFilter} onValueChange={setBatchFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Batch" />
+          </SelectTrigger>
+          <SelectContent className="bg-white z-50">
+            <SelectItem value="all">All Batches</SelectItem>
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {batchOptions.map(batch => (
+              <SelectItem key={batch.id} value={batch.id}>{batch.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

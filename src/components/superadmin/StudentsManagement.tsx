@@ -91,6 +91,9 @@ export function StudentsManagement() {
   const [lmsStatusFilter, setLmsStatusFilter] = useState('all');
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
+  const [batchFilter, setBatchFilter] = useState('all');
+  const [batchOptions, setBatchOptions] = useState<{id: string; name: string}[]>([]);
+  const [studentBatchMap, setStudentBatchMap] = useState<Map<string, string[]>>(new Map());
   const [totalFeeSort, setTotalFeeSort] = useState('none');
   const [feeRangeFrom, setFeeRangeFrom] = useState('');
   const [feeRangeTo, setFeeRangeTo] = useState('');
@@ -153,6 +156,7 @@ export function StudentsManagement() {
   useEffect(() => {
     fetchStudents();
     fetchCompanyCurrency();
+    fetchBatchOptions();
   }, []);
   useEffect(() => {
     if (students.length > 0) {
@@ -162,7 +166,7 @@ export function StudentsManagement() {
   useEffect(() => {
     filterStudents();
     setCurrentPage(1);
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, feeRangeFrom, feeRangeTo, installmentPayments, joinDateRange]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, feeRangeFrom, feeRangeTo, installmentPayments, joinDateRange, batchFilter, studentBatchMap]);
 
   // Re-render periodically so time-based invoice statuses update without refresh
   useEffect(() => {
@@ -181,6 +185,27 @@ export function StudentsManagement() {
       supabase.removeChannel(channel);
     };
   }, []);
+  const fetchBatchOptions = async () => {
+    try {
+      const [batchesRes, enrollmentsRes] = await Promise.all([
+        supabase.from('batches').select('id, name').order('start_date', { ascending: false }),
+        supabase.from('course_enrollments').select('user_id, batch_id').not('batch_id', 'is', null)
+      ]);
+      if (batchesRes.data) setBatchOptions(batchesRes.data);
+      if (enrollmentsRes.data) {
+        const map = new Map<string, string[]>();
+        enrollmentsRes.data.forEach((e: any) => {
+          const batches = map.get(e.user_id) || [];
+          if (!batches.includes(e.batch_id)) batches.push(e.batch_id);
+          map.set(e.user_id, batches);
+        });
+        setStudentBatchMap(map);
+      }
+    } catch (error) {
+      console.error('Error fetching batch options:', error);
+    }
+  };
+
   const fetchCompanyCurrency = async () => {
     try {
       const { data, error } = await supabase
@@ -427,6 +452,18 @@ export function StudentsManagement() {
       const endOfDay = new Date(joinDateRange.to);
       endOfDay.setHours(23, 59, 59, 999);
       filtered = filtered.filter(student => new Date(student.created_at) <= endOfDay);
+    }
+
+    // Apply batch filter
+    if (batchFilter !== 'all') {
+      if (batchFilter === 'unassigned') {
+        filtered = filtered.filter(student => !studentBatchMap.has(student.id));
+      } else {
+        filtered = filtered.filter(student => {
+          const batches = studentBatchMap.get(student.id) || [];
+          return batches.includes(batchFilter);
+        });
+      }
     }
 
     setFilteredStudents(filtered);
@@ -1579,7 +1616,7 @@ export function StudentsManagement() {
         <span className="ml-2 text-muted-foreground">Loading students...</span>
       </div>;
   }
-  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo) || Boolean(joinDateRange.from || joinDateRange.to);
+  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo) || Boolean(joinDateRange.from || joinDateRange.to) || batchFilter !== 'all';
   const displayStudents = hasActiveFilters ? filteredStudents : students;
   const totalPages = Math.ceil(displayStudents.length / pageSize);
   const paginatedStudents = displayStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -1705,6 +1742,19 @@ export function StudentsManagement() {
             <SelectItem value="fees_due">Fees Due</SelectItem>
             <SelectItem value="fees_overdue">Fees Overdue</SelectItem>
             <SelectItem value="fees_cleared">Fees Cleared</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={batchFilter} onValueChange={setBatchFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="Batch" />
+          </SelectTrigger>
+          <SelectContent className="bg-white z-50">
+            <SelectItem value="all">All Batches</SelectItem>
+            <SelectItem value="unassigned">Unassigned</SelectItem>
+            {batchOptions.map(batch => (
+              <SelectItem key={batch.id} value={batch.id}>{batch.name}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
