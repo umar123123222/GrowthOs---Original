@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Send, Loader2 } from 'lucide-react';
+import { MessageSquare, Send, Loader2, ShieldAlert } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,6 +14,8 @@ interface Note {
   note: string;
   created_at: string;
   created_by_name: string;
+  type: 'note' | 'suspension';
+  autoUnsuspendDate?: string;
 }
 
 interface StudentNotesDialogProps {
@@ -42,15 +44,18 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
     try {
       const { data, error } = await supabase
         .from('user_activity_logs')
-        .select('id, metadata, occurred_at, reference_id')
+        .select('id, metadata, occurred_at, activity_type')
         .eq('user_id', studentId)
-        .eq('activity_type', 'admin_note')
+        .in('activity_type', ['admin_note', 'lms_suspended'])
         .order('occurred_at', { ascending: false });
 
       if (error) throw error;
 
       // Resolve creator names
-      const creatorIds = [...new Set((data || []).map(d => (d.metadata as any)?.created_by).filter(Boolean))];
+      const creatorIds = [...new Set((data || []).map(d => {
+        const meta = d.metadata as any;
+        return meta?.created_by || meta?.suspended_by;
+      }).filter(Boolean))];
       let creatorMap: Record<string, string> = {};
       if (creatorIds.length > 0) {
         const { data: creators } = await supabase
@@ -60,12 +65,18 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
         creatorMap = Object.fromEntries((creators || []).map(c => [c.id, c.full_name]));
       }
 
-      setNotes((data || []).map(d => ({
-        id: d.id,
-        note: (d.metadata as any)?.note || '',
-        created_at: d.occurred_at,
-        created_by_name: creatorMap[(d.metadata as any)?.created_by] || 'System'
-      })));
+      setNotes((data || []).map(d => {
+        const meta = d.metadata as any;
+        const isSuspension = d.activity_type === 'lms_suspended';
+        return {
+          id: d.id,
+          note: isSuspension ? (meta?.reason || 'No reason provided') : (meta?.note || ''),
+          created_at: d.occurred_at,
+          created_by_name: creatorMap[meta?.created_by || meta?.suspended_by] || 'System',
+          type: isSuspension ? 'suspension' as const : 'note' as const,
+          autoUnsuspendDate: isSuspension ? meta?.auto_unsuspend_date : undefined,
+        };
+      }));
     } catch (error) {
       console.error('Error fetching notes:', error);
     } finally {
@@ -142,8 +153,17 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
             ) : (
               <div className="space-y-3">
                 {notes.map((note) => (
-                  <div key={note.id} className="rounded-lg border p-3 space-y-1">
+                  <div key={note.id} className={`rounded-lg border p-3 space-y-1 ${note.type === 'suspension' ? 'border-red-200 bg-red-50' : ''}`}>
+                    {note.type === 'suspension' && (
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-red-600 mb-1">
+                        <ShieldAlert className="w-3.5 h-3.5" />
+                        Suspension
+                      </div>
+                    )}
                     <p className="text-sm whitespace-pre-wrap">{note.note}</p>
+                    {note.autoUnsuspendDate && (
+                      <p className="text-xs text-red-500">Auto-unsuspend: {format(new Date(note.autoUnsuspendDate), 'MMM d, yyyy')}</p>
+                    )}
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>{note.created_by_name}</span>
                       <span>{format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}</span>
