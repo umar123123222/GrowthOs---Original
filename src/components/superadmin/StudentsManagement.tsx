@@ -1617,8 +1617,45 @@ export function StudentsManagement() {
       });
     }
   };
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     const batchNameMap = new Map(batchOptions.map(b => [b.id, b.name]));
+
+    // Fetch all activity logs and notes for displayed students
+    const studentIds = displayStudents.map(s => s.id);
+    let allLogs: any[] = [];
+    if (studentIds.length > 0) {
+      const { data: logsData } = await supabase
+        .from('user_activity_logs')
+        .select('user_id, activity_type, metadata, occurred_at')
+        .in('user_id', studentIds)
+        .order('occurred_at', { ascending: true });
+      allLogs = logsData || [];
+    }
+
+    // Resolve creator names for notes/suspensions
+    const creatorIds = [...new Set(allLogs.map(l => {
+      const meta = l.metadata as any;
+      return meta?.created_by || meta?.suspended_by;
+    }).filter(Boolean))];
+    let creatorMap: Record<string, string> = {};
+    if (creatorIds.length > 0) {
+      const { data: creators } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .in('id', creatorIds);
+      creatorMap = Object.fromEntries((creators || []).map(c => [c.id, c.full_name]));
+    }
+
+    // Group logs by student
+    const logsByStudent = new Map<string, any[]>();
+    allLogs.forEach(log => {
+      const list = logsByStudent.get(log.user_id) || [];
+      list.push(log);
+      logsByStudent.set(log.user_id, list);
+    });
+
+    const escCsv = (val: string) => `"${String(val || '').replace(/"/g, '""')}"`;
+
     const rows = displayStudents.map(student => {
       const key = String(student.student_record_id || '');
       const payments = installmentPayments.get(key) || [];
@@ -1627,22 +1664,56 @@ export function StudentsManagement() {
       const installmentCount = payments.length || '';
       const batchIds = studentBatchMap.get(student.id) || [];
       const batchNames = batchIds.map(id => batchNameMap.get(id) || id).join('; ');
-      return {
-        student_id: student.student_id || '',
-        name: student.full_name || '',
-        email: student.email || '',
-        phone: student.phone || '',
-        batch: batchNames || 'Unassigned',
-        installments: installmentCount,
-        total_fees: totalFees,
-        paid_amount: paidAmount
-      };
+
+      const studentLogs = logsByStudent.get(student.id) || [];
+
+      // Format activity logs
+      const activitySummary = studentLogs.map(log => {
+        const ts = log.occurred_at ? format(new Date(log.occurred_at), 'yyyy-MM-dd HH:mm') : '';
+        const meta = log.metadata as any || {};
+        let detail = log.activity_type;
+        if (log.activity_type === 'admin_note') {
+          const by = creatorMap[meta.created_by] || 'Unknown';
+          detail = `Note by ${by}: ${meta.note || ''}`;
+        } else if (log.activity_type === 'lms_suspended') {
+          const by = creatorMap[meta.suspended_by] || 'Unknown';
+          const reason = meta.suspension_note || meta.note || meta.reason || 'No reason';
+          detail = `Suspended by ${by}: ${reason}`;
+          if (meta.auto_unsuspend_date) detail += ` (auto-unsuspend: ${meta.auto_unsuspend_date})`;
+        } else if (log.activity_type === 'page_visit') {
+          detail = `Page visit: ${meta.page || ''}`;
+        } else if (log.activity_type === 'video_watched') {
+          detail = `Video watched: ${meta.videoId || ''}`;
+        }
+        return `[${ts}] ${detail}`;
+      }).join(' | ');
+
+      // Notes only
+      const notesSummary = studentLogs
+        .filter(l => l.activity_type === 'admin_note')
+        .map(log => {
+          const meta = log.metadata as any || {};
+          const by = creatorMap[meta.created_by] || 'Unknown';
+          const ts = log.occurred_at ? format(new Date(log.occurred_at), 'yyyy-MM-dd HH:mm') : '';
+          return `[${ts}] ${by}: ${meta.note || ''}`;
+        }).join(' | ');
+
+      return [
+        escCsv(student.student_id || ''),
+        escCsv(student.full_name || ''),
+        escCsv(student.email || ''),
+        escCsv(student.phone || ''),
+        escCsv(batchNames || 'Unassigned'),
+        escCsv(String(installmentCount)),
+        escCsv(String(totalFees)),
+        escCsv(String(paidAmount)),
+        escCsv(activitySummary),
+        escCsv(notesSummary),
+      ].join(',');
     });
-    const header = 'Student ID,Name,Email,Phone,Batch,Installments,Total Fees,Paid Amount';
-    const csvRows = rows.map(r => 
-      `"${r.student_id}","${r.name}","${r.email}","${r.phone}","${r.batch}","${r.installments}","${r.total_fees}","${r.paid_amount}"`
-    );
-    const csv = [header, ...csvRows].join('\n');
+
+    const header = 'Student ID,Name,Email,Phone,Batch,Installments,Total Fees,Paid Amount,Activity Logs,Admin Notes';
+    const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1650,7 +1721,7 @@ export function StudentsManagement() {
     a.download = `students-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: 'Export Complete', description: `Exported ${rows.length} students to CSV` });
+    toast({ title: 'Export Complete', description: `Exported ${displayStudents.length} students with activity logs to CSV` });
   };
 
   if (loading) {
