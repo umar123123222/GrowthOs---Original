@@ -1617,6 +1617,42 @@ export function StudentsManagement() {
       });
     }
   };
+  const handleExportCSV = () => {
+    const batchNameMap = new Map(batchOptions.map(b => [b.id, b.name]));
+    const rows = displayStudents.map(student => {
+      const key = String(student.student_record_id || '');
+      const payments = installmentPayments.get(key) || [];
+      const totalFees = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+      const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
+      const installmentCount = payments.length || '';
+      const batchIds = studentBatchMap.get(student.id) || [];
+      const batchNames = batchIds.map(id => batchNameMap.get(id) || id).join('; ');
+      return {
+        student_id: student.student_id || '',
+        name: student.full_name || '',
+        email: student.email || '',
+        phone: student.phone || '',
+        batch: batchNames || 'Unassigned',
+        installments: installmentCount,
+        total_fees: totalFees,
+        paid_amount: paidAmount
+      };
+    });
+    const header = 'Student ID,Name,Email,Phone,Batch,Installments,Total Fees,Paid Amount';
+    const csvRows = rows.map(r => 
+      `"${r.student_id}","${r.name}","${r.email}","${r.phone}","${r.batch}","${r.installments}","${r.total_fees}","${r.paid_amount}"`
+    );
+    const csv = [header, ...csvRows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `students-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: 'Export Complete', description: `Exported ${rows.length} students to CSV` });
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -1636,6 +1672,10 @@ export function StudentsManagement() {
           <p className="text-muted-foreground mt-2 text-lg">Manage student records and track their progress</p>
         </div>
         <div className="flex gap-2 flex-shrink-0">
+          <Button variant="outline" onClick={handleExportCSV} className="hover-scale animate-scale-in">
+            <Download className="w-4 h-4 mr-2" />
+            Export CSV
+          </Button>
           <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
             <Plus className="w-4 h-4 mr-2" />
             Add Student
