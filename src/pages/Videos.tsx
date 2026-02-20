@@ -210,6 +210,17 @@ const Videos = () => {
               onWatch={handleWatchRecording}
             />
           </>
+        ) : isInPathwayMode ? (
+          /* Pathway mode but no grouped data — show empty state instead of fallback courses */
+          <Card className="shadow-medium border-border/50">
+            <CardContent className="p-8 text-center">
+              <div className="text-muted-foreground">
+                <BookOpen className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2 text-foreground">Pathway Content Loading</h3>
+                <p>Your pathway courses are being configured. Please check back later or contact your instructor.</p>
+              </div>
+            </CardContent>
+          </Card>
         ) : (
           <>
             {/* Course progress card - show when NOT in pathway mode */}

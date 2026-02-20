@@ -124,13 +124,35 @@ export function useCourses(): UseCoursesReturn {
           e => e.pathway_id !== null && e.enrollment_source === 'pathway' && e.status === 'active'
         );
 
-        // Map courses with enrollment data, filtering out expired access
-        // If user has active pathway, we still include pathway courses in the list
-        // but the Videos page will handle restricting access via useActivePathwayAccess
+        // If user has an active pathway, only show courses from that pathway
+        let filteredCourseIds: Set<string> | null = null;
+        if (hasActivePathway) {
+          // Get the pathway ID from the pathway enrollment
+          const pathwayEnrollment = enrollmentsData?.find(
+            e => e.pathway_id !== null && e.enrollment_source === 'pathway' && e.status === 'active'
+          );
+          if (pathwayEnrollment?.pathway_id) {
+            const { data: pathwayCourseData } = await supabase
+              .from('pathway_courses')
+              .select('course_id')
+              .eq('pathway_id', pathwayEnrollment.pathway_id);
+            if (pathwayCourseData) {
+              filteredCourseIds = new Set(pathwayCourseData.map(pc => pc.course_id));
+            }
+          }
+        }
+
+        // Map courses with enrollment data, filtering out expired access and non-pathway courses
         const enrolledCoursesData: CourseWithEnrollment[] = (coursesData || [])
           .filter(course => {
             const enrollment = enrollmentsData?.find(e => e.course_id === course.id);
             if (!enrollment) return false;
+
+            // If in pathway mode, only include courses that are in the pathway
+            if (filteredCourseIds && !filteredCourseIds.has(course.id)) {
+              logger.debug('Filtering out non-pathway course', { courseId: course.id });
+              return false;
+            }
             
             // Check if access has expired
             if (enrollment.access_expires_at) {
