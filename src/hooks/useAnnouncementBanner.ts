@@ -115,7 +115,7 @@ export function useAnnouncementBanner() {
     setIsDismissed(true);
   };
 
-  const isVisible = !loading && settings?.enabled && !isDismissed && isWithinDateRange();
+  const isVisible = Boolean(!loading && settings?.enabled && !isDismissed && isWithinDateRange());
 
   return {
     settings,
