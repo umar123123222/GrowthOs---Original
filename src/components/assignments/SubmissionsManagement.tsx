@@ -281,12 +281,16 @@ export function SubmissionsManagement({
       setSelectedSubmission(null);
       setReviewNotes('');
       fetchSubmissions();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error reviewing submission:', error);
+      const isHttpPostError = error?.message?.includes('http_post') || error?.code === '42883';
       toast({
         title: 'Error',
-        description: 'Failed to review submission',
-        variant: 'destructive'
+        description: isHttpPostError
+          ? 'A database webhook trigger is blocking approvals. Please ask your admin to check Supabase Database Webhooks on the submissions table, or run: CREATE EXTENSION IF NOT EXISTS http WITH SCHEMA extensions;'
+          : 'Failed to review submission',
+        variant: 'destructive',
+        duration: isHttpPostError ? 15000 : 5000,
       });
     }
   };
