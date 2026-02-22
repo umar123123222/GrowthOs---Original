@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen, Clock, Megaphone, Info, AlertTriangle, AlertCircle, CheckCircle } from 'lucide-react';
+import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen, Clock, Megaphone, Info, AlertTriangle, AlertCircle, CheckCircle, MessageCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
@@ -60,6 +60,8 @@ interface CompanySettingsData {
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
   onboarding_video_url?: string;
+  // Live Chat
+  livechat_code?: string;
   // Multi-Course Feature
   multi_course_enabled: boolean;
   // Drip Content Feature
@@ -102,6 +104,8 @@ export function CompanySettings() {
     enable_student_signin: false,
     questionnaire: [],
     onboarding_video_url: '',
+    // Live Chat
+    livechat_code: '',
     // Multi-Course Feature
     multi_course_enabled: false,
     // Drip Content Feature
@@ -162,6 +166,7 @@ export function CompanySettings() {
           drip_enabled_default: settingsData.drip_enabled_default ?? false,
           multi_course_enabled: settingsData.multi_course_enabled ?? false,
           enable_student_signin: settingsData.enable_student_signin ?? false,
+          livechat_code: settingsData.livechat_code ?? '',
           questionnaire: settingsData.questionnaire ?? [],
           payment_methods: settingsData.payment_methods ?? [],
           announcement_banner: settingsData.announcement_banner ?? {
@@ -859,6 +864,33 @@ export function CompanySettings() {
                   </div>
                 )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Live Chat Widget */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5" />
+              Live Chat Widget
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="livechat_code">Live Chat Embed Code</Label>
+              <Textarea
+                id="livechat_code"
+                value={settings.livechat_code || ''}
+                onChange={(e) => handleInputChange('livechat_code', e.target.value)}
+                placeholder="Paste your live chat embed code here (e.g., Tawk.to, Crisp, Intercom, Tidio script tag)..."
+                rows={6}
+                className="font-mono text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste the JavaScript embed code from your live chat provider. This widget will be displayed across the entire LMS for students only.
+                Supported providers include Tawk.to, Crisp, Intercom, Tidio, LiveChat, and any provider that uses a script tag embed.
+              </p>
             </div>
           </CardContent>
         </Card>
