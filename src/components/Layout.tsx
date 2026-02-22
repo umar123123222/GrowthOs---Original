@@ -19,6 +19,7 @@ import RouteContentLoader from "./LoadingStates/RouteContentLoader";
 import { throttle } from "@/utils/performance";
 import { safeLogger } from '@/lib/safe-logger';
 import { AnnouncementBanner } from "./AnnouncementBanner";
+import { LiveChatWidget } from "./LiveChatWidget";
 
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -1119,6 +1120,9 @@ const Layout = memo(({
       
       {/* Motivational Notifications for Students */}
       {user?.role === 'student' && <MotivationalNotifications />}
+      
+      {/* Live Chat Widget for Students */}
+      <LiveChatWidget userRole={user?.role} />
       
       {/* Success Partner Dialog */}
       {showSuccessPartner && user?.id && user?.email && <SuccessPartner onClose={() => setShowSuccessPartner(false)} user={{
