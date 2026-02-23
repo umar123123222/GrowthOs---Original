@@ -519,6 +519,43 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('Enrollment failed (non-fatal):', enrollError);
     }
 
+    // Notify late-joining batch students about missed session recordings
+    if (batch_id) {
+      try {
+        const { data: batchData } = await supabaseAdmin
+          .from('batches').select('start_date, name').eq('id', batch_id).single();
+
+        if (batchData) {
+          const now = new Date().toISOString();
+          const { data: missedSessions } = await supabaseAdmin
+            .from('success_sessions')
+            .select('id, title, link, start_time')
+            .eq('batch_id', batch_id)
+            .lt('start_time', now)
+            .not('link', 'is', null)
+            .order('start_time', { ascending: true });
+
+          const sessionLinks = (missedSessions || [])
+            .filter(s => s.link && s.link.trim() !== '')
+            .map(s => ({ title: s.title, link: s.link, date: new Date(s.start_time).toLocaleDateString() }));
+
+          if (sessionLinks.length > 0) {
+            const linksText = sessionLinks.map(s => `• ${s.title} (${s.date})`).join('\n');
+            await supabaseAdmin.from('notifications').insert({
+              user_id: authUser.user.id,
+              title: `📹 ${sessionLinks.length} Missed Session Recording${sessionLinks.length > 1 ? 's' : ''} Available`,
+              message: `You've been added to batch "${batchData.name}". Here are the recordings of sessions you missed:\n${linksText}\n\nVisit the Live Sessions page to watch them.`,
+              type: 'info',
+              is_read: false
+            });
+            console.log(`✅ Sent missed sessions notification for ${sessionLinks.length} sessions`);
+          }
+        }
+      } catch (missedErr) {
+        console.error('Error processing missed sessions notification:', missedErr);
+      }
+    }
+
     // Queue email for credential delivery (non-blocking)
     supabaseAdmin
       .from('email_queue')

@@ -221,6 +221,124 @@ serve(async (req) => {
         // Don't throw - this is non-critical
       } else {
         console.log('✅ Successfully updated enrollment settings');
+
+        // If batch was assigned, notify student about missed session recordings
+        if (batch_id) {
+          try {
+            // Get batch start date
+            const { data: batchData } = await supabaseAdmin
+              .from('batches')
+              .select('start_date, name')
+              .eq('id', batch_id)
+              .single();
+
+            if (batchData) {
+              const now = new Date().toISOString();
+              // Find past sessions for this batch that the student missed
+              const { data: missedSessions } = await supabaseAdmin
+                .from('success_sessions')
+                .select('id, title, link, start_time')
+                .eq('batch_id', batch_id)
+                .lt('start_time', now)
+                .not('link', 'is', null)
+                .order('start_time', { ascending: true });
+
+              if (missedSessions && missedSessions.length > 0) {
+                console.log(`Found ${missedSessions.length} missed sessions for late-joining student`);
+
+                // Build list of recording links for notification
+                const sessionLinks = missedSessions
+                  .filter(s => s.link && s.link.trim() !== '')
+                  .map(s => ({
+                    title: s.title,
+                    link: s.link,
+                    date: new Date(s.start_time).toLocaleDateString()
+                  }));
+
+                if (sessionLinks.length > 0) {
+                  // Create in-app notification
+                  const linksText = sessionLinks.map(s => `• ${s.title} (${s.date})`).join('\n');
+                  await supabaseAdmin.from('notifications').insert({
+                    user_id: user_id,
+                    title: `📹 ${sessionLinks.length} Missed Session Recording${sessionLinks.length > 1 ? 's' : ''} Available`,
+                    message: `You've been added to batch "${batchData.name}". Here are the recordings of sessions you missed:\n${linksText}\n\nVisit the Live Sessions page to watch them.`,
+                    type: 'info',
+                    is_read: false
+                  });
+                  console.log(`✅ Sent missed sessions notification to student ${user_id}`);
+
+                  // Send email notification if SMTP is configured
+                  const smtpHost = Deno.env.get('SMTP_HOST');
+                  if (smtpHost) {
+                    try {
+                      const { data: companySettings } = await supabaseAdmin
+                        .from('company_settings')
+                        .select('company_name, lms_url')
+                        .single();
+
+                      const companyName = companySettings?.company_name || 'Growth OS';
+                      const lmsUrl = companySettings?.lms_url || '';
+
+                      const sessionListHtml = sessionLinks.map(s =>
+                        `<tr>
+                          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${s.title}</td>
+                          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${s.date}</td>
+                          <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;"><a href="${s.link}" style="color:#4F46E5;">Watch Recording</a></td>
+                        </tr>`
+                      ).join('');
+
+                      const smtpClient = SMTPClient.fromEnv();
+                      await smtpClient.sendEmail({
+                        to: email,
+                        subject: `${companyName} - Missed Session Recordings Available`,
+                        html: `
+                          <!DOCTYPE html>
+                          <html>
+                            <head><meta charset="utf-8"></head>
+                            <body style="font-family:Arial,sans-serif;line-height:1.6;color:#333;">
+                              <div style="max-width:600px;margin:0 auto;padding:20px;">
+                                <div style="background-color:#4F46E5;color:white;padding:20px;text-align:center;border-radius:5px 5px 0 0;">
+                                  <h1>${companyName}</h1>
+                                </div>
+                                <div style="background-color:#f9fafb;padding:30px;border-radius:0 0 5px 5px;">
+                                  <h2>Missed Session Recordings</h2>
+                                  <p>Hello ${full_name},</p>
+                                  <p>You've been added to batch <strong>"${batchData.name}"</strong>. Here are the recordings of live sessions that took place before you joined:</p>
+                                  <table style="width:100%;border-collapse:collapse;margin:20px 0;background:white;border-radius:5px;border:1px solid #e5e7eb;">
+                                    <thead>
+                                      <tr style="background:#f3f4f6;">
+                                        <th style="padding:10px 12px;text-align:left;">Session</th>
+                                        <th style="padding:10px 12px;text-align:left;">Date</th>
+                                        <th style="padding:10px 12px;text-align:left;">Recording</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>${sessionListHtml}</tbody>
+                                  </table>
+                                  <center>
+                                    <a href="${lmsUrl}" style="display:inline-block;background-color:#4F46E5;color:white;padding:12px 30px;text-decoration:none;border-radius:5px;margin:20px 0;">Go to Platform</a>
+                                  </center>
+                                  <div style="text-align:center;color:#6b7280;margin-top:30px;font-size:14px;">
+                                    <p>&copy; ${new Date().getFullYear()} ${companyName}. All rights reserved.</p>
+                                  </div>
+                                </div>
+                              </div>
+                            </body>
+                          </html>
+                        `,
+                      });
+                      console.log('✅ Missed sessions email sent to', email);
+                    } catch (emailErr) {
+                      console.error('Failed to send missed sessions email:', emailErr);
+                    }
+                  }
+                }
+              }
+            }
+          } catch (missedErr) {
+            console.error('Error processing missed sessions notification:', missedErr);
+            // Non-critical, don't throw
+          }
+        }
       }
     }
 
