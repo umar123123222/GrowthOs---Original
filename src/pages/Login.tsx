@@ -17,6 +17,7 @@ import type { CreatedUserResult } from '@/types/database';
 import { ENV_CONFIG } from '@/lib/env-config';
 import { TEXT_CONTENT } from '@/config/text-content';
 import { logUserActivity, ACTIVITY_TYPES } from '@/lib/activity-logger';
+import { LiveChatWidget } from '@/components/LiveChatWidget';
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -323,6 +324,7 @@ const Login = () => {
           </form>
         </CardContent>
       </Card>
+      <LiveChatWidget userRole="student" />
     </div>;
 };
 export default Login;
