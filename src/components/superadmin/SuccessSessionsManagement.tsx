@@ -316,6 +316,17 @@ export function SuccessSessionsManagement() {
     setEditingSession(null);
   };
 
+  const extractTimeFromTimestamp = (timestamp: string | undefined | null): string => {
+    if (!timestamp) return '';
+    try {
+      const date = new Date(timestamp);
+      if (isNaN(date.getTime())) return '';
+      return format(date, 'HH:mm');
+    } catch {
+      return '';
+    }
+  };
+
   const handleOpenDialog = (session?: SuccessSession) => {
     if (session) {
       setEditingSession(session);
@@ -325,8 +336,8 @@ export function SuccessSessionsManagement() {
         mentor_name: session.mentor_name || '',
         mentor_id: session.mentor_id || '',
         schedule_date: session.schedule_date || '',
-        start_time: session.start_time || '',
-        end_time: session.end_time || '',
+        start_time: extractTimeFromTimestamp(session.start_time),
+        end_time: extractTimeFromTimestamp(session.end_time),
         link: session.link || '',
         zoom_meeting_id: session.zoom_meeting_id || '',
         zoom_passcode: session.zoom_passcode || '',
