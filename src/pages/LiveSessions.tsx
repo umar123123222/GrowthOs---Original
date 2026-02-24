@@ -105,9 +105,9 @@ const SessionCard = ({ session, isUpcoming, userLMSStatus, hasAttended, onJoin, 
               <div className="text-sm text-muted-foreground">
                 {new Date(session.start_time).toLocaleTimeString('en-US', { 
                   hour: '2-digit', minute: '2-digit', hour12: true 
-                })} - {new Date(session.end_time).toLocaleTimeString('en-US', { 
+                })}{session.end_time ? ` - ${new Date(session.end_time).toLocaleTimeString('en-US', { 
                   hour: '2-digit', minute: '2-digit', hour12: true 
-                })}
+                })}` : ''}
               </div>
             </div>
           </div>
