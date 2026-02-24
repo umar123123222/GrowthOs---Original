@@ -37,6 +37,7 @@ interface Recording {
   id: string;
   recording_title: string;
   sequence_order?: number;
+  assignment_id?: string | null;
 }
 
 interface Course {
@@ -102,7 +103,7 @@ export function AssignmentManagement() {
       const {
         data: recordingsData,
         error: recordingsError
-      } = await supabase.from('available_lessons').select('id, recording_title, sequence_order').order('sequence_order');
+      } = await supabase.from('available_lessons').select('id, recording_title, sequence_order, assignment_id').order('sequence_order');
       if (recordingsError) throw recordingsError;
       setAssignments((assignmentsData || []).map(assignment => ({
         ...assignment,
@@ -401,9 +402,10 @@ export function AssignmentManagement() {
               </TableHeader>
               <TableBody>
                 {filteredAssignments.map(assignment => {
+                  // Check both directions: assignment.recording_id -> recording, or recording.assignment_id -> assignment
                   const linkedRecording = assignment.recording_id
                     ? recordings.find(r => r.id === assignment.recording_id)
-                    : null;
+                    : recordings.find(r => r.assignment_id === assignment.id) || null;
                   return (
                     <TableRow key={assignment.id} className="table-row-hover">
                       <TableCell className="font-medium bg-white">{assignment.name}</TableCell>
