@@ -255,17 +255,17 @@ const NotificationDropdown = () => {
             </Badge>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[26rem] sm:w-[28rem] p-0 bg-transparent border-0 shadow-none" align="end">
-        <div className="section-surface overflow-hidden">
-          <div className="section-header p-4 bg-slate-50">
-            <div className="flex items-center justify-between">
-              <h4 className="font-medium text-foreground">Notifications</h4>
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-muted-foreground hover:text-foreground">
-                  Mark all as read
+      <PopoverContent className="w-[calc(100vw-2rem)] max-w-[28rem] p-0 bg-transparent border-0 shadow-none" align="end" sideOffset={8}>
+        <div className="section-surface overflow-hidden rounded-lg border border-border shadow-lg bg-background">
+          <div className="section-header p-3 sm:p-4 bg-muted/30">
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="font-medium text-foreground text-sm sm:text-base">Notifications</h4>
+              <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+                <Button variant="ghost" size="sm" onClick={markAllAsRead} className="text-muted-foreground hover:text-foreground text-xs sm:text-sm px-2 sm:px-3 h-8">
+                  Mark all read
                 </Button>
                 <Link to="/notifications">
-                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 transition-colors">
+                  <Button variant="ghost" size="sm" className="text-primary hover:text-primary/80 transition-colors text-xs sm:text-sm px-2 sm:px-3 h-8">
                     View all
                   </Button>
                 </Link>
@@ -273,51 +273,51 @@ const NotificationDropdown = () => {
             </div>
           </div>
           
-          <ScrollArea className="max-h-[26rem]">
-            {loading ? <div className="p-4 space-y-3">
+          <ScrollArea className="max-h-[60vh] sm:max-h-[26rem]">
+            {loading ? <div className="p-3 sm:p-4 space-y-3">
                 {[1, 2, 3].map(i => <div key={i} className="animate-pulse">
                     <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
                     <div className="h-3 bg-muted rounded w-1/2"></div>
                   </div>)}
-              </div> : notifications.length === 0 ? <div className="p-4 text-center text-muted-foreground bg-white">
+              </div> : notifications.length === 0 ? <div className="p-6 text-center text-muted-foreground">
                 <Bell className="h-8 w-8 mx-auto mb-2 text-muted-foreground/40" />
                 <p className="text-sm">No unread notifications</p>
-              </div> : <div className="p-2 bg-white">
+              </div> : <div className="p-1.5 sm:p-2">
                 {notifications.map((notification, index) => <div key={notification.id}>
-                    <div className="flex items-start gap-3 p-3 hover:bg-muted/40 rounded-lg group transition-colors">
+                    <div className="flex items-start gap-2 sm:gap-3 p-2 sm:p-3 hover:bg-muted/40 rounded-lg group transition-colors">
                       <div className="flex-shrink-0 mt-0.5 icon-chip">
                         {getNotificationIcon(notification.type, notification.status)}
                       </div>
                       
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <p className="text-xs sm:text-sm font-medium text-foreground line-clamp-2">
                           {notification.displayTitle || notification.payload?.title || `${notification.type} notification`}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate mt-1">
+                        <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5 sm:mt-1">
                           {notification.displayMessage || notification.payload?.message || notification.payload?.description || 'No message content'}
                         </p>
-                        <p className="text-xs text-muted-foreground/70 mt-1">
+                        <p className="text-xs text-muted-foreground/70 mt-0.5 sm:mt-1">
                           {formatDate(notification.sent_at)}
                         </p>
                       </div>
                       
-                      <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button size="sm" variant="ghost" onClick={() => toggleNotificationStatus(notification.id, notification.status)} className="h-8 w-8 p-0">
+                      <div className="flex-shrink-0 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                        <Button size="sm" variant="ghost" onClick={() => toggleNotificationStatus(notification.id, notification.status)} className="h-7 w-7 sm:h-8 sm:w-8 p-0">
                           {notification.status === 'sent' ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                         </Button>
                       </div>
                     </div>
                     
-                    {index < notifications.length - 1 && <Separator className="my-1" />}
+                    {index < notifications.length - 1 && <Separator className="my-0.5 sm:my-1" />}
                   </div>)}
               </div>}
           </ScrollArea>
           
           {notifications.length > 0 && <>
               <Separator />
-              <div className="p-3 bg-slate-50">
+              <div className="p-2 sm:p-3 bg-muted/30">
                 <Link to="/notifications">
-                  <Button variant="ghost" className="w-full text-sm">
+                  <Button variant="ghost" className="w-full text-xs sm:text-sm h-8 sm:h-9">
                     View all notifications
                   </Button>
                 </Link>
