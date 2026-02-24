@@ -113,7 +113,8 @@ export const ActivityLogs = () => {
       admin: 'Admin',
       mentor: 'Mentor',
       student: 'Student',
-      enrollment_manager: 'Enrollment Manager'
+      enrollment_manager: 'Enrollment Manager',
+      support_member: 'Support Member'
     };
     return roleLabels[role] || role.charAt(0).toUpperCase() + role.slice(1).replace('_', ' ');
   };

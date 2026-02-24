@@ -121,7 +121,8 @@ export const GlobalActivityLogs = () => {
       admin: 'Admin',
       mentor: 'Mentor',
       student: 'Student',
-      enrollment_manager: 'Enrollment Manager'
+      enrollment_manager: 'Enrollment Manager',
+      support_member: 'Support Member'
     };
     return roleLabels[role] || role;
   };
@@ -146,7 +147,8 @@ export const GlobalActivityLogs = () => {
       admin: 'bg-purple-500',
       mentor: 'bg-green-500',
       student: 'bg-blue-500',
-      enrollment_manager: 'bg-yellow-500'
+      enrollment_manager: 'bg-yellow-500',
+      support_member: 'bg-teal-500'
     };
     return colors[role || ''] || 'bg-gray-500';
   };
@@ -280,6 +282,7 @@ export const GlobalActivityLogs = () => {
               <SelectItem value="mentor">Mentor</SelectItem>
               <SelectItem value="student">Student</SelectItem>
               <SelectItem value="enrollment_manager">Enrollment Manager</SelectItem>
+              <SelectItem value="support_member">Support Member</SelectItem>
             </SelectContent>
           </Select>
 

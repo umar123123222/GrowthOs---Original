@@ -5,7 +5,7 @@
 export interface User {
   id: string;
   email: string;
-  role: 'student' | 'admin' | 'mentor' | 'superadmin' | 'enrollment_manager';
+  role: 'student' | 'admin' | 'mentor' | 'superadmin' | 'enrollment_manager' | 'support_member';
   full_name?: string;
   created_at?: string;
   avatar_url?: string;
@@ -42,7 +42,7 @@ export interface Admin extends User {
 }
 
 export interface TeamMember extends User {
-  role: 'student' | 'admin' | 'mentor' | 'superadmin' | 'enrollment_manager';
+  role: 'student' | 'admin' | 'mentor' | 'superadmin' | 'enrollment_manager' | 'support_member';
   lms_user_id?: string;
   last_active_at?: string;
 }
