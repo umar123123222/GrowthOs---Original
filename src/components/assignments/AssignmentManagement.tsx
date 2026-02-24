@@ -393,31 +393,49 @@ export function AssignmentManagement() {
               <TableHeader>
                 <TableRow className="bg-muted/40">
                   <TableHead className="font-semibold">Title</TableHead>
+                  <TableHead className="font-semibold">Linked With</TableHead>
                   <TableHead className="font-semibold">Due Days</TableHead>
                   <TableHead className="font-semibold">Type</TableHead>
                   <TableHead className="font-semibold">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAssignments.map(assignment => <TableRow key={assignment.id} className="table-row-hover">
-                    <TableCell className="font-medium bg-white">{assignment.name}</TableCell>
-                    <TableCell className="bg-white">{assignment.due_days || 7} days</TableCell>
-                    <TableCell className="bg-white">
-                      <span className="capitalize">{assignment.submission_type || 'text'}</span>
-                    </TableCell>
-                    <TableCell className="bg-white">
-                      <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(assignment)} className="hover:bg-gray-50">
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        {user?.role !== 'mentor' && (
-                          <Button variant="outline" size="sm" onClick={() => handleDelete(assignment.id)} className="hover:bg-red-50 hover:text-red-600">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                {filteredAssignments.map(assignment => {
+                  const linkedRecording = assignment.recording_id
+                    ? recordings.find(r => r.id === assignment.recording_id)
+                    : null;
+                  return (
+                    <TableRow key={assignment.id} className="table-row-hover">
+                      <TableCell className="font-medium bg-white">{assignment.name}</TableCell>
+                      <TableCell className="bg-white">
+                        {linkedRecording ? (
+                          <Badge variant="secondary" className="font-normal">
+                            <Play className="w-3 h-3 mr-1" />
+                            {linkedRecording.recording_title}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm italic">None</span>
                         )}
-                      </div>
-                    </TableCell>
-                  </TableRow>)}
+                      </TableCell>
+                      <TableCell className="bg-white">{assignment.due_days || 7} days</TableCell>
+                      <TableCell className="bg-white">
+                        <span className="capitalize">{assignment.submission_type || 'text'}</span>
+                      </TableCell>
+                      <TableCell className="bg-white">
+                        <div className="flex items-center space-x-2">
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(assignment)} className="hover:bg-gray-50">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          {user?.role !== 'mentor' && (
+                            <Button variant="outline" size="sm" onClick={() => handleDelete(assignment.id)} className="hover:bg-red-50 hover:text-red-600">
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>}
         </div>
