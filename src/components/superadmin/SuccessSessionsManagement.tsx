@@ -59,7 +59,7 @@ interface SessionFormData {
   host_login_pwd: string;
   status: string;
   course_id: string;
-  batch_id: string;
+  batch_ids: string[];
 }
 
 interface User {
@@ -126,8 +126,9 @@ export function SuccessSessionsManagement() {
     host_login_pwd: '',
     status: 'draft',
     course_id: '__all__',
-    batch_id: ''
+    batch_ids: ['__all__']
   });
+  const [batchPopoverOpen, setBatchPopoverOpen] = useState(false);
   const [publishing, setPublishing] = useState<string | null>(null);
   const { toast } = useToast();
   const { user: authUser } = useAuth();
@@ -311,7 +312,7 @@ export function SuccessSessionsManagement() {
       host_login_pwd: '',
       status: 'draft',
       course_id: '__all__',
-      batch_id: ''
+      batch_ids: ['__all__']
     });
     setEditingSession(null);
   };
@@ -345,7 +346,7 @@ export function SuccessSessionsManagement() {
         host_login_pwd: session.host_login_pwd || '',
         status: session.status || 'upcoming',
         course_id: session.course_id || '__all__',
-        batch_id: session.batch_id || ''
+        batch_ids: session.batch_id ? [session.batch_id] : ['__all__']
       });
     } else {
       resetForm();
@@ -371,7 +372,7 @@ export function SuccessSessionsManagement() {
         return `${date}T${time}:00`;
       };
 
-      const sessionData = {
+      const baseSessionData = {
         title: formData.title,
         description: formData.description,
         mentor_name: selectedUser ? selectedUser.full_name : formData.mentor_name,
@@ -386,11 +387,17 @@ export function SuccessSessionsManagement() {
         host_login_pwd: formData.host_login_pwd,
         status: formData.status,
         course_id: formData.course_id === '__all__' ? null : (formData.course_id || null),
-        batch_id: formData.batch_id === '' || formData.batch_id === 'unbatched' ? null : formData.batch_id,
         pathway_id: null as string | null
       };
 
+      // Resolve batch_ids: '__all__' means null (all batches), 'unbatched' means null
+      const resolvedBatchIds = formData.batch_ids.includes('__all__')
+        ? [null]
+        : formData.batch_ids.map(id => id === 'unbatched' ? null : id);
+
       if (editingSession) {
+        // When editing, update with the first selected batch
+        const sessionData = { ...baseSessionData, batch_id: resolvedBatchIds[0] };
         const { error } = await supabase
           .from('success_sessions')
           .update(sessionData)
@@ -398,14 +405,25 @@ export function SuccessSessionsManagement() {
 
         if (error) throw error;
 
-        // Log session update activity
+        // If multiple batches selected while editing, create additional sessions for the rest
+        if (resolvedBatchIds.length > 1) {
+          const extraSessions = resolvedBatchIds.slice(1).map(bid => ({
+            ...baseSessionData,
+            batch_id: bid
+          }));
+          const { error: insertError } = await supabase
+            .from('success_sessions')
+            .insert(extraSessions as any);
+          if (insertError) throw insertError;
+        }
+
         if (authUser?.id) {
           logUserActivity({
             user_id: authUser.id,
             activity_type: ACTIVITY_TYPES.SUCCESS_SESSION_SCHEDULED,
             metadata: {
-              session_title: sessionData.title,
-              session_date: sessionData.start_time || formData.schedule_date,
+              session_title: baseSessionData.title,
+              session_date: baseSessionData.start_time || formData.schedule_date,
               scheduled_by: authUser.full_name || 'Admin',
               action: 'updated'
             }
@@ -417,126 +435,93 @@ export function SuccessSessionsManagement() {
           description: "Session updated successfully",
         });
       } else {
-        // Auto-clone: if the course belongs to multiple pathways, create one session per pathway
-        const courseId = sessionData.course_id;
+        // Creating new sessions — one per batch × pathway combination
+        const courseId = baseSessionData.course_id;
         const relevantPathwayIds = courseId
           ? pathwayCourses.filter(pc => pc.course_id === courseId).map(pc => pc.pathway_id)
           : [];
 
-        if (relevantPathwayIds.length > 1) {
-          // Create separate session per pathway
-          const sessionsToInsert = relevantPathwayIds.map(pid => ({
-            ...sessionData,
-            pathway_id: pid
-          }));
-
-          const result = await safeQuery<SuccessSessionResult[]>(
-            supabase
-              .from('success_sessions')
-              .insert(sessionsToInsert as any)
-              .select(),
-            'create cloned success sessions'
-          );
-
-          if (!result.success) throw result.error;
-
-          // Log session creation
-          if (authUser?.id) {
-            logUserActivity({
-              user_id: authUser.id,
-              activity_type: ACTIVITY_TYPES.SUCCESS_SESSION_SCHEDULED,
-              metadata: {
-                session_title: sessionData.title,
-                session_date: sessionData.start_time || formData.schedule_date,
-                scheduled_by: authUser.full_name || 'Admin',
-                action: 'created',
-                cloned_count: relevantPathwayIds.length
-              }
-            });
-          }
-
-          toast({
-            title: "Success",
-            description: `Created ${relevantPathwayIds.length} sessions (one per pathway)`,
-          });
-        } else {
-          // Single pathway or no pathway
-          if (relevantPathwayIds.length === 1) {
-            sessionData.pathway_id = relevantPathwayIds[0];
-          }
-
-          const result = await safeQuery<SuccessSessionResult>(
-            supabase
-              .from('success_sessions')
-              .insert([sessionData as any])
-              .select()
-              .single(),
-            'create new success session'
-          );
-
-          if (!result.success) throw result.error;
-          const newSession = result.data;
-
-          // Log session creation
-          if (authUser?.id) {
-            logUserActivity({
-              user_id: authUser.id,
-              activity_type: ACTIVITY_TYPES.SUCCESS_SESSION_SCHEDULED,
-              metadata: {
-                session_title: sessionData.title,
-                session_date: sessionData.start_time || formData.schedule_date,
-                scheduled_by: authUser.full_name || 'Admin',
-                action: 'created'
-              }
-            });
-          }
-
-          // Notify the assigned mentor about the new session
-          if (formData.mentor_id && newSession) {
-            try {
-              await notifyMentorOfSuccessSessionScheduled(
-                formData.mentor_id,
-                formData.title,
-                sessionData.start_time || formData.schedule_date,
-                newSession.id
-              );
-            } catch (notificationError) {
-              console.error('Failed to notify mentor:', notificationError);
-            }
-          }
-
-          // Notify batch students via email + in-app notifications
-          if (sessionData.batch_id && newSession) {
-            try {
-              await supabase.functions.invoke('send-batch-content-notification', {
-                body: {
-                  batch_id: sessionData.batch_id,
-                  item_type: 'LIVE_SESSION',
-                  item_id: newSession.id,
-                  title: sessionData.title,
-                  description: sessionData.description,
-                  meeting_link: sessionData.link,
-                  start_datetime: sessionData.start_time
-                }
-              });
-              toast({
-                title: "Success",
-                description: "Session created and students notified successfully",
-              });
-            } catch (notifyError) {
-              console.error('Failed to notify batch students:', notifyError);
-              toast({
-                title: "Success",
-                description: "Session created, but student notifications may have failed",
-              });
+        const sessionsToInsert: any[] = [];
+        for (const batchId of resolvedBatchIds) {
+          if (relevantPathwayIds.length > 1) {
+            for (const pid of relevantPathwayIds) {
+              sessionsToInsert.push({ ...baseSessionData, batch_id: batchId, pathway_id: pid });
             }
           } else {
-            toast({
-              title: "Success",
-              description: "Session created successfully",
+            sessionsToInsert.push({
+              ...baseSessionData,
+              batch_id: batchId,
+              pathway_id: relevantPathwayIds.length === 1 ? relevantPathwayIds[0] : null
             });
           }
         }
+
+        const result = await safeQuery<SuccessSessionResult[]>(
+          supabase
+            .from('success_sessions')
+            .insert(sessionsToInsert)
+            .select(),
+          'create success sessions'
+        );
+
+        if (!result.success) throw result.error;
+        const newSessions = result.data || [];
+
+        if (authUser?.id) {
+          logUserActivity({
+            user_id: authUser.id,
+            activity_type: ACTIVITY_TYPES.SUCCESS_SESSION_SCHEDULED,
+            metadata: {
+              session_title: baseSessionData.title,
+              session_date: baseSessionData.start_time || formData.schedule_date,
+              scheduled_by: authUser.full_name || 'Admin',
+              action: 'created',
+              sessions_created: sessionsToInsert.length
+            }
+          });
+        }
+
+        // Notify mentor
+        if (formData.mentor_id && newSessions.length > 0) {
+          try {
+            await notifyMentorOfSuccessSessionScheduled(
+              formData.mentor_id,
+              formData.title,
+              baseSessionData.start_time || formData.schedule_date,
+              newSessions[0].id
+            );
+          } catch (notificationError) {
+            console.error('Failed to notify mentor:', notificationError);
+          }
+        }
+
+        // Notify batch students for each batch
+        for (const session of newSessions) {
+          if ((session as any).batch_id) {
+            try {
+              await supabase.functions.invoke('send-batch-content-notification', {
+                body: {
+                  batch_id: (session as any).batch_id,
+                  item_type: 'LIVE_SESSION',
+                  item_id: session.id,
+                  title: baseSessionData.title,
+                  description: baseSessionData.description,
+                  meeting_link: baseSessionData.link,
+                  start_datetime: baseSessionData.start_time
+                }
+              });
+            } catch (notifyError) {
+              console.error('Failed to notify batch students:', notifyError);
+            }
+          }
+        }
+
+        toast({
+          title: "Success",
+          description: sessionsToInsert.length > 1
+            ? `Created ${sessionsToInsert.length} sessions across batches/pathways`
+            : "Session created successfully",
+        });
       }
 
       fetchSessions();
@@ -869,7 +854,7 @@ export function SuccessSessionsManagement() {
                   </label>
                   <Select
                     value={formData.course_id}
-                    onValueChange={(value) => setFormData({ ...formData, course_id: value, batch_id: '' })}
+                    onValueChange={(value) => setFormData({ ...formData, course_id: value, batch_ids: ['__all__'] })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All students (no filter)" />
@@ -889,22 +874,74 @@ export function SuccessSessionsManagement() {
                     <Users2 className="w-4 h-4 text-muted-foreground" />
                     Target Batch
                   </label>
-                  <Select
-                    value={formData.batch_id}
-                    onValueChange={(value) => setFormData({ ...formData, batch_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select batch" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unbatched">Unbatched students</SelectItem>
-                      {filteredBatches.map((batch) => (
-                        <SelectItem key={batch.id} value={batch.id}>
-                          {batch.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={batchPopoverOpen} onOpenChange={setBatchPopoverOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-between font-normal">
+                        <span className="truncate">
+                          {formData.batch_ids.includes('__all__')
+                            ? 'All Batches'
+                            : formData.batch_ids.length === 1
+                              ? (formData.batch_ids[0] === 'unbatched'
+                                ? 'Unbatched students'
+                                : filteredBatches.find(b => b.id === formData.batch_ids[0])?.name || formData.batch_ids[0])
+                              : `${formData.batch_ids.length} batches selected`}
+                        </span>
+                        <Users2 className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[260px] p-2 max-h-[240px] overflow-y-auto" align="start">
+                      <div className="space-y-1">
+                        {/* All Batches option */}
+                        <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                          <Checkbox
+                            checked={formData.batch_ids.includes('__all__')}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setFormData({ ...formData, batch_ids: ['__all__'] });
+                              } else {
+                                setFormData({ ...formData, batch_ids: [] });
+                              }
+                            }}
+                          />
+                          <span className="font-medium">All Batches</span>
+                        </label>
+                        {/* Unbatched option */}
+                        <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                          <Checkbox
+                            checked={formData.batch_ids.includes('unbatched')}
+                            disabled={formData.batch_ids.includes('__all__')}
+                            onCheckedChange={(checked) => {
+                              const without = formData.batch_ids.filter(id => id !== '__all__' && id !== 'unbatched');
+                              if (checked) {
+                                setFormData({ ...formData, batch_ids: [...without, 'unbatched'] });
+                              } else {
+                                setFormData({ ...formData, batch_ids: without.length ? without : ['__all__'] });
+                              }
+                            }}
+                          />
+                          <span>Unbatched students</span>
+                        </label>
+                        <div className="border-t my-1" />
+                        {filteredBatches.map((batch) => (
+                          <label key={batch.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                            <Checkbox
+                              checked={formData.batch_ids.includes(batch.id)}
+                              disabled={formData.batch_ids.includes('__all__')}
+                              onCheckedChange={(checked) => {
+                                const without = formData.batch_ids.filter(id => id !== '__all__' && id !== batch.id);
+                                if (checked) {
+                                  setFormData({ ...formData, batch_ids: [...without, batch.id] });
+                                } else {
+                                  setFormData({ ...formData, batch_ids: without.length ? without : ['__all__'] });
+                                }
+                              }}
+                            />
+                            <span>{batch.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
               
