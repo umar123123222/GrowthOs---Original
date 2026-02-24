@@ -255,7 +255,7 @@ const NotificationDropdown = () => {
             </Badge>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[calc(100vw-2rem)] max-w-[28rem] p-0 bg-transparent border-0 shadow-none" align="end" sideOffset={8}>
+      <PopoverContent className="w-[calc(100vw-2rem)] max-w-[28rem] p-0" align="end" sideOffset={8}>
         <div className="section-surface overflow-hidden rounded-lg border border-border shadow-lg bg-background">
           <div className="section-header p-3 sm:p-4 bg-muted/30">
             <div className="flex items-center justify-between gap-2">
