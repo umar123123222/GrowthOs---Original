@@ -14,17 +14,25 @@ export function LiveChatWidget({ userRole }: LiveChatWidgetProps) {
 
     const fetchLiveChatCode = async () => {
       try {
+        // Try direct query first (works for authenticated users)
         const { data, error } = await supabase
           .from('company_settings')
           .select('livechat_code')
           .eq('id', 1)
           .maybeSingle();
 
-        if (error || !data) return;
+        if (!error && data) {
+          const code = (data as any).livechat_code;
+          if (code && typeof code === 'string' && code.trim()) {
+            setLivechatCode(code.trim());
+            return;
+          }
+        }
 
-        const code = (data as any).livechat_code;
-        if (code && typeof code === 'string' && code.trim()) {
-          setLivechatCode(code.trim());
+        // Fallback: use edge function for unauthenticated users (e.g., login page)
+        const { data: fnData, error: fnError } = await supabase.functions.invoke('get-livechat-code');
+        if (!fnError && fnData?.livechat_code) {
+          setLivechatCode(fnData.livechat_code.trim());
         }
       } catch (e) {
         console.error('Error fetching live chat code:', e);
