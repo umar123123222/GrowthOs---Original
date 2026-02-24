@@ -214,6 +214,7 @@ const Layout = memo(({
   const isUserAdmin = user?.role === 'admin';
   const isUserMentor = user?.role === 'mentor';
   const isUserEnrollmentManager = user?.role === 'enrollment_manager';
+  const isUserSupportMember = user?.role === 'support_member';
   const isUserAdminOrSuperadmin = isUserSuperadmin || isUserAdmin;
   
   // Close mobile menu on route change
@@ -605,6 +606,48 @@ const Layout = memo(({
         href: "/profile",
         icon: User
       }];
+    } else if (isUserSupportMember) {
+      return [{
+        name: "Dashboard",
+        href: "/support-member",
+        icon: Monitor
+      }, {
+        name: "Students",
+        href: "/support-member?tab=students",
+        icon: Users
+      }, {
+        name: "Analytics",
+        href: "/support-member?tab=analytics",
+        icon: BarChart3
+      }, {
+        name: "Support",
+        href: "/support-member?tab=support",
+        icon: MessageSquare
+      }, {
+        name: "Notifications",
+        href: "/notifications",
+        icon: Bell
+      }, {
+        name: "Messages",
+        href: "/messages",
+        icon: MessageCircle
+      }, {
+        name: "Live Sessions",
+        href: "/live-sessions",
+        icon: Calendar
+      }, {
+        name: "Leaderboard",
+        href: "/leaderboard",
+        icon: Trophy
+      }, {
+        name: "Certificates",
+        href: "/certificates",
+        icon: GraduationCap
+      }, {
+        name: "Profile",
+        href: "/profile",
+        icon: User
+      }];
     }
 
     // Default navigation for other users (students)
@@ -666,7 +709,7 @@ const Layout = memo(({
       icon: User
     };
     return [...withIntegrations, profileItem];
-  }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager, connectionStatus]);
+  }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager, isUserSupportMember, connectionStatus]);
 
   // Auto-expand course menu if any course tab is active
   useEffect(() => {

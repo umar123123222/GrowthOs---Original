@@ -61,6 +61,7 @@ const Dashboard = lazy(() => import("./pages/Dashboard"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const MentorDashboard = lazy(() => import("./pages/MentorDashboard"));
 const SuperadminDashboard = lazy(() => import("./pages/SuperadminDashboard"));
+const SupportMemberDashboard = lazy(() => import("./pages/SupportMemberDashboard"));
 const EnrollmentManagerDashboard = lazy(() => import("./pages/EnrollmentManagerDashboard"));
 const Videos = lazy(() => import("./pages/Videos"));
 const VideoPlayer = lazy(() => import("./pages/VideoPlayer"));
@@ -223,6 +224,7 @@ const App = () => {
                       user.role === 'mentor' ? <MentorDashboard /> :
                       user.role === 'superadmin' ? <SuperadminDashboard /> :
                       user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
+                      user.role === 'support_member' ? <SupportMemberDashboard /> :
                       <Dashboard user={user} />
                     } />
                     
@@ -232,6 +234,7 @@ const App = () => {
                       user.role === 'mentor' ? <MentorDashboard /> :
                       user.role === 'superadmin' ? <SuperadminDashboard /> :
                       user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
+                      user.role === 'support_member' ? <SupportMemberDashboard /> :
                       <Dashboard user={user} />
                     } />
                     
@@ -269,6 +272,7 @@ const App = () => {
                     <Route path="mentor/submissions" element={<MentorSubmissionsPage />} />
                     <Route path="mentor/calendar" element={<MentorCalendarPage />} />
                     <Route path="superadmin" element={<SuperadminDashboard />} />
+                    <Route path="support-member" element={<SupportMemberDashboard />} />
                     <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
 
                     {/* Notifications admin + dev */}

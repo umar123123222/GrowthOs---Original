@@ -78,7 +78,7 @@ const AdminTeams = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .in('role', ['mentor', 'enrollment_manager'])
+        .in('role', ['mentor', 'enrollment_manager', 'support_member'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -321,6 +321,7 @@ const AdminTeams = () => {
                   <SelectContent>
                     <SelectItem value="mentor">Mentor</SelectItem>
                     <SelectItem value="enrollment_manager">Enrollment Manager</SelectItem>
+                    <SelectItem value="support_member">Support Member</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
