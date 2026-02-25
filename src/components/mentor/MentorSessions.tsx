@@ -70,8 +70,20 @@ export function MentorSessions() {
 
       const rawSessions = data || [];
 
-      // Collect unique IDs
-      const batchIds = [...new Set(rawSessions.map(s => s.batch_id).filter(Boolean))] as string[];
+      // Collect unique IDs - handle both legacy batch_id and new batch_ids JSONB array
+      const batchIdSet = new Set<string>();
+      rawSessions.forEach(s => {
+        if (s.batch_id) batchIdSet.add(s.batch_id);
+        // Parse batch_ids JSONB array
+        const batchIdsField = (s as any).batch_ids;
+        if (batchIdsField) {
+          try {
+            const parsed = typeof batchIdsField === 'string' ? JSON.parse(batchIdsField) : batchIdsField;
+            if (Array.isArray(parsed)) parsed.forEach((id: string) => batchIdSet.add(id));
+          } catch { /* ignore parse errors */ }
+        }
+      });
+      const batchIds = [...batchIdSet];
       const courseIds = [...new Set(rawSessions.map(s => s.course_id).filter(Boolean))] as string[];
       const pathwayIds: string[] = [];
 
@@ -148,7 +160,27 @@ export function MentorSessions() {
       const unlockData = await fetchUnlockInfo([...allCourseIds], batchMap, rawSessions, pathwayCourseMap);
 
       const sessions: MentorSession[] = rawSessions.map(session => {
-        const batch = session.batch_id ? batchMap.get(session.batch_id) : null;
+        // Resolve batch info from legacy batch_id or batch_ids JSONB array
+        let batch = session.batch_id ? batchMap.get(session.batch_id) : null;
+        let resolvedBatchName = batch?.name;
+        let resolvedBatchId = session.batch_id;
+        
+        if (!batch) {
+          // Try batch_ids JSONB array
+          const batchIdsField = (session as any).batch_ids;
+          if (batchIdsField) {
+            try {
+              const parsed = typeof batchIdsField === 'string' ? JSON.parse(batchIdsField) : batchIdsField;
+              if (Array.isArray(parsed) && parsed.length > 0) {
+                const names = parsed.map((id: string) => batchMap.get(id)?.name).filter(Boolean);
+                resolvedBatchName = names.join(', ') || undefined;
+                resolvedBatchId = parsed[0]; // Use first batch for course/pathway resolution
+                batch = batchMap.get(parsed[0]) || null;
+              }
+            } catch { /* ignore */ }
+          }
+        }
+        
         const effectiveCourseId = session.course_id || batch?.course_id || null;
         const effectivePathwayId = (session as any).pathway_id || batch?.pathway_id || null;
 
@@ -188,8 +220,8 @@ export function MentorSessions() {
           host_login_email: session.host_login_email || '',
           host_login_pwd: session.host_login_pwd || '',
           isAssignedToMe: true,
-          batch_id: session.batch_id || undefined,
-          batch_name: batch?.name,
+          batch_id: resolvedBatchId || undefined,
+          batch_name: resolvedBatchName,
           course_id: effectiveCourseId || undefined,
           course_title: effectiveCourseId ? courseMap.get(effectiveCourseId) : undefined,
           pathway_id: effectivePathwayId || undefined,
