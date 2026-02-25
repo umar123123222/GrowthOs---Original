@@ -452,7 +452,7 @@ export function SuccessSessionsManagement() {
         };
         const { error } = await supabase
           .from('success_sessions')
-          .update(sessionData)
+          .update(sessionData as any)
           .eq('id', editingSession.id);
 
         if (error) throw error;
@@ -491,7 +491,7 @@ export function SuccessSessionsManagement() {
         const result = await safeQuery<SuccessSessionResult[]>(
           supabase
             .from('success_sessions')
-            .insert([sessionToInsert])
+            .insert([sessionToInsert] as any)
             .select(),
           'create success sessions'
         );
