@@ -1336,18 +1336,18 @@ export function StudentsManagement() {
 
           for (const record of studentRecords) {
             // Check if enrollment already exists
-            const query = supabase
+            let existingQuery = supabase
               .from('course_enrollments')
               .select('id')
               .eq('student_id', record.id);
 
             if (bulkAccessType === 'course') {
-              query.eq('course_id', bulkAccessSelectedId).is('pathway_id', null);
+              existingQuery = existingQuery.eq('course_id', bulkAccessSelectedId).is('pathway_id', null);
             } else {
-              query.eq('pathway_id', bulkAccessSelectedId);
+              existingQuery = existingQuery.eq('pathway_id', bulkAccessSelectedId);
             }
 
-            const { data: existing } = await query.maybeSingle();
+            const { data: existing } = await existingQuery.maybeSingle();
             if (existing) continue; // Already enrolled
 
             // Create enrollment
@@ -1391,17 +1391,17 @@ export function StudentsManagement() {
           if (!studentRecords) continue;
           const studentRecordIds = studentRecords.map(r => r.id);
 
-          const query = supabase
+          let revokeQuery = supabase
             .from('course_enrollments')
             .update({ status: 'cancelled' })
             .in('student_id', studentRecordIds);
 
           if (bulkAccessType === 'course') {
-            query.eq('course_id', bulkAccessSelectedId);
+            revokeQuery = revokeQuery.eq('course_id', bulkAccessSelectedId);
           } else {
-            query.eq('pathway_id', bulkAccessSelectedId);
+            revokeQuery = revokeQuery.eq('pathway_id', bulkAccessSelectedId);
           }
-          await query;
+          await revokeQuery;
         }
         toast({ title: 'Success', description: `Access revoked for ${selectedStudents.size} student(s)` });
       }
