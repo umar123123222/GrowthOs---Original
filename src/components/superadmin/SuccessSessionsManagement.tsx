@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -130,6 +130,7 @@ export function SuccessSessionsManagement() {
   });
   const [batchPopoverOpen, setBatchPopoverOpen] = useState(false);
   const [publishing, setPublishing] = useState<string | null>(null);
+  const formSubmittedRef = useRef(false);
   const { toast } = useToast();
   const { user: authUser } = useAuth();
 
@@ -329,6 +330,7 @@ export function SuccessSessionsManagement() {
   };
 
   const handleOpenDialog = (session?: SuccessSession) => {
+    formSubmittedRef.current = false;
     if (session) {
       setEditingSession(session);
       setFormData({
@@ -354,14 +356,57 @@ export function SuccessSessionsManagement() {
     setDialogOpen(true);
   };
 
-  const handleCloseDialog = () => {
+  const handleCloseDialog = async () => {
+    // If form was not submitted and has meaningful data, save as draft
+    if (!formSubmittedRef.current && !editingSession && formData.title.trim()) {
+      try {
+        const selectedUser = users.find(user => user.id === formData.mentor_id);
+        const combineDateTime = (date: string, time: string) => {
+          if (!date || !time) return null;
+          return `${date}T${time}:00`;
+        };
+
+        const baseSessionData = {
+          title: formData.title,
+          description: formData.description,
+          mentor_name: selectedUser ? selectedUser.full_name : formData.mentor_name,
+          mentor_id: formData.mentor_id || null,
+          schedule_date: formData.schedule_date || null,
+          start_time: combineDateTime(formData.schedule_date, formData.start_time),
+          end_time: formData.end_time ? combineDateTime(formData.schedule_date, formData.end_time) : null,
+          link: formData.link || null,
+          zoom_meeting_id: formData.zoom_meeting_id || null,
+          zoom_passcode: formData.zoom_passcode || null,
+          host_login_email: formData.host_login_email || null,
+          host_login_pwd: formData.host_login_pwd || null,
+          status: 'draft',
+          course_id: formData.course_id === '__all__' ? null : (formData.course_id || null),
+          batch_id: formData.batch_ids.includes('__all__') ? null : (formData.batch_ids[0] === 'unbatched' ? null : formData.batch_ids[0] || null),
+          pathway_id: null as string | null
+        };
+
+        await supabase
+          .from('success_sessions')
+          .insert([baseSessionData] as any);
+
+        toast({
+          title: "Draft Saved",
+          description: "Session saved as draft. You can continue editing it later.",
+        });
+
+        fetchSessions();
+      } catch (error) {
+        console.error('Error saving draft:', error);
+      }
+    }
+    formSubmittedRef.current = false;
     setDialogOpen(false);
     resetForm();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    formSubmittedRef.current = true;
     try {
       // Find the selected user to get their name
       const selectedUser = users.find(user => user.id === formData.mentor_id);
@@ -677,7 +722,7 @@ export function SuccessSessionsManagement() {
           <p className="text-muted-foreground mt-1 text-lg">Manage scheduled success sessions and their status</p>
         </div>
         
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
           <DialogTrigger asChild>
             <Button 
               onClick={() => handleOpenDialog()}
