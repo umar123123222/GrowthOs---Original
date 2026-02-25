@@ -38,6 +38,7 @@ interface SuccessSession {
   host_login_pwd?: string;
   course_id?: string;
   batch_id?: string | null;
+  batch_ids?: string[] | null;
   pathway_id?: string | null;
   drip_days?: number | null;
   created_at: string;
@@ -348,7 +349,9 @@ export function SuccessSessionsManagement() {
         host_login_pwd: session.host_login_pwd || '',
         status: session.status || 'upcoming',
         course_id: session.course_id || '__all__',
-        batch_ids: session.batch_id ? [session.batch_id] : ['__all__']
+        batch_ids: session.batch_ids && Array.isArray(session.batch_ids) && session.batch_ids.length > 0
+          ? session.batch_ids
+          : session.batch_id ? [session.batch_id] : ['__all__']
       });
     } else {
       resetForm();
@@ -381,7 +384,8 @@ export function SuccessSessionsManagement() {
           host_login_pwd: formData.host_login_pwd || null,
           status: 'draft',
           course_id: formData.course_id === '__all__' ? null : (formData.course_id || null),
-          batch_id: formData.batch_ids.includes('__all__') ? null : (formData.batch_ids[0] === 'unbatched' ? null : formData.batch_ids[0] || null),
+          batch_id: null,
+          batch_ids: formData.batch_ids.includes('__all__') ? null : formData.batch_ids.filter(id => id !== 'unbatched'),
           pathway_id: null as string | null
         };
 
@@ -435,32 +439,23 @@ export function SuccessSessionsManagement() {
         pathway_id: null as string | null
       };
 
-      // Resolve batch_ids: '__all__' means null (all batches), 'unbatched' means null
+      // Resolve batch_ids for JSONB column: '__all__' means null (all batches)
       const resolvedBatchIds = formData.batch_ids.includes('__all__')
-        ? [null]
-        : formData.batch_ids.map(id => id === 'unbatched' ? null : id);
+        ? null
+        : formData.batch_ids.filter(id => id !== 'unbatched');
 
       if (editingSession) {
-        // When editing, update with the first selected batch
-        const sessionData = { ...baseSessionData, batch_id: resolvedBatchIds[0] };
+        const sessionData = {
+          ...baseSessionData,
+          batch_id: null,
+          batch_ids: resolvedBatchIds && resolvedBatchIds.length > 0 ? resolvedBatchIds : null
+        };
         const { error } = await supabase
           .from('success_sessions')
           .update(sessionData)
           .eq('id', editingSession.id);
 
         if (error) throw error;
-
-        // If multiple batches selected while editing, create additional sessions for the rest
-        if (resolvedBatchIds.length > 1) {
-          const extraSessions = resolvedBatchIds.slice(1).map(bid => ({
-            ...baseSessionData,
-            batch_id: bid
-          }));
-          const { error: insertError } = await supabase
-            .from('success_sessions')
-            .insert(extraSessions as any);
-          if (insertError) throw insertError;
-        }
 
         if (authUser?.id) {
           logUserActivity({
@@ -480,31 +475,23 @@ export function SuccessSessionsManagement() {
           description: "Session updated successfully",
         });
       } else {
-        // Creating new sessions — one per batch × pathway combination
+        // Creating a single session record with batch_ids JSONB
         const courseId = baseSessionData.course_id;
         const relevantPathwayIds = courseId
           ? pathwayCourses.filter(pc => pc.course_id === courseId).map(pc => pc.pathway_id)
           : [];
 
-        const sessionsToInsert: any[] = [];
-        for (const batchId of resolvedBatchIds) {
-          if (relevantPathwayIds.length > 1) {
-            for (const pid of relevantPathwayIds) {
-              sessionsToInsert.push({ ...baseSessionData, batch_id: batchId, pathway_id: pid });
-            }
-          } else {
-            sessionsToInsert.push({
-              ...baseSessionData,
-              batch_id: batchId,
-              pathway_id: relevantPathwayIds.length === 1 ? relevantPathwayIds[0] : null
-            });
-          }
-        }
+        const sessionToInsert = {
+          ...baseSessionData,
+          batch_id: null,
+          batch_ids: resolvedBatchIds && resolvedBatchIds.length > 0 ? resolvedBatchIds : null,
+          pathway_id: relevantPathwayIds.length === 1 ? relevantPathwayIds[0] : null
+        };
 
         const result = await safeQuery<SuccessSessionResult[]>(
           supabase
             .from('success_sessions')
-            .insert(sessionsToInsert)
+            .insert([sessionToInsert])
             .select(),
           'create success sessions'
         );
@@ -521,7 +508,8 @@ export function SuccessSessionsManagement() {
               session_date: baseSessionData.start_time || formData.schedule_date,
               scheduled_by: authUser.full_name || 'Admin',
               action: 'created',
-              sessions_created: sessionsToInsert.length
+              sessions_created: 1,
+              batch_ids: resolvedBatchIds
             }
           });
         }
@@ -540,31 +528,33 @@ export function SuccessSessionsManagement() {
           }
         }
 
-        // Notify batch students for each batch
-        for (const session of newSessions) {
-          if ((session as any).batch_id) {
-            try {
-              await supabase.functions.invoke('send-batch-content-notification', {
-                body: {
-                  batch_id: (session as any).batch_id,
-                  item_type: 'LIVE_SESSION',
-                  item_id: session.id,
-                  title: baseSessionData.title,
-                  description: baseSessionData.description,
-                  meeting_link: baseSessionData.link,
-                  start_datetime: baseSessionData.start_time
-                }
-              });
-            } catch (notifyError) {
-              console.error('Failed to notify batch students:', notifyError);
+        // Notify batch students for each batch in batch_ids
+        if (resolvedBatchIds && resolvedBatchIds.length > 0 && newSessions.length > 0) {
+          for (const batchId of resolvedBatchIds) {
+            if (batchId) {
+              try {
+                await supabase.functions.invoke('send-batch-content-notification', {
+                  body: {
+                    batch_id: batchId,
+                    item_type: 'LIVE_SESSION',
+                    item_id: newSessions[0].id,
+                    title: baseSessionData.title,
+                    description: baseSessionData.description,
+                    meeting_link: baseSessionData.link,
+                    start_datetime: baseSessionData.start_time
+                  }
+                });
+              } catch (notifyError) {
+                console.error('Failed to notify batch students:', notifyError);
+              }
             }
           }
         }
 
         toast({
           title: "Success",
-          description: sessionsToInsert.length > 1
-            ? `Created ${sessionsToInsert.length} sessions across batches/pathways`
+          description: resolvedBatchIds && resolvedBatchIds.length > 1
+            ? `Session created for ${resolvedBatchIds.length} batches`
             : "Session created successfully",
         });
       }
@@ -593,22 +583,25 @@ export function SuccessSessionsManagement() {
         .eq('id', session.id);
       if (error) throw error;
 
-      // Notify batch students via email + in-app
-      if (session.batch_id) {
-        try {
-          await supabase.functions.invoke('send-batch-content-notification', {
-            body: {
-              batch_id: session.batch_id,
-              item_type: 'LIVE_SESSION',
-              item_id: session.id,
-              title: session.title,
-              description: session.description,
-              meeting_link: session.link,
-              start_datetime: session.start_time
-            }
-          });
-        } catch (notifyError) {
-          console.error('Failed to notify batch students:', notifyError);
+      // Notify batch students via email + in-app for all batch_ids
+      const sessionBatchIds: string[] = (session as any).batch_ids || (session.batch_id ? [session.batch_id] : []);
+      for (const batchId of sessionBatchIds) {
+        if (batchId) {
+          try {
+            await supabase.functions.invoke('send-batch-content-notification', {
+              body: {
+                batch_id: batchId,
+                item_type: 'LIVE_SESSION',
+                item_id: session.id,
+                title: session.title,
+                description: session.description,
+                meeting_link: session.link,
+                start_datetime: session.start_time
+              }
+            });
+          } catch (notifyError) {
+            console.error('Failed to notify batch students:', notifyError);
+          }
         }
       }
 
@@ -1129,7 +1122,10 @@ export function SuccessSessionsManagement() {
               if (filterSearch && !s.title.toLowerCase().includes(filterSearch.toLowerCase())) return false;
               if (filterHost !== '__all__' && s.mentor_id !== filterHost) return false;
               if (filterCourse !== '__all__' && s.course_id !== filterCourse) return false;
-              if (filterBatch !== '__all__' && s.batch_id !== filterBatch) return false;
+              if (filterBatch !== '__all__') {
+                const sBatchIds: string[] = (s as any).batch_ids || (s.batch_id ? [s.batch_id] : []);
+                if (sBatchIds.length === 0 || !sBatchIds.includes(filterBatch)) return false;
+              }
               if (filterStatus !== '__all__' && s.status !== filterStatus) return false;
               if (filterDate) {
                 try {
@@ -1203,11 +1199,21 @@ export function SuccessSessionsManagement() {
                           <span className="truncate text-sm font-medium">
                             {courses.find(c => c.id === session.course_id)?.title || 'All Courses'}
                           </span>
-                          <Badge variant="outline" className="text-xs w-fit">
-                            {session.batch_id
-                              ? batches.find(b => b.id === session.batch_id)?.name || 'Unknown Batch'
-                              : 'All Batches'}
-                          </Badge>
+                          {(() => {
+                            const sessionBatchIds: string[] = (session as any).batch_ids || (session.batch_id ? [session.batch_id] : []);
+                            if (sessionBatchIds.length === 0) {
+                              return <Badge variant="outline" className="text-xs w-fit">All Batches</Badge>;
+                            }
+                            return (
+                              <div className="flex flex-wrap gap-0.5">
+                                {sessionBatchIds.map(bid => (
+                                  <Badge key={bid} variant="outline" className="text-xs w-fit">
+                                    {batches.find(b => b.id === bid)?.name || 'Unknown'}
+                                  </Badge>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </TableCell>
                       <TableCell className="min-w-[120px]">
