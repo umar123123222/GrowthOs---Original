@@ -157,13 +157,36 @@ const VideoPlayer = () => {
         } = await supabase.from('available_lessons').select('id, recording_title, recording_url, duration_min, module, notes').eq('id', id).maybeSingle();
         if (error) throw error;
         if (data) {
+          // Resolve module name and course name from module UUID
+          let moduleName = 'Module';
+          let courseName = '';
+          if (data.module) {
+            const { data: moduleData } = await supabase
+              .from('modules')
+              .select('id, title, course_id')
+              .eq('id', data.module)
+              .maybeSingle();
+            if (moduleData) {
+              moduleName = moduleData.title || 'Module';
+              if (moduleData.course_id) {
+                const { data: courseData } = await supabase
+                  .from('courses')
+                  .select('title')
+                  .eq('id', moduleData.course_id)
+                  .maybeSingle();
+                if (courseData) courseName = courseData.title || '';
+              }
+            }
+          }
           setCurrentVideo({
             id: data.id,
             title: data.recording_title || 'Lesson',
             description: data.notes || 'Watch this lesson to continue your learning journey.',
             videoUrl: data.recording_url || '',
             duration: data.duration_min ? `${data.duration_min} min` : 'N/A',
-            module: data.module || 'Module',
+            module: moduleName,
+            moduleId: data.module,
+            courseName: courseName,
             checklist: ['Watch the complete video', 'Take notes on key concepts', 'Complete any related assignments', 'Mark lesson as complete']
           });
           return;
@@ -280,7 +303,7 @@ const VideoPlayer = () => {
       setVideoWatched(true);
 
       // Log video watched activity with course context
-      const courseName = searchParams.get('course') ? decodeURIComponent(searchParams.get('course') || '') : undefined;
+      const courseNameParam = searchParams.get('course') ? decodeURIComponent(searchParams.get('course') || '') : undefined;
       logUserActivity({
         user_id: user.id,
         activity_type: ACTIVITY_TYPES.VIDEO_WATCHED,
@@ -288,7 +311,7 @@ const VideoPlayer = () => {
         metadata: {
           video_title: currentVideo.title,
           module_name: currentVideo.module,
-          course_name: courseName || 'N/A',
+          course_name: courseNameParam || currentVideo.courseName || 'N/A',
           timestamp: new Date().toISOString()
         }
       });
