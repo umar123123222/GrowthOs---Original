@@ -163,10 +163,15 @@ export function StudentsManagement() {
       fetchInstallmentPayments();
     }
   }, [students]);
+  // Re-filter when students data or filter criteria change
   useEffect(() => {
     filterStudents();
-    setCurrentPage(1);
   }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, feeRangeFrom, feeRangeTo, installmentPayments, joinDateRange, batchFilter, studentBatchMap]);
+
+  // Only reset to page 1 when actual filter criteria change, NOT when students data refreshes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, feeRangeFrom, feeRangeTo, joinDateRange, batchFilter]);
 
   // Re-render periodically so time-based invoice statuses update without refresh
   useEffect(() => {
