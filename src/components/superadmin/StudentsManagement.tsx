@@ -1354,6 +1354,8 @@ export function StudentsManagement() {
             const enrollmentData: any = {
               student_id: record.id,
               status: 'active',
+              enrollment_source: 'direct',
+              progress_percentage: 0,
               enrolled_at: new Date().toISOString(),
             };
             if (bulkAccessType === 'course') {
@@ -1370,7 +1372,10 @@ export function StudentsManagement() {
               enrollmentData.course_id = firstStep?.course_id || bulkAccessSelectedId;
               enrollmentData.pathway_id = bulkAccessSelectedId;
             }
-            await supabase.from('course_enrollments').insert(enrollmentData);
+            const { error: insertError } = await supabase.from('course_enrollments').insert(enrollmentData);
+            if (insertError) {
+              console.error('Failed to insert enrollment for student', record.id, insertError);
+            }
           }
         }
 
