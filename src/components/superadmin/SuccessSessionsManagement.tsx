@@ -908,10 +908,15 @@ export function SuccessSessionsManagement() {
                         {/* Unbatched option */}
                         <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
                           <Checkbox
-                            checked={formData.batch_ids.includes('unbatched')}
-                            disabled={formData.batch_ids.includes('__all__')}
+                            checked={formData.batch_ids.includes('unbatched') || formData.batch_ids.includes('__all__')}
                             onCheckedChange={(checked) => {
-                              const without = formData.batch_ids.filter(id => id !== '__all__' && id !== 'unbatched');
+                              if (formData.batch_ids.includes('__all__')) {
+                                // Deselect "All Batches", keep only other batches minus unbatched
+                                const allBatchIds = filteredBatches.map(b => b.id);
+                                setFormData({ ...formData, batch_ids: checked ? ['unbatched', ...allBatchIds] : allBatchIds });
+                                return;
+                              }
+                              const without = formData.batch_ids.filter(id => id !== 'unbatched');
                               if (checked) {
                                 setFormData({ ...formData, batch_ids: [...without, 'unbatched'] });
                               } else {
@@ -925,10 +930,16 @@ export function SuccessSessionsManagement() {
                         {filteredBatches.map((batch) => (
                           <label key={batch.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
                             <Checkbox
-                              checked={formData.batch_ids.includes(batch.id)}
-                              disabled={formData.batch_ids.includes('__all__')}
+                              checked={formData.batch_ids.includes(batch.id) || formData.batch_ids.includes('__all__')}
                               onCheckedChange={(checked) => {
-                                const without = formData.batch_ids.filter(id => id !== '__all__' && id !== batch.id);
+                                if (formData.batch_ids.includes('__all__')) {
+                                  // Deselect "All Batches", select all others except this one if unchecking
+                                  const allBatchIds = filteredBatches.map(b => b.id).filter(id => id !== batch.id);
+                                  const withUnbatched = [...allBatchIds, 'unbatched'];
+                                  setFormData({ ...formData, batch_ids: checked ? [...withUnbatched, batch.id] : withUnbatched });
+                                  return;
+                                }
+                                const without = formData.batch_ids.filter(id => id !== batch.id);
                                 if (checked) {
                                   setFormData({ ...formData, batch_ids: [...without, batch.id] });
                                 } else {
