@@ -1200,7 +1200,15 @@ export function SuccessSessionsManagement() {
                             {courses.find(c => c.id === session.course_id)?.title || 'All Courses'}
                           </span>
                           {(() => {
-                            const sessionBatchIds: string[] = (session as any).batch_ids || (session.batch_id ? [session.batch_id] : []);
+                            const rawBatchIds = (session as any).batch_ids;
+                            let sessionBatchIds: string[] = [];
+                            if (Array.isArray(rawBatchIds)) {
+                              sessionBatchIds = rawBatchIds.map(String);
+                            } else if (typeof rawBatchIds === 'string') {
+                              try { const p = JSON.parse(rawBatchIds); sessionBatchIds = Array.isArray(p) ? p.map(String) : []; } catch { /* ignore */ }
+                            } else if (session.batch_id) {
+                              sessionBatchIds = [session.batch_id];
+                            }
                             if (sessionBatchIds.length === 0) {
                               return <Badge variant="outline" className="text-xs w-fit">All Batches</Badge>;
                             }
@@ -1208,7 +1216,7 @@ export function SuccessSessionsManagement() {
                               <div className="flex flex-wrap gap-0.5">
                                 {sessionBatchIds.map(bid => (
                                   <Badge key={bid} variant="outline" className="text-xs w-fit">
-                                    {batches.find(b => b.id === bid)?.name || 'Unknown'}
+                                    {batches.find(b => b.id === bid)?.name || bid}
                                   </Badge>
                                 ))}
                               </div>
@@ -1371,10 +1379,17 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
     // (a session can be "completed" for one batch but upcoming for another)
     const skipNonDrip = session.status === 'completed' && dripDays == null;
 
+    // Resolve batch IDs from both legacy batch_id and new batch_ids JSONB
+    const sessionBatchIdList: string[] = Array.isArray((session as any).batch_ids)
+      ? (session as any).batch_ids
+      : typeof (session as any).batch_ids === 'string'
+        ? (() => { try { const p = JSON.parse((session as any).batch_ids); return Array.isArray(p) ? p : []; } catch { return []; } })()
+        : session.batch_id ? [session.batch_id] : [];
+
     if (dripDays != null) {
       let relevantBatches: Batch[];
-      if (session.batch_id) {
-        relevantBatches = batches.filter(b => b.id === session.batch_id);
+      if (sessionBatchIdList.length > 0) {
+        relevantBatches = batches.filter(b => sessionBatchIdList.includes(b.id));
       } else if (session.course_id) {
         const junctionBatchIds = batchCourseMap[session.course_id] || [];
         relevantBatches = batches.filter(b =>
@@ -1403,15 +1418,25 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
       try {
         const sessionDate = new Date(session.schedule_date);
         if (sessionDate >= now && sessionDate <= sevenDaysLater) {
-          const batchName = session.batch_id
-            ? batches.find(b => b.id === session.batch_id)?.name || 'Unknown'
-            : 'All Batches';
-          computedSessions.push({
-            session,
-            computedDate: sessionDate,
-            batchId: session.batch_id || '__all__',
-            batchName,
-          });
+          if (sessionBatchIdList.length > 0) {
+            // Create an entry per batch so each batch shows individually
+            for (const bid of sessionBatchIdList) {
+              const bName = batches.find(b => b.id === bid)?.name || bid;
+              computedSessions.push({
+                session,
+                computedDate: sessionDate,
+                batchId: bid,
+                batchName: bName,
+              });
+            }
+          } else {
+            computedSessions.push({
+              session,
+              computedDate: sessionDate,
+              batchId: '__all__',
+              batchName: 'All Batches',
+            });
+          }
         }
       } catch { /* skip invalid dates */ }
     }
@@ -1481,9 +1506,7 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
 
   filtered.sort((a, b) => a.computedDate.getTime() - b.computedDate.getTime());
 
-  const batchesWithSessions = Array.from(
-    new Map(computedSessions.map(cs => [cs.batchId, cs.batchName])).entries()
-  );
+   const batchesForDropdown = batches.filter(b => b.status === 'active' || computedSessions.some(cs => cs.batchId === b.id));
 
   const needsAttention = (session: SuccessSession) => {
     return !session.zoom_meeting_id || !session.zoom_passcode || session.link === 'TBD' || !session.link;
@@ -1539,8 +1562,8 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All Batches</SelectItem>
-                {batchesWithSessions.map(([id, name]) => (
-                  <SelectItem key={id} value={id}>{name}</SelectItem>
+                {batchesForDropdown.map(b => (
+                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
