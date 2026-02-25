@@ -1506,6 +1506,21 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
 
   filtered.sort((a, b) => a.computedDate.getTime() - b.computedDate.getTime());
 
+  // Deduplicate by session ID: merge batch names into a single entry
+  const deduped: (ComputedWeekSession & { allBatchNames: string[] })[] = [];
+  const seenSessionIds = new Map<string, number>();
+  for (const cs of filtered) {
+    const existing = seenSessionIds.get(cs.session.id);
+    if (existing !== undefined) {
+      if (cs.batchName && !deduped[existing].allBatchNames.includes(cs.batchName)) {
+        deduped[existing].allBatchNames.push(cs.batchName);
+      }
+    } else {
+      seenSessionIds.set(cs.session.id, deduped.length);
+      deduped.push({ ...cs, allBatchNames: [cs.batchName] });
+    }
+  }
+
    const batchesForDropdown = batches.filter(b => b.status === 'active' || computedSessions.some(cs => cs.batchId === b.id));
 
   const needsAttention = (session: SuccessSession) => {
@@ -1521,7 +1536,7 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
           <CardTitle className="flex items-center text-lg">
             <CalendarDays className="w-5 h-5 mr-2 text-amber-600" />
             Upcoming Live Classes — Next 7 Days
-            <Badge variant="secondary" className="ml-2">{filtered.length}</Badge>
+            <Badge variant="secondary" className="ml-2">{deduped.length}</Badge>
           </CardTitle>
           <div className="flex items-center gap-2">
             {filterOptions.length > 0 && (
@@ -1571,7 +1586,7 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
         </div>
       </CardHeader>
       <CardContent className="pt-0">
-        {filtered.length === 0 ? (
+        {deduped.length === 0 ? (
           <div className="text-center py-8">
             <CalendarDays className="w-10 h-10 mx-auto mb-2 text-muted-foreground/40" />
             <p className="text-sm text-muted-foreground">No live classes scheduled in the next 7 days</p>
@@ -1579,15 +1594,15 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
           </div>
         ) : (
           <div className="space-y-2">
-            {filtered.map((cs, idx) => {
-              const { session, computedDate, batchName } = cs;
+            {deduped.map((cs, idx) => {
+              const { session, computedDate, allBatchNames } = cs;
               const missing = needsAttention(session);
               const courseName = courses.find(c => c.id === session.course_id)?.title;
               const pathwayName = getPathway(session);
 
               return (
                 <div
-                  key={`${session.id}-${cs.batchId}-${idx}`}
+                  key={`${session.id}-${idx}`}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition-colors hover:bg-background/80 ${
                     missing ? 'border-amber-300 bg-amber-50/50' : 'border-green-300 bg-green-50/50'
                   }`}
@@ -1605,7 +1620,9 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
                       {session.start_time && <span>• {format(new Date(session.start_time), 'h:mm a')}</span>}
                       {pathwayName && <span>• 🎯 {pathwayName}</span>}
                       {courseName && <span>• {courseName}</span>}
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">{batchName}</Badge>
+                      {allBatchNames.map(bn => (
+                        <Badge key={bn} variant="outline" className="text-[10px] px-1.5 py-0">{bn}</Badge>
+                      ))}
                     </div>
                   </div>
                   {missing && (
