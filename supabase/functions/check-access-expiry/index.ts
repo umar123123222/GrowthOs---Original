@@ -24,7 +24,7 @@ Deno.serve(async (req) => {
     // Find enrollments where access has expired but status is still active
     const { data: expiredEnrollments, error: fetchError } = await supabase
       .from('course_enrollments')
-      .select('id, student_id, course_id, access_expires_at')
+      .select('id, student_id, course_id, access_expires_at, students!inner(user_id)')
       .lt('access_expires_at', now)
       .eq('status', 'active');
 
@@ -46,33 +46,42 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update expired enrollments status
-    const enrollmentIds = expiredEnrollments.map(e => e.id);
-    
-    const { error: updateError } = await supabase
-      .from('course_enrollments')
-      .update({ 
-        status: 'expired',
-        updated_at: now
-      })
-      .in('id', enrollmentIds);
+    // IMPORTANT: Do NOT change enrollment status automatically.
+    // Only suspend LMS access so the student can't access content,
+    // but keep the enrollment record intact for admin to manage manually.
+    const affectedUserIds = [...new Set(expiredEnrollments.map(e => (e.students as any).user_id))];
 
-    if (updateError) {
-      console.error('[check-access-expiry] Error updating enrollments:', updateError);
-      throw updateError;
+    for (const userId of affectedUserIds) {
+      const { error: suspendError } = await supabase
+        .from('users')
+        .update({ lms_status: 'suspended', updated_at: now })
+        .eq('id', userId);
+
+      if (suspendError) {
+        console.error(`[check-access-expiry] Error suspending LMS for user ${userId}:`, suspendError);
+      } else {
+        console.log(`[check-access-expiry] Suspended LMS access for user ${userId}`);
+      }
+
+      // Log the suspension
+      await supabase.from('admin_logs').insert({
+        entity_type: 'user',
+        entity_id: userId,
+        action: 'lms_suspended',
+        description: 'LMS suspended due to expired access duration (enrollment preserved)',
+        data: { reason: 'access_expiry', checked_at: now }
+      });
     }
-
-    console.log(`[check-access-expiry] Updated ${enrollmentIds.length} enrollments to expired status`);
 
     // Create notifications for affected students
     const notifications = expiredEnrollments.map(enrollment => ({
-      user_id: enrollment.student_id,
+      user_id: (enrollment.students as any).user_id,
       type: 'access_expired',
       channel: 'in_app',
       status: 'sent',
       payload: {
         title: 'Course Access Expired',
-        message: 'Your access to a course has expired. Please contact support if you need to renew.',
+        message: 'Your course access period has ended. Your LMS access has been suspended. Please contact support to renew.',
         metadata: {
           course_id: enrollment.course_id,
           expired_at: enrollment.access_expires_at
@@ -80,7 +89,6 @@ Deno.serve(async (req) => {
       }
     }));
 
-    // Batch insert notifications (ignore errors as notifications are non-critical)
     if (notifications.length > 0) {
       const { error: notifError } = await supabase
         .from('notifications')
@@ -96,8 +104,9 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Processed ${enrollmentIds.length} expired enrollments`,
-        processed: enrollmentIds.length
+        message: `Suspended LMS for ${affectedUserIds.length} users with ${expiredEnrollments.length} expired enrollments (enrollments preserved)`,
+        processed: expiredEnrollments.length,
+        usersSuspended: affectedUserIds.length
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
