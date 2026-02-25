@@ -51,7 +51,7 @@ serve(async (req: Request) => {
     console.log(`Found ${inactiveStudents?.length || 0} potentially inactive students`);
 
     // Filter out students who have made at least one payment or have a valid extension
-    const studentsToDelete = [];
+    const studentsToSuspend = [];
     
     for (const student of inactiveStudents || []) {
       // Check for payments
@@ -68,7 +68,7 @@ serve(async (req: Request) => {
 
       // If payments found, skip this student
       if (payments && payments.length > 0) {
-        console.log(`Student ${student.id} has payments, skipping deletion`);
+        console.log(`Student ${student.id} has payments, skipping`);
         continue;
       }
 
@@ -103,7 +103,7 @@ serve(async (req: Request) => {
         });
 
         if (hasValidExtension) {
-          console.log(`Student ${student.id} has valid fee extension, skipping deletion`);
+          console.log(`Student ${student.id} has valid fee extension, skipping`);
           continue;
         }
 
@@ -111,34 +111,34 @@ serve(async (req: Request) => {
         const firstInvoice = invoicesWithExtension?.find(inv => inv.installment_number === 1);
         if (firstInvoice) {
           const effectiveDueDate = new Date(firstInvoice.extended_due_date || firstInvoice.due_date);
-          const deletionThreshold = new Date(effectiveDueDate);
-          deletionThreshold.setDate(deletionThreshold.getDate() + 14); // 2 weeks after due date
+          const suspensionThreshold = new Date(effectiveDueDate);
+          suspensionThreshold.setDate(suspensionThreshold.getDate() + 14); // 2 weeks after due date
 
-          if (today < deletionThreshold) {
-            console.log(`Student ${student.id} not past deletion threshold yet, skipping`);
+          if (today < suspensionThreshold) {
+            console.log(`Student ${student.id} not past suspension threshold yet, skipping`);
             continue;
           }
         }
       }
 
-      // Mark for deletion
-      studentsToDelete.push(student);
+      // Mark for suspension (NOT deletion — enrollments must be preserved)
+      studentsToSuspend.push(student);
     }
 
-    console.log(`${studentsToDelete.length} students will be deleted`);
+    console.log(`${studentsToSuspend.length} students will be suspended`);
 
-    let deletedCount = 0;
-    const deletedStudents = [];
+    let suspendedCount = 0;
+    const suspendedStudents = [];
 
-    // Delete students one by one
-    for (const student of studentsToDelete) {
+    // Suspend students instead of deleting them
+    for (const student of studentsToSuspend) {
       try {
-        // Log the deletion before it happens
+        // Log the action before it happens
         await supabase.from('admin_logs').insert({
           entity_type: 'user',
           entity_id: student.id,
-          action: 'auto_deleted',
-          description: `Student auto-deleted: inactive + unpaid first fee for 2+ weeks`,
+          action: 'auto_suspended',
+          description: `Student auto-suspended: inactive + unpaid first fee for 2+ weeks (enrollment preserved)`,
           data: {
             full_name: student.full_name,
             email: student.email,
@@ -147,37 +147,50 @@ serve(async (req: Request) => {
           }
         });
 
-        const { error: deleteError } = await supabase
+        // Suspend LMS access instead of deleting the user
+        const { error: suspendError } = await supabase
           .from('users')
-          .delete()
+          .update({ 
+            lms_status: 'suspended',
+            updated_at: new Date().toISOString()
+          })
           .eq('id', student.id);
 
-        if (deleteError) {
-          console.error(`Error deleting student ${student.id}:`, deleteError);
+        if (suspendError) {
+          console.error(`Error suspending student ${student.id}:`, suspendError);
           continue;
         }
 
-        deletedStudents.push({
+        // Send notification
+        await supabase.from('notifications').insert({
+          user_id: student.id,
+          title: '⚠️ Account Suspended',
+          message: 'Your account has been suspended due to inactivity and unpaid fees. Please contact support to restore access.',
+          type: 'warning',
+          is_read: false
+        });
+
+        suspendedStudents.push({
           id: student.id,
           name: student.full_name,
           email: student.email
         });
         
-        deletedCount++;
-        console.log(`Deleted student: ${student.full_name} (${student.email})`);
+        suspendedCount++;
+        console.log(`Suspended student: ${student.full_name} (${student.email})`);
       } catch (error) {
-        console.error(`Failed to delete student ${student.id}:`, error);
+        console.error(`Failed to suspend student ${student.id}:`, error);
       }
     }
 
-    console.log(`Cleanup complete. Deleted ${deletedCount} inactive students.`);
+    console.log(`Cleanup complete. Suspended ${suspendedCount} inactive students (enrollments preserved).`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Cleanup complete. Deleted ${deletedCount} inactive students.`,
-        deletedCount,
-        deletedStudents
+        message: `Cleanup complete. Suspended ${suspendedCount} inactive students (enrollments preserved).`,
+        suspendedCount,
+        suspendedStudents
       }),
       {
         status: 200,
