@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send, Filter } from 'lucide-react';
+import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send, Filter, Check } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -104,6 +104,7 @@ export function SuccessSessionsManagement() {
   const [batchCourseMap, setBatchCourseMap] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
   const [editingSession, setEditingSession] = useState<SuccessSession | null>(null);
   // Filter state
   const [filterSearch, setFilterSearch] = useState('');
@@ -404,6 +405,7 @@ export function SuccessSessionsManagement() {
       }
     }
     formSubmittedRef.current = false;
+    setSubmitSuccess(false);
     setDialogOpen(false);
     resetForm();
   };
@@ -560,7 +562,13 @@ export function SuccessSessionsManagement() {
       }
 
       fetchSessions();
-      handleCloseDialog();
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        setSubmitSuccess(false);
+        setDialogOpen(false);
+        resetForm();
+        formSubmittedRef.current = false;
+      }, 1500);
     } catch (error) {
       toast({
         title: "Error",
@@ -725,7 +733,19 @@ export function SuccessSessionsManagement() {
               Schedule Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => { if (submitSuccess) e.preventDefault(); }}>
+            {submitSuccess ? (
+              <div className="flex flex-col items-center justify-center py-16 gap-4 animate-fade-in">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+                <p className="text-lg font-semibold text-foreground">
+                  {editingSession ? 'Session Updated!' : 'Session Scheduled!'}
+                </p>
+                <p className="text-sm text-muted-foreground">Closing automatically...</p>
+              </div>
+            ) : (
+            <>
             <DialogHeader>
               <DialogTitle>
                 {editingSession ? 'Edit Success Session' : 'Schedule New Success Session'}
@@ -1003,6 +1023,8 @@ export function SuccessSessionsManagement() {
                 </Button>
               </div>
             </form>
+            </>
+            )}
           </DialogContent>
         </Dialog>
       </div>
