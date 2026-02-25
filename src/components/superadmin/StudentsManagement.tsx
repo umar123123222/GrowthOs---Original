@@ -518,10 +518,11 @@ export function StudentsManagement() {
       filtered = filtered.filter(student => {
         const studentEnrollments = studentEnrollmentMap.get(student.id);
         if (enrollmentFilter.includes('none')) {
-          // "None" means no active enrollments at all
-          if (!studentEnrollments || studentEnrollments.size === 0) return true;
-          // If only "none" is selected, exclude students with enrollments
-          if (enrollmentFilter.length === 1) return true;
+          const hasNoEnrollments = !studentEnrollments || studentEnrollments.size === 0;
+          // If only "none" is selected, show only students without enrollments
+          if (enrollmentFilter.length === 1) return hasNoEnrollments;
+          // If "none" + other filters: include if no enrollments OR matches other filters
+          if (hasNoEnrollments) return true;
         }
         if (!studentEnrollments) return false;
         // AND logic: student must have all selected items (excluding 'none')
