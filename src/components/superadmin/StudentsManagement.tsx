@@ -98,6 +98,11 @@ export function StudentsManagement() {
   const [feeRangeFrom, setFeeRangeFrom] = useState('');
   const [feeRangeTo, setFeeRangeTo] = useState('');
   const [joinDateRange, setJoinDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [enrollmentFilter, setEnrollmentFilter] = useState<string[]>([]);
+  const [allCourses, setAllCourses] = useState<{id: string; title: string}[]>([]);
+  const [allPathways, setAllPathways] = useState<{id: string; name: string}[]>([]);
+  const [studentEnrollmentMap, setStudentEnrollmentMap] = useState<Map<string, Set<string>>>(new Map());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [activityLogsDialog, setActivityLogsDialog] = useState(false);
@@ -157,6 +162,7 @@ export function StudentsManagement() {
     fetchStudents();
     fetchCompanyCurrency();
     fetchBatchOptions();
+    fetchCoursesAndPathways();
   }, []);
   useEffect(() => {
     if (students.length > 0) {
@@ -166,12 +172,12 @@ export function StudentsManagement() {
   // Re-filter when students data or filter criteria change
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, feeRangeFrom, feeRangeTo, installmentPayments, joinDateRange, batchFilter, studentBatchMap]);
+  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, feeRangeFrom, feeRangeTo, installmentPayments, joinDateRange, batchFilter, studentBatchMap, enrollmentFilter, studentEnrollmentMap]);
 
   // Only reset to page 1 when actual filter criteria change, NOT when students data refreshes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, feeRangeFrom, feeRangeTo, joinDateRange, batchFilter]);
+  }, [searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, totalFeeSort, feeRangeFrom, feeRangeTo, joinDateRange, batchFilter, enrollmentFilter]);
 
   // Re-render periodically so time-based invoice statuses update without refresh
   useEffect(() => {
@@ -215,6 +221,35 @@ export function StudentsManagement() {
       }
     } catch (error) {
       console.error('Error fetching batch options:', error);
+    }
+  };
+
+  const fetchCoursesAndPathways = async () => {
+    try {
+      const [coursesRes, pathwaysRes, enrollmentsRes, studentsTableRes] = await Promise.all([
+        supabase.from('courses').select('id, title').order('title'),
+        supabase.from('learning_pathways').select('id, name').order('name'),
+        supabase.from('course_enrollments').select('student_id, course_id, pathway_id').eq('status', 'active'),
+        supabase.from('students').select('id, user_id')
+      ]);
+      if (coursesRes.data) setAllCourses(coursesRes.data as any);
+      if (pathwaysRes.data) setAllPathways(pathwaysRes.data as any);
+      if (enrollmentsRes.data && studentsTableRes.data) {
+        const recordToUser = new Map<string, string>();
+        studentsTableRes.data.forEach((s: any) => recordToUser.set(s.id, s.user_id));
+        const map = new Map<string, Set<string>>();
+        enrollmentsRes.data.forEach((e: any) => {
+          const userId = recordToUser.get(e.student_id);
+          if (!userId) return;
+          const set = map.get(userId) || new Set<string>();
+          if (e.course_id) set.add(`course:${e.course_id}`);
+          if (e.pathway_id) set.add(`pathway:${e.pathway_id}`);
+          map.set(userId, set);
+        });
+        setStudentEnrollmentMap(map);
+      }
+    } catch (error) {
+      console.error('Error fetching courses/pathways:', error);
     }
   };
 
@@ -476,6 +511,23 @@ export function StudentsManagement() {
           return batches.includes(batchFilter);
         });
       }
+    }
+
+    // Apply enrollment filter (AND logic - student must have ALL selected enrollments)
+    if (enrollmentFilter.length > 0) {
+      filtered = filtered.filter(student => {
+        const studentEnrollments = studentEnrollmentMap.get(student.id);
+        if (enrollmentFilter.includes('none')) {
+          // "None" means no active enrollments at all
+          if (!studentEnrollments || studentEnrollments.size === 0) return true;
+          // If only "none" is selected, exclude students with enrollments
+          if (enrollmentFilter.length === 1) return true;
+        }
+        if (!studentEnrollments) return false;
+        // AND logic: student must have all selected items (excluding 'none')
+        const nonNoneFilters = enrollmentFilter.filter(f => f !== 'none');
+        return nonNoneFilters.every(f => studentEnrollments.has(f));
+      });
     }
 
     setFilteredStudents(filtered);
@@ -1740,7 +1792,8 @@ export function StudentsManagement() {
         <span className="ml-2 text-muted-foreground">Loading students...</span>
       </div>;
   }
-  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo) || Boolean(joinDateRange.from || joinDateRange.to) || batchFilter !== 'all';
+  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo) || Boolean(joinDateRange.from || joinDateRange.to) || batchFilter !== 'all' || enrollmentFilter.length > 0;
+  const activeFilterCount = [lmsStatusFilter !== 'all', feesStructureFilter !== 'all', invoiceFilter !== 'all', totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo), Boolean(joinDateRange.from || joinDateRange.to), batchFilter !== 'all', enrollmentFilter.length > 0].filter(Boolean).length;
   const displayStudents = hasActiveFilters ? filteredStudents : students;
   const totalPages = Math.ceil(displayStudents.length / pageSize);
   const paginatedStudents = displayStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -1833,152 +1886,282 @@ export function StudentsManagement() {
           <Input placeholder="Search by ID, name, email, or phone..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
         
+        <Button
+          variant={filtersOpen ? "default" : "outline"}
+          onClick={() => setFiltersOpen(!filtersOpen)}
+          className="relative"
+        >
+          <Filter className="w-4 h-4 mr-2" />
+          Filters
+          {activeFilterCount > 0 && (
+            <Badge variant="secondary" className="ml-2 bg-primary/20 text-primary text-xs px-1.5 py-0.5 min-w-[20px] h-5">
+              {activeFilterCount}
+            </Badge>
+          )}
+        </Button>
 
-        <Select value={lmsStatusFilter} onValueChange={setLmsStatusFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="LMS Status" />
-          </SelectTrigger>
-          <SelectContent className="bg-white z-50">
-            <SelectItem value="all">All LMS Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-            <SelectItem value="dropout">Dropout</SelectItem>
-            <SelectItem value="complete">Complete</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={feesStructureFilter} onValueChange={setFeesStructureFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Fees Structure" />
-          </SelectTrigger>
-          <SelectContent className="bg-white z-50">
-            <SelectItem value="all">All Installments</SelectItem>
-            {installmentOptions.map(option => <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>)}
-          </SelectContent>
-        </Select>
-
-        <Select value={invoiceFilter} onValueChange={setInvoiceFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Invoice Status" />
-          </SelectTrigger>
-          <SelectContent className="bg-white z-50">
-            <SelectItem value="all">All Fees Status</SelectItem>
-            <SelectItem value="no_invoice">No Invoice</SelectItem>
-            <SelectItem value="fees_due">Fees Due</SelectItem>
-            <SelectItem value="fees_overdue">Fees Overdue</SelectItem>
-            <SelectItem value="fees_cleared">Fees Cleared</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Select value={batchFilter} onValueChange={setBatchFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Batch" />
-          </SelectTrigger>
-          <SelectContent className="bg-white z-50">
-            <SelectItem value="all">All Batches</SelectItem>
-            <SelectItem value="unassigned">Unassigned</SelectItem>
-            {batchOptions.map(batch => (
-              <SelectItem key={batch.id} value={batch.id}>{batch.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("w-auto justify-start text-left font-normal h-10 text-sm", !(feeRangeFrom || feeRangeTo || totalFeeSort !== 'none') && "text-muted-foreground")}>
-              <DollarSign className="mr-2 h-4 w-4" />
-              {feeRangeFrom || feeRangeTo
-                ? `${feeRangeFrom || '0'} – ${feeRangeTo || '∞'}`
-                : totalFeeSort !== 'none'
-                  ? totalFeeSort === 'low_to_high' ? 'Low → High' : 'High → Low'
-                  : 'Fee Amount'}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64 p-4 pointer-events-auto space-y-3" align="start" sideOffset={4}>
-            <p className="text-sm font-medium text-foreground">Fee Amount Range</p>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                placeholder="From"
-                value={feeRangeFrom}
-                onChange={(e) => setFeeRangeFrom(e.target.value)}
-                className="h-9 text-sm"
-                min="0"
-              />
-              <span className="text-muted-foreground text-sm">–</span>
-              <Input
-                type="number"
-                placeholder="To"
-                value={feeRangeTo}
-                onChange={(e) => setFeeRangeTo(e.target.value)}
-                className="h-9 text-sm"
-                min="0"
-              />
-            </div>
-            <div className="border-t pt-2">
-              <p className="text-sm font-medium text-foreground mb-2">Sort</p>
-              <Select value={totalFeeSort} onValueChange={setTotalFeeSort}>
-                <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Sort order" />
-                </SelectTrigger>
-                <SelectContent className="bg-white z-50">
-                  <SelectItem value="none">No sorting</SelectItem>
-                  <SelectItem value="low_to_high">Lowest to Highest</SelectItem>
-                  <SelectItem value="high_to_low">Highest to Lowest</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-xs"
-              onClick={() => { setFeeRangeFrom(''); setFeeRangeTo(''); setTotalFeeSort('none'); }}
-            >
-              Clear
-            </Button>
-          </PopoverContent>
-        </Popover>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className={cn("w-auto justify-start text-left font-normal h-10 text-sm", !(joinDateRange.from || joinDateRange.to) && "text-muted-foreground")}>
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {joinDateRange.from && joinDateRange.to
-                ? `${format(joinDateRange.from, 'dd MMM')} – ${format(joinDateRange.to, 'dd MMM yyyy')}`
-                : joinDateRange.from
-                  ? `From ${format(joinDateRange.from, 'dd MMM yyyy')}`
-                  : 'Joining Date'}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 pointer-events-auto" align="start" sideOffset={4}>
-            <Calendar
-              mode="range"
-              defaultMonth={joinDateRange.from}
-              selected={joinDateRange.from ? { from: joinDateRange.from, to: joinDateRange.to } : undefined}
-              onSelect={(range: any) => {
-                if (!range) {
-                  setJoinDateRange({});
-                } else {
-                  setJoinDateRange({ from: range.from, to: range.to });
-                }
-              }}
-              disabled={(date) => date > new Date()}
-              numberOfMonths={1}
-              initialFocus
-              className="p-3 pointer-events-auto"
-            />
-            {(joinDateRange.from || joinDateRange.to) && (
-              <div className="p-3 pt-0">
-                <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setJoinDateRange({})}>
-                  Clear dates
-                </Button>
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setLmsStatusFilter('all');
+              setFeesStructureFilter('all');
+              setInvoiceFilter('all');
+              setBatchFilter('all');
+              setTotalFeeSort('none');
+              setFeeRangeFrom('');
+              setFeeRangeTo('');
+              setJoinDateRange({});
+              setEnrollmentFilter([]);
+              setSearchTerm('');
+            }}
+            className="text-muted-foreground hover:text-foreground text-xs"
+          >
+            Clear all filters
+          </Button>
+        )}
       </div>
+
+      {/* Collapsible Filter Panel */}
+      {filtersOpen && (
+        <Card className="animate-fade-in">
+          <CardContent className="pt-4 pb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {/* LMS Status */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">LMS Status</Label>
+                <Select value={lmsStatusFilter} onValueChange={setLmsStatusFilter}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="LMS Status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="all">All LMS Status</SelectItem>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="suspended">Suspended</SelectItem>
+                    <SelectItem value="dropout">Dropout</SelectItem>
+                    <SelectItem value="complete">Complete</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Fees Structure */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Installments</Label>
+                <Select value={feesStructureFilter} onValueChange={setFeesStructureFilter}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Fees Structure" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="all">All Installments</SelectItem>
+                    {installmentOptions.map(option => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Invoice Status */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Fees Status</Label>
+                <Select value={invoiceFilter} onValueChange={setInvoiceFilter}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Invoice Status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="all">All Fees Status</SelectItem>
+                    <SelectItem value="no_invoice">No Invoice</SelectItem>
+                    <SelectItem value="fees_due">Fees Due</SelectItem>
+                    <SelectItem value="fees_overdue">Fees Overdue</SelectItem>
+                    <SelectItem value="fees_cleared">Fees Cleared</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Batch */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Batch</Label>
+                <Select value={batchFilter} onValueChange={setBatchFilter}>
+                  <SelectTrigger className="h-9 text-sm">
+                    <SelectValue placeholder="Batch" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background z-50">
+                    <SelectItem value="all">All Batches</SelectItem>
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                    {batchOptions.map(batch => (
+                      <SelectItem key={batch.id} value={batch.id}>{batch.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Course / Pathway Filter */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label className="text-xs font-medium text-muted-foreground">Course / Pathway Enrollment</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-between text-left font-normal h-9 text-sm", enrollmentFilter.length === 0 && "text-muted-foreground")}>
+                      <span className="truncate">
+                        {enrollmentFilter.length === 0
+                          ? 'All Courses & Pathways'
+                          : `${enrollmentFilter.length} selected`}
+                      </span>
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0 bg-background z-50" align="start">
+                    <ScrollArea className="h-72">
+                      <div className="p-2">
+                        {/* None option */}
+                        <div
+                          className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer"
+                          onClick={() => {
+                            setEnrollmentFilter(prev =>
+                              prev.includes('none') ? prev.filter(f => f !== 'none') : [...prev, 'none']
+                            );
+                          }}
+                        >
+                          <Checkbox checked={enrollmentFilter.includes('none')} />
+                          <span className="text-sm font-medium text-muted-foreground italic">No enrollment</span>
+                        </div>
+
+                        {/* Pathways group */}
+                        {allPathways.length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 mt-2">
+                              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Pathways</span>
+                            </div>
+                            {allPathways.map(p => (
+                              <div
+                                key={`pathway:${p.id}`}
+                                className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer"
+                                onClick={() => {
+                                  const key = `pathway:${p.id}`;
+                                  setEnrollmentFilter(prev =>
+                                    prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
+                                  );
+                                }}
+                              >
+                                <Checkbox checked={enrollmentFilter.includes(`pathway:${p.id}`)} />
+                                <span className="text-sm">{p.name}</span>
+                              </div>
+                            ))}
+                          </>
+                        )}
+
+                        {/* Courses group */}
+                        {allCourses.length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 mt-2">
+                              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Courses</span>
+                            </div>
+                            {allCourses.map(c => (
+                              <div
+                                key={`course:${c.id}`}
+                                className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer"
+                                onClick={() => {
+                                  const key = `course:${c.id}`;
+                                  setEnrollmentFilter(prev =>
+                                    prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
+                                  );
+                                }}
+                              >
+                                <Checkbox checked={enrollmentFilter.includes(`course:${c.id}`)} />
+                                <span className="text-sm">{c.title}</span>
+                              </div>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    </ScrollArea>
+                    {enrollmentFilter.length > 0 && (
+                      <div className="border-t p-2">
+                        <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setEnrollmentFilter([])}>
+                          Clear selection
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Fee Amount */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Fee Amount</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-9 text-sm", !(feeRangeFrom || feeRangeTo || totalFeeSort !== 'none') && "text-muted-foreground")}>
+                      <DollarSign className="mr-2 h-4 w-4" />
+                      {feeRangeFrom || feeRangeTo
+                        ? `${feeRangeFrom || '0'} – ${feeRangeTo || '∞'}`
+                        : totalFeeSort !== 'none'
+                          ? totalFeeSort === 'low_to_high' ? 'Low → High' : 'High → Low'
+                          : 'Fee Amount'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-4 pointer-events-auto space-y-3 bg-background z-50" align="start" sideOffset={4}>
+                    <p className="text-sm font-medium text-foreground">Fee Amount Range</p>
+                    <div className="flex items-center gap-2">
+                      <Input type="number" placeholder="From" value={feeRangeFrom} onChange={(e) => setFeeRangeFrom(e.target.value)} className="h-9 text-sm" min="0" />
+                      <span className="text-muted-foreground text-sm">–</span>
+                      <Input type="number" placeholder="To" value={feeRangeTo} onChange={(e) => setFeeRangeTo(e.target.value)} className="h-9 text-sm" min="0" />
+                    </div>
+                    <div className="border-t pt-2">
+                      <p className="text-sm font-medium text-foreground mb-2">Sort</p>
+                      <Select value={totalFeeSort} onValueChange={setTotalFeeSort}>
+                        <SelectTrigger className="h-9 text-sm">
+                          <SelectValue placeholder="Sort order" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background z-50">
+                          <SelectItem value="none">No sorting</SelectItem>
+                          <SelectItem value="low_to_high">Lowest to Highest</SelectItem>
+                          <SelectItem value="high_to_low">Highest to Lowest</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => { setFeeRangeFrom(''); setFeeRangeTo(''); setTotalFeeSort('none'); }}>Clear</Button>
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Joining Date */}
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Joining Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-start text-left font-normal h-9 text-sm", !(joinDateRange.from || joinDateRange.to) && "text-muted-foreground")}>
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {joinDateRange.from && joinDateRange.to
+                        ? `${format(joinDateRange.from, 'dd MMM')} – ${format(joinDateRange.to, 'dd MMM yyyy')}`
+                        : joinDateRange.from
+                          ? `From ${format(joinDateRange.from, 'dd MMM yyyy')}`
+                          : 'Joining Date'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 pointer-events-auto bg-background z-50" align="start" sideOffset={4}>
+                    <Calendar
+                      mode="range"
+                      defaultMonth={joinDateRange.from}
+                      selected={joinDateRange.from ? { from: joinDateRange.from, to: joinDateRange.to } : undefined}
+                      onSelect={(range: any) => {
+                        if (!range) { setJoinDateRange({}); } else { setJoinDateRange({ from: range.from, to: range.to }); }
+                      }}
+                      disabled={(date) => date > new Date()}
+                      numberOfMonths={1}
+                      initialFocus
+                      className="p-3 pointer-events-auto"
+                    />
+                    {(joinDateRange.from || joinDateRange.to) && (
+                      <div className="p-3 pt-0">
+                        <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setJoinDateRange({})}>Clear dates</Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Bulk Actions - Sticky toolbar */}
       {selectedStudents.size > 0 && (
