@@ -453,6 +453,7 @@ export function StudentDashboard() {
       try {
         const now = new Date().toISOString();
         // Build query for upcoming sessions matching student's enrollment
+        // Sessions can use batch_id (legacy) or batch_ids JSONB array (new multi-batch)
         let sessionQuery = supabase
           .from('success_sessions')
           .select('id, title, start_time, mentor_name, link, description')
@@ -465,9 +466,14 @@ export function StudentDashboard() {
 
         // Filter by batch if enrolled, otherwise by course
         if (currentBatchId) {
-          sessionQuery = sessionQuery.eq('batch_id', currentBatchId);
+          // Match sessions via legacy batch_id OR batch_ids JSONB array, OR global sessions (both null)
+          sessionQuery = sessionQuery.or(
+            `batch_id.eq.${currentBatchId},batch_ids.cs.["${currentBatchId}"],and(batch_id.is.null,batch_ids.is.null)`
+          );
         } else if (activeCourse?.id) {
-          sessionQuery = sessionQuery.eq('course_id', activeCourse.id);
+          sessionQuery = sessionQuery.or(
+            `course_id.eq.${activeCourse.id},and(course_id.is.null,batch_id.is.null,batch_ids.is.null)`
+          );
         }
 
         const { data: sessionData } = await sessionQuery;
