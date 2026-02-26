@@ -1682,18 +1682,32 @@ export function StudentsManagement() {
   };
   const handleExportCSV = async () => {
     const batchNameMap = new Map(batchOptions.map(b => [b.id, b.name]));
+    const courseNameMap = new Map(allCourses.map(c => [c.id, c.title]));
+    const pathwayNameMap = new Map(allPathways.map(p => [p.id, p.name]));
 
-    // Fetch all activity logs and notes for displayed students
     const studentIds = displayStudents.map(s => s.id);
-    let allLogs: any[] = [];
-    if (studentIds.length > 0) {
-      const { data: logsData } = await supabase
-        .from('user_activity_logs')
-        .select('user_id, activity_type, metadata, occurred_at')
-        .in('user_id', studentIds)
-        .order('occurred_at', { ascending: true });
-      allLogs = logsData || [];
-    }
+    const studentRecordIds = displayStudents.map(s => s.student_record_id).filter(Boolean) as string[];
+
+    // Parallel fetch: activity logs, assignments, recordings watched, enrollments
+    const [logsRes, assignmentsRes, recordingsRes, enrollmentsRes] = await Promise.all([
+      studentIds.length > 0
+        ? supabase.from('user_activity_logs').select('user_id, activity_type, metadata, occurred_at').in('user_id', studentIds).order('occurred_at', { ascending: true })
+        : Promise.resolve({ data: [] }),
+      studentRecordIds.length > 0
+        ? (supabase as any).from('student_assignments').select('student_id, status').in('student_id', studentRecordIds)
+        : Promise.resolve({ data: [] }),
+      studentRecordIds.length > 0
+        ? (supabase as any).from('student_recordings').select('student_id').in('student_id', studentRecordIds)
+        : Promise.resolve({ data: [] }),
+      studentRecordIds.length > 0
+        ? supabase.from('course_enrollments').select('student_id, course_id, pathway_id, batch_id, status').in('student_id', studentRecordIds).eq('status', 'active')
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const allLogs = logsRes.data || [];
+    const allAssignments = assignmentsRes.data || [];
+    const allRecordings = recordingsRes.data || [];
+    const allEnrollments = enrollmentsRes.data || [];
 
     // Resolve creator names for notes/suspensions
     const creatorIds = [...new Set(allLogs.map(l => {
@@ -1702,19 +1716,35 @@ export function StudentsManagement() {
     }).filter(Boolean))];
     let creatorMap: Record<string, string> = {};
     if (creatorIds.length > 0) {
-      const { data: creators } = await supabase
-        .from('users')
-        .select('id, full_name')
-        .in('id', creatorIds);
+      const { data: creators } = await supabase.from('users').select('id, full_name').in('id', creatorIds);
       creatorMap = Object.fromEntries((creators || []).map(c => [c.id, c.full_name]));
     }
 
-    // Group logs by student
+    // Group data by student
     const logsByStudent = new Map<string, any[]>();
     allLogs.forEach(log => {
       const list = logsByStudent.get(log.user_id) || [];
       list.push(log);
       logsByStudent.set(log.user_id, list);
+    });
+
+    const assignmentsByStudent = new Map<string, any[]>();
+    allAssignments.forEach(a => {
+      const list = assignmentsByStudent.get(a.student_id) || [];
+      list.push(a);
+      assignmentsByStudent.set(a.student_id, list);
+    });
+
+    const recordingCountByStudent = new Map<string, number>();
+    allRecordings.forEach(r => {
+      recordingCountByStudent.set(r.student_id, (recordingCountByStudent.get(r.student_id) || 0) + 1);
+    });
+
+    const enrollmentsByStudent = new Map<string, any[]>();
+    allEnrollments.forEach(e => {
+      const list = enrollmentsByStudent.get(e.student_id) || [];
+      list.push(e);
+      enrollmentsByStudent.set(e.student_id, list);
     });
 
     const escCsv = (val: string) => `"${String(val || '').replace(/"/g, '""')}"`;
@@ -1724,9 +1754,35 @@ export function StudentsManagement() {
       const payments = installmentPayments.get(key) || [];
       const totalFees = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
       const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
+      const remainingAmount = totalFees - paidAmount;
       const installmentCount = payments.length || '';
       const batchIds = studentBatchMap.get(student.id) || [];
       const batchNames = batchIds.map(id => batchNameMap.get(id) || id).join('; ');
+
+      // Invoice details
+      const latestInvoice = payments.length > 0 ? payments[payments.length - 1] : null;
+      const invoiceStatus = latestInvoice ? latestInvoice.status : 'No Invoice';
+      const invoiceDueDate = latestInvoice?.due_date || '';
+
+      // Assignments
+      const studentAssignments = assignmentsByStudent.get(key) || [];
+      const totalSubmitted = studentAssignments.length;
+      const approved = studentAssignments.filter(a => a.status === 'approved').length;
+      const declined = studentAssignments.filter(a => a.status === 'declined' || a.status === 'rejected').length;
+
+      // Recordings watched
+      const recordingsWatched = recordingCountByStudent.get(key) || 0;
+
+      // Course/Pathway access
+      const enrollments = enrollmentsByStudent.get(key) || [];
+      const courseAccess = enrollments
+        .filter(e => e.course_id && !e.pathway_id)
+        .map(e => courseNameMap.get(e.course_id) || e.course_id)
+        .join('; ');
+      const pathwayAccess = enrollments
+        .filter(e => e.pathway_id)
+        .map(e => pathwayNameMap.get(e.pathway_id) || e.pathway_id)
+        .join('; ');
 
       const studentLogs = logsByStudent.get(student.id) || [];
 
@@ -1766,16 +1822,29 @@ export function StudentsManagement() {
         escCsv(student.full_name || ''),
         escCsv(student.email || ''),
         escCsv(student.phone || ''),
-        escCsv(batchNames || 'Unassigned'),
         escCsv(String(installmentCount)),
+        escCsv(student.lms_status || ''),
+        escCsv(student.created_at ? format(new Date(student.created_at), 'yyyy-MM-dd') : ''),
         escCsv(String(totalFees)),
         escCsv(String(paidAmount)),
+        escCsv(String(remainingAmount)),
+        escCsv(invoiceStatus),
+        escCsv(invoiceDueDate),
+        escCsv(student.lms_user_id || ''),
+        escCsv(student.password_display || ''),
+        escCsv(String(totalSubmitted)),
+        escCsv(String(approved)),
+        escCsv(String(declined)),
+        escCsv(String(recordingsWatched)),
+        escCsv(courseAccess || 'None'),
+        escCsv(pathwayAccess || 'None'),
+        escCsv(batchNames || 'Unassigned'),
         escCsv(activitySummary),
         escCsv(notesSummary),
       ].join(',');
     });
 
-    const header = 'Student ID,Name,Email,Phone,Batch,Installments,Total Fees,Paid Amount,Activity Logs,Admin Notes';
+    const header = 'Student ID,Name,Email,Phone,Installments,LMS Status,Joining Date,Total Fee Amount,Total Paid,Remaining to Pay,Invoice Status,Invoice Due Date,LMS ID,LMS Password,Assignments Submitted,Assignments Approved,Assignments Declined,Recordings Watched,Course Access,Pathway Access,Batch,Activity Logs,Admin Notes';
     const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -1784,7 +1853,7 @@ export function StudentsManagement() {
     a.download = `students-export-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: 'Export Complete', description: `Exported ${displayStudents.length} students with activity logs to CSV` });
+    toast({ title: 'Export Complete', description: `Exported ${displayStudents.length} students with all details to CSV` });
   };
 
   if (loading) {
