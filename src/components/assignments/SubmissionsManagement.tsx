@@ -8,11 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle, XCircle, Eye, MessageSquare, Clock, FileText, BookOpen } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, MessageSquare, Clock, FileText, BookOpen, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourses } from '@/hooks/useCourses';
 import { logUserActivity, ACTIVITY_TYPES } from '@/lib/activity-logger';
+import { Input } from '@/components/ui/input';
+import { useDebounce } from '@/hooks/useDebounce';
 
 interface Submission {
   id: string;
@@ -54,6 +56,18 @@ export function SubmissionsManagement({
   const [reviewNotes, setReviewNotes] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCourse, setFilterCourse] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const filteredSubmissions = submissions.filter(s => {
+    if (!debouncedSearch) return true;
+    const q = debouncedSearch.toLowerCase();
+    return (
+      s.student?.full_name?.toLowerCase().includes(q) ||
+      s.student?.email?.toLowerCase().includes(q) ||
+      s.student?.student_id?.toLowerCase().includes(q)
+    );
+  });
 
   useEffect(() => {
     fetchSubmissions();
@@ -341,6 +355,17 @@ export function SubmissionsManagement({
           <p className="text-muted-foreground mt-1">Manage assignment submissions and their assignments</p>
         </div>
         <div className="flex gap-3 flex-wrap">
+          {/* Search input */}
+          <div className="relative w-[260px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, email, or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+
           {/* Course filter for multi-course mode */}
           {isMultiCourseEnabled && enrolledCourses.length > 1 && (
             <Select value={filterCourse} onValueChange={setFilterCourse}>
@@ -386,7 +411,7 @@ export function SubmissionsManagement({
         </div>
         
         <div className="overflow-x-auto">
-          {submissions.length === 0 ? <div className="text-center py-12">
+          {filteredSubmissions.length === 0 ? <div className="text-center py-12">
               <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="w-8 h-8 text-muted-foreground" />
               </div>
@@ -405,7 +430,7 @@ export function SubmissionsManagement({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {submissions.map(submission => <TableRow key={submission.id} className="table-row-hover">
+                {filteredSubmissions.map(submission => <TableRow key={submission.id} className="table-row-hover">
                     <TableCell className="bg-white">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
