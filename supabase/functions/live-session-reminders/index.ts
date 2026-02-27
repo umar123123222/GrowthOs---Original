@@ -136,6 +136,40 @@ serve(async (req) => {
       }
     }
 
+    // ── Auto-update success_sessions status ──
+    // Mark upcoming → live (start_time has passed)
+    const { data: toLive } = await supabase
+      .from('success_sessions')
+      .update({ status: 'live' })
+      .eq('status', 'upcoming')
+      .lte('start_time', now.toISOString())
+      .select('id');
+
+    // Mark live → completed (end_time has passed, fallback start_time + 1hr)
+    const { data: liveSessions } = await supabase
+      .from('success_sessions')
+      .select('id, start_time, end_time')
+      .eq('status', 'live');
+
+    let completedCount = 0;
+    if (liveSessions?.length) {
+      const toComplete = liveSessions.filter(s => {
+        const start = new Date(s.start_time);
+        const end = s.end_time ? new Date(s.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
+        return now >= end;
+      });
+      if (toComplete.length > 0) {
+        const ids = toComplete.map(s => s.id);
+        await supabase
+          .from('success_sessions')
+          .update({ status: 'completed' })
+          .in('id', ids);
+        completedCount = toComplete.length;
+      }
+    }
+
+    (results as any).sessions_made_live = toLive?.length || 0;
+    (results as any).sessions_completed = completedCount;
     return new Response(JSON.stringify({ success: true, results }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },

@@ -451,20 +451,16 @@ export function StudentDashboard() {
       // Fetch upcoming live session for this student's batch/course
       const currentBatchId = fetchedBatchId;
       try {
-        const now = new Date().toISOString();
-        // Build query for upcoming sessions matching student's enrollment
-        // Sessions can use batch_id (legacy) or batch_ids JSONB array (new multi-batch)
-        // Show sessions that are upcoming OR currently live (started within the last 2 hours)
-        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+        // Show sessions that are upcoming OR currently live (until their end_time, fallback start+1hr)
+        const nowDate = new Date();
         let sessionQuery = supabase
           .from('success_sessions')
           .select('id, title, start_time, end_time, mentor_name, link, description, status')
           .in('status', ['upcoming', 'live'])
-          .gt('start_time', twoHoursAgo)
           .not('link', 'is', null)
           .neq('link', '')
           .order('start_time', { ascending: true })
-          .limit(3);
+          .limit(5);
 
         // Filter by batch if enrolled, otherwise by course
         if (currentBatchId) {
@@ -480,15 +476,19 @@ export function StudentDashboard() {
 
         const { data: sessionData } = await sessionQuery;
         if (sessionData && sessionData.length > 0) {
-          // Pick the best session: prefer one that's currently live, then the next upcoming
-          const now = new Date();
-          const liveSession = sessionData.find((s: any) => {
+          // Filter client-side: only show sessions that haven't ended yet
+          const validSessions = sessionData.filter((s: any) => {
             const start = new Date(s.start_time);
             const end = s.end_time ? new Date(s.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
-            return start <= now && now <= end;
+            return nowDate < end; // still ongoing or upcoming
           });
-          const upcomingSes = sessionData.find((s: any) => new Date(s.start_time) > now);
-          setUpcomingSession(liveSession || upcomingSes || sessionData[0]);
+          // Prefer currently-live session, then next upcoming
+          const liveSession = validSessions.find((s: any) => {
+            const start = new Date(s.start_time);
+            return start <= nowDate;
+          });
+          const upcomingSes = validSessions.find((s: any) => new Date(s.start_time) > nowDate);
+          setUpcomingSession(liveSession || upcomingSes || null);
         } else {
           setUpcomingSession(null);
         }
