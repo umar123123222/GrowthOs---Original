@@ -454,15 +454,17 @@ export function StudentDashboard() {
         const now = new Date().toISOString();
         // Build query for upcoming sessions matching student's enrollment
         // Sessions can use batch_id (legacy) or batch_ids JSONB array (new multi-batch)
+        // Show sessions that are upcoming OR currently live (started within the last 2 hours)
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
         let sessionQuery = supabase
           .from('success_sessions')
-          .select('id, title, start_time, mentor_name, link, description')
-          .gt('start_time', now)
-          .eq('status', 'upcoming')
+          .select('id, title, start_time, end_time, mentor_name, link, description, status')
+          .in('status', ['upcoming', 'live'])
+          .gt('start_time', twoHoursAgo)
           .not('link', 'is', null)
           .neq('link', '')
           .order('start_time', { ascending: true })
-          .limit(1);
+          .limit(3);
 
         // Filter by batch if enrolled, otherwise by course
         if (currentBatchId) {
@@ -478,7 +480,15 @@ export function StudentDashboard() {
 
         const { data: sessionData } = await sessionQuery;
         if (sessionData && sessionData.length > 0) {
-          setUpcomingSession(sessionData[0]);
+          // Pick the best session: prefer one that's currently live, then the next upcoming
+          const now = new Date();
+          const liveSession = sessionData.find((s: any) => {
+            const start = new Date(s.start_time);
+            const end = s.end_time ? new Date(s.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
+            return start <= now && now <= end;
+          });
+          const upcomingSes = sessionData.find((s: any) => new Date(s.start_time) > now);
+          setUpcomingSession(liveSession || upcomingSes || sessionData[0]);
         } else {
           setUpcomingSession(null);
         }
@@ -585,7 +595,9 @@ export function StudentDashboard() {
                   <Video className="w-5 h-5 text-violet-600" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-violet-600 uppercase tracking-wide">Upcoming Live Session</p>
+                  <p className="text-xs font-medium text-violet-600 uppercase tracking-wide">
+                    {new Date(upcomingSession.start_time) <= new Date() ? '🔴 Live Now' : 'Upcoming Live Session'}
+                  </p>
                   <h3 className="text-base sm:text-lg font-semibold truncate">{upcomingSession.title}</h3>
                   <p className="text-sm text-muted-foreground">
                     {format(new Date(upcomingSession.start_time), 'EEEE, MMM dd · h:mm a')}
