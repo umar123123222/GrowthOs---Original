@@ -96,6 +96,7 @@ const MentorCalendarPage = lazy(() => import("./pages/MentorCalendarPage"));
 const AdminNotifications = lazy(() => import("./pages/AdminNotifications"));
 const DevSendNotification = lazy(() => import("./pages/DevSendNotification"));
 const Catalog = lazy(() => import("./pages/Catalog"));
+const Certificates = lazy(() => import("./pages/Certificates"));
 const SupportDetails = lazy(() => import("./pages/SupportDetails"));
 
 
@@ -240,6 +241,7 @@ const App = () => {
                     
                     {/* Shared routes */}
                     <Route path="catalog" element={<Catalog />} />
+                    <Route path="certificates" element={<Certificates />} />
                     <Route path="videos" element={<Videos />} />
                     <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
                     <Route path="video-player" element={<VideoPlayer />} />
@@ -253,8 +255,16 @@ const App = () => {
                     <Route path="connect" element={<Connect />} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="notifications" element={<Notifications />} />
-                    <Route path="teams" element={<Teams />} />
-                    <Route path="students" element={<StudentsManagement />} />
+                    <Route path="teams" element={
+                      <RoleGuard allowedRoles={["admin", "superadmin"]}>
+                        <Teams />
+                      </RoleGuard>
+                    } />
+                    <Route path="students" element={
+                      <RoleGuard allowedRoles={["admin", "superadmin", "enrollment_manager"]}>
+                        <StudentsManagement />
+                      </RoleGuard>
+                    } />
                     <Route path="shopify-dashboard" element={<ShopifyDashboard />} />
                     <Route path="meta-ads-dashboard" element={<MetaAdsDashboard />} />
                     
