@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useProgressTracker } from "@/hooks/useProgressTracker";
 import { useActivePathwayAccess } from "@/hooks/useActivePathwayAccess";
@@ -14,7 +15,7 @@ import { CourseSelector } from "@/components/courses/CourseSelector";
 import { PathwayProgressCard } from "@/components/courses/PathwayProgressCard";
 import { BatchPathwayView } from "@/components/videos/BatchPathwayView";
 import { RecordingRow } from "@/components/videos/RecordingRow";
-import { Play, BookOpen, ChevronDown, ChevronRight, Lock } from "lucide-react";
+import { Play, BookOpen, ChevronDown, ChevronRight, Lock, Search, X } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -64,6 +65,7 @@ const Videos = () => {
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set());
   const [userLMSStatus, setUserLMSStatus] = useState<string>("active");
   const [isAdvancing, setIsAdvancing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Pathway-grouped recordings for pathway students
   const {
@@ -149,6 +151,36 @@ const Videos = () => {
 
   const loading = coursesLoading || recordingsLoading || pathwayLoading || (isInPathwayMode && pathwayRecordingsLoading);
 
+  const totalRecordings = modules.reduce((sum, module) => sum + module.recordings.length, 0);
+  const watchedRecordings = modules.reduce((sum, module) => sum + module.watchedLessons, 0);
+
+  // Filter modules/recordings by search query
+  const query = searchQuery.trim().toLowerCase();
+
+  const filteredModules = useMemo(() => {
+    if (!query) return modules;
+    return modules
+      .map((module) => {
+        const matchingRecordings = module.recordings.filter(
+          (r: any) => r.title?.toLowerCase().includes(query)
+        );
+        const moduleMatches = module.title?.toLowerCase().includes(query);
+        if (moduleMatches) return module; // show full module if title matches
+        if (matchingRecordings.length > 0) return { ...module, recordings: matchingRecordings };
+        return null;
+      })
+      .filter(Boolean) as typeof modules;
+  }, [modules, query]);
+
+  // Auto-expand modules when searching
+  const effectiveExpanded = useMemo(() => {
+    if (query) return new Set(filteredModules.map((m) => m.id));
+    return expandedModules;
+  }, [query, filteredModules, expandedModules]);
+
+  const showCourseSelector = !isInPathwayMode && isMultiCourseEnabled && enrolledCourses.length > 1;
+  const showCourseGroupedView = isInPathwayMode && pathwayCourseGroups.length > 0;
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -156,12 +188,6 @@ const Videos = () => {
       </div>
     );
   }
-
-  const totalRecordings = modules.reduce((sum, module) => sum + module.recordings.length, 0);
-  const watchedRecordings = modules.reduce((sum, module) => sum + module.watchedLessons, 0);
-
-  const showCourseSelector = !isInPathwayMode && isMultiCourseEnabled && enrolledCourses.length > 1;
-  const showCourseGroupedView = isInPathwayMode && pathwayCourseGroups.length > 0;
 
   return (
     <RoleGuard allowedRoles={["student", "admin", "mentor", "superadmin"]}>
@@ -186,6 +212,27 @@ const Videos = () => {
             />
           )}
         </div>
+
+        {/* Search bar */}
+        {!showCourseGroupedView && (
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search lessons or modules..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 pr-9"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        )}
 
         {/* COURSE-GROUPED VIEW: Show Course > Module > Recording for pathway students */}
         {showCourseGroupedView ? (
@@ -241,21 +288,31 @@ const Videos = () => {
               </Card>
             )}
 
-            {modules.length === 0 ? (
+            {filteredModules.length === 0 ? (
               <Card className="shadow-medium border-border/50">
                 <CardContent className="p-8 text-center">
                   <div className="text-muted-foreground">
-                    <Play className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <h3 className="text-lg font-medium mb-2 text-foreground">No Video Lessons Available</h3>
-                    <p>Check back later for new lessons or contact your instructor.</p>
+                    {query ? (
+                      <>
+                        <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <h3 className="text-lg font-medium mb-2 text-foreground">No Results Found</h3>
+                        <p>No lessons match "{searchQuery}". Try a different search term.</p>
+                      </>
+                    ) : (
+                      <>
+                        <Play className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <h3 className="text-lg font-medium mb-2 text-foreground">No Video Lessons Available</h3>
+                        <p>Check back later for new lessons or contact your instructor.</p>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ) : (
               <div className="space-y-4">
-                {modules.map((module) => (
+                {filteredModules.map((module) => (
                   <Card key={module.id} className="shadow-lg border-0 bg-gradient-to-br from-card to-muted/20">
-                    <Collapsible open={expandedModules.has(module.id)} onOpenChange={() => toggleModule(module.id)}>
+                    <Collapsible open={effectiveExpanded.has(module.id)} onOpenChange={() => toggleModule(module.id)}>
                       <CollapsibleTrigger asChild>
                         <CardHeader className="cursor-pointer hover:bg-muted/30 transition-colors border-b">
                           <div className="flex items-center justify-between">
