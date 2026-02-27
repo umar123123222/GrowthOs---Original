@@ -207,7 +207,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
-        .in('status', ['upcoming', 'completed'])
+        .in('status', ['upcoming', 'live', 'completed'])
         .not('link', 'is', null)
         .neq('link', '')
         .order('start_time', { ascending: true });
@@ -221,12 +221,18 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       const now = new Date();
       const enrolledDate = enrolledAt ? new Date(enrolledAt) : undefined;
 
-      const upcoming = (data || []).filter(session => new Date(session.start_time) >= now);
+      // Upcoming & live: session hasn't ended yet (use end_time or fallback start+1hr)
+      const upcoming = (data || []).filter(session => {
+        const start = new Date(session.start_time);
+        const end = session.end_time ? new Date(session.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
+        return end > now;
+      });
+      // Past: session has ended and is after enrollment date
       const pastSessions = (data || []).filter(session => {
-        const sessionEnd = new Date(session.end_time);
-        const sessionStart = new Date(session.start_time);
-        if (sessionEnd >= now) return false;
-        if (enrolledDate && sessionStart < enrolledDate) return false;
+        const start = new Date(session.start_time);
+        const end = session.end_time ? new Date(session.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
+        if (end >= now) return false;
+        if (enrolledDate && start < enrolledDate) return false;
         return true;
       });
       

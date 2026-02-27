@@ -68,11 +68,6 @@ const NavigationItems = memo(({
       label: "Live Sessions",
       roles: ['student', 'admin', 'superadmin', 'mentor']
     }, {
-      to: "/mentorship",
-      icon: Users,
-      label: "Mentorship",
-      roles: ['student', 'mentor']
-    }, {
       to: "/teams",
       icon: Users,
       label: "Teams",
