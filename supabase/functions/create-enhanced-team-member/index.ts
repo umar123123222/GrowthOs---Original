@@ -93,7 +93,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Validate role
-    if (!['admin', 'mentor', 'enrollment_manager'].includes(role)) {
+    if (!['admin', 'mentor', 'enrollment_manager', 'support_member'].includes(role)) {
       return new Response(
         JSON.stringify({ success: false, error: 'Invalid role for team member' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
