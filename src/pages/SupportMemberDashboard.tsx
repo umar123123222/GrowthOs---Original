@@ -251,7 +251,7 @@ function SupportMemberDashboardContent() {
         </Card>
       </div>
 
-      <ContentScheduleCalendar />
+      <ContentScheduleCalendar readOnly />
     </div>
   );
 }
