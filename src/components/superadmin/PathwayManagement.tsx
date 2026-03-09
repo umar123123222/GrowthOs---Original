@@ -48,7 +48,7 @@ interface Course {
   title: string;
 }
 
-export function PathwayManagement() {
+export function PathwayManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [pathways, setPathways] = useState<LearningPathway[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
@@ -472,7 +472,7 @@ export function PathwayManagement() {
           <h2 className="text-2xl font-bold">Learning Pathways</h2>
           <p className="text-muted-foreground">Create structured learning paths with multiple courses</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
+        {!readOnly && <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
@@ -636,7 +636,7 @@ export function PathwayManagement() {
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       <Card>
@@ -647,7 +647,7 @@ export function PathwayManagement() {
                 <TableHead>Name</TableHead>
                 <TableHead>Courses</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {!readOnly && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -688,7 +688,7 @@ export function PathwayManagement() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    {!readOnly && <TableCell>
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
@@ -722,7 +722,7 @@ export function PathwayManagement() {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    </TableCell>
+                    </TableCell>}
                   </TableRow>
                 ))
               )}

@@ -53,12 +53,13 @@ interface Course {
 }
 
 // Sortable Module Row Component
-function SortableModuleRow({ module, index, onEdit, onDelete, courses }: {
+function SortableModuleRow({ module, index, onEdit, onDelete, courses, readOnly }: {
   module: Module;
   index: number;
   onEdit: (module: Module) => void;
   onDelete: (id: string) => void;
   courses: Course[];
+  readOnly?: boolean;
 }) {
   const {
     attributes,
@@ -111,7 +112,7 @@ function SortableModuleRow({ module, index, onEdit, onDelete, courses }: {
           {module.recording_count} recordings
         </Badge>
       </TableCell>
-      <TableCell>
+      {!readOnly && <TableCell>
         <div className="flex space-x-2">
           <Button
             variant="outline"
@@ -130,7 +131,7 @@ function SortableModuleRow({ module, index, onEdit, onDelete, courses }: {
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
-      </TableCell>
+      </TableCell>}
     </TableRow>
   );
 }
@@ -185,7 +186,7 @@ function SortableRecordingBadge({ recording, onRemove }: {
   );
 }
 
-export function ModulesManagement() {
+export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [modules, setModules] = useState<Module[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -590,7 +591,7 @@ export function ModulesManagement() {
           <p className="text-muted-foreground mt-1 text-lg">Manage course modules and their recordings</p>
         </div>
         
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        {!readOnly && <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button 
               onClick={resetForm}
@@ -757,7 +758,7 @@ export function ModulesManagement() {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
@@ -814,7 +815,7 @@ export function ModulesManagement() {
                     <TableHead className="font-semibold">Course</TableHead>
                     <TableHead className="font-semibold">Order</TableHead>
                     <TableHead className="font-semibold">Recordings</TableHead>
-                    <TableHead className="font-semibold">Actions</TableHead>
+                    {!readOnly && <TableHead className="font-semibold">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -826,6 +827,7 @@ export function ModulesManagement() {
                       onEdit={handleEdit}
                       onDelete={handleDelete}
                       courses={courses}
+                      readOnly={readOnly}
                     />
                   ))}
                 </TableBody>
@@ -845,7 +847,7 @@ export function ModulesManagement() {
                       <TableHead className="font-semibold">Course</TableHead>
                       <TableHead className="font-semibold">Order</TableHead>
                       <TableHead className="font-semibold">Recordings</TableHead>
-                      <TableHead className="font-semibold">Actions</TableHead>
+                      {!readOnly && <TableHead className="font-semibold">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -861,6 +863,7 @@ export function ModulesManagement() {
                           onEdit={handleEdit}
                           onDelete={handleDelete}
                           courses={courses}
+                          readOnly={readOnly}
                         />
                       ))}
                     </SortableContext>

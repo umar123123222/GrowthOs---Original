@@ -44,7 +44,7 @@ interface Course {
   id: string;
   title: string;
 }
-export function AssignmentManagement() {
+export function AssignmentManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const {
     user
   } = useAuth();
@@ -247,7 +247,7 @@ export function AssignmentManagement() {
             {user?.role === 'mentor' ? 'View and edit assignments' : 'Manage assignment assignments and their assignments'}
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {!readOnly && <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={openCreateDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-medium">
               <Plus className="w-4 h-4 mr-2" />
@@ -343,7 +343,7 @@ export function AssignmentManagement() {
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       {/* All Assignments Section */}
@@ -397,7 +397,7 @@ export function AssignmentManagement() {
                   <TableHead className="font-semibold">Linked With</TableHead>
                   <TableHead className="font-semibold">Due Days</TableHead>
                   <TableHead className="font-semibold">Type</TableHead>
-                  <TableHead className="font-semibold">Actions</TableHead>
+                  {!readOnly && <TableHead className="font-semibold">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -423,7 +423,7 @@ export function AssignmentManagement() {
                       <TableCell className="bg-white">
                         <span className="capitalize">{assignment.submission_type || 'text'}</span>
                       </TableCell>
-                      <TableCell className="bg-white">
+                      {!readOnly && <TableCell className="bg-white">
                         <div className="flex items-center space-x-2">
                           <Button variant="outline" size="sm" onClick={() => handleEdit(assignment)} className="hover:bg-gray-50">
                             <Edit className="w-4 h-4" />
@@ -434,7 +434,7 @@ export function AssignmentManagement() {
                             </Button>
                           )}
                         </div>
-                      </TableCell>
+                      </TableCell>}
                     </TableRow>
                   );
                 })}

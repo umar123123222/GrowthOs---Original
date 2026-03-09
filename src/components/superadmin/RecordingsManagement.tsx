@@ -81,7 +81,8 @@ function SortableRecordingRow({
   onDelete,
   onRefresh,
   onView,
-  courses
+  courses,
+  readOnly
 }: {
   recording: Recording;
   index: number;
@@ -92,6 +93,7 @@ function SortableRecordingRow({
   onRefresh: () => void;
   onView: (recording: Recording) => void;
   courses: Course[];
+  readOnly?: boolean;
 }) {
   const {
     attributes,
@@ -155,7 +157,7 @@ function SortableRecordingRow({
           >
             <Eye className="w-4 h-4" />
           </Button>
-          <Button
+          {!readOnly && <Button
             variant="outline"
             size="sm"
             onClick={() => onEdit(recording)}
@@ -163,8 +165,8 @@ function SortableRecordingRow({
             title="Edit recording"
           >
             <Edit className="w-4 h-4" />
-          </Button>
-          <Button
+          </Button>}
+          {!readOnly && <Button
             variant="outline"
             size="sm"
             onClick={() => onDelete(recording.id)}
@@ -172,7 +174,7 @@ function SortableRecordingRow({
             title="Delete recording"
           >
             <Trash2 className="w-4 h-4" />
-          </Button>
+          </Button>}
         </div>
       </div>
       
@@ -220,7 +222,7 @@ function SortableRecordingRow({
   );
 }
 
-export function RecordingsManagement() {
+export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -619,7 +621,7 @@ export function RecordingsManagement() {
           </h2>
           <p className="text-muted-foreground mt-1 text-lg">Manage video recordings and their assignments</p>
         </div>
-        <div className="flex gap-3">
+        {!readOnly && <div className="flex gap-3">
           <Button 
             onClick={handleSyncAllUsersUnlocks}
             disabled={syncingUnlocks}
@@ -893,7 +895,7 @@ export function RecordingsManagement() {
             </form>
           </DialogContent>
           </Dialog>
-        </div>
+        </div>}
       </div>
 
       <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
@@ -996,7 +998,7 @@ export function RecordingsManagement() {
                 <div className="text-center">Course</div>
                 <div className="text-center">Duration</div>
                 <div className="text-center">Order</div>
-                <div className="text-center">Actions</div>
+                {!readOnly && <div className="text-center">Actions</div>}
               </div>
               
               {/* Body */}
@@ -1022,6 +1024,7 @@ export function RecordingsManagement() {
                         onRefresh={fetchRecordings}
                         onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
                         courses={courses}
+                        readOnly={readOnly}
                       />
                     ))}
                   </SortableContext>

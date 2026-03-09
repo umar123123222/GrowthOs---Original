@@ -47,7 +47,7 @@ interface Course {
   mentors?: MentorAssignment[];
 }
 
-export function CourseManagement() {
+export function CourseManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -432,7 +432,7 @@ export function CourseManagement() {
           <h2 className="text-2xl font-bold">Course Management</h2>
           <p className="text-muted-foreground">Create and manage courses for your students</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
+        {!readOnly && <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
@@ -598,7 +598,7 @@ export function CourseManagement() {
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       <Card>
@@ -612,7 +612,7 @@ export function CourseManagement() {
                 <TableHead>Mentor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Order</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {!readOnly && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -676,7 +676,7 @@ export function CourseManagement() {
                         ) : (
                           <span className="text-muted-foreground text-sm">No mentor</span>
                         )}
-                        <Button
+                        {!readOnly && <Button
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
@@ -687,7 +687,7 @@ export function CourseManagement() {
                           title="Assign mentor"
                         >
                           <Plus className="w-3 h-3" />
-                        </Button>
+                        </Button>}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -713,7 +713,7 @@ export function CourseManagement() {
                     <TableCell>
                       <Badge variant="outline">{course.sequence_order || 0}</Badge>
                     </TableCell>
-                    <TableCell>
+                    {!readOnly && <TableCell>
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
@@ -751,7 +751,7 @@ export function CourseManagement() {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    </TableCell>
+                    </TableCell>}
                   </TableRow>
                 ))
               )}
