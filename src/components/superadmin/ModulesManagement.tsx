@@ -112,7 +112,7 @@ function SortableModuleRow({ module, index, onEdit, onDelete, courses, readOnly 
           {module.recording_count} recordings
         </Badge>
       </TableCell>
-      <TableCell>
+      {!readOnly && <TableCell>
         <div className="flex space-x-2">
           <Button
             variant="outline"
@@ -131,7 +131,7 @@ function SortableModuleRow({ module, index, onEdit, onDelete, courses, readOnly 
             <Trash2 className="w-4 h-4" />
           </Button>
         </div>
-      </TableCell>
+      </TableCell>}
     </TableRow>
   );
 }
