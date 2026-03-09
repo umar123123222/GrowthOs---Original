@@ -472,7 +472,7 @@ export function PathwayManagement({ readOnly = false }: { readOnly?: boolean } =
           <h2 className="text-2xl font-bold">Learning Pathways</h2>
           <p className="text-muted-foreground">Create structured learning paths with multiple courses</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
+        {!readOnly && <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
