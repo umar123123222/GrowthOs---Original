@@ -48,7 +48,7 @@ interface Course {
   title: string;
 }
 
-export function PathwayManagement() {
+export function PathwayManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [pathways, setPathways] = useState<LearningPathway[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
