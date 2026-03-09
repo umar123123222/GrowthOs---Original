@@ -186,7 +186,7 @@ function SortableRecordingBadge({ recording, onRemove }: {
   );
 }
 
-export function ModulesManagement() {
+export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [modules, setModules] = useState<Module[]>([]);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
