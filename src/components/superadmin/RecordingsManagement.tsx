@@ -220,7 +220,7 @@ function SortableRecordingRow({
   );
 }
 
-export function RecordingsManagement() {
+export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
