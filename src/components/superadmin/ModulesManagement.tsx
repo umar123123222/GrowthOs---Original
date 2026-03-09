@@ -591,7 +591,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
           <p className="text-muted-foreground mt-1 text-lg">Manage course modules and their recordings</p>
         </div>
         
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        {!readOnly && <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button 
               onClick={resetForm}
