@@ -676,7 +676,7 @@ export function CourseManagement({ readOnly = false }: { readOnly?: boolean } = 
                         ) : (
                           <span className="text-muted-foreground text-sm">No mentor</span>
                         )}
-                        <Button
+                        {!readOnly && <Button
                           variant="ghost"
                           size="sm"
                           className="h-6 w-6 p-0"
@@ -687,7 +687,7 @@ export function CourseManagement({ readOnly = false }: { readOnly?: boolean } = 
                           title="Assign mentor"
                         >
                           <Plus className="w-3 h-3" />
-                        </Button>
+                        </Button>}
                       </div>
                     </TableCell>
                     <TableCell>
