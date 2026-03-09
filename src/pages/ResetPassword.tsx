@@ -51,14 +51,24 @@ const ResetPassword = () => {
 
     const handlePasswordResetToken = async () => {
       try {
+        // Capture full URL for diagnostics BEFORE anything clears it
+        const fullUrl = window.location.href;
         const urlParams = new URLSearchParams(window.location.search);
         const hashStr = window.location.hash.substring(1);
         const hashParams = new URLSearchParams(hashStr);
+
+        console.log('[ResetPassword] Full URL on mount:', fullUrl);
+        console.log('[ResetPassword] Search params:', window.location.search);
+        console.log('[ResetPassword] Hash params:', window.location.hash);
+        console.log('[ResetPassword] All search keys:', Array.from(urlParams.keys()));
+        console.log('[ResetPassword] All hash keys:', Array.from(hashParams.keys()));
 
         // Check for error parameters (Supabase redirects with these when link is expired/invalid)
         const error = urlParams.get('error') || hashParams.get('error');
         const errorCode = urlParams.get('error_code') || hashParams.get('error_code');
         const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+        
+        console.log('[ResetPassword] Error:', error, 'Code:', errorCode, 'Desc:', errorDescription);
 
         if (error || errorCode === 'otp_expired') {
           const desc = errorDescription || 'Email link is invalid or has expired';
