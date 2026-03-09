@@ -619,6 +619,30 @@ const Layout = memo(({
         href: "/support-member?tab=support",
         icon: MessageSquare
       }, {
+        name: "Courses",
+        href: "/superadmin?tab=courses",
+        icon: BookOpen
+      }, {
+        name: "Pathways",
+        href: "/superadmin?tab=pathways",
+        icon: Route
+      }, {
+        name: "Modules",
+        href: "/superadmin?tab=modules",
+        icon: Layers
+      }, {
+        name: "Recordings",
+        href: "/superadmin?tab=recordings",
+        icon: Video
+      }, {
+        name: "Assignments",
+        href: "/superadmin?tab=assignments",
+        icon: FileText
+      }, {
+        name: "Submissions",
+        href: "/superadmin?tab=submissions",
+        icon: MessageSquare
+      }, {
         name: "Live Sessions",
         href: "/live-sessions",
         icon: Calendar
