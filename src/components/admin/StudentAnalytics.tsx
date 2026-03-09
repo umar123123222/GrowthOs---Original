@@ -199,10 +199,12 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
-          <TabsTrigger value="payments" className="gap-2">
-            <DollarSign className="h-4 w-4" />
-            Payments
-          </TabsTrigger>
+          {!hidePayments && (
+            <TabsTrigger value="payments" className="gap-2">
+              <DollarSign className="h-4 w-4" />
+              Payments
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
