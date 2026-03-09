@@ -598,7 +598,7 @@ export function CourseManagement({ readOnly = false }: { readOnly?: boolean } = 
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       <Card>
