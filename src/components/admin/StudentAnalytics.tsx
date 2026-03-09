@@ -32,7 +32,11 @@ interface OverviewStats {
   videos_watched_today: number;
   assignments_submitted_today: number;
 }
-export const StudentAnalytics = () => {
+interface StudentAnalyticsProps {
+  hidePayments?: boolean;
+}
+
+export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps) => {
   const [students, setStudents] = useState<StudentAnalytics[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'engagement' | 'payments' | string>('overview');
   const [currentPage, setCurrentPage] = useState(1);
