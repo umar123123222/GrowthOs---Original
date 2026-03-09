@@ -612,7 +612,7 @@ export function CourseManagement({ readOnly = false }: { readOnly?: boolean } = 
                 <TableHead>Mentor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Order</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {!readOnly && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
