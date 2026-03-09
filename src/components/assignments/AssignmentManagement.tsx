@@ -343,7 +343,7 @@ export function AssignmentManagement({ readOnly = false }: { readOnly?: boolean 
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       {/* All Assignments Section */}

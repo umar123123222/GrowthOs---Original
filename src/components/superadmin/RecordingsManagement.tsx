@@ -893,7 +893,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
             </form>
           </DialogContent>
           </Dialog>
-        </div>
+        </div>}
       </div>
 
       <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">

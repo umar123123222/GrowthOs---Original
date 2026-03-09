@@ -636,7 +636,7 @@ export function PathwayManagement({ readOnly = false }: { readOnly?: boolean } =
               </DialogFooter>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       <Card>

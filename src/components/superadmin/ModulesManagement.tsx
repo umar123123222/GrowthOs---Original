@@ -758,7 +758,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
               </div>
             </form>
           </DialogContent>
-        </Dialog>
+        </Dialog>}
       </div>
 
       <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
