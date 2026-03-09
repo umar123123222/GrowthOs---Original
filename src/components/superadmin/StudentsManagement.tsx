@@ -78,6 +78,7 @@ export function StudentsManagement() {
   const {
     user
   } = useAuth();
+  const isSupportMember = user?.role === 'support_member';
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
