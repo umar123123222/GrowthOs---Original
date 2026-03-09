@@ -2339,17 +2339,19 @@ export function StudentsManagement() {
             <Table className="w-full min-w-[900px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12 pl-6">
-                    <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
-                  </TableHead>
+                  {!isSupportMember && (
+                    <TableHead className="w-12 pl-6">
+                      <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
+                    </TableHead>
+                  )}
                   <TableHead>Student ID</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Fees Structure</TableHead>
+                  {!isSupportMember && <TableHead>Email</TableHead>}
+                  {!isSupportMember && <TableHead>Phone</TableHead>}
+                  {!isSupportMember && <TableHead>Fees Structure</TableHead>}
                   <TableHead>LMS Status</TableHead>
                   <TableHead>Created By</TableHead>
-                  <TableHead className="pr-6">Actions</TableHead>
+                  {!isSupportMember && <TableHead className="pr-6">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
