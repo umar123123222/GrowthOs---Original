@@ -827,6 +827,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
                       onEdit={handleEdit}
                       onDelete={handleDelete}
                       courses={courses}
+                      readOnly={readOnly}
                     />
                   ))}
                 </TableBody>
