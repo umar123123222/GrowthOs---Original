@@ -40,15 +40,15 @@ export default function SupportMemberDashboard() {
       case 'analytics':
         return <StudentAnalytics hidePayments />;
       case 'courses':
-        return <CourseManagement />;
+        return <CourseManagement readOnly />;
       case 'pathways':
-        return <PathwayManagement />;
+        return <PathwayManagement readOnly />;
       case 'modules':
-        return <ModulesManagement />;
+        return <ModulesManagement readOnly />;
       case 'recordings':
-        return <RecordingsManagement />;
+        return <RecordingsManagement readOnly />;
       case 'assignments':
-        return <AssignmentManagement />;
+        return <AssignmentManagement readOnly />;
       case 'submissions':
         return <SubmissionsManagement />;
       default:
