@@ -32,7 +32,7 @@ export default function SupportMemberDashboard() {
       case 'support':
         return <SupportManagement />;
       case 'analytics':
-        return <StudentAnalytics />;
+        return <StudentAnalytics hidePayments />;
       default:
         return <SupportMemberDashboardContent />;
     }
