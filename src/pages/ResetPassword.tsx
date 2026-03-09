@@ -29,6 +29,19 @@ const ResetPassword = () => {
 
   // Check if we're in password reset mode (user clicked link from email)
   useEffect(() => {
+    // Listen for auth state changes FIRST (before async work)
+    // so we don't miss the PASSWORD_RECOVERY event
+    const {
+      data: {
+        subscription
+      }
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsResetMode(true);
+        setIsCheckingToken(false);
+      }
+    });
+
     const handlePasswordResetToken = async () => {
       try {
         // Check for error parameters FIRST (Supabase redirects with these when link is expired/invalid)
@@ -47,7 +60,6 @@ const ResetPassword = () => {
         if (error || hashError || errorCode === 'otp_expired' || hashErrorCode === 'otp_expired') {
           const description = errorDescription || hashErrorDescription || 'Email link is invalid or has expired';
           setLinkError(decodeURIComponent(description.replace(/\+/g, ' ')));
-          // Clean up URL
           window.history.replaceState({}, document.title, window.location.pathname);
           setIsCheckingToken(false);
           return;
@@ -62,7 +74,6 @@ const ResetPassword = () => {
           const { data: sessionData } = await supabase.auth.getSession();
           
           if (sessionData.session) {
-            // Session was already established by auto-detection
             setIsResetMode(true);
             window.history.replaceState({}, document.title, window.location.pathname);
             setIsCheckingToken(false);
@@ -74,7 +85,6 @@ const ResetPassword = () => {
           
           if (error) {
             console.error('Code exchange error:', error);
-            // One more check - session might have been set by onAuthStateChange
             const { data: retrySession } = await supabase.auth.getSession();
             if (retrySession.session) {
               setIsResetMode(true);
@@ -102,6 +112,20 @@ const ResetPassword = () => {
         
         if (accessToken && type === 'recovery') {
           setIsResetMode(true);
+          setIsCheckingToken(false);
+          return;
+        }
+
+        // No code or hash params found — detectSessionInUrl may have already
+        // consumed the code before React mounted. Check if a recovery session
+        // was already established.
+        const { data: existingSession } = await supabase.auth.getSession();
+        if (existingSession.session) {
+          // We're on /reset-password with an active session but no code in URL —
+          // this means the PKCE code was already auto-exchanged.
+          setIsResetMode(true);
+          setIsCheckingToken(false);
+          return;
         }
         
         setIsCheckingToken(false);
@@ -114,17 +138,6 @@ const ResetPassword = () => {
 
     handlePasswordResetToken();
 
-    // Listen for auth state changes (for when user clicks email link)
-    const {
-      data: {
-        subscription
-      }
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        setIsResetMode(true);
-        setIsCheckingToken(false);
-      }
-    });
     return () => subscription.unsubscribe();
   }, []);
   const handleRequestReset = async (e: React.FormEvent) => {
