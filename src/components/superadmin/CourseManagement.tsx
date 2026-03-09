@@ -432,7 +432,7 @@ export function CourseManagement({ readOnly = false }: { readOnly?: boolean } = 
           <h2 className="text-2xl font-bold">Course Management</h2>
           <p className="text-muted-foreground">Create and manage courses for your students</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
+        {!readOnly && <Dialog open={dialogOpen} onOpenChange={(open) => {
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
