@@ -29,110 +29,114 @@ const ResetPassword = () => {
 
   // Check if we're in password reset mode (user clicked link from email)
   useEffect(() => {
-    // Listen for auth state changes FIRST (before async work)
-    // so we don't miss the PASSWORD_RECOVERY event
+    let resolved = false;
+    const markResolved = (mode: boolean, error?: string) => {
+      if (resolved) return;
+      resolved = true;
+      if (error) setLinkError(error);
+      if (mode) setIsResetMode(true);
+      setIsCheckingToken(false);
+    };
+
+    // Listen for PASSWORD_RECOVERY event from Supabase auto-exchange
     const {
-      data: {
-        subscription
-      }
+      data: { subscription }
     } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('[ResetPassword] Auth event:', event);
       if (event === 'PASSWORD_RECOVERY') {
-        setIsResetMode(true);
-        setIsCheckingToken(false);
+        window.history.replaceState({}, document.title, window.location.pathname);
+        markResolved(true);
       }
     });
 
     const handlePasswordResetToken = async () => {
       try {
-        // Check for error parameters FIRST (Supabase redirects with these when link is expired/invalid)
         const urlParams = new URLSearchParams(window.location.search);
-        const error = urlParams.get('error');
-        const errorCode = urlParams.get('error_code');
-        const errorDescription = urlParams.get('error_description');
-        
-        // Also check hash for error parameters
-        const errorHashParams = new URLSearchParams(window.location.hash.substring(1));
-        const hashError = errorHashParams.get('error');
-        const hashErrorCode = errorHashParams.get('error_code');
-        const hashErrorDescription = errorHashParams.get('error_description');
-        
-        // If any error is present, show the error message
-        if (error || hashError || errorCode === 'otp_expired' || hashErrorCode === 'otp_expired') {
-          const description = errorDescription || hashErrorDescription || 'Email link is invalid or has expired';
-          setLinkError(decodeURIComponent(description.replace(/\+/g, ' ')));
+        const hashStr = window.location.hash.substring(1);
+        const hashParams = new URLSearchParams(hashStr);
+
+        // Check for error parameters (Supabase redirects with these when link is expired/invalid)
+        const error = urlParams.get('error') || hashParams.get('error');
+        const errorCode = urlParams.get('error_code') || hashParams.get('error_code');
+        const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+
+        if (error || errorCode === 'otp_expired') {
+          const desc = errorDescription || 'Email link is invalid or has expired';
           window.history.replaceState({}, document.title, window.location.pathname);
-          setIsCheckingToken(false);
-          return;
-        }
-        
-        // Check for PKCE code in query parameters (modern Supabase format)
-        const code = urlParams.get('code');
-        
-        if (code) {
-          // The Supabase client with detectSessionInUrl:true may already be exchanging
-          // the code automatically. First check if a session already exists.
-          const { data: sessionData } = await supabase.auth.getSession();
-          
-          if (sessionData.session) {
-            setIsResetMode(true);
-            window.history.replaceState({}, document.title, window.location.pathname);
-            setIsCheckingToken(false);
-            return;
-          }
-          
-          // Try manual exchange as fallback
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
-          
-          if (error) {
-            console.error('Code exchange error:', error);
-            const { data: retrySession } = await supabase.auth.getSession();
-            if (retrySession.session) {
-              setIsResetMode(true);
-              window.history.replaceState({}, document.title, window.location.pathname);
-              setIsCheckingToken(false);
-              return;
-            }
-            setLinkError("This password reset link has expired or is invalid. Please request a new one.");
-            setIsCheckingToken(false);
-            return;
-          }
-          
-          if (data.session) {
-            setIsResetMode(true);
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
-          setIsCheckingToken(false);
-          return;
-        }
-        
-        // Check for hash parameters (legacy format)
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token');
-        const type = hashParams.get('type');
-        
-        if (accessToken && type === 'recovery') {
-          setIsResetMode(true);
-          setIsCheckingToken(false);
+          markResolved(false, decodeURIComponent(desc.replace(/\+/g, ' ')));
           return;
         }
 
-        // No code or hash params found — detectSessionInUrl may have already
-        // consumed the code before React mounted. Check if a recovery session
-        // was already established.
-        const { data: existingSession } = await supabase.auth.getSession();
-        if (existingSession.session) {
-          // We're on /reset-password with an active session but no code in URL —
-          // this means the PKCE code was already auto-exchanged.
-          setIsResetMode(true);
-          setIsCheckingToken(false);
+        // Check for hash-based recovery token (legacy implicit flow)
+        const accessToken = hashParams.get('access_token');
+        const type = hashParams.get('type');
+        if (accessToken && type === 'recovery') {
+          markResolved(true);
           return;
         }
-        
-        setIsCheckingToken(false);
-      } catch (error) {
-        console.error('Token handling error:', error);
-        setLinkError("An error occurred while processing your reset link. Please try again.");
-        setIsCheckingToken(false);
+
+        const code = urlParams.get('code');
+
+        if (code) {
+          // detectSessionInUrl:true means Supabase client is already trying to
+          // exchange this code in the background. Give it time to finish, then
+          // check if a session was established. We poll a few times rather than
+          // calling exchangeCodeForSession ourselves (which would race/conflict).
+          console.log('[ResetPassword] Code found in URL, waiting for auto-exchange...');
+          
+          for (let attempt = 0; attempt < 8; attempt++) {
+            await new Promise(r => setTimeout(r, 500));
+            if (resolved) return; // PASSWORD_RECOVERY event already fired
+            
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData.session) {
+              console.log('[ResetPassword] Session found after auto-exchange');
+              window.history.replaceState({}, document.title, window.location.pathname);
+              markResolved(true);
+              return;
+            }
+          }
+
+          // Auto-exchange didn't work. Try manual exchange as last resort.
+          console.log('[ResetPassword] Auto-exchange timed out, trying manual exchange...');
+          const { data, error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
+          
+          if (exchangeErr) {
+            console.error('[ResetPassword] Manual exchange error:', exchangeErr);
+            // One more session check — maybe it was set despite the error
+            const { data: lastCheck } = await supabase.auth.getSession();
+            if (lastCheck.session) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+              markResolved(true);
+              return;
+            }
+            window.history.replaceState({}, document.title, window.location.pathname);
+            markResolved(false, "This password reset link has expired or is invalid. Please request a new one.");
+            return;
+          }
+
+          if (data.session) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            markResolved(true);
+          } else {
+            markResolved(false, "This password reset link has expired or is invalid. Please request a new one.");
+          }
+          return;
+        }
+
+        // No code or hash params — check for existing session (code may have
+        // been consumed before React mounted)
+        const { data: existingSession } = await supabase.auth.getSession();
+        if (existingSession.session) {
+          markResolved(true);
+          return;
+        }
+
+        // No recovery indicators at all — show request form
+        markResolved(false);
+      } catch (err) {
+        console.error('[ResetPassword] Token handling error:', err);
+        markResolved(false, "An error occurred while processing your reset link. Please try again.");
       }
     };
 
