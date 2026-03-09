@@ -247,7 +247,7 @@ export function AssignmentManagement({ readOnly = false }: { readOnly?: boolean 
             {user?.role === 'mentor' ? 'View and edit assignments' : 'Manage assignment assignments and their assignments'}
           </p>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        {!readOnly && <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={openCreateDialog} className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-medium">
               <Plus className="w-4 h-4 mr-2" />
