@@ -307,21 +307,15 @@ export function ContentScheduleCalendar({ readOnly = false }: { readOnly?: boole
           const hasBatchIds = batchIdsArray.length > 0;
           const hasLegacyBatchId = !!session.batch_id;
 
+          // Only show sessions where this batch was explicitly selected
           let sessionMatchesBatch = false;
 
           if (hasLegacyBatchId) {
-            // Legacy: single batch_id match
             sessionMatchesBatch = session.batch_id === batch.id;
           } else if (hasBatchIds) {
-            // New: check batch_ids array
             sessionMatchesBatch = batchIdsArray.includes(batch.id);
-          } else if (session.course_id && courseIds.includes(session.course_id)) {
-            // Course-level session (no batch targeting) — show for matching batches
-            sessionMatchesBatch = true;
-          } else if (!session.course_id) {
-            // Global session — show for all batches
-            sessionMatchesBatch = true;
           }
+          // Sessions without any batch assignment are NOT shown on batch-specific calendars
 
           if (!sessionMatchesBatch) return;
           
