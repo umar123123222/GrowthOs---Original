@@ -308,13 +308,10 @@ export function ContentScheduleCalendar({ readOnly = false }: { readOnly?: boole
           const hasLegacyBatchId = !!session.batch_id;
 
           // Only show sessions where this batch was explicitly selected
-          let sessionMatchesBatch = false;
-
-          if (hasLegacyBatchId) {
-            sessionMatchesBatch = session.batch_id === batch.id;
-          } else if (hasBatchIds) {
-            sessionMatchesBatch = batchIdsArray.includes(batch.id);
-          }
+          // Check both legacy batch_id AND batch_ids array (session may have both)
+          const matchesLegacy = hasLegacyBatchId && session.batch_id === batch.id;
+          const matchesBatchIds = hasBatchIds && batchIdsArray.includes(batch.id);
+          const sessionMatchesBatch = matchesLegacy || matchesBatchIds;
           // Sessions without any batch assignment are NOT shown on batch-specific calendars
 
           if (!sessionMatchesBatch) return;
