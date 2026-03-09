@@ -2350,10 +2350,11 @@ export function StudentsManagement() {
                   <TableHead>Name</TableHead>
                   {!isSupportMember && <TableHead>Email</TableHead>}
                   {!isSupportMember && <TableHead>Phone</TableHead>}
+                  <TableHead>Batch</TableHead>
                   {!isSupportMember && <TableHead>Fees Structure</TableHead>}
                   <TableHead>LMS Status</TableHead>
                   <TableHead>Created By</TableHead>
-                  {!isSupportMember && <TableHead className="pr-6">Actions</TableHead>}
+                  <TableHead className="pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -2368,6 +2369,16 @@ export function StudentsManagement() {
                       <TableCell className="whitespace-normal break-words">{student.full_name}</TableCell>
                       {!isSupportMember && <TableCell className="whitespace-normal break-words">{student.email}</TableCell>}
                       {!isSupportMember && <TableCell className="whitespace-normal break-words">{student.phone || 'N/A'}</TableCell>}
+                      <TableCell className="whitespace-normal break-words">
+                        {(() => {
+                          const batchIds = studentBatchMap.get(student.id) || [];
+                          if (batchIds.length === 0) return <span className="text-muted-foreground text-xs">Unassigned</span>;
+                          return batchIds.map(bid => {
+                            const found = batchOptions.find(b => b.id === bid);
+                            return found?.name || bid;
+                          }).join(', ');
+                        })()}
+                      </TableCell>
                       {!isSupportMember && <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>}
                         <TableCell>
                            <div className="flex flex-wrap gap-2">
@@ -2386,33 +2397,62 @@ export function StudentsManagement() {
                            </div>
                          </TableCell>
                          <TableCell>{student.creator?.full_name || 'System'}</TableCell>
-                         {!isSupportMember && (
                          <TableCell className="pr-6">
                            <div className="flex space-x-1">
-                              <Button variant="outline" size="sm" onClick={() => {
-                        if (user?.role === 'admin' || user?.role === 'superadmin') {
-                          handleEditStudent(student);
-                        } else {
-                          toast({
-                            title: "Access Denied",
-                            description: "Only admins and superadmins can edit student details.",
-                            variant: "destructive"
-                          });
-                        }
-                      }} title="Edit Student Details" className="hover-scale hover:border-blue-300 hover:text-blue-600">
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            <Button variant="outline" size="sm" onClick={() => toggleRowExpansion(student.id)} title={expandedRows.has(student.id) ? "Collapse" : "Expand"} className="hover-scale hover:border-green-300 hover:text-green-600">
-                              {expandedRows.has(student.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </Button>
-                          </div>
-                        </TableCell>
-                         )}
+                             {!isSupportMember && (
+                               <Button variant="outline" size="sm" onClick={() => {
+                                 if (user?.role === 'admin' || user?.role === 'superadmin') {
+                                   handleEditStudent(student);
+                                 } else {
+                                   toast({
+                                     title: "Access Denied",
+                                     description: "Only admins and superadmins can edit student details.",
+                                     variant: "destructive"
+                                   });
+                                 }
+                               }} title="Edit Student Details" className="hover-scale hover:border-blue-300 hover:text-blue-600">
+                                 <Edit className="w-4 h-4" />
+                               </Button>
+                             )}
+                             <Button variant="outline" size="sm" onClick={() => toggleRowExpansion(student.id)} title={expandedRows.has(student.id) ? "Collapse" : "Expand"} className="hover-scale hover:border-green-300 hover:text-green-600">
+                               {expandedRows.has(student.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                             </Button>
+                           </div>
+                         </TableCell>
                       </TableRow>];
                 if (expandedRows.has(student.id)) {
+                  const expandedColSpan = isSupportMember ? 6 : 9;
                   rowElements.push(<TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
-                         <TableCell colSpan={9} className="w-full bg-gradient-to-r from-slate-50 to-blue-50 p-0 border-l-4 border-l-blue-200">
+                         <TableCell colSpan={expandedColSpan} className="w-full bg-gradient-to-r from-slate-50 to-blue-50 p-0 border-l-4 border-l-blue-200">
                           <div className="w-full space-y-3 p-4 box-border">
+                            {isSupportMember ? (
+                              /* Support member: only show joining date and notes */
+                              <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Joining Date</Label>
+                                    <p className="text-sm text-foreground">{formatDate(student.created_at)}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">LMS Status</Label>
+                                    <Badge className={getLMSStatusColor(student.lms_status)}>
+                                      <div className="flex items-center">
+                                        {getLMSStatusIcon(student.lms_status)}
+                                        <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
+                                      </div>
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 pt-3 border-t border-blue-200">
+                                  <Button variant="outline" size="sm" onClick={() => { setSelectedStudentForNotes(student); setNotesDialogOpen(true); }} className="hover-scale hover:border-amber-300 hover:text-amber-600">
+                                    <MessageSquare className="w-4 h-4 mr-2" />
+                                    Notes
+                                  </Button>
+                                </div>
+                              </>
+                            ) : (
+                              /* Admin/Superadmin: full expanded view */
+                              <>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                               {/* Row 1: Joining Date, Fees Structure, Last Invoice Sent Date */}
                               <div>
@@ -2591,7 +2631,6 @@ export function StudentsManagement() {
                                         className="w-full justify-start text-sm"
                                         onClick={async () => {
                                           if (student.lms_status !== status) {
-                                            // For suspension, open the dialog
                                             if (status === 'suspended') {
                                               setStudentForSuspension(student);
                                               setSuspensionDialogOpen(true);
@@ -2705,6 +2744,8 @@ export function StudentsManagement() {
                                  </AlertDialogContent>
                                </AlertDialog>
                              </div>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>);
