@@ -380,7 +380,9 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
                       <span className="text-xs text-gray-500">Last active</span>
                     </div>
                     <span className="text-xs font-medium text-gray-700">
-                      {new Date(student.last_activity).toLocaleDateString()}
+                      {student.last_activity && !isNaN(new Date(student.last_activity).getTime())
+                        ? new Date(student.last_activity).toLocaleDateString()
+                        : 'Never'}
                     </span>
                   </div>
                 </CardContent>
