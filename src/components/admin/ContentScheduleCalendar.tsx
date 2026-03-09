@@ -292,10 +292,37 @@ export function ContentScheduleCalendar({ readOnly = false }: { readOnly?: boole
 
         // Map sessions to events
         (sessionsData || []).forEach(session => {
-          const sessionMatchesBatch = 
-            (session.batch_id && session.batch_id === batch.id) ||
-            (!session.batch_id && session.course_id && courseIds.includes(session.course_id)) ||
-            (!session.batch_id && !session.course_id);
+          // Check batch_ids JSONB array (newer field)
+          let batchIdsArray: string[] = [];
+          if (session.batch_ids) {
+            try {
+              if (Array.isArray(session.batch_ids)) {
+                batchIdsArray = session.batch_ids;
+              } else if (typeof session.batch_ids === 'string') {
+                batchIdsArray = JSON.parse(session.batch_ids);
+              }
+            } catch { /* ignore parse errors */ }
+          }
+
+          const hasBatchIds = batchIdsArray.length > 0;
+          const hasLegacyBatchId = !!session.batch_id;
+
+          let sessionMatchesBatch = false;
+
+          if (hasLegacyBatchId) {
+            // Legacy: single batch_id match
+            sessionMatchesBatch = session.batch_id === batch.id;
+          } else if (hasBatchIds) {
+            // New: check batch_ids array
+            sessionMatchesBatch = batchIdsArray.includes(batch.id);
+          } else if (session.course_id && courseIds.includes(session.course_id)) {
+            // Course-level session (no batch targeting) — show for matching batches
+            sessionMatchesBatch = true;
+          } else if (!session.course_id) {
+            // Global session — show for all batches
+            sessionMatchesBatch = true;
+          }
+
           if (!sessionMatchesBatch) return;
           
           const dripDays = (session as any).drip_days;
