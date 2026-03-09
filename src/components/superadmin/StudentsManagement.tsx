@@ -2399,24 +2399,31 @@ export function StudentsManagement() {
                          <TableCell>{student.creator?.full_name || 'System'}</TableCell>
                          <TableCell className="pr-6">
                            <div className="flex space-x-1">
-                             {!isSupportMember && (
-                               <Button variant="outline" size="sm" onClick={() => {
-                                 if (user?.role === 'admin' || user?.role === 'superadmin') {
-                                   handleEditStudent(student);
-                                 } else {
-                                   toast({
-                                     title: "Access Denied",
-                                     description: "Only admins and superadmins can edit student details.",
-                                     variant: "destructive"
-                                   });
-                                 }
-                               }} title="Edit Student Details" className="hover-scale hover:border-blue-300 hover:text-blue-600">
-                                 <Edit className="w-4 h-4" />
+                             {isSupportMember ? (
+                               <Button variant="outline" size="sm" onClick={() => { setSelectedStudentForNotes(student); setNotesDialogOpen(true); }} title="View Notes" className="hover-scale hover:border-amber-300 hover:text-amber-600">
+                                 <MessageSquare className="w-4 h-4 mr-1" />
+                                 Notes
                                </Button>
+                             ) : (
+                               <>
+                                 <Button variant="outline" size="sm" onClick={() => {
+                                   if (user?.role === 'admin' || user?.role === 'superadmin') {
+                                     handleEditStudent(student);
+                                   } else {
+                                     toast({
+                                       title: "Access Denied",
+                                       description: "Only admins and superadmins can edit student details.",
+                                       variant: "destructive"
+                                     });
+                                   }
+                                 }} title="Edit Student Details" className="hover-scale hover:border-blue-300 hover:text-blue-600">
+                                   <Edit className="w-4 h-4" />
+                                 </Button>
+                                 <Button variant="outline" size="sm" onClick={() => toggleRowExpansion(student.id)} title={expandedRows.has(student.id) ? "Collapse" : "Expand"} className="hover-scale hover:border-green-300 hover:text-green-600">
+                                   {expandedRows.has(student.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                                 </Button>
+                               </>
                              )}
-                             <Button variant="outline" size="sm" onClick={() => toggleRowExpansion(student.id)} title={expandedRows.has(student.id) ? "Collapse" : "Expand"} className="hover-scale hover:border-green-300 hover:text-green-600">
-                               {expandedRows.has(student.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                             </Button>
                            </div>
                          </TableCell>
                       </TableRow>];
