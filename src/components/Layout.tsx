@@ -619,25 +619,9 @@ const Layout = memo(({
         href: "/support-member?tab=support",
         icon: MessageSquare
       }, {
-        name: "Notifications",
-        href: "/notifications",
-        icon: Bell
-      }, {
-        name: "Messages",
-        href: "/messages",
-        icon: MessageCircle
-      }, {
         name: "Live Sessions",
         href: "/live-sessions",
         icon: Calendar
-      }, {
-        name: "Leaderboard",
-        href: "/leaderboard",
-        icon: Trophy
-      }, {
-        name: "Certificates",
-        href: "/certificates",
-        icon: GraduationCap
       }, {
         name: "Profile",
         href: "/profile",
