@@ -9,6 +9,12 @@ import { SupportManagement } from '@/components/superadmin/SupportManagement';
 import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
 import { supabase } from '@/integrations/supabase/client';
 import { ContentScheduleCalendar } from '@/components/admin/ContentScheduleCalendar';
+import { CourseManagement } from '@/components/superadmin/CourseManagement';
+import { PathwayManagement } from '@/components/superadmin/PathwayManagement';
+import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
+import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
+import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
+import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 
 interface DashboardStats {
   totalAdmins: number;
@@ -33,6 +39,18 @@ export default function SupportMemberDashboard() {
         return <SupportManagement />;
       case 'analytics':
         return <StudentAnalytics hidePayments />;
+      case 'courses':
+        return <CourseManagement />;
+      case 'pathways':
+        return <PathwayManagement />;
+      case 'modules':
+        return <ModulesManagement />;
+      case 'recordings':
+        return <RecordingsManagement />;
+      case 'assignments':
+        return <AssignmentManagement />;
+      case 'submissions':
+        return <SubmissionsManagement />;
       default:
         return <SupportMemberDashboardContent />;
     }
