@@ -87,6 +87,7 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
           email,
           status,
           created_at,
+          last_active_at,
           students!inner(
             enrollment_date,
             onboarding_completed
