@@ -2421,9 +2421,38 @@ export function StudentsManagement() {
                          </TableCell>
                       </TableRow>];
                 if (expandedRows.has(student.id)) {
+                  const expandedColSpan = isSupportMember ? 6 : 9;
                   rowElements.push(<TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
-                         <TableCell colSpan={9} className="w-full bg-gradient-to-r from-slate-50 to-blue-50 p-0 border-l-4 border-l-blue-200">
+                         <TableCell colSpan={expandedColSpan} className="w-full bg-gradient-to-r from-slate-50 to-blue-50 p-0 border-l-4 border-l-blue-200">
                           <div className="w-full space-y-3 p-4 box-border">
+                            {isSupportMember ? (
+                              /* Support member: only show joining date and notes */
+                              <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">Joining Date</Label>
+                                    <p className="text-sm text-foreground">{formatDate(student.created_at)}</p>
+                                  </div>
+                                  <div>
+                                    <Label className="text-sm font-medium text-muted-foreground">LMS Status</Label>
+                                    <Badge className={getLMSStatusColor(student.lms_status)}>
+                                      <div className="flex items-center">
+                                        {getLMSStatusIcon(student.lms_status)}
+                                        <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
+                                      </div>
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <div className="flex flex-wrap gap-2 pt-3 border-t border-blue-200">
+                                  <Button variant="outline" size="sm" onClick={() => { setSelectedStudentForNotes(student); setNotesDialogOpen(true); }} className="hover-scale hover:border-amber-300 hover:text-amber-600">
+                                    <MessageSquare className="w-4 h-4 mr-2" />
+                                    Notes
+                                  </Button>
+                                </div>
+                              </>
+                            ) : (
+                              /* Admin/Superadmin: full expanded view */
+                              <>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                               {/* Row 1: Joining Date, Fees Structure, Last Invoice Sent Date */}
                               <div>
@@ -2602,7 +2631,6 @@ export function StudentsManagement() {
                                         className="w-full justify-start text-sm"
                                         onClick={async () => {
                                           if (student.lms_status !== status) {
-                                            // For suspension, open the dialog
                                             if (status === 'suspended') {
                                               setStudentForSuspension(student);
                                               setSuspensionDialogOpen(true);
@@ -2716,6 +2744,8 @@ export function StudentsManagement() {
                                  </AlertDialogContent>
                                </AlertDialog>
                              </div>
+                              </>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>);
