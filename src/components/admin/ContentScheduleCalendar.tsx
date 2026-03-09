@@ -324,6 +324,8 @@ export function ContentScheduleCalendar({ readOnly = false }: { readOnly?: boole
             eventDate.setDate(eventDate.getDate() + dripDays);
           } else if (session.schedule_date) {
             eventDate = new Date(session.schedule_date);
+          } else if (session.start_time) {
+            eventDate = new Date(session.start_time);
           } else {
             return;
           }
