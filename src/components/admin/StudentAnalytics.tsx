@@ -588,7 +588,11 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {filteredStudents.sort((a, b) => new Date(b.last_activity).getTime() - new Date(a.last_activity).getTime()).slice(0, 5).map((student, index) => <div key={student.id} className="flex items-center space-x-3">
+                  {filteredStudents.sort((a, b) => {
+                    const dateA = a.last_activity ? new Date(a.last_activity).getTime() : 0;
+                    const dateB = b.last_activity ? new Date(b.last_activity).getTime() : 0;
+                    return dateB - dateA;
+                  }).slice(0, 5).map((student, index) => <div key={student.id} className="flex items-center space-x-3">
                         <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
                           {index + 1}
                         </div>
@@ -598,7 +602,9 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
                         <div className="flex-1">
                           <div className="font-medium text-sm">{student.full_name}</div>
                           <div className="text-xs text-gray-500">
-                            {new Date(student.last_activity).toLocaleDateString()}
+                            {student.last_activity && !isNaN(new Date(student.last_activity).getTime())
+                              ? new Date(student.last_activity).toLocaleDateString()
+                              : 'Never'}
                           </div>
                         </div>
                         <Badge variant="outline">{student.progress_percentage}%</Badge>
