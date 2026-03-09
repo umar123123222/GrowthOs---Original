@@ -713,7 +713,7 @@ export function CourseManagement({ readOnly = false }: { readOnly?: boolean } = 
                     <TableCell>
                       <Badge variant="outline">{course.sequence_order || 0}</Badge>
                     </TableCell>
-                    <TableCell>
+                    {!readOnly && <TableCell>
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"
@@ -751,7 +751,7 @@ export function CourseManagement({ readOnly = false }: { readOnly?: boolean } = 
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    </TableCell>
+                    </TableCell>}
                   </TableRow>
                 ))
               )}

@@ -846,7 +846,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
                       <TableHead className="font-semibold">Course</TableHead>
                       <TableHead className="font-semibold">Order</TableHead>
                       <TableHead className="font-semibold">Recordings</TableHead>
-                      <TableHead className="font-semibold">Actions</TableHead>
+                      {!readOnly && <TableHead className="font-semibold">Actions</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>

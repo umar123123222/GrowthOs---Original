@@ -423,7 +423,7 @@ export function AssignmentManagement({ readOnly = false }: { readOnly?: boolean 
                       <TableCell className="bg-white">
                         <span className="capitalize">{assignment.submission_type || 'text'}</span>
                       </TableCell>
-                      <TableCell className="bg-white">
+                      {!readOnly && <TableCell className="bg-white">
                         <div className="flex items-center space-x-2">
                           <Button variant="outline" size="sm" onClick={() => handleEdit(assignment)} className="hover:bg-gray-50">
                             <Edit className="w-4 h-4" />
@@ -434,7 +434,7 @@ export function AssignmentManagement({ readOnly = false }: { readOnly?: boolean 
                             </Button>
                           )}
                         </div>
-                      </TableCell>
+                      </TableCell>}
                     </TableRow>
                   );
                 })}

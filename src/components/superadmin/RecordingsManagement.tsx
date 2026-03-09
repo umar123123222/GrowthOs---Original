@@ -155,7 +155,7 @@ function SortableRecordingRow({
           >
             <Eye className="w-4 h-4" />
           </Button>
-          <Button
+          {!readOnly && <Button
             variant="outline"
             size="sm"
             onClick={() => onEdit(recording)}
@@ -163,8 +163,8 @@ function SortableRecordingRow({
             title="Edit recording"
           >
             <Edit className="w-4 h-4" />
-          </Button>
-          <Button
+          </Button>}
+          {!readOnly && <Button
             variant="outline"
             size="sm"
             onClick={() => onDelete(recording.id)}
@@ -172,7 +172,7 @@ function SortableRecordingRow({
             title="Delete recording"
           >
             <Trash2 className="w-4 h-4" />
-          </Button>
+          </Button>}
         </div>
       </div>
       
