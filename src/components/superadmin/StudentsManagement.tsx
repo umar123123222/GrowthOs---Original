@@ -2237,7 +2237,7 @@ export function StudentsManagement() {
       )}
 
       {/* Bulk Actions - Sticky toolbar */}
-      {selectedStudents.size > 0 && (
+      {selectedStudents.size > 0 && !isSupportMember && (
         <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border border-border rounded-lg shadow-lg p-3 sm:p-4 animate-fade-in">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             {/* Left: Selection info */}
