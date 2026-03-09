@@ -53,7 +53,7 @@ interface Course {
 }
 
 // Sortable Module Row Component
-function SortableModuleRow({ module, index, onEdit, onDelete, courses }: {
+function SortableModuleRow({ module, index, onEdit, onDelete, courses, readOnly }: {
   module: Module;
   index: number;
   onEdit: (module: Module) => void;
