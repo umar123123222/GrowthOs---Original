@@ -2350,10 +2350,11 @@ export function StudentsManagement() {
                   <TableHead>Name</TableHead>
                   {!isSupportMember && <TableHead>Email</TableHead>}
                   {!isSupportMember && <TableHead>Phone</TableHead>}
+                  <TableHead>Batch</TableHead>
                   {!isSupportMember && <TableHead>Fees Structure</TableHead>}
                   <TableHead>LMS Status</TableHead>
                   <TableHead>Created By</TableHead>
-                  {!isSupportMember && <TableHead className="pr-6">Actions</TableHead>}
+                  <TableHead className="pr-6">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
