@@ -397,7 +397,7 @@ export function AssignmentManagement({ readOnly = false }: { readOnly?: boolean 
                   <TableHead className="font-semibold">Linked With</TableHead>
                   <TableHead className="font-semibold">Due Days</TableHead>
                   <TableHead className="font-semibold">Type</TableHead>
-                  <TableHead className="font-semibold">Actions</TableHead>
+                  {!readOnly && <TableHead className="font-semibold">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
