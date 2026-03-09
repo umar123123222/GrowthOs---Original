@@ -619,7 +619,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
           </h2>
           <p className="text-muted-foreground mt-1 text-lg">Manage video recordings and their assignments</p>
         </div>
-        <div className="flex gap-3">
+        {!readOnly && <div className="flex gap-3">
           <Button 
             onClick={handleSyncAllUsersUnlocks}
             disabled={syncingUnlocks}
