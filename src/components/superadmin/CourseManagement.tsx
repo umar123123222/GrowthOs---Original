@@ -47,7 +47,7 @@ interface Course {
   mentors?: MentorAssignment[];
 }
 
-export function CourseManagement() {
+export function CourseManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const [courses, setCourses] = useState<Course[]>([]);
   const [mentors, setMentors] = useState<Mentor[]>([]);
   const [loading, setLoading] = useState(true);
