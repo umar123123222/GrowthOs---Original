@@ -2357,14 +2357,16 @@ export function StudentsManagement() {
               <TableBody>
                 {paginatedStudents.map(student => {
                 const rowElements = [<TableRow key={`main-${student.id}`}>
-                    <TableCell className="pl-6">
+                    {!isSupportMember && (
+                      <TableCell className="pl-6">
                         <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
                       </TableCell>
+                    )}
                       <TableCell className="font-medium whitespace-normal break-words">{student.student_id}</TableCell>
                       <TableCell className="whitespace-normal break-words">{student.full_name}</TableCell>
-                      <TableCell className="whitespace-normal break-words">{student.email}</TableCell>
-                      <TableCell className="whitespace-normal break-words">{student.phone || 'N/A'}</TableCell>
-                       <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
+                      {!isSupportMember && <TableCell className="whitespace-normal break-words">{student.email}</TableCell>}
+                      {!isSupportMember && <TableCell className="whitespace-normal break-words">{student.phone || 'N/A'}</TableCell>}
+                      {!isSupportMember && <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>}
                         <TableCell>
                            <div className="flex flex-wrap gap-2">
                              <Badge className={getLMSStatusColor(student.lms_status)}>
@@ -2373,7 +2375,7 @@ export function StudentsManagement() {
                                  <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
                                </div>
                              </Badge>
-                             {(() => {
+                             {!isSupportMember && (() => {
                         const inst = getInstallmentStatus(student);
                         return <Badge className={inst.color}>
                                  <span className="text-xs font-medium whitespace-normal break-words text-center">{inst.status}</span>
@@ -2382,10 +2384,10 @@ export function StudentsManagement() {
                            </div>
                          </TableCell>
                          <TableCell>{student.creator?.full_name || 'System'}</TableCell>
+                         {!isSupportMember && (
                          <TableCell className="pr-6">
                            <div className="flex space-x-1">
                               <Button variant="outline" size="sm" onClick={() => {
-                        // Check if user has permission to edit
                         if (user?.role === 'admin' || user?.role === 'superadmin') {
                           handleEditStudent(student);
                         } else {
@@ -2403,6 +2405,7 @@ export function StudentsManagement() {
                             </Button>
                           </div>
                         </TableCell>
+                         )}
                       </TableRow>];
                 if (expandedRows.has(student.id)) {
                   rowElements.push(<TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
