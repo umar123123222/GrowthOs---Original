@@ -2369,6 +2369,16 @@ export function StudentsManagement() {
                       <TableCell className="whitespace-normal break-words">{student.full_name}</TableCell>
                       {!isSupportMember && <TableCell className="whitespace-normal break-words">{student.email}</TableCell>}
                       {!isSupportMember && <TableCell className="whitespace-normal break-words">{student.phone || 'N/A'}</TableCell>}
+                      <TableCell className="whitespace-normal break-words">
+                        {(() => {
+                          const batchIds = studentBatchMap.get(student.id) || [];
+                          if (batchIds.length === 0) return <span className="text-muted-foreground text-xs">Unassigned</span>;
+                          return batchIds.map(bid => {
+                            const found = batchOptions.find(b => b.id === bid);
+                            return found?.name || bid;
+                          }).join(', ');
+                        })()}
+                      </TableCell>
                       {!isSupportMember && <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>}
                         <TableCell>
                            <div className="flex flex-wrap gap-2">
@@ -2387,28 +2397,28 @@ export function StudentsManagement() {
                            </div>
                          </TableCell>
                          <TableCell>{student.creator?.full_name || 'System'}</TableCell>
-                         {!isSupportMember && (
                          <TableCell className="pr-6">
                            <div className="flex space-x-1">
-                              <Button variant="outline" size="sm" onClick={() => {
-                        if (user?.role === 'admin' || user?.role === 'superadmin') {
-                          handleEditStudent(student);
-                        } else {
-                          toast({
-                            title: "Access Denied",
-                            description: "Only admins and superadmins can edit student details.",
-                            variant: "destructive"
-                          });
-                        }
-                      }} title="Edit Student Details" className="hover-scale hover:border-blue-300 hover:text-blue-600">
-                                <Edit className="w-4 h-4" />
-                              </Button>
-                            <Button variant="outline" size="sm" onClick={() => toggleRowExpansion(student.id)} title={expandedRows.has(student.id) ? "Collapse" : "Expand"} className="hover-scale hover:border-green-300 hover:text-green-600">
-                              {expandedRows.has(student.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                            </Button>
-                          </div>
-                        </TableCell>
-                         )}
+                             {!isSupportMember && (
+                               <Button variant="outline" size="sm" onClick={() => {
+                                 if (user?.role === 'admin' || user?.role === 'superadmin') {
+                                   handleEditStudent(student);
+                                 } else {
+                                   toast({
+                                     title: "Access Denied",
+                                     description: "Only admins and superadmins can edit student details.",
+                                     variant: "destructive"
+                                   });
+                                 }
+                               }} title="Edit Student Details" className="hover-scale hover:border-blue-300 hover:text-blue-600">
+                                 <Edit className="w-4 h-4" />
+                               </Button>
+                             )}
+                             <Button variant="outline" size="sm" onClick={() => toggleRowExpansion(student.id)} title={expandedRows.has(student.id) ? "Collapse" : "Expand"} className="hover-scale hover:border-green-300 hover:text-green-600">
+                               {expandedRows.has(student.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                             </Button>
+                           </div>
+                         </TableCell>
                       </TableRow>];
                 if (expandedRows.has(student.id)) {
                   rowElements.push(<TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
