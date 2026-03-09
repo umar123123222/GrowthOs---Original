@@ -1024,6 +1024,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                         onRefresh={fetchRecordings}
                         onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
                         courses={courses}
+                        readOnly={readOnly}
                       />
                     ))}
                   </SortableContext>
