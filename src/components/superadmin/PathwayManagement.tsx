@@ -647,7 +647,7 @@ export function PathwayManagement({ readOnly = false }: { readOnly?: boolean } =
                 <TableHead>Name</TableHead>
                 <TableHead>Courses</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                {!readOnly && <TableHead className="text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
