@@ -1927,6 +1927,7 @@ export function StudentsManagement() {
           </CardContent>
         </Card>
 
+        {!isSupportMember && (
         <Card className="border-l-4 border-l-red-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-red-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-red-800">Fees Overdue</CardTitle>
@@ -1937,6 +1938,7 @@ export function StudentsManagement() {
             <p className="text-xs text-muted-foreground">Payment due</p>
           </CardContent>
         </Card>
+        )}
 
         <Card className="border-l-4 border-l-purple-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-purple-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
