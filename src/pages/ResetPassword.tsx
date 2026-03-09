@@ -51,14 +51,24 @@ const ResetPassword = () => {
 
     const handlePasswordResetToken = async () => {
       try {
+        // Capture full URL for diagnostics BEFORE anything clears it
+        const fullUrl = window.location.href;
         const urlParams = new URLSearchParams(window.location.search);
         const hashStr = window.location.hash.substring(1);
         const hashParams = new URLSearchParams(hashStr);
+
+        console.log('[ResetPassword] Full URL on mount:', fullUrl);
+        console.log('[ResetPassword] Search params:', window.location.search);
+        console.log('[ResetPassword] Hash params:', window.location.hash);
+        console.log('[ResetPassword] All search keys:', Array.from(urlParams.keys()));
+        console.log('[ResetPassword] All hash keys:', Array.from(hashParams.keys()));
 
         // Check for error parameters (Supabase redirects with these when link is expired/invalid)
         const error = urlParams.get('error') || hashParams.get('error');
         const errorCode = urlParams.get('error_code') || hashParams.get('error_code');
         const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+        
+        console.log('[ResetPassword] Error:', error, 'Code:', errorCode, 'Desc:', errorDescription);
 
         if (error || errorCode === 'otp_expired') {
           const desc = errorDescription || 'Email link is invalid or has expired';
@@ -76,21 +86,25 @@ const ResetPassword = () => {
         }
 
         const code = urlParams.get('code');
+        
+        // Check if code_verifier exists in localStorage (PKCE requirement)
+        const supabaseRef = ENV_CONFIG.SUPABASE_URL?.match(/https:\/\/([^.]+)/)?.[1] || '';
+        const codeVerifierKey = `sb-${supabaseRef}-auth-token-code-verifier`;
+        const storedVerifier = localStorage.getItem(codeVerifierKey);
+        console.log('[ResetPassword] Code in URL:', code ? 'YES' : 'NO');
+        console.log('[ResetPassword] Code verifier key:', codeVerifierKey);
+        console.log('[ResetPassword] Code verifier exists:', !!storedVerifier);
 
         if (code) {
-          // detectSessionInUrl:true means Supabase client is already trying to
-          // exchange this code in the background. Give it time to finish, then
-          // check if a session was established. We poll a few times rather than
-          // calling exchangeCodeForSession ourselves (which would race/conflict).
-          console.log('[ResetPassword] Code found in URL, waiting for auto-exchange...');
+          console.log('[ResetPassword] Code found, waiting for auto-exchange...');
           
           for (let attempt = 0; attempt < 8; attempt++) {
             await new Promise(r => setTimeout(r, 500));
-            if (resolved) return; // PASSWORD_RECOVERY event already fired
+            if (resolved) return;
             
             const { data: sessionData } = await supabase.auth.getSession();
             if (sessionData.session) {
-              console.log('[ResetPassword] Session found after auto-exchange');
+              console.log('[ResetPassword] Session found after auto-exchange on attempt', attempt);
               window.history.replaceState({}, document.title, window.location.pathname);
               markResolved(true);
               return;
