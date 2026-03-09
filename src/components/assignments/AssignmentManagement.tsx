@@ -44,7 +44,7 @@ interface Course {
   id: string;
   title: string;
 }
-export function AssignmentManagement() {
+export function AssignmentManagement({ readOnly = false }: { readOnly?: boolean } = {}) {
   const {
     user
   } = useAuth();
