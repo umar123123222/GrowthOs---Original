@@ -40,7 +40,7 @@ interface Submission {
 }
 
 interface SubmissionsManagementProps {
-  userRole?: 'mentor' | 'admin' | 'superadmin';
+  userRole?: 'mentor' | 'admin' | 'superadmin' | 'support_member';
 }
 
 export function SubmissionsManagement({

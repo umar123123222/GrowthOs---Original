@@ -50,7 +50,7 @@ export default function SupportMemberDashboard() {
       case 'assignments':
         return <AssignmentManagement readOnly />;
       case 'submissions':
-        return <SubmissionsManagement />;
+        return <SubmissionsManagement userRole="support_member" />;
       default:
         return <SupportMemberDashboardContent />;
     }
