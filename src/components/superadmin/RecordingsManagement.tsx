@@ -996,7 +996,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                 <div className="text-center">Course</div>
                 <div className="text-center">Duration</div>
                 <div className="text-center">Order</div>
-                <div className="text-center">Actions</div>
+                {!readOnly && <div className="text-center">Actions</div>}
               </div>
               
               {/* Body */}
