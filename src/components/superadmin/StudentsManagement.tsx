@@ -1876,18 +1876,20 @@ export function StudentsManagement() {
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">Manage student records and track their progress</p>
         </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <Button variant="outline" onClick={handleExportCSV} className="hover-scale animate-scale-in">
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Student
-          </Button>
-        </div>
+        {!isSupportMember && (
+          <div className="flex gap-2 flex-shrink-0">
+            <Button variant="outline" onClick={handleExportCSV} className="hover-scale animate-scale-in">
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Student
+            </Button>
+          </div>
+        )}
         
-        <EnhancedStudentCreationDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} onStudentCreated={fetchStudents} />
+        {!isSupportMember && <EnhancedStudentCreationDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} onStudentCreated={fetchStudents} />}
       </div>
 
       {/* Stats Cards */}
