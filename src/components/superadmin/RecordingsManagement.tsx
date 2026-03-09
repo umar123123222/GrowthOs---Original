@@ -81,7 +81,8 @@ function SortableRecordingRow({
   onDelete,
   onRefresh,
   onView,
-  courses
+  courses,
+  readOnly
 }: {
   recording: Recording;
   index: number;
@@ -92,6 +93,7 @@ function SortableRecordingRow({
   onRefresh: () => void;
   onView: (recording: Recording) => void;
   courses: Course[];
+  readOnly?: boolean;
 }) {
   const {
     attributes,
