@@ -32,7 +32,11 @@ interface OverviewStats {
   videos_watched_today: number;
   assignments_submitted_today: number;
 }
-export const StudentAnalytics = () => {
+interface StudentAnalyticsProps {
+  hidePayments?: boolean;
+}
+
+export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps) => {
   const [students, setStudents] = useState<StudentAnalytics[]>([]);
   const [activeTab, setActiveTab] = useState<'overview' | 'engagement' | 'payments' | string>('overview');
   const [currentPage, setCurrentPage] = useState(1);
@@ -195,10 +199,12 @@ export const StudentAnalytics = () => {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
-          <TabsTrigger value="payments" className="gap-2">
-            <DollarSign className="h-4 w-4" />
-            Payments
-          </TabsTrigger>
+          {!hidePayments && (
+            <TabsTrigger value="payments" className="gap-2">
+              <DollarSign className="h-4 w-4" />
+              Payments
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -382,40 +388,59 @@ export const StudentAnalytics = () => {
           
           {/* Pagination Controls */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center space-x-2 pt-6">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous
-              </Button>
-              
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                  <Button
-                    key={page}
-                    variant={currentPage === page ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(page)}
-                    className="w-8 h-8 p-0"
-                  >
-                    {page}
-                  </Button>
-                ))}
+            <div className="flex items-center justify-between pt-6">
+              <p className="text-sm text-muted-foreground">
+                Page {currentPage} of {totalPages} ({filteredStudents.length} students)
+              </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                {(() => {
+                  const pages: (number | string)[] = [];
+                  if (totalPages <= 7) {
+                    for (let i = 1; i <= totalPages; i++) pages.push(i);
+                  } else {
+                    pages.push(1);
+                    if (currentPage > 3) pages.push('...');
+                    const start = Math.max(2, currentPage - 1);
+                    const end = Math.min(totalPages - 1, currentPage + 1);
+                    for (let i = start; i <= end; i++) pages.push(i);
+                    if (currentPage < totalPages - 2) pages.push('...');
+                    pages.push(totalPages);
+                  }
+                  return pages.map((page, idx) =>
+                    typeof page === 'string' ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">…</span>
+                    ) : (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className="w-8 h-8 p-0"
+                      >
+                        {page}
+                      </Button>
+                    )
+                  );
+                })()}
+                
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
             </div>
           )}
         </TabsContent>
