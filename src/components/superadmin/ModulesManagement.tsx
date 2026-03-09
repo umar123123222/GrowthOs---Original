@@ -59,6 +59,7 @@ function SortableModuleRow({ module, index, onEdit, onDelete, courses, readOnly 
   onEdit: (module: Module) => void;
   onDelete: (id: string) => void;
   courses: Course[];
+  readOnly?: boolean;
 }) {
   const {
     attributes,
