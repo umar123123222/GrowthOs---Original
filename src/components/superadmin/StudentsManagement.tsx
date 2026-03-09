@@ -78,6 +78,7 @@ export function StudentsManagement() {
   const {
     user
   } = useAuth();
+  const isSupportMember = user?.role === 'support_member';
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -1875,18 +1876,20 @@ export function StudentsManagement() {
           </h1>
           <p className="text-muted-foreground mt-2 text-lg">Manage student records and track their progress</p>
         </div>
-        <div className="flex gap-2 flex-shrink-0">
-          <Button variant="outline" onClick={handleExportCSV} className="hover-scale animate-scale-in">
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
-            <Plus className="w-4 h-4 mr-2" />
-            Add Student
-          </Button>
-        </div>
+        {!isSupportMember && (
+          <div className="flex gap-2 flex-shrink-0">
+            <Button variant="outline" onClick={handleExportCSV} className="hover-scale animate-scale-in">
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
+              <Plus className="w-4 h-4 mr-2" />
+              Add Student
+            </Button>
+          </div>
+        )}
         
-        <EnhancedStudentCreationDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} onStudentCreated={fetchStudents} />
+        {!isSupportMember && <EnhancedStudentCreationDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} onStudentCreated={fetchStudents} />}
       </div>
 
       {/* Stats Cards */}
@@ -1924,6 +1927,7 @@ export function StudentsManagement() {
           </CardContent>
         </Card>
 
+        {!isSupportMember && (
         <Card className="border-l-4 border-l-red-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-red-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-red-800">Fees Overdue</CardTitle>
@@ -1934,6 +1938,7 @@ export function StudentsManagement() {
             <p className="text-xs text-muted-foreground">Payment due</p>
           </CardContent>
         </Card>
+        )}
 
         <Card className="border-l-4 border-l-purple-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-purple-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -1953,7 +1958,7 @@ export function StudentsManagement() {
       <div className="flex gap-4 items-center flex-wrap">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search by ID, name, email, or phone..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
+          <Input placeholder={isSupportMember ? "Search by ID or name..." : "Search by ID, name, email, or phone..."} value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
         
         <Button
@@ -2234,7 +2239,7 @@ export function StudentsManagement() {
       )}
 
       {/* Bulk Actions - Sticky toolbar */}
-      {selectedStudents.size > 0 && (
+      {selectedStudents.size > 0 && !isSupportMember && (
         <div className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border border-border rounded-lg shadow-lg p-3 sm:p-4 animate-fade-in">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             {/* Left: Selection info */}
@@ -2336,30 +2341,34 @@ export function StudentsManagement() {
             <Table className="w-full min-w-[900px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12 pl-6">
-                    <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
-                  </TableHead>
+                  {!isSupportMember && (
+                    <TableHead className="w-12 pl-6">
+                      <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
+                    </TableHead>
+                  )}
                   <TableHead>Student ID</TableHead>
                   <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead>Fees Structure</TableHead>
+                  {!isSupportMember && <TableHead>Email</TableHead>}
+                  {!isSupportMember && <TableHead>Phone</TableHead>}
+                  {!isSupportMember && <TableHead>Fees Structure</TableHead>}
                   <TableHead>LMS Status</TableHead>
                   <TableHead>Created By</TableHead>
-                  <TableHead className="pr-6">Actions</TableHead>
+                  {!isSupportMember && <TableHead className="pr-6">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedStudents.map(student => {
                 const rowElements = [<TableRow key={`main-${student.id}`}>
-                    <TableCell className="pl-6">
+                    {!isSupportMember && (
+                      <TableCell className="pl-6">
                         <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
                       </TableCell>
+                    )}
                       <TableCell className="font-medium whitespace-normal break-words">{student.student_id}</TableCell>
                       <TableCell className="whitespace-normal break-words">{student.full_name}</TableCell>
-                      <TableCell className="whitespace-normal break-words">{student.email}</TableCell>
-                      <TableCell className="whitespace-normal break-words">{student.phone || 'N/A'}</TableCell>
-                       <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>
+                      {!isSupportMember && <TableCell className="whitespace-normal break-words">{student.email}</TableCell>}
+                      {!isSupportMember && <TableCell className="whitespace-normal break-words">{student.phone || 'N/A'}</TableCell>}
+                      {!isSupportMember && <TableCell>{getFeesStructureLabel(student.fees_structure)}</TableCell>}
                         <TableCell>
                            <div className="flex flex-wrap gap-2">
                              <Badge className={getLMSStatusColor(student.lms_status)}>
@@ -2368,7 +2377,7 @@ export function StudentsManagement() {
                                  <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
                                </div>
                              </Badge>
-                             {(() => {
+                             {!isSupportMember && (() => {
                         const inst = getInstallmentStatus(student);
                         return <Badge className={inst.color}>
                                  <span className="text-xs font-medium whitespace-normal break-words text-center">{inst.status}</span>
@@ -2377,10 +2386,10 @@ export function StudentsManagement() {
                            </div>
                          </TableCell>
                          <TableCell>{student.creator?.full_name || 'System'}</TableCell>
+                         {!isSupportMember && (
                          <TableCell className="pr-6">
                            <div className="flex space-x-1">
                               <Button variant="outline" size="sm" onClick={() => {
-                        // Check if user has permission to edit
                         if (user?.role === 'admin' || user?.role === 'superadmin') {
                           handleEditStudent(student);
                         } else {
@@ -2398,6 +2407,7 @@ export function StudentsManagement() {
                             </Button>
                           </div>
                         </TableCell>
+                         )}
                       </TableRow>];
                 if (expandedRows.has(student.id)) {
                   rowElements.push(<TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
