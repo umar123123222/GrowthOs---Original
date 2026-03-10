@@ -64,17 +64,15 @@ const ResetPassword = () => {
 
     const handlePasswordResetToken = async () => {
       try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const hashStr = window.location.hash.substring(1);
+        const hashStr = capturedParams.hash.substring(1);
         const hashParams = new URLSearchParams(hashStr);
 
-        console.log('[ResetPassword] Search params:', window.location.search);
-        console.log('[ResetPassword] Hash params:', window.location.hash);
+        console.log('[ResetPassword] Using captured params:', capturedParams);
 
         // Check for error parameters
-        const error = urlParams.get('error') || hashParams.get('error');
-        const errorCode = urlParams.get('error_code') || hashParams.get('error_code');
-        const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
+        const error = capturedParams.error || hashParams.get('error');
+        const errorCode = capturedParams.errorCode || hashParams.get('error_code');
+        const errorDescription = capturedParams.errorDescription || hashParams.get('error_description');
 
         if (error || errorCode === 'otp_expired') {
           const desc = errorDescription || 'Email link is invalid or has expired';
@@ -83,20 +81,19 @@ const ResetPassword = () => {
           return;
         }
 
-        // NEW: Handle token_hash flow (link goes directly to our app, not Supabase /verify)
-        const tokenHash = urlParams.get('token_hash');
-        const type = urlParams.get('type');
-        if (tokenHash && type === 'recovery') {
+        // Handle token_hash flow (link goes directly to our app, not Supabase /verify)
+        if (capturedParams.tokenHash && capturedParams.type === 'recovery') {
           console.log('[ResetPassword] token_hash found, verifying OTP...');
           window.history.replaceState({}, document.title, window.location.pathname);
           const { error: otpError } = await supabase.auth.verifyOtp({
-            token_hash: tokenHash,
+            token_hash: capturedParams.tokenHash,
             type: 'recovery',
           });
           if (otpError) {
             console.error('[ResetPassword] OTP verification error:', otpError);
             markResolved(false, "This password reset link has expired or is invalid. Please request a new one.");
           } else {
+            console.log('[ResetPassword] OTP verification successful!');
             markResolved(true);
           }
           return;
