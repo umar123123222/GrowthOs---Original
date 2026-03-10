@@ -108,7 +108,7 @@ const ResetPassword = () => {
         }
 
         // Legacy: code-based PKCE flow
-        const code = urlParams.get('code');
+        const code = capturedParams.code;
         if (code) {
           console.log('[ResetPassword] Code found, exchanging...');
           const { data, error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
