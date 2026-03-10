@@ -51,24 +51,17 @@ const ResetPassword = () => {
 
     const handlePasswordResetToken = async () => {
       try {
-        // Capture full URL for diagnostics BEFORE anything clears it
-        const fullUrl = window.location.href;
         const urlParams = new URLSearchParams(window.location.search);
         const hashStr = window.location.hash.substring(1);
         const hashParams = new URLSearchParams(hashStr);
 
-        console.log('[ResetPassword] Full URL on mount:', fullUrl);
         console.log('[ResetPassword] Search params:', window.location.search);
         console.log('[ResetPassword] Hash params:', window.location.hash);
-        console.log('[ResetPassword] All search keys:', Array.from(urlParams.keys()));
-        console.log('[ResetPassword] All hash keys:', Array.from(hashParams.keys()));
 
-        // Check for error parameters (Supabase redirects with these when link is expired/invalid)
+        // Check for error parameters
         const error = urlParams.get('error') || hashParams.get('error');
         const errorCode = urlParams.get('error_code') || hashParams.get('error_code');
         const errorDescription = urlParams.get('error_description') || hashParams.get('error_description');
-        
-        console.log('[ResetPassword] Error:', error, 'Code:', errorCode, 'Desc:', errorDescription);
 
         if (error || errorCode === 'otp_expired') {
           const desc = errorDescription || 'Email link is invalid or has expired';
@@ -77,60 +70,43 @@ const ResetPassword = () => {
           return;
         }
 
-        // Check for hash-based recovery token (legacy implicit flow)
+        // NEW: Handle token_hash flow (link goes directly to our app, not Supabase /verify)
+        const tokenHash = urlParams.get('token_hash');
+        const type = urlParams.get('type');
+        if (tokenHash && type === 'recovery') {
+          console.log('[ResetPassword] token_hash found, verifying OTP...');
+          window.history.replaceState({}, document.title, window.location.pathname);
+          const { error: otpError } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: 'recovery',
+          });
+          if (otpError) {
+            console.error('[ResetPassword] OTP verification error:', otpError);
+            markResolved(false, "This password reset link has expired or is invalid. Please request a new one.");
+          } else {
+            markResolved(true);
+          }
+          return;
+        }
+
+        // Legacy: hash-based recovery token (implicit flow)
         const accessToken = hashParams.get('access_token');
-        const type = hashParams.get('type');
-        if (accessToken && type === 'recovery') {
+        const hashType = hashParams.get('type');
+        if (accessToken && hashType === 'recovery') {
           markResolved(true);
           return;
         }
 
+        // Legacy: code-based PKCE flow
         const code = urlParams.get('code');
-        
-        // Check if code_verifier exists in localStorage (PKCE requirement)
-        const supabaseRef = ENV_CONFIG.SUPABASE_URL?.match(/https:\/\/([^.]+)/)?.[1] || '';
-        const codeVerifierKey = `sb-${supabaseRef}-auth-token-code-verifier`;
-        const storedVerifier = localStorage.getItem(codeVerifierKey);
-        console.log('[ResetPassword] Code in URL:', code ? 'YES' : 'NO');
-        console.log('[ResetPassword] Code verifier key:', codeVerifierKey);
-        console.log('[ResetPassword] Code verifier exists:', !!storedVerifier);
-
         if (code) {
-          console.log('[ResetPassword] Code found, waiting for auto-exchange...');
-          
-          for (let attempt = 0; attempt < 8; attempt++) {
-            await new Promise(r => setTimeout(r, 500));
-            if (resolved) return;
-            
-            const { data: sessionData } = await supabase.auth.getSession();
-            if (sessionData.session) {
-              console.log('[ResetPassword] Session found after auto-exchange on attempt', attempt);
-              window.history.replaceState({}, document.title, window.location.pathname);
-              markResolved(true);
-              return;
-            }
-          }
-
-          // Auto-exchange didn't work. Try manual exchange as last resort.
-          console.log('[ResetPassword] Auto-exchange timed out, trying manual exchange...');
+          console.log('[ResetPassword] Code found, exchanging...');
           const { data, error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
-          
+          window.history.replaceState({}, document.title, window.location.pathname);
           if (exchangeErr) {
-            console.error('[ResetPassword] Manual exchange error:', exchangeErr);
-            // One more session check — maybe it was set despite the error
-            const { data: lastCheck } = await supabase.auth.getSession();
-            if (lastCheck.session) {
-              window.history.replaceState({}, document.title, window.location.pathname);
-              markResolved(true);
-              return;
-            }
-            window.history.replaceState({}, document.title, window.location.pathname);
+            console.error('[ResetPassword] Exchange error:', exchangeErr);
             markResolved(false, "This password reset link has expired or is invalid. Please request a new one.");
-            return;
-          }
-
-          if (data.session) {
-            window.history.replaceState({}, document.title, window.location.pathname);
+          } else if (data.session) {
             markResolved(true);
           } else {
             markResolved(false, "This password reset link has expired or is invalid. Please request a new one.");
@@ -138,15 +114,14 @@ const ResetPassword = () => {
           return;
         }
 
-        // No code or hash params — check for existing session (code may have
-        // been consumed before React mounted)
+        // No recovery indicators — check existing session
         const { data: existingSession } = await supabase.auth.getSession();
         if (existingSession.session) {
           markResolved(true);
           return;
         }
 
-        // No recovery indicators at all — show request form
+        // Show request form
         markResolved(false);
       } catch (err) {
         console.error('[ResetPassword] Token handling error:', err);
