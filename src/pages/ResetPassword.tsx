@@ -9,6 +9,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2, ArrowLeft, Mail, Lock, CheckCircle2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { FieldError } from "@/components/ui/error-message";
+// Capture URL params IMMEDIATELY before Supabase or React can clear them
+const capturedParams = {
+  tokenHash: new URLSearchParams(window.location.search).get('token_hash'),
+  type: new URLSearchParams(window.location.search).get('type'),
+  code: new URLSearchParams(window.location.search).get('code'),
+  error: new URLSearchParams(window.location.search).get('error'),
+  errorCode: new URLSearchParams(window.location.search).get('error_code'),
+  errorDescription: new URLSearchParams(window.location.search).get('error_description'),
+  hash: window.location.hash,
+};
+console.log('[ResetPassword] Captured params at module level:', capturedParams);
+
 const ResetPassword = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,6 +45,7 @@ const ResetPassword = () => {
     const markResolved = (mode: boolean, error?: string) => {
       if (resolved) return;
       resolved = true;
+      console.log('[ResetPassword] markResolved called:', { mode, error });
       if (error) setLinkError(error);
       if (mode) setIsResetMode(true);
       setIsCheckingToken(false);
