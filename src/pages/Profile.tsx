@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
+import { logAdminAction, ACTIVITY_TYPES } from "@/lib/activity-logger";
 
 interface UserProfile {
   id: string;
