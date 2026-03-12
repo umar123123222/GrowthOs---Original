@@ -84,8 +84,9 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       }
 
       // Filter by specific user if userId is provided
+      // Show logs where user performed the action OR was the target of the action
       if (userId) {
-        query = query.eq('performed_by', userId);
+        query = query.or(`performed_by.eq.${userId},data->>target_user_id.eq.${userId}`);
       }
 
       // Apply date filter
