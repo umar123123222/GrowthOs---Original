@@ -88,7 +88,8 @@ export const GlobalActivityLogs = () => {
 
       // Map logs with user info
       const enrichedLogs: GlobalLog[] = (logsData || []).map(log => {
-        const targetUserId = log.data?.target_user_id;
+        const logData = log.data as any;
+        const targetUserId = logData?.target_user_id;
         const targetUser = targetUserId ? userMap.get(targetUserId) : null;
         return {
           id: log.id,
