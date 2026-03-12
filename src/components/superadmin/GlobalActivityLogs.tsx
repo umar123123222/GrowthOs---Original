@@ -65,8 +65,10 @@ export const GlobalActivityLogs = () => {
       const { data: logsData, error: logsError } = await query;
       if (logsError) throw logsError;
 
-      // Get unique user IDs for fetching user info
-      const userIds = [...new Set((logsData || []).map(l => l.performed_by).filter(Boolean))];
+      // Get unique user IDs for fetching user info (both performed_by and target_user_id from data)
+      const performerIds = (logsData || []).map(l => l.performed_by).filter(Boolean);
+      const targetIds = (logsData || []).map(l => l.data?.target_user_id).filter(Boolean);
+      const userIds = [...new Set([...performerIds, ...targetIds])];
       
       // Fetch user details
       let userMap = new Map<string, { email: string; full_name: string; role: string }>();
@@ -82,19 +84,25 @@ export const GlobalActivityLogs = () => {
       }
 
       // Map logs with user info
-      const enrichedLogs: GlobalLog[] = (logsData || []).map(log => ({
-        id: log.id,
-        action: log.action,
-        entity_type: log.entity_type,
-        entity_id: log.entity_id,
-        description: log.description,
-        data: log.data,
-        performed_by: log.performed_by,
-        created_at: log.created_at,
-        user_email: log.performed_by ? userMap.get(log.performed_by)?.email : undefined,
-        user_name: log.performed_by ? userMap.get(log.performed_by)?.full_name : undefined,
-        user_role: log.performed_by ? userMap.get(log.performed_by)?.role : undefined
-      }));
+      const enrichedLogs: GlobalLog[] = (logsData || []).map(log => {
+        const targetUserId = log.data?.target_user_id;
+        const targetUser = targetUserId ? userMap.get(targetUserId) : null;
+        return {
+          id: log.id,
+          action: log.action,
+          entity_type: log.entity_type,
+          entity_id: log.entity_id,
+          description: log.description,
+          data: log.data,
+          performed_by: log.performed_by,
+          created_at: log.created_at,
+          user_email: log.performed_by ? userMap.get(log.performed_by)?.email : undefined,
+          user_name: log.performed_by ? userMap.get(log.performed_by)?.full_name : undefined,
+          user_role: log.performed_by ? userMap.get(log.performed_by)?.role : undefined,
+          target_user_name: targetUser?.full_name || undefined,
+          target_user_email: targetUser?.email || undefined,
+        };
+      });
 
       setLogs(enrichedLogs);
     } catch (error) {
