@@ -149,6 +149,17 @@ const Profile = () => {
           confirmPassword: ''
         });
 
+        // Log password change
+        logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: user?.id || '',
+          entityType: 'user',
+          entityId: user?.id || '',
+          action: ACTIVITY_TYPES.PASSWORD_CHANGED,
+          description: `Password changed by user`,
+          data: {}
+        });
+
         toast({
           title: "Success!",
           description: "Password updated successfully",
