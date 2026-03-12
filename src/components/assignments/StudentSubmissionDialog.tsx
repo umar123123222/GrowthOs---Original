@@ -61,6 +61,25 @@ export const StudentSubmissionDialog = ({
 
       if (error) throw error;
 
+      // Auto-mark the linked recording as watched
+      try {
+        const { data: linkedRecording } = await supabase
+          .from('available_lessons')
+          .select('id')
+          .eq('assignment_id', assignment.id)
+          .maybeSingle();
+        if (linkedRecording) {
+          await supabase.from('recording_views').upsert({
+            user_id: userId,
+            recording_id: linkedRecording.id,
+            watched: true,
+            watched_at: new Date().toISOString()
+          }, { onConflict: 'user_id,recording_id' });
+        }
+      } catch (e) {
+        console.error('Failed to auto-mark recording watched:', e);
+      }
+
       toast({
         title: "Assignment Submitted",
         description: "Your assignment has been successfully submitted for review.",

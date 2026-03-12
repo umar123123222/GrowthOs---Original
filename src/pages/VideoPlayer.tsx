@@ -225,6 +225,26 @@ const VideoPlayer = () => {
     }
   }, [searchParams, lessonId]);
 
+  // Auto-mark video as watched when the player page loads
+  useEffect(() => {
+    const autoMarkWatched = async () => {
+      if (!user?.id || !currentVideo?.id) return;
+      try {
+        await supabase.from('recording_views').upsert({
+          user_id: user.id,
+          recording_id: currentVideo.id,
+          watched: true,
+          watched_at: new Date().toISOString()
+        }, { onConflict: 'user_id,recording_id' });
+        setVideoWatched(true);
+        logger.info('Auto-marked video as watched:', currentVideo.id);
+      } catch (error) {
+        logger.error('Error auto-marking video watched:', error);
+      }
+    };
+    autoMarkWatched();
+  }, [user?.id, currentVideo?.id]);
+
   // Load attachments for current video
   useEffect(() => {
     const loadAttachments = async () => {
