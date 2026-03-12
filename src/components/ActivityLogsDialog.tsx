@@ -386,7 +386,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                              {log.users?.email || (log.performed_by ? 'Deleted User' : 'System')}
                            </TableCell>
                            <TableCell className="max-w-[150px] truncate">
-                             {log.users?.full_name || 'Unknown'}
+                             {log.users?.full_name || (log.performed_by ? 'Deleted User' : 'System')}
                            </TableCell>
                            <TableCell>
                              <Badge className={getRoleBadge(log.users?.role || '')}>
