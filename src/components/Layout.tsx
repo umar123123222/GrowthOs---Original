@@ -5,8 +5,9 @@ import SuccessPartner from "@/components/SuccessPartner";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route, LayoutGrid, Lock, Layers } from "lucide-react";
+import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route, LayoutGrid, Lock, Layers, Sun, Moon } from "lucide-react";
 const MetaIcon = Facebook;
+import { useTheme } from "next-themes";
 import NotificationDropdown from "./NotificationDropdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -155,9 +156,9 @@ const NavigationItems = memo(({
               Integrations
             </h3>
             <div className="space-y-2">
-              {connectionStatus.shopify && <Link to="/shopify" className={`
+              {connectionStatus.shopify && <Link to="/shopify-dashboard" className={`
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
-                    ${location.pathname === '/shopify' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                    ${location.pathname === '/shopify-dashboard' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}
                   `}>
                   <ShoppingBag className="h-4 w-4" />
                   <span>Shopify</span>
@@ -165,9 +166,9 @@ const NavigationItems = memo(({
                     Connected
                   </Badge>
                 </Link>}
-              {connectionStatus.meta && <Link to="/meta-ads" className={`
+              {connectionStatus.meta && <Link to="/meta-ads-dashboard" className={`
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
-                    ${location.pathname === '/meta-ads' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                    ${location.pathname === '/meta-ads-dashboard' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}
                   `}>
                   <MetaIcon className="h-5 w-5" />
                   <span>Meta Ads</span>
@@ -181,6 +182,23 @@ const NavigationItems = memo(({
     </nav>;
 });
 NavigationItems.displayName = "NavigationItems";
+
+// Dark mode toggle component
+const ThemeToggle = () => {
+  const { theme, setTheme } = useTheme();
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="text-muted-foreground hover:text-primary hover:border-primary/30 p-2"
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+    </Button>
+  );
+};
+
 const Layout = memo(({
   user
 }: LayoutProps) => {
@@ -788,9 +806,9 @@ const Layout = memo(({
       });
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+  return <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-gray-200 shadow-sm">
+      <header className="fixed top-0 left-0 right-0 z-40 bg-card border-b border-border shadow-sm">
         <div className="w-full px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 sm:h-16">
             <div className="flex items-center space-x-2 sm:space-x-4">
@@ -969,12 +987,15 @@ const Layout = memo(({
             <div className="flex items-center space-x-1 sm:space-x-4">
               <NotificationDropdown />
               
+              {/* Dark mode toggle */}
+              <ThemeToggle />
+              
               {/* Success Partner Button - Only for students */}
               {user?.role === 'student' && (
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="text-gray-700 hover:text-blue-600 hover:border-blue-200 p-2 sm:px-3" 
+                  className="text-muted-foreground hover:text-primary hover:border-primary/30 p-2 sm:px-3" 
                   onClick={() => setShowSuccessPartner(true)}
                 >
                   <MessageCircle className="w-4 h-4 sm:mr-2" />
@@ -985,14 +1006,14 @@ const Layout = memo(({
               {/* Activity Logs Button for authorized users - Only admins and superadmins */}
               {(isUserSuperadmin || isUserAdmin) && !isMobile && (
                 <ActivityLogsDialog>
-                  <Button variant="outline" size="sm" className="text-gray-700 hover:text-blue-600 hover:border-blue-200" title="View Activity Logs">
+                  <Button variant="outline" size="sm" className="text-muted-foreground hover:text-primary hover:border-primary/30" title="View Activity Logs">
                     <Activity className="w-4 h-4 mr-2" />
                     Activity Logs
                   </Button>
                 </ActivityLogsDialog>
               )}
               
-              <Button onClick={handleLogout} variant="outline" size="sm" className="text-gray-700 hover:text-red-600 hover:border-red-200 p-2 sm:px-3">
+              <Button onClick={handleLogout} variant="outline" size="sm" className="text-muted-foreground hover:text-destructive hover:border-destructive/30 p-2 sm:px-3">
                 <LogOut className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Logout</span>
               </Button>
@@ -1006,7 +1027,7 @@ const Layout = memo(({
       <div className="flex">
         {/* Sidebar - Desktop only, hidden on mobile */}
         {!isMobile && (
-          <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-white shadow-lg transition-all duration-300 fixed left-0 z-30 overflow-y-auto scrollbar-none`} style={{ top: isBannerVisible ? '112px' : '64px', height: isBannerVisible ? 'calc(100vh - 112px)' : 'calc(100vh - 64px)' }}>
+          <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-card shadow-lg transition-all duration-300 fixed left-0 z-30 overflow-y-auto scrollbar-none`} style={{ top: isBannerVisible ? '112px' : '64px', height: isBannerVisible ? 'calc(100vh - 112px)' : 'calc(100vh - 64px)' }}>
             <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
               <div className="space-y-2">
               {navigation.map(item => {

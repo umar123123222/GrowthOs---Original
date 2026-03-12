@@ -1106,32 +1106,119 @@ export const StudentManagement = () => {
       });
     }
   };
-  const handleExportCSV = () => {
+  const handleExportCSV = async () => {
     const batchNameMap = new Map(batchOptions.map(b => [b.id, b.name]));
+
+    const studentIds = displayStudents.map(s => s.id);
+    const studentRecordIds = displayStudents.map(s => s.student_record_id).filter(Boolean) as string[];
+
+    // Parallel fetch: activity logs, recordings watched, enrollments, courses, pathways
+    const [logsRes, recordingsRes, enrollmentsRes, coursesRes, pathwaysRes] = await Promise.all([
+      studentIds.length > 0
+        ? supabase.from('user_activity_logs').select('user_id, activity_type, metadata, occurred_at').in('user_id', studentIds).order('occurred_at', { ascending: true })
+        : Promise.resolve({ data: [] }),
+      studentRecordIds.length > 0
+        ? (supabase as any).from('student_recordings').select('student_id').in('student_id', studentRecordIds)
+        : Promise.resolve({ data: [] }),
+      studentRecordIds.length > 0
+        ? supabase.from('course_enrollments').select('student_id, course_id, pathway_id, batch_id, status').in('student_id', studentRecordIds).eq('status', 'active')
+        : Promise.resolve({ data: [] }),
+      supabase.from('courses').select('id, title'),
+      (supabase as any).from('pathways').select('id, name'),
+    ]);
+
+    const allLogs = logsRes.data || [];
+    const allRecordings = recordingsRes.data || [];
+    const allEnrollments = enrollmentsRes.data || [];
+    const courseNameMap = new Map((coursesRes.data || []).map((c: any) => [c.id, c.title]));
+    const pathwayNameMap = new Map((pathwaysRes.data || []).map((p: any) => [p.id, p.name]));
+
+    // Group data by student
+    const logsByStudent = new Map<string, any[]>();
+    allLogs.forEach((log: any) => {
+      const list = logsByStudent.get(log.user_id) || [];
+      list.push(log);
+      logsByStudent.set(log.user_id, list);
+    });
+
+    const recordingCountByStudent = new Map<string, number>();
+    allRecordings.forEach((r: any) => {
+      recordingCountByStudent.set(r.student_id, (recordingCountByStudent.get(r.student_id) || 0) + 1);
+    });
+
+    const enrollmentsByStudent = new Map<string, any[]>();
+    allEnrollments.forEach((e: any) => {
+      const list = enrollmentsByStudent.get(e.student_id) || [];
+      list.push(e);
+      enrollmentsByStudent.set(e.student_id, list);
+    });
+
+    const escCsv = (val: string) => `"${String(val || '').replace(/"/g, '""')}"`;
+
     const rows = displayStudents.map(student => {
       const key = String(student.student_record_id || '');
       const payments = installmentPayments.get(key) || [];
       const totalFees = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
       const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
+      const remainingAmount = totalFees - paidAmount;
       const installmentCount = payments.length || '';
       const batchIds = studentBatchMap.get(student.id) || [];
       const batchNames = batchIds.map(id => batchNameMap.get(id) || id).join('; ');
-      return {
-        student_id: student.student_id || '',
-        name: student.full_name || '',
-        email: student.email || '',
-        phone: student.phone || '',
-        batch: batchNames || 'Unassigned',
-        installments: installmentCount,
-        total_fees: totalFees,
-        paid_amount: paidAmount
-      };
+
+      // Invoice details
+      const latestInvoice = payments.length > 0 ? payments[payments.length - 1] : null;
+      const invoiceStatus = latestInvoice ? latestInvoice.status : 'No Invoice';
+      const invoiceDueDate = latestInvoice?.due_date || '';
+
+      // Recordings watched
+      const recordingsWatched = recordingCountByStudent.get(key) || 0;
+
+      // Course/Pathway access
+      const enrollments = enrollmentsByStudent.get(key) || [];
+      const courseAccess = enrollments
+        .filter((e: any) => e.course_id && !e.pathway_id)
+        .map((e: any) => courseNameMap.get(e.course_id) || e.course_id)
+        .join('; ');
+      const pathwayAccess = enrollments
+        .filter((e: any) => e.pathway_id)
+        .map((e: any) => pathwayNameMap.get(e.pathway_id) || e.pathway_id)
+        .join('; ');
+
+      // Notes
+      const studentLogs = logsByStudent.get(student.id) || [];
+      const notesSummary = studentLogs
+        .filter((l: any) => l.activity_type === 'admin_note')
+        .map((log: any) => {
+          const meta = log.metadata as any || {};
+          const ts = log.occurred_at ? new Date(log.occurred_at).toISOString().split('T')[0] : '';
+          return `[${ts}] ${meta.note || ''}`;
+        }).join(' | ');
+
+      return [
+        escCsv(student.student_id || ''),
+        escCsv(student.full_name || ''),
+        escCsv(student.email || ''),
+        escCsv(student.phone || ''),
+        escCsv(String(installmentCount)),
+        escCsv(student.lms_status || ''),
+        escCsv(student.created_at ? new Date(student.created_at).toISOString().split('T')[0] : ''),
+        escCsv(String(totalFees)),
+        escCsv(String(paidAmount)),
+        escCsv(String(remainingAmount)),
+        escCsv(invoiceStatus),
+        escCsv(invoiceDueDate),
+        escCsv(student.lms_user_id || ''),
+        escCsv(student.password_display || ''),
+        escCsv(String(recordingsWatched)),
+        escCsv(courseAccess || 'None'),
+        escCsv(pathwayAccess || 'None'),
+        escCsv(batchNames || 'Unassigned'),
+        escCsv(notesSummary),
+      ].join(',');
     });
-    const header = 'Student ID,Name,Email,Phone,Batch,Installments,Total Fees,Paid Amount';
-    const csvRows = rows.map(r => 
-      `"${r.student_id}","${r.name}","${r.email}","${r.phone}","${r.batch}","${r.installments}","${r.total_fees}","${r.paid_amount}"`
-    );
-    const csv = [header, ...csvRows].join('\n');
+
+    const header = 'Student ID,Name,Email,Phone,Installments,LMS Status,Joining Date,Total Fee Amount,Total Paid,Remaining to Pay,Invoice Status,Invoice Due Date,LMS ID,LMS Password,Recordings Watched,Course Access,Pathway Access,Batch,Admin Notes';
+    const csv = [header, ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1139,7 +1226,7 @@ export const StudentManagement = () => {
     a.download = `students-export-${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast({ title: 'Export Complete', description: `Exported ${rows.length} students to CSV` });
+    toast({ title: 'Export Complete', description: `Exported ${displayStudents.length} students with all details to CSV` });
   };
 
   if (loading) {

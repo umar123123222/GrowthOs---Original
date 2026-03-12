@@ -6,6 +6,7 @@ import { MilestoneCelebrationPopup } from '@/components/MilestoneCelebrationPopu
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import React, { useState, useEffect, Suspense, lazy } from "react";
+import { ThemeProvider } from "next-themes";
 import { useAuth } from "./hooks/useAuth";
 import { initializeGlobalIntegrations } from "./lib/global-integrations";
 import { initPerformanceMonitoring } from "./lib/performance";
@@ -161,17 +162,43 @@ const App = () => {
   const checkPaymentStatus = async () => {
     if (!user?.id) return;
 
-    // Set placeholder invoice data
-    setPendingInvoice({
-      amount: 50000,
-      invoice_number: 'INV-PENDING'
-    });
+    // Only check payment for students who have completed onboarding
+    if (user.role !== 'student' || !user.onboarding_done) return;
 
-    // For students, check if they have overdue fees or no payment recorded
-    if (user.role === 'student' && user.onboarding_done) {
-      if (user.fees_overdue || !user.fees_due_date) {
-        setShowPaywall(true);
+    try {
+      // Get student record ID
+      const { data: studentRecord } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!studentRecord?.id) return;
+
+      // Fetch the earliest unpaid invoice
+      const { data: unpaidInvoice } = await supabase
+        .from('invoices')
+        .select('amount, installment_number, status, due_date')
+        .eq('student_id', studentRecord.id)
+        .neq('status', 'paid')
+        .order('due_date', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (unpaidInvoice) {
+        setPendingInvoice({
+          amount: unpaidInvoice.amount || 0,
+          invoice_number: `INV-${unpaidInvoice.installment_number || 1}`
+        });
+
+        // Show paywall if overdue
+        const isOverdue = unpaidInvoice.due_date && new Date(unpaidInvoice.due_date) < new Date();
+        if (isOverdue || user.fees_overdue) {
+          setShowPaywall(true);
+        }
       }
+    } catch (error) {
+      logger.warn('Failed to check payment status', { error });
     }
   };
 
@@ -197,130 +224,176 @@ const App = () => {
 
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <DynamicFavicon />
-          <BrowserRouter>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                {/* Public routes - accessible without authentication */}
-                <Route path="reset-password" element={<ResetPassword />} />
-                
-                {!user ? (
-                  <Route path="*" element={<Login />} />
-                ) : user?.role === 'student' && !user?.onboarding_done ? (
-                  (() => {
-                    logger.debug('App: Showing onboarding for student', { userId: user.id, onboarding_done: user.onboarding_done });
-                    return <Route path="*" element={
-                      <OnboardingWrapper user={user} />
-                    } />;
-                  })()
-                ) : (
-                  <Route path="/" element={<Layout user={user} />}>
-                    {/* Role-based dashboard routing */}
-                    <Route index element={
-                      user.role === 'admin' ? <AdminDashboard /> :
-                      user.role === 'mentor' ? <MentorDashboard /> :
-                      user.role === 'superadmin' ? <SuperadminDashboard /> :
-                      user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
-                      user.role === 'support_member' ? <SupportMemberDashboard /> :
-                      <Dashboard user={user} />
-                    } />
-                    
-                    {/* Dashboard route */}
-                    <Route path="dashboard" element={
-                      user.role === 'admin' ? <AdminDashboard /> :
-                      user.role === 'mentor' ? <MentorDashboard /> :
-                      user.role === 'superadmin' ? <SuperadminDashboard /> :
-                      user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
-                      user.role === 'support_member' ? <SupportMemberDashboard /> :
-                      <Dashboard user={user} />
-                    } />
-                    
-                    {/* Shared routes */}
-                    <Route path="catalog" element={<Catalog />} />
-                    <Route path="certificates" element={<Certificates />} />
-                    <Route path="videos" element={<Videos />} />
-                    <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
-                    <Route path="video-player" element={<VideoPlayer />} />
-                    <Route path="assignments" element={<Assignments user={user} />} />
-                    <Route path="leaderboard" element={<Leaderboard />} />
-                    <Route path="live-sessions" element={<LiveSessions user={user} />} />
-                    
-                    <Route path="messages" element={<Messages />} />
-                    <Route path="support" element={<Support />} />
-                    <Route path="support-details" element={<SupportDetails />} />
-                    <Route path="connect" element={<Connect />} />
-                    <Route path="profile" element={<Profile />} />
-                    <Route path="notifications" element={<Notifications />} />
-                    <Route path="teams" element={
-                      <RoleGuard allowedRoles={["admin", "superadmin"]}>
-                        <Teams />
-                      </RoleGuard>
-                    } />
-                    <Route path="students" element={
-                      <RoleGuard allowedRoles={["admin", "superadmin", "enrollment_manager"]}>
-                        <StudentsManagement />
-                      </RoleGuard>
-                    } />
-                    <Route path="shopify-dashboard" element={<ShopifyDashboard />} />
-                    <Route path="meta-ads-dashboard" element={<MetaAdsDashboard />} />
-                    
-                    {/* Role-specific routes */}
-                    <Route path="admin" element={<AdminDashboard />} />
-                    {/* Admin-friendly aliases (avoid falling back to dashboard) */}
-                    <Route path="courses" element={<AdminTabRedirect user={user} tab="courses" />} />
-                    <Route path="modules" element={<AdminTabRedirect user={user} tab="modules" />} />
-                    <Route path="pathways" element={<AdminTabRedirect user={user} tab="pathways" />} />
-                    <Route path="mentor" element={<MentorDashboard />} />
-                    <Route path="mentor/sessions" element={<MentorSessionsPage />} />
-                    <Route path="mentor/recordings" element={<MentorRecordingsPage />} />
-                    <Route path="mentor/modules" element={<MentorModulesPage />} />
-                    <Route path="mentor/assignments" element={<MentorAssignmentsPage />} />
-                    <Route path="mentor/submissions" element={<MentorSubmissionsPage />} />
-                    <Route path="mentor/calendar" element={<MentorCalendarPage />} />
-                    <Route path="superadmin" element={<SuperadminDashboard />} />
-                    <Route path="support-member" element={<SupportMemberDashboard />} />
-                    <Route path="enrollment-manager" element={<EnrollmentManagerDashboard />} />
-
-                    {/* Notifications admin + dev */}
-                    <Route
-                      path="admin/notifications"
-                      element={
-                        <RoleGuard allowedRoles={["admin","superadmin"]}>
-                          <AdminNotifications />
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <QueryClientProvider client={queryClient}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <DynamicFavicon />
+            <BrowserRouter>
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  {/* Public routes - accessible without authentication */}
+                  <Route path="reset-password" element={<ResetPassword />} />
+                  
+                  {!user ? (
+                    <Route path="*" element={<Login />} />
+                  ) : user?.role === 'student' && !user?.onboarding_done ? (
+                    (() => {
+                      logger.debug('App: Showing onboarding for student', { userId: user.id, onboarding_done: user.onboarding_done });
+                      return <Route path="*" element={
+                        <OnboardingWrapper user={user} />
+                      } />;
+                    })()
+                  ) : (
+                    <Route path="/" element={<Layout user={user} />}>
+                      {/* Role-based dashboard routing */}
+                      <Route index element={
+                        user.role === 'admin' ? <AdminDashboard /> :
+                        user.role === 'mentor' ? <MentorDashboard /> :
+                        user.role === 'superadmin' ? <SuperadminDashboard /> :
+                        user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
+                        user.role === 'support_member' ? <SupportMemberDashboard /> :
+                        <Dashboard user={user} />
+                      } />
+                      
+                      {/* Dashboard route */}
+                      <Route path="dashboard" element={
+                        user.role === 'admin' ? <AdminDashboard /> :
+                        user.role === 'mentor' ? <MentorDashboard /> :
+                        user.role === 'superadmin' ? <SuperadminDashboard /> :
+                        user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
+                        user.role === 'support_member' ? <SupportMemberDashboard /> :
+                        <Dashboard user={user} />
+                      } />
+                      
+                      {/* Shared routes */}
+                      <Route path="catalog" element={<Catalog />} />
+                      <Route path="certificates" element={<Certificates />} />
+                      <Route path="videos" element={<Videos />} />
+                      <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
+                      <Route path="video-player" element={<VideoPlayer />} />
+                      <Route path="assignments" element={<Assignments user={user} />} />
+                      <Route path="leaderboard" element={<Leaderboard />} />
+                      <Route path="live-sessions" element={<LiveSessions user={user} />} />
+                      
+                      <Route path="messages" element={<Messages />} />
+                      <Route path="support" element={<Support />} />
+                      <Route path="support-details" element={<SupportDetails />} />
+                      <Route path="connect" element={<Connect />} />
+                      <Route path="profile" element={<Profile />} />
+                      <Route path="notifications" element={<Notifications />} />
+                      <Route path="teams" element={
+                        <RoleGuard allowedRoles={["admin", "superadmin"]}>
+                          <Teams />
                         </RoleGuard>
-                      }
-                    />
-                    <Route
-                      path="dev/notify-test"
-                      element={
+                      } />
+                      <Route path="students" element={
+                        <RoleGuard allowedRoles={["admin", "superadmin", "enrollment_manager"]}>
+                          <StudentsManagement />
+                        </RoleGuard>
+                      } />
+                      <Route path="shopify-dashboard" element={<ShopifyDashboard />} />
+                      <Route path="meta-ads-dashboard" element={<MetaAdsDashboard />} />
+                      
+                      {/* Role-specific routes with RoleGuard */}
+                      <Route path="admin" element={
+                        <RoleGuard allowedRoles={["admin", "superadmin"]}>
+                          <AdminDashboard />
+                        </RoleGuard>
+                      } />
+                      {/* Admin-friendly aliases */}
+                      <Route path="courses" element={<AdminTabRedirect user={user} tab="courses" />} />
+                      <Route path="modules" element={<AdminTabRedirect user={user} tab="modules" />} />
+                      <Route path="pathways" element={<AdminTabRedirect user={user} tab="pathways" />} />
+                      <Route path="mentor" element={
+                        <RoleGuard allowedRoles={["mentor"]}>
+                          <MentorDashboard />
+                        </RoleGuard>
+                      } />
+                      <Route path="mentor/sessions" element={
+                        <RoleGuard allowedRoles={["mentor"]}>
+                          <MentorSessionsPage />
+                        </RoleGuard>
+                      } />
+                      <Route path="mentor/recordings" element={
+                        <RoleGuard allowedRoles={["mentor"]}>
+                          <MentorRecordingsPage />
+                        </RoleGuard>
+                      } />
+                      <Route path="mentor/modules" element={
+                        <RoleGuard allowedRoles={["mentor"]}>
+                          <MentorModulesPage />
+                        </RoleGuard>
+                      } />
+                      <Route path="mentor/assignments" element={
+                        <RoleGuard allowedRoles={["mentor"]}>
+                          <MentorAssignmentsPage />
+                        </RoleGuard>
+                      } />
+                      <Route path="mentor/submissions" element={
+                        <RoleGuard allowedRoles={["mentor"]}>
+                          <MentorSubmissionsPage />
+                        </RoleGuard>
+                      } />
+                      <Route path="mentor/calendar" element={
+                        <RoleGuard allowedRoles={["mentor"]}>
+                          <MentorCalendarPage />
+                        </RoleGuard>
+                      } />
+                      <Route path="superadmin" element={
                         <RoleGuard allowedRoles={["superadmin"]}>
-                          <DevSendNotification />
+                          <SuperadminDashboard />
                         </RoleGuard>
-                      }
-                    />
-                    
-                    <Route path="*" element={<Navigate to="/" />} />
-                  </Route>
-                )}
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-          
-          {/* Paywall Modal - only render when user is authenticated */}
-          {user && (
-            <PaywallModal
-              isOpen={showPaywall}
-              onOpenChange={setShowPaywall}
-              invoiceAmount={pendingInvoice?.amount}
-              invoiceNumber={pendingInvoice?.invoice_number}
-            />
-          )}
-        </TooltipProvider>
-      </QueryClientProvider>
+                      } />
+                      <Route path="support-member" element={
+                        <RoleGuard allowedRoles={["support_member"]}>
+                          <SupportMemberDashboard />
+                        </RoleGuard>
+                      } />
+                      <Route path="enrollment-manager" element={
+                        <RoleGuard allowedRoles={["enrollment_manager"]}>
+                          <EnrollmentManagerDashboard />
+                        </RoleGuard>
+                      } />
+
+                      {/* Notifications admin + dev */}
+                      <Route
+                        path="admin/notifications"
+                        element={
+                          <RoleGuard allowedRoles={["admin","superadmin"]}>
+                            <AdminNotifications />
+                          </RoleGuard>
+                        }
+                      />
+                      <Route
+                        path="dev/notify-test"
+                        element={
+                          <RoleGuard allowedRoles={["superadmin"]}>
+                            <DevSendNotification />
+                          </RoleGuard>
+                        }
+                      />
+                      
+                      <Route path="*" element={<Navigate to="/" />} />
+                    </Route>
+                  )}
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+            
+            {/* Paywall Modal - only render when user is authenticated */}
+            {user && (
+              <PaywallModal
+                isOpen={showPaywall}
+                onOpenChange={setShowPaywall}
+                invoiceAmount={pendingInvoice?.amount}
+                invoiceNumber={pendingInvoice?.invoice_number}
+              />
+            )}
+          </TooltipProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 };
