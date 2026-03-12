@@ -1014,14 +1014,66 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                 {recordings.length === 0 ? 'Upload your first recording to get started' : 'Try adjusting your search or filters'}
               </p>
             </div>
+          ) : groupedRecordings ? (
+            /* Grouped by course view */
+            <div data-testid="recordings-table" className="w-full">
+              {groupedRecordings.map(([courseId, group]) => (
+                <Collapsible key={courseId} defaultOpen>
+                  <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-muted/50 border-b hover:bg-muted/70 transition-colors">
+                    <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
+                    <span className="font-semibold text-base">{group.courseTitle}</span>
+                    <Badge variant="secondary" className="ml-auto">{group.recordings.length} recordings</Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    {/* Header */}
+                    <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
+                      <div></div>
+                      <div></div>
+                      <div>Title <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span></div>
+                      <div className="text-center">Duration</div>
+                      <div className="text-center">Order</div>
+                      {!readOnly && <div className="text-center">Actions</div>}
+                    </div>
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleRecordingDragEnd}
+                    >
+                      <div className="divide-y">
+                        <SortableContext
+                          items={group.recordings.map(r => r.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {group.recordings.map((recording, index) => (
+                            <SortableRecordingRow
+                              key={recording.id}
+                              recording={recording}
+                              index={index}
+                              isExpanded={expandedRecordings.has(recording.id)}
+                              onToggleExpand={() => toggleRecordingExpansion(recording.id)}
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
+                              onRefresh={fetchRecordings}
+                              onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
+                              courses={courses}
+                              readOnly={readOnly}
+                            />
+                          ))}
+                        </SortableContext>
+                      </div>
+                    </DndContext>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
+            </div>
           ) : (
+            /* Flat list when specific course is filtered */
             <div data-testid="recordings-table" className="w-full">
               {/* Header */}
-              <div className="grid grid-cols-[24px_24px_1fr_220px_100px_80px_160px] items-center gap-4 p-4 bg-gray-50 border-b font-semibold text-sm">
+              <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
                 <div></div>
                 <div></div>
                 <div>Title <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span></div>
-                <div className="text-center">Course</div>
                 <div className="text-center">Duration</div>
                 <div className="text-center">Order</div>
                 {!readOnly && <div className="text-center">Actions</div>}
