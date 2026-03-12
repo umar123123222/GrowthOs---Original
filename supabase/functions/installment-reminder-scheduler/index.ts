@@ -42,11 +42,12 @@ serve(async (req) => {
     today.setHours(0, 0, 0, 0);
 
     // 1. Check for invoices that should change from 'scheduled' to 'pending' (issue date reached)
+    // Use issue_date if available (batch-based scheduling), fallback to created_at
     const { data: scheduledInvoices, error: scheduledError } = await supabaseAdmin
       .from('invoices')
       .select('*, students!inner(user_id, users!inner(full_name, email))')
       .eq('status', 'scheduled')
-      .lte('created_at', today.toISOString());
+      .or(`issue_date.lte.${today.toISOString()},and(issue_date.is.null,created_at.lte.${today.toISOString()})`);
 
     if (scheduledError) {
       console.error('Error fetching scheduled invoices:', scheduledError);
@@ -86,7 +87,7 @@ serve(async (req) => {
       console.error('Error fetching pending invoices:', pendingError);
     } else {
       for (const invoice of pendingInvoices || []) {
-        const issueDate = new Date(invoice.created_at);
+        const issueDate = new Date(invoice.issue_date || invoice.created_at);
         // Use extended_due_date if set, otherwise use due_date
         const effectiveDueDate = invoice.extended_due_date 
           ? new Date(invoice.extended_due_date) 
@@ -128,7 +129,7 @@ serve(async (req) => {
           } else {
             console.log(`LMS suspended for user ${invoice.students.user_id} due to overdue payment`);
             
-            // Log the suspension
+            // Log the suspension in admin_logs
             await supabaseAdmin.from('admin_logs').insert({
               entity_type: 'user',
               entity_id: invoice.students.user_id,
@@ -139,6 +140,20 @@ serve(async (req) => {
                 installment_number: invoice.installment_number,
                 amount: invoice.amount 
               }
+            });
+
+            // Log auto-suspension in user_activity_logs for audit trail
+            await supabaseAdmin.from('user_activity_logs').insert({
+              user_id: invoice.students.user_id,
+              activity_type: 'lms_suspended',
+              metadata: {
+                reason: 'Auto-suspended due to non-payment of fees',
+                invoice_id: invoice.id,
+                installment_number: invoice.installment_number,
+                amount: invoice.amount,
+                due_date: invoice.due_date
+              },
+              occurred_at: new Date().toISOString()
             });
 
             // Send suspension notification

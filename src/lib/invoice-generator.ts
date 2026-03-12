@@ -8,6 +8,7 @@ export interface GenerateInvoicesParams {
   maxInstallments: number;
   invoiceSendGapDays?: number;
   invoiceOverdueDays?: number;
+  batchStartDate?: string;
   enrollmentDetails?: {
     courseName?: string;
     pathwayName?: string;
@@ -37,6 +38,7 @@ export async function generateEnrollmentInvoices({
   maxInstallments,
   invoiceSendGapDays = 30,
   invoiceOverdueDays = 5,
+  batchStartDate,
   enrollmentDetails
 }: GenerateInvoicesParams): Promise<GeneratedInvoice[]> {
   // If total amount is 0 or less, no invoices needed
@@ -46,12 +48,14 @@ export async function generateEnrollmentInvoices({
   }
 
   const installmentAmount = totalAmount / maxInstallments;
+  const batchAnchor = batchStartDate ? new Date(batchStartDate) : null;
   const invoices: Array<{
     student_id: string;
     course_id: string | null;
     pathway_id: string | null;
     installment_number: number;
     amount: number;
+    issue_date: string;
     due_date: string;
     status: string;
     enrollment_details: Record<string, string[]> | null;
@@ -59,11 +63,27 @@ export async function generateEnrollmentInvoices({
   }> = [];
 
   for (let i = 1; i <= maxInstallments; i++) {
-    const issueDate = new Date();
-    issueDate.setDate(issueDate.getDate() + ((i - 1) * invoiceSendGapDays));
-    
-    const dueDate = new Date(issueDate);
-    dueDate.setDate(dueDate.getDate() + invoiceOverdueDays);
+    let issueDate: Date;
+    let dueDate: Date;
+
+    if (i === 1) {
+      // 1st installment: issued immediately
+      issueDate = new Date();
+      dueDate = new Date(issueDate);
+      dueDate.setDate(dueDate.getDate() + invoiceOverdueDays);
+    } else if (batchAnchor) {
+      // Batch-enrolled: 2nd+ installments anchored to batch start date + (i-1)*27 days
+      issueDate = new Date(batchAnchor);
+      issueDate.setDate(issueDate.getDate() + ((i - 1) * 27));
+      dueDate = new Date(issueDate);
+      dueDate.setDate(dueDate.getDate() + 5);
+    } else {
+      // Non-batch: use company settings interval
+      issueDate = new Date();
+      issueDate.setDate(issueDate.getDate() + ((i - 1) * invoiceSendGapDays));
+      dueDate = new Date(issueDate);
+      dueDate.setDate(dueDate.getDate() + invoiceOverdueDays);
+    }
 
     invoices.push({
       student_id: studentId,
@@ -71,6 +91,7 @@ export async function generateEnrollmentInvoices({
       pathway_id: pathwayId || null,
       installment_number: i,
       amount: installmentAmount,
+      issue_date: issueDate.toISOString(),
       due_date: dueDate.toISOString(),
       status: i === 1 ? 'pending' : 'scheduled',
       enrollment_details: enrollmentDetails ? {
