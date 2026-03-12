@@ -405,6 +405,7 @@ export function StudentsManagement() {
           student_record_id: mapEntry?.student_record_id || null,
           phone: user.phone || '',
           password_display: user.password_display || '',
+          original_password: user.original_password || user.password_display || '',
           fees_structure: feesStructure,
           fees_overdue: false,
           last_invoice_date: '',
