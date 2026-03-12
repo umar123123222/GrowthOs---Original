@@ -217,7 +217,30 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
     });
   }, [modules, searchQuery, filterCourseId]);
 
-  const filtersActive = searchQuery.trim() !== '' || filterCourseId !== 'all';
+  // Group modules by course for display
+  const groupedModules = useMemo(() => {
+    if (filterCourseId !== 'all') return null;
+    
+    const groups = new Map<string, { courseTitle: string; modules: Module[] }>();
+    
+    for (const mod of filteredModules) {
+      const courseId = mod.course_id || '__none__';
+      const courseTitle = courses.find(c => c.id === courseId)?.title || 'No Course (Global)';
+      
+      if (!groups.has(courseId)) {
+        groups.set(courseId, { courseTitle, modules: [] });
+      }
+      groups.get(courseId)!.modules.push(mod);
+    }
+    
+    const sorted = Array.from(groups.entries()).sort(([aId, a], [bId, b]) => {
+      if (aId === '__none__') return 1;
+      if (bId === '__none__') return -1;
+      return a.courseTitle.localeCompare(b.courseTitle);
+    });
+    
+    return sorted;
+  }, [filteredModules, filterCourseId, courses]);
 
   useEffect(() => {
     fetchModules();
