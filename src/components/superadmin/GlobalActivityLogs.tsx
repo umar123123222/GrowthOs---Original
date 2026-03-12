@@ -23,6 +23,8 @@ interface GlobalLog {
   user_email?: string;
   user_name?: string;
   user_role?: string;
+  target_user_name?: string;
+  target_user_email?: string;
 }
 
 export const GlobalActivityLogs = () => {
