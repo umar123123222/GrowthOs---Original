@@ -482,6 +482,16 @@ export const StudentManagement = () => {
           updated_at: new Date().toISOString()
         }).eq('id', student.id);
         if (error) throw error;
+        // Log unsuspension
+        logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: student.id,
+          entityType: 'user',
+          entityId: student.id,
+          action: ACTIVITY_TYPES.LMS_ACTIVATED,
+          description: `LMS account activated (unsuspended)`,
+          data: { student_name: student.full_name }
+        });
         await fetchStudents();
         toast({ title: 'Success', description: 'LMS account activated successfully' });
       } catch (error) {
