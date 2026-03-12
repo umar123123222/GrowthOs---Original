@@ -6,6 +6,7 @@ import { MilestoneCelebrationPopup } from '@/components/MilestoneCelebrationPopu
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import React, { useState, useEffect, Suspense, lazy } from "react";
+import { ThemeProvider } from "next-themes";
 import { useAuth } from "./hooks/useAuth";
 import { initializeGlobalIntegrations } from "./lib/global-integrations";
 import { initPerformanceMonitoring } from "./lib/performance";
