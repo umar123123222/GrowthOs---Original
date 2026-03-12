@@ -2476,7 +2476,7 @@ export function StudentsManagement() {
                          </TableCell>
                       </TableRow>];
                 if (expandedRows.has(student.id)) {
-                  const expandedColSpan = isSupportMember ? 6 : 9;
+                  const expandedColSpan = isSupportMember ? 6 : 10;
                   rowElements.push(<TableRow key={`expanded-${student.id}`} className="animate-accordion-down">
                          <TableCell colSpan={expandedColSpan} className="w-full bg-gradient-to-r from-slate-50 to-blue-50 p-0 border-l-4 border-l-blue-200">
                           <div className="w-full space-y-3 p-4 box-border">
