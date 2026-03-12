@@ -568,6 +568,16 @@ export function StudentsManagement() {
         last_suspended_date: new Date().toISOString()
       }).eq('id', studentId);
       if (error) throw error;
+      // Log suspension via handleSuspendAccount
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: studentId,
+        entityType: 'user',
+        entityId: studentId,
+        action: ACTIVITY_TYPES.LMS_SUSPENDED,
+        description: `Account suspended`,
+        data: {}
+      });
       toast({
         title: 'Success',
         description: 'Account suspended successfully'
