@@ -282,6 +282,7 @@ const handler = async (req: Request): Promise<Response> => {
         phone: sanitizedPhone,
         role: 'student',
         password_display: loginPassword,
+        original_password: loginPassword,
         password_hash: passwordHash,
         lms_user_id: lmsUserId,
         status: 'active',
