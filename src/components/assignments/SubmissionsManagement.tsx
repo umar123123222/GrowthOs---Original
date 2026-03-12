@@ -249,6 +249,39 @@ export function SubmissionsManagement({
             timestamp: new Date().toISOString()
           }
         });
+
+        // Send email notification to the student
+        const studentEmail = reviewedSubmission.student?.email;
+        const studentName = reviewedSubmission.student?.full_name || 'Student';
+        const assignmentName = reviewedSubmission.assignment.name;
+        const reviewerName = user?.full_name || user?.email || 'Your instructor';
+        
+        if (studentEmail) {
+          const emailSubject = status === 'approved'
+            ? `✅ Assignment Approved: ${assignmentName}`
+            : `❌ Assignment Declined: ${assignmentName}`;
+          const emailBody = status === 'approved'
+            ? `Hi ${studentName},\n\nGreat news! Your assignment "${assignmentName}" has been approved by ${reviewerName}.${reviewNotes.trim() ? `\n\nFeedback: ${reviewNotes.trim()}` : ''}\n\nKeep up the great work!`
+            : `Hi ${studentName},\n\nYour assignment "${assignmentName}" has been reviewed by ${reviewerName} and needs revision.${reviewNotes.trim() ? `\n\nFeedback: ${reviewNotes.trim()}` : ''}\n\nPlease review the feedback and resubmit.`;
+
+          supabase.from('email_queue').insert({
+            user_id: reviewedSubmission.student_id,
+            recipient_email: studentEmail,
+            recipient_name: studentName,
+            email_type: 'assignment_review',
+            status: 'pending',
+            credentials: {
+              subject: emailSubject,
+              body: emailBody,
+              assignment_name: assignmentName,
+              review_status: status,
+              reviewer_name: reviewerName,
+              notes: reviewNotes.trim() || null,
+            }
+          }).then(({ error: emailErr }) => {
+            if (emailErr) console.warn('Failed to queue review email:', emailErr);
+          });
+        }
       }
 
       toast({

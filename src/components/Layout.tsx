@@ -182,6 +182,23 @@ const NavigationItems = memo(({
     </nav>;
 });
 NavigationItems.displayName = "NavigationItems";
+
+// Dark mode toggle component
+const ThemeToggle = () => {
+  const { theme, setTheme } = useTheme();
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      className="text-muted-foreground hover:text-primary hover:border-primary/30 p-2"
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+      title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+    >
+      {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+    </Button>
+  );
+};
+
 const Layout = memo(({
   user
 }: LayoutProps) => {
