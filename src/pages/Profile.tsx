@@ -65,6 +65,17 @@ const Profile = () => {
 
       if (error) throw error;
 
+      // Log profile update
+      logAdminAction({
+        performedBy: user.id,
+        targetUserId: user.id,
+        entityType: 'user',
+        entityId: user.id,
+        action: ACTIVITY_TYPES.PROFILE_UPDATED,
+        description: `Profile updated by user`,
+        data: { full_name: profileData.full_name }
+      });
+
       toast({
         title: "Success!",
         description: "Profile updated successfully",
