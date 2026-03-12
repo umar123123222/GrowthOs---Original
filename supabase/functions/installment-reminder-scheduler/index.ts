@@ -129,7 +129,7 @@ serve(async (req) => {
           } else {
             console.log(`LMS suspended for user ${invoice.students.user_id} due to overdue payment`);
             
-            // Log the suspension
+            // Log the suspension in admin_logs
             await supabaseAdmin.from('admin_logs').insert({
               entity_type: 'user',
               entity_id: invoice.students.user_id,
@@ -140,6 +140,20 @@ serve(async (req) => {
                 installment_number: invoice.installment_number,
                 amount: invoice.amount 
               }
+            });
+
+            // Log auto-suspension in user_activity_logs for audit trail
+            await supabaseAdmin.from('user_activity_logs').insert({
+              user_id: invoice.students.user_id,
+              activity_type: 'lms_suspended',
+              metadata: {
+                reason: 'Auto-suspended due to non-payment of fees',
+                invoice_id: invoice.id,
+                installment_number: invoice.installment_number,
+                amount: invoice.amount,
+                due_date: invoice.due_date
+              },
+              occurred_at: new Date().toISOString()
             });
 
             // Send suspension notification

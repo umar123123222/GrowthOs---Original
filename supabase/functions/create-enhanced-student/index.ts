@@ -623,28 +623,59 @@ const handler = async (req: Request): Promise<Response> => {
           .select('invoice_overdue_days, invoice_send_gap_days')
           .single();
 
+        // Fetch batch start_date if batch_id is provided
+        let batchStartDate: Date | null = null;
+        if (batch_id) {
+          const { data: batchData } = await supabaseAdmin
+            .from('batches')
+            .select('start_date')
+            .eq('id', batch_id)
+            .single();
+          if (batchData?.start_date) {
+            batchStartDate = new Date(batchData.start_date);
+            console.log(`Batch start date: ${batchStartDate.toISOString()}`);
+          }
+        }
+
         if (installmentSettings) {
           const installmentAmount = finalFeeAmount / installment_count;
           const intervalDays = installmentSettings.invoice_send_gap_days || 30;
+          const overdueDays = installmentSettings.invoice_overdue_days || 5;
           
           // Create all installments with course_id/pathway_id link
           const installments = [];
           for (let i = 1; i <= installment_count; i++) {
-            const issueDate = new Date();
-            issueDate.setDate(issueDate.getDate() + ((i - 1) * intervalDays));
-            
-            const dueDate = new Date(issueDate);
-            dueDate.setDate(dueDate.getDate() + (installmentSettings.invoice_overdue_days || 5));
+            let issueDate: Date;
+            let dueDate: Date;
+
+            if (i === 1) {
+              // 1st installment: issued immediately
+              issueDate = new Date();
+              dueDate = new Date(issueDate);
+              dueDate.setDate(dueDate.getDate() + overdueDays);
+            } else if (batchStartDate) {
+              // Batch-enrolled: 2nd+ installments anchored to batch start date + (i-1)*27 days
+              issueDate = new Date(batchStartDate);
+              issueDate.setDate(issueDate.getDate() + ((i - 1) * 27));
+              dueDate = new Date(issueDate);
+              dueDate.setDate(dueDate.getDate() + 5);
+            } else {
+              // Non-batch: use company settings interval
+              issueDate = new Date();
+              issueDate.setDate(issueDate.getDate() + ((i - 1) * intervalDays));
+              dueDate = new Date(issueDate);
+              dueDate.setDate(dueDate.getDate() + overdueDays);
+            }
 
             installments.push({
               student_id: studentRecord.id,
-              course_id: selectedCourseId, // Link invoice to selected course
-              pathway_id: selectedPathwayId, // Link invoice to selected pathway
+              course_id: selectedCourseId,
+              pathway_id: selectedPathwayId,
               amount: installmentAmount,
               installment_number: i,
+              issue_date: issueDate.toISOString(),
               due_date: dueDate.toISOString(),
               status: i === 1 ? 'pending' : 'scheduled'
-              // created_at will use database default (now()) - don't set it to future date
             });
           }
 
