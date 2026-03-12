@@ -355,6 +355,32 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     return matchesSearch && matchesCourse && matchesModule;
   });
 
+  // Group recordings by course for display
+  const groupedRecordings = useMemo(() => {
+    if (filterCourseId !== 'all') return null; // No grouping when a specific course is filtered
+    
+    const groups = new Map<string, { courseTitle: string; recordings: Recording[] }>();
+    
+    for (const recording of filteredRecordings) {
+      const courseId = recording.module?.course_id || '__none__';
+      const courseTitle = courses.find(c => c.id === courseId)?.title || 'No Course (Global)';
+      
+      if (!groups.has(courseId)) {
+        groups.set(courseId, { courseTitle, recordings: [] });
+      }
+      groups.get(courseId)!.recordings.push(recording);
+    }
+    
+    // Sort: named courses first (by title), "No Course" last
+    const sorted = Array.from(groups.entries()).sort(([aId, a], [bId, b]) => {
+      if (aId === '__none__') return 1;
+      if (bId === '__none__') return -1;
+      return a.courseTitle.localeCompare(b.courseTitle);
+    });
+    
+    return sorted;
+  }, [filteredRecordings, filterCourseId, courses]);
+
   const fetchAssignments = async () => {
     try {
       const { data, error } = await supabase
