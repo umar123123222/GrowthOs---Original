@@ -37,6 +37,7 @@ interface Student {
   phone: string;
   lms_user_id: string;
   password_display: string;
+  original_password?: string;
   created_at: string;
   last_active_at: string;
   fees_structure: string;
