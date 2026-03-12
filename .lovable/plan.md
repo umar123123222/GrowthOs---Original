@@ -1,37 +1,38 @@
 
+# LMS Fixes and Improvements — COMPLETED
 
-# Fix Reset Password to Use Original Default Password
+## ✅ Bug Fixes (Done)
 
-## Problem
-The approved plan to stop overwriting `password_display` was never applied. The code in `ResetPassword.tsx` (lines 226-241) still syncs `password_display` to whatever new password the student sets. This means the "Reset Password" button on the Students Management page resets to the student's *current* password instead of the *original* one issued at creation.
+### Fix 1: RoleGuard on unprotected routes (App.tsx)
+- `/admin` → admin, superadmin
+- `/superadmin` → superadmin
+- `/mentor` + all `/mentor/*` sub-routes → mentor
+- `/enrollment-manager` → enrollment_manager
+- `/support-member` → support_member
 
-## Solution
+### Fix 2: Sidebar integration links (Layout.tsx)
+- `/shopify` → `/shopify-dashboard`
+- `/meta-ads` → `/meta-ads-dashboard`
 
-### 1. Add `original_password` column to `users` table
-We need a separate field that is set once during student creation and never changed. `password_display` is already being used for "current password" visibility, so we introduce `original_password` as the immutable default.
+## ✅ Improvements (Done)
 
-**Migration:**
-```sql
-ALTER TABLE public.users ADD COLUMN IF NOT EXISTS original_password text;
-UPDATE public.users SET original_password = password_display WHERE original_password IS NULL;
-```
+### 1. Email notification on assignment approval/decline
+- Inserts into `email_queue` table when a submission is approved/declined
+- Includes assignment name, reviewer name, and feedback notes
 
-### 2. Set `original_password` during student creation
-In `create-enhanced-student/index.ts`, when inserting the user record, also set `original_password` to the generated password. This field is never updated again.
+### 2. Enhanced admin CSV export
+- Now exports 19 columns matching superadmin version: LMS Status, Joining Date, Remaining to Pay, Invoice Status, Invoice Due Date, LMS ID, LMS Password, Recordings Watched, Course/Pathway Access, Batch, Admin Notes
 
-### 3. Update Reset Password handler in StudentsManagement
-Change `handleResetPassword` to use `original_password` instead of `password_display`. Update the Student interface, the fetch query, and the UI to show the original password in the reset confirmation dialog.
+### 3. Dark mode support
+- Added `ThemeProvider` from `next-themes` wrapping the app
+- Added Sun/Moon toggle button in the header
+- Replaced hardcoded colors in header, sidebar, and main content with semantic tokens (`bg-background`, `bg-card`, `border-border`, `text-muted-foreground`)
 
-### 4. Keep `password_display` sync in ResetPassword.tsx
-Leave the existing sync as-is — it serves the purpose of showing the *current* password to superadmins. The reset button will now use `original_password` instead.
+### 4. Fixed hardcoded paywall invoice data
+- Replaced placeholder `amount: 50000` / `invoice_number: 'INV-PENDING'` with real DB query
+- Fetches earliest unpaid invoice from `invoices` table via student record
 
-## Files to Change
-
-| File | Change |
-|------|--------|
-| Migration SQL | Add `original_password` column, backfill from `password_display` |
-| `supabase/functions/create-enhanced-student/index.ts` | Set `original_password` alongside `password_display` on creation |
-| `src/components/superadmin/StudentsManagement.tsx` | Add `original_password` to Student interface, fetch query, and use it in `handleResetPassword` + dialog text |
-| `src/components/admin/StudentManagement.tsx` | Same changes if reset password exists there |
-| `src/integrations/supabase/types.ts` | Add `original_password` to users type |
-
+## Remaining items (not in scope)
+- Student self-service payment view (deferred)
+- No search/filter on Videos page (deferred)
+- No pagination on student tables (deferred)

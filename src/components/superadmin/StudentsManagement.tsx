@@ -37,6 +37,7 @@ interface Student {
   phone: string;
   lms_user_id: string;
   password_display: string;
+  original_password?: string;
   created_at: string;
   last_active_at: string;
   fees_structure: string;
@@ -404,6 +405,7 @@ export function StudentsManagement() {
           student_record_id: mapEntry?.student_record_id || null,
           phone: user.phone || '',
           password_display: user.password_display || '',
+          original_password: user.original_password || user.password_display || '',
           fees_structure: feesStructure,
           fees_overdue: false,
           last_invoice_date: '',
@@ -2754,7 +2756,7 @@ export function StudentsManagement() {
                                       variant="outline" 
                                       size="sm" 
                                       className="hover-scale hover:border-blue-300 hover:text-blue-600"
-                                      disabled={!student.password_display}
+                                      disabled={!student.original_password && !student.password_display}
                                     >
                                       <Key className="w-4 h-4 mr-2" />
                                       Reset Password
@@ -2764,12 +2766,12 @@ export function StudentsManagement() {
                                     <AlertDialogHeader>
                                       <AlertDialogTitle>Reset Password</AlertDialogTitle>
                                       <AlertDialogDescription>
-                                        This will reset {student.full_name}'s login password to the original stored password ({student.password_display || 'N/A'}). The student will need to use this password to log in.
+                                        This will reset {student.full_name}'s login password to their original default password ({student.original_password || student.password_display || 'N/A'}). The student will need to use this password to log in.
                                       </AlertDialogDescription>
                                     </AlertDialogHeader>
                                     <AlertDialogFooter>
                                       <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                      <AlertDialogAction onClick={() => handleResetPassword(student.id, student.full_name, student.password_display, student.email)}>
+                                      <AlertDialogAction onClick={() => handleResetPassword(student.id, student.full_name, student.original_password || student.password_display, student.email)}>
                                         Reset Password
                                       </AlertDialogAction>
                                     </AlertDialogFooter>
