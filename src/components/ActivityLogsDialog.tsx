@@ -354,7 +354,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     <TableHeader>
                       <TableRow className="hover:bg-transparent border-0">
                         <TableHead className="font-medium h-12">Timestamp</TableHead>
-                        <TableHead className="font-medium h-12">User</TableHead>
+                        <TableHead className="font-medium h-12">Performed By</TableHead>
                         <TableHead className="font-medium h-12">Name</TableHead>
                         <TableHead className="font-medium h-12">Role</TableHead>
                         <TableHead className="font-medium h-12">Activity</TableHead>
