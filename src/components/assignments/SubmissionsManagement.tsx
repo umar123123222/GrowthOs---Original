@@ -250,6 +250,21 @@ export function SubmissionsManagement({
           }
         });
 
+        // Log to admin_logs with target_user_id
+        logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: reviewedSubmission.student_id,
+          entityType: 'assignment',
+          entityId: reviewedSubmission.assignment_id,
+          action: status === 'approved' ? ACTIVITY_TYPES.ASSIGNMENT_APPROVED : ACTIVITY_TYPES.ASSIGNMENT_DECLINED,
+          description: `Assignment "${reviewedSubmission.assignment.name}" ${status} for ${reviewedSubmission.student?.full_name || 'student'}`,
+          data: {
+            assignment_name: reviewedSubmission.assignment.name,
+            student_name: reviewedSubmission.student?.full_name,
+            notes: reviewNotes.trim() || null,
+          }
+        });
+
         // Send email notification to the student
         const studentEmail = reviewedSubmission.student?.email;
         const studentName = reviewedSubmission.student?.full_name || 'Student';
