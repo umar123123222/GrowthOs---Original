@@ -8,6 +8,7 @@ export interface GenerateInvoicesParams {
   maxInstallments: number;
   invoiceSendGapDays?: number;
   invoiceOverdueDays?: number;
+  batchStartDate?: string;
   enrollmentDetails?: {
     courseName?: string;
     pathwayName?: string;
