@@ -316,8 +316,9 @@ export const GlobalActivityLogs = () => {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-[160px]">Timestamp</TableHead>
-                  <TableHead className="w-[200px]">User</TableHead>
+                  <TableHead className="w-[200px]">Performed By</TableHead>
                   <TableHead className="w-[120px]">Role</TableHead>
+                  <TableHead className="w-[160px]">Target Student</TableHead>
                   <TableHead className="w-[120px]">Action</TableHead>
                   <TableHead className="w-[120px]">Entity</TableHead>
                   <TableHead>Description</TableHead>
