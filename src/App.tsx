@@ -162,17 +162,43 @@ const App = () => {
   const checkPaymentStatus = async () => {
     if (!user?.id) return;
 
-    // Set placeholder invoice data
-    setPendingInvoice({
-      amount: 50000,
-      invoice_number: 'INV-PENDING'
-    });
+    // Only check payment for students who have completed onboarding
+    if (user.role !== 'student' || !user.onboarding_done) return;
 
-    // For students, check if they have overdue fees or no payment recorded
-    if (user.role === 'student' && user.onboarding_done) {
-      if (user.fees_overdue || !user.fees_due_date) {
-        setShowPaywall(true);
+    try {
+      // Get student record ID
+      const { data: studentRecord } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (!studentRecord?.id) return;
+
+      // Fetch the earliest unpaid invoice
+      const { data: unpaidInvoice } = await supabase
+        .from('invoices')
+        .select('amount, installment_number, status, due_date')
+        .eq('student_id', studentRecord.id)
+        .neq('status', 'paid')
+        .order('due_date', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      if (unpaidInvoice) {
+        setPendingInvoice({
+          amount: unpaidInvoice.amount || 0,
+          invoice_number: `INV-${unpaidInvoice.installment_number || 1}`
+        });
+
+        // Show paywall if overdue
+        const isOverdue = unpaidInvoice.due_date && new Date(unpaidInvoice.due_date) < new Date();
+        if (isOverdue || user.fees_overdue) {
+          setShowPaywall(true);
+        }
       }
+    } catch (error) {
+      logger.warn('Failed to check payment status', { error });
     }
   };
 
