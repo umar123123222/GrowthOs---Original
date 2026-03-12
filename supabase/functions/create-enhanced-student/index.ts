@@ -605,6 +605,7 @@ const handler = async (req: Request): Promise<Response> => {
         description: `100% discount applied - total fee: ${currency} 0.00`,
         performed_by: createdBy,
         data: {
+          target_user_id: userId,
           original_amount: baseFeeAmount,
           discount_amount: discount_amount || 0,
           discount_percentage: discount_percentage || 0,
