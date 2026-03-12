@@ -359,6 +359,18 @@ export const GlobalActivityLogs = () => {
                           {log.user_role ? formatRole(log.user_role) : 'System'}
                         </Badge>
                       </TableCell>
+                      <TableCell className="w-[160px]">
+                        {log.target_user_name ? (
+                          <div className="flex flex-col">
+                            <span className="text-sm truncate">{log.target_user_name}</span>
+                            <span className="text-xs text-muted-foreground truncate">
+                              {log.target_user_email}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell className="w-[120px]">
                         <Badge className={getActionBadgeColor(log.action)}>
                           {formatAction(log.action)}
