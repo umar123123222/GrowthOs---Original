@@ -87,7 +87,7 @@ serve(async (req) => {
       console.error('Error fetching pending invoices:', pendingError);
     } else {
       for (const invoice of pendingInvoices || []) {
-        const issueDate = new Date(invoice.created_at);
+        const issueDate = new Date(invoice.issue_date || invoice.created_at);
         // Use extended_due_date if set, otherwise use due_date
         const effectiveDueDate = invoice.extended_due_date 
           ? new Date(invoice.extended_due_date) 
