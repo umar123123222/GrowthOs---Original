@@ -1124,7 +1124,7 @@ export const StudentManagement = () => {
         ? supabase.from('course_enrollments').select('student_id, course_id, pathway_id, batch_id, status').in('student_id', studentRecordIds).eq('status', 'active')
         : Promise.resolve({ data: [] }),
       supabase.from('courses').select('id, title'),
-      supabase.from('pathways').select('id, name'),
+      (supabase as any).from('pathways').select('id, name'),
     ]);
 
     const allLogs = logsRes.data || [];
