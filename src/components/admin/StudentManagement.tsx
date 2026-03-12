@@ -434,6 +434,17 @@ export const StudentManagement = () => {
       }).eq('id', selectedStudentForStatus.id);
       if (error) throw error;
       
+      // Log LMS status change
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: selectedStudentForStatus.id,
+        entityType: 'user',
+        entityId: selectedStudentForStatus.id,
+        action: ACTIVITY_TYPES.LMS_STATUS_CHANGED,
+        description: `LMS status changed from ${oldStatus} to ${newLMSStatus}`,
+        data: { old_status: oldStatus, new_status: newLMSStatus, student_name: selectedStudentForStatus.full_name }
+      });
+
       // Close dialog first
       setStatusUpdateDialog(false);
       
