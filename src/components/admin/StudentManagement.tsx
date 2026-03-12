@@ -27,6 +27,7 @@ import { SuspensionDialog } from '@/components/SuspensionDialog';
 import { StudentNotesDialog } from '@/components/StudentNotesDialog';
 import { useAuth } from '@/hooks/useAuth';
 import jsPDF from 'jspdf';
+import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 interface Student {
   id: string;
   student_id: string;
