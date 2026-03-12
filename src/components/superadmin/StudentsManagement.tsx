@@ -292,6 +292,21 @@ export function StudentsManagement() {
         }
       });
 
+      // Also log to admin_logs for unified view
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: studentForSuspension.id,
+        entityType: 'user',
+        entityId: studentForSuspension.id,
+        action: ACTIVITY_TYPES.LMS_SUSPENDED,
+        description: `Student suspended: ${studentForSuspension.full_name}`,
+        data: {
+          suspension_note: data.note || null,
+          auto_unsuspend_date: data.autoUnsuspendDate ? data.autoUnsuspendDate.toISOString() : null,
+          student_name: studentForSuspension.full_name
+        }
+      });
+
       toast({
         title: 'Student Suspended',
         description: `${studentForSuspension.full_name} has been suspended${data.autoUnsuspendDate ? `. Auto-unsuspend: ${format(data.autoUnsuspendDate, 'PPP')}` : ''}`
