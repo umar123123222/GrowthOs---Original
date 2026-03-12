@@ -42,11 +42,12 @@ serve(async (req) => {
     today.setHours(0, 0, 0, 0);
 
     // 1. Check for invoices that should change from 'scheduled' to 'pending' (issue date reached)
+    // Use issue_date if available (batch-based scheduling), fallback to created_at
     const { data: scheduledInvoices, error: scheduledError } = await supabaseAdmin
       .from('invoices')
       .select('*, students!inner(user_id, users!inner(full_name, email))')
       .eq('status', 'scheduled')
-      .lte('created_at', today.toISOString());
+      .or(`issue_date.lte.${today.toISOString()},and(issue_date.is.null,created_at.lte.${today.toISOString()})`);
 
     if (scheduledError) {
       console.error('Error fetching scheduled invoices:', scheduledError);
