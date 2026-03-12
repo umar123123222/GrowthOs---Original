@@ -1,71 +1,57 @@
 
 
-# Comprehensive LMS Audit: Issues & Missing Features
+# LMS Fixes and Improvements Plan
 
-## BUGS / BROKEN ITEMS
+## Bug Fixes
 
-### 1. Missing Route: `/certificates`
-The sidebar (Layout.tsx line 141) links to `/certificates`, but **no route exists** in App.tsx. Clicking "Certificates" in the sidebar redirects to `/` (the catch-all). The `Certificates` page component exists but is never imported or routed.
+### Fix 1: Add RoleGuard to unprotected routes (App.tsx)
+Wrap these routes with appropriate `RoleGuard`:
+- `/shopify-dashboard` → admin, superadmin
+- `/meta-ads-dashboard` → admin, superadmin  
+- `/catalog` → admin, superadmin
+- `/connect` → student, admin, superadmin
+- `/certificates` → student
+- `/admin` → admin
+- `/superadmin` → superadmin
+- `/mentor` → mentor
+- `/enrollment-manager` → enrollment_manager
+- `/support-member` → support_member
+- All `/mentor/*` sub-routes → mentor
 
-### 2. Missing Route: `/mentorship`
-The sidebar (Layout.tsx line 71) shows a "Mentorship" link for students and mentors, but **no `/mentorship` route exists** in App.tsx. Clicking it redirects to `/`.
-
-### 3. LiveSessions page does NOT show "live" sessions
-The LiveSessions.tsx query on line 210 filters `.in('status', ['upcoming', 'completed'])` -- it **excludes `'live'` status entirely**. After the edge function auto-updates a session from `upcoming` to `live`, it vanishes from this page. This directly contradicts the dashboard fix just made.
-
-### 4. LiveSessions page disappears sessions at start_time
-Line 224: `new Date(session.start_time) >= now` means once a session's start_time passes, it's removed from "upcoming" but NOT caught by the "past" filter either (since `sessionEnd >= now` returns false). Sessions that are currently ongoing are invisible on this page.
-
-### 5. Messages page is non-functional
-Messages.tsx (line 46-47) explicitly sets `messages` to an empty array with the comment "messages table doesn't exist." Sending a message writes to `user_activity_logs` instead. The entire page is a dead-end UI.
-
-### 6. Certificates page is a placeholder
-Certificates.tsx (line 38-39) hardcodes `setCertificates([])` with comment "Certificates table doesn't exist yet." The page shows a "Coming Soon" banner and static placeholder data.
-
-### 7. No RoleGuard on several routes
-Routes like `/students`, `/teams`, `/shopify-dashboard`, `/meta-ads-dashboard`, `/catalog`, and `/connect` in App.tsx have no `RoleGuard`. Any authenticated user can access them regardless of role.
-
-### 8. LiveSessions `user` prop may be undefined
-In App.tsx, `<LiveSessions user={user} />` passes the user, but the component's `useEffect` (line 197) only fetches data `if (user?.id)` -- if the auth user object structure differs from what the component expects, sessions won't load.
+### Fix 2: Fix sidebar integration links (Layout.tsx)
+- Change `/shopify` → `/shopify-dashboard`
+- Change `/meta-ads` → `/meta-ads-dashboard`
+- Update the `location.pathname` checks to match
 
 ---
 
-## MISSING FEATURES / SUGGESTIONS
+## Improvements
 
-### 1. Session status "live" not reflected in LiveSessions page
-The dashboard was fixed but the LiveSessions page still uses the old logic. It should include `'live'` in the status filter and show currently-live sessions prominently.
+### 1. Email notification on assignment approval/decline
+In `SubmissionsManagement.tsx`, after a submission is approved/declined, insert a row into the `email_queue` table (or call `process-email-queue` edge function) to notify the student via email. Will use the existing SMTP infrastructure via `supabase.functions.invoke('process-email-queue')` or insert into `notifications` table with email channel.
 
-### 2. No search/filter on Videos page
-Students have no way to search recordings by name. With many modules, this becomes a UX problem.
+### 2. Enhance admin CSV export
+In `src/components/admin/StudentManagement.tsx`, expand `handleExportCSV` to include the additional columns the superadmin version has: LMS Status, Joining Date, Remaining to Pay, Invoice Status, Invoice Due Date, LMS ID, LMS Password, Assignments stats, Recordings Watched, Course/Pathway Access, Activity Logs, Admin Notes.
 
-### 3. No pagination on student management tables
-The superadmin and admin student management pages fetch all students at once. With hundreds of students, this causes slow loads.
+### 3. Dark mode support
+- The CSS already has `.dark` variables defined in `index.css`
+- Replace hardcoded colors (`bg-gray-50`, `text-gray-600`, `bg-white`, etc.) with Tailwind semantic classes (`bg-background`, `text-foreground`, `bg-muted`, `text-muted-foreground`, `bg-card`, `border-border`) across Layout.tsx and other major components
+- Add a dark mode toggle button in the header using `next-themes` (already installed)
+- Wrap the app with `ThemeProvider` in `main.tsx`
 
-### 4. No email notification on assignment status change
-When an admin approves/declines a submission, there's no email notification to the student -- only in-app.
-
-### 5. No dark mode support
-The app uses hardcoded light colors in many places (e.g., `bg-gray-50`, `text-gray-600`) rather than semantic Tailwind classes, making dark mode impossible.
-
-### 6. No session recording upload for admins
-Admins can set a link for live sessions but there's no dedicated recording upload/management after a session ends.
-
-### 7. No student self-service payment view
-Students see a paywall modal but have no dedicated page to view invoices, payment history, or make payments.
-
-### 8. Admin CSV export missing on admin-level StudentManagement
-The comprehensive 23-column CSV export was added to superadmin's `StudentsManagement.tsx` but NOT to admin-level `StudentManagement.tsx`.
+### 4. Fix hardcoded paywall invoice data
+In `App.tsx`, replace the hardcoded `amount: 50000` and `invoice_number: 'INV-PENDING'` with a real database query. Fetch from `installment_payments` or `invoices` table to get the student's actual pending invoice amount and number.
 
 ---
 
-## PRIORITY FIX LIST
+## Files to modify
+- `src/App.tsx` — RoleGuards + paywall fix
+- `src/components/Layout.tsx` — sidebar links + dark mode classes + theme toggle
+- `src/main.tsx` — ThemeProvider wrapper
+- `src/components/assignments/SubmissionsManagement.tsx` — email notification on review
+- `src/components/admin/StudentManagement.tsx` — enhanced CSV export
+- Several component files — replace hardcoded gray colors with semantic tokens
 
-| # | Issue | Severity |
-|---|-------|----------|
-| 1 | LiveSessions excludes `'live'` status -- sessions vanish | **Critical** |
-| 2 | `/certificates` route missing -- sidebar link broken | **High** |
-| 3 | `/mentorship` route missing -- sidebar link broken | **High** |
-| 4 | Messages page non-functional | **Medium** |
-| 5 | No RoleGuard on several routes | **Medium** |
-| 6 | Admin CSV export not updated | **Low** |
+## Estimated scope
+~8 files modified, primarily Layout.tsx (largest change for dark mode class replacements).
 
