@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -115,7 +115,7 @@ function SortableRecordingRow({
       <div 
         ref={setNodeRef}
         style={style}
-        className="grid grid-cols-[24px_24px_1fr_220px_100px_80px_160px] items-center gap-4 p-4 hover:bg-gray-50 transition-colors animate-fade-in"
+        className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 hover:bg-muted/50 transition-colors animate-fade-in"
       >
         <div
           {...attributes}
@@ -136,11 +136,6 @@ function SortableRecordingRow({
           </CollapsibleTrigger>
         </div>
         <div className="font-medium truncate">{recording.recording_title}</div>
-        <div className="text-center">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            {courses.find(c => c.id === recording.module?.course_id)?.title || 'No Course'}
-          </Badge>
-        </div>
         <div className="text-center text-sm text-muted-foreground">
           {recording.duration_min} min
         </div>
@@ -354,6 +349,32 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     
     return matchesSearch && matchesCourse && matchesModule;
   });
+
+  // Group recordings by course for display
+  const groupedRecordings = useMemo(() => {
+    if (filterCourseId !== 'all') return null; // No grouping when a specific course is filtered
+    
+    const groups = new Map<string, { courseTitle: string; recordings: Recording[] }>();
+    
+    for (const recording of filteredRecordings) {
+      const courseId = recording.module?.course_id || '__none__';
+      const courseTitle = courses.find(c => c.id === courseId)?.title || 'No Course (Global)';
+      
+      if (!groups.has(courseId)) {
+        groups.set(courseId, { courseTitle, recordings: [] });
+      }
+      groups.get(courseId)!.recordings.push(recording);
+    }
+    
+    // Sort: named courses first (by title), "No Course" last
+    const sorted = Array.from(groups.entries()).sort(([aId, a], [bId, b]) => {
+      if (aId === '__none__') return 1;
+      if (bId === '__none__') return -1;
+      return a.courseTitle.localeCompare(b.courseTitle);
+    });
+    
+    return sorted;
+  }, [filteredRecordings, filterCourseId, courses]);
 
   const fetchAssignments = async () => {
     try {
@@ -988,14 +1009,66 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                 {recordings.length === 0 ? 'Upload your first recording to get started' : 'Try adjusting your search or filters'}
               </p>
             </div>
+          ) : groupedRecordings ? (
+            /* Grouped by course view */
+            <div data-testid="recordings-table" className="w-full">
+              {groupedRecordings.map(([courseId, group]) => (
+                <Collapsible key={courseId} defaultOpen>
+                  <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-muted/50 border-b hover:bg-muted/70 transition-colors">
+                    <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
+                    <span className="font-semibold text-base">{group.courseTitle}</span>
+                    <Badge variant="secondary" className="ml-auto">{group.recordings.length} recordings</Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    {/* Header */}
+                    <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
+                      <div></div>
+                      <div></div>
+                      <div>Title <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span></div>
+                      <div className="text-center">Duration</div>
+                      <div className="text-center">Order</div>
+                      {!readOnly && <div className="text-center">Actions</div>}
+                    </div>
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleRecordingDragEnd}
+                    >
+                      <div className="divide-y">
+                        <SortableContext
+                          items={group.recordings.map(r => r.id)}
+                          strategy={verticalListSortingStrategy}
+                        >
+                          {group.recordings.map((recording, index) => (
+                            <SortableRecordingRow
+                              key={recording.id}
+                              recording={recording}
+                              index={index}
+                              isExpanded={expandedRecordings.has(recording.id)}
+                              onToggleExpand={() => toggleRecordingExpansion(recording.id)}
+                              onEdit={handleEdit}
+                              onDelete={handleDelete}
+                              onRefresh={fetchRecordings}
+                              onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
+                              courses={courses}
+                              readOnly={readOnly}
+                            />
+                          ))}
+                        </SortableContext>
+                      </div>
+                    </DndContext>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
+            </div>
           ) : (
+            /* Flat list when specific course is filtered */
             <div data-testid="recordings-table" className="w-full">
               {/* Header */}
-              <div className="grid grid-cols-[24px_24px_1fr_220px_100px_80px_160px] items-center gap-4 p-4 bg-gray-50 border-b font-semibold text-sm">
+              <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
                 <div></div>
                 <div></div>
                 <div>Title <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span></div>
-                <div className="text-center">Course</div>
                 <div className="text-center">Duration</div>
                 <div className="text-center">Order</div>
                 {!readOnly && <div className="text-center">Actions</div>}

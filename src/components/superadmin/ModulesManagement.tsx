@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, BookOpen, GripVertical } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Plus, Edit, Trash2, BookOpen, GripVertical, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { safeQuery } from '@/lib/database-safety';
@@ -216,7 +217,30 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
     });
   }, [modules, searchQuery, filterCourseId]);
 
-  const filtersActive = searchQuery.trim() !== '' || filterCourseId !== 'all';
+  // Group modules by course for display
+  const groupedModules = useMemo(() => {
+    if (filterCourseId !== 'all') return null;
+    
+    const groups = new Map<string, { courseTitle: string; modules: Module[] }>();
+    
+    for (const mod of filteredModules) {
+      const courseId = mod.course_id || '__none__';
+      const courseTitle = courses.find(c => c.id === courseId)?.title || 'No Course (Global)';
+      
+      if (!groups.has(courseId)) {
+        groups.set(courseId, { courseTitle, modules: [] });
+      }
+      groups.get(courseId)!.modules.push(mod);
+    }
+    
+    const sorted = Array.from(groups.entries()).sort(([aId, a], [bId, b]) => {
+      if (aId === '__none__') return 1;
+      if (bId === '__none__') return -1;
+      return a.courseTitle.localeCompare(b.courseTitle);
+    });
+    
+    return sorted;
+  }, [filteredModules, filterCourseId, courses]);
 
   useEffect(() => {
     fetchModules();
@@ -767,9 +791,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
             <CardTitle className="flex items-center text-xl">
               <BookOpen className="w-6 h-6 mr-3 text-blue-600" />
               All Modules
-              {!filtersActive && (
-                <span className="ml-3 text-sm text-muted-foreground font-normal">Drag to reorder</span>
-              )}
+              <span className="ml-3 text-sm text-muted-foreground font-normal">Drag to reorder</span>
             </CardTitle>
 
             {/* Filters */}
@@ -804,73 +826,95 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
               <h3 className="text-lg font-semibold text-muted-foreground mb-2">No modules found</h3>
               <p className="text-muted-foreground">Create your first module to get started</p>
             </div>
+          ) : groupedModules ? (
+            /* Grouped by course view */
+            <div>
+              {groupedModules.map(([courseId, group]) => (
+                <Collapsible key={courseId} defaultOpen>
+                  <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-muted/50 border-b hover:bg-muted/70 transition-colors">
+                    <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
+                    <span className="font-semibold text-base">{group.courseTitle}</span>
+                    <Badge variant="secondary" className="ml-auto">{group.modules.length} modules</Badge>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleModuleDragEnd}
+                    >
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-muted/30">
+                            <TableHead className="w-[50px]"></TableHead>
+                            <TableHead className="font-semibold">Title</TableHead>
+                            <TableHead className="font-semibold">Description</TableHead>
+                            <TableHead className="font-semibold">Order</TableHead>
+                            <TableHead className="font-semibold">Recordings</TableHead>
+                            {!readOnly && <TableHead className="font-semibold">Actions</TableHead>}
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <SortableContext
+                            items={group.modules.map(m => m.id)}
+                            strategy={verticalListSortingStrategy}
+                          >
+                            {group.modules.map((module, index) => (
+                              <SortableModuleRow
+                                key={module.id}
+                                module={module}
+                                index={index}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                                courses={courses}
+                                readOnly={readOnly}
+                              />
+                            ))}
+                          </SortableContext>
+                        </TableBody>
+                      </Table>
+                    </DndContext>
+                  </CollapsibleContent>
+                </Collapsible>
+              ))}
+            </div>
           ) : (
-            filtersActive ? (
+            /* Flat list when specific course is filtered */
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleModuleDragEnd}
+            >
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
+                  <TableRow className="bg-muted/30">
                     <TableHead className="w-[50px]"></TableHead>
                     <TableHead className="font-semibold">Title</TableHead>
                     <TableHead className="font-semibold">Description</TableHead>
-                    <TableHead className="font-semibold">Course</TableHead>
                     <TableHead className="font-semibold">Order</TableHead>
                     <TableHead className="font-semibold">Recordings</TableHead>
                     {!readOnly && <TableHead className="font-semibold">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredModules.map((module, index) => (
-                    <SortableModuleRow
-                      key={module.id}
-                      module={module}
-                      index={index}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      courses={courses}
-                      readOnly={readOnly}
-                    />
-                  ))}
+                  <SortableContext
+                    items={filteredModules.map(m => m.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    {filteredModules.map((module, index) => (
+                      <SortableModuleRow
+                        key={module.id}
+                        module={module}
+                        index={index}
+                        onEdit={handleEdit}
+                        onDelete={handleDelete}
+                        courses={courses}
+                        readOnly={readOnly}
+                      />
+                    ))}
+                  </SortableContext>
                 </TableBody>
               </Table>
-            ) : (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleModuleDragEnd}
-              >
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-gray-50">
-                      <TableHead className="w-[50px]"></TableHead>
-                      <TableHead className="font-semibold">Title</TableHead>
-                      <TableHead className="font-semibold">Description</TableHead>
-                      <TableHead className="font-semibold">Course</TableHead>
-                      <TableHead className="font-semibold">Order</TableHead>
-                      <TableHead className="font-semibold">Recordings</TableHead>
-                      {!readOnly && <TableHead className="font-semibold">Actions</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    <SortableContext
-                      items={modules.map(m => m.id)}
-                      strategy={verticalListSortingStrategy}
-                    >
-                      {modules.map((module, index) => (
-                        <SortableModuleRow
-                          key={module.id}
-                          module={module}
-                          index={index}
-                          onEdit={handleEdit}
-                          onDelete={handleDelete}
-                          courses={courses}
-                          readOnly={readOnly}
-                        />
-                      ))}
-                    </SortableContext>
-                  </TableBody>
-                </Table>
-              </DndContext>
-            )
+            </DndContext>
           )}
         </CardContent>
       </Card>
