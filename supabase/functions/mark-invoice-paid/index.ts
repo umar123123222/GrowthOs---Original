@@ -124,6 +124,24 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Activate user account
     await supabase.from("users").update({ status: "active", lms_status: "active", last_active_at: now }).eq("id", userId);
+
+    // Log payment to admin_logs with target_user_id
+    await supabase.from("admin_logs").insert({
+      performed_by: null,
+      entity_type: "invoice",
+      entity_id: invoiceId,
+      action: "invoice_paid",
+      description: `Invoice #${invoice.installment_number || ''} marked as paid`,
+      data: {
+        target_user_id: userId,
+        student_id: invoice.student_id,
+        amount: invoice.amount,
+        installment_number: invoice.installment_number,
+        course_id: invoice.course_id || null,
+        pathway_id: invoice.pathway_id || null,
+      }
+    });
+
     console.log(`✅ Payment processed - Invoice: ${invoiceId}, User: ${userId}`);
 
     return new Response(
