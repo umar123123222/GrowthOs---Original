@@ -67,7 +67,10 @@ export const GlobalActivityLogs = () => {
 
       // Get unique user IDs for fetching user info (both performed_by and target_user_id from data)
       const performerIds = (logsData || []).map(l => l.performed_by).filter(Boolean);
-      const targetIds = (logsData || []).map(l => l.data?.target_user_id).filter(Boolean);
+      const targetIds = (logsData || []).map(l => {
+        const d = l.data as any;
+        return d?.target_user_id;
+      }).filter(Boolean);
       const userIds = [...new Set([...performerIds, ...targetIds])];
       
       // Fetch user details
