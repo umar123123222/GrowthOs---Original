@@ -155,9 +155,9 @@ const NavigationItems = memo(({
               Integrations
             </h3>
             <div className="space-y-2">
-              {connectionStatus.shopify && <Link to="/shopify" className={`
+              {connectionStatus.shopify && <Link to="/shopify-dashboard" className={`
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
-                    ${location.pathname === '/shopify' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                    ${location.pathname === '/shopify-dashboard' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}
                   `}>
                   <ShoppingBag className="h-4 w-4" />
                   <span>Shopify</span>
@@ -165,9 +165,9 @@ const NavigationItems = memo(({
                     Connected
                   </Badge>
                 </Link>}
-              {connectionStatus.meta && <Link to="/meta-ads" className={`
+              {connectionStatus.meta && <Link to="/meta-ads-dashboard" className={`
                     flex items-center gap-2 px-3 py-2 text-sm rounded-md transition-colors
-                    ${location.pathname === '/meta-ads' ? 'bg-primary text-primary-foreground' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}
+                    ${location.pathname === '/meta-ads-dashboard' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'}
                   `}>
                   <MetaIcon className="h-5 w-5" />
                   <span>Meta Ads</span>
