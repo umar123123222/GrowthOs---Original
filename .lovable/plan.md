@@ -1,38 +1,37 @@
 
-# LMS Fixes and Improvements — COMPLETED
 
-## ✅ Bug Fixes (Done)
+# Group Recordings & Modules by Course
 
-### Fix 1: RoleGuard on unprotected routes (App.tsx)
-- `/admin` → admin, superadmin
-- `/superadmin` → superadmin
-- `/mentor` + all `/mentor/*` sub-routes → mentor
-- `/enrollment-manager` → enrollment_manager
-- `/support-member` → support_member
+## Current State
+Both pages show a flat list with a course filter dropdown. Items are not visually grouped by course.
 
-### Fix 2: Sidebar integration links (Layout.tsx)
-- `/shopify` → `/shopify-dashboard`
-- `/meta-ads` → `/meta-ads-dashboard`
+## Plan
 
-## ✅ Improvements (Done)
+### Recordings Management (`RecordingsManagement.tsx`)
+- When no specific course is selected (filter = "all"), group recordings by course with course name section headers
+- Each course group gets a collapsible section with a header showing course title and recording count
+- When a specific course is filtered, show only that course's recordings (no grouping needed, just a flat list under that course)
+- Recordings with no course association go under a "No Course (Global)" group at the bottom
 
-### 1. Email notification on assignment approval/decline
-- Inserts into `email_queue` table when a submission is approved/declined
-- Includes assignment name, reviewer name, and feedback notes
+### Modules Management (`ModulesManagement.tsx`)
+- Same approach: group modules by course with section headers when filter = "all"
+- Each course group is a collapsible card/section showing course title and module count
+- When a specific course is filtered, show flat list for that course only
+- Modules with no `course_id` go under "Global" group
 
-### 2. Enhanced admin CSV export
-- Now exports 19 columns matching superadmin version: LMS Status, Joining Date, Remaining to Pay, Invoice Status, Invoice Due Date, LMS ID, LMS Password, Recordings Watched, Course/Pathway Access, Batch, Admin Notes
+### Implementation Details
 
-### 3. Dark mode support
-- Added `ThemeProvider` from `next-themes` wrapping the app
-- Added Sun/Moon toggle button in the header
-- Replaced hardcoded colors in header, sidebar, and main content with semantic tokens (`bg-background`, `bg-card`, `border-border`, `text-muted-foreground`)
+**Recordings page:**
+- Add a `useMemo` that groups `filteredRecordings` by `recording.module?.course_id` into a `Map<string, Recording[]>`
+- Render each group as a section with a styled course header (course title badge + count), followed by the existing sortable recording rows
+- Drag-and-drop reordering stays within each course group
 
-### 4. Fixed hardcoded paywall invoice data
-- Replaced placeholder `amount: 50000` / `invoice_number: 'INV-PENDING'` with real DB query
-- Fetches earliest unpaid invoice from `invoices` table via student record
+**Modules page:**
+- Add a `useMemo` that groups `filteredModules` by `module.course_id` into a `Map<string, Module[]>`
+- Render each group as a collapsible section with course header, containing the existing table rows
+- Drag-and-drop reordering stays within each course group
 
-## Remaining items (not in scope)
-- Student self-service payment view (deferred)
-- No search/filter on Videos page (deferred)
-- No pagination on student tables (deferred)
+### Files to Change
+- `src/components/superadmin/RecordingsManagement.tsx` — add course grouping logic and grouped rendering
+- `src/components/superadmin/ModulesManagement.tsx` — add course grouping logic and grouped rendering
+
