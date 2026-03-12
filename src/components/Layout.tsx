@@ -970,12 +970,15 @@ const Layout = memo(({
             <div className="flex items-center space-x-1 sm:space-x-4">
               <NotificationDropdown />
               
+              {/* Dark mode toggle */}
+              <ThemeToggle />
+              
               {/* Success Partner Button - Only for students */}
               {user?.role === 'student' && (
                 <Button 
                   variant="outline" 
                   size="sm" 
-                  className="text-gray-700 hover:text-blue-600 hover:border-blue-200 p-2 sm:px-3" 
+                  className="text-muted-foreground hover:text-primary hover:border-primary/30 p-2 sm:px-3" 
                   onClick={() => setShowSuccessPartner(true)}
                 >
                   <MessageCircle className="w-4 h-4 sm:mr-2" />
@@ -986,14 +989,14 @@ const Layout = memo(({
               {/* Activity Logs Button for authorized users - Only admins and superadmins */}
               {(isUserSuperadmin || isUserAdmin) && !isMobile && (
                 <ActivityLogsDialog>
-                  <Button variant="outline" size="sm" className="text-gray-700 hover:text-blue-600 hover:border-blue-200" title="View Activity Logs">
+                  <Button variant="outline" size="sm" className="text-muted-foreground hover:text-primary hover:border-primary/30" title="View Activity Logs">
                     <Activity className="w-4 h-4 mr-2" />
                     Activity Logs
                   </Button>
                 </ActivityLogsDialog>
               )}
               
-              <Button onClick={handleLogout} variant="outline" size="sm" className="text-gray-700 hover:text-red-600 hover:border-red-200 p-2 sm:px-3">
+              <Button onClick={handleLogout} variant="outline" size="sm" className="text-muted-foreground hover:text-destructive hover:border-destructive/30 p-2 sm:px-3">
                 <LogOut className="w-4 h-4 sm:mr-2" />
                 <span className="hidden sm:inline">Logout</span>
               </Button>
