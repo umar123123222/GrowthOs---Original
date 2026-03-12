@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
+import { logAdminAction, ACTIVITY_TYPES } from "@/lib/activity-logger";
 
 interface UserProfile {
   id: string;
@@ -63,6 +64,17 @@ const Profile = () => {
         .eq('id', user.id);
 
       if (error) throw error;
+
+      // Log profile update
+      logAdminAction({
+        performedBy: user.id,
+        targetUserId: user.id,
+        entityType: 'user',
+        entityId: user.id,
+        action: ACTIVITY_TYPES.PROFILE_UPDATED,
+        description: `Profile updated by user`,
+        data: { full_name: profileData.full_name }
+      });
 
       toast({
         title: "Success!",
@@ -135,6 +147,17 @@ const Profile = () => {
           currentPassword: '',
           newPassword: '',
           confirmPassword: ''
+        });
+
+        // Log password change
+        logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: user?.id || '',
+          entityType: 'user',
+          entityId: user?.id || '',
+          action: ACTIVITY_TYPES.PASSWORD_CHANGED,
+          description: `Password changed by user`,
+          data: {}
         });
 
         toast({

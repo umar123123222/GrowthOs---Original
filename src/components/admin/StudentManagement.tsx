@@ -27,6 +27,7 @@ import { SuspensionDialog } from '@/components/SuspensionDialog';
 import { StudentNotesDialog } from '@/components/StudentNotesDialog';
 import { useAuth } from '@/hooks/useAuth';
 import jsPDF from 'jspdf';
+import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 interface Student {
   id: string;
   student_id: string;
@@ -433,6 +434,17 @@ export const StudentManagement = () => {
       }).eq('id', selectedStudentForStatus.id);
       if (error) throw error;
       
+      // Log LMS status change
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: selectedStudentForStatus.id,
+        entityType: 'user',
+        entityId: selectedStudentForStatus.id,
+        action: ACTIVITY_TYPES.LMS_STATUS_CHANGED,
+        description: `LMS status changed from ${oldStatus} to ${newLMSStatus}`,
+        data: { old_status: oldStatus, new_status: newLMSStatus, student_name: selectedStudentForStatus.full_name }
+      });
+
       // Close dialog first
       setStatusUpdateDialog(false);
       
@@ -470,6 +482,16 @@ export const StudentManagement = () => {
           updated_at: new Date().toISOString()
         }).eq('id', student.id);
         if (error) throw error;
+        // Log unsuspension
+        logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: student.id,
+          entityType: 'user',
+          entityId: student.id,
+          action: ACTIVITY_TYPES.LMS_ACTIVATED,
+          description: `LMS account activated (unsuspended)`,
+          data: { student_name: student.full_name }
+        });
         await fetchStudents();
         toast({ title: 'Success', description: 'LMS account activated successfully' });
       } catch (error) {
@@ -504,6 +526,21 @@ export const StudentManagement = () => {
           suspension_note: data.note || null,
           auto_unsuspend_date: data.autoUnsuspendDate ? data.autoUnsuspendDate.toISOString() : null,
           suspended_by: user?.id || null
+        }
+      });
+
+      // Also log to admin_logs for unified view
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: studentForSuspension.id,
+        entityType: 'user',
+        entityId: studentForSuspension.id,
+        action: ACTIVITY_TYPES.LMS_SUSPENDED,
+        description: `Student suspended: ${studentForSuspension.full_name}`,
+        data: {
+          suspension_note: data.note || null,
+          auto_unsuspend_date: data.autoUnsuspendDate ? data.autoUnsuspendDate.toISOString() : null,
+          student_name: studentForSuspension.full_name
         }
       });
 

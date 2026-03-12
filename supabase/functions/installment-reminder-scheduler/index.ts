@@ -136,9 +136,11 @@ serve(async (req) => {
               action: 'lms_suspended',
               description: `LMS suspended due to overdue installment #${invoice.installment_number}`,
               data: { 
+                target_user_id: invoice.students.user_id,
                 invoice_id: invoice.id, 
                 installment_number: invoice.installment_number,
-                amount: invoice.amount 
+                amount: invoice.amount,
+                reason: 'Auto-suspended due to non-payment of fees'
               }
             });
 

@@ -84,8 +84,9 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       }
 
       // Filter by specific user if userId is provided
+      // Show logs where user performed the action OR was the target of the action
       if (userId) {
-        query = query.eq('performed_by', userId);
+        query = query.or(`performed_by.eq.${userId},data->>target_user_id.eq.${userId}`);
       }
 
       // Apply date filter
@@ -353,7 +354,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     <TableHeader>
                       <TableRow className="hover:bg-transparent border-0">
                         <TableHead className="font-medium h-12">Timestamp</TableHead>
-                        <TableHead className="font-medium h-12">User</TableHead>
+                        <TableHead className="font-medium h-12">Performed By</TableHead>
                         <TableHead className="font-medium h-12">Name</TableHead>
                         <TableHead className="font-medium h-12">Role</TableHead>
                         <TableHead className="font-medium h-12">Activity</TableHead>
@@ -382,10 +383,10 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                              })}
                            </TableCell>
                            <TableCell className="max-w-[200px] truncate">
-                             {log.users?.email || 'Unknown'}
+                             {log.users?.email || (log.performed_by ? 'Deleted User' : 'System')}
                            </TableCell>
                            <TableCell className="max-w-[150px] truncate">
-                             {log.users?.full_name || 'Unknown'}
+                             {log.users?.full_name || (log.performed_by ? 'Deleted User' : 'System')}
                            </TableCell>
                            <TableCell>
                              <Badge className={getRoleBadge(log.users?.role || '')}>

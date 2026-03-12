@@ -23,6 +23,8 @@ interface GlobalLog {
   user_email?: string;
   user_name?: string;
   user_role?: string;
+  target_user_name?: string;
+  target_user_email?: string;
 }
 
 export const GlobalActivityLogs = () => {
@@ -63,8 +65,13 @@ export const GlobalActivityLogs = () => {
       const { data: logsData, error: logsError } = await query;
       if (logsError) throw logsError;
 
-      // Get unique user IDs for fetching user info
-      const userIds = [...new Set((logsData || []).map(l => l.performed_by).filter(Boolean))];
+      // Get unique user IDs for fetching user info (both performed_by and target_user_id from data)
+      const performerIds = (logsData || []).map(l => l.performed_by).filter(Boolean);
+      const targetIds = (logsData || []).map(l => {
+        const d = l.data as any;
+        return d?.target_user_id;
+      }).filter(Boolean);
+      const userIds = [...new Set([...performerIds, ...targetIds])];
       
       // Fetch user details
       let userMap = new Map<string, { email: string; full_name: string; role: string }>();
@@ -80,19 +87,26 @@ export const GlobalActivityLogs = () => {
       }
 
       // Map logs with user info
-      const enrichedLogs: GlobalLog[] = (logsData || []).map(log => ({
-        id: log.id,
-        action: log.action,
-        entity_type: log.entity_type,
-        entity_id: log.entity_id,
-        description: log.description,
-        data: log.data,
-        performed_by: log.performed_by,
-        created_at: log.created_at,
-        user_email: log.performed_by ? userMap.get(log.performed_by)?.email : undefined,
-        user_name: log.performed_by ? userMap.get(log.performed_by)?.full_name : undefined,
-        user_role: log.performed_by ? userMap.get(log.performed_by)?.role : undefined
-      }));
+      const enrichedLogs: GlobalLog[] = (logsData || []).map(log => {
+        const logData = log.data as any;
+        const targetUserId = logData?.target_user_id;
+        const targetUser = targetUserId ? userMap.get(targetUserId) : null;
+        return {
+          id: log.id,
+          action: log.action,
+          entity_type: log.entity_type,
+          entity_id: log.entity_id,
+          description: log.description,
+          data: log.data,
+          performed_by: log.performed_by,
+          created_at: log.created_at,
+          user_email: log.performed_by ? userMap.get(log.performed_by)?.email : undefined,
+          user_name: log.performed_by ? userMap.get(log.performed_by)?.full_name : undefined,
+          user_role: log.performed_by ? userMap.get(log.performed_by)?.role : undefined,
+          target_user_name: targetUser?.full_name || undefined,
+          target_user_email: targetUser?.email || undefined,
+        };
+      });
 
       setLogs(enrichedLogs);
     } catch (error) {
@@ -306,8 +320,9 @@ export const GlobalActivityLogs = () => {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-[160px]">Timestamp</TableHead>
-                  <TableHead className="w-[200px]">User</TableHead>
+                  <TableHead className="w-[200px]">Performed By</TableHead>
                   <TableHead className="w-[120px]">Role</TableHead>
+                  <TableHead className="w-[160px]">Target Student</TableHead>
                   <TableHead className="w-[120px]">Action</TableHead>
                   <TableHead className="w-[120px]">Entity</TableHead>
                   <TableHead>Description</TableHead>
@@ -321,7 +336,7 @@ export const GlobalActivityLogs = () => {
               <TableBody>
                 {filteredLogs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       No activity logs found
                     </TableCell>
                   </TableRow>
@@ -343,6 +358,18 @@ export const GlobalActivityLogs = () => {
                         <Badge className={getRoleBadgeColor(log.user_role)}>
                           {log.user_role ? formatRole(log.user_role) : 'System'}
                         </Badge>
+                      </TableCell>
+                      <TableCell className="w-[160px]">
+                        {log.target_user_name ? (
+                          <div className="flex flex-col">
+                            <span className="text-sm truncate">{log.target_user_name}</span>
+                            <span className="text-xs text-muted-foreground truncate">
+                              {log.target_user_email}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="w-[120px]">
                         <Badge className={getActionBadgeColor(log.action)}>

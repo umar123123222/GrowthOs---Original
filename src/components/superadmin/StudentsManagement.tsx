@@ -26,6 +26,7 @@ import { useUserManagement } from '@/hooks/useUserManagement';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/currencyFormatter';
 import { cn } from '@/lib/utils';
+import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 import jsPDF from 'jspdf';
 interface Student {
   id: string;
@@ -291,6 +292,21 @@ export function StudentsManagement() {
         }
       });
 
+      // Also log to admin_logs for unified view
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: studentForSuspension.id,
+        entityType: 'user',
+        entityId: studentForSuspension.id,
+        action: ACTIVITY_TYPES.LMS_SUSPENDED,
+        description: `Student suspended: ${studentForSuspension.full_name}`,
+        data: {
+          suspension_note: data.note || null,
+          auto_unsuspend_date: data.autoUnsuspendDate ? data.autoUnsuspendDate.toISOString() : null,
+          student_name: studentForSuspension.full_name
+        }
+      });
+
       toast({
         title: 'Student Suspended',
         description: `${studentForSuspension.full_name} has been suspended${data.autoUnsuspendDate ? `. Auto-unsuspend: ${format(data.autoUnsuspendDate, 'PPP')}` : ''}`
@@ -552,6 +568,16 @@ export function StudentsManagement() {
         last_suspended_date: new Date().toISOString()
       }).eq('id', studentId);
       if (error) throw error;
+      // Log suspension via handleSuspendAccount
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: studentId,
+        entityType: 'user',
+        entityId: studentId,
+        action: ACTIVITY_TYPES.LMS_SUSPENDED,
+        description: `Account suspended`,
+        data: {}
+      });
       toast({
         title: 'Success',
         description: 'Account suspended successfully'
@@ -942,6 +968,17 @@ export function StudentsManagement() {
       } = await supabase.from('users').update(updateData).eq('id', studentId);
       if (error) throw error;
       
+      // Log LMS status toggle
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: studentId,
+        entityType: 'user',
+        entityId: studentId,
+        action: ACTIVITY_TYPES.LMS_STATUS_CHANGED,
+        description: `LMS status changed from ${currentStatus} to ${newLMSStatus}`,
+        data: { old_status: currentStatus, new_status: newLMSStatus }
+      });
+
       // Refresh to ensure consistency
       await fetchStudents();
       
@@ -1014,6 +1051,17 @@ export function StudentsManagement() {
       } = await supabase.from('users').update(updateData).eq('id', selectedStudentForStatus.id);
       if (error) throw error;
       
+      // Log LMS status change
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: selectedStudentForStatus.id,
+        entityType: 'user',
+        entityId: selectedStudentForStatus.id,
+        action: ACTIVITY_TYPES.LMS_STATUS_CHANGED,
+        description: `LMS status changed from ${oldStatus} to ${newLMSStatus}`,
+        data: { old_status: oldStatus, new_status: newLMSStatus, student_name: selectedStudentForStatus.full_name }
+      });
+
       // Close dialog
       setStatusUpdateDialog(false);
       setSelectedStudentForStatus(null);

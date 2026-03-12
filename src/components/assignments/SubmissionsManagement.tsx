@@ -12,7 +12,7 @@ import { CheckCircle, XCircle, Eye, MessageSquare, Clock, FileText, BookOpen, Se
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourses } from '@/hooks/useCourses';
-import { logUserActivity, ACTIVITY_TYPES } from '@/lib/activity-logger';
+import { logUserActivity, logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/useDebounce';
 
@@ -247,6 +247,21 @@ export function SubmissionsManagement({
             reviewed_by: user?.full_name || user?.email || 'Admin',
             notes: reviewNotes.trim() || undefined,
             timestamp: new Date().toISOString()
+          }
+        });
+
+        // Log to admin_logs with target_user_id
+        logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: reviewedSubmission.student_id,
+          entityType: 'assignment',
+          entityId: reviewedSubmission.assignment_id,
+          action: status === 'approved' ? ACTIVITY_TYPES.ASSIGNMENT_APPROVED : ACTIVITY_TYPES.ASSIGNMENT_DECLINED,
+          description: `Assignment "${reviewedSubmission.assignment.name}" ${status} for ${reviewedSubmission.student?.full_name || 'student'}`,
+          data: {
+            assignment_name: reviewedSubmission.assignment.name,
+            student_name: reviewedSubmission.student?.full_name,
+            notes: reviewNotes.trim() || null,
           }
         });
 

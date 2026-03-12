@@ -7,37 +7,103 @@ export interface ActivityLogData {
   reference_id?: string;
 }
 
+export interface AdminLogData {
+  performed_by?: string | null; // WHO did it (null = system)
+  target_user_id?: string | null; // WHO it was done TO
+  entity_type: string;
+  entity_id?: string | null;
+  action: string;
+  description: string;
+  data?: any;
+}
+
+/**
+ * Log to admin_logs — the unified activity log table.
+ * Used for ALL actions: student self-actions, admin actions on students, and system actions.
+ */
+export const logToAdminLogs = async (logData: AdminLogData) => {
+  try {
+    const { error } = await supabase
+      .from('admin_logs')
+      .insert([{
+        performed_by: logData.performed_by || null,
+        entity_type: logData.entity_type,
+        entity_id: logData.entity_id || null,
+        action: logData.action,
+        description: logData.description,
+        data: {
+          ...logData.data,
+          target_user_id: logData.target_user_id || null,
+          timestamp: new Date().toISOString()
+        }
+      }] as any);
+
+    if (error) {
+      console.warn('Failed to log to admin_logs:', error);
+    }
+  } catch (error) {
+    console.warn('Admin log error:', error);
+  }
+};
+
+/**
+ * Log a user's own activity (login, video watched, etc.)
+ * Also mirrors to admin_logs for unified querying.
+ */
 export const logUserActivity = async (activityData: ActivityLogData) => {
   try {
-    // Check if user is authenticated first
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      // Silently skip logging if user is not authenticated
-      return;
-    }
-
-    // Ensure the user_id matches the authenticated user
-    if (activityData.user_id !== user.id) {
-      console.warn('Activity log user_id mismatch, skipping log');
-      return;
-    }
-
+    // Insert into user_activity_logs (legacy, keep for backward compat)
     const { error } = await supabase
       .from('user_activity_logs')
       .insert([{
-        ...activityData,
+        user_id: activityData.user_id,
+        activity_type: activityData.activity_type,
+        metadata: activityData.metadata,
+        reference_id: activityData.reference_id,
         occurred_at: new Date().toISOString()
       }]);
 
     if (error) {
-      // Don't throw errors for activity logging - just log them
       console.warn('Failed to log activity:', error);
     }
+
+    // Mirror to admin_logs for unified view
+    await logToAdminLogs({
+      performed_by: activityData.user_id,
+      target_user_id: activityData.user_id,
+      entity_type: 'user',
+      entity_id: activityData.reference_id || activityData.user_id,
+      action: activityData.activity_type,
+      description: activityData.activity_type.replace(/_/g, ' '),
+      data: activityData.metadata
+    });
   } catch (error) {
-    // Silently handle all activity logging errors to prevent blocking the UI
     console.warn('Activity logging error:', error);
   }
+};
+
+/**
+ * Log an admin/mentor/system action performed ON a student.
+ * This is the primary function for cross-user logging.
+ */
+export const logAdminAction = async (params: {
+  performedBy: string | null; // admin/mentor user ID, or null for system
+  targetUserId: string; // the student being acted on
+  entityType: string;
+  entityId?: string;
+  action: string;
+  description: string;
+  data?: any;
+}) => {
+  await logToAdminLogs({
+    performed_by: params.performedBy,
+    target_user_id: params.targetUserId,
+    entity_type: params.entityType,
+    entity_id: params.entityId || params.targetUserId,
+    action: params.action,
+    description: params.description,
+    data: params.data
+  });
 };
 
 // Common activity types for consistency
@@ -51,6 +117,7 @@ export const ACTIVITY_TYPES = {
   ASSIGNMENT_VIEWED: 'assignment_viewed',
   ASSIGNMENT_REVIEWED: 'assignment_reviewed',
   PROFILE_UPDATED: 'profile_updated',
+  PASSWORD_CHANGED: 'password_changed',
   LEADERBOARD_VIEWED: 'leaderboard_viewed',
   MODULE_COMPLETED: 'module_completed',
   MODULE_STARTED: 'module_started',
@@ -71,6 +138,25 @@ export const ACTIVITY_TYPES = {
   RECORDING_UNLOCKED: 'recording_unlocked',
   SUCCESS_SESSION_SCHEDULED: 'success_session_scheduled',
   SUCCESS_SESSION_ATTENDED: 'success_session_attended',
+  LMS_STATUS_CHANGED: 'lms_status_changed',
+  LMS_SUSPENDED: 'lms_suspended',
+  LMS_ACTIVATED: 'lms_activated',
+  RECORDING_CREATED: 'recording_created',
+  RECORDING_UPDATED: 'recording_updated',
+  RECORDING_DELETED: 'recording_deleted',
+  MODULE_CREATED: 'module_created',
+  MODULE_UPDATED: 'module_updated',
+  MODULE_DELETED: 'module_deleted',
+  COURSE_CREATED: 'course_created',
+  COURSE_UPDATED: 'course_updated',
+  PATHWAY_CREATED: 'pathway_created',
+  PATHWAY_UPDATED: 'pathway_updated',
+  BATCH_CREATED: 'batch_created',
+  STUDENT_ENROLLED_IN_BATCH: 'student_enrolled_in_batch',
+  INVOICE_PAID: 'invoice_paid',
+  DRIP_CONTENT_TOGGLED: 'drip_content_toggled',
+  MENTOR_ASSIGNED: 'mentor_assigned',
+  MENTOR_REMOVED: 'mentor_removed',
 } as const;
 
 // Helper function to log specific activities with common patterns
