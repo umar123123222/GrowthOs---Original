@@ -26,6 +26,7 @@ import { useUserManagement } from '@/hooks/useUserManagement';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/currencyFormatter';
 import { cn } from '@/lib/utils';
+import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 import jsPDF from 'jspdf';
 interface Student {
   id: string;
