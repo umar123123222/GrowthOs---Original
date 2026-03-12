@@ -136,11 +136,6 @@ function SortableRecordingRow({
           </CollapsibleTrigger>
         </div>
         <div className="font-medium truncate">{recording.recording_title}</div>
-        <div className="text-center">
-          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-            {courses.find(c => c.id === recording.module?.course_id)?.title || 'No Course'}
-          </Badge>
-        </div>
         <div className="text-center text-sm text-muted-foreground">
           {recording.duration_min} min
         </div>
