@@ -12,7 +12,7 @@ import { CheckCircle, XCircle, Eye, MessageSquare, Clock, FileText, BookOpen, Se
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useCourses } from '@/hooks/useCourses';
-import { logUserActivity, ACTIVITY_TYPES } from '@/lib/activity-logger';
+import { logUserActivity, logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/useDebounce';
 
