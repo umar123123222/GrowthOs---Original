@@ -115,7 +115,7 @@ function SortableRecordingRow({
       <div 
         ref={setNodeRef}
         style={style}
-        className="grid grid-cols-[24px_24px_1fr_220px_100px_80px_160px] items-center gap-4 p-4 hover:bg-gray-50 transition-colors animate-fade-in"
+        className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 hover:bg-muted/50 transition-colors animate-fade-in"
       >
         <div
           {...attributes}
