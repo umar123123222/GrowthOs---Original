@@ -943,6 +943,17 @@ export function StudentsManagement() {
       } = await supabase.from('users').update(updateData).eq('id', studentId);
       if (error) throw error;
       
+      // Log LMS status toggle
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: studentId,
+        entityType: 'user',
+        entityId: studentId,
+        action: ACTIVITY_TYPES.LMS_STATUS_CHANGED,
+        description: `LMS status changed from ${currentStatus} to ${newLMSStatus}`,
+        data: { old_status: currentStatus, new_status: newLMSStatus }
+      });
+
       // Refresh to ensure consistency
       await fetchStudents();
       
