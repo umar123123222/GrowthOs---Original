@@ -8,8 +8,88 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+// Shared currency symbol helper
+function getCurrencySymbol(curr: string = 'USD'): string {
+  const symbols: Record<string, string> = {
+    USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
+  };
+  return symbols[curr] || curr;
+}
+
+// Safe PDF generation — returns buffer or null if generation fails
+async function safeGeneratePDF(
+  invoice: any,
+  currency: string,
+  companyDetails: CompanyDetails,
+  paymentMethods: any[],
+  dueDate: string,
+  studentName: string,
+  studentEmail: string
+): Promise<Uint8Array | null> {
+  try {
+    const invoiceData: InvoiceData = {
+      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
+      date: new Date().toLocaleDateString(),
+      due_date: dueDate,
+      student_name: studentName,
+      student_email: studentEmail,
+      items: [{
+        description: `Course Installment Payment`,
+        installment_number: invoice.installment_number,
+        price: parseFloat(invoice.amount),
+        total: parseFloat(invoice.amount)
+      }],
+      subtotal: parseFloat(invoice.amount),
+      tax: 0,
+      total: parseFloat(invoice.amount),
+      currency: currency,
+      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
+      terms: 'Please send payment within 30 days of receiving this invoice.'
+    };
+
+    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
+    console.log(`[PDF] Successfully generated for invoice installment #${invoice.installment_number}`);
+    return pdfBuffer;
+  } catch (error) {
+    console.warn(`[PDF] Generation failed for installment #${invoice.installment_number}, will send email without attachment:`, error.message);
+    return null;
+  }
+}
+
+// Sends billing email with optional PDF attachment. Throws on failure.
+async function sendBillingEmail(options: {
+  to: string;
+  subject: string;
+  html: string;
+  pdfBuffer: Uint8Array | null;
+  installmentNumber: number;
+}): Promise<void> {
+  const smtpClient = SMTPClient.fromEnv();
+  const billingCc = Deno.env.get('BILLING_EMAIL_CC');
+
+  const emailPayload: any = {
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+    ...(billingCc ? { cc: billingCc } : {}),
+  };
+
+  if (options.pdfBuffer) {
+    emailPayload.attachments = [{
+      filename: `Invoice-${options.installmentNumber}.pdf`,
+      content: options.pdfBuffer,
+      contentType: 'application/pdf'
+    }];
+  }
+
+  await smtpClient.sendEmail(emailPayload);
+
+  const mode = options.pdfBuffer ? 'with PDF attachment' : 'WITHOUT attachment (PDF generation failed)';
+  const ccInfo = billingCc ? `, CC: ${billingCc}` : '';
+  console.log(`[Email] Sent ${mode} to ${options.to}${ccInfo}`);
+}
+
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -22,7 +102,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Get company settings including currency and company details
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
       .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods')
@@ -31,18 +110,19 @@ serve(async (req) => {
     
     const loginUrl = companySettings?.lms_url || 'https://growthos.core47.ai';
     const currency = companySettings?.currency || 'USD';
+    const currencySymbol = getCurrencySymbol(currency);
     const companyDetails: CompanyDetails = {
       company_name: companySettings?.company_name || 'Your Company',
       address: companySettings?.address || '',
       contact_email: companySettings?.contact_email || '',
       primary_phone: companySettings?.primary_phone || ''
     };
+    const paymentMethods = companySettings?.payment_methods || [];
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // 1. Check for invoices that should change from 'scheduled' to 'pending' (issue date reached)
-    // Use issue_date if available (batch-based scheduling), fallback to created_at
+    // 1. Check for invoices that should change from 'scheduled' to 'pending'
     const { data: scheduledInvoices, error: scheduledError } = await supabaseAdmin
       .from('invoices')
       .select('*, students!inner(user_id, users!inner(full_name, email))')
@@ -53,17 +133,46 @@ serve(async (req) => {
       console.error('Error fetching scheduled invoices:', scheduledError);
     } else {
       for (const invoice of scheduledInvoices || []) {
-        // Update status to pending
         await supabaseAdmin
           .from('invoices')
           .update({ status: 'pending' })
           .eq('id', invoice.id);
 
-        // Send issue email
-        await sendInstallmentIssueEmail(invoice, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
-        
-        // Create notification
-        const currencySymbol = currency === 'PKR' ? '₨' : currency === 'USD' ? '$' : currency;
+        // Send issue email (non-blocking for status transition)
+        try {
+          const studentEmail = invoice.students.users.email;
+          const studentName = invoice.students.users.full_name;
+          const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
+
+          const pdfBuffer = await safeGeneratePDF(invoice, currency, companyDetails, paymentMethods, dueDate, studentName, studentEmail);
+
+          await sendBillingEmail({
+            to: studentEmail,
+            subject: `Installment #${invoice.installment_number} Issued - Payment Due ${dueDate}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2563eb;">Installment Payment Issued</h2>
+                <p>Dear ${studentName},</p>
+                <p>A new installment payment has been issued for your account:</p>
+                <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                  <h3 style="margin-top: 0;">Payment Details</h3>
+                  <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
+                  <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
+                  <p><strong>Due Date:</strong> ${dueDate}</p>
+                  <p><strong>Status:</strong> Pending Payment</p>
+                </div>
+                <p>Please ensure payment is made by the due date to avoid any service interruptions. ${pdfBuffer ? 'The detailed invoice with payment instructions is attached to this email.' : ''}</p>
+                <p>If you have any questions, please contact our support team.</p>
+                <p>Best regards,<br>The Learning Team</p>
+              </div>
+            `,
+            pdfBuffer,
+            installmentNumber: invoice.installment_number,
+          });
+        } catch (emailError) {
+          console.error(`[Email FAILED] Issue email for installment #${invoice.installment_number} to ${invoice.students.users.email}:`, emailError.message);
+        }
+
         await createInstallmentNotification(
           supabaseAdmin,
           invoice.students.user_id,
@@ -88,18 +197,20 @@ serve(async (req) => {
     } else {
       for (const invoice of pendingInvoices || []) {
         const issueDate = new Date(invoice.issue_date || invoice.created_at);
-        // Use extended_due_date if set, otherwise use due_date
         const effectiveDueDate = invoice.extended_due_date 
           ? new Date(invoice.extended_due_date) 
           : new Date(invoice.due_date);
         const daysDiff = Math.floor((effectiveDueDate.getTime() - issueDate.getTime()) / (1000 * 60 * 60 * 24));
         
-        // Calculate reminder dates with equal intervals based on effective due date
         const firstReminderDate = new Date(issueDate);
         firstReminderDate.setDate(firstReminderDate.getDate() + Math.floor(daysDiff / 3));
         
         const secondReminderDate = new Date(issueDate);
         secondReminderDate.setDate(secondReminderDate.getDate() + Math.floor(2 * daysDiff / 3));
+
+        const studentEmail = invoice.students.users.email;
+        const studentName = invoice.students.users.full_name;
+        const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
 
         // Check if effective due date has passed
         if (today >= effectiveDueDate) {
@@ -108,17 +219,46 @@ serve(async (req) => {
             .update({ status: 'due' })
             .eq('id', invoice.id);
 
-          await sendDueEmail(invoice, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
+          // Send due/overdue email
+          try {
+            const pdfBuffer = await safeGeneratePDF(invoice, currency, companyDetails, paymentMethods, dueDate, studentName, studentEmail);
+
+            await sendBillingEmail({
+              to: studentEmail,
+              subject: `URGENT - Payment Overdue for Installment #${invoice.installment_number} - LMS Access Suspended`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #dc2626;">Payment Overdue - LMS Access Suspended</h2>
+                  <p>Dear ${studentName},</p>
+                  <p><strong>Your payment is now overdue and your LMS access has been suspended.</strong> Immediate action is required to restore your access:</p>
+                  <div style="background-color: #fecaca; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #dc2626;">
+                    <h3 style="margin-top: 0; color: #dc2626;">Overdue Payment</h3>
+                    <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
+                    <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
+                    <p><strong>Status:</strong> OVERDUE - LMS SUSPENDED</p>
+                  </div>
+                  <p><strong>Action Required:</strong> Your learning platform access has been suspended until payment is received. Please make payment immediately to restore full access. ${pdfBuffer ? 'The detailed invoice with payment instructions is attached to this email.' : ''}</p>
+                  <p>If you need assistance or wish to discuss payment arrangements, please contact our support team immediately.</p>
+                  <p>Best regards,<br>The Learning Team</p>
+                </div>
+              `,
+              pdfBuffer,
+              installmentNumber: invoice.installment_number,
+            });
+          } catch (emailError) {
+            console.error(`[Email FAILED] Due email for installment #${invoice.installment_number} to ${studentEmail}:`, emailError.message);
+          }
+
           await createInstallmentNotification(
             supabaseAdmin,
             invoice.students.user_id,
             'installment_due',
             'Payment Overdue',
-            `Installment #${invoice.installment_number} of $${invoice.amount} is now overdue. Please make payment immediately.`,
+            `Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} is now overdue. Please make payment immediately.`,
             { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date }
           );
 
-          // Suspend LMS access when invoice becomes due
+          // Suspend LMS access
           const { error: suspendError } = await supabaseAdmin
             .from('users')
             .update({ lms_status: 'suspended' })
@@ -129,7 +269,6 @@ serve(async (req) => {
           } else {
             console.log(`LMS suspended for user ${invoice.students.user_id} due to overdue payment`);
             
-            // Log the suspension in admin_logs
             await supabaseAdmin.from('admin_logs').insert({
               entity_type: 'user',
               entity_id: invoice.students.user_id,
@@ -144,7 +283,6 @@ serve(async (req) => {
               }
             });
 
-            // Log auto-suspension in user_activity_logs for audit trail
             await supabaseAdmin.from('user_activity_logs').insert({
               user_id: invoice.students.user_id,
               activity_type: 'lms_suspended',
@@ -158,7 +296,6 @@ serve(async (req) => {
               occurred_at: new Date().toISOString()
             });
 
-            // Send suspension notification
             await createInstallmentNotification(
               supabaseAdmin,
               invoice.students.user_id,
@@ -169,51 +306,120 @@ serve(async (req) => {
             );
           }
 
-          console.log(`Marked installment ${invoice.installment_number} as due for student ${invoice.students.users.full_name}`);
+          console.log(`Marked installment ${invoice.installment_number} as due for student ${studentName}`);
         }
-        // Check for first reminder
+        // First reminder — send email BEFORE marking flag (retry-safe)
         else if (today >= firstReminderDate && !invoice.first_reminder_sent) {
-          await supabaseAdmin
-            .from('invoices')
-            .update({ 
-              first_reminder_sent: true,
-              first_reminder_sent_at: new Date().toISOString()
-            })
-            .eq('id', invoice.id);
+          let emailSent = false;
+          try {
+            const pdfBuffer = await safeGeneratePDF(invoice, currency, companyDetails, paymentMethods, dueDate, studentName, studentEmail);
 
-          await sendFirstReminderEmail(invoice, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
+            await sendBillingEmail({
+              to: studentEmail,
+              subject: `Payment Reminder - Installment #${invoice.installment_number} Due ${dueDate}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #f59e0b;">Payment Reminder</h2>
+                  <p>Dear ${studentName},</p>
+                  <p>This is a friendly reminder that your installment payment is coming due:</p>
+                  <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+                    <h3 style="margin-top: 0;">Payment Details</h3>
+                    <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
+                    <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
+                    <p><strong>Due Date:</strong> ${dueDate}</p>
+                    <p><strong>Status:</strong> Pending Payment</p>
+                  </div>
+                  <p>Please make your payment by the due date to continue your learning journey without interruption. ${pdfBuffer ? 'The detailed invoice with payment instructions is attached to this email.' : ''}</p>
+                  <p>If you have any questions or need assistance, please contact our support team.</p>
+                  <p>Best regards,<br>The Learning Team</p>
+                </div>
+              `,
+              pdfBuffer,
+              installmentNumber: invoice.installment_number,
+            });
+            emailSent = true;
+          } catch (emailError) {
+            console.error(`[Email FAILED] First reminder for installment #${invoice.installment_number} to ${studentEmail}:`, emailError.message);
+          }
+
+          // Only mark as sent if email succeeded — allows retry on next run
+          if (emailSent) {
+            await supabaseAdmin
+              .from('invoices')
+              .update({ 
+                first_reminder_sent: true,
+                first_reminder_sent_at: new Date().toISOString()
+              })
+              .eq('id', invoice.id);
+            console.log(`First reminder sent and flagged for installment ${invoice.installment_number} to ${studentName}`);
+          } else {
+            console.warn(`[Retry] First reminder for installment #${invoice.installment_number} will be retried on next run`);
+          }
+
           await createInstallmentNotification(
             supabaseAdmin,
             invoice.students.user_id,
             'installment_reminder',
             'Payment Reminder',
-            `Reminder: Installment #${invoice.installment_number} of $${invoice.amount} is due on ${effectiveDueDate.toLocaleDateString()}`,
+            `Reminder: Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} is due on ${effectiveDueDate.toLocaleDateString()}`,
             { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() }
           );
-
-          console.log(`Sent first reminder for installment ${invoice.installment_number} to student ${invoice.students.users.full_name}`);
         }
-        // Check for second reminder
+        // Second reminder — send email BEFORE marking flag (retry-safe)
         else if (today >= secondReminderDate && !invoice.second_reminder_sent && invoice.first_reminder_sent) {
-          await supabaseAdmin
-            .from('invoices')
-            .update({ 
-              second_reminder_sent: true,
-              second_reminder_sent_at: new Date().toISOString()
-            })
-            .eq('id', invoice.id);
+          let emailSent = false;
+          try {
+            const pdfBuffer = await safeGeneratePDF(invoice, currency, companyDetails, paymentMethods, dueDate, studentName, studentEmail);
 
-          await sendSecondReminderEmail(invoice, loginUrl, currency, companyDetails, companySettings?.payment_methods || []);
+            await sendBillingEmail({
+              to: studentEmail,
+              subject: `FINAL REMINDER - Installment #${invoice.installment_number} Due ${dueDate}`,
+              html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                  <h2 style="color: #dc2626;">Final Payment Reminder</h2>
+                  <p>Dear ${studentName},</p>
+                  <p><strong>This is your final reminder</strong> that your installment payment is due soon:</p>
+                  <div style="background-color: #fee2e2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+                    <h3 style="margin-top: 0;">Payment Details</h3>
+                    <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
+                    <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
+                    <p><strong>Due Date:</strong> ${dueDate}</p>
+                    <p><strong>Status:</strong> Payment Required</p>
+                  </div>
+                  <p><strong>Important:</strong> Failure to make payment by the due date may result in temporary suspension of your learning platform access. ${pdfBuffer ? 'The detailed invoice with payment instructions is attached to this email.' : ''}</p>
+                  <p>If you're experiencing financial difficulties, please contact our support team immediately to discuss payment options.</p>
+                  <p>Best regards,<br>The Learning Team</p>
+                </div>
+              `,
+              pdfBuffer,
+              installmentNumber: invoice.installment_number,
+            });
+            emailSent = true;
+          } catch (emailError) {
+            console.error(`[Email FAILED] Second reminder for installment #${invoice.installment_number} to ${studentEmail}:`, emailError.message);
+          }
+
+          if (emailSent) {
+            await supabaseAdmin
+              .from('invoices')
+              .update({ 
+                second_reminder_sent: true,
+                second_reminder_sent_at: new Date().toISOString()
+              })
+              .eq('id', invoice.id);
+            console.log(`Second reminder sent and flagged for installment ${invoice.installment_number} to ${studentName}`);
+          } else {
+            console.warn(`[Retry] Second reminder for installment #${invoice.installment_number} will be retried on next run`);
+          }
+
           await createInstallmentNotification(
             supabaseAdmin,
             invoice.students.user_id,
             'installment_reminder',
             'Final Payment Reminder',
-            `Final reminder: Installment #${invoice.installment_number} of $${invoice.amount} is due on ${effectiveDueDate.toLocaleDateString()}`,
+            `Final reminder: Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} is due on ${effectiveDueDate.toLocaleDateString()}`,
             { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() }
           );
-
-          console.log(`Sent second reminder for installment ${invoice.installment_number} to student ${invoice.students.users.full_name}`);
         }
       }
     }
@@ -241,321 +447,6 @@ serve(async (req) => {
   }
 });
 
-async function sendInstallmentIssueEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
-  try {
-    const smtpClient = SMTPClient.fromEnv();
-    const studentEmail = invoice.students.users.email;
-    const studentName = invoice.students.users.full_name;
-    const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
-    
-    // Get currency symbol
-    const getCurrencySymbol = (curr: string = 'USD') => {
-      const symbols: { [key: string]: string } = {
-        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
-      };
-      return symbols[curr] || curr;
-    };
-    
-    const currencySymbol = getCurrencySymbol(currency);
-    
-    // Generate PDF invoice
-    const invoiceData: InvoiceData = {
-      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
-      date: new Date().toLocaleDateString(),
-      due_date: dueDate,
-      student_name: studentName,
-      student_email: studentEmail,
-      items: [{
-        description: `Course Installment Payment`,
-        installment_number: invoice.installment_number,
-        price: parseFloat(invoice.amount),
-        total: parseFloat(invoice.amount)
-      }],
-      subtotal: parseFloat(invoice.amount),
-      tax: 0,
-      total: parseFloat(invoice.amount),
-      currency: currency,
-      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
-      terms: 'Please send payment within 30 days of receiving this invoice.'
-    };
-    
-    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
-    
-    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
-    await smtpClient.sendEmail({
-      to: studentEmail,
-      subject: `Installment #${invoice.installment_number} Issued - Payment Due ${dueDate}`,
-      ...(billingCc ? { cc: billingCc } : {}),
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #2563eb;">Installment Payment Issued</h2>
-          
-          <p>Dear ${studentName},</p>
-          
-          <p>A new installment payment has been issued for your account:</p>
-          
-          <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin-top: 0;">Payment Details</h3>
-            <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-            <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
-            <p><strong>Due Date:</strong> ${dueDate}</p>
-            <p><strong>Status:</strong> Pending Payment</p>
-          </div>
-          
-          <p>Please ensure payment is made by the due date to avoid any service interruptions. The detailed invoice with payment instructions is attached to this email.</p>
-          
-          <p>If you have any questions, please contact our support team.</p>
-          
-          <p>Best regards,<br>The Learning Team</p>
-        </div>
-      `,
-      attachments: [{
-        filename: `Invoice-${invoice.installment_number}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf'
-      }]
-    });
-
-    console.log(`Issue email sent to ${studentEmail} for installment ${invoice.installment_number}`);
-  } catch (error) {
-    console.error('Error sending issue email:', error);
-  }
-}
-
-async function sendFirstReminderEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
-  try {
-    const smtpClient = SMTPClient.fromEnv();
-    const studentEmail = invoice.students.users.email;
-    const studentName = invoice.students.users.full_name;
-    const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
-    
-    // Get currency symbol
-    const getCurrencySymbol = (curr: string = 'USD') => {
-      const symbols: { [key: string]: string } = {
-        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
-      };
-      return symbols[curr] || curr;
-    };
-    
-    const currencySymbol = getCurrencySymbol(currency);
-    
-    // Generate PDF invoice
-    const invoiceData: InvoiceData = {
-      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
-      date: new Date().toLocaleDateString(),
-      due_date: dueDate,
-      student_name: studentName,
-      student_email: studentEmail,
-      items: [{
-        description: `Course Installment Payment`,
-        installment_number: invoice.installment_number,
-        price: parseFloat(invoice.amount),
-        total: parseFloat(invoice.amount)
-      }],
-      subtotal: parseFloat(invoice.amount),
-      tax: 0,
-      total: parseFloat(invoice.amount),
-      currency: currency,
-      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
-      terms: 'Please send payment within 30 days of receiving this invoice.'
-    };
-    
-    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
-    
-    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
-    await smtpClient.sendEmail({
-      to: studentEmail,
-      subject: `Payment Reminder - Installment #${invoice.installment_number} Due ${dueDate}`,
-      ...(billingCc ? { cc: billingCc } : {}),
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #f59e0b;">Payment Reminder</h2>
-          
-          <p>Dear ${studentName},</p>
-          
-          <p>This is a friendly reminder that your installment payment is coming due:</p>
-          
-          <div style="background-color: #fef3c7; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-            <h3 style="margin-top: 0;">Payment Details</h3>
-            <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-            <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
-            <p><strong>Due Date:</strong> ${dueDate}</p>
-            <p><strong>Status:</strong> Pending Payment</p>
-          </div>
-          
-          <p>Please make your payment by the due date to continue your learning journey without interruption. The detailed invoice with payment instructions is attached to this email.</p>
-          
-          <p>If you have any questions or need assistance, please contact our support team.</p>
-          
-          <p>Best regards,<br>The Learning Team</p>
-        </div>
-      `,
-      attachments: [{
-        filename: `Invoice-${invoice.installment_number}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf'
-      }]
-    });
-
-    console.log(`First reminder email sent to ${studentEmail} for installment ${invoice.installment_number}`);
-  } catch (error) {
-    console.error('Error sending first reminder email:', error);
-  }
-}
-
-async function sendSecondReminderEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
-  try {
-    const smtpClient = SMTPClient.fromEnv();
-    const studentEmail = invoice.students.users.email;
-    const studentName = invoice.students.users.full_name;
-    const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
-    
-    const getCurrencySymbol = (curr: string = 'USD') => {
-      const symbols: { [key: string]: string } = {
-        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
-      };
-      return symbols[curr] || curr;
-    };
-    
-    const currencySymbol = getCurrencySymbol(currency);
-    
-    const invoiceData: InvoiceData = {
-      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
-      date: new Date().toLocaleDateString(),
-      due_date: dueDate,
-      student_name: studentName,
-      student_email: studentEmail,
-      items: [{
-        description: `Course Installment Payment`,
-        installment_number: invoice.installment_number,
-        price: parseFloat(invoice.amount),
-        total: parseFloat(invoice.amount)
-      }],
-      subtotal: parseFloat(invoice.amount),
-      tax: 0,
-      total: parseFloat(invoice.amount),
-      currency: currency,
-      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
-      terms: 'Please send payment within 30 days of receiving this invoice.'
-    };
-    
-    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
-    
-    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
-    await smtpClient.sendEmail({
-      to: studentEmail,
-      subject: `FINAL REMINDER - Installment #${invoice.installment_number} Due ${dueDate}`,
-      ...(billingCc ? { cc: billingCc } : {}),
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #dc2626;">Final Payment Reminder</h2>
-          <p>Dear ${studentName},</p>
-          <p><strong>This is your final reminder</strong> that your installment payment is due soon:</p>
-          <div style="background-color: #fee2e2; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
-            <h3 style="margin-top: 0;">Payment Details</h3>
-            <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-            <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
-            <p><strong>Due Date:</strong> ${dueDate}</p>
-            <p><strong>Status:</strong> Payment Required</p>
-          </div>
-          <p><strong>Important:</strong> Failure to make payment by the due date may result in temporary suspension of your learning platform access. The detailed invoice with payment instructions is attached to this email.</p>
-          <p>If you're experiencing financial difficulties, please contact our support team immediately to discuss payment options.</p>
-          <p>Best regards,<br>The Learning Team</p>
-        </div>
-      `,
-      attachments: [{
-        filename: `Invoice-${invoice.installment_number}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf'
-      }]
-    });
-
-    console.log(`Second reminder email sent to ${studentEmail} for installment ${invoice.installment_number}`);
-  } catch (error) {
-    console.error('Error sending second reminder email:', error);
-  }
-}
-
-async function sendDueEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
-  try {
-    const smtpClient = SMTPClient.fromEnv();
-    const studentEmail = invoice.students.users.email;
-    const studentName = invoice.students.users.full_name;
-    
-    // Get currency symbol
-    const getCurrencySymbol = (curr: string = 'USD') => {
-      const symbols: { [key: string]: string } = {
-        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
-      };
-      return symbols[curr] || curr;
-    };
-    
-    const currencySymbol = getCurrencySymbol(currency);
-    const effectiveDueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
-    
-    // Generate PDF invoice
-    const invoiceData: InvoiceData = {
-      invoice_number: `INV-${invoice.installment_number.toString().padStart(3, '0')}`,
-      date: new Date().toLocaleDateString(),
-      due_date: effectiveDueDate,
-      student_name: studentName,
-      student_email: studentEmail,
-      items: [{
-        description: `Course Installment Payment`,
-        installment_number: invoice.installment_number,
-        price: parseFloat(invoice.amount),
-        total: parseFloat(invoice.amount)
-      }],
-      subtotal: parseFloat(invoice.amount),
-      tax: 0,
-      total: parseFloat(invoice.amount),
-      currency: currency,
-      payment_methods: paymentMethods.filter((pm: any) => pm.enabled),
-      terms: 'Please send payment within 30 days of receiving this invoice.'
-    };
-    
-    const pdfBuffer = await generateInvoicePDF(invoiceData, companyDetails);
-    
-    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
-    await smtpClient.sendEmail({
-      to: studentEmail,
-      subject: `URGENT - Payment Overdue for Installment #${invoice.installment_number} - LMS Access Suspended`,
-      ...(billingCc ? { cc: billingCc } : {}),
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h2 style="color: #dc2626;">Payment Overdue - LMS Access Suspended</h2>
-          
-          <p>Dear ${studentName},</p>
-          
-          <p><strong>Your payment is now overdue and your LMS access has been suspended.</strong> Immediate action is required to restore your access:</p>
-          
-          <div style="background-color: #fecaca; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #dc2626;">
-            <h3 style="margin-top: 0; color: #dc2626;">Overdue Payment</h3>
-            <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-            <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
-            <p><strong>Status:</strong> OVERDUE - LMS SUSPENDED</p>
-          </div>
-          
-          <p><strong>Action Required:</strong> Your learning platform access has been suspended until payment is received. Please make payment immediately to restore full access. The detailed invoice with payment instructions is attached to this email.</p>
-          
-          <p>If you need assistance or wish to discuss payment arrangements, please contact our support team immediately.</p>
-          
-          <p>Best regards,<br>The Learning Team</p>
-        </div>
-      `,
-      attachments: [{
-        filename: `Invoice-${invoice.installment_number}.pdf`,
-        content: pdfBuffer,
-        contentType: 'application/pdf'
-      }]
-    });
-
-    console.log(`Due email sent to ${studentEmail} for installment ${invoice.installment_number}`);
-  } catch (error) {
-    console.error('Error sending due email:', error);
-  }
-}
-
 async function createInstallmentNotification(
   supabase: any,
   userId: string,
@@ -565,7 +456,6 @@ async function createInstallmentNotification(
   metadata: any
 ) {
   try {
-    // Create notification for the student
     await supabase.rpc('create_notification', {
       p_user_id: userId,
       p_type: type,
@@ -574,7 +464,6 @@ async function createInstallmentNotification(
       p_metadata: metadata
     });
 
-    // Notify admins and superadmins
     const { data: adminUsers } = await supabase
       .from('users')
       .select('id')
