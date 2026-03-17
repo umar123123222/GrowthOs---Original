@@ -72,11 +72,11 @@ export async function generateEnrollmentInvoices({
       dueDate = new Date(issueDate);
       dueDate.setDate(dueDate.getDate() + invoiceOverdueDays);
     } else if (batchAnchor) {
-      // Batch-enrolled: 2nd+ installments anchored to batch start date + (i-1)*27 days
+      // Batch-enrolled: 2nd+ installments anchored to batch start date + (i-1)*invoiceSendGapDays
       issueDate = new Date(batchAnchor);
-      issueDate.setDate(issueDate.getDate() + ((i - 1) * 27));
+      issueDate.setDate(issueDate.getDate() + ((i - 1) * invoiceSendGapDays));
       dueDate = new Date(issueDate);
-      dueDate.setDate(dueDate.getDate() + 5);
+      dueDate.setDate(dueDate.getDate() + invoiceOverdueDays);
     } else {
       // Non-batch: use company settings interval
       issueDate = new Date();

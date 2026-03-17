@@ -656,11 +656,11 @@ const handler = async (req: Request): Promise<Response> => {
               dueDate = new Date(issueDate);
               dueDate.setDate(dueDate.getDate() + overdueDays);
             } else if (batchStartDate) {
-              // Batch-enrolled: 2nd+ installments anchored to batch start date + (i-1)*27 days
+              // Batch-enrolled: 2nd+ installments anchored to batch start date + (i-1)*intervalDays
               issueDate = new Date(batchStartDate);
-              issueDate.setDate(issueDate.getDate() + ((i - 1) * 27));
+              issueDate.setDate(issueDate.getDate() + ((i - 1) * intervalDays));
               dueDate = new Date(issueDate);
-              dueDate.setDate(dueDate.getDate() + 5);
+              dueDate.setDate(dueDate.getDate() + overdueDays);
             } else {
               // Non-batch: use company settings interval
               issueDate = new Date();

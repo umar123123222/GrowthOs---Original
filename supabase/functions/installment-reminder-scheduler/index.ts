@@ -16,6 +16,109 @@ function getCurrencySymbol(curr: string = 'USD'): string {
   return symbols[curr] || curr;
 }
 
+// Branded invoice email template (matches resend-invoice template)
+function generateBrandedInvoiceHtml(params: {
+  companyName: string;
+  companyEmail: string;
+  companyAddress: string;
+  companyPhone: string;
+  studentName: string;
+  studentEmail: string;
+  studentId: string;
+  installmentNumber: number;
+  amount: number;
+  currency: string;
+  currencySymbol: string;
+  dueDate: string;
+  enrollmentName: string;
+  invoiceNumber: string;
+  loginUrl: string;
+  paymentMethodsHtml: string;
+}): string {
+  const formattedAmount = parseFloat(String(params.amount)).toLocaleString();
+  const today = new Date().toLocaleDateString();
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Invoice ${params.invoiceNumber}</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <div style="background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; padding: 30px 40px; text-align: center;">
+          <h1 style="margin: 0; font-size: 28px; font-weight: bold;">INVOICE</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">${params.companyName}</p>
+        </div>
+        <div style="padding: 40px;">
+          <p style="color: #374151; font-size: 16px; line-height: 1.6;">Dear ${params.studentName},</p>
+          <p style="color: #374151; font-size: 16px; line-height: 1.6;">Your installment invoice has been generated. Please find the details below:</p>
+          <div style="background-color: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 25px; margin: 25px 0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+              <div>
+                <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">Invoice To:</h3>
+                <p style="margin: 0; font-weight: bold; color: #111827;">${params.studentName}</p>
+                <p style="margin: 5px 0 0 0; color: #6b7280;">${params.studentEmail}</p>
+              </div>
+              <div style="text-align: right;">
+                <p style="margin: 0; color: #6b7280;">Invoice #: <strong>${params.invoiceNumber}</strong></p>
+                <p style="margin: 5px 0; color: #6b7280;">Date: <strong>${today}</strong></p>
+                <p style="margin: 5px 0; color: #6b7280;">Due Date: <strong>${params.dueDate}</strong></p>
+              </div>
+            </div>
+            <div style="background-color: white; border-radius: 6px; padding: 20px; text-align: center; border: 2px solid #2563eb;">
+              <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">AMOUNT DUE</p>
+              <p style="margin: 0; font-size: 36px; font-weight: bold; color: #2563eb;">${params.currencySymbol}${formattedAmount}</p>
+            </div>
+          </div>
+          <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+            <h3 style="margin: 0 0 15px 0; color: #374151;">Course Details:</h3>
+            <div style="border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #374151;">Course Installment Payment #${params.installmentNumber}</span>
+                <span style="font-weight: bold; color: #111827;">${params.currencySymbol}${formattedAmount}</span>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: #2563eb;">
+              <span>Total Amount Due:</span>
+              <span>${params.currencySymbol}${formattedAmount}</span>
+            </div>
+          </div>
+          ${params.paymentMethodsHtml ? `
+          <div style="margin: 25px 0;">
+            <h3 style="margin: 0 0 20px 0; color: #374151;">Payment Methods:</h3>
+            ${params.paymentMethodsHtml}
+          </div>
+          ` : ''}
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${params.loginUrl}" style="background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; text-decoration: none; padding: 15px 30px; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Access Learning Platform
+            </a>
+          </div>
+          <div style="background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 20px; margin: 25px 0;">
+            <h4 style="margin: 0 0 10px 0; color: #92400e;">Important Notes:</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+              <li>Payment is due by ${params.dueDate}</li>
+              <li>Access to courses may be restricted for overdue payments</li>
+              <li>Contact support if you have any payment-related questions</li>
+            </ul>
+          </div>
+          <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">If you have any questions about this invoice or need assistance with payment, please contact our support team.</p>
+          <p style="color: #374151; font-size: 16px; margin-top: 30px;">Best regards,<br><strong>${params.companyName} Team</strong></p>
+        </div>
+        <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="margin: 0; color: #6b7280; font-size: 12px;">${params.companyName}</p>
+          <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">${params.companyAddress}</p>
+          <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${params.companyEmail} | Phone: ${params.companyPhone}</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 // Safe PDF generation — returns buffer or null if generation fails
 async function safeGeneratePDF(
   invoice: any,
@@ -122,50 +225,88 @@ serve(async (req) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Pre-generate payment methods HTML for branded template
+    const enabledPaymentMethods = (paymentMethods as any[]).filter((pm: any) => pm.enabled);
+    const paymentMethodsHtml = enabledPaymentMethods.map((method: any) => `
+      <div style="border-left: 3px solid #2563eb; padding-left: 15px; margin-bottom: 15px;">
+        <h4 style="margin: 0 0 10px 0; color: #1e40af;">${method.name}</h4>
+        ${Object.entries(method.details || {}).map(([key, value]) => `
+          <p style="margin: 5px 0; font-size: 14px;"><strong>${key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}:</strong> ${value}</p>
+        `).join('')}
+      </div>
+    `).join('');
+
+    const siteUrl = Deno.env.get('SITE_URL') || loginUrl;
+
     // 1. Check for invoices that should change from 'scheduled' to 'pending'
     const { data: scheduledInvoices, error: scheduledError } = await supabaseAdmin
       .from('invoices')
-      .select('*, students!inner(user_id, users!inner(full_name, email))')
+      .select('*, students!inner(id, user_id, student_id, users!inner(full_name, email))')
       .eq('status', 'scheduled')
       .or(`issue_date.lte.${today.toISOString()},and(issue_date.is.null,created_at.lte.${today.toISOString()})`);
 
     if (scheduledError) {
       console.error('Error fetching scheduled invoices:', scheduledError);
     } else {
+      // Pre-fetch course and pathway names for all scheduled invoices
+      const courseIds = [...new Set((scheduledInvoices || []).map((i: any) => i.course_id).filter(Boolean))];
+      const pathwayIds = [...new Set((scheduledInvoices || []).map((i: any) => i.pathway_id).filter(Boolean))];
+      const courseMap = new Map<string, string>();
+      const pathwayMap = new Map<string, string>();
+
+      if (courseIds.length) {
+        const { data: courses } = await supabaseAdmin.from('courses').select('id, title').in('id', courseIds);
+        (courses || []).forEach((c: any) => courseMap.set(c.id, c.title));
+      }
+      if (pathwayIds.length) {
+        const { data: pathways } = await supabaseAdmin.from('learning_pathways').select('id, name').in('id', pathwayIds);
+        (pathways || []).forEach((p: any) => pathwayMap.set(p.id, p.name));
+      }
+
       for (const invoice of scheduledInvoices || []) {
         await supabaseAdmin
           .from('invoices')
           .update({ status: 'pending' })
           .eq('id', invoice.id);
 
-        // Send issue email (non-blocking for status transition)
+        // Send branded issue email
         try {
           const studentEmail = invoice.students.users.email;
           const studentName = invoice.students.users.full_name;
+          const studentDisplayId = invoice.students.student_id || invoice.students.id;
           const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
+          const enrollmentName = invoice.course_id
+            ? courseMap.get(invoice.course_id) || 'Course'
+            : invoice.pathway_id
+              ? pathwayMap.get(invoice.pathway_id) || 'Pathway'
+              : 'Enrollment';
+          const invoiceNumber = `INV-${studentDisplayId}-${invoice.installment_number}`;
 
           const pdfBuffer = await safeGeneratePDF(invoice, currency, companyDetails, paymentMethods, dueDate, studentName, studentEmail);
 
+          const brandedHtml = generateBrandedInvoiceHtml({
+            companyName: companyDetails.company_name,
+            companyEmail: companyDetails.contact_email,
+            companyAddress: companyDetails.address,
+            companyPhone: companyDetails.primary_phone,
+            studentName,
+            studentEmail,
+            studentId: studentDisplayId,
+            installmentNumber: invoice.installment_number,
+            amount: invoice.amount,
+            currency,
+            currencySymbol,
+            dueDate,
+            enrollmentName,
+            invoiceNumber,
+            loginUrl: siteUrl,
+            paymentMethodsHtml,
+          });
+
           await sendBillingEmail({
             to: studentEmail,
-            subject: `Installment #${invoice.installment_number} Issued - Payment Due ${dueDate}`,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #2563eb;">Installment Payment Issued</h2>
-                <p>Dear ${studentName},</p>
-                <p>A new installment payment has been issued for your account:</p>
-                <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <h3 style="margin-top: 0;">Payment Details</h3>
-                  <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-                  <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
-                  <p><strong>Due Date:</strong> ${dueDate}</p>
-                  <p><strong>Status:</strong> Pending Payment</p>
-                </div>
-                <p>Please ensure payment is made by the due date to avoid any service interruptions. ${pdfBuffer ? 'The detailed invoice with payment instructions is attached to this email.' : ''}</p>
-                <p>If you have any questions, please contact our support team.</p>
-                <p>Best regards,<br>The Learning Team</p>
-              </div>
-            `,
+            subject: `Invoice ${invoiceNumber} - Installment #${invoice.installment_number} for ${enrollmentName} - Due ${dueDate}`,
+            html: brandedHtml,
             pdfBuffer,
             installmentNumber: invoice.installment_number,
           });
