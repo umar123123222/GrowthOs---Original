@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'npm:@supabase/supabase-js@2.55.0'
-import { SMTPClient } from '../_shared/smtp-client.ts'
+import { Resend } from "npm:resend@2.0.0"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,6 +12,45 @@ function getCurrencySymbol(curr: string = 'USD'): string {
     USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
   };
   return symbols[curr] || curr;
+}
+
+function sanitizeEmail(value: string): string {
+  const trimmed = value.trim();
+  const match = trimmed.match(/<([^>]+)>/);
+  return match ? match[1].trim() : trimmed;
+}
+
+async function sendEmail(options: {
+  to: string;
+  subject: string;
+  html: string;
+  cc?: string;
+}): Promise<void> {
+  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  const rawFromEmail = Deno.env.get('SMTP_FROM_EMAIL');
+  const fromEmail = rawFromEmail ? sanitizeEmail(rawFromEmail) : '';
+  const fromName = Deno.env.get('SMTP_FROM_NAME') || 'Growth OS';
+
+  if (!resendApiKey) {
+    throw new Error('RESEND_API_KEY is not configured');
+  }
+  if (!fromEmail) {
+    throw new Error('SMTP_FROM_EMAIL is required');
+  }
+
+  const resend = new Resend(resendApiKey);
+  const payload: Record<string, unknown> = {
+    from: `${fromName} <${fromEmail}>`,
+    to: [options.to],
+    subject: options.subject,
+    html: options.html,
+  };
+  if (options.cc) payload.cc = [options.cc];
+
+  const { error } = await resend.emails.send(payload as any);
+  if (error) {
+    throw new Error(`Resend API error: ${(error as any).message}`);
+  }
 }
 
 function generateInvoiceEmailHtml(params: {
@@ -158,7 +197,6 @@ serve(async (req) => {
       (pathways || []).forEach((p: any) => pathwayMap.set(p.id, p.name));
     }
 
-    const smtpClient = SMTPClient.fromEnv();
     const billingCc = Deno.env.get('BILLING_EMAIL_CC');
     let sentCount = 0;
     let failedCount = 0;
@@ -194,7 +232,7 @@ serve(async (req) => {
           invoiceNumber,
         });
 
-        await smtpClient.sendEmail({
+        await sendEmail({
           to: studentEmail,
           subject: `Invoice ${invoiceNumber} - Installment #${invoice.installment_number} for ${enrollmentName} - Due ${dueDate}`,
           html,
