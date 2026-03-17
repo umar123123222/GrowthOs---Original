@@ -16,6 +16,109 @@ function getCurrencySymbol(curr: string = 'USD'): string {
   return symbols[curr] || curr;
 }
 
+// Branded invoice email template (matches resend-invoice template)
+function generateBrandedInvoiceHtml(params: {
+  companyName: string;
+  companyEmail: string;
+  companyAddress: string;
+  companyPhone: string;
+  studentName: string;
+  studentEmail: string;
+  studentId: string;
+  installmentNumber: number;
+  amount: number;
+  currency: string;
+  currencySymbol: string;
+  dueDate: string;
+  enrollmentName: string;
+  invoiceNumber: string;
+  loginUrl: string;
+  paymentMethodsHtml: string;
+}): string {
+  const formattedAmount = parseFloat(String(params.amount)).toLocaleString();
+  const today = new Date().toLocaleDateString();
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Invoice ${params.invoiceNumber}</title>
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: white; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <div style="background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; padding: 30px 40px; text-align: center;">
+          <h1 style="margin: 0; font-size: 28px; font-weight: bold;">INVOICE</h1>
+          <p style="margin: 10px 0 0 0; opacity: 0.9;">${params.companyName}</p>
+        </div>
+        <div style="padding: 40px;">
+          <p style="color: #374151; font-size: 16px; line-height: 1.6;">Dear ${params.studentName},</p>
+          <p style="color: #374151; font-size: 16px; line-height: 1.6;">Your installment invoice has been generated. Please find the details below:</p>
+          <div style="background-color: #f0f9ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 25px; margin: 25px 0;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+              <div>
+                <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 18px;">Invoice To:</h3>
+                <p style="margin: 0; font-weight: bold; color: #111827;">${params.studentName}</p>
+                <p style="margin: 5px 0 0 0; color: #6b7280;">${params.studentEmail}</p>
+              </div>
+              <div style="text-align: right;">
+                <p style="margin: 0; color: #6b7280;">Invoice #: <strong>${params.invoiceNumber}</strong></p>
+                <p style="margin: 5px 0; color: #6b7280;">Date: <strong>${today}</strong></p>
+                <p style="margin: 5px 0; color: #6b7280;">Due Date: <strong>${params.dueDate}</strong></p>
+              </div>
+            </div>
+            <div style="background-color: white; border-radius: 6px; padding: 20px; text-align: center; border: 2px solid #2563eb;">
+              <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">AMOUNT DUE</p>
+              <p style="margin: 0; font-size: 36px; font-weight: bold; color: #2563eb;">${params.currencySymbol}${formattedAmount}</p>
+            </div>
+          </div>
+          <div style="background-color: #f9fafb; border-radius: 8px; padding: 20px; margin: 25px 0;">
+            <h3 style="margin: 0 0 15px 0; color: #374151;">Course Details:</h3>
+            <div style="border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 10px;">
+              <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #374151;">Course Installment Payment #${params.installmentNumber}</span>
+                <span style="font-weight: bold; color: #111827;">${params.currencySymbol}${formattedAmount}</span>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; color: #2563eb;">
+              <span>Total Amount Due:</span>
+              <span>${params.currencySymbol}${formattedAmount}</span>
+            </div>
+          </div>
+          ${params.paymentMethodsHtml ? `
+          <div style="margin: 25px 0;">
+            <h3 style="margin: 0 0 20px 0; color: #374151;">Payment Methods:</h3>
+            ${params.paymentMethodsHtml}
+          </div>
+          ` : ''}
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${params.loginUrl}" style="background: linear-gradient(135deg, #2563eb, #7c3aed); color: white; text-decoration: none; padding: 15px 30px; border-radius: 6px; font-weight: bold; display: inline-block;">
+              Access Learning Platform
+            </a>
+          </div>
+          <div style="background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 20px; margin: 25px 0;">
+            <h4 style="margin: 0 0 10px 0; color: #92400e;">Important Notes:</h4>
+            <ul style="margin: 0; padding-left: 20px; color: #92400e;">
+              <li>Payment is due by ${params.dueDate}</li>
+              <li>Access to courses may be restricted for overdue payments</li>
+              <li>Contact support if you have any payment-related questions</li>
+            </ul>
+          </div>
+          <p style="color: #6b7280; font-size: 14px; line-height: 1.6;">If you have any questions about this invoice or need assistance with payment, please contact our support team.</p>
+          <p style="color: #374151; font-size: 16px; margin-top: 30px;">Best regards,<br><strong>${params.companyName} Team</strong></p>
+        </div>
+        <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+          <p style="margin: 0; color: #6b7280; font-size: 12px;">${params.companyName}</p>
+          <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">${params.companyAddress}</p>
+          <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${params.companyEmail} | Phone: ${params.companyPhone}</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 // Safe PDF generation — returns buffer or null if generation fails
 async function safeGeneratePDF(
   invoice: any,
