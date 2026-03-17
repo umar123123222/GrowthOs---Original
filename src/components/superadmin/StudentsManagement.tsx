@@ -2386,6 +2386,12 @@ export function StudentsManagement() {
                 </PopoverContent>
               </Popover>
 
+              {/* Resend Invoice */}
+              <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm gap-1.5" onClick={handleBulkResendInvoice} disabled={bulkResendLoading}>
+                <Send className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">{bulkResendLoading ? 'Sending...' : 'Resend'}</span> Invoice
+              </Button>
+
               {/* Batch Assignment */}
               <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm gap-1.5" onClick={openBulkBatchDialog}>
                 <Users className="w-3.5 h-3.5" />
