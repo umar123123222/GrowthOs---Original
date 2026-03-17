@@ -1468,6 +1468,10 @@ export const StudentManagement = () => {
                 </Button>
               </div>
               <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={handleBulkResendInvoice} disabled={bulkResendLoading} className="text-blue-600 border-blue-300 hover:bg-blue-50">
+                  <Send className="w-4 h-4 mr-2" />
+                  {bulkResendLoading ? 'Sending...' : 'Resend Invoice'}
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('suspend')} className="text-red-600 border-red-300 hover:bg-red-50">
                   <Ban className="w-4 h-4 mr-2" />
                   Suspend LMS
