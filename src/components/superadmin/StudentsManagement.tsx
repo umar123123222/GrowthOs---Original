@@ -618,57 +618,26 @@ export function StudentsManagement() {
   };
   const handleResendInvoice = async (student: Student) => {
     try {
-      if (!student.student_record_id) {
-        toast({
-          title: 'Error',
-          description: 'No student record to find invoices',
-          variant: 'destructive'
-        });
-        return;
-      }
-      const {
-        data: invoice,
-        error
-      } = await supabase.from('invoices').select('*').eq('student_id', student.student_record_id).neq('status', 'paid').order('created_at', {
-        ascending: false
-      }).limit(1).maybeSingle();
+      const { data, error } = await supabase.functions.invoke('resend-invoice', {
+        body: { student_ids: [student.id] }
+      });
       if (error) throw error;
-      if (!invoice) {
-        toast({
-          title: 'No Invoice Found',
-          description: 'This student has no unpaid invoices to resend.',
-          variant: 'destructive'
-        });
+
+      const hasFailures = data?.failed > 0;
+      if (data?.no_unpaid_invoice === 1 && data?.sent === 0) {
+        toast({ title: 'No Invoice Found', description: 'This student has no unpaid invoices to resend.', variant: 'destructive' });
         return;
       }
-      const {
-        error: rpcError
-      } = await supabase.rpc('create_notification', {
-        p_user_id: student.id,
-        p_type: 'invoice_issued',
-        p_title: 'Invoice Issued',
-        p_message: `Invoice #${invoice.installment_number || ''} has been re-sent.`,
-        p_metadata: {
-          invoice_id: invoice.id,
-          student_user_id: student.id,
-          amount: invoice.amount,
-          due_date: invoice.due_date,
-          installment_number: invoice.installment_number,
-          resent: true
-        }
-      });
-      if (rpcError) throw rpcError;
       toast({
-        title: 'Success',
-        description: 'Invoice re-sent to student.'
+        title: hasFailures ? 'Invoice Resend Failed' : 'Success',
+        description: data?.errors?.length
+          ? `Errors: ${data.errors.join('; ')}`
+          : data?.message || 'Invoice resent successfully.',
+        variant: hasFailures ? 'destructive' : 'default',
       });
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error resending invoice:', e);
-      toast({
-        title: 'Error',
-        description: 'Failed to resend invoice',
-        variant: 'destructive'
-      });
+      toast({ title: 'Error', description: e?.message || 'Failed to resend invoice', variant: 'destructive' });
     }
   };
 
