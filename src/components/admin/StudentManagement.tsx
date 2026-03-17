@@ -671,83 +671,26 @@ export const StudentManagement = () => {
   };
   const handleResendInvoice = async (student: Student) => {
     try {
-      if (!student.student_record_id) {
-        toast({
-          title: 'Error',
-          description: 'No student record to find invoices',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Allow resending for any unpaid invoice
-      const { data: invoice, error } = await supabase
-        .from('invoices')
-        .select('*')
-        .eq('student_id', student.student_record_id)
-        .neq('status', 'paid')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error) throw error;
-      if (!invoice) {
-        toast({
-          title: 'No Invoice Found',
-          description: 'This student has no invoices to resend.',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Get company settings for email details
-      const { data: settings } = await supabase
-        .from('company_settings')
-        .select('company_name, company_email, contact_email')
-        .single();
-
-      // Queue email in email_queue table
-      const { error: emailError } = await supabase
-        .from('email_queue')
-        .insert({
-          user_id: student.id,
-          recipient_email: student.email,
-          recipient_name: student.full_name,
-          email_type: 'invoice_resend',
-          status: 'pending',
-          credentials: {
-            invoice_id: invoice.id,
-            amount: invoice.amount,
-            due_date: invoice.due_date,
-            installment_number: invoice.installment_number,
-            status: invoice.status,
-            company_name: settings?.company_name || 'Company',
-            company_email: settings?.company_email || settings?.contact_email,
-          }
-        });
-
-      if (emailError) throw emailError;
-
-      // Also create in-app notification
-      await supabase.rpc('create_notification', {
-        p_user_id: student.id,
-        p_type: 'invoice_issued',
-        p_title: 'Invoice Reminder',
-        p_message: `Invoice #${invoice.installment_number || ''} has been re-sent. Status: ${invoice.status}`,
-        p_metadata: {
-          invoice_id: invoice.id,
-          student_user_id: student.id,
-          amount: invoice.amount,
-          due_date: invoice.due_date,
-          installment_number: invoice.installment_number,
-          resent: true,
-        },
+      const { data, error } = await supabase.functions.invoke('resend-invoice', {
+        body: { student_ids: [student.id] }
       });
+      if (error) throw error;
 
-      toast({ title: 'Success', description: 'Invoice email queued and notification sent to student.' });
-    } catch (e) {
+      const hasFailures = data?.failed > 0;
+      if (data?.no_unpaid_invoice === 1 && data?.sent === 0) {
+        toast({ title: 'No Invoice Found', description: 'This student has no unpaid invoices to resend.', variant: 'destructive' });
+        return;
+      }
+      toast({
+        title: hasFailures ? 'Invoice Resend Failed' : 'Success',
+        description: data?.errors?.length
+          ? `Errors: ${data.errors.join('; ')}`
+          : data?.message || 'Invoice resent successfully.',
+        variant: hasFailures ? 'destructive' : 'default',
+      });
+    } catch (e: any) {
       console.error('Error resending invoice:', e);
-      toast({ title: 'Error', description: 'Failed to resend invoice', variant: 'destructive' });
+      toast({ title: 'Error', description: e?.message || 'Failed to resend invoice', variant: 'destructive' });
     }
   };
 
