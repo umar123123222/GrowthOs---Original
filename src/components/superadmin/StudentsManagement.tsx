@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon, BookOpen, MessageSquare } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon, BookOpen, MessageSquare, Send } from 'lucide-react';
 import { StudentAccessManagement } from './StudentAccessManagement';
 import { SuspensionDialog } from '@/components/SuspensionDialog';
 import { StudentNotesDialog } from '@/components/StudentNotesDialog';
@@ -1292,6 +1292,30 @@ export function StudentsManagement() {
       setSelectedStudents(new Set());
     }
   };
+  const [bulkResendLoading, setBulkResendLoading] = useState(false);
+  const handleBulkResendInvoice = async () => {
+    if (selectedStudents.size === 0) {
+      toast({ title: 'Error', description: 'Please select at least one student', variant: 'destructive' });
+      return;
+    }
+    setBulkResendLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resend-invoice', {
+        body: { student_ids: Array.from(selectedStudents) }
+      });
+      if (error) throw error;
+      toast({
+        title: 'Invoice Resend Complete',
+        description: data?.message || `Sent ${data?.sent || 0} invoice(s)`,
+      });
+      setSelectedStudents(new Set());
+    } catch (error: any) {
+      console.error('Error resending invoices:', error);
+      toast({ title: 'Error', description: error?.message || 'Failed to resend invoices', variant: 'destructive' });
+    } finally {
+      setBulkResendLoading(false);
+    }
+  };
   const handleBulkLMSAction = async (action: 'suspend' | 'activate') => {
     if (selectedStudents.size === 0) {
       toast({
@@ -2361,6 +2385,12 @@ export function StudentsManagement() {
                   </div>
                 </PopoverContent>
               </Popover>
+
+              {/* Resend Invoice */}
+              <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm gap-1.5" onClick={handleBulkResendInvoice} disabled={bulkResendLoading}>
+                <Send className="w-3.5 h-3.5" />
+                <span className="hidden xs:inline">{bulkResendLoading ? 'Sending...' : 'Resend'}</span> Invoice
+              </Button>
 
               {/* Batch Assignment */}
               <Button variant="outline" size="sm" className="h-8 text-xs sm:text-sm gap-1.5" onClick={openBulkBatchDialog}>

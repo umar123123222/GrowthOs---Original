@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, CalendarIcon, MessageSquare } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, CalendarIcon, MessageSquare, Send } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -1069,6 +1069,30 @@ export const StudentManagement = () => {
       setSelectedStudents(new Set());
     }
   };
+  const [bulkResendLoading, setBulkResendLoading] = useState(false);
+  const handleBulkResendInvoice = async () => {
+    if (selectedStudents.size === 0) {
+      toast({ title: 'Error', description: 'Please select at least one student', variant: 'destructive' });
+      return;
+    }
+    setBulkResendLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resend-invoice', {
+        body: { student_ids: Array.from(selectedStudents) }
+      });
+      if (error) throw error;
+      toast({
+        title: 'Invoice Resend Complete',
+        description: data?.message || `Sent ${data?.sent || 0} invoice(s)`,
+      });
+      setSelectedStudents(new Set());
+    } catch (error: any) {
+      console.error('Error resending invoices:', error);
+      toast({ title: 'Error', description: error?.message || 'Failed to resend invoices', variant: 'destructive' });
+    } finally {
+      setBulkResendLoading(false);
+    }
+  };
   const handleBulkLMSAction = async (action: 'suspend' | 'activate') => {
     if (selectedStudents.size === 0) {
       toast({
@@ -1444,6 +1468,10 @@ export const StudentManagement = () => {
                 </Button>
               </div>
               <div className="flex space-x-2">
+                <Button variant="outline" size="sm" onClick={handleBulkResendInvoice} disabled={bulkResendLoading} className="text-blue-600 border-blue-300 hover:bg-blue-50">
+                  <Send className="w-4 h-4 mr-2" />
+                  {bulkResendLoading ? 'Sending...' : 'Resend Invoice'}
+                </Button>
                 <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('suspend')} className="text-red-600 border-red-300 hover:bg-red-50">
                   <Ban className="w-4 h-4 mr-2" />
                   Suspend LMS
