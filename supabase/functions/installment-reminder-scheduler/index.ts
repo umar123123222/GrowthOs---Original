@@ -225,50 +225,88 @@ serve(async (req) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // Pre-generate payment methods HTML for branded template
+    const enabledPaymentMethods = (paymentMethods as any[]).filter((pm: any) => pm.enabled);
+    const paymentMethodsHtml = enabledPaymentMethods.map((method: any) => `
+      <div style="border-left: 3px solid #2563eb; padding-left: 15px; margin-bottom: 15px;">
+        <h4 style="margin: 0 0 10px 0; color: #1e40af;">${method.name}</h4>
+        ${Object.entries(method.details || {}).map(([key, value]) => `
+          <p style="margin: 5px 0; font-size: 14px;"><strong>${key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}:</strong> ${value}</p>
+        `).join('')}
+      </div>
+    `).join('');
+
+    const siteUrl = Deno.env.get('SITE_URL') || loginUrl;
+
     // 1. Check for invoices that should change from 'scheduled' to 'pending'
     const { data: scheduledInvoices, error: scheduledError } = await supabaseAdmin
       .from('invoices')
-      .select('*, students!inner(user_id, users!inner(full_name, email))')
+      .select('*, students!inner(id, user_id, student_id, users!inner(full_name, email))')
       .eq('status', 'scheduled')
       .or(`issue_date.lte.${today.toISOString()},and(issue_date.is.null,created_at.lte.${today.toISOString()})`);
 
     if (scheduledError) {
       console.error('Error fetching scheduled invoices:', scheduledError);
     } else {
+      // Pre-fetch course and pathway names for all scheduled invoices
+      const courseIds = [...new Set((scheduledInvoices || []).map((i: any) => i.course_id).filter(Boolean))];
+      const pathwayIds = [...new Set((scheduledInvoices || []).map((i: any) => i.pathway_id).filter(Boolean))];
+      const courseMap = new Map<string, string>();
+      const pathwayMap = new Map<string, string>();
+
+      if (courseIds.length) {
+        const { data: courses } = await supabaseAdmin.from('courses').select('id, title').in('id', courseIds);
+        (courses || []).forEach((c: any) => courseMap.set(c.id, c.title));
+      }
+      if (pathwayIds.length) {
+        const { data: pathways } = await supabaseAdmin.from('learning_pathways').select('id, name').in('id', pathwayIds);
+        (pathways || []).forEach((p: any) => pathwayMap.set(p.id, p.name));
+      }
+
       for (const invoice of scheduledInvoices || []) {
         await supabaseAdmin
           .from('invoices')
           .update({ status: 'pending' })
           .eq('id', invoice.id);
 
-        // Send issue email (non-blocking for status transition)
+        // Send branded issue email
         try {
           const studentEmail = invoice.students.users.email;
           const studentName = invoice.students.users.full_name;
+          const studentDisplayId = invoice.students.student_id || invoice.students.id;
           const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
+          const enrollmentName = invoice.course_id
+            ? courseMap.get(invoice.course_id) || 'Course'
+            : invoice.pathway_id
+              ? pathwayMap.get(invoice.pathway_id) || 'Pathway'
+              : 'Enrollment';
+          const invoiceNumber = `INV-${studentDisplayId}-${invoice.installment_number}`;
 
           const pdfBuffer = await safeGeneratePDF(invoice, currency, companyDetails, paymentMethods, dueDate, studentName, studentEmail);
 
+          const brandedHtml = generateBrandedInvoiceHtml({
+            companyName: companyDetails.company_name,
+            companyEmail: companyDetails.contact_email,
+            companyAddress: companyDetails.address,
+            companyPhone: companyDetails.primary_phone,
+            studentName,
+            studentEmail,
+            studentId: studentDisplayId,
+            installmentNumber: invoice.installment_number,
+            amount: invoice.amount,
+            currency,
+            currencySymbol,
+            dueDate,
+            enrollmentName,
+            invoiceNumber,
+            loginUrl: siteUrl,
+            paymentMethodsHtml,
+          });
+
           await sendBillingEmail({
             to: studentEmail,
-            subject: `Installment #${invoice.installment_number} Issued - Payment Due ${dueDate}`,
-            html: `
-              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                <h2 style="color: #2563eb;">Installment Payment Issued</h2>
-                <p>Dear ${studentName},</p>
-                <p>A new installment payment has been issued for your account:</p>
-                <div style="background-color: #f8fafc; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                  <h3 style="margin-top: 0;">Payment Details</h3>
-                  <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
-                  <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
-                  <p><strong>Due Date:</strong> ${dueDate}</p>
-                  <p><strong>Status:</strong> Pending Payment</p>
-                </div>
-                <p>Please ensure payment is made by the due date to avoid any service interruptions. ${pdfBuffer ? 'The detailed invoice with payment instructions is attached to this email.' : ''}</p>
-                <p>If you have any questions, please contact our support team.</p>
-                <p>Best regards,<br>The Learning Team</p>
-              </div>
-            `,
+            subject: `Invoice ${invoiceNumber} - Installment #${invoice.installment_number} for ${enrollmentName} - Due ${dueDate}`,
+            html: brandedHtml,
             pdfBuffer,
             installmentNumber: invoice.installment_number,
           });
