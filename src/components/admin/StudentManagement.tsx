@@ -1069,6 +1069,30 @@ export const StudentManagement = () => {
       setSelectedStudents(new Set());
     }
   };
+  const [bulkResendLoading, setBulkResendLoading] = useState(false);
+  const handleBulkResendInvoice = async () => {
+    if (selectedStudents.size === 0) {
+      toast({ title: 'Error', description: 'Please select at least one student', variant: 'destructive' });
+      return;
+    }
+    setBulkResendLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('resend-invoice', {
+        body: { student_ids: Array.from(selectedStudents) }
+      });
+      if (error) throw error;
+      toast({
+        title: 'Invoice Resend Complete',
+        description: data?.message || `Sent ${data?.sent || 0} invoice(s)`,
+      });
+      setSelectedStudents(new Set());
+    } catch (error: any) {
+      console.error('Error resending invoices:', error);
+      toast({ title: 'Error', description: error?.message || 'Failed to resend invoices', variant: 'destructive' });
+    } finally {
+      setBulkResendLoading(false);
+    }
+  };
   const handleBulkLMSAction = async (action: 'suspend' | 'activate') => {
     if (selectedStudents.size === 0) {
       toast({
