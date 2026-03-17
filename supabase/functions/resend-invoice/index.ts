@@ -332,15 +332,20 @@ serve(async (req) => {
         const html = generateInvoiceEmailHtml({
           companyName,
           companyEmail,
+          companyAddress,
+          companyPhone,
           studentName,
           studentEmail,
           studentId: studentDisplayId,
           installmentNumber: invoice.installment_number,
           amount: invoice.amount,
           currency,
+          currencySymbol,
           dueDate,
           enrollmentName,
           invoiceNumber,
+          loginUrl: siteUrl,
+          paymentMethodsHtml,
         });
 
         await sendEmail({
