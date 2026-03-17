@@ -183,14 +183,44 @@ export function StudentAccessManagement({
       const installments = maxInstallments || 3;
       const installmentAmount = price / installments;
 
+      // Check if student has an active batch enrollment for anchor date
+      let batchStartDate: Date | null = null;
+      const { data: batchEnrollment } = await supabase
+        .from('course_enrollments')
+        .select('batch_id, batches!inner(start_date)')
+        .eq('student_id', studentId)
+        .not('batch_id', 'is', null)
+        .limit(1)
+        .maybeSingle();
+
+      if (batchEnrollment?.batches?.start_date) {
+        batchStartDate = new Date((batchEnrollment.batches as any).start_date);
+      }
+
       // Create all installment invoices
       const invoices = [];
       for (let i = 1; i <= installments; i++) {
-        const issueDate = new Date();
-        issueDate.setDate(issueDate.getDate() + ((i - 1) * gapDays));
-        
-        const dueDate = new Date(issueDate);
-        dueDate.setDate(dueDate.getDate() + overdueDays);
+        let issueDate: Date;
+        let dueDate: Date;
+
+        if (i === 1) {
+          // 1st installment: issued immediately
+          issueDate = new Date();
+          dueDate = new Date(issueDate);
+          dueDate.setDate(dueDate.getDate() + overdueDays);
+        } else if (batchStartDate) {
+          // Batch-enrolled: anchor to batch start date + (i-1)*gapDays
+          issueDate = new Date(batchStartDate);
+          issueDate.setDate(issueDate.getDate() + ((i - 1) * gapDays));
+          dueDate = new Date(issueDate);
+          dueDate.setDate(dueDate.getDate() + overdueDays);
+        } else {
+          // Non-batch: anchor to joining date (now) + (i-1)*gapDays
+          issueDate = new Date();
+          issueDate.setDate(issueDate.getDate() + ((i - 1) * gapDays));
+          dueDate = new Date(issueDate);
+          dueDate.setDate(dueDate.getDate() + overdueDays);
+        }
 
         invoices.push({
           student_id: studentId,
@@ -198,6 +228,7 @@ export function StudentAccessManagement({
           pathway_id: itemType === 'pathway' ? itemId : null,
           installment_number: i,
           amount: installmentAmount,
+          issue_date: issueDate.toISOString(),
           due_date: dueDate.toISOString(),
           status: i === 1 ? 'pending' : 'scheduled',
           enrollment_details: {
