@@ -1304,9 +1304,13 @@ export function StudentsManagement() {
         body: { student_ids: Array.from(selectedStudents) }
       });
       if (error) throw error;
+      const hasFailures = data?.failed > 0;
       toast({
-        title: 'Invoice Resend Complete',
-        description: data?.message || `Sent ${data?.sent || 0} invoice(s)`,
+        title: hasFailures ? 'Invoice Resend - Some Failed' : 'Invoice Resend Complete',
+        description: data?.errors?.length
+          ? `${data.message}\nErrors: ${data.errors.join('; ')}`
+          : data?.message || `Sent ${data?.sent || 0} invoice(s)`,
+        variant: hasFailures ? 'destructive' : 'default',
       });
       setSelectedStudents(new Set());
     } catch (error: any) {
