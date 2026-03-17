@@ -109,3 +109,6 @@ verify_jwt = false
 
 [functions.get-user-details]
 verify_jwt = false
+
+[functions.resend-invoice]
+verify_jwt = false
