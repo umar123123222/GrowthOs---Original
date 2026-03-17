@@ -226,13 +226,30 @@ serve(async (req) => {
     // Get company settings
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
-      .select('currency, company_name, contact_email')
+      .select('currency, company_name, contact_email, address, primary_phone, payment_methods')
       .eq('id', 1)
       .single();
 
     const currency = companySettings?.currency || 'USD';
+    const currencySymbol = getCurrencySymbol(currency);
     const companyName = companySettings?.company_name || 'The Learning Team';
     const companyEmail = companySettings?.contact_email || 'support@company.com';
+    const companyAddress = companySettings?.address || '';
+    const companyPhone = companySettings?.primary_phone || '';
+    const paymentMethods = (companySettings?.payment_methods as any[]) || [];
+
+    // Generate payment methods HTML
+    const paymentMethodsHtml = paymentMethods.filter((pm: any) => pm.enabled).map((method: any) => `
+      <div style="border-left: 3px solid #2563eb; padding-left: 15px; margin-bottom: 15px;">
+        <h4 style="margin: 0 0 10px 0; color: #1e40af;">${method.name}</h4>
+        ${Object.entries(method.details).map(([key, value]) => `
+          <p style="margin: 5px 0; font-size: 14px;"><strong>${key.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())}:</strong> ${value}</p>
+        `).join('')}
+      </div>
+    `).join('');
+
+    // Get site URL for login link
+    const siteUrl = Deno.env.get('SITE_URL') || Deno.env.get('VITE_SITE_URL') || 'https://growthos.idmpakistan.pk';
 
     // Get student records for the user IDs
     const { data: students, error: studentsErr } = await supabaseAdmin
