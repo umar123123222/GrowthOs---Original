@@ -324,7 +324,7 @@ const Login = () => {
           </form>
         </CardContent>
       </Card>
-      <LiveChatWidget userRole="student" />
+      <LiveChatWidget userRole="login" />
     </div>;
 };
 export default Login;
