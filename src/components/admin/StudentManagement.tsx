@@ -1051,6 +1051,22 @@ export const StudentManagement = () => {
           : data?.message || `Sent ${data?.sent || 0} invoice(s)`,
         variant: hasFailures ? 'destructive' : 'default',
       });
+      // Log each successful resend
+      if (data?.sent > 0) {
+        Array.from(selectedStudents).forEach(studentId => {
+          const student = displayStudents.find(s => s.id === studentId);
+          if (student) {
+            logAdminAction({
+              performedBy: user?.id || null,
+              targetUserId: studentId,
+              entityType: 'invoice',
+              action: ACTIVITY_TYPES.INVOICE_RESENT,
+              description: `Invoice resent to ${student.full_name || student.email}`,
+              data: { student_email: student.email, student_name: student.full_name, bulk: true }
+            });
+          }
+        });
+      }
       setSelectedStudents(new Set());
     } catch (error: any) {
       console.error('Error resending invoices:', error);
