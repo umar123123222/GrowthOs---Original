@@ -1432,8 +1432,8 @@ export const StudentManagement = () => {
 
       {/* Bulk Actions */}
       {selectedStudents.size > 0 && <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center space-x-4">
                 <span className="text-sm font-medium text-blue-800">
                   {selectedStudents.size} student(s) selected
@@ -1442,18 +1442,18 @@ export const StudentManagement = () => {
                   Clear Selection
                 </Button>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={handleBulkResendInvoice} disabled={bulkResendLoading} className="text-blue-600 border-blue-300 hover:bg-blue-50">
                   <Send className="w-4 h-4 mr-2" />
                   {bulkResendLoading ? 'Sending...' : 'Resend Invoice'}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('suspend')} className="text-red-600 border-red-300 hover:bg-red-50">
                   <Ban className="w-4 h-4 mr-2" />
-                  Suspend LMS
+                  Suspend
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('activate')} className="text-green-600 border-green-300 hover:bg-green-50">
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Activate LMS
+                  Activate
                 </Button>
               </div>
             </div>
