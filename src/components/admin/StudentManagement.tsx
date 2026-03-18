@@ -65,6 +65,8 @@ interface ActivityLog {
   metadata: any;
   reference_id: string;
 }
+const PAGE_SIZE = 25;
+
 export const StudentManagement = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
