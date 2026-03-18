@@ -317,10 +317,8 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
         onConnectionUpdate();
       }
       
-      // Call global checkIntegrations
-      if (window.checkIntegrations) {
-        window.checkIntegrations();
-      }
+      // Notify integration listeners
+      window.dispatchEvent(new CustomEvent('integrations-updated'));
       
       toast({
         title: "Shopify connected 🎉",
@@ -359,9 +357,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
         onConnectionUpdate();
       }
       
-      if (window.checkIntegrations) {
-        window.checkIntegrations();
-      }
+      window.dispatchEvent(new CustomEvent('integrations-updated'));
       
       toast({
         title: "Shopify Disconnected",
@@ -449,9 +445,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
         onConnectionUpdate();
       }
 
-      if (window.checkIntegrations) {
-        window.checkIntegrations();
-      }
+      window.dispatchEvent(new CustomEvent('integrations-updated'));
 
       toast({
         title: "Meta API Connected",
