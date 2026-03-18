@@ -696,7 +696,7 @@ export const MentorStudents = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allFilteredStudents.map((student, idx) => (
+                {paginatedStudents.map((student, idx) => (
                   <TableRow key={`${student.student_id}-${idx}`}>
                     <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
                     <TableCell className="font-medium">{student.student_name}</TableCell>
@@ -726,6 +726,31 @@ export const MentorStudents = () => {
                 ))}
               </TableBody>
             </Table>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, allFilteredStudents.length)} of {allFilteredStudents.length}
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage <= 1} onClick={() => setCurrentPage(safePage - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  {getMentorPaginationRange().map((p, i) =>
+                    p === '...' ? (
+                      <span key={`dots-${i}`} className="px-2 text-muted-foreground text-sm">…</span>
+                    ) : (
+                      <Button key={p} variant={p === safePage ? 'default' : 'outline'} size="icon" className="h-8 w-8 text-xs" onClick={() => setCurrentPage(p as number)}>
+                        {p}
+                      </Button>
+                    )
+                  )}
+                  <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage >= totalPages} onClick={() => setCurrentPage(safePage + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           )}
         </CardContent>
       </Card>

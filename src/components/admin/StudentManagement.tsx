@@ -1015,7 +1015,7 @@ export const StudentManagement = () => {
   };
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedStudents(new Set(displayStudents.map(s => s.id)));
+      setSelectedStudents(new Set(paginatedStudents.map(s => s.id)));
     } else {
       setSelectedStudents(new Set());
     }
