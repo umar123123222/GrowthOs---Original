@@ -28,7 +28,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { User as UserType } from '@/types/common';
 
 interface LayoutProps {
-  user: User;
+  user: UserType;
 }
 
 interface CourseMenuItem {
