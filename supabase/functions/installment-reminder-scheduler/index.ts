@@ -507,7 +507,8 @@ serve(async (req) => {
             'installment_reminder',
             'Payment Reminder',
             `Reminder: Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} is due on ${effectiveDueDate.toLocaleDateString()}`,
-            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() }
+            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() },
+            studentDisplayId
           );
         }
         // Second reminder — send email BEFORE marking flag (retry-safe)
