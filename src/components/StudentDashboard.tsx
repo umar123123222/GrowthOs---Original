@@ -216,14 +216,14 @@ export function StudentDashboard() {
         setUserLMSStatus(userData.lms_status || 'active');
       }
 
-      // Fetch first onboarding answer
+      // Fetch student data (consolidated: answers, goal, and id for batch lookup)
       const studentRes = await safeMaybeSingle<StudentDataResult>(
         supabase
           .from('students')
-          .select('answers_json, goal_brief')
+          .select('id, answers_json, goal_brief')
           .eq('user_id', user.id)
           .maybeSingle(),
-        `fetch student answers for ${user.id}`
+        `fetch student data for ${user.id}`
       );
 
       const studentData = studentRes.data;
