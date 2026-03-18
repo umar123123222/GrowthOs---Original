@@ -249,6 +249,30 @@ const Dashboard = ({ user }: { user?: any }) => {
     }
   };
 
+  // Refetch connection status when dialog closes
+  const handleDialogClose = (open: boolean) => {
+    setConnectDialogOpen(open);
+    if (!open && user?.id) {
+      setTimeout(async () => {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
+            .eq('id', user.id)
+            .maybeSingle();
+
+          if (error) throw error;
+
+          setShopifyConnected(!!data?.shopify_credentials);
+          setMetaConnected(!!data?.meta_ads_credentials);
+          setDreamGoalSummary(data?.dream_goal_summary || null);
+        } catch (error) {
+          logger.error('Error refetching connection status:', error);
+        }
+      }, 500);
+    }
+  };
+
   const handleConnectAccounts = useCallback(() => {
     setConnectDialogOpen(true);
   }, []);
