@@ -5,7 +5,7 @@ import SuccessPartner from "@/components/SuccessPartner";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route, LayoutGrid, Lock, Layers, Sun, Moon } from "lucide-react";
+import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User as UserIcon, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route, LayoutGrid, Lock, Layers, Sun, Moon } from "lucide-react";
 const MetaIcon = Facebook;
 import { useTheme } from "next-themes";
 import NotificationDropdown from "./NotificationDropdown";

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types/common';
 import { logger } from '@/lib/logger';
-import { logger } from '@/lib/logger';
 
 // Module-level throttle to prevent duplicate activity updates when `useAuth`
 // is mounted in multiple places (or when events fire rapidly).
