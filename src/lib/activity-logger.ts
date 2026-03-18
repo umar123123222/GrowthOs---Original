@@ -154,6 +154,8 @@ export const ACTIVITY_TYPES = {
   BATCH_CREATED: 'batch_created',
   STUDENT_ENROLLED_IN_BATCH: 'student_enrolled_in_batch',
   INVOICE_PAID: 'invoice_paid',
+  INVOICE_CREATED: 'invoice_created',
+  INVOICE_RESENT: 'invoice_resent',
   DRIP_CONTENT_TOGGLED: 'drip_content_toggled',
   MENTOR_ASSIGNED: 'mentor_assigned',
   MENTOR_REMOVED: 'mentor_removed',
