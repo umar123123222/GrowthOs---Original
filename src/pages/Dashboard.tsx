@@ -30,14 +30,31 @@ const Dashboard = ({ user }: { user?: any }) => {
   const [questionnaireOpen, setQuestionnaireOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  const [progressData, setProgressData] = useState({
+    videosWatched: 0,
+    totalVideos: 0,
+    assignmentsCompleted: 0,
+    totalAssignments: 0,
+    overallProgress: 0
+  });
 
-  // For students, show the specialized student dashboard
-  if (user?.role === 'student') {
-    return <StudentDashboard />;
-  }
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState([
+    { title: "First Login", completed: false, icon: "🎯" },
+    { title: "Profile Complete", completed: false, icon: "✅" },
+    { title: "First Video Watched", completed: false, icon: "📹" },
+    { title: "First Assignment", completed: false, icon: "📝" },
+    { title: "Store Live", completed: false, icon: "🛒" },
+    { title: "First Sale", completed: false, icon: "💰" }
+  ]);
+  const [nextAssignment, setNextAssignment] = useState<any>(null);
+
+  const isStudent = user?.role === 'student';
 
   // Fetch connection status when component mounts or user changes
   useEffect(() => {
+    if (isStudent) return; // Skip for students
     const fetchConnectionStatus = async () => {
       if (user?.id) {
         try {
@@ -63,64 +80,18 @@ const Dashboard = ({ user }: { user?: any }) => {
     };
 
     fetchConnectionStatus();
-  }, [user?.id]);
-
-  // Refetch connection status when dialog closes
-  const handleDialogClose = (open: boolean) => {
-    setConnectDialogOpen(open);
-    if (!open && user?.id) {
-      // Refetch status when dialog closes
-      setTimeout(async () => {
-        try {
-          const { data, error } = await supabase
-            .from('users')
-            .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
-            .eq('id', user.id)
-            .maybeSingle();
-
-          if (error) throw error;
-
-          setShopifyConnected(!!data?.shopify_credentials);
-          setMetaConnected(!!data?.meta_ads_credentials);
-          setDreamGoalSummary(data?.dream_goal_summary || null);
-        } catch (error) {
-          console.error('Error refetching connection status:', error);
-        }
-      }, 500);
-    }
-  };
-  
-  const [progressData, setProgressData] = useState({
-    videosWatched: 0,
-    totalVideos: 0,
-    assignmentsCompleted: 0,
-    totalAssignments: 0,
-    overallProgress: 0
-  });
-
-  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
-  const [milestones, setMilestones] = useState([
-    { title: "First Login", completed: false, icon: "🎯" },
-    { title: "Profile Complete", completed: false, icon: "✅" },
-    { title: "First Video Watched", completed: false, icon: "📹" },
-    { title: "First Assignment", completed: false, icon: "📝" },
-    { title: "Store Live", completed: false, icon: "🛒" },
-    { title: "First Sale", completed: false, icon: "💰" }
-  ]);
-  const [nextAssignment, setNextAssignment] = useState<any>(null);
-  
+  }, [user?.id, isStudent]);
 
   // Fetch real data when user is available - optimize by batching requests
   useEffect(() => {
+    if (isStudent) return; // Skip for students
     if (user?.id) {
-      // Use a single effect to fetch all data concurrently
       Promise.allSettled([
         fetchProgressData(),
         fetchLeaderboardData(),
         fetchMilestones(),
         fetchNextAssignment()
       ]).then(results => {
-        // Log any errors but don't fail the entire operation
         results.forEach((result, index) => {
           if (result.status === 'rejected') {
             console.warn(`Dashboard data fetch ${index} failed:`, result.reason);
@@ -128,7 +99,12 @@ const Dashboard = ({ user }: { user?: any }) => {
         });
       });
     }
-  }, [user?.id]);
+  }, [user?.id, isStudent]);
+
+  // For students, show the specialized student dashboard
+  if (isStudent) {
+    return <StudentDashboard />;
+  }
 
 
   const fetchProgressData = async () => {
