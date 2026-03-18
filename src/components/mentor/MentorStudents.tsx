@@ -375,6 +375,24 @@ export const MentorStudents = () => {
     });
   }, [filteredCoursesWithStudents, sortOrder]);
 
+  const totalPages = Math.max(1, Math.ceil(allFilteredStudents.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedStudents = allFilteredStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const getMentorPaginationRange = () => {
+    const range: (number | '...')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) range.push(i);
+    } else {
+      range.push(1);
+      if (safePage > 3) range.push('...');
+      for (let i = Math.max(2, safePage - 1); i <= Math.min(totalPages - 1, safePage + 1); i++) range.push(i);
+      if (safePage < totalPages - 2) range.push('...');
+      range.push(totalPages);
+    }
+    return range;
+  };
+
   if (loading) {
     return (
       <Card>
