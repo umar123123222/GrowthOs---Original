@@ -15,6 +15,7 @@ export interface UserStatusResult {
 }
 
 export interface StudentDataResult {
+  id?: string;
   answers_json: any; // JSON type from Supabase
   goal_brief: string | null;
 }
