@@ -296,13 +296,13 @@ useEffect(() => {
     } catch (error) {
       logger.error('fetchUserProfile: Unexpected error', error);
       // Don't sign out on errors - preserve the session
-      if (session?.user) {
+      if (sessionRef.current?.user) {
         logger.warn('fetchUserProfile: Preserving session despite error');
         setUser({
-          id: session.user.id,
-          email: session.user.email || '',
+          id: sessionRef.current.user.id,
+          email: sessionRef.current.user.email || '',
           role: 'student', // default role
-          full_name: session.user.user_metadata?.full_name || session.user.email,
+          full_name: sessionRef.current.user.user_metadata?.full_name || sessionRef.current.user.email,
           onboarding_done: false // Assume onboarding needed on error
         });
       }
