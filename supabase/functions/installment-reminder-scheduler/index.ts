@@ -320,7 +320,8 @@ serve(async (req) => {
           'installment_issued',
           'New Installment Issued',
           `Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} has been issued. Due date: ${new Date(invoice.due_date).toLocaleDateString()}`,
-          { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date }
+          { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date },
+          studentDisplayId
         );
 
         console.log(`Issued installment ${invoice.installment_number} for student ${invoice.students.users.full_name}`);
