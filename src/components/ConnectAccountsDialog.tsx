@@ -445,9 +445,7 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
         onConnectionUpdate();
       }
 
-      if (window.checkIntegrations) {
-        window.checkIntegrations();
-      }
+      window.dispatchEvent(new CustomEvent('integrations-updated'));
 
       toast({
         title: "Meta API Connected",
