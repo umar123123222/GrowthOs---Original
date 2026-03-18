@@ -52,6 +52,7 @@ export const MentorStudents = () => {
   const [selectedEnrollmentType, setSelectedEnrollmentType] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [allBatches, setAllBatches] = useState<{ id: string; name: string }[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (user) {
