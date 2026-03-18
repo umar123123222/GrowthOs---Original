@@ -2509,6 +2509,12 @@ export function StudentsManagement() {
                                  <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
                                </div>
                              </Badge>
+                             {scheduledSuspensions.has(student.id) && (
+                               <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 cursor-pointer" onClick={() => handleCancelScheduledSuspension(student)} title={`Scheduled: ${new Date(scheduledSuspensions.get(student.id)!.schedule_suspend_date).toLocaleDateString()}. Click to cancel.`}>
+                                 <Clock className="w-3 h-3 mr-1" />
+                                 <span className="text-xs font-medium">Suspend: {new Date(scheduledSuspensions.get(student.id)!.schedule_suspend_date).toLocaleDateString()}</span>
+                               </Badge>
+                             )}
                              {!isSupportMember && (() => {
                         const inst = getInstallmentStatus(student);
                         return <Badge className={inst.color}>
