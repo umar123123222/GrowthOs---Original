@@ -282,13 +282,13 @@ useEffect(() => {
       } else {
         logger.warn('fetchUserProfile: No data returned but session exists');
         // User record doesn't exist but session is valid - use session data
-        if (session?.user) {
+        if (sessionRef.current?.user) {
           logger.warn('fetchUserProfile: Creating fallback user data for session without user record');
           setUser({
-            id: session.user.id,
-            email: session.user.email || '',
+            id: sessionRef.current.user.id,
+            email: sessionRef.current.user.email || '',
             role: 'student', // default role
-            full_name: session.user.user_metadata?.full_name || session.user.email,
+            full_name: sessionRef.current.user.user_metadata?.full_name || sessionRef.current.user.email,
             onboarding_done: false // New users need onboarding
           });
         }
