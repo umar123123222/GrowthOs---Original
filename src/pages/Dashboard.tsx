@@ -350,7 +350,7 @@ const Dashboard = ({ user }: { user?: any }) => {
             <div>
               <div className="flex justify-between mb-2">
                 <span className="text-sm font-medium">Assignments Done</span>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   {progressData.assignmentsCompleted}/{progressData.totalAssignments}
                 </span>
               </div>
