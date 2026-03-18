@@ -398,14 +398,20 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                              })}
                            </TableCell>
                            <TableCell className="max-w-[200px] truncate">
-                             {log.users?.email || (log.performed_by ? 'Deleted User' : 'System')}
+                             {log.performed_by 
+                               ? (log.users?.email || 'Deleted User')
+                               : 'System'}
                            </TableCell>
                            <TableCell className="max-w-[150px] truncate">
-                             {log.users?.full_name || (log.performed_by ? 'Deleted User' : 'System')}
+                             {log.performed_by
+                               ? (log.users?.full_name || 'Deleted User')
+                               : ((log as any).target_user?.full_name || '—')}
                            </TableCell>
                            <TableCell>
                              <Badge className={getRoleBadge(log.users?.role || '')}>
-                               {log.users?.role || 'Unknown'}
+                               {log.performed_by
+                                 ? (log.users?.role || 'Unknown')
+                                 : ((log as any).target_user ? log.users?.role || 'Unknown' : 'System')}
                              </Badge>
                            </TableCell>
                            <TableCell>
