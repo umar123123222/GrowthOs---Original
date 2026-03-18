@@ -398,7 +398,8 @@ serve(async (req) => {
             'installment_due',
             'Payment Overdue',
             `Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} is now overdue. Please make payment immediately.`,
-            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date }
+            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date },
+            studentDisplayId
           );
 
           // Suspend LMS access
