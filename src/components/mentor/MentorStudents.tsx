@@ -684,7 +684,7 @@ export const MentorStudents = () => {
               <Button variant="link" onClick={clearAllFilters}>Clear all filters</Button>
             </div>
           ) : (
-            <Table>
+            <>
               <TableHeader>
                 <TableRow>
                   <TableHead>Student ID</TableHead>
