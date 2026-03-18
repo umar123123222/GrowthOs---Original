@@ -564,7 +564,8 @@ serve(async (req) => {
             'installment_reminder',
             'Final Payment Reminder',
             `Final reminder: Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} is due on ${effectiveDueDate.toLocaleDateString()}`,
-            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() }
+            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() },
+            studentDisplayId
           );
         }
       }
