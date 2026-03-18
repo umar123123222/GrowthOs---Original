@@ -12,7 +12,6 @@ import { Activity, Download, Search, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { RoleGuard } from '@/components/RoleGuard';
-import { safeQuery } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 
 interface ActivityLog {
