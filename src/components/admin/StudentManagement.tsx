@@ -1610,6 +1610,12 @@ export const StudentManagement = () => {
                                {getLMSStatusIcon(student.lms_status)}
                                {getLMSStatusLabel(student.lms_status)}
                              </Badge>
+                             {scheduledSuspensions.has(student.id) && (
+                               <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 cursor-pointer" onClick={() => handleCancelScheduledSuspension(student)} title={`Scheduled: ${new Date(scheduledSuspensions.get(student.id)!.schedule_suspend_date).toLocaleDateString()}. Click to cancel.`}>
+                                 <Clock className="w-3 h-3 mr-1" />
+                                 <span className="text-xs">Suspend: {new Date(scheduledSuspensions.get(student.id)!.schedule_suspend_date).toLocaleDateString()}</span>
+                               </Badge>
+                             )}
                             {student.fees_overdue && <Badge className="bg-orange-100 text-orange-800">
                                 <Clock className="w-3 h-3 mr-1" />
                                 Overdue
