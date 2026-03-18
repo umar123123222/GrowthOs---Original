@@ -26,10 +26,6 @@ import { safeQuery } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 
 const Dashboard = ({ user }: { user?: any }) => {
-  // For students, show the specialized student dashboard
-  if (user?.role === 'student') {
-    return <StudentDashboard />;
-  }
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [shopifyConnected, setShopifyConnected] = useState(false);
   const [metaConnected, setMetaConnected] = useState(false);
@@ -37,6 +33,11 @@ const Dashboard = ({ user }: { user?: any }) => {
   const [questionnaireOpen, setQuestionnaireOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // For students, show the specialized student dashboard
+  if (user?.role === 'student') {
+    return <StudentDashboard />;
+  }
 
   // Fetch connection status when component mounts or user changes
   useEffect(() => {
