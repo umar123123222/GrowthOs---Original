@@ -239,12 +239,9 @@ const App = () => {
                   {!user ? (
                     <Route path="*" element={<Login />} />
                   ) : user?.role === 'student' && !user?.onboarding_done ? (
-                    (() => {
-                      logger.debug('App: Showing onboarding for student', { userId: user.id, onboarding_done: user.onboarding_done });
-                      return <Route path="*" element={
-                        <OnboardingWrapper user={user} />
-                      } />;
-                    })()
+                    <Route path="*" element={
+                      <OnboardingWrapper user={user} />
+                    } />
                   ) : (
                     <Route path="/" element={<Layout user={user} />}>
                       {/* Role-based dashboard routing */}

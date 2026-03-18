@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -11,12 +11,9 @@ import { DreamGoalCard } from "@/components/DreamGoalCard";
 import { StudentDashboard } from "@/components/StudentDashboard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { generateDreamGoalSummary } from "@/utils/dreamGoalUtils";
 import { 
   BookOpen, 
   FileText, 
-  Star, 
-  Clock,
   TrendingUp,
   Trophy,
   Target,
@@ -26,10 +23,6 @@ import { safeQuery } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 
 const Dashboard = ({ user }: { user?: any }) => {
-  // For students, show the specialized student dashboard
-  if (user?.role === 'student') {
-    return <StudentDashboard />;
-  }
   const [connectDialogOpen, setConnectDialogOpen] = useState(false);
   const [shopifyConnected, setShopifyConnected] = useState(false);
   const [metaConnected, setMetaConnected] = useState(false);
@@ -37,9 +30,31 @@ const Dashboard = ({ user }: { user?: any }) => {
   const [questionnaireOpen, setQuestionnaireOpen] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  const [progressData, setProgressData] = useState({
+    videosWatched: 0,
+    totalVideos: 0,
+    assignmentsCompleted: 0,
+    totalAssignments: 0,
+    overallProgress: 0
+  });
+
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [milestones, setMilestones] = useState([
+    { title: "First Login", completed: false, icon: "🎯" },
+    { title: "Profile Complete", completed: false, icon: "✅" },
+    { title: "First Video Watched", completed: false, icon: "📹" },
+    { title: "First Assignment", completed: false, icon: "📝" },
+    { title: "Store Live", completed: false, icon: "🛒" },
+    { title: "First Sale", completed: false, icon: "💰" }
+  ]);
+  const [nextAssignment, setNextAssignment] = useState<any>(null);
+
+  const isStudent = user?.role === 'student';
 
   // Fetch connection status when component mounts or user changes
   useEffect(() => {
+    if (isStudent) return; // Skip for students
     const fetchConnectionStatus = async () => {
       if (user?.id) {
         try {
@@ -65,64 +80,18 @@ const Dashboard = ({ user }: { user?: any }) => {
     };
 
     fetchConnectionStatus();
-  }, [user?.id]);
-
-  // Refetch connection status when dialog closes
-  const handleDialogClose = (open: boolean) => {
-    setConnectDialogOpen(open);
-    if (!open && user?.id) {
-      // Refetch status when dialog closes
-      setTimeout(async () => {
-        try {
-          const { data, error } = await supabase
-            .from('users')
-            .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
-            .eq('id', user.id)
-            .maybeSingle();
-
-          if (error) throw error;
-
-          setShopifyConnected(!!data?.shopify_credentials);
-          setMetaConnected(!!data?.meta_ads_credentials);
-          setDreamGoalSummary(data?.dream_goal_summary || null);
-        } catch (error) {
-          console.error('Error refetching connection status:', error);
-        }
-      }, 500);
-    }
-  };
-  
-  const [progressData, setProgressData] = useState({
-    videosWatched: 0,
-    totalVideos: 0,
-    assignmentsCompleted: 0,
-    totalAssignments: 0,
-    overallProgress: 0
-  });
-
-  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
-  const [milestones, setMilestones] = useState([
-    { title: "First Login", completed: false, icon: "🎯" },
-    { title: "Profile Complete", completed: false, icon: "✅" },
-    { title: "First Video Watched", completed: false, icon: "📹" },
-    { title: "First Assignment", completed: false, icon: "📝" },
-    { title: "Store Live", completed: false, icon: "🛒" },
-    { title: "First Sale", completed: false, icon: "💰" }
-  ]);
-  const [nextAssignment, setNextAssignment] = useState<any>(null);
-  
+  }, [user?.id, isStudent]);
 
   // Fetch real data when user is available - optimize by batching requests
   useEffect(() => {
+    if (isStudent) return; // Skip for students
     if (user?.id) {
-      // Use a single effect to fetch all data concurrently
       Promise.allSettled([
         fetchProgressData(),
         fetchLeaderboardData(),
         fetchMilestones(),
         fetchNextAssignment()
       ]).then(results => {
-        // Log any errors but don't fail the entire operation
         results.forEach((result, index) => {
           if (result.status === 'rejected') {
             console.warn(`Dashboard data fetch ${index} failed:`, result.reason);
@@ -130,7 +99,12 @@ const Dashboard = ({ user }: { user?: any }) => {
         });
       });
     }
-  }, [user?.id]);
+  }, [user?.id, isStudent]);
+
+  // For students, show the specialized student dashboard
+  if (isStudent) {
+    return <StudentDashboard />;
+  }
 
 
   const fetchProgressData = async () => {
@@ -188,17 +162,24 @@ const Dashboard = ({ user }: { user?: any }) => {
 
   const fetchLeaderboardData = async () => {
     try {
-      // Leaderboard table doesn't exist yet, use placeholder data
-      const placeholderData = [
-        { name: 'Alex M.', score: 95, rank: 1 },
-        { name: 'Sarah K.', score: 87, rank: 2 },
-        { name: 'John D.', score: 82, rank: 3 },
-        { name: 'Emily R.', score: 78, rank: 4 },
-        { name: 'Mike S.', score: 74, rank: 5 }
-      ];
-      setLeaderboardData(placeholderData);
+      const { data: snapshots } = await supabase
+        .from('leaderboard_snapshots')
+        .select('user_id, rank, total_score, users!inner(full_name)')
+        .order('rank', { ascending: true })
+        .limit(5);
+
+      if (snapshots && snapshots.length > 0) {
+        setLeaderboardData(snapshots.map((s: any) => ({
+          name: s.users?.full_name || 'Unknown',
+          score: s.total_score ?? 0,
+          rank: s.rank ?? 0
+        })));
+      } else {
+        setLeaderboardData([]);
+      }
     } catch (error) {
-      console.error('Error fetching leaderboard data:', error);
+      logger.warn('Error fetching leaderboard data:', error);
+      setLeaderboardData([]);
     }
   };
 
@@ -268,18 +249,40 @@ const Dashboard = ({ user }: { user?: any }) => {
     }
   };
 
-  const handleConnectAccounts = useCallback(() => {
-    setConnectDialogOpen(true);
-  }, []);
+  // Refetch connection status when dialog closes
+  const handleDialogClose = (open: boolean) => {
+    setConnectDialogOpen(open);
+    if (!open && user?.id) {
+      setTimeout(async () => {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .select('shopify_credentials, meta_ads_credentials, dream_goal_summary')
+            .eq('id', user.id)
+            .maybeSingle();
 
-  const handleEditGoal = useCallback(() => {
-    // For now, just show a placeholder message
-    // In a full implementation, this would open a questionnaire modal
+          if (error) throw error;
+
+          setShopifyConnected(!!data?.shopify_credentials);
+          setMetaConnected(!!data?.meta_ads_credentials);
+          setDreamGoalSummary(data?.dream_goal_summary || null);
+        } catch (error) {
+          logger.error('Error refetching connection status:', error);
+        }
+      }, 500);
+    }
+  };
+
+  const handleConnectAccounts = () => {
+    setConnectDialogOpen(true);
+  };
+
+  const handleEditGoal = () => {
     toast({
       title: "Coming Soon",
       description: "Dream goal editing questionnaire will be available soon!",
     });
-  }, [toast]);
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -341,7 +344,7 @@ const Dashboard = ({ user }: { user?: any }) => {
                   {progressData.videosWatched}/{progressData.totalVideos}
                 </span>
               </div>
-              <Progress value={(progressData.videosWatched / progressData.totalVideos) * 100} />
+              <Progress value={progressData.totalVideos > 0 ? (progressData.videosWatched / progressData.totalVideos) * 100 : 0} />
             </div>
             
             <div>
@@ -351,7 +354,7 @@ const Dashboard = ({ user }: { user?: any }) => {
                   {progressData.assignmentsCompleted}/{progressData.totalAssignments}
                 </span>
               </div>
-              <Progress value={(progressData.assignmentsCompleted / progressData.totalAssignments) * 100} />
+              <Progress value={progressData.totalAssignments > 0 ? (progressData.assignmentsCompleted / progressData.totalAssignments) * 100 : 0} />
             </div>
           </CardContent>
         </Card>

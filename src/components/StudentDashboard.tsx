@@ -216,14 +216,14 @@ export function StudentDashboard() {
         setUserLMSStatus(userData.lms_status || 'active');
       }
 
-      // Fetch first onboarding answer
+      // Fetch student data (consolidated: answers, goal, and id for batch lookup)
       const studentRes = await safeMaybeSingle<StudentDataResult>(
         supabase
           .from('students')
-          .select('answers_json, goal_brief')
+          .select('id, answers_json, goal_brief')
           .eq('user_id', user.id)
           .maybeSingle(),
-        `fetch student answers for ${user.id}`
+        `fetch student data for ${user.id}`
       );
 
       const studentData = studentRes.data;
@@ -416,23 +416,18 @@ export function StudentDashboard() {
         logger.warn('StudentDashboard: Failed to fetch leaderboard position', leaderboardErr);
       }
 
-      // Fetch batch enrollment
+      // Fetch batch enrollment - reuse studentData from earlier query
       let fetchedBatchId: string | null = null;
       try {
-        const { data: studentData } = await supabase
-          .from('students')
-          .select('id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-
-        if (studentData?.id) {
+        const studentId = studentData?.id;
+        if (studentId) {
           const { data: enrollment } = await supabase
             .from('course_enrollments')
             .select(`
               batch_id,
               batches!inner(id, name)
             `)
-            .eq('student_id', studentData.id)
+            .eq('student_id', studentId)
             .not('batch_id', 'is', null)
             .maybeSingle();
 

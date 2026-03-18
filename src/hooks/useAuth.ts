@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@/types/common';
 import { logger } from '@/lib/logger';
@@ -28,6 +28,12 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<AuthSession | null>(null);
+  const sessionRef = useRef<AuthSession | null>(null);
+
+  // Keep sessionRef in sync
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
   // Update user activity timestamp
   const updateLastActive = async (userId: string) => {
@@ -206,13 +212,13 @@ useEffect(() => {
       if (error) {
         logger.error('fetchUserProfile: Database error', error);
         // Don't sign out on database errors - keep the session active
-        if (session?.user) {
+        if (sessionRef.current?.user) {
           logger.warn('fetchUserProfile: Keeping session active despite database error');
           setUser({
-            id: session.user.id,
-            email: session.user.email || '',
+            id: sessionRef.current.user.id,
+            email: sessionRef.current.user.email || '',
             role: 'student', // default role
-            full_name: session.user.user_metadata?.full_name || session.user.email,
+            full_name: sessionRef.current.user.user_metadata?.full_name || sessionRef.current.user.email,
             onboarding_done: false // Assume onboarding needed on error
           });
         }
@@ -276,13 +282,13 @@ useEffect(() => {
       } else {
         logger.warn('fetchUserProfile: No data returned but session exists');
         // User record doesn't exist but session is valid - use session data
-        if (session?.user) {
+        if (sessionRef.current?.user) {
           logger.warn('fetchUserProfile: Creating fallback user data for session without user record');
           setUser({
-            id: session.user.id,
-            email: session.user.email || '',
+            id: sessionRef.current.user.id,
+            email: sessionRef.current.user.email || '',
             role: 'student', // default role
-            full_name: session.user.user_metadata?.full_name || session.user.email,
+            full_name: sessionRef.current.user.user_metadata?.full_name || sessionRef.current.user.email,
             onboarding_done: false // New users need onboarding
           });
         }
@@ -290,13 +296,13 @@ useEffect(() => {
     } catch (error) {
       logger.error('fetchUserProfile: Unexpected error', error);
       // Don't sign out on errors - preserve the session
-      if (session?.user) {
+      if (sessionRef.current?.user) {
         logger.warn('fetchUserProfile: Preserving session despite error');
         setUser({
-          id: session.user.id,
-          email: session.user.email || '',
+          id: sessionRef.current.user.id,
+          email: sessionRef.current.user.email || '',
           role: 'student', // default role
-          full_name: session.user.user_metadata?.full_name || session.user.email,
+          full_name: sessionRef.current.user.user_metadata?.full_name || sessionRef.current.user.email,
           onboarding_done: false // Assume onboarding needed on error
         });
       }
