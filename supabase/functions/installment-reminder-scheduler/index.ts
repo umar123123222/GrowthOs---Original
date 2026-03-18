@@ -595,7 +595,8 @@ async function createInstallmentNotification(
   type: string,
   title: string,
   message: string,
-  metadata: any
+  metadata: any,
+  studentRecordId?: string
 ) {
   try {
     await supabase.rpc('create_notification', {
@@ -606,6 +607,7 @@ async function createInstallmentNotification(
       p_metadata: metadata
     });
 
+    const displayId = studentRecordId || userId;
     const { data: adminUsers } = await supabase
       .from('users')
       .select('id')
@@ -616,8 +618,8 @@ async function createInstallmentNotification(
         p_user_id: admin.id,
         p_type: 'financial',
         p_title: `Student ${title}`,
-        p_message: `${message} (Student ID: ${userId})`,
-        p_metadata: { ...metadata, student_id: userId }
+        p_message: `${message} (Student ID: ${displayId})`,
+        p_metadata: { ...metadata, student_id: displayId }
       });
     }
 
