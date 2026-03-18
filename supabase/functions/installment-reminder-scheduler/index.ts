@@ -446,7 +446,8 @@ serve(async (req) => {
               'lms_suspended',
               'LMS Access Suspended',
               `Your learning platform access has been suspended due to overdue payment for Installment #${invoice.installment_number}. Please make payment to restore access.`,
-              { invoice_id: invoice.id, installment_number: invoice.installment_number }
+              { invoice_id: invoice.id, installment_number: invoice.installment_number },
+              studentDisplayId
             );
           }
 
