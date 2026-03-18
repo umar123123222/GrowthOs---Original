@@ -416,16 +416,18 @@ export function StudentDashboard() {
         logger.warn('StudentDashboard: Failed to fetch leaderboard position', leaderboardErr);
       }
 
-      // Reuse studentData from earlier query instead of re-fetching
+      // Fetch batch enrollment - reuse studentData from earlier query
+      let fetchedBatchId: string | null = null;
       try {
         const studentId = studentData?.id;
+        if (studentId) {
           const { data: enrollment } = await supabase
             .from('course_enrollments')
             .select(`
               batch_id,
               batches!inner(id, name)
             `)
-            .eq('student_id', studentData.id)
+            .eq('student_id', studentId)
             .not('batch_id', 'is', null)
             .maybeSingle();
 
