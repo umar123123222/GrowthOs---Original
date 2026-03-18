@@ -161,8 +161,14 @@ export function StudentsManagement() {
     options: installmentOptions
   } = useInstallmentOptions();
 
-  // Debug: Ensure statusFilter is completely removed
-  safeLogger.info('StudentsManagement component loaded - statusFilter removed');
+  const studentIds = students.map(s => s.id);
+  const {
+    suspensions: scheduledSuspensions,
+    createScheduledSuspension,
+    cancelScheduledSuspension,
+    fetchSuspensions: refetchSuspensions,
+  } = useScheduledSuspensions(studentIds);
+
   useEffect(() => {
     fetchStudents();
     fetchCompanyCurrency();
