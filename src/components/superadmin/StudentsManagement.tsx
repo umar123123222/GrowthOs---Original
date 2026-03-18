@@ -27,6 +27,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/currencyFormatter';
 import { cn } from '@/lib/utils';
 import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
+import { useScheduledSuspensions } from '@/hooks/useScheduledSuspensions';
+import type { SuspensionConfirmData } from '@/components/SuspensionDialog';
 import jsPDF from 'jspdf';
 interface Student {
   id: string;
@@ -159,8 +161,14 @@ export function StudentsManagement() {
     options: installmentOptions
   } = useInstallmentOptions();
 
-  // Debug: Ensure statusFilter is completely removed
-  safeLogger.info('StudentsManagement component loaded - statusFilter removed');
+  const studentIds = students.map(s => s.id);
+  const {
+    suspensions: scheduledSuspensions,
+    createScheduledSuspension,
+    cancelScheduledSuspension,
+    fetchSuspensions: refetchSuspensions,
+  } = useScheduledSuspensions(studentIds);
+
   useEffect(() => {
     fetchStudents();
     fetchCompanyCurrency();
@@ -271,17 +279,53 @@ export function StudentsManagement() {
     }
   };
 
-  const handleSuspendStudent = async (data: { note: string; autoUnsuspendDate?: Date }) => {
+  const handleSuspendStudent = async (data: SuspensionConfirmData) => {
     if (!studentForSuspension) return;
     setSuspensionLoading(true);
     try {
+      // If a schedule date is set, create a scheduled suspension instead of immediate
+      if (data.scheduleSuspendDate) {
+        const { error } = await createScheduledSuspension({
+          userId: studentForSuspension.id,
+          scheduleSuspendDate: data.scheduleSuspendDate,
+          reason: data.note,
+          autoUnsuspendDate: data.autoUnsuspendDate,
+          createdBy: user?.id || null,
+        });
+        if (error) throw error;
+
+        logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: studentForSuspension.id,
+          entityType: 'user',
+          entityId: studentForSuspension.id,
+          action: 'scheduled_suspension_created',
+          description: `Scheduled suspension for ${studentForSuspension.full_name} on ${format(data.scheduleSuspendDate, 'PPP')}`,
+          data: {
+            suspension_note: data.note || null,
+            schedule_suspend_date: data.scheduleSuspendDate.toISOString(),
+            auto_unsuspend_date: data.autoUnsuspendDate?.toISOString() || null,
+            student_name: studentForSuspension.full_name
+          }
+        });
+
+        toast({
+          title: 'Suspension Scheduled',
+          description: `${studentForSuspension.full_name} will be suspended on ${format(data.scheduleSuspendDate, 'PPP')}`
+        });
+        setSuspensionDialogOpen(false);
+        setStudentForSuspension(null);
+        refetchSuspensions(studentIds);
+        return;
+      }
+
+      // Immediate suspension
       const { error } = await supabase.from('users').update({
         lms_status: 'suspended',
         updated_at: new Date().toISOString()
       }).eq('id', studentForSuspension.id);
       if (error) throw error;
 
-      // Log suspension with metadata
       await supabase.from('user_activity_logs').insert({
         user_id: studentForSuspension.id,
         activity_type: 'lms_suspended',
@@ -293,7 +337,6 @@ export function StudentsManagement() {
         }
       });
 
-      // Also log to admin_logs for unified view
       logAdminAction({
         performedBy: user?.id || null,
         targetUserId: studentForSuspension.id,
@@ -324,6 +367,31 @@ export function StudentsManagement() {
       });
     } finally {
       setSuspensionLoading(false);
+    }
+  };
+
+  const handleCancelScheduledSuspension = async (student: Student) => {
+    try {
+      const { error } = await cancelScheduledSuspension(student.id);
+      if (error) throw error;
+
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: student.id,
+        entityType: 'user',
+        entityId: student.id,
+        action: 'scheduled_suspension_cancelled',
+        description: `Scheduled suspension cancelled for ${student.full_name}`,
+        data: { student_name: student.full_name }
+      });
+
+      toast({
+        title: 'Scheduled Suspension Cancelled',
+        description: `Scheduled suspension for ${student.full_name} has been cancelled.`
+      });
+    } catch (error) {
+      console.error('Error cancelling scheduled suspension:', error);
+      toast({ title: 'Error', description: 'Failed to cancel scheduled suspension', variant: 'destructive' });
     }
   };
 
@@ -2441,6 +2509,12 @@ export function StudentsManagement() {
                                  <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
                                </div>
                              </Badge>
+                             {scheduledSuspensions.has(student.id) && (
+                               <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 cursor-pointer" onClick={() => handleCancelScheduledSuspension(student)} title={`Scheduled: ${new Date(scheduledSuspensions.get(student.id)!.schedule_suspend_date).toLocaleDateString()}. Click to cancel.`}>
+                                 <Clock className="w-3 h-3 mr-1" />
+                                 <span className="text-xs font-medium">Suspend: {new Date(scheduledSuspensions.get(student.id)!.schedule_suspend_date).toLocaleDateString()}</span>
+                               </Badge>
+                             )}
                              {!isSupportMember && (() => {
                         const inst = getInstallmentStatus(student);
                         return <Badge className={inst.color}>

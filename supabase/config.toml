@@ -112,3 +112,7 @@ verify_jwt = false
 
 [functions.resend-invoice]
 verify_jwt = false
+
+[functions.process-scheduled-suspensions]
+verify_jwt = false
+schedule = "0 2 * * *"
