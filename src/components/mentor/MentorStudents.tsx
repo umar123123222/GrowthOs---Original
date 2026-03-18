@@ -35,6 +35,8 @@ interface CourseWithStudents {
   students: EnrolledStudent[];
 }
 
+const PAGE_SIZE = 25;
+
 export const MentorStudents = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
