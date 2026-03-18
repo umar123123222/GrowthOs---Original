@@ -1259,22 +1259,42 @@ export const StudentManagement = () => {
     batchFilter !== 'all'
   );
   const displayStudents = hasActiveFilters ? filteredStudents : students;
+  const totalPages = Math.max(1, Math.ceil(displayStudents.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedStudents = displayStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const getPaginationRange = () => {
+    const range: (number | '...')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) range.push(i);
+    } else {
+      range.push(1);
+      if (safePage > 3) range.push('...');
+      for (let i = Math.max(2, safePage - 1); i <= Math.min(totalPages - 1, safePage + 1); i++) range.push(i);
+      if (safePage < totalPages - 2) range.push('...');
+      range.push(totalPages);
+    }
+    return range;
+  };
+
   return <div className="space-y-6 animate-fade-in px-0 mx-0">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="animate-fade-in">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
             👥 Students Management
           </h1>
-          <p className="text-muted-foreground mt-2 text-lg">Manage student records and track their progress</p>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-lg">Manage student records and track their progress</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportCSV} className="hover-scale animate-scale-in">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={handleExportCSV} className="hover-scale animate-scale-in flex-1 sm:flex-none" size="sm">
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </Button>
-          <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
+          <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in flex-1 sm:flex-none" size="sm">
             <Plus className="w-4 h-4 mr-2" />
-            Add Student
+            <span className="hidden sm:inline">Add Student</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
         <EnhancedStudentCreationDialog 
