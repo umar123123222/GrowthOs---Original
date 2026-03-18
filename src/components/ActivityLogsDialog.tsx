@@ -12,7 +12,6 @@ import { Activity, Download, Search, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { RoleGuard } from '@/components/RoleGuard';
-import { safeQuery } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 
 interface ActivityLog {
@@ -106,22 +105,37 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
 
       if (error) throw error;
       
-      // Fetch user details for each log separately since foreign key doesn't exist
-      const logsWithUsers = await Promise.all((data || []).map(async (log) => {
-        let userData = null;
-        if (log.performed_by) {
-        const userResult = await safeQuery(
-          supabase
+      // Collect all unique user IDs (performers + targets)
+      const performerIds = (data || []).map(l => l.performed_by).filter(Boolean) as string[];
+      const targetIds = (data || []).map(l => (l.data as any)?.target_user_id).filter(Boolean) as string[];
+      const allUserIds = [...new Set([...performerIds, ...targetIds])];
+
+      // Batch fetch user details
+      const userMap = new Map<string, { email: string; role: string; full_name: string }>();
+      if (allUserIds.length > 0) {
+        const batchSize = 100;
+        for (let i = 0; i < allUserIds.length; i += batchSize) {
+          const batch = allUserIds.slice(i, i + batchSize);
+          const { data: users } = await supabase
             .from('users')
-            .select('email, role, full_name')
-            .eq('id', log.performed_by)
-            .maybeSingle() as any,
-          `fetch user for activity log ${log.performed_by}`
-        );
-        userData = userResult.data;
+            .select('id, email, role, full_name')
+            .in('id', batch);
+          (users || []).forEach(u => userMap.set(u.id, { email: u.email, full_name: u.full_name, role: u.role }));
         }
-        return { ...log, users: userData };
-      }));
+      }
+
+      const logsWithUsers = (data || []).map(log => {
+        const performer = log.performed_by ? userMap.get(log.performed_by) : null;
+        const targetUserId = (log.data as any)?.target_user_id;
+        const target = targetUserId ? userMap.get(targetUserId) : null;
+        // For system actions, show target user info as the primary user context
+        const displayUser = performer || (target ? { ...target } : null);
+        return {
+          ...log,
+          users: displayUser ? { email: displayUser.email, role: displayUser.role, full_name: displayUser.full_name } : null,
+          target_user: target ? { email: target.email, full_name: target.full_name } : null,
+        };
+      });
       
       setLogs(logsWithUsers);
     } catch (error) {
@@ -383,14 +397,20 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                              })}
                            </TableCell>
                            <TableCell className="max-w-[200px] truncate">
-                             {log.users?.email || (log.performed_by ? 'Deleted User' : 'System')}
+                             {log.performed_by 
+                               ? (log.users?.email || 'Deleted User')
+                               : 'System'}
                            </TableCell>
                            <TableCell className="max-w-[150px] truncate">
-                             {log.users?.full_name || (log.performed_by ? 'Deleted User' : 'System')}
+                             {log.performed_by
+                               ? (log.users?.full_name || 'Deleted User')
+                               : ((log as any).target_user?.full_name || '—')}
                            </TableCell>
                            <TableCell>
                              <Badge className={getRoleBadge(log.users?.role || '')}>
-                               {log.users?.role || 'Unknown'}
+                               {log.performed_by
+                                 ? (log.users?.role || 'Unknown')
+                                 : ((log as any).target_user ? log.users?.role || 'Unknown' : 'System')}
                              </Badge>
                            </TableCell>
                            <TableCell>
