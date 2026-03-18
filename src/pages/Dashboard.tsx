@@ -277,14 +277,12 @@ const Dashboard = ({ user }: { user?: any }) => {
     setConnectDialogOpen(true);
   };
 
-  const handleEditGoal = useCallback(() => {
-    // For now, just show a placeholder message
-    // In a full implementation, this would open a questionnaire modal
+  const handleEditGoal = () => {
     toast({
       title: "Coming Soon",
       description: "Dream goal editing questionnaire will be available soon!",
     });
-  }, [toast]);
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
