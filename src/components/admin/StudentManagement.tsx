@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, CalendarIcon, MessageSquare, Send } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, CalendarIcon, MessageSquare, Send, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
@@ -65,6 +65,8 @@ interface ActivityLog {
   metadata: any;
   reference_id: string;
 }
+const PAGE_SIZE = 25;
+
 export const StudentManagement = () => {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,6 +110,7 @@ export const StudentManagement = () => {
   const [suspensionLoading, setSuspensionLoading] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [selectedStudentForNotes, setSelectedStudentForNotes] = useState<Student | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const { options: installmentOptions } = useInstallmentOptions();
   const { deleteUser, loading: deleteLoading } = useUserManagement();
@@ -123,7 +126,12 @@ export const StudentManagement = () => {
   }, [students]);
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, installmentPayments, timeTick, batchFilter, studentBatchMap]);
+    setCurrentPage(1); // Reset page when filters change
+  }, [searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, batchFilter]);
+
+  useEffect(() => {
+    filterStudents();
+  }, [students, installmentPayments, timeTick, studentBatchMap]);
 
   // Re-render periodically so time-based invoice statuses (due/overdue) update without refresh
   useEffect(() => {
@@ -1007,7 +1015,7 @@ export const StudentManagement = () => {
   };
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedStudents(new Set(displayStudents.map(s => s.id)));
+      setSelectedStudents(new Set(paginatedStudents.map(s => s.id)));
     } else {
       setSelectedStudents(new Set());
     }
@@ -1251,22 +1259,42 @@ export const StudentManagement = () => {
     batchFilter !== 'all'
   );
   const displayStudents = hasActiveFilters ? filteredStudents : students;
+  const totalPages = Math.max(1, Math.ceil(displayStudents.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedStudents = displayStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const getPaginationRange = () => {
+    const range: (number | '...')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) range.push(i);
+    } else {
+      range.push(1);
+      if (safePage > 3) range.push('...');
+      for (let i = Math.max(2, safePage - 1); i <= Math.min(totalPages - 1, safePage + 1); i++) range.push(i);
+      if (safePage < totalPages - 2) range.push('...');
+      range.push(totalPages);
+    }
+    return range;
+  };
+
   return <div className="space-y-6 animate-fade-in px-0 mx-0">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="animate-fade-in">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
             👥 Students Management
           </h1>
-          <p className="text-muted-foreground mt-2 text-lg">Manage student records and track their progress</p>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-lg">Manage student records and track their progress</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportCSV} className="hover-scale animate-scale-in">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <Button variant="outline" onClick={handleExportCSV} className="hover-scale animate-scale-in flex-1 sm:flex-none" size="sm">
             <Download className="w-4 h-4 mr-2" />
-            Export CSV
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
           </Button>
-          <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in">
+          <Button onClick={() => setIsDialogOpen(true)} className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600 animate-scale-in flex-1 sm:flex-none" size="sm">
             <Plus className="w-4 h-4 mr-2" />
-            Add Student
+            <span className="hidden sm:inline">Add Student</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </div>
         <EnhancedStudentCreationDialog 
@@ -1283,7 +1311,7 @@ export const StudentManagement = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
         <Card className="border-l-4 border-l-blue-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-blue-50 to-white animate-fade-in">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-blue-800">Total Students</CardTitle>
@@ -1343,14 +1371,14 @@ export const StudentManagement = () => {
       </div>
 
       {/* Search and Filter */}
-      <div className="flex gap-4 items-center flex-wrap">
-        <div className="relative flex-1 max-w-md">
+      <div className="flex gap-3 items-center flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-md">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input placeholder="Search by ID, name, email, or phone..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10" />
         </div>
 
         <Select value={lmsStatusFilter} onValueChange={setLmsStatusFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-32 sm:w-40">
             <SelectValue placeholder="LMS Status" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
@@ -1364,7 +1392,7 @@ export const StudentManagement = () => {
         </Select>
 
         <Select value={feesStructureFilter} onValueChange={setFeesStructureFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-32 sm:w-40">
             <SelectValue placeholder="Fees Structure" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
@@ -1376,7 +1404,7 @@ export const StudentManagement = () => {
         </Select>
 
         <Select value={invoiceFilter} onValueChange={setInvoiceFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-32 sm:w-40">
             <SelectValue placeholder="Invoice Status" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
@@ -1389,7 +1417,7 @@ export const StudentManagement = () => {
         </Select>
 
         <Select value={batchFilter} onValueChange={setBatchFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-32 sm:w-40">
             <SelectValue placeholder="Batch" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
@@ -1404,8 +1432,8 @@ export const StudentManagement = () => {
 
       {/* Bulk Actions */}
       {selectedStudents.size > 0 && <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center space-x-4">
                 <span className="text-sm font-medium text-blue-800">
                   {selectedStudents.size} student(s) selected
@@ -1414,18 +1442,18 @@ export const StudentManagement = () => {
                   Clear Selection
                 </Button>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" onClick={handleBulkResendInvoice} disabled={bulkResendLoading} className="text-blue-600 border-blue-300 hover:bg-blue-50">
                   <Send className="w-4 h-4 mr-2" />
                   {bulkResendLoading ? 'Sending...' : 'Resend Invoice'}
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('suspend')} className="text-red-600 border-red-300 hover:bg-red-50">
                   <Ban className="w-4 h-4 mr-2" />
-                  Suspend LMS
+                  Suspend
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => handleBulkLMSAction('activate')} className="text-green-600 border-green-300 hover:bg-green-50">
                   <CheckCircle className="w-4 h-4 mr-2" />
-                  Activate LMS
+                  Activate
                 </Button>
               </div>
             </div>
@@ -1445,7 +1473,7 @@ export const StudentManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
-                  <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
+                  <Checkbox checked={selectedStudents.size === paginatedStudents.length && paginatedStudents.length > 0} onCheckedChange={handleSelectAll} />
                 </TableHead>
                 <TableHead className="w-[100px]">Student ID</TableHead>
                 <TableHead className="min-w-[120px]">Name</TableHead>
@@ -1467,7 +1495,7 @@ export const StudentManagement = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  displayStudents.map(student => [
+                  paginatedStudents.map(student => [
                     <TableRow key={student.id}>
                       <TableCell>
                         <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
@@ -1801,6 +1829,31 @@ export const StudentManagement = () => {
               </TableBody>
             </Table>
         </CardContent>
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t">
+            <p className="text-sm text-muted-foreground">
+              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, displayStudents.length)} of {displayStudents.length}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage <= 1} onClick={() => setCurrentPage(safePage - 1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {getPaginationRange().map((p, i) =>
+                p === '...' ? (
+                  <span key={`dots-${i}`} className="px-2 text-muted-foreground text-sm">…</span>
+                ) : (
+                  <Button key={p} variant={p === safePage ? 'default' : 'outline'} size="icon" className="h-8 w-8 text-xs" onClick={() => setCurrentPage(p as number)}>
+                    {p}
+                  </Button>
+                )
+              )}
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage >= totalPages} onClick={() => setCurrentPage(safePage + 1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Activity Logs Dialog */}

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -34,6 +35,8 @@ interface CourseWithStudents {
   students: EnrolledStudent[];
 }
 
+const PAGE_SIZE = 25;
+
 export const MentorStudents = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -49,6 +52,7 @@ export const MentorStudents = () => {
   const [selectedEnrollmentType, setSelectedEnrollmentType] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [allBatches, setAllBatches] = useState<{ id: string; name: string }[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (user) {
@@ -343,7 +347,13 @@ export const MentorStudents = () => {
     setSelectedLmsStatus('all');
     setSelectedEnrollmentType('all');
     setSortOrder('newest');
+    setCurrentPage(1);
   };
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCourseId, selectedBatches, dateRange, selectedLmsStatus, selectedEnrollmentType]);
 
   const hasActiveFilters = searchQuery || selectedCourseId !== 'all' || selectedBatches.length > 0 || 
     dateRange?.from || selectedLmsStatus !== 'all' || selectedEnrollmentType !== 'all' || sortOrder !== 'newest';
@@ -364,6 +374,24 @@ export const MentorStudents = () => {
       return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
     });
   }, [filteredCoursesWithStudents, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(allFilteredStudents.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedStudents = allFilteredStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const getMentorPaginationRange = () => {
+    const range: (number | '...')[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) range.push(i);
+    } else {
+      range.push(1);
+      if (safePage > 3) range.push('...');
+      for (let i = Math.max(2, safePage - 1); i <= Math.min(totalPages - 1, safePage + 1); i++) range.push(i);
+      if (safePage < totalPages - 2) range.push('...');
+      range.push(totalPages);
+    }
+    return range;
+  };
 
   if (loading) {
     return (
@@ -656,6 +684,7 @@ export const MentorStudents = () => {
               <Button variant="link" onClick={clearAllFilters}>Clear all filters</Button>
             </div>
           ) : (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -668,7 +697,7 @@ export const MentorStudents = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {allFilteredStudents.map((student, idx) => (
+                {paginatedStudents.map((student, idx) => (
                   <TableRow key={`${student.student_id}-${idx}`}>
                     <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
                     <TableCell className="font-medium">{student.student_name}</TableCell>
@@ -698,6 +727,32 @@ export const MentorStudents = () => {
                 ))}
               </TableBody>
             </Table>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t">
+                <p className="text-sm text-muted-foreground">
+                  Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, allFilteredStudents.length)} of {allFilteredStudents.length}
+                </p>
+                <div className="flex items-center gap-1">
+                  <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage <= 1} onClick={() => setCurrentPage(safePage - 1)}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  {getMentorPaginationRange().map((p, i) =>
+                    p === '...' ? (
+                      <span key={`dots-${i}`} className="px-2 text-muted-foreground text-sm">…</span>
+                    ) : (
+                      <Button key={p} variant={p === safePage ? 'default' : 'outline'} size="icon" className="h-8 w-8 text-xs" onClick={() => setCurrentPage(p as number)}>
+                        {p}
+                      </Button>
+                    )
+                  )}
+                  <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage >= totalPages} onClick={() => setCurrentPage(safePage + 1)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+            </>
           )}
         </CardContent>
       </Card>

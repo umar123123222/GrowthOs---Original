@@ -340,7 +340,7 @@ const Dashboard = ({ user }: { user?: any }) => {
             <div>
               <div className="flex justify-between mb-2">
                 <span className="text-sm font-medium">Videos Watched</span>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   {progressData.videosWatched}/{progressData.totalVideos}
                 </span>
               </div>
@@ -350,7 +350,7 @@ const Dashboard = ({ user }: { user?: any }) => {
             <div>
               <div className="flex justify-between mb-2">
                 <span className="text-sm font-medium">Assignments Done</span>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   {progressData.assignmentsCompleted}/{progressData.totalAssignments}
                 </span>
               </div>
@@ -421,7 +421,7 @@ const Dashboard = ({ user }: { user?: any }) => {
               {milestones.map((milestone, index) => (
                 <div key={index} className="flex items-center space-x-3">
                   <span className="text-lg">{milestone.icon}</span>
-                  <span className={`flex-1 ${milestone.completed ? 'text-gray-900' : 'text-gray-500'}`}>
+                  <span className={`flex-1 ${milestone.completed ? 'text-foreground' : 'text-muted-foreground'}`}>
                     {milestone.title}
                   </span>
                   {milestone.completed ? (
