@@ -352,7 +352,7 @@ const Dashboard = ({ user }: { user?: any }) => {
                   {progressData.assignmentsCompleted}/{progressData.totalAssignments}
                 </span>
               </div>
-              <Progress value={(progressData.assignmentsCompleted / progressData.totalAssignments) * 100} />
+              <Progress value={progressData.totalAssignments > 0 ? (progressData.assignmentsCompleted / progressData.totalAssignments) * 100 : 0} />
             </div>
           </CardContent>
         </Card>
