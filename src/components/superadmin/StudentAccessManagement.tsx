@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BookOpen, Route, Plus, Trash2, CheckCircle, XCircle, Loader2, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
+import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 
 interface Course {
   id: string;
