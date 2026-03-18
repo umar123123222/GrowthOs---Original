@@ -282,6 +282,23 @@ export function StudentAccessManagement({
         description: `${installments} installment invoice${installments > 1 ? 's' : ''} generated for ${itemName}`,
       });
 
+      // Log invoice creation to activity logs
+      logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: studentUserId,
+        entityType: 'invoice',
+        action: ACTIVITY_TYPES.INVOICE_CREATED,
+        description: `${installments} invoice(s) created for ${itemType}: ${itemName}`,
+        data: {
+          item_type: itemType,
+          item_name: itemName,
+          total_amount: price,
+          installments,
+          student_name: studentName,
+          invoice_ids: createdInvoices?.map(inv => inv.id)
+        }
+      });
+
       return createdInvoices;
     } catch (error) {
       console.error('Error creating invoices:', error);
