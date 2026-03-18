@@ -273,9 +273,9 @@ const Dashboard = ({ user }: { user?: any }) => {
     }
   };
 
-  const handleConnectAccounts = useCallback(() => {
+  const handleConnectAccounts = () => {
     setConnectDialogOpen(true);
-  }, []);
+  };
 
   const handleEditGoal = useCallback(() => {
     // For now, just show a placeholder message
