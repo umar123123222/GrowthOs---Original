@@ -343,6 +343,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     <SelectItem value="invoice_status_changed">Invoice Status Changed</SelectItem>
                     <SelectItem value="invoice_created">Invoice Created</SelectItem>
                     <SelectItem value="invoice_updated">Invoice Updated</SelectItem>
+                    <SelectItem value="invoice_resent">Invoice Resent</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
