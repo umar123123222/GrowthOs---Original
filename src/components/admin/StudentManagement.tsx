@@ -1473,7 +1473,7 @@ export const StudentManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10">
-                  <Checkbox checked={selectedStudents.size === displayStudents.length && displayStudents.length > 0} onCheckedChange={handleSelectAll} />
+                  <Checkbox checked={selectedStudents.size === paginatedStudents.length && paginatedStudents.length > 0} onCheckedChange={handleSelectAll} />
                 </TableHead>
                 <TableHead className="w-[100px]">Student ID</TableHead>
                 <TableHead className="min-w-[120px]">Name</TableHead>
