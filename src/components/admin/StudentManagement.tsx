@@ -110,6 +110,7 @@ export const StudentManagement = () => {
   const [suspensionLoading, setSuspensionLoading] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [selectedStudentForNotes, setSelectedStudentForNotes] = useState<Student | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const { options: installmentOptions } = useInstallmentOptions();
   const { deleteUser, loading: deleteLoading } = useUserManagement();
