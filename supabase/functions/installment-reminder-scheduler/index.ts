@@ -331,7 +331,7 @@ serve(async (req) => {
     // 2. Check for pending invoices that need reminders or are due
     const { data: pendingInvoices, error: pendingError } = await supabaseAdmin
       .from('invoices')
-      .select('*, students!inner(user_id, users!inner(full_name, email))')
+      .select('*, students!inner(id, user_id, student_id, users!inner(full_name, email))')
       .eq('status', 'pending');
 
     if (pendingError) {
