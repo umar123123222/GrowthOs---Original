@@ -342,7 +342,7 @@ const Dashboard = ({ user }: { user?: any }) => {
                   {progressData.videosWatched}/{progressData.totalVideos}
                 </span>
               </div>
-              <Progress value={(progressData.videosWatched / progressData.totalVideos) * 100} />
+              <Progress value={progressData.totalVideos > 0 ? (progressData.videosWatched / progressData.totalVideos) * 100 : 0} />
             </div>
             
             <div>
