@@ -1417,7 +1417,7 @@ export const StudentManagement = () => {
         </Select>
 
         <Select value={batchFilter} onValueChange={setBatchFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-32 sm:w-40">
             <SelectValue placeholder="Batch" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
