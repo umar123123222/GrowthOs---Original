@@ -1404,7 +1404,7 @@ export const StudentManagement = () => {
         </Select>
 
         <Select value={invoiceFilter} onValueChange={setInvoiceFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-32 sm:w-40">
             <SelectValue placeholder="Invoice Status" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
