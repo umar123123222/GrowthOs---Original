@@ -685,6 +685,7 @@ export const MentorStudents = () => {
             </div>
           ) : (
             <>
+            <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Student ID</TableHead>
