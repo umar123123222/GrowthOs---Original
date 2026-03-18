@@ -1829,6 +1829,31 @@ export const StudentManagement = () => {
               </TableBody>
             </Table>
         </CardContent>
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t">
+            <p className="text-sm text-muted-foreground">
+              Showing {(safePage - 1) * PAGE_SIZE + 1}–{Math.min(safePage * PAGE_SIZE, displayStudents.length)} of {displayStudents.length}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage <= 1} onClick={() => setCurrentPage(safePage - 1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {getPaginationRange().map((p, i) =>
+                p === '...' ? (
+                  <span key={`dots-${i}`} className="px-2 text-muted-foreground text-sm">…</span>
+                ) : (
+                  <Button key={p} variant={p === safePage ? 'default' : 'outline'} size="icon" className="h-8 w-8 text-xs" onClick={() => setCurrentPage(p as number)}>
+                    {p}
+                  </Button>
+                )
+              )}
+              <Button variant="outline" size="icon" className="h-8 w-8" disabled={safePage >= totalPages} onClick={() => setCurrentPage(safePage + 1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Activity Logs Dialog */}
