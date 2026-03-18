@@ -126,7 +126,12 @@ export const StudentManagement = () => {
   }, [students]);
   useEffect(() => {
     filterStudents();
-  }, [students, searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, installmentPayments, timeTick, batchFilter, studentBatchMap]);
+    setCurrentPage(1); // Reset page when filters change
+  }, [searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, batchFilter]);
+
+  useEffect(() => {
+    filterStudents();
+  }, [students, installmentPayments, timeTick, studentBatchMap]);
 
   // Re-render periodically so time-based invoice statuses (due/overdue) update without refresh
   useEffect(() => {
