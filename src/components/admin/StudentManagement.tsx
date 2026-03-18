@@ -1392,7 +1392,7 @@ export const StudentManagement = () => {
         </Select>
 
         <Select value={feesStructureFilter} onValueChange={setFeesStructureFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-32 sm:w-40">
             <SelectValue placeholder="Fees Structure" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
