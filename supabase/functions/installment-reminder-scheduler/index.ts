@@ -320,7 +320,8 @@ serve(async (req) => {
           'installment_issued',
           'New Installment Issued',
           `Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} has been issued. Due date: ${new Date(invoice.due_date).toLocaleDateString()}`,
-          { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date }
+          { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date },
+          studentDisplayId
         );
 
         console.log(`Issued installment ${invoice.installment_number} for student ${invoice.students.users.full_name}`);
@@ -330,7 +331,7 @@ serve(async (req) => {
     // 2. Check for pending invoices that need reminders or are due
     const { data: pendingInvoices, error: pendingError } = await supabaseAdmin
       .from('invoices')
-      .select('*, students!inner(user_id, users!inner(full_name, email))')
+      .select('*, students!inner(id, user_id, student_id, users!inner(full_name, email))')
       .eq('status', 'pending');
 
     if (pendingError) {
@@ -351,6 +352,7 @@ serve(async (req) => {
 
         const studentEmail = invoice.students.users.email;
         const studentName = invoice.students.users.full_name;
+        const studentDisplayId = invoice.students.student_id || invoice.students.id;
         const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
 
         // Check if effective due date has passed
@@ -396,7 +398,8 @@ serve(async (req) => {
             'installment_due',
             'Payment Overdue',
             `Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} is now overdue. Please make payment immediately.`,
-            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date }
+            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: invoice.due_date },
+            studentDisplayId
           );
 
           // Suspend LMS access
@@ -443,7 +446,8 @@ serve(async (req) => {
               'lms_suspended',
               'LMS Access Suspended',
               `Your learning platform access has been suspended due to overdue payment for Installment #${invoice.installment_number}. Please make payment to restore access.`,
-              { invoice_id: invoice.id, installment_number: invoice.installment_number }
+              { invoice_id: invoice.id, installment_number: invoice.installment_number },
+              studentDisplayId
             );
           }
 
@@ -503,7 +507,8 @@ serve(async (req) => {
             'installment_reminder',
             'Payment Reminder',
             `Reminder: Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} is due on ${effectiveDueDate.toLocaleDateString()}`,
-            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() }
+            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() },
+            studentDisplayId
           );
         }
         // Second reminder — send email BEFORE marking flag (retry-safe)
@@ -559,7 +564,8 @@ serve(async (req) => {
             'installment_reminder',
             'Final Payment Reminder',
             `Final reminder: Installment #${invoice.installment_number} of ${currencySymbol}${invoice.amount} is due on ${effectiveDueDate.toLocaleDateString()}`,
-            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() }
+            { installment_number: invoice.installment_number, amount: invoice.amount, due_date: effectiveDueDate.toISOString() },
+            studentDisplayId
           );
         }
       }
@@ -594,7 +600,8 @@ async function createInstallmentNotification(
   type: string,
   title: string,
   message: string,
-  metadata: any
+  metadata: any,
+  studentRecordId?: string
 ) {
   try {
     await supabase.rpc('create_notification', {
@@ -605,6 +612,7 @@ async function createInstallmentNotification(
       p_metadata: metadata
     });
 
+    const displayId = studentRecordId || userId;
     const { data: adminUsers } = await supabase
       .from('users')
       .select('id')
@@ -615,8 +623,8 @@ async function createInstallmentNotification(
         p_user_id: admin.id,
         p_type: 'financial',
         p_title: `Student ${title}`,
-        p_message: `${message} (Student ID: ${userId})`,
-        p_metadata: { ...metadata, student_id: userId }
+        p_message: `${message} (Student ID: ${displayId})`,
+        p_metadata: { ...metadata, student_id: displayId }
       });
     }
 
