@@ -25,8 +25,10 @@ import { LiveChatWidget } from "./LiveChatWidget";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+import { User } from '@/types/common';
+
 interface LayoutProps {
-  user: any;
+  user: User;
 }
 
 interface CourseMenuItem {

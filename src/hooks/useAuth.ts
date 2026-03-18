@@ -29,6 +29,12 @@ export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<AuthSession | null>(null);
+  const sessionRef = useRef<AuthSession | null>(null);
+
+  // Keep sessionRef in sync
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
   // Update user activity timestamp
   const updateLastActive = async (userId: string) => {
