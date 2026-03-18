@@ -27,6 +27,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/currencyFormatter';
 import { cn } from '@/lib/utils';
 import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
+import { useScheduledSuspensions } from '@/hooks/useScheduledSuspensions';
+import type { SuspensionConfirmData } from '@/components/SuspensionDialog';
 import jsPDF from 'jspdf';
 interface Student {
   id: string;

@@ -28,6 +28,8 @@ import { StudentNotesDialog } from '@/components/StudentNotesDialog';
 import { useAuth } from '@/hooks/useAuth';
 import jsPDF from 'jspdf';
 import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
+import { useScheduledSuspensions } from '@/hooks/useScheduledSuspensions';
+import type { SuspensionConfirmData } from '@/components/SuspensionDialog';
 interface Student {
   id: string;
   student_id: string;
