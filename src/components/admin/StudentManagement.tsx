@@ -1495,7 +1495,7 @@ export const StudentManagement = () => {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  displayStudents.map(student => [
+                  paginatedStudents.map(student => [
                     <TableRow key={student.id}>
                       <TableCell>
                         <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
