@@ -189,17 +189,24 @@ const Dashboard = ({ user }: { user?: any }) => {
 
   const fetchLeaderboardData = async () => {
     try {
-      // Leaderboard table doesn't exist yet, use placeholder data
-      const placeholderData = [
-        { name: 'Alex M.', score: 95, rank: 1 },
-        { name: 'Sarah K.', score: 87, rank: 2 },
-        { name: 'John D.', score: 82, rank: 3 },
-        { name: 'Emily R.', score: 78, rank: 4 },
-        { name: 'Mike S.', score: 74, rank: 5 }
-      ];
-      setLeaderboardData(placeholderData);
+      const { data: snapshots } = await supabase
+        .from('leaderboard_snapshots')
+        .select('user_id, rank, total_score, users!inner(full_name)')
+        .order('rank', { ascending: true })
+        .limit(5);
+
+      if (snapshots && snapshots.length > 0) {
+        setLeaderboardData(snapshots.map((s: any) => ({
+          name: s.users?.full_name || 'Unknown',
+          score: s.total_score ?? 0,
+          rank: s.rank ?? 0
+        })));
+      } else {
+        setLeaderboardData([]);
+      }
     } catch (error) {
-      console.error('Error fetching leaderboard data:', error);
+      logger.warn('Error fetching leaderboard data:', error);
+      setLeaderboardData([]);
     }
   };
 

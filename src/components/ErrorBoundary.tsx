@@ -85,7 +85,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                   Try Again
                 </Button>
                 <Button onClick={() => {
-                  this.setState({ hasError: false, error: null });
+                  this.setState({ hasError: false, error: undefined });
                   // Use state-based reset instead of hard refresh
                   this.forceUpdate();
                 }}>
