@@ -421,7 +421,7 @@ const Dashboard = ({ user }: { user?: any }) => {
               {milestones.map((milestone, index) => (
                 <div key={index} className="flex items-center space-x-3">
                   <span className="text-lg">{milestone.icon}</span>
-                  <span className={`flex-1 ${milestone.completed ? 'text-gray-900' : 'text-gray-500'}`}>
+                  <span className={`flex-1 ${milestone.completed ? 'text-foreground' : 'text-muted-foreground'}`}>
                     {milestone.title}
                   </span>
                   {milestone.completed ? (
