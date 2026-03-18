@@ -340,7 +340,7 @@ const Dashboard = ({ user }: { user?: any }) => {
             <div>
               <div className="flex justify-between mb-2">
                 <span className="text-sm font-medium">Videos Watched</span>
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-muted-foreground">
                   {progressData.videosWatched}/{progressData.totalVideos}
                 </span>
               </div>
