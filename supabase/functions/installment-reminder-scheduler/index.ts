@@ -352,6 +352,7 @@ serve(async (req) => {
 
         const studentEmail = invoice.students.users.email;
         const studentName = invoice.students.users.full_name;
+        const studentDisplayId = invoice.students.student_id || invoice.students.id;
         const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
 
         // Check if effective due date has passed
