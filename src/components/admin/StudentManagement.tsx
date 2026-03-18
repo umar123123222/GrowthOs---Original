@@ -117,6 +117,15 @@ export const StudentManagement = () => {
   const { options: installmentOptions } = useInstallmentOptions();
   const { deleteUser, loading: deleteLoading } = useUserManagement();
   const { user } = useAuth();
+
+  const studentIds = students.map(s => s.id);
+  const {
+    suspensions: scheduledSuspensions,
+    createScheduledSuspension,
+    cancelScheduledSuspension,
+    fetchSuspensions: refetchSuspensions,
+  } = useScheduledSuspensions(studentIds);
+
   useEffect(() => {
     fetchStudents();
     fetchBatchOptions();
