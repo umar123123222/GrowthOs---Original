@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useMemo, useEffect } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -11,12 +11,9 @@ import { DreamGoalCard } from "@/components/DreamGoalCard";
 import { StudentDashboard } from "@/components/StudentDashboard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { generateDreamGoalSummary } from "@/utils/dreamGoalUtils";
 import { 
   BookOpen, 
   FileText, 
-  Star, 
-  Clock,
   TrendingUp,
   Trophy,
   Target,
