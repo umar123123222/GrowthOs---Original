@@ -347,7 +347,13 @@ export const MentorStudents = () => {
     setSelectedLmsStatus('all');
     setSelectedEnrollmentType('all');
     setSortOrder('newest');
+    setCurrentPage(1);
   };
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, selectedCourseId, selectedBatches, dateRange, selectedLmsStatus, selectedEnrollmentType]);
 
   const hasActiveFilters = searchQuery || selectedCourseId !== 'all' || selectedBatches.length > 0 || 
     dateRange?.from || selectedLmsStatus !== 'all' || selectedEnrollmentType !== 'all' || sortOrder !== 'newest';
