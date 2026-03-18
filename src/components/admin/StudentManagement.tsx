@@ -1378,7 +1378,7 @@ export const StudentManagement = () => {
         </div>
 
         <Select value={lmsStatusFilter} onValueChange={setLmsStatusFilter}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-32 sm:w-40">
             <SelectValue placeholder="LMS Status" />
           </SelectTrigger>
           <SelectContent className="bg-white z-50">
