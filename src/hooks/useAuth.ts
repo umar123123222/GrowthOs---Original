@@ -212,13 +212,13 @@ useEffect(() => {
       if (error) {
         logger.error('fetchUserProfile: Database error', error);
         // Don't sign out on database errors - keep the session active
-        if (session?.user) {
+        if (sessionRef.current?.user) {
           logger.warn('fetchUserProfile: Keeping session active despite database error');
           setUser({
-            id: session.user.id,
-            email: session.user.email || '',
+            id: sessionRef.current.user.id,
+            email: sessionRef.current.user.email || '',
             role: 'student', // default role
-            full_name: session.user.user_metadata?.full_name || session.user.email,
+            full_name: sessionRef.current.user.user_metadata?.full_name || sessionRef.current.user.email,
             onboarding_done: false // Assume onboarding needed on error
           });
         }
