@@ -66,6 +66,7 @@ export function StudentAccessManagement({
   onAccessUpdated
 }: StudentAccessManagementProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [courses, setCourses] = useState<Course[]>([]);
