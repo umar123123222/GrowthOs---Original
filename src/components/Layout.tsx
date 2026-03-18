@@ -25,7 +25,7 @@ import { LiveChatWidget } from "./LiveChatWidget";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-import { User } from '@/types/common';
+import { User as UserType } from '@/types/common';
 
 interface LayoutProps {
   user: User;
