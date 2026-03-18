@@ -317,10 +317,8 @@ export const ConnectAccountsDialog = ({ open, onOpenChange, userId, onConnection
         onConnectionUpdate();
       }
       
-      // Call global checkIntegrations
-      if (window.checkIntegrations) {
-        window.checkIntegrations();
-      }
+      // Notify integration listeners
+      window.dispatchEvent(new CustomEvent('integrations-updated'));
       
       toast({
         title: "Shopify connected 🎉",
