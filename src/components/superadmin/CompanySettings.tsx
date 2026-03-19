@@ -898,6 +898,50 @@ export function CompanySettings() {
           </CardContent>
         </Card>
 
+        {/* Email Settings */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              Email Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Configure CC email addresses for billing and notification emails. Multiple addresses can be separated by commas. 
+              If left empty, the system will fall back to server-configured defaults.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="billing_email_cc">Billing Email CC</Label>
+                <Input
+                  id="billing_email_cc"
+                  type="text"
+                  value={settings.billing_email_cc || ''}
+                  onChange={(e) => handleInputChange('billing_email_cc', e.target.value)}
+                  placeholder="finance@company.com, billing@company.com"
+                />
+                <p className="text-xs text-muted-foreground">
+                  CC recipients for invoices, payment reminders, and overdue notices
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notification_email_cc">Notification Email CC</Label>
+                <Input
+                  id="notification_email_cc"
+                  type="text"
+                  value={settings.notification_email_cc || ''}
+                  onChange={(e) => handleInputChange('notification_email_cc', e.target.value)}
+                  placeholder="admin@company.com, manager@company.com"
+                />
+                <p className="text-xs text-muted-foreground">
+                  CC recipients for account creation, credential updates, and general notifications
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Billing Configuration */}
         <Card className="lg:col-span-2">
           <CardHeader>
