@@ -485,6 +485,7 @@ serve(async (req) => {
               `,
               pdfBuffer,
               installmentNumber: invoice.installment_number,
+              billingCc,
             });
             emailSent = true;
           } catch (emailError) {
