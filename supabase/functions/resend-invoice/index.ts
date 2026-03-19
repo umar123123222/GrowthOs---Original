@@ -308,7 +308,7 @@ serve(async (req) => {
       (pathways || []).forEach((p: any) => pathwayMap.set(p.id, p.name));
     }
 
-    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
+    const billingCc = companySettings?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC');
     let sentCount = 0;
     let failedCount = 0;
     const errors: string[] = [];

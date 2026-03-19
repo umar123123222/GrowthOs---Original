@@ -892,7 +892,7 @@ async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: s
       </div>
     `).join('');
     
-    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
+    const billingCc = companyDetails?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC');
     await smtpClient.sendEmail({
       to: studentEmail,
       subject: `Invoice #${invoice.installment_number.toString().padStart(3, '0')} - Payment Due ${dueDate}`,
