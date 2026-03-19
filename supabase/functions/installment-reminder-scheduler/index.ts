@@ -311,6 +311,7 @@ serve(async (req) => {
             html: brandedHtml,
             pdfBuffer,
             installmentNumber: invoice.installment_number,
+            billingCc,
           });
         } catch (emailError) {
           console.error(`[Email FAILED] Issue email for installment #${invoice.installment_number} to ${invoice.students.users.email}:`, emailError.message);
