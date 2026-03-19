@@ -222,6 +222,7 @@ serve(async (req) => {
       primary_phone: companySettings?.primary_phone || ''
     };
     const paymentMethods = companySettings?.payment_methods || [];
+    const billingCc = companySettings?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC') || '';
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
