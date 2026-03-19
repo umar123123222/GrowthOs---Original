@@ -200,7 +200,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get LMS URL from company settings
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url')
+      .select('lms_url, notification_email_cc')
       .eq('id', 1)
       .single();
     
