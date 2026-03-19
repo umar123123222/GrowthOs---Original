@@ -166,9 +166,10 @@ async function sendBillingEmail(options: {
   html: string;
   pdfBuffer: Uint8Array | null;
   installmentNumber: number;
+  billingCc?: string;
 }): Promise<void> {
   const smtpClient = SMTPClient.fromEnv();
-  const billingCc = Deno.env.get('BILLING_EMAIL_CC');
+  const billingCc = options.billingCc;
 
   const emailPayload: any = {
     to: options.to,
@@ -207,7 +208,7 @@ serve(async (req) => {
 
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods')
+      .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods, billing_email_cc')
       .eq('id', 1)
       .single();
     
@@ -221,6 +222,7 @@ serve(async (req) => {
       primary_phone: companySettings?.primary_phone || ''
     };
     const paymentMethods = companySettings?.payment_methods || [];
+    const billingCc = companySettings?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC') || '';
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -309,6 +311,7 @@ serve(async (req) => {
             html: brandedHtml,
             pdfBuffer,
             installmentNumber: invoice.installment_number,
+            billingCc,
           });
         } catch (emailError) {
           console.error(`[Email FAILED] Issue email for installment #${invoice.installment_number} to ${invoice.students.users.email}:`, emailError.message);
@@ -387,6 +390,7 @@ serve(async (req) => {
               `,
               pdfBuffer,
               installmentNumber: invoice.installment_number,
+              billingCc,
             });
           } catch (emailError) {
             console.error(`[Email FAILED] Due email for installment #${invoice.installment_number} to ${studentEmail}:`, emailError.message);
@@ -481,6 +485,7 @@ serve(async (req) => {
               `,
               pdfBuffer,
               installmentNumber: invoice.installment_number,
+              billingCc,
             });
             emailSent = true;
           } catch (emailError) {
@@ -539,6 +544,7 @@ serve(async (req) => {
               `,
               pdfBuffer,
               installmentNumber: invoice.installment_number,
+              billingCc,
             });
             emailSent = true;
           } catch (emailError) {

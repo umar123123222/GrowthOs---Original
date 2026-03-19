@@ -436,7 +436,7 @@ serve(async (req) => {
         console.log('Fetching company settings...');
         const { data: companySettings, error: companyError } = await supabaseAdmin
           .from('company_settings')
-          .select('company_name, company_logo, lms_url')
+          .select('company_name, company_logo, lms_url, notification_email_cc')
           .single();
 
         if (companyError) {
@@ -455,7 +455,7 @@ serve(async (req) => {
         }
 
         // Read CC email from function secrets
-        const ccEmail = Deno.env.get('NOTIFICATION_EMAIL_CC');
+        const ccEmail = companySettings?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
         console.log('CC configuration:', { 
           has_cc: !!ccEmail, 
           cc_email: ccEmail ? '***@***.***' : 'none' 

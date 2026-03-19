@@ -226,7 +226,7 @@ serve(async (req) => {
     // Get company settings
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
-      .select('currency, company_name, contact_email, address, primary_phone, payment_methods')
+      .select('currency, company_name, contact_email, address, primary_phone, payment_methods, billing_email_cc')
       .eq('id', 1)
       .single();
 
@@ -308,7 +308,7 @@ serve(async (req) => {
       (pathways || []).forEach((p: any) => pathwayMap.set(p.id, p.name));
     }
 
-    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
+    const billingCc = companySettings?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC');
     let sentCount = 0;
     let failedCount = 0;
     const errors: string[] = [];

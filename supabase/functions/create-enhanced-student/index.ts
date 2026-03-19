@@ -581,7 +581,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get company settings including currency and company details
     const { data: companyDetailsData } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods')
+      .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods, billing_email_cc, notification_email_cc')
       .eq('id', 1)
       .single();
     
@@ -726,7 +726,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       const smtpClient = SMTPClient.fromEnv();
-      const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
+      const notificationCc = companyDetailsData?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
       
       await smtpClient.sendEmail({
         to: email,
@@ -892,7 +892,7 @@ async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: s
       </div>
     `).join('');
     
-    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
+    const billingCc = companyDetailsData?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC');
     await smtpClient.sendEmail({
       to: studentEmail,
       subject: `Invoice #${invoice.installment_number.toString().padStart(3, '0')} - Payment Due ${dueDate}`,

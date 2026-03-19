@@ -200,7 +200,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get LMS URL from company settings
     const { data: companySettings } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url')
+      .select('lms_url, notification_email_cc')
       .eq('id', 1)
       .single();
     
@@ -210,7 +210,7 @@ const handler = async (req: Request): Promise<Response> => {
     try {
       const smtpClient = SMTPClient.fromEnv();
       
-      const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
+      const notificationCc = companySettings?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
       await smtpClient.sendEmail({
         to: email,
         subject: 'Welcome to Growth OS - Your Login Credentials',
