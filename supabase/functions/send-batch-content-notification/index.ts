@@ -231,7 +231,14 @@ const handler = async (req: Request): Promise<Response> => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const body: NotificationRequest = await req.json();
+    // Fetch notification CC from company settings, fall back to secret
+    const { data: ccSettings } = await supabase
+      .from('company_settings')
+      .select('notification_email_cc')
+      .eq('id', 1)
+      .single();
+    const notificationCc = ccSettings?.notification_email_cc || notificationCcSecret;
+
     const {
       batch_id,
       item_type,
