@@ -239,6 +239,7 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
     const notificationCc = ccSettings?.notification_email_cc || notificationCcSecret;
 
+    const body: NotificationRequest = await req.json();
     const {
       batch_id,
       item_type,
