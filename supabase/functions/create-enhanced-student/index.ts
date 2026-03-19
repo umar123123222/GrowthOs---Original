@@ -726,7 +726,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       const smtpClient = SMTPClient.fromEnv();
-      const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
+      const notificationCc = companyDetails?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
       
       await smtpClient.sendEmail({
         to: email,
