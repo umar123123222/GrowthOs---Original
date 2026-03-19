@@ -581,7 +581,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get company settings including currency and company details
     const { data: companyDetailsData } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods')
+      .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods, billing_email_cc, notification_email_cc')
       .eq('id', 1)
       .single();
     
