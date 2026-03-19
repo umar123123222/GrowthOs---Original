@@ -64,7 +64,7 @@ serve(async (req: Request) => {
     // Get company settings for branding
     const { data: settings } = await supabase
       .from('company_settings')
-      .select('company_name, site_url, logo_url')
+      .select('company_name, site_url, logo_url, notification_email_cc')
       .limit(1)
       .single();
 
