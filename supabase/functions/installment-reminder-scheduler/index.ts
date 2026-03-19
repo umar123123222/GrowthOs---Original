@@ -168,7 +168,7 @@ async function sendBillingEmail(options: {
   installmentNumber: number;
 }): Promise<void> {
   const smtpClient = SMTPClient.fromEnv();
-  const billingCc = Deno.env.get('BILLING_EMAIL_CC');
+  const billingCc = companySettings?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC');
 
   const emailPayload: any = {
     to: options.to,
