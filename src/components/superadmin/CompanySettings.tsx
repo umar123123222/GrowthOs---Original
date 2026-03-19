@@ -76,6 +76,9 @@ interface CompanySettingsData {
       header?: string;
     };
   };
+  // Email CC Settings
+  billing_email_cc?: string;
+  notification_email_cc?: string;
 }
 
 export function CompanySettings() {
