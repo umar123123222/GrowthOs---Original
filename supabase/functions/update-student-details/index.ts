@@ -436,7 +436,7 @@ serve(async (req) => {
         console.log('Fetching company settings...');
         const { data: companySettings, error: companyError } = await supabaseAdmin
           .from('company_settings')
-          .select('company_name, company_logo, lms_url')
+          .select('company_name, company_logo, lms_url, notification_email_cc')
           .single();
 
         if (companyError) {
