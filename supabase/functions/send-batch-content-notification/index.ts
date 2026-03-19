@@ -227,7 +227,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const lmsUrl = Deno.env.get("LMS_URL") || "https://growthos-final.lovable.app";
-    const notificationCc = Deno.env.get("NOTIFICATION_EMAIL_CC");
+    const notificationCcSecret = Deno.env.get("NOTIFICATION_EMAIL_CC");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 

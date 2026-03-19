@@ -125,7 +125,7 @@ serve(async (req: Request) => {
 </html>`;
 
     // Get notification CC
-    const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC') || '';
+    const notificationCc = settings?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC') || '';
 
     // Try to send directly first, fall back to queue
     try {
