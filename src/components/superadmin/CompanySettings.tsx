@@ -79,6 +79,10 @@ interface CompanySettingsData {
   // Email CC Settings
   billing_email_cc?: string;
   notification_email_cc?: string;
+  // Overdue Penalty & Suspension Notice
+  overdue_penalty_type?: 'fixed' | 'percentage';
+  overdue_penalty_amount?: number;
+  suspension_notice_note?: string;
 }
 
 export function CompanySettings() {
