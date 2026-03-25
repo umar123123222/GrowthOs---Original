@@ -1092,6 +1092,77 @@ export function CompanySettings() {
                 </p>
               </div>
 
+              <Separator className="my-6" />
+
+              {/* Overdue Penalty Settings */}
+              <div className="space-y-4">
+                <h4 className="font-medium flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Overdue Penalty Settings
+                </h4>
+                <p className="text-sm text-muted-foreground">
+                  Configure a penalty that is applied per overdue installment. The penalty amount will be shown in the suspension notice email sent to students.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="overdue_penalty_type">Penalty Type</Label>
+                    <Select 
+                      value={settings.overdue_penalty_type || 'none'} 
+                      onValueChange={(value) => handleInputChange('overdue_penalty_type', value === 'none' ? '' : value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select penalty type" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-background z-50">
+                        <SelectItem value="none">No Penalty</SelectItem>
+                        <SelectItem value="fixed">Fixed Amount</SelectItem>
+                        <SelectItem value="percentage">Percentage of Installment</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Choose whether the penalty is a fixed amount or percentage of the overdue installment
+                    </p>
+                  </div>
+                  {settings.overdue_penalty_type && settings.overdue_penalty_type !== '' && (
+                    <div className="space-y-2">
+                      <Label htmlFor="overdue_penalty_amount">
+                        {settings.overdue_penalty_type === 'fixed' 
+                          ? `Penalty Amount (${getCurrencySymbol(settings.currency)})` 
+                          : 'Penalty Percentage (%)'}
+                      </Label>
+                      <Input
+                        id="overdue_penalty_amount"
+                        type="number"
+                        min="0"
+                        step={settings.overdue_penalty_type === 'percentage' ? '0.1' : '1'}
+                        value={settings.overdue_penalty_amount || ''}
+                        onChange={(e) => handleInputChange('overdue_penalty_amount', parseFloat(e.target.value) || 0)}
+                        placeholder={settings.overdue_penalty_type === 'fixed' ? 'e.g. 500' : 'e.g. 5'}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {settings.overdue_penalty_type === 'fixed'
+                          ? 'Fixed penalty amount added to each overdue installment'
+                          : 'Percentage of the overdue installment amount added as penalty'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="suspension_notice_note">Extra Note for Suspension Notice</Label>
+                  <Textarea
+                    id="suspension_notice_note"
+                    value={settings.suspension_notice_note || ''}
+                    onChange={(e) => handleInputChange('suspension_notice_note', e.target.value)}
+                    placeholder="e.g. A penalty has been applied due to late payment. Contact finance@company.com for payment plans."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This note will be displayed in the suspension/overdue email sent to students, below the payment details
+                  </p>
+                </div>
+              </div>
+
               {/* Invoice Preview Button */}
               <div className="flex justify-start mt-4">
                 <Dialog open={showInvoicePreview} onOpenChange={setShowInvoicePreview}>
