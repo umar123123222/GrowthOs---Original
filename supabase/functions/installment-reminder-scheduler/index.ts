@@ -34,6 +34,8 @@ function generateBrandedInvoiceHtml(params: {
   invoiceNumber: string;
   loginUrl: string;
   paymentMethodsHtml: string;
+  penaltyType?: string;
+  penaltyAmount?: number;
 }): string {
   const formattedAmount = parseFloat(String(params.amount)).toLocaleString();
   const today = new Date().toLocaleDateString();
