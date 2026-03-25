@@ -256,6 +256,10 @@ serve(async (req) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
+    // End of today for querying scheduled invoices whose issue_date falls on or before today
+    const endOfToday = new Date(today);
+    endOfToday.setHours(23, 59, 59, 999);
+
     // Pre-generate payment methods HTML for branded template
     const enabledPaymentMethods = (paymentMethods as any[]).filter((pm: any) => pm.enabled);
     const paymentMethodsHtml = enabledPaymentMethods.map((method: any) => `
@@ -274,7 +278,7 @@ serve(async (req) => {
       .from('invoices')
       .select('*, students!inner(id, user_id, student_id, users!inner(full_name, email))')
       .eq('status', 'scheduled')
-      .or(`issue_date.lte.${today.toISOString()},and(issue_date.is.null,created_at.lte.${today.toISOString()})`);
+      .or(`issue_date.lte.${endOfToday.toISOString()},and(issue_date.is.null,created_at.lte.${endOfToday.toISOString()})`);
 
     if (scheduledError) {
       console.error('Error fetching scheduled invoices:', scheduledError);
