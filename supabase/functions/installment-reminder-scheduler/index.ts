@@ -373,9 +373,18 @@ serve(async (req) => {
     } else {
       for (const invoice of pendingInvoices || []) {
         const issueDate = new Date(invoice.issue_date || invoice.created_at);
+        issueDate.setHours(0, 0, 0, 0);
+
+        // Skip invoices whose issue date hasn't arrived yet — no reminders before the invoice is actually due
+        if (today < issueDate) {
+          console.log(`[Skip] Invoice installment #${invoice.installment_number} for student ${invoice.students.users.full_name} — issue date ${issueDate.toLocaleDateString()} is in the future`);
+          continue;
+        }
+
         const effectiveDueDate = invoice.extended_due_date 
           ? new Date(invoice.extended_due_date) 
           : new Date(invoice.due_date);
+        effectiveDueDate.setHours(0, 0, 0, 0);
         const daysDiff = Math.floor((effectiveDueDate.getTime() - issueDate.getTime()) / (1000 * 60 * 60 * 24));
         
         const firstReminderDate = new Date(issueDate);
