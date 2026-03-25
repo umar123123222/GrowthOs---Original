@@ -332,6 +332,8 @@ serve(async (req) => {
             invoiceNumber,
             loginUrl: siteUrl,
             paymentMethodsHtml,
+            penaltyType,
+            penaltyAmount,
           });
 
           await sendBillingEmail({
