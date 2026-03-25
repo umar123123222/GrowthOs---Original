@@ -278,7 +278,7 @@ serve(async (req) => {
       .from('invoices')
       .select('*, students!inner(id, user_id, student_id, users!inner(full_name, email))')
       .eq('status', 'scheduled')
-      .or(`issue_date.lte.${today.toISOString()},and(issue_date.is.null,created_at.lte.${today.toISOString()})`);
+      .or(`issue_date.lte.${endOfToday.toISOString()},and(issue_date.is.null,created_at.lte.${endOfToday.toISOString()})`);
 
     if (scheduledError) {
       console.error('Error fetching scheduled invoices:', scheduledError);
