@@ -372,6 +372,29 @@ serve(async (req) => {
           try {
             const pdfBuffer = await safeGeneratePDF(invoice, currency, companyDetails, paymentMethods, dueDate, studentName, studentEmail);
 
+            // Calculate penalty
+            const invoiceAmount = parseFloat(String(invoice.amount));
+            let penaltyValue = 0;
+            if (penaltyType === 'fixed' && penaltyAmount > 0) {
+              penaltyValue = penaltyAmount;
+            } else if (penaltyType === 'percentage' && penaltyAmount > 0) {
+              penaltyValue = (invoiceAmount * penaltyAmount) / 100;
+            }
+            const newPayable = invoiceAmount + penaltyValue;
+            const formattedPenalty = penaltyValue > 0 ? parseFloat(String(penaltyValue)).toLocaleString() : '';
+            const formattedNewPayable = parseFloat(String(newPayable)).toLocaleString();
+
+            const penaltyHtml = penaltyValue > 0 ? `
+              <p><strong>Penalty Applied:</strong> ${currencySymbol}${formattedPenalty} ${penaltyType === 'percentage' ? `(${penaltyAmount}%)` : ''}</p>
+              <p style="font-size: 18px; font-weight: bold; color: #dc2626;"><strong>New Payable Amount:</strong> ${currencySymbol}${formattedNewPayable}</p>
+            ` : '';
+
+            const suspensionNoteHtml = suspensionNoticeNote ? `
+              <div style="background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 15px; margin: 20px 0;">
+                <p style="margin: 0; color: #92400e;"><strong>Note:</strong> ${suspensionNoticeNote}</p>
+              </div>
+            ` : '';
+
             await sendBillingEmail({
               to: studentEmail,
               subject: `URGENT - Payment Overdue for Installment #${invoice.installment_number} - LMS Access Suspended`,
@@ -385,7 +408,9 @@ serve(async (req) => {
                     <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
                     <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
                     <p><strong>Status:</strong> OVERDUE - LMS SUSPENDED</p>
+                    ${penaltyHtml}
                   </div>
+                  ${suspensionNoteHtml}
                   <p><strong>Action Required:</strong> Your learning platform access has been suspended until payment is received. Please make payment immediately to restore full access. ${pdfBuffer ? 'The detailed invoice with payment instructions is attached to this email.' : ''}</p>
                   <p>If you need assistance or wish to discuss payment arrangements, please contact our support team immediately.</p>
                   <p>Best regards,<br>The Learning Team</p>
