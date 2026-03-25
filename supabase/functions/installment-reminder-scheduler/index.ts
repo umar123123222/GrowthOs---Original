@@ -37,8 +37,31 @@ function generateBrandedInvoiceHtml(params: {
   penaltyType?: string;
   penaltyAmount?: number;
 }): string {
-  const formattedAmount = parseFloat(String(params.amount)).toLocaleString();
+  const invoiceAmount = parseFloat(String(params.amount));
+  const formattedAmount = invoiceAmount.toLocaleString();
   const today = new Date().toLocaleDateString();
+
+  // Calculate penalty info for display
+  let penaltyValue = 0;
+  if (params.penaltyType === 'fixed' && (params.penaltyAmount || 0) > 0) {
+    penaltyValue = params.penaltyAmount!;
+  } else if (params.penaltyType === 'percentage' && (params.penaltyAmount || 0) > 0) {
+    penaltyValue = (invoiceAmount * params.penaltyAmount!) / 100;
+  }
+  const formattedAfterOverdue = (invoiceAmount + penaltyValue).toLocaleString();
+  const formattedPenaltyVal = penaltyValue.toLocaleString();
+
+  const overdueWarningHtml = penaltyValue > 0 ? `
+    <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 6px; padding: 15px; margin-top: 15px;">
+      <p style="margin: 0 0 5px 0; color: #991b1b; font-size: 13px; font-weight: bold;">⚠️ If not paid by due date:</p>
+      <p style="margin: 0; color: #991b1b; font-size: 13px;">
+        Penalty: ${params.currencySymbol}${formattedPenaltyVal} ${params.penaltyType === 'percentage' ? '(' + params.penaltyAmount + '%)' : '(fixed)'}
+      </p>
+      <p style="margin: 5px 0 0 0; color: #dc2626; font-size: 15px; font-weight: bold;">
+        Amount after overdue: ${params.currencySymbol}${formattedAfterOverdue}
+      </p>
+    </div>
+  ` : '';
 
   return `
     <!DOCTYPE html>
@@ -87,6 +110,7 @@ function generateBrandedInvoiceHtml(params: {
               <span>Total Amount Due:</span>
               <span>${params.currencySymbol}${formattedAmount}</span>
             </div>
+            ${overdueWarningHtml}
           </div>
           ${params.paymentMethodsHtml ? `
           <div style="margin: 25px 0;">
