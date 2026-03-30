@@ -212,11 +212,12 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     // If assignment has no linked recording, it's always available
     if (!assignment.recording) return true;
     
-    // Check if the linked recording has been watched
     const linkedRecordingId = assignment.recording.id;
     
-    // Check if the recording has been watched
-    return watchedRecordingIds.has(linkedRecordingId);
+    // Assignment is available if the linked recording is UNLOCKED (not just watched)
+    // This prevents a deadlock where the recording is locked waiting for assignment submission
+    // but the assignment isn't visible because the recording hasn't been watched yet
+    return isRecordingUnlocked(linkedRecordingId) || watchedRecordingIds.has(linkedRecordingId);
   };
 
   let availableAssignments: Assignment[] = [];
