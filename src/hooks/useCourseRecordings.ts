@@ -168,21 +168,26 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       });
 
       for (let i = 1; i < sortedRecordings.length; i++) {
-        const previous = sortedRecordings[i - 1];
         const current = sortedRecordings[i];
         const blockingByPreviousAssignment =
           current.lockReason === 'previous_assignment_not_approved' ||
           current.lockReason === 'previous_assignment_not_submitted';
 
-        if (
-          !current.isUnlocked &&
-          blockingByPreviousAssignment &&
-          previous.assignmentId &&
-          previous.isWatched &&
-          approvedAssignments.has(previous.assignmentId)
-        ) {
-          current.isUnlocked = true;
-          current.lockReason = null;
+        if (!current.isUnlocked && blockingByPreviousAssignment) {
+          // Walk backwards to find the actual blocking predecessor
+          let allPredecessorsMet = true;
+          for (let j = i - 1; j >= 0; j--) {
+            const pred = sortedRecordings[j];
+            if (!pred.isWatched) { allPredecessorsMet = false; break; }
+            if (pred.hasAssignment && pred.assignmentId && !approvedAssignments.has(pred.assignmentId)) {
+              allPredecessorsMet = false;
+              break;
+            }
+          }
+          if (allPredecessorsMet) {
+            current.isUnlocked = true;
+            current.lockReason = null;
+          }
         }
       }
 
