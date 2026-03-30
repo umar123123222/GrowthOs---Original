@@ -53,10 +53,12 @@ export const LessonRow = React.memo(({
   };
 
   const handleAssignmentClick = () => {
-    if (!lesson.locked && !moduleLocked && lesson.assignmentTitle !== 'No Assignment') {
+    if (!isLocked && lesson.assignmentTitle !== 'No Assignment') {
       onAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted, lesson.assignmentId);
     }
   };
+
+  const isLocked = lesson.locked || moduleLocked;
 
   const isLocked = lesson.locked || moduleLocked;
 

@@ -99,7 +99,7 @@ export const RecordingRow: React.FC<RecordingRowProps> = ({
           </Badge>
         )}
 
-        {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && recording.isWatched && (
+        {recording.hasAssignment && recording.isUnlocked && userLMSStatus === 'active' && (
           <Button
             variant="outline"
             size="sm"
