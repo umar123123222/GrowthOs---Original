@@ -95,6 +95,32 @@ const Videos = () => {
     fetchUserLMSStatus();
   }, [user?.id]);
 
+  // Real-time refresh when submissions are approved/changed
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel('videos-submission-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'submissions',
+          filter: `student_id=eq.${user.id}`,
+        },
+        () => {
+          refreshData();
+          if (isInPathwayMode) refreshPathwayRecordings();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, isInPathwayMode]);
+
   const handleWatchRecording = async (recording: any) => {
     if (userLMSStatus !== "active") return;
     if (!recording.isUnlocked || !recording.recording_url) return;
