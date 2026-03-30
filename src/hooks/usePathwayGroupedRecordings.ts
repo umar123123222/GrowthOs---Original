@@ -97,26 +97,27 @@ export function usePathwayGroupedRecordings(
         lessonsData = data || [];
       }
 
-      // Fetch unlock status for each course using sequential unlock RPC
+      // Fetch unlock status for all courses in parallel
       const unlockStatusMap = new Map<string, { isUnlocked: boolean; lockReason?: string; dripUnlockDate?: string }>();
 
-      for (const pc of pathwayCourses) {
-        try {
-          const { data: unlockData } = await supabase.rpc('get_course_sequential_unlock_status', {
+      const unlockResults = await Promise.all(
+        pathwayCourses.map(pc =>
+          supabase.rpc('get_course_sequential_unlock_status', {
             p_user_id: user.id,
             p_course_id: pc.course_id,
+          }).then(res => res.data || []).catch(() => [])
+        )
+      );
+
+      unlockResults.forEach(unlockData => {
+        (unlockData as any[]).forEach((u: any) => {
+          unlockStatusMap.set(u.recording_id, {
+            isUnlocked: u.is_unlocked,
+            lockReason: u.lock_reason,
+            dripUnlockDate: u.drip_unlock_date,
           });
-          (unlockData || []).forEach((u: any) => {
-            unlockStatusMap.set(u.recording_id, {
-              isUnlocked: u.is_unlocked,
-              lockReason: u.lock_reason,
-              dripUnlockDate: u.drip_unlock_date,
-            });
-          });
-        } catch {
-          // Non-critical
-        }
-      }
+        });
+      });
 
       // Build lookup maps
       const courseMap = new Map((coursesData || []).map(c => [c.id, c.title]));
