@@ -101,12 +101,17 @@ export function usePathwayGroupedRecordings(
       const unlockStatusMap = new Map<string, { isUnlocked: boolean; lockReason?: string; dripUnlockDate?: string }>();
 
       const unlockResults = await Promise.all(
-        pathwayCourses.map(pc =>
-          supabase.rpc('get_course_sequential_unlock_status', {
-            p_user_id: user.id,
-            p_course_id: pc.course_id,
-          }).then(res => res.data || []).catch(() => [])
-        )
+        pathwayCourses.map(async (pc) => {
+          try {
+            const res = await supabase.rpc('get_course_sequential_unlock_status', {
+              p_user_id: user.id,
+              p_course_id: pc.course_id,
+            });
+            return res.data || [];
+          } catch {
+            return [];
+          }
+        })
       );
 
       unlockResults.forEach(unlockData => {
