@@ -339,7 +339,7 @@ export function StudentDashboard() {
         }
       }
 
-      // Fetch next assignment
+      // Fetch next assignment - only show assignments whose linked recording is unlocked
       const { data: assignments } = await supabase
         .from('assignments')
         .select('*')
@@ -350,15 +350,33 @@ export function StudentDashboard() {
         .select('assignment_id')
         .eq('student_id', user.id);
 
+      // Fetch recordings to check assignment-recording links
+      const { data: assignmentRecordings } = await supabase
+        .from('available_lessons')
+        .select('id, assignment_id');
+
       const submittedIds = submissions?.map(s => s.assignment_id) || [];
-      const pendingAssignments = assignments?.filter(a => !submittedIds.includes(a.id)) || [];
+      
+      // Build a set of unlocked recording IDs from the already-loaded recordings data
+      const unlockedRecordingIds = new Set(
+        (recordings || []).filter(r => r.isUnlocked).map(r => r.id)
+      );
+      
+      const pendingAssignments = (assignments || []).filter(a => {
+        if (submittedIds.includes(a.id)) return false;
+        // Check if the linked recording is unlocked
+        const linkedRecording = assignmentRecordings?.find(r => r.assignment_id === a.id);
+        if (linkedRecording && !unlockedRecordingIds.has(linkedRecording.id)) return false;
+        return true;
+      });
       
       if (pendingAssignments.length > 0) {
         setNextAssignment(pendingAssignments[0]);
-        // Check if assignment is overdue (simplified - using created_at + 7 days)
         const dueDate = new Date(pendingAssignments[0].created_at || '');
         dueDate.setDate(dueDate.getDate() + (pendingAssignments[0].due_days || 7));
         setAssignmentDueStatus(new Date() > dueDate ? 'overdue' : 'future');
+      } else {
+        setNextAssignment(null);
       }
 
       // Fetch milestones with resilience - don't fail dashboard if user_milestones missing

@@ -97,26 +97,32 @@ export function usePathwayGroupedRecordings(
         lessonsData = data || [];
       }
 
-      // Fetch unlock status for each course using sequential unlock RPC
+      // Fetch unlock status for all courses in parallel
       const unlockStatusMap = new Map<string, { isUnlocked: boolean; lockReason?: string; dripUnlockDate?: string }>();
 
-      for (const pc of pathwayCourses) {
-        try {
-          const { data: unlockData } = await supabase.rpc('get_course_sequential_unlock_status', {
-            p_user_id: user.id,
-            p_course_id: pc.course_id,
-          });
-          (unlockData || []).forEach((u: any) => {
-            unlockStatusMap.set(u.recording_id, {
-              isUnlocked: u.is_unlocked,
-              lockReason: u.lock_reason,
-              dripUnlockDate: u.drip_unlock_date,
+      const unlockResults = await Promise.all(
+        pathwayCourses.map(async (pc) => {
+          try {
+            const res = await supabase.rpc('get_course_sequential_unlock_status', {
+              p_user_id: user.id,
+              p_course_id: pc.course_id,
             });
+            return res.data || [];
+          } catch {
+            return [];
+          }
+        })
+      );
+
+      unlockResults.forEach(unlockData => {
+        (unlockData as any[]).forEach((u: any) => {
+          unlockStatusMap.set(u.recording_id, {
+            isUnlocked: u.is_unlocked,
+            lockReason: u.lock_reason,
+            dripUnlockDate: u.drip_unlock_date,
           });
-        } catch {
-          // Non-critical
-        }
-      }
+        });
+      });
 
       // Build lookup maps
       const courseMap = new Map((coursesData || []).map(c => [c.id, c.title]));
@@ -233,21 +239,26 @@ export function usePathwayGroupedRecordings(
           .flatMap(mod => mod.recordings.slice().sort((a, b) => a.sequence_order - b.sequence_order));
 
         for (let i = 1; i < allCourseRecordings.length; i++) {
-          const previous = allCourseRecordings[i - 1];
           const current = allCourseRecordings[i];
           const blockingByPreviousAssignment =
             current.lockReason === 'previous_assignment_not_approved' ||
             current.lockReason === 'previous_assignment_not_submitted';
 
-          if (
-            !current.isUnlocked &&
-            blockingByPreviousAssignment &&
-            previous.assignmentId &&
-            previous.isWatched &&
-            approvedAssignments.has(previous.assignmentId)
-          ) {
-            current.isUnlocked = true;
-            current.lockReason = null;
+          if (!current.isUnlocked && blockingByPreviousAssignment) {
+            // Walk backwards to find the actual blocking predecessor
+            let allPredecessorsMet = true;
+            for (let j = i - 1; j >= 0; j--) {
+              const pred = allCourseRecordings[j];
+              if (!pred.isWatched) { allPredecessorsMet = false; break; }
+              if (pred.hasAssignment && pred.assignmentId && !approvedAssignments.has(pred.assignmentId)) {
+                allPredecessorsMet = false;
+                break;
+              }
+            }
+            if (allPredecessorsMet) {
+              current.isUnlocked = true;
+              current.lockReason = null;
+            }
           }
         }
 

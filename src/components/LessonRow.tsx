@@ -52,13 +52,14 @@ export const LessonRow = React.memo(({
     }
   };
 
+  const isLocked = lesson.locked || moduleLocked;
+
   const handleAssignmentClick = () => {
-    if (!lesson.locked && !moduleLocked && lesson.assignmentTitle !== 'No Assignment') {
+    if (!isLocked && lesson.assignmentTitle !== 'No Assignment') {
       onAssignmentClick(lesson.title, lesson.assignmentTitle, lesson.assignmentSubmitted, lesson.assignmentId);
     }
   };
 
-  const isLocked = lesson.locked || moduleLocked;
 
   return (
     <div className={`flex items-center justify-between p-4 rounded-lg transition-colors ${
@@ -109,13 +110,12 @@ export const LessonRow = React.memo(({
             variant="outline"
             size="sm"
             onClick={handleAssignmentClick}
-            disabled={isLocked || !lesson.watched}
+            disabled={isLocked}
             className={`${
               lesson.assignmentSubmitted ? 'bg-green-50 text-green-700 border-green-200' : ''
             }`}
           >
             {isLocked ? 'Locked' : 
-             !lesson.watched ? 'Watch First' :
              lesson.assignmentSubmitted ? 'View Submission' : 'Submit Assignment'}
           </Button>
         )}
