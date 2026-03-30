@@ -90,7 +90,10 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         }),
         supabase.from('users').select('lms_status').eq('id', user.id).maybeSingle(),
         supabase.from('recording_views').select('recording_id, watched').eq('user_id', user.id),
-        supabase.from('submissions').select('assignment_id, status').eq('student_id', user.id),
+        supabase
+          .from('submissions')
+          .select('assignment_id, status, version, created_at')
+          .eq('student_id', user.id),
       ]);
 
       const unlockData = unlockResult.data;
@@ -107,16 +110,31 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
 
       const watchedMap = new Map((viewsResult.data || []).map(v => [v.recording_id, v.watched]));
 
+      const latestSubmissionByAssignment = new Map<string, { status: string; version: number; createdAt: number }>();
+      (submissionsResult.data || []).forEach((submission: any) => {
+        const version = Number(submission.version || 0);
+        const createdAt = submission.created_at ? new Date(submission.created_at).getTime() : 0;
+        const existing = latestSubmissionByAssignment.get(submission.assignment_id);
+
+        if (!existing || version > existing.version || (version === existing.version && createdAt > existing.createdAt)) {
+          latestSubmissionByAssignment.set(submission.assignment_id, {
+            status: submission.status,
+            version,
+            createdAt
+          });
+        }
+      });
+
       const submittedAssignments = new Set(
-        (submissionsResult.data || [])
-          .filter(s => s.status !== 'declined')
-          .map(s => s.assignment_id)
+        Array.from(latestSubmissionByAssignment.entries())
+          .filter(([, submission]) => submission.status !== 'declined')
+          .map(([assignmentId]) => assignmentId)
       );
 
       const approvedAssignments = new Set(
-        (submissionsResult.data || [])
-          .filter(s => s.status === 'approved')
-          .map(s => s.assignment_id)
+        Array.from(latestSubmissionByAssignment.entries())
+          .filter(([, submission]) => submission.status === 'approved')
+          .map(([assignmentId]) => assignmentId)
       );
 
       // Process recordings
@@ -141,6 +159,32 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           dripUnlockDate: unlockStatus?.dripUnlockDate || null
         };
       });
+
+      // Consistency fix: if prior assignment is already approved, don't keep next lesson locked
+      // due to stale/multi-row submission join states from RPC.
+      const sortedRecordings = [...processedRecordings].sort((a, b) => {
+        if (a.module_order !== b.module_order) return a.module_order - b.module_order;
+        return a.sequence_order - b.sequence_order;
+      });
+
+      for (let i = 1; i < sortedRecordings.length; i++) {
+        const previous = sortedRecordings[i - 1];
+        const current = sortedRecordings[i];
+        const blockingByPreviousAssignment =
+          current.lockReason === 'previous_assignment_not_approved' ||
+          current.lockReason === 'previous_assignment_not_submitted';
+
+        if (
+          !current.isUnlocked &&
+          blockingByPreviousAssignment &&
+          previous.assignmentId &&
+          previous.isWatched &&
+          approvedAssignments.has(previous.assignmentId)
+        ) {
+          current.isUnlocked = true;
+          current.lockReason = null;
+        }
+      }
 
       // Frontend override: if LMS is active but RPC returns fees_not_cleared, apply sequential logic
       if (studentLMSStatus === 'active') {
