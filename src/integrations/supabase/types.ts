@@ -262,6 +262,7 @@ export type Database = {
           end_datetime: string | null
           id: string
           meeting_link: string | null
+          notification_sent_at: string | null
           recording_id: string | null
           recording_url: string | null
           reminder_1h_sent_at: string | null
@@ -287,6 +288,7 @@ export type Database = {
           end_datetime?: string | null
           id?: string
           meeting_link?: string | null
+          notification_sent_at?: string | null
           recording_id?: string | null
           recording_url?: string | null
           reminder_1h_sent_at?: string | null
@@ -312,6 +314,7 @@ export type Database = {
           end_datetime?: string | null
           id?: string
           meeting_link?: string | null
+          notification_sent_at?: string | null
           recording_id?: string | null
           recording_url?: string | null
           reminder_1h_sent_at?: string | null
@@ -384,6 +387,7 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           default_session_time: string | null
+          facebook_community_link: string | null
           id: string
           name: string
           pathway_id: string | null
@@ -391,12 +395,14 @@ export type Database = {
           status: string | null
           timezone: string | null
           updated_at: string | null
+          whatsapp_group_link: string | null
         }
         Insert: {
           course_id?: string | null
           created_at?: string | null
           created_by?: string | null
           default_session_time?: string | null
+          facebook_community_link?: string | null
           id?: string
           name: string
           pathway_id?: string | null
@@ -404,12 +410,14 @@ export type Database = {
           status?: string | null
           timezone?: string | null
           updated_at?: string | null
+          whatsapp_group_link?: string | null
         }
         Update: {
           course_id?: string | null
           created_at?: string | null
           created_by?: string | null
           default_session_time?: string | null
+          facebook_community_link?: string | null
           id?: string
           name?: string
           pathway_id?: string | null
@@ -417,6 +425,7 @@ export type Database = {
           status?: string | null
           timezone?: string | null
           updated_at?: string | null
+          whatsapp_group_link?: string | null
         }
         Relationships: [
           {
@@ -511,16 +520,20 @@ export type Database = {
           invoice_notes: string | null
           invoice_overdue_days: number
           invoice_send_gap_days: number
+          livechat_code: string | null
           lms_sequential_unlock: boolean | null
           lms_url: string | null
           maximum_installment_count: number
           multi_course_enabled: boolean | null
           onboarding_video_url: string | null
           original_fee_amount: number
+          overdue_penalty_amount: number | null
+          overdue_penalty_type: string | null
           payment_methods: Json | null
           primary_phone: string
           questionnaire: Json | null
           secondary_phone: string | null
+          suspension_notice_note: string | null
           updated_at: string | null
         }
         Insert: {
@@ -541,16 +554,20 @@ export type Database = {
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
+          livechat_code?: string | null
           lms_sequential_unlock?: boolean | null
           lms_url?: string | null
           maximum_installment_count?: number
           multi_course_enabled?: boolean | null
           onboarding_video_url?: string | null
           original_fee_amount?: number
+          overdue_penalty_amount?: number | null
+          overdue_penalty_type?: string | null
           payment_methods?: Json | null
           primary_phone?: string
           questionnaire?: Json | null
           secondary_phone?: string | null
+          suspension_notice_note?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -571,16 +588,20 @@ export type Database = {
           invoice_notes?: string | null
           invoice_overdue_days?: number
           invoice_send_gap_days?: number
+          livechat_code?: string | null
           lms_sequential_unlock?: boolean | null
           lms_url?: string | null
           maximum_installment_count?: number
           multi_course_enabled?: boolean | null
           onboarding_video_url?: string | null
           original_fee_amount?: number
+          overdue_penalty_amount?: number | null
+          overdue_penalty_type?: string | null
           payment_methods?: Json | null
           primary_phone?: string
           questionnaire?: Json | null
           secondary_phone?: string | null
+          suspension_notice_note?: string | null
           updated_at?: string | null
         }
         Relationships: []
@@ -1128,6 +1149,7 @@ export type Database = {
           first_reminder_sent_at: string | null
           id: string
           installment_number: number
+          issue_date: string | null
           notes: string | null
           paid_at: string | null
           pathway_id: string | null
@@ -1149,6 +1171,7 @@ export type Database = {
           first_reminder_sent_at?: string | null
           id?: string
           installment_number: number
+          issue_date?: string | null
           notes?: string | null
           paid_at?: string | null
           pathway_id?: string | null
@@ -1170,6 +1193,7 @@ export type Database = {
           first_reminder_sent_at?: string | null
           id?: string
           installment_number?: number
+          issue_date?: string | null
           notes?: string | null
           paid_at?: string | null
           pathway_id?: string | null
@@ -1951,6 +1975,45 @@ export type Database = {
           },
         ]
       }
+      scheduled_suspensions: {
+        Row: {
+          auto_unsuspend_date: string | null
+          cancelled_at: string | null
+          created_at: string | null
+          created_by: string | null
+          executed_at: string | null
+          id: string
+          reason: string | null
+          schedule_suspend_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          auto_unsuspend_date?: string | null
+          cancelled_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          executed_at?: string | null
+          id?: string
+          reason?: string | null
+          schedule_suspend_date: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          auto_unsuspend_date?: string | null
+          cancelled_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          executed_at?: string | null
+          id?: string
+          reason?: string | null
+          schedule_suspend_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       session_attendance: {
         Row: {
           attended_at: string | null
@@ -2281,10 +2344,12 @@ export type Database = {
       success_sessions: {
         Row: {
           batch_id: string | null
+          batch_ids: Json | null
           course_id: string | null
           created_at: string | null
           created_by: string | null
           description: string | null
+          drip_days: number | null
           end_time: string | null
           host_login_email: string | null
           host_login_pwd: string | null
@@ -2292,6 +2357,7 @@ export type Database = {
           link: string
           mentor_id: string | null
           mentor_name: string | null
+          pathway_id: string | null
           schedule_date: string | null
           start_time: string
           status: string | null
@@ -2301,10 +2367,12 @@ export type Database = {
         }
         Insert: {
           batch_id?: string | null
+          batch_ids?: Json | null
           course_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          drip_days?: number | null
           end_time?: string | null
           host_login_email?: string | null
           host_login_pwd?: string | null
@@ -2312,6 +2380,7 @@ export type Database = {
           link: string
           mentor_id?: string | null
           mentor_name?: string | null
+          pathway_id?: string | null
           schedule_date?: string | null
           start_time: string
           status?: string | null
@@ -2321,10 +2390,12 @@ export type Database = {
         }
         Update: {
           batch_id?: string | null
+          batch_ids?: Json | null
           course_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string | null
+          drip_days?: number | null
           end_time?: string | null
           host_login_email?: string | null
           host_login_pwd?: string | null
@@ -2332,6 +2403,7 @@ export type Database = {
           link?: string
           mentor_id?: string | null
           mentor_name?: string | null
+          pathway_id?: string | null
           schedule_date?: string | null
           start_time?: string
           status?: string | null
@@ -2352,6 +2424,13 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "success_sessions_pathway_id_fkey"
+            columns: ["pathway_id"]
+            isOneToOne: false
+            referencedRelation: "learning_pathways"
             referencedColumns: ["id"]
           },
         ]
@@ -2738,6 +2817,7 @@ export type Database = {
           lms_status: string | null
           lms_user_id: string | null
           meta_ads_credentials: string | null
+          original_password: string | null
           password_display: string
           password_hash: string
           phone: string | null
@@ -2759,6 +2839,7 @@ export type Database = {
           lms_status?: string | null
           lms_user_id?: string | null
           meta_ads_credentials?: string | null
+          original_password?: string | null
           password_display: string
           password_hash: string
           phone?: string | null
@@ -2780,6 +2861,7 @@ export type Database = {
           lms_status?: string | null
           lms_user_id?: string | null
           meta_ads_credentials?: string | null
+          original_password?: string | null
           password_display?: string
           password_hash?: string
           phone?: string | null
@@ -3370,6 +3452,7 @@ export type Database = {
         | "enrollment_manager"
         | "mentor"
         | "student"
+        | "support_member"
       assignment_submission_status:
         | "submitted"
         | "under_review"
@@ -3509,6 +3592,7 @@ export const Constants = {
         "enrollment_manager",
         "mentor",
         "student",
+        "support_member",
       ],
       assignment_submission_status: [
         "submitted",
