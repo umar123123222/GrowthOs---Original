@@ -77,7 +77,8 @@ export const RecordingRow: React.FC<RecordingRowProps> = ({
               {recording.lockReason === 'drip_locked' && recording.dripUnlockDate &&
                 `Unlocks on ${new Date(recording.dripUnlockDate).toLocaleDateString()}`
               }
-              {recording.lockReason === 'fees_not_cleared' && 'Clear your fees to unlock'}
+              {recording.lockReason === 'fees_not_cleared' && 'Not started yet'}
+              {recording.lockReason === 'not_started_yet' && 'Not started yet'}
               {!recording.lockReason && 'Complete previous lessons to unlock'}
             </span>
           )}
