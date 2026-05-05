@@ -102,6 +102,8 @@ export const StudentManagement = () => {
   const [selectedStudentForEdit, setSelectedStudentForEdit] = useState<Student | null>(null);
   const [manageAccessDialogOpen, setManageAccessDialogOpen] = useState(false);
   const [selectedStudentForAccess, setSelectedStudentForAccess] = useState<Student | null>(null);
+  const [dripDisabledMap, setDripDisabledMap] = useState<Map<string, boolean>>(new Map());
+  const [dripTogglingId, setDripTogglingId] = useState<string | null>(null);
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
   const [timeTick, setTimeTick] = useState(0); // triggers periodic re-render for time-based status updates
