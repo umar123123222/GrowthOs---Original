@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { safeLogger } from '@/lib/safe-logger';
 import { useToast } from '@/hooks/use-toast';
@@ -91,12 +91,19 @@ export const useInstallmentOptions = (specificMaxCount?: number) => {
     });
   };
 
+  const maxCountRef = useRef(maxCount);
   useEffect(() => {
+    maxCountRef.current = maxCount;
+  }, [maxCount]);
+
+  useEffect(() => {
+    if (specificMaxCount) return;
+
     fetchCompanySettings();
 
-    // Set up real-time listener for company settings changes
+    // Set up real-time listener for company settings changes (subscribe once)
     const channel = supabase
-      .channel('company-settings-changes')
+      .channel(`company-settings-changes-${Math.random().toString(36).slice(2)}`)
       .on(
         'postgres_changes',
         {
@@ -104,8 +111,8 @@ export const useInstallmentOptions = (specificMaxCount?: number) => {
           schema: 'public',
           table: 'company_settings'
         },
-        (payload) => {
-          if (payload.new && payload.new.maximum_installment_count !== maxCount) {
+        (payload: any) => {
+          if (payload.new && payload.new.maximum_installment_count !== maxCountRef.current) {
             const newCount = payload.new.maximum_installment_count;
             setMaxCount(newCount);
             setOptions(generateOptions(newCount));
@@ -121,7 +128,8 @@ export const useInstallmentOptions = (specificMaxCount?: number) => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [maxCount, toast]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specificMaxCount]);
 
   return {
     options,
