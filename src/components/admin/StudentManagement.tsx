@@ -1717,7 +1717,28 @@ export const StudentManagement = () => {
                             <Button variant="outline" size="sm" onClick={() => toggleRowExpansion(student.id)} title={expandedRows.has(student.id) ? "Collapse" : "Expand"} className="hover-scale hover:border-green-300 hover:text-green-600">
                               {expandedRows.has(student.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </Button>
-                            
+
+                            {(() => {
+                              const isDisabled = student.student_record_id ? dripDisabledMap.get(student.student_record_id) === true : false;
+                              const isToggling = dripTogglingId === student.student_record_id;
+                              return (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  disabled={isToggling || !student.student_record_id}
+                                  onClick={() => handleToggleDripForStudent(student)}
+                                  title={isDisabled
+                                    ? 'Drip currently OFF — click to re-enable drip schedule'
+                                    : 'Skip drip — unlock all course recordings immediately'}
+                                  className={`hover-scale ${isDisabled
+                                    ? 'text-amber-600 hover:text-amber-700 hover:border-amber-300'
+                                    : 'text-emerald-600 hover:text-emerald-700 hover:border-emerald-300'}`}
+                                >
+                                  {isDisabled ? <Clock className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
+                                </Button>
+                              );
+                            })()}
+
                             <AlertDialog>
                              <AlertDialogTrigger asChild>
                                <Button variant="outline" size="sm" title="Delete Student" className="hover-scale hover:border-red-300 hover:text-red-600">
