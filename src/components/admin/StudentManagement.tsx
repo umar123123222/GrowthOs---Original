@@ -1722,7 +1722,7 @@ export const StudentManagement = () => {
                               const isDisabled = student.student_record_id ? dripDisabledMap.get(student.student_record_id) === true : false;
                               const isToggling = dripTogglingId === student.student_record_id;
                               return (
-                                <Button
+                                 <Button
                                   variant="outline"
                                   size="sm"
                                   disabled={isToggling || !student.student_record_id}
@@ -1730,10 +1730,12 @@ export const StudentManagement = () => {
                                   title={isDisabled
                                     ? 'Drip currently OFF — click to re-enable drip schedule'
                                     : 'Skip drip — unlock all course recordings immediately'}
+                                  data-testid="drip-toggle-row"
+                                  aria-label={isDisabled ? 'Enable drip schedule' : 'Skip drip schedule'}
                                   className={`hover-scale ${isDisabled
                                     ? 'text-amber-600 hover:text-amber-700 hover:border-amber-300'
                                     : 'text-emerald-600 hover:text-emerald-700 hover:border-emerald-300'}`}
-                                >
+                                 >
                                   {isDisabled ? <Clock className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
                                 </Button>
                               );
