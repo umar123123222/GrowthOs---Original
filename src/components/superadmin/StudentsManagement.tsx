@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { safeLogger } from '@/lib/safe-logger';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -83,6 +84,8 @@ export function StudentsManagement() {
     user
   } = useAuth();
   const isSupportMember = user?.role === 'support_member';
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -92,7 +95,17 @@ export function StudentsManagement() {
   const [suspendedStudents, setSuspendedStudents] = useState(0);
   const [overdueStudents, setOverdueStudents] = useState(0);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(initialSearch);
+
+  // Sync searchTerm when URL ?search= changes (e.g., navigated from At-Risk page)
+  useEffect(() => {
+    const urlSearch = searchParams.get('search');
+    if (urlSearch && urlSearch !== searchTerm) {
+      setSearchTerm(urlSearch);
+      setFiltersOpen(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
   const [lmsStatusFilter, setLmsStatusFilter] = useState('all');
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
@@ -174,6 +187,17 @@ export function StudentsManagement() {
     fetchCompanyCurrency();
     fetchBatchOptions();
     fetchCoursesAndPathways();
+    // Safety watchdog: if loading hasn't cleared after 15s, release the spinner
+    // so the user is never stuck on "Loading students..." forever.
+    const watchdog = setTimeout(() => {
+      setLoading(prev => {
+        if (prev) {
+          console.warn('[StudentsManagement] Watchdog: forcing loading=false after 15s');
+        }
+        return false;
+      });
+    }, 15000);
+    return () => clearTimeout(watchdog);
   }, []);
   useEffect(() => {
     if (students.length > 0) {
@@ -429,15 +453,65 @@ export function StudentsManagement() {
   };
   const fetchStudents = async () => {
     try {
-      // Fetch student user_ids from user_roles table, then fetch their data
-      const { data: studentRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'student');
-      if (rolesError) throw rolesError;
+      console.log('[StudentsManagement] fetchStudents: starting', {
+        currentUserId: user?.id,
+        currentUserRole: user?.role,
+        currentUserEmail: user?.email,
+      });
+      // Resilient lookup: students must be visible whether they're tagged in
+      // the `user_roles` junction table OR have role='student' on the users
+      // table. We union both sources to avoid invisibility from legacy rows
+      // that never got an explicit user_roles entry.
+      const [rolesRes, legacyRes, allUsersRes] = await Promise.all([
+        supabase.from('user_roles').select('user_id, role').eq('role', 'student'),
+        supabase.from('users').select('id, role').eq('role', 'student'),
+        // Diagnostic: count all users visible to this caller, broken down by role.
+        // If this returns 0 rows we know RLS is blocking everything.
+        supabase.from('users').select('id, role'),
+      ]);
+      if (rolesRes.error) {
+        console.error('[StudentsManagement] user_roles query error:', rolesRes.error);
+      }
+      if (legacyRes.error) {
+        console.warn('[StudentsManagement] users.role lookup failed:', legacyRes.error);
+      }
+      if (allUsersRes.error) {
+        console.error('[StudentsManagement] users (all) query error:', allUsersRes.error);
+      }
 
-      const studentUserIds = studentRoles?.map(r => r.user_id) || [];
+      const visibleUsers = allUsersRes.data || [];
+      const roleBreakdown = visibleUsers.reduce<Record<string, number>>((acc, u: any) => {
+        const r = u.role || 'null';
+        acc[r] = (acc[r] || 0) + 1;
+        return acc;
+      }, {});
+      console.log('[StudentsManagement] RLS visibility check:', {
+        totalUsersVisible: visibleUsers.length,
+        roleBreakdown,
+        userRolesStudentRows: rolesRes.data?.length || 0,
+        usersStudentRows: legacyRes.data?.length || 0,
+      });
+
+      const idSet = new Set<string>();
+      (rolesRes.data || []).forEach((r: any) => r?.user_id && idSet.add(r.user_id));
+      (legacyRes.data || []).forEach((u: any) => u?.id && idSet.add(u.id));
+      const studentUserIds = Array.from(idSet);
+
       if (studentUserIds.length === 0) {
+        // Surface the underlying reason so the user sees something actionable
+        // instead of a silent empty table.
+        if (visibleUsers.length === 0 && !allUsersRes.error) {
+          toast({
+            title: 'No users visible',
+            description: `RLS may be blocking access. Logged in as ${user?.email || 'unknown'} (${user?.role || 'no role'}).`,
+            variant: 'destructive',
+          });
+        } else if (visibleUsers.length > 0) {
+          toast({
+            title: 'No students found',
+            description: `Database contains ${visibleUsers.length} users but none with role=student. Roles seen: ${Object.keys(roleBreakdown).join(', ') || 'none'}.`,
+          });
+        }
         setStudents([]);
         setTotalStudents(0);
         setActiveStudents(0);
@@ -446,18 +520,88 @@ export function StudentsManagement() {
         return;
       }
 
-      // Fetch users and their corresponding student records in parallel
-      const [usersRes, studentsRes] = await Promise.all([
-        supabase.from('users').select('*, creator:created_by(full_name, email)').in('id', studentUserIds).order('created_at', { ascending: false }),
+      // Self-heal: backfill missing user_roles rows so future queries see them
+      // immediately. Errors here are non-fatal.
+      const knownRoleIds = new Set((rolesRes.data || []).map((r: any) => r.user_id));
+      const missingRoleIds = studentUserIds.filter(id => !knownRoleIds.has(id));
+      if (missingRoleIds.length > 0) {
+        console.log('[StudentsManagement] backfilling user_roles for', missingRoleIds.length, 'students');
+        supabase
+          .from('user_roles')
+          .upsert(
+            missingRoleIds.map(uid => ({ user_id: uid, role: 'student' as const })),
+            { onConflict: 'user_id,role', ignoreDuplicates: true }
+          )
+          .then(({ error }) => {
+            if (error) console.warn('[StudentsManagement] user_roles backfill failed:', error);
+          });
+      }
+
+      // Fetch users and their corresponding student records in parallel.
+      // NOTE: The embedded `creator:created_by(...)` relationship can hang/fail
+      // when the FK is missing or ambiguous. Fetch creators separately instead.
+      // IMPORTANT: Chunk the .in() call to avoid PostgREST "Bad Request" from
+      // URL length limits when there are hundreds of student IDs.
+      const chunkArray = <T,>(arr: T[], size: number): T[][] => {
+        const out: T[][] = [];
+        for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+        return out;
+      };
+      const idChunks = chunkArray(studentUserIds, 100);
+      const [usersChunkResults, studentsRes] = await Promise.all([
+        Promise.all(
+          idChunks.map(chunk =>
+            supabase.from('users').select('*').in('id', chunk)
+          )
+        ),
         supabase.from('students').select('id, user_id, student_id, installment_count')
       ]);
-      if (usersRes.error) throw usersRes.error;
+      const usersErrEntry = usersChunkResults.find(r => r.error);
+      const usersData = usersChunkResults.flatMap(r => r.data || []);
+      // Sort newest-first to mimic the previous .order('created_at', desc)
+      usersData.sort((a: any, b: any) => {
+        const at = a?.created_at ? new Date(a.created_at).getTime() : 0;
+        const bt = b?.created_at ? new Date(b.created_at).getTime() : 0;
+        return bt - at;
+      });
+      console.log('[StudentsManagement] users/students queries done', {
+        usersErr: usersErrEntry?.error?.message,
+        studentsErr: studentsRes.error?.message,
+        userCount: usersData.length,
+        chunks: idChunks.length,
+      });
+      if (usersErrEntry?.error) throw usersErrEntry.error;
       if (studentsRes.error) {
         console.warn('Warning fetching students table:', studentsRes.error);
       }
 
-      const usersData = usersRes.data || [];
       const studentsTable = studentsRes.data || [];
+
+      // Resolve creators in a separate, resilient query
+      const creatorIds = Array.from(new Set(
+        usersData.map((u: any) => u.created_by).filter((id: any) => !!id)
+      ));
+      let creatorMap = new Map<string, { full_name: string; email: string }>();
+      if (creatorIds.length > 0) {
+        const creatorChunks = chunkArray(creatorIds as string[], 100);
+        const creatorResults = await Promise.all(
+          creatorChunks.map(chunk =>
+            supabase.from('users').select('id, full_name, email').in('id', chunk)
+          )
+        );
+        const creatorsData = creatorResults.flatMap(r => r.data || []);
+        const creatorsErr = creatorResults.find(r => r.error)?.error;
+        if (creatorsErr) {
+          console.warn('Warning fetching creators:', creatorsErr);
+        }
+        creatorMap = new Map(
+          creatorsData.map((c: any) => [c.id as string, { full_name: c.full_name, email: c.email }])
+        );
+      }
+      // Attach creator info onto each user object
+      usersData.forEach((u: any) => {
+        u.creator = u.created_by ? (creatorMap.get(u.created_by) || null) : null;
+      });
       const studentIdMap = new Map<string, { student_id: string | null; student_record_id: string | null; installment_count: number | null }>(
         studentsTable.map((s: any) => [s.user_id as string, { student_id: s.student_id as string | null, student_record_id: s.id as string | null, installment_count: (s.installment_count as number | null) ?? null }])
       );
@@ -469,6 +613,12 @@ export function StudentsManagement() {
         const feesStructure = count === 1 ? '1_installment' : count === 2 ? '2_installments' : count === 3 ? '3_installments' : count ? `${count}_installments` : '';
         return {
           ...user,
+          full_name: user.full_name || user.email || 'Unnamed Student',
+          email: user.email || '',
+          created_at: user.created_at || '',
+          last_active_at: user.last_active_at || '',
+          lms_user_id: user.lms_user_id || '',
+          lms_status: user.lms_status || 'inactive',
           student_id: mapEntry?.student_id || '',
           student_record_id: mapEntry?.student_record_id || null,
           phone: user.phone || '',
@@ -511,7 +661,14 @@ export function StudentsManagement() {
 
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(student => student.student_id?.toLowerCase().includes(searchTerm.toLowerCase()) || student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || student.email.toLowerCase().includes(searchTerm.toLowerCase()) || student.phone?.toLowerCase().includes(searchTerm.toLowerCase()));
+      const normalizedSearch = searchTerm.toLowerCase();
+      filtered = filtered.filter(student => {
+        const studentId = student.student_id?.toLowerCase?.() || '';
+        const fullName = student.full_name?.toLowerCase?.() || '';
+        const email = student.email?.toLowerCase?.() || '';
+        const phone = student.phone?.toLowerCase?.() || '';
+        return studentId.includes(normalizedSearch) || fullName.includes(normalizedSearch) || email.includes(normalizedSearch) || phone.includes(normalizedSearch);
+      });
     }
 
     // Apply LMS status filter
@@ -635,7 +792,7 @@ export function StudentsManagement() {
         error
       } = await supabase.from('users').update({
         lms_status: 'suspended',
-        last_suspended_date: new Date().toISOString()
+        updated_at: new Date().toISOString()
       }).eq('id', studentId);
       if (error) throw error;
       // Log suspension via handleSuspendAccount
@@ -960,9 +1117,11 @@ export function StudentsManagement() {
         return 'Unknown';
     }
   };
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string | null) => {
     if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
@@ -1773,12 +1932,14 @@ export function StudentsManagement() {
       return;
     }
     try {
-      const updateField = passwordType === 'temp' ? 'temp_password' : 'lms_password';
+      const passwordUpdate = {
+        password_display: newPassword,
+        is_temp_password: passwordType === 'temp',
+        updated_at: new Date().toISOString(),
+      };
       const {
         error
-      } = await supabase.from('users').update({
-        [updateField]: newPassword
-      }).eq('id', selectedStudentForPassword.id);
+      } = await supabase.from('users').update(passwordUpdate).eq('id', selectedStudentForPassword.id);
       if (error) throw error;
       toast({
         title: "Success",
@@ -2509,12 +2670,17 @@ export function StudentsManagement() {
                                  <span className="text-xs font-medium">{getLMSStatusLabel(student.lms_status)}</span>
                                </div>
                              </Badge>
-                             {scheduledSuspensions.has(student.id) && (
-                               <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 cursor-pointer" onClick={() => handleCancelScheduledSuspension(student)} title={`Scheduled: ${new Date(scheduledSuspensions.get(student.id)!.schedule_suspend_date).toLocaleDateString()}. Click to cancel.`}>
-                                 <Clock className="w-3 h-3 mr-1" />
-                                 <span className="text-xs font-medium">Suspend: {new Date(scheduledSuspensions.get(student.id)!.schedule_suspend_date).toLocaleDateString()}</span>
-                               </Badge>
-                             )}
+                              {(() => {
+                                const scheduled = scheduledSuspensions.get(student.id);
+                                if (!scheduled) return null;
+                                const scheduledDate = formatDate(scheduled.schedule_suspend_date);
+                                return (
+                                  <Badge className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 cursor-pointer" onClick={() => handleCancelScheduledSuspension(student)} title={`Scheduled: ${scheduledDate}. Click to cancel.`}>
+                                    <Clock className="w-3 h-3 mr-1" />
+                                    <span className="text-xs font-medium">Suspend: {scheduledDate}</span>
+                                  </Badge>
+                                );
+                              })()}
                              {!isSupportMember && (() => {
                         const inst = getInstallmentStatus(student);
                         return <Badge className={inst.color}>
@@ -3219,7 +3385,7 @@ export function StudentsManagement() {
                     <SelectItem value="none">No Batch (Use LMS Access Date)</SelectItem>
                     {editBatches.map((batch) => (
                       <SelectItem key={batch.id} value={batch.id}>
-                        {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
+                        {batch.name} (Start: {formatDate(batch.start_date)})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -3301,7 +3467,7 @@ export function StudentsManagement() {
                   <SelectItem value="none">No Batch</SelectItem>
                   {bulkBatches.map((batch) => (
                     <SelectItem key={batch.id} value={batch.id}>
-                      {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
+                      {batch.name} (Start: {formatDate(batch.start_date)})
                     </SelectItem>
                   ))}
                 </SelectContent>
