@@ -1364,6 +1364,77 @@ export const StudentManagement = () => {
   const safePage = Math.min(currentPage, totalPages);
   const paginatedStudents = displayStudents.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
+  // Fetch drip-disabled status for visible students
+  useEffect(() => {
+    const recordIds = paginatedStudents.map(s => s.student_record_id).filter(Boolean) as string[];
+    if (recordIds.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from('course_enrollments')
+        .select('student_id, drip_override, drip_enabled, sequential_override, sequential_enabled')
+        .in('student_id', recordIds)
+        .eq('status', 'active');
+      if (cancelled || error || !data) return;
+      const grouped = new Map<string, any[]>();
+      data.forEach((row: any) => {
+        const list = grouped.get(row.student_id) || [];
+        list.push(row);
+        grouped.set(row.student_id, list);
+      });
+      const next = new Map<string, boolean>();
+      grouped.forEach((rows, sid) => {
+        // Considered "drip disabled" only when ALL active enrollments have overrides set to disabled
+        const allDisabled = rows.length > 0 && rows.every(r =>
+          r.drip_override === true && r.drip_enabled === false &&
+          r.sequential_override === true && r.sequential_enabled === false
+        );
+        next.set(sid, allDisabled);
+      });
+      setDripDisabledMap(next);
+    })();
+    return () => { cancelled = true; };
+  }, [paginatedStudents.map(s => s.student_record_id).join(',')]);
+
+  const handleToggleDripForStudent = async (student: Student) => {
+    if (!student.student_record_id) {
+      toast({ title: 'Error', description: 'Student record not found', variant: 'destructive' });
+      return;
+    }
+    const recordId = student.student_record_id;
+    const currentlyDisabled = dripDisabledMap.get(recordId) === true;
+    const willDisable = !currentlyDisabled;
+    setDripTogglingId(recordId);
+    try {
+      const { error } = await supabase
+        .from('course_enrollments')
+        .update(willDisable
+          ? { drip_override: true, drip_enabled: false, sequential_override: true, sequential_enabled: false }
+          : { drip_override: false, sequential_override: false }
+        )
+        .eq('student_id', recordId)
+        .eq('status', 'active');
+      if (error) throw error;
+      setDripDisabledMap(prev => {
+        const next = new Map(prev);
+        next.set(recordId, willDisable);
+        return next;
+      });
+      toast({
+        title: willDisable ? 'Drip Disabled' : 'Drip Re-enabled',
+        description: willDisable
+          ? `${student.full_name} now has full immediate access to all enrolled course recordings.`
+          : `${student.full_name}'s unwatched videos will follow the drip schedule again.`,
+      });
+    } catch (e: any) {
+      console.error('Toggle drip error:', e);
+      toast({ title: 'Error', description: e.message || 'Failed to update drip setting', variant: 'destructive' });
+    } finally {
+      setDripTogglingId(null);
+    }
+  };
+
+
   const getPaginationRange = () => {
     const range: (number | '...')[] = [];
     if (totalPages <= 7) {
