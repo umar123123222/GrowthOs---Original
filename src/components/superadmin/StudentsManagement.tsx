@@ -3053,6 +3053,28 @@ export function StudentsManagement() {
                                  <BookOpen className="w-4 h-4 mr-2" />
                                  Manage Access
                                </Button>
+                               {(() => {
+                                 const recId = student.student_record_id;
+                                 const isDripDisabled = recId ? dripDisabledMap.get(recId) === true : false;
+                                 const isToggling = recId ? togglingDrip.has(recId) : false;
+                                 return (
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     disabled={!recId || isToggling}
+                                     onClick={() => handleToggleDripForStudent(student)}
+                                     data-testid="drip-toggle-row"
+                                     aria-label={isDripDisabled ? 'Enable drip schedule' : 'Skip drip schedule'}
+                                     title={isDripDisabled
+                                       ? 'Drip currently OFF — click to re-enable drip schedule for unwatched videos'
+                                       : 'Skip drip — unlock all course recordings immediately'}
+                                     className={`hover-scale ${isDripDisabled ? 'hover:border-amber-300 text-amber-600' : 'hover:border-emerald-300 text-emerald-600'}`}
+                                   >
+                                     {isDripDisabled ? <Clock className="w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                                     {isDripDisabled ? 'Enable Drip' : 'Skip Drip'}
+                                   </Button>
+                                 );
+                               })()}
                                <Button 
                                  variant="outline" 
                                  size="sm" 
