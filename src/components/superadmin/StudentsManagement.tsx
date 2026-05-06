@@ -135,6 +135,8 @@ export function StudentsManagement() {
   const [selectedStudentForPassword, setSelectedStudentForPassword] = useState<Student | null>(null);
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
+  const [dripDisabledMap, setDripDisabledMap] = useState<Map<string, boolean>>(new Map());
+  const [togglingDrip, setTogglingDrip] = useState<Set<string>>(new Set());
   const [editDialog, setEditDialog] = useState(false);
   const [editFormData, setEditFormData] = useState({
     full_name: '',
