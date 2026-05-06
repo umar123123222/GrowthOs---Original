@@ -1141,12 +1141,80 @@ export function StudentsManagement() {
         return 'N/A';
     }
   };
+  const fetchDripStatusForStudent = useCallback(async (studentRecordId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('course_enrollments')
+        .select('drip_override, drip_enabled')
+        .eq('student_id', studentRecordId)
+        .eq('status', 'active');
+      if (error) throw error;
+      const isDisabled = !!data && data.length > 0 && data.every((r: any) => r.drip_override === true && r.drip_enabled === false);
+      setDripDisabledMap(prev => {
+        const next = new Map(prev);
+        next.set(studentRecordId, isDisabled);
+        return next;
+      });
+    } catch (e) {
+      console.error('fetchDripStatusForStudent error', e);
+    }
+  }, []);
+
+  const handleToggleDripForStudent = async (student: Student) => {
+    if (!student.student_record_id) {
+      toast({ title: 'Error', description: 'Student record not found', variant: 'destructive' });
+      return;
+    }
+    const recordId = student.student_record_id;
+    const currentlyDisabled = dripDisabledMap.get(recordId) === true;
+    setTogglingDrip(prev => {
+      const n = new Set(prev);
+      n.add(recordId);
+      return n;
+    });
+    try {
+      const update = currentlyDisabled
+        ? { drip_override: false, drip_enabled: true, sequential_override: false, sequential_enabled: true }
+        : { drip_override: true, drip_enabled: false, sequential_override: true, sequential_enabled: false };
+      const { error } = await supabase
+        .from('course_enrollments')
+        .update(update)
+        .eq('student_id', recordId)
+        .eq('status', 'active');
+      if (error) throw error;
+      setDripDisabledMap(prev => {
+        const next = new Map(prev);
+        next.set(recordId, !currentlyDisabled);
+        return next;
+      });
+      toast({
+        title: currentlyDisabled ? 'Drip schedule re-enabled' : 'Drip schedule skipped',
+        description: currentlyDisabled
+          ? `${student.full_name} will now follow the drip schedule for unwatched videos.`
+          : `${student.full_name} now has immediate access to all course recordings.`,
+      });
+    } catch (e: any) {
+      console.error('handleToggleDripForStudent error', e);
+      toast({ title: 'Error', description: e?.message || 'Failed to update drip setting', variant: 'destructive' });
+    } finally {
+      setTogglingDrip(prev => {
+        const n = new Set(prev);
+        n.delete(recordId);
+        return n;
+      });
+    }
+  };
+
   const toggleRowExpansion = (studentId: string) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(studentId)) {
       newExpanded.delete(studentId);
     } else {
       newExpanded.add(studentId);
+      const student = students.find(s => s.id === studentId);
+      if (student?.student_record_id && !dripDisabledMap.has(student.student_record_id)) {
+        fetchDripStatusForStudent(student.student_record_id);
+      }
     }
     setExpandedRows(newExpanded);
   };
