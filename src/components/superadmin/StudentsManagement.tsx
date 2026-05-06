@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon, BookOpen, MessageSquare, Send } from 'lucide-react';
+import { AlertTriangle, Plus, Edit, Trash2, Users, Activity, DollarSign, Download, CheckCircle, XCircle, Search, Filter, Clock, Ban, ChevronDown, ChevronUp, FileText, Key, Lock, Eye, Settings, Award, RefreshCw, CalendarIcon, BookOpen, MessageSquare, Send, Zap } from 'lucide-react';
 import { StudentAccessManagement } from './StudentAccessManagement';
 import { SuspensionDialog } from '@/components/SuspensionDialog';
 import { StudentNotesDialog } from '@/components/StudentNotesDialog';
@@ -135,6 +135,8 @@ export function StudentsManagement() {
   const [selectedStudentForPassword, setSelectedStudentForPassword] = useState<Student | null>(null);
   const [passwordType, setPasswordType] = useState<'temp' | 'lms'>('temp');
   const [newPassword, setNewPassword] = useState('');
+  const [dripDisabledMap, setDripDisabledMap] = useState<Map<string, boolean>>(new Map());
+  const [togglingDrip, setTogglingDrip] = useState<Set<string>>(new Set());
   const [editDialog, setEditDialog] = useState(false);
   const [editFormData, setEditFormData] = useState({
     full_name: '',
@@ -1139,12 +1141,80 @@ export function StudentsManagement() {
         return 'N/A';
     }
   };
+  const fetchDripStatusForStudent = useCallback(async (studentRecordId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('course_enrollments')
+        .select('drip_override, drip_enabled')
+        .eq('student_id', studentRecordId)
+        .eq('status', 'active');
+      if (error) throw error;
+      const isDisabled = !!data && data.length > 0 && data.every((r: any) => r.drip_override === true && r.drip_enabled === false);
+      setDripDisabledMap(prev => {
+        const next = new Map(prev);
+        next.set(studentRecordId, isDisabled);
+        return next;
+      });
+    } catch (e) {
+      console.error('fetchDripStatusForStudent error', e);
+    }
+  }, []);
+
+  const handleToggleDripForStudent = async (student: Student) => {
+    if (!student.student_record_id) {
+      toast({ title: 'Error', description: 'Student record not found', variant: 'destructive' });
+      return;
+    }
+    const recordId = student.student_record_id;
+    const currentlyDisabled = dripDisabledMap.get(recordId) === true;
+    setTogglingDrip(prev => {
+      const n = new Set(prev);
+      n.add(recordId);
+      return n;
+    });
+    try {
+      const update = currentlyDisabled
+        ? { drip_override: false, drip_enabled: true, sequential_override: false, sequential_enabled: true }
+        : { drip_override: true, drip_enabled: false, sequential_override: true, sequential_enabled: false };
+      const { error } = await supabase
+        .from('course_enrollments')
+        .update(update)
+        .eq('student_id', recordId)
+        .eq('status', 'active');
+      if (error) throw error;
+      setDripDisabledMap(prev => {
+        const next = new Map(prev);
+        next.set(recordId, !currentlyDisabled);
+        return next;
+      });
+      toast({
+        title: currentlyDisabled ? 'Drip schedule re-enabled' : 'Drip schedule skipped',
+        description: currentlyDisabled
+          ? `${student.full_name} will now follow the drip schedule for unwatched videos.`
+          : `${student.full_name} now has immediate access to all course recordings.`,
+      });
+    } catch (e: any) {
+      console.error('handleToggleDripForStudent error', e);
+      toast({ title: 'Error', description: e?.message || 'Failed to update drip setting', variant: 'destructive' });
+    } finally {
+      setTogglingDrip(prev => {
+        const n = new Set(prev);
+        n.delete(recordId);
+        return n;
+      });
+    }
+  };
+
   const toggleRowExpansion = (studentId: string) => {
     const newExpanded = new Set(expandedRows);
     if (newExpanded.has(studentId)) {
       newExpanded.delete(studentId);
     } else {
       newExpanded.add(studentId);
+      const student = students.find(s => s.id === studentId);
+      if (student?.student_record_id && !dripDisabledMap.has(student.student_record_id)) {
+        fetchDripStatusForStudent(student.student_record_id);
+      }
     }
     setExpandedRows(newExpanded);
   };
@@ -2983,6 +3053,28 @@ export function StudentsManagement() {
                                  <BookOpen className="w-4 h-4 mr-2" />
                                  Manage Access
                                </Button>
+                               {(() => {
+                                 const recId = student.student_record_id;
+                                 const isDripDisabled = recId ? dripDisabledMap.get(recId) === true : false;
+                                 const isToggling = recId ? togglingDrip.has(recId) : false;
+                                 return (
+                                   <Button
+                                     variant="outline"
+                                     size="sm"
+                                     disabled={!recId || isToggling}
+                                     onClick={() => handleToggleDripForStudent(student)}
+                                     data-testid="drip-toggle-row"
+                                     aria-label={isDripDisabled ? 'Enable drip schedule' : 'Skip drip schedule'}
+                                     title={isDripDisabled
+                                       ? 'Drip currently OFF — click to re-enable drip schedule for unwatched videos'
+                                       : 'Skip drip — unlock all course recordings immediately'}
+                                     className={`hover-scale ${isDripDisabled ? 'hover:border-amber-300 text-amber-600' : 'hover:border-emerald-300 text-emerald-600'}`}
+                                   >
+                                     {isDripDisabled ? <Clock className="w-4 h-4 mr-2" /> : <Zap className="w-4 h-4 mr-2" />}
+                                     {isDripDisabled ? 'Enable Drip' : 'Skip Drip'}
+                                   </Button>
+                                 );
+                               })()}
                                <Button 
                                  variant="outline" 
                                  size="sm" 
