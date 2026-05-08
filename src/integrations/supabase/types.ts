@@ -3426,6 +3426,10 @@ export type Database = {
         Args: { payload: Json; template_key: string }
         Returns: string[]
       }
+      student_can_view_success_session: {
+        Args: { _batch_id: string; _batch_ids: Json; _course_id: string }
+        Returns: boolean
+      }
       sync_all_users_unlock_progress: { Args: never; Returns: string }
       sync_user_unlock_progress: {
         Args: { p_user_id: string }
