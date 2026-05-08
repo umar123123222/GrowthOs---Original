@@ -220,12 +220,14 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
 
       const now = new Date();
 
-      // Helper: a session is visible to this student if it has no batch targeting,
-      // OR explicitly includes their batch. Recordings are evergreen — no date cutoff.
+      // Strict batch targeting: a session (upcoming OR recorded) is visible only if
+      //  - it has no batch targeting (global session), OR
+      //  - the student's active batch is explicitly included in batch_ids.
+      // Students without an active batch only see global sessions.
       const isVisibleToStudent = (session: any) => {
         const batchIds: string[] = Array.isArray(session.batch_ids) ? session.batch_ids : [];
-        if (batchIds.length === 0) return true; // global session
-        if (!studentBatchId) return true; // student not in a batch — show all
+        if (batchIds.length === 0) return true; // global session — visible to everyone
+        if (!studentBatchId) return false; // targeted session, but student has no batch
         return batchIds.includes(studentBatchId);
       };
 
