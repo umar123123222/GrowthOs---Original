@@ -31,6 +31,7 @@ interface LiveSession {
   created_by: string;
   course_id?: string;
   batch_id?: string | null;
+  batch_ids?: string[] | null;
 }
 
 interface SessionAttendance {
@@ -201,16 +202,54 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     }
   }, [user?.id]);
 
+  const normalizeBatchIds = (value: unknown): string[] => {
+    if (!Array.isArray(value)) return [];
+    return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
+  };
+
   const fetchSessions = async (studentBatchId?: string) => {
     safeLogger.info('fetchSessions called');
     try {
-      const { data, error } = await supabase
+      const sessionSelect = `
+        id,
+        title,
+        description,
+        start_time,
+        end_time,
+        link,
+        status,
+        mentor_name,
+        schedule_date,
+        created_at,
+        created_by,
+        course_id,
+        batch_id,
+        batch_ids
+      `;
+
+      let sessionsQuery = supabase
         .from('success_sessions')
-        .select('*')
+        .select(sessionSelect)
         .in('status', ['upcoming', 'live', 'completed'])
-        .not('link', 'is', null)
-        .neq('link', '')
         .order('start_time', { ascending: true });
+
+      if (user?.role === 'student') {
+        const visibilityClauses = studentBatchId
+          ? [
+              `batch_id.eq.${studentBatchId}`,
+              `batch_ids.cs.${JSON.stringify([studentBatchId])}`,
+              'and(batch_id.is.null,batch_ids.is.null)',
+              'batch_ids.eq.[]',
+            ]
+          : [
+              'and(batch_id.is.null,batch_ids.is.null)',
+              'batch_ids.eq.[]',
+            ];
+
+        sessionsQuery = sessionsQuery.or(visibilityClauses.join(','));
+      }
+
+      const { data, error } = await sessionsQuery;
 
       safeLogger.info('Sessions fetched:', { count: data?.length });
       if (error) {
@@ -224,14 +263,17 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       //  - it has no batch targeting (global session), OR
       //  - the student's active batch is explicitly included in batch_ids.
       // Students without an active batch only see global sessions.
-      const isVisibleToStudent = (session: any) => {
-        const batchIds: string[] = Array.isArray(session.batch_ids) ? session.batch_ids : [];
+      const isVisibleToStudent = (session: LiveSession) => {
+        const batchIds = normalizeBatchIds(session.batch_ids);
+        const isGlobalSession = (session.batch_id == null && session.batch_ids == null) || batchIds.length === 0;
+
+        if (isGlobalSession) return true;
         if (batchIds.length === 0) return true; // global session — visible to everyone
         if (!studentBatchId) return false; // targeted session, but student has no batch
-        return batchIds.includes(studentBatchId);
+        return session.batch_id === studentBatchId || batchIds.includes(studentBatchId);
       };
 
-      const visible = (data || []).filter(isVisibleToStudent);
+      const visible = (data || []).filter(session => user?.role === 'student' ? isVisibleToStudent(session as LiveSession) : true) as LiveSession[];
 
       // Upcoming & live: session hasn't ended yet (use end_time or fallback start+1hr)
       const upcoming = visible.filter(session => {
@@ -244,7 +286,8 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       const pastSessions = visible.filter(session => {
         const start = new Date(session.start_time);
         const end = session.end_time ? new Date(session.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
-        return end < now;
+        const hasRecordingLink = typeof session.link === 'string' && session.link.trim().length > 0;
+        return end < now && hasRecordingLink;
       });
 
       setUpcomingSessions(upcoming);
