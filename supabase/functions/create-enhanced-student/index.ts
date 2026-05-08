@@ -326,6 +326,21 @@ const handler = async (req: Request): Promise<Response> => {
     let baseFeeAmount = 0;
     let selectedCourseId: string | null = course_id || null;
     let selectedPathwayId: string | null = pathway_id || null;
+
+    // Safety net: if admin chose a batch but didn't pick a pathway/course explicitly,
+    // derive them from the batch row so the student isn't left "unassigned".
+    if (batch_id && (!selectedPathwayId || !selectedCourseId)) {
+      const { data: batchRow } = await supabaseAdmin
+        .from('batches')
+        .select('pathway_id, course_id')
+        .eq('id', batch_id)
+        .maybeSingle();
+      if (batchRow) {
+        if (!selectedPathwayId && batchRow.pathway_id) selectedPathwayId = batchRow.pathway_id;
+        if (!selectedCourseId && batchRow.course_id) selectedCourseId = batchRow.course_id;
+        console.log('Derived from batch:', { selectedPathwayId, selectedCourseId });
+      }
+    }
     
     if (course_id) {
       // Use specific course

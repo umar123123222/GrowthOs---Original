@@ -67,7 +67,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
     email: '',
     phone: '',
     installment_count: 1,
-    enrollment_type: 'course' as EnrollmentType,
+    enrollment_type: 'pathway' as EnrollmentType,
     course_id: '',
     pathway_id: '',
     batch_id: '',
