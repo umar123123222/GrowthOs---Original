@@ -1,94 +1,59 @@
-# Diagnose: Why does asadali4692@gmail.com see all recordings unlocked?
+## Diagnosis: mrowais014@gmail.com
 
-I can't query the database from plan mode (read-only), so I need to run diagnostics in build mode. Below are the most likely root causes based on a code review of the unlock pipeline, plus the exact checks I'll run to identify which one applies to this user.
+**Student state**
+- Enrolled in pathway `a16b8328` via batch **287** (start date **2026-04-03**).
+- The "Freelancing with AI" course in question (`915a661b`) is part of that pathway (no direct course enrollment).
+- Today is 2026-05-08.
 
-## Most likely causes (ranked)
+**What the RPC returns for the locked Chapter 5 lessons**
+| # | Title | drip_days | Computed unlock | Displayed |
+|---|---|---|---|---|
+| 3 | Fiverr - Ranking Tips & Tricks | 93 | 2026-07-05 | "Unlocks 7/5/2026" |
+| 4 | Fiverr - Communication with client | 94 | 2026-07-06 | "Unlocks 7/6/2026" |
+| 5 | Fiverr - Conclude.mp4 | 95 | 2026-07-07 | "Unlocks 7/7/2026" |
 
-Based on `useCourseRecordings.ts`, `usePathwayGroupedRecordings.ts`, the `get_course_sequential_unlock_status` RPC, and the access-override system documented in `features/access-settings-overrides`:
+`get_course_sequential_unlock_status` calculates `drip_unlock_date = batch.start_date + drip_days`, i.e. **April 3 + 93 days = July 5, 2026**.
 
-1. **Per-student drip override is OFF**
-   The "Manage Access" dialog (`src/components/admin/ManageAccessDialog.tsx`) lets admins toggle `drip_enabled` / `sequential_unlock_enabled` on the student's `course_enrollments` row. Student-level overrides take highest priority over course/pathway/company defaults. If either was unchecked for this user, all content unlocks immediately.
+**Root cause (two issues)**
 
-2. **Course/pathway has drip disabled at source**
-   The course or pathway this student is enrolled in may itself have `drip_enabled = false` or no `drip_days` set on its lessons (everything defaults to day 0).
+1. **Drip schedule is absolute pathway-wide, not per-course.** Every lesson in the Freelancing course has `drip_days` 87…106 (course #1 of pathway uses 1…86, etc.). So drip is a single linear "day N from batch start" counter across all courses in the pathway. There is **no course-level offset column** (`courses`, `pathway_courses`, `batch_courses` have no `drip_offset_days` / `start_day` column), so the RPC has no way to anchor a course to "the day this course is supposed to start."
+2. **UI date format is ambiguous.** `RecordingRow.tsx` uses `new Date(...).toLocaleDateString()` (no locale, no options). In the user's browser this renders as `7/5/2026` (M/D/Y), which is easily misread as 7 May (D/M/Y). The student/admin reading the screenshot believed the unlock was "yesterday" (May 7) when the system actually scheduled it for **July 5**.
 
-3. **`recording_views` already marked watched for everything**
-   Per the `drip-lock-prevention-on-batch-assignment` rule, any recording marked watched stays permanently unlocked. If this account was used to "watch" everything before drip was applied, those rows now bypass drip forever.
+So technically the lessons are NOT overdue — they are scheduled correctly per the configured `drip_days`. The two real problems are:
 
-4. **No batch assigned + old `created_at`**
-   When a student has no batch, the system uses their LMS access date (account creation) as the drip anchor. If this account is old, every drip offset has elapsed and everything is unlocked legitimately.
+- (A) The displayed date is locale-ambiguous and is being misread.
+- (B) If the intent is "Chapter 5 of Freelancing should unlock about a month after enrollment, not 3 months", the `drip_days` values themselves need to be corrected (or a course-level offset feature needs to be added).
 
-5. **Frontend `fees_not_cleared` override unlocking everything sequentially**
-   The frontend in `useCourseRecordings.ts` (lines 195-222) overrides `fees_not_cleared` locks for any student with `lms_status = 'active'`. Combined with auto-marking videos as watched, this can cascade-unlock the whole course.
+**Project-wide check**
+- 658 / 667 students have an active `course_enrollments` row, so the RPC's batch-anchored drip path applies to almost everyone.
+- 9 students have **no** `course_enrollments` at all (asaad_1995, aftab.gsk, aqibh2909, coolghazi2012, snapshop1980, syed.jaffery90, shayanbilal2112000, modernplastic.ash, abdulrahmankhi917). For them the RPC falls back to `students.enrollment_date` as the drip anchor and `v_has_course_access` is **false**, so every lesson shows `not_started_yet`. They effectively cannot see any content. This is a separate bug worth flagging.
 
-6. **Role isn't actually `student`**
-   If `user_roles` has admin/mentor/superadmin for this account, RLS-based course filtering and unlock RPC behave differently.
+---
 
-## Diagnostics to run (build mode)
+## Proposed fix (two parts)
 
-I'll execute a single SQL diagnostic that pulls everything needed to pinpoint the cause:
+### Part 1 — Unambiguous date display (frontend only)
+In `src/components/videos/RecordingRow.tsx`, change the lock label from
+`new Date(d).toLocaleDateString()` to a format that cannot be misread, e.g. `"Unlocks 5 Jul 2026"` using `toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })`. Apply the same to any other place that prints `dripUnlockDate` (`StudentDashboard.tsx`, `SequentialUnlockAdmin.tsx`, `assignments/StudentAssignmentList.tsx`, `superadmin/RecordingsManagement.tsx`).
 
-```sql
--- 1. User identity, status, batch, role
-SELECT u.id, u.email, u.full_name, u.role, u.lms_status,
-       u.batch_id, u.created_at, u.lms_user_id,
-       b.name AS batch_name, b.start_date AS batch_start
-FROM users u
-LEFT JOIN batches b ON b.id = u.batch_id
-WHERE u.email = 'asadali4692@gmail.com';
+This alone resolves the "yesterday vs July" confusion in the screenshot.
 
-SELECT role FROM user_roles WHERE user_id = (SELECT id FROM users WHERE email='asadali4692@gmail.com');
+### Part 2 — Confirm the drip schedule intent (needs your input)
+Before changing data or the RPC, please confirm which of these matches your intent so I can plan the right migration:
 
--- 2. All enrollments with override flags
-SELECT ce.course_id, c.title AS course_title, ce.pathway_id, p.title AS pathway_title,
-       ce.status, ce.enrolled_at, ce.access_expires_at,
-       ce.drip_enabled, ce.sequential_unlock_enabled
-FROM course_enrollments ce
-LEFT JOIN courses c ON c.id = ce.course_id
-LEFT JOIN pathways p ON p.id = ce.pathway_id
-WHERE ce.user_id = (SELECT id FROM users WHERE email='asadali4692@gmail.com');
+- **Option A — drip_days are correct as-is.** Chapter 5 of Freelancing is genuinely meant to unlock in early July for a batch that started Apr 3. No data change needed; only Part 1 applies.
+- **Option B — drip_days should be reset per course** (lesson 1 of every course = day 1 of that course). I will add a `drip_offset_days` column on `pathway_courses` (and/or `batch_courses`), backfill it from existing pathway sequencing, and update `get_course_sequential_unlock_status` to use `batch_start + course.offset + lesson.drip_days`.
+- **Option C — drip_days values are wrong and need to be re-numbered** (e.g. each course should start at day 1). I will rewrite `available_lessons.drip_days` per course.
 
--- 3. Course/pathway-level drip settings
-SELECT id, title, drip_enabled, sequential_unlock_enabled FROM courses
-WHERE id IN (SELECT course_id FROM course_enrollments
-             WHERE user_id=(SELECT id FROM users WHERE email='asadali4692@gmail.com'));
+### Part 3 — Fix the 9 orphaned students
+Either backfill `course_enrollments` for the 9 students above (preferred) or extend the RPC's fallback to grant pathway access via `students.enrollment_date` when no `course_enrollments` row exists. I'll handle this as a separate migration once you confirm.
 
--- 4. Lesson drip_days for the enrolled course(s)
-SELECT al.id, al.recording_title, al.sequence_order, al.drip_days, m.title AS module
-FROM available_lessons al JOIN modules m ON m.id = al.module
-WHERE m.course_id IN (SELECT course_id FROM course_enrollments
-                      WHERE user_id=(SELECT id FROM users WHERE email='asadali4692@gmail.com'))
-ORDER BY m.order, al.sequence_order;
+---
 
--- 5. Recording views (anything marked watched bypasses drip forever)
-SELECT COUNT(*) FILTER (WHERE watched) AS watched_count, COUNT(*) AS total_views
-FROM recording_views WHERE user_id=(SELECT id FROM users WHERE email='asadali4692@gmail.com');
+## Files / objects affected
+- `src/components/videos/RecordingRow.tsx` (and 3-4 other files showing `dripUnlockDate`) — date format change.
+- DB function `get_course_sequential_unlock_status` — only if Option B.
+- `pathway_courses` / `available_lessons` data — only if Option B or C.
+- `course_enrollments` — backfill for the 9 orphaned students (Part 3).
 
--- 6. Run the actual RPC the frontend uses
-SELECT * FROM get_course_sequential_unlock_status(
-  (SELECT id FROM users WHERE email='asadali4692@gmail.com'),
-  (SELECT course_id FROM course_enrollments
-   WHERE user_id=(SELECT id FROM users WHERE email='asadali4692@gmail.com') LIMIT 1)
-);
-
--- 7. Company-wide defaults
-SELECT drip_enabled, sequential_unlock_enabled FROM company_settings LIMIT 1;
-```
-
-The combination of these results pinpoints which layer (student override / course setting / lesson drip_days / batch anchor / watched flag) is letting this user through.
-
-## After diagnosis
-
-Once we know the cause, the fix is one of:
-
-- **If student override is off**: re-enable drip for this enrollment in the Manage Access dialog (no code change).
-- **If lessons have no `drip_days`**: bulk-set drip in the Content Timeline dialog (no code change).
-- **If `recording_views` was pre-watched incorrectly**: clear the spurious `watched=true` rows for this user.
-- **If anchor date is too old (no batch)**: assign a batch with a recent `start_date`, OR change drip anchor logic.
-- **If RPC is misbehaving**: patch `get_course_sequential_unlock_status` and/or the frontend override.
-
-I won't change any code or data until we see the diagnostics and you confirm which fix to apply.
-
-## Approve to proceed
-
-Approving this plan switches me to build mode so I can run the SQL above and report back with the exact root cause for this account.
+Please pick A / B / C for the drip schedule and confirm whether to backfill the 9 orphan students, and I'll write the migration + code edits.
