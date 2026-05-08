@@ -201,7 +201,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     }
   }, [user?.id]);
 
-  const fetchSessions = async (enrolledAt?: string) => {
+  const fetchSessions = async (studentBatchId?: string) => {
     safeLogger.info('fetchSessions called');
     try {
       const { data, error } = await supabase
@@ -217,25 +217,34 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         safeLogger.error('Supabase error:', error);
         throw error;
       }
-      
+
       const now = new Date();
-      const enrolledDate = enrolledAt ? new Date(enrolledAt) : undefined;
+
+      // Helper: a session is visible to this student if it has no batch targeting,
+      // OR explicitly includes their batch. Recordings are evergreen — no date cutoff.
+      const isVisibleToStudent = (session: any) => {
+        const batchIds: string[] = Array.isArray(session.batch_ids) ? session.batch_ids : [];
+        if (batchIds.length === 0) return true; // global session
+        if (!studentBatchId) return true; // student not in a batch — show all
+        return batchIds.includes(studentBatchId);
+      };
+
+      const visible = (data || []).filter(isVisibleToStudent);
 
       // Upcoming & live: session hasn't ended yet (use end_time or fallback start+1hr)
-      const upcoming = (data || []).filter(session => {
+      const upcoming = visible.filter(session => {
         const start = new Date(session.start_time);
         const end = session.end_time ? new Date(session.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
         return end > now;
       });
-      // Past: session has ended and is after enrollment date
-      const pastSessions = (data || []).filter(session => {
+      // Past recordings: session has ended. No enrollment-date cutoff —
+      // recordings are evergreen learning content for all enrolled students.
+      const pastSessions = visible.filter(session => {
         const start = new Date(session.start_time);
         const end = session.end_time ? new Date(session.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
-        if (end >= now) return false;
-        if (enrolledDate && start < enrolledDate) return false;
-        return true;
+        return end < now;
       });
-      
+
       setUpcomingSessions(upcoming);
       setRecordedSessions(pastSessions);
     } catch (error) {
