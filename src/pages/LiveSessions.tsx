@@ -266,23 +266,15 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       const { data: studentData } = await supabase
         .from('students').select('id').eq('user_id', user.id).maybeSingle();
 
-      let earliestCutoffDate: string | undefined;
+      let studentBatchId: string | undefined;
       if (studentData?.id) {
-        // Fetch enrollments with batch info to determine the correct cutoff
         const { data: enrollments } = await supabase
-          .from('course_enrollments').select('enrolled_at, batch_id')
+          .from('course_enrollments').select('batch_id')
           .eq('student_id', studentData.id).eq('status', 'active')
+          .not('batch_id', 'is', null)
           .order('enrolled_at', { ascending: true }).limit(1);
-        
-        const enrollment = enrollments?.[0];
-        if (enrollment?.batch_id) {
-          // If student is in a batch, use batch start_date so they see all sessions since batch started
-          const { data: batchData } = await supabase
-            .from('batches').select('start_date').eq('id', enrollment.batch_id).single();
-          earliestCutoffDate = batchData?.start_date || enrollment.enrolled_at;
-        } else {
-          earliestCutoffDate = enrollment?.enrolled_at;
-        }
+
+        studentBatchId = enrollments?.[0]?.batch_id || undefined;
       }
 
       const { data: attendanceData, error: attendanceError } = await supabase
@@ -295,7 +287,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         setAttendance(attendanceData || []);
       }
       
-      await fetchSessions(earliestCutoffDate);
+      await fetchSessions(studentBatchId);
     } catch (error) {
       safeLogger.error('Error fetching attendance:', error);
     } finally {
