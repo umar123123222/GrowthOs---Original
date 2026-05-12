@@ -76,6 +76,11 @@ const NavigationItems = memo(({
       label: "Teams",
       roles: ['admin', 'superadmin']
     }, {
+      to: "/resources",
+      icon: FolderOpen,
+      label: "Resources",
+      roles: ['student']
+    }, {
       to: "/support",
       icon: MessageSquare,
       label: "Support",
