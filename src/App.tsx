@@ -99,6 +99,7 @@ const DevSendNotification = lazy(() => import("./pages/DevSendNotification"));
 const Catalog = lazy(() => import("./pages/Catalog"));
 const Certificates = lazy(() => import("./pages/Certificates"));
 const SupportDetails = lazy(() => import("./pages/SupportDetails"));
+const Resources = lazy(() => import("./pages/Resources"));
 
 
 // Loading component
