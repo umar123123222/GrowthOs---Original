@@ -1975,6 +1975,124 @@ export type Database = {
           },
         ]
       }
+      resource_audiences: {
+        Row: {
+          audience_type: string
+          created_at: string
+          id: string
+          resource_id: string
+          target_id: string | null
+        }
+        Insert: {
+          audience_type: string
+          created_at?: string
+          id?: string
+          resource_id: string
+          target_id?: string | null
+        }
+        Update: {
+          audience_type?: string
+          created_at?: string
+          id?: string
+          resource_id?: string
+          target_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resource_audiences_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      resource_sections: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      resources: {
+        Row: {
+          content: Json
+          content_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          section_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          content_type: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          section_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          section_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "resources_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "resource_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scheduled_suspensions: {
         Row: {
           auto_unsuspend_date: string | null
@@ -3368,6 +3486,7 @@ export type Database = {
         Args: { _recording_id: string; _user_id: string }
         Returns: boolean
       }
+      lms_status_active: { Args: { _user_id: string }; Returns: boolean }
       log_data_access_attempt: {
         Args: {
           operation: string
@@ -3443,6 +3562,10 @@ export type Database = {
       update_course_progress: {
         Args: { p_course_id: string; p_student_id: string }
         Returns: undefined
+      }
+      user_can_see_resource: {
+        Args: { _resource_id: string; _user_id: string }
+        Returns: boolean
       }
       validate_questionnaire_structure: {
         Args: { questionnaire_data: Json }
