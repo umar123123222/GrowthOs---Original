@@ -79,6 +79,8 @@ export default function SuperadminDashboard() {
         return <PathwayManagement />;
       case 'batches':
         return <BatchManagement />;
+      case 'resources':
+        return <ResourcesManagement />;
       default:
         return <DashboardContent />;
     }
