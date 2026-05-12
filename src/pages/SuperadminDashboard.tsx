@@ -25,6 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { ENV_CONFIG } from '@/lib/env-config';
 import { ContentScheduleCalendar } from '@/components/admin/ContentScheduleCalendar';
+import ResourcesManagement from '@/pages/admin/ResourcesManagement';
 interface DashboardStats {
   totalAdmins: number;
   totalSuperadmins: number;
