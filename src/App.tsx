@@ -281,6 +281,7 @@ const App = () => {
                       <Route path="connect" element={<Connect />} />
                       <Route path="profile" element={<Profile />} />
                       <Route path="notifications" element={<Notifications />} />
+                      <Route path="resources" element={<Resources />} />
                       <Route path="teams" element={
                         <RoleGuard allowedRoles={["admin", "superadmin"]}>
                           <Teams />
