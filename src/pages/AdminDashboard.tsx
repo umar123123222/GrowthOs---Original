@@ -26,6 +26,7 @@ import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 import { formatCurrency } from '@/utils/currencyFormatter';
 import { CourseManagement } from '@/components/superadmin/CourseManagement';
 import { ContentScheduleCalendar } from '@/components/admin/ContentScheduleCalendar';
+import ResourcesManagement from '@/pages/admin/ResourcesManagement';
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'dashboard';
@@ -67,6 +68,8 @@ export default function AdminDashboard() {
         return <StudentAnalytics />;
       case 'batches':
         return <BatchManagement />;
+      case 'resources':
+        return <ResourcesManagement />;
       default:
         return <DashboardContent />;
     }

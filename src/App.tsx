@@ -99,6 +99,7 @@ const DevSendNotification = lazy(() => import("./pages/DevSendNotification"));
 const Catalog = lazy(() => import("./pages/Catalog"));
 const Certificates = lazy(() => import("./pages/Certificates"));
 const SupportDetails = lazy(() => import("./pages/SupportDetails"));
+const Resources = lazy(() => import("./pages/Resources"));
 
 
 // Loading component
@@ -280,6 +281,7 @@ const App = () => {
                       <Route path="connect" element={<Connect />} />
                       <Route path="profile" element={<Profile />} />
                       <Route path="notifications" element={<Notifications />} />
+                      <Route path="resources" element={<Resources />} />
                       <Route path="teams" element={
                         <RoleGuard allowedRoles={["admin", "superadmin"]}>
                           <Teams />

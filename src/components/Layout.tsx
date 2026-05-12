@@ -5,7 +5,7 @@ import SuccessPartner from "@/components/SuccessPartner";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route, LayoutGrid, Lock, Layers, Sun, Moon } from "lucide-react";
+import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route, LayoutGrid, Lock, Layers, Sun, Moon, FolderOpen } from "lucide-react";
 const MetaIcon = Facebook;
 import { useTheme } from "next-themes";
 import NotificationDropdown from "./NotificationDropdown";
@@ -75,6 +75,11 @@ const NavigationItems = memo(({
       icon: Users,
       label: "Teams",
       roles: ['admin', 'superadmin']
+    }, {
+      to: "/resources",
+      icon: FolderOpen,
+      label: "Resources",
+      roles: ['student']
     }, {
       to: "/support",
       icon: MessageSquare,
@@ -474,6 +479,10 @@ const Layout = memo(({
         href: "/superadmin?tab=batches",
         icon: Layers
       }, {
+        name: "Resources",
+        href: "/superadmin?tab=resources",
+        icon: FolderOpen
+      }, {
         name: "Students",
         href: "/superadmin?tab=students",
         icon: Users
@@ -548,6 +557,10 @@ const Layout = memo(({
         name: "Batches",
         href: "/admin?tab=batches",
         icon: Layers
+      }, {
+        name: "Resources",
+        href: "/admin?tab=resources",
+        icon: FolderOpen
       }, {
         name: "Students",
         href: "/admin?tab=students",
