@@ -553,6 +553,10 @@ const Layout = memo(({
         href: "/admin?tab=batches",
         icon: Layers
       }, {
+        name: "Resources",
+        href: "/admin?tab=resources",
+        icon: FolderOpen
+      }, {
         name: "Students",
         href: "/admin?tab=students",
         icon: Users
