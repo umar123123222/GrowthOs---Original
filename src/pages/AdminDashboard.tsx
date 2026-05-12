@@ -68,6 +68,8 @@ export default function AdminDashboard() {
         return <StudentAnalytics />;
       case 'batches':
         return <BatchManagement />;
+      case 'resources':
+        return <ResourcesManagement />;
       default:
         return <DashboardContent />;
     }
