@@ -304,12 +304,13 @@ serve(async (req) => {
           .update({ status: 'pending' })
           .eq('id', invoice.id);
 
+        const studentEmail = invoice.students.users.email;
+        const studentName = invoice.students.users.full_name;
+        const studentDisplayId = invoice.students.student_id || invoice.students.id;
+        const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
+
         // Send branded issue email
         try {
-          const studentEmail = invoice.students.users.email;
-          const studentName = invoice.students.users.full_name;
-          const studentDisplayId = invoice.students.student_id || invoice.students.id;
-          const dueDate = new Date(invoice.extended_due_date || invoice.due_date).toLocaleDateString();
           const enrollmentName = invoice.course_id
             ? courseMap.get(invoice.course_id) || 'Course'
             : invoice.pathway_id
