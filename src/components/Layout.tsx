@@ -701,6 +701,10 @@ const Layout = memo(({
       href: "/live-sessions",
       icon: Calendar
     }, {
+      name: "Resources",
+      href: "/resources",
+      icon: FolderOpen
+    }, {
       name: "Connect Accounts",
       href: "/connect",
       icon: Activity
