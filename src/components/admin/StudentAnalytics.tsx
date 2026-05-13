@@ -123,22 +123,12 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
       } = await supabase.from('submissions').select('student_id, assignment_id, status, submitted_at');
       if (submissionsError) throw submissionsError;
 
-      // Fetch recent activity
-      const {
-        data: recentActivity,
-        error: activityError
-      } = await supabase.from('user_activity_logs').select('user_id, created_at').order('created_at', {
-        ascending: false
-      });
-      if (activityError) throw activityError;
-
-      // Process student analytics
+      // Process student analytics (use users.last_active_at instead of scanning user_activity_logs which is too large to query unfiltered)
       const processedStudents = studentsData?.map(student => {
         const studentViews = recordingViews?.filter(view => view.user_id === student.id) || [];
         const watchedVideos = studentViews.filter(view => view.watched).length;
         const studentSubmissions = submissions?.filter(sub => sub.student_id === student.id) || [];
         const completedAssignments = studentSubmissions.filter(sub => sub.status === 'approved').length;
-        const lastActivity = recentActivity?.find(activity => activity.user_id === student.id);
         const progress = Math.round((watchedVideos / (totalRecordings?.length || 1) * 0.6 + completedAssignments / (assignments?.length || 1) * 0.4) * 100);
         return {
           id: student.id,
@@ -150,7 +140,7 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
           videos_total: totalRecordings?.length || 0,
           assignments_completed: completedAssignments,
           assignments_total: assignments?.length || 0,
-          last_activity: student.last_active_at || lastActivity?.created_at || '',
+          last_activity: student.last_active_at || '',
           progress_percentage: progress,
           current_module: 'Module 1' // This would need proper module tracking
         };
