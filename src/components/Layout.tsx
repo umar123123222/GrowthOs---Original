@@ -491,6 +491,10 @@ const Layout = memo(({
         href: "/superadmin?tab=analytics",
         icon: BarChart3
       }, {
+        name: "Recovery",
+        href: "/superadmin?tab=recovery",
+        icon: LifeBuoy
+      }, {
         name: "Support",
         href: "/superadmin?tab=support",
         icon: MessageSquare
