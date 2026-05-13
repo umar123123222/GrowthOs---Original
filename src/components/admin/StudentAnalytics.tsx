@@ -95,12 +95,31 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
         `).eq('role', 'student');
       if (studentsError) throw studentsError;
 
-      // Fetch recording views for each student
-      const {
-        data: recordingViews,
-        error: viewsError
-      } = await supabase.from('recording_views').select('user_id, recording_id, watched, watched_at');
-      if (viewsError) throw viewsError;
+      // Helper to fetch ALL rows (Supabase caps at 1000 per request)
+      const fetchAll = async <T,>(table: string, columns: string, filter?: (q: any) => any): Promise<T[]> => {
+        const pageSize = 1000;
+        let from = 0;
+        const all: T[] = [];
+        // Loop until fewer than pageSize rows are returned
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          let q: any = supabase.from(table as any).select(columns).range(from, from + pageSize - 1);
+          if (filter) q = filter(q);
+          const { data, error } = await q;
+          if (error) throw error;
+          const rows = (data || []) as T[];
+          all.push(...rows);
+          if (rows.length < pageSize) break;
+          from += pageSize;
+        }
+        return all;
+      };
+
+      // Fetch recording views (paginated — table can exceed 1000 rows)
+      const recordingViews = await fetchAll<{ user_id: string; recording_id: string; watched: boolean; watched_at: string | null }>(
+        'recording_views',
+        'user_id, recording_id, watched, watched_at'
+      );
 
       // Fetch total available recordings
       const {
@@ -116,12 +135,11 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
       } = await supabase.from('assignments').select('id');
       if (assignmentsError) throw assignmentsError;
 
-      // Fetch submissions for each student
-      const {
-        data: submissions,
-        error: submissionsError
-      } = await supabase.from('submissions').select('student_id, assignment_id, status, submitted_at');
-      if (submissionsError) throw submissionsError;
+      // Fetch submissions (paginated — table can exceed 1000 rows)
+      const submissions = await fetchAll<{ student_id: string; assignment_id: string; status: string; submitted_at: string | null }>(
+        'submissions',
+        'student_id, assignment_id, status, submitted_at'
+      );
 
       // Process student analytics (use users.last_active_at instead of scanning user_activity_logs which is too large to query unfiltered)
       const processedStudents = studentsData?.map(student => {
