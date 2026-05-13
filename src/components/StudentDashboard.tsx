@@ -44,12 +44,15 @@ import {
   Video
 } from 'lucide-react';
 
+type AssignmentStatus = 'not_submitted' | 'pending_review' | 'needs_revision' | 'approved';
+
 interface Assignment {
   id: string;
   name: string;
   description?: string;
   due_days?: number;
   created_at?: string;
+  status?: AssignmentStatus;
 }
 
 interface Milestone {
@@ -102,6 +105,7 @@ export function StudentDashboard() {
   const [dreamGoal, setDreamGoal] = useState<string>('');
   const [courseProgress, setCourseProgress] = useState(0);
   const [nextAssignment, setNextAssignment] = useState<Assignment | null>(null);
+  const [pendingItems, setPendingItems] = useState<Assignment[]>([]);
   const [assignmentDueStatus, setAssignmentDueStatus] = useState<'future' | 'overdue'>('future');
   const [shopifyConnected, setShopifyConnected] = useState(false);
   const [metaConnected, setMetaConnected] = useState(false);
@@ -339,7 +343,9 @@ export function StudentDashboard() {
         }
       }
 
-      // Fetch next assignment - only show assignments whose linked recording is unlocked
+      // Fetch assignments along with the student's latest submission status per assignment.
+      // We DO NOT hide assignments that are submitted-but-not-yet-approved — those should
+      // surface as "In review" / "Needs revision" so the student knows where things stand.
       const { data: assignments } = await supabase
         .from('assignments')
         .select('*')
@@ -347,33 +353,64 @@ export function StudentDashboard() {
 
       const { data: submissions } = await supabase
         .from('submissions')
-        .select('assignment_id')
-        .eq('student_id', user.id);
+        .select('assignment_id, status, version, created_at')
+        .eq('student_id', user.id)
+        .order('version', { ascending: false })
+        .order('created_at', { ascending: false });
 
       // Fetch recordings to check assignment-recording links
       const { data: assignmentRecordings } = await supabase
         .from('available_lessons')
         .select('id, assignment_id');
 
-      const submittedIds = submissions?.map(s => s.assignment_id) || [];
-      
-      // Build a set of unlocked recording IDs from the already-loaded recordings data
+      // Latest submission per assignment (already sorted desc above)
+      const latestByAssignment = new Map<string, { status: string }>();
+      for (const s of submissions || []) {
+        if (!latestByAssignment.has(s.assignment_id)) {
+          latestByAssignment.set(s.assignment_id, { status: s.status });
+        }
+      }
+
+      // Build a set of unlocked recording IDs from the already-loaded recordings data.
+      // fetchDashboardData is gated on `!loading` (which includes recordingsLoading), so by
+      // the time we get here the recordings array reflects the actual unlock state.
       const unlockedRecordingIds = new Set(
         (recordings || []).filter(r => r.isUnlocked).map(r => r.id)
       );
-      
-      const pendingAssignments = (assignments || []).filter(a => {
-        if (submittedIds.includes(a.id)) return false;
-        // Check if the linked recording is unlocked
-        const linkedRecording = assignmentRecordings?.find(r => r.assignment_id === a.id);
-        if (linkedRecording && !unlockedRecordingIds.has(linkedRecording.id)) return false;
-        return true;
-      });
-      
-      if (pendingAssignments.length > 0) {
-        setNextAssignment(pendingAssignments[0]);
-        const dueDate = new Date(pendingAssignments[0].created_at || '');
-        dueDate.setDate(dueDate.getDate() + (pendingAssignments[0].due_days || 7));
+
+      const classified: Assignment[] = (assignments || [])
+        .map(a => {
+          const linkedRecording = assignmentRecordings?.find(r => r.assignment_id === a.id);
+          // Hide assignments whose linked recording isn't unlocked yet
+          if (linkedRecording && !unlockedRecordingIds.has(linkedRecording.id)) return null;
+
+          const sub = latestByAssignment.get(a.id);
+          let status: AssignmentStatus = 'not_submitted';
+          if (sub) {
+            if (sub.status === 'approved') status = 'approved';
+            else if (sub.status === 'rejected' || sub.status === 'needs_revision') status = 'needs_revision';
+            else status = 'pending_review'; // submitted, pending, in_review, etc.
+          }
+          return { ...a, status } as Assignment;
+        })
+        .filter((a): a is Assignment => a !== null && a.status !== 'approved');
+
+      // Sort: needs_revision (action needed) → not_submitted → pending_review (waiting on mentor)
+      const order: Record<AssignmentStatus, number> = {
+        needs_revision: 0,
+        not_submitted: 1,
+        pending_review: 2,
+        approved: 3,
+      };
+      classified.sort((a, b) => order[a.status!] - order[b.status!]);
+
+      setPendingItems(classified.slice(0, 3));
+
+      if (classified.length > 0) {
+        const first = classified[0];
+        setNextAssignment(first);
+        const dueDate = new Date(first.created_at || '');
+        dueDate.setDate(dueDate.getDate() + (first.due_days || 7));
         setAssignmentDueStatus(new Date() > dueDate ? 'overdue' : 'future');
       } else {
         setNextAssignment(null);
@@ -885,33 +922,36 @@ export function StudentDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
-            {nextAssignment ? (
+            {pendingItems.length > 0 ? (
               <div className="space-y-3">
-                <div>
-                  <h3 className="font-normal text-foreground mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors duration-300">
-                    {nextAssignment.name}
-                  </h3>
-                  <div className="flex items-center gap-2 text-xs">
-                    {assignmentDueStatus === 'overdue' ? (
-                      <AlertCircle className="w-3 h-3 text-red-500 group-hover:animate-bounce" />
-                    ) : (
-                      <Clock className="w-3 h-3 text-orange-500 group-hover:animate-spin" />
-                    )}
-                    <span className={`font-normal transition-all duration-300 ${
-                      assignmentDueStatus === 'overdue' ? 'text-red-500 group-hover:animate-pulse' : 'text-orange-500'
-                    }`}>
-                      {assignmentDueStatus === 'overdue' ? 'Past Due' : 'Due Soon'}
-                    </span>
-                  </div>
-                </div>
-                <Button 
+                <ul className="space-y-2">
+                  {pendingItems.map((item) => {
+                    const statusMeta: Record<AssignmentStatus, { label: string; cls: string }> = {
+                      not_submitted: { label: 'Not submitted', cls: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+                      pending_review: { label: 'In review', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+                      needs_revision: { label: 'Needs revision', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+                      approved: { label: 'Approved', cls: 'bg-green-100 text-green-700' },
+                    };
+                    const meta = statusMeta[item.status || 'not_submitted'];
+                    return (
+                      <li key={item.id} className="flex items-start justify-between gap-2 p-2 rounded-md bg-muted/30">
+                        <span className="text-xs font-normal text-foreground line-clamp-2 flex-1">{item.name}</span>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${meta.cls}`}>
+                          {meta.label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <Button
                   onClick={handleSubmitAssignment}
-                  className="w-full text-sm font-normal group-hover:scale-105 transition-all duration-300 relative overflow-hidden"
-                  variant={assignmentDueStatus === 'overdue' ? 'destructive' : 'default'}
+                  className="w-full text-sm font-normal group-hover:scale-105 transition-all duration-300"
+                  variant={pendingItems.some(i => i.status === 'needs_revision') ? 'destructive' : 'default'}
                   size="sm"
                 >
-                  <span className="relative z-10">Submit Now</span>
-                  <div className="absolute inset-0 bg-white/20 transform -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
+                  <span className="relative z-10">
+                    {pendingItems.every(i => i.status === 'pending_review') ? 'View Submissions' : 'Open Assignments'}
+                  </span>
                 </Button>
               </div>
             ) : (
