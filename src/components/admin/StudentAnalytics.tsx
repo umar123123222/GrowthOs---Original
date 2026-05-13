@@ -140,7 +140,7 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
           videos_total: totalRecordings?.length || 0,
           assignments_completed: completedAssignments,
           assignments_total: assignments?.length || 0,
-          last_activity: student.last_active_at || lastActivity?.created_at || '',
+          last_activity: student.last_active_at || '',
           progress_percentage: progress,
           current_module: 'Module 1' // This would need proper module tracking
         };
