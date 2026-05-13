@@ -922,33 +922,36 @@ export function StudentDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent className="relative z-10">
-            {nextAssignment ? (
+            {pendingItems.length > 0 ? (
               <div className="space-y-3">
-                <div>
-                  <h3 className="font-normal text-foreground mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors duration-300">
-                    {nextAssignment.name}
-                  </h3>
-                  <div className="flex items-center gap-2 text-xs">
-                    {assignmentDueStatus === 'overdue' ? (
-                      <AlertCircle className="w-3 h-3 text-red-500 group-hover:animate-bounce" />
-                    ) : (
-                      <Clock className="w-3 h-3 text-orange-500 group-hover:animate-spin" />
-                    )}
-                    <span className={`font-normal transition-all duration-300 ${
-                      assignmentDueStatus === 'overdue' ? 'text-red-500 group-hover:animate-pulse' : 'text-orange-500'
-                    }`}>
-                      {assignmentDueStatus === 'overdue' ? 'Past Due' : 'Due Soon'}
-                    </span>
-                  </div>
-                </div>
-                <Button 
+                <ul className="space-y-2">
+                  {pendingItems.map((item) => {
+                    const statusMeta: Record<AssignmentStatus, { label: string; cls: string }> = {
+                      not_submitted: { label: 'Not submitted', cls: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' },
+                      pending_review: { label: 'In review', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' },
+                      needs_revision: { label: 'Needs revision', cls: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' },
+                      approved: { label: 'Approved', cls: 'bg-green-100 text-green-700' },
+                    };
+                    const meta = statusMeta[item.status || 'not_submitted'];
+                    return (
+                      <li key={item.id} className="flex items-start justify-between gap-2 p-2 rounded-md bg-muted/30">
+                        <span className="text-xs font-normal text-foreground line-clamp-2 flex-1">{item.name}</span>
+                        <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full whitespace-nowrap ${meta.cls}`}>
+                          {meta.label}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <Button
                   onClick={handleSubmitAssignment}
-                  className="w-full text-sm font-normal group-hover:scale-105 transition-all duration-300 relative overflow-hidden"
-                  variant={assignmentDueStatus === 'overdue' ? 'destructive' : 'default'}
+                  className="w-full text-sm font-normal group-hover:scale-105 transition-all duration-300"
+                  variant={pendingItems.some(i => i.status === 'needs_revision') ? 'destructive' : 'default'}
                   size="sm"
                 >
-                  <span className="relative z-10">Submit Now</span>
-                  <div className="absolute inset-0 bg-white/20 transform -translate-x-full group-hover:translate-x-full transition-transform duration-500"></div>
+                  <span className="relative z-10">
+                    {pendingItems.every(i => i.status === 'pending_review') ? 'View Submissions' : 'Open Assignments'}
+                  </span>
                 </Button>
               </div>
             ) : (
