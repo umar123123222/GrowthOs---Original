@@ -72,6 +72,8 @@ export default function SuperadminDashboard() {
         return <MilestoneManagement />;
       case 'analytics':
         return <StudentAnalytics />;
+      case 'recovery':
+        return <RecoveryManagement />;
       case 'error-logs':
         return <ErrorLogsManagement />;
       case 'courses':
