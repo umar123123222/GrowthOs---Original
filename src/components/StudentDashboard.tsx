@@ -343,7 +343,9 @@ export function StudentDashboard() {
         }
       }
 
-      // Fetch next assignment - only show assignments whose linked recording is unlocked
+      // Fetch assignments along with the student's latest submission status per assignment.
+      // We DO NOT hide assignments that are submitted-but-not-yet-approved — those should
+      // surface as "In review" / "Needs revision" so the student knows where things stand.
       const { data: assignments } = await supabase
         .from('assignments')
         .select('*')
@@ -351,33 +353,64 @@ export function StudentDashboard() {
 
       const { data: submissions } = await supabase
         .from('submissions')
-        .select('assignment_id')
-        .eq('student_id', user.id);
+        .select('assignment_id, status, version, created_at')
+        .eq('student_id', user.id)
+        .order('version', { ascending: false })
+        .order('created_at', { ascending: false });
 
       // Fetch recordings to check assignment-recording links
       const { data: assignmentRecordings } = await supabase
         .from('available_lessons')
         .select('id, assignment_id');
 
-      const submittedIds = submissions?.map(s => s.assignment_id) || [];
-      
-      // Build a set of unlocked recording IDs from the already-loaded recordings data
+      // Latest submission per assignment (already sorted desc above)
+      const latestByAssignment = new Map<string, { status: string }>();
+      for (const s of submissions || []) {
+        if (!latestByAssignment.has(s.assignment_id)) {
+          latestByAssignment.set(s.assignment_id, { status: s.status });
+        }
+      }
+
+      // Build a set of unlocked recording IDs from the already-loaded recordings data.
+      // fetchDashboardData is gated on `!loading` (which includes recordingsLoading), so by
+      // the time we get here the recordings array reflects the actual unlock state.
       const unlockedRecordingIds = new Set(
         (recordings || []).filter(r => r.isUnlocked).map(r => r.id)
       );
-      
-      const pendingAssignments = (assignments || []).filter(a => {
-        if (submittedIds.includes(a.id)) return false;
-        // Check if the linked recording is unlocked
-        const linkedRecording = assignmentRecordings?.find(r => r.assignment_id === a.id);
-        if (linkedRecording && !unlockedRecordingIds.has(linkedRecording.id)) return false;
-        return true;
-      });
-      
-      if (pendingAssignments.length > 0) {
-        setNextAssignment(pendingAssignments[0]);
-        const dueDate = new Date(pendingAssignments[0].created_at || '');
-        dueDate.setDate(dueDate.getDate() + (pendingAssignments[0].due_days || 7));
+
+      const classified: Assignment[] = (assignments || [])
+        .map(a => {
+          const linkedRecording = assignmentRecordings?.find(r => r.assignment_id === a.id);
+          // Hide assignments whose linked recording isn't unlocked yet
+          if (linkedRecording && !unlockedRecordingIds.has(linkedRecording.id)) return null;
+
+          const sub = latestByAssignment.get(a.id);
+          let status: AssignmentStatus = 'not_submitted';
+          if (sub) {
+            if (sub.status === 'approved') status = 'approved';
+            else if (sub.status === 'rejected' || sub.status === 'needs_revision') status = 'needs_revision';
+            else status = 'pending_review'; // submitted, pending, in_review, etc.
+          }
+          return { ...a, status } as Assignment;
+        })
+        .filter((a): a is Assignment => a !== null && a.status !== 'approved');
+
+      // Sort: needs_revision (action needed) → not_submitted → pending_review (waiting on mentor)
+      const order: Record<AssignmentStatus, number> = {
+        needs_revision: 0,
+        not_submitted: 1,
+        pending_review: 2,
+        approved: 3,
+      };
+      classified.sort((a, b) => order[a.status!] - order[b.status!]);
+
+      setPendingItems(classified.slice(0, 3));
+
+      if (classified.length > 0) {
+        const first = classified[0];
+        setNextAssignment(first);
+        const dueDate = new Date(first.created_at || '');
+        dueDate.setDate(dueDate.getDate() + (first.due_days || 7));
         setAssignmentDueStatus(new Date() > dueDate ? 'overdue' : 'future');
       } else {
         setNextAssignment(null);
