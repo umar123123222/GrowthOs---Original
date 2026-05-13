@@ -105,6 +105,7 @@ export function StudentDashboard() {
   const [dreamGoal, setDreamGoal] = useState<string>('');
   const [courseProgress, setCourseProgress] = useState(0);
   const [nextAssignment, setNextAssignment] = useState<Assignment | null>(null);
+  const [pendingItems, setPendingItems] = useState<Assignment[]>([]);
   const [assignmentDueStatus, setAssignmentDueStatus] = useState<'future' | 'overdue'>('future');
   const [shopifyConnected, setShopifyConnected] = useState(false);
   const [metaConnected, setMetaConnected] = useState(false);
