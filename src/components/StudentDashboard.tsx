@@ -44,12 +44,15 @@ import {
   Video
 } from 'lucide-react';
 
+type AssignmentStatus = 'not_submitted' | 'pending_review' | 'needs_revision' | 'approved';
+
 interface Assignment {
   id: string;
   name: string;
   description?: string;
   due_days?: number;
   created_at?: string;
+  status?: AssignmentStatus;
 }
 
 interface Milestone {
