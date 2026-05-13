@@ -18,6 +18,7 @@ import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAn
 import { MilestoneManagement } from '@/components/admin/MilestoneManagement';
 import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
 import { ErrorLogsManagement } from '@/components/superadmin/ErrorLogsManagement';
+import { RecoveryManagement } from '@/components/admin/RecoveryManagement';
 import { CourseManagement } from '@/components/superadmin/CourseManagement';
 import { PathwayManagement } from '@/components/superadmin/PathwayManagement';
 import { BatchManagement } from '@/components/batch';
@@ -71,6 +72,8 @@ export default function SuperadminDashboard() {
         return <MilestoneManagement />;
       case 'analytics':
         return <StudentAnalytics />;
+      case 'recovery':
+        return <RecoveryManagement />;
       case 'error-logs':
         return <ErrorLogsManagement />;
       case 'courses':
