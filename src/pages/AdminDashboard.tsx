@@ -6,7 +6,7 @@ import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Vid
 import { supabase } from '@/integrations/supabase/client';
 import { RoleGuard } from '@/components/RoleGuard';
 import { ContentManagement } from '@/components/admin/ContentManagement';
-import { FinancialManagement } from '@/components/admin/FinancialManagement';
+
 import { MentorManagement } from '@/components/admin/MentorManagement';
 import { ActivityLogs } from '@/components/admin/ActivityLogs';
 import { StudentPerformance } from '@/components/admin/StudentPerformance';
@@ -53,7 +53,7 @@ export default function AdminDashboard() {
       case 'content':
         return <ContentManagement />;
       case 'financial':
-        return <FinancialManagement />;
+        return <StudentAnalytics />;
       case 'mentors':
         return <MentorManagement />;
       case 'activity':
