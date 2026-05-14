@@ -203,8 +203,11 @@ export function usePathwayGroupedRecordings(
               hasAssignment: !!lesson.assignment_id,
               assignmentId: lesson.assignment_id,
               assignmentSubmitted: lesson.assignment_id ? submittedAssignments.has(lesson.assignment_id) : false,
+              assignmentDeclined: lesson.assignment_id ? declinedAssignments.has(lesson.assignment_id) : false,
               lockReason,
               dripUnlockDate,
+              blockingLessonTitle: null,
+              blockingAssignmentDeclined: false,
             };
           });
 
