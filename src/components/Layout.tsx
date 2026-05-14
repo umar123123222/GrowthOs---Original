@@ -218,6 +218,12 @@ const Layout = memo(({
   const [courseMenuOpen, setCourseMenuOpen] = useState(false);
   const [catalogMenuOpen, setCatalogMenuOpen] = useState(false);
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
+  const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set());
+  const toggleMenu = (name: string) => setExpandedMenus(prev => {
+    const next = new Set(prev);
+    next.has(name) ? next.delete(name) : next.add(name);
+    return next;
+  });
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -961,10 +967,10 @@ const Layout = memo(({
                           }
                           
                           if (item.isExpandable) {
-                            const isExpanded = courseMenuOpen;
-                            const Icon = item.icon;
-                            return <div key={item.name}>
-                              <button onClick={() => setCourseMenuOpen(!courseMenuOpen)} className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50">
+                             const isExpanded = expandedMenus.has(item.name);
+                             const Icon = item.icon;
+                             return <div key={item.name}>
+                               <button onClick={() => toggleMenu(item.name)} className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50">
                                 <div className="flex items-center">
                                   <Icon className="mr-3 h-5 w-5 text-gray-400" />
                                   {item.name}
@@ -1162,10 +1168,10 @@ const Layout = memo(({
               }
               
               if (item.isExpandable) {
-                const isExpanded = courseMenuOpen && !sidebarCollapsed;
+                const isExpanded = expandedMenus.has(item.name) && !sidebarCollapsed;
                 const Icon = item.icon;
                 return <div key={item.name}>
-                      <button onClick={() => !sidebarCollapsed && setCourseMenuOpen(!courseMenuOpen)} className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover-scale" title={sidebarCollapsed ? item.name : undefined}>
+                      <button onClick={() => !sidebarCollapsed && toggleMenu(item.name)} className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover-scale" title={sidebarCollapsed ? item.name : undefined}>
                         <div className="flex items-center">
                           <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 text-gray-400`} />
                           {!sidebarCollapsed && item.name}
