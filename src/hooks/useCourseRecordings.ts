@@ -142,6 +142,12 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           .map(([assignmentId]) => assignmentId)
       );
 
+      const declinedAssignments = new Set(
+        Array.from(latestSubmissionByAssignment.entries())
+          .filter(([, submission]) => submission.status === 'declined')
+          .map(([assignmentId]) => assignmentId)
+      );
+
       // Process recordings
       const processedRecordings: CourseRecording[] = lessonsData.map(lesson => {
         const module = modulesData?.find(m => m.id === lesson.module);
@@ -160,13 +166,15 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           hasAssignment: !!lesson.assignment_id,
           assignmentId: lesson.assignment_id,
           assignmentSubmitted: lesson.assignment_id ? submittedAssignments.has(lesson.assignment_id) : false,
+          assignmentDeclined: lesson.assignment_id ? declinedAssignments.has(lesson.assignment_id) : false,
           lockReason: unlockStatus?.lockReason || null,
-          dripUnlockDate: unlockStatus?.dripUnlockDate || null
+          dripUnlockDate: unlockStatus?.dripUnlockDate || null,
+          blockingLessonTitle: null,
+          blockingAssignmentDeclined: false,
         };
       });
 
-      // Consistency fix: if prior assignment is already approved, don't keep next lesson locked
-      // due to stale/multi-row submission join states from RPC.
+      // Consistency fix + identify the precise predecessor blocking each locked lesson
       const sortedRecordings = [...processedRecordings].sort((a, b) => {
         if (a.module_order !== b.module_order) return a.module_order - b.module_order;
         return a.sequence_order - b.sequence_order;
@@ -181,14 +189,35 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         if (!current.isUnlocked && blockingByPreviousAssignment) {
           // Walk backwards to find the actual blocking predecessor
           let allPredecessorsMet = true;
+          let blocker: typeof current | null = null;
           for (let j = i - 1; j >= 0; j--) {
             const pred = sortedRecordings[j];
-            if (!pred.isWatched) { allPredecessorsMet = false; break; }
+            if (!pred.isWatched) { allPredecessorsMet = false; blocker = pred; break; }
             if (pred.hasAssignment && pred.assignmentId && !approvedAssignments.has(pred.assignmentId)) {
               allPredecessorsMet = false;
+              blocker = pred;
               break;
             }
           }
+          if (allPredecessorsMet) {
+            current.isUnlocked = true;
+            current.lockReason = null;
+          } else if (blocker) {
+            current.blockingLessonTitle = blocker.recording_title;
+            // Sharper reason if the blocker has a declined submission
+            if (blocker.hasAssignment && blocker.assignmentId && declinedAssignments.has(blocker.assignmentId)) {
+              current.lockReason = 'previous_assignment_declined';
+              current.blockingAssignmentDeclined = true;
+            } else if (blocker.hasAssignment && blocker.assignmentId && submittedAssignments.has(blocker.assignmentId) && !approvedAssignments.has(blocker.assignmentId)) {
+              current.lockReason = 'previous_assignment_not_approved';
+            } else if (blocker.hasAssignment && blocker.assignmentId) {
+              current.lockReason = 'previous_assignment_not_submitted';
+            } else {
+              current.lockReason = 'previous_lesson_not_watched';
+            }
+          }
+        }
+      }
           if (allPredecessorsMet) {
             current.isUnlocked = true;
             current.lockReason = null;
