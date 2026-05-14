@@ -574,6 +574,17 @@ const getStatusBadge = (status: string) => {
           </Table>
         </CardContent>
       </Card>
+
+      {refundContext && (
+        <RefundDialog
+          open={refundOpen}
+          onOpenChange={(o) => { setRefundOpen(o); if (!o) setRefundContext(null); }}
+          studentId={refundContext.studentId}
+          studentEmail={refundContext.email}
+          initialInvoiceId={refundContext.invoiceId}
+          onSuccess={fetchInvoices}
+        />
+      )}
     </div>
   );
 };
