@@ -496,7 +496,7 @@ export const PaymentReports = () => {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           )}
-          <Table className="min-w-[1100px]">
+          <Table className="min-w-[1400px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Student ID</TableHead>
@@ -555,7 +555,7 @@ export const PaymentReports = () => {
                     </TableCell>
                     <TableCell>{r.paymentDate ? format(new Date(r.paymentDate), 'MMM d, yyyy') : 'N/A'}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col gap-1.5 min-w-[140px]">
                         <Select value={r.status} onValueChange={(v) => updateInvoiceStatus(r.id, v)}>
                           <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
                           <SelectContent>
