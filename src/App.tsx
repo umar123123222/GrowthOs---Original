@@ -74,6 +74,7 @@ const LiveSessions = lazy(() => import("./pages/LiveSessions"));
 
 const Messages = lazy(() => import("./pages/Messages"));
 const Teams = lazy(() => import("./pages/Teams"));
+const AtRiskStudents = lazy(() => import("./pages/AtRiskStudents"));
 const StudentsManagement = lazy(() => import("./pages/StudentsManagement"));
 // Layout with retry logic to prevent cache issues
 const Layout = lazy(() => 
