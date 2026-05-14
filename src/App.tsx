@@ -293,6 +293,11 @@ const App = () => {
                           <StudentsManagement />
                         </RoleGuard>
                       } />
+                      <Route path="at-risk" element={
+                        <RoleGuard allowedRoles={["admin", "superadmin"]}>
+                          <AtRiskStudents />
+                        </RoleGuard>
+                      } />
                       <Route path="shopify-dashboard" element={<ShopifyDashboard />} />
                       <Route path="meta-ads-dashboard" element={<MetaAdsDashboard />} />
                       
