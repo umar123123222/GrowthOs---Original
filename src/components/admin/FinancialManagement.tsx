@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, TrendingUp, AlertTriangle, Download, Search, CalendarIcon, Clock } from 'lucide-react';
+import { DollarSign, TrendingUp, AlertTriangle, Download, Search, CalendarIcon, Clock, Undo2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { RefundDialog } from './RefundDialog';
 
 interface Invoice {
   id: string;
