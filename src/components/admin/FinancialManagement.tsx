@@ -46,6 +46,8 @@ export const FinancialManagement = () => {
   const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
   const [extensionInvoiceId, setExtensionInvoiceId] = useState<string | null>(null);
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundContext, setRefundContext] = useState<{ studentId: string; email?: string; invoiceId?: string } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
