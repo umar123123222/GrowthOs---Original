@@ -134,6 +134,7 @@ export function StudentDashboard() {
     reason: string;
     unlockDate?: string;
     nextLesson?: string;
+    blockingLessonTitle?: string | null;
   } | null>(null);
   
   // Onboarding video state
