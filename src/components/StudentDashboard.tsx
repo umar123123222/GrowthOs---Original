@@ -846,6 +846,8 @@ export function StudentDashboard() {
                         return <Upload className="w-4 h-4 text-amber-600 flex-shrink-0" />;
                       case 'previous_assignment_not_approved':
                         return <Clock className="w-4 h-4 text-amber-600 flex-shrink-0" />;
+                      case 'previous_assignment_declined':
+                        return <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />;
                       case 'drip_locked':
                         return <Calendar className="w-4 h-4 text-amber-600 flex-shrink-0" />;
                       case 'fees_not_cleared':
@@ -860,13 +862,24 @@ export function StudentDashboard() {
                       : 'text-amber-700 dark:text-amber-400'
                   }`}>
                     {(() => {
+                      const blocker = currentLockReason.blockingLessonTitle;
                       switch (currentLockReason.reason) {
                         case 'previous_lesson_not_watched':
-                          return 'Complete previous lesson to unlock';
+                          return blocker
+                            ? `Watch "${blocker}" to unlock the next lesson`
+                            : 'Watch the previous lesson to unlock the next one';
                         case 'previous_assignment_not_submitted':
-                          return 'Submit previous assignment to unlock';
+                          return blocker
+                            ? `Submit the assignment for "${blocker}" to continue`
+                            : 'Submit the previous assignment to continue';
                         case 'previous_assignment_not_approved':
-                          return 'Previous assignment pending approval';
+                          return blocker
+                            ? `Waiting for your "${blocker}" assignment to be approved`
+                            : 'Your previous assignment is pending approval';
+                        case 'previous_assignment_declined':
+                          return blocker
+                            ? `Your "${blocker}" assignment was declined — resubmit to continue`
+                            : 'Your previous assignment was declined — resubmit to continue';
                         case 'drip_locked':
                           return currentLockReason.unlockDate 
                             ? `Unlocks on ${format(new Date(currentLockReason.unlockDate), 'MMM d')}`
