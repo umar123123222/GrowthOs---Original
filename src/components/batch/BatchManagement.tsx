@@ -648,7 +648,7 @@ export function BatchManagement() {
                   const refundPct = m && m.total > 0 ? Math.round((m.refunded / m.total) * 100) : 0;
                   const paidPct = m && m.finalEnroll > 0 ? Math.round((m.fullyPaid / m.finalEnroll) * 100) : 0;
                   return (
-                  <>
+                  <React.Fragment key={batch.id}>
                   <TableRow key={batch.id}>
                     <TableCell>
                       <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleExpand(batch.id)} title={isExpanded ? 'Collapse' : 'Expand metrics'}>
@@ -738,7 +738,7 @@ export function BatchManagement() {
                       </TableCell>
                     </TableRow>
                   )}
-                  </>
+                  </React.Fragment>
                   );
                 })}
               </TableBody>
