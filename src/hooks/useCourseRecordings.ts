@@ -219,8 +219,40 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         }
       }
 
+      // SAFETY NET: Re-lock lessons that the RPC returned as unlocked but whose
+      // immediate predecessor's assignment is NOT approved (declined / pending / missing).
+      // The RPC short-circuits to unlocked when current.watched=true, which incorrectly
+      // bypasses the "previous assignment must be approved" rule once a student has
+      // peeked at the next video.
+      for (let i = 1; i < sortedRecordings.length; i++) {
+        const current = sortedRecordings[i];
+        if (!current.isUnlocked) continue;
 
-      // Frontend override: if LMS is active but RPC returns fees_not_cleared, apply sequential logic
+        // Find the immediate predecessor lesson
+        const predecessor = sortedRecordings[i - 1];
+        if (!predecessor) continue;
+
+        // If predecessor has an assignment that is not approved, re-lock current
+        if (predecessor.hasAssignment && predecessor.assignmentId && !approvedAssignments.has(predecessor.assignmentId)) {
+          current.isUnlocked = false;
+          current.blockingLessonTitle = predecessor.recording_title;
+          if (declinedAssignments.has(predecessor.assignmentId)) {
+            current.lockReason = 'previous_assignment_declined';
+            current.blockingAssignmentDeclined = true;
+          } else if (submittedAssignments.has(predecessor.assignmentId)) {
+            current.lockReason = 'previous_assignment_not_approved';
+          } else {
+            current.lockReason = 'previous_assignment_not_submitted';
+          }
+        } else if (!predecessor.isWatched) {
+          // Predecessor not watched at all → re-lock
+          current.isUnlocked = false;
+          current.blockingLessonTitle = predecessor.recording_title;
+          current.lockReason = 'previous_lesson_not_watched';
+        }
+      }
+
+
       if (studentLMSStatus === 'active') {
         const sortedBySequence = [...processedRecordings].sort((a, b) => {
           if (a.module_order !== b.module_order) return a.module_order - b.module_order;
