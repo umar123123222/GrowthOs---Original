@@ -284,6 +284,34 @@ export function usePathwayGroupedRecordings(
           }
         }
 
+        // SAFETY NET: Re-lock lessons that the RPC returned as unlocked but whose
+        // immediate predecessor's assignment is NOT approved. The RPC short-circuits
+        // unlocked when current.watched=true, bypassing the "previous assignment must
+        // be approved" rule.
+        for (let i = 1; i < allCourseRecordings.length; i++) {
+          const current = allCourseRecordings[i];
+          if (!current.isUnlocked) continue;
+          const predecessor = allCourseRecordings[i - 1];
+          if (!predecessor) continue;
+
+          if (predecessor.hasAssignment && predecessor.assignmentId && !approvedAssignments.has(predecessor.assignmentId)) {
+            current.isUnlocked = false;
+            current.blockingLessonTitle = predecessor.recording_title;
+            if (declinedAssignments.has(predecessor.assignmentId)) {
+              current.lockReason = 'previous_assignment_declined';
+              current.blockingAssignmentDeclined = true;
+            } else if (submittedAssignments.has(predecessor.assignmentId)) {
+              current.lockReason = 'previous_assignment_not_approved';
+            } else {
+              current.lockReason = 'previous_assignment_not_submitted';
+            }
+          } else if (!predecessor.isWatched) {
+            current.isUnlocked = false;
+            current.blockingLessonTitle = predecessor.recording_title;
+            current.lockReason = 'previous_lesson_not_watched';
+          }
+        }
+
         for (const mod of group.modules) {
           mod.isLocked = mod.recordings.length > 0 && mod.recordings.every(r => !r.isUnlocked);
           mod.watchedLessons = mod.recordings.filter(r => r.isWatched).length;
