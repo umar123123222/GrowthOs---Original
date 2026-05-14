@@ -42,6 +42,60 @@ export function BatchManagement() {
   const [selectedPathways, setSelectedPathways] = useState<string[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [batchAssociations, setBatchAssociations] = useState<Record<string, BatchAssociations>>({});
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const [batchMetrics, setBatchMetrics] = useState<Record<string, { loading: boolean; total: number; refunded: number; finalEnroll: number; fullyPaid: number } | undefined>>({});
+
+  const loadBatchMetrics = async (batchId: string) => {
+    setBatchMetrics(prev => ({ ...prev, [batchId]: { loading: true, total: 0, refunded: 0, finalEnroll: 0, fullyPaid: 0 } }));
+    try {
+      const { data: students } = await supabase
+        .from('students')
+        .select('id')
+        .eq('batch_id', batchId);
+      const studentIds = (students || []).map(s => s.id);
+      const total = studentIds.length;
+      if (total === 0) {
+        setBatchMetrics(prev => ({ ...prev, [batchId]: { loading: false, total: 0, refunded: 0, finalEnroll: 0, fullyPaid: 0 } }));
+        return;
+      }
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('student_id, status')
+        .in('student_id', studentIds);
+      const refundedSet = new Set<string>();
+      const byStudent: Record<string, string[]> = {};
+      (invoices || []).forEach(inv => {
+        if (inv.status === 'refunded') refundedSet.add(inv.student_id as string);
+        (byStudent[inv.student_id as string] ||= []).push(inv.status as string);
+      });
+      const refunded = refundedSet.size;
+      const finalEnroll = total - refunded;
+      let fullyPaid = 0;
+      studentIds.forEach(sid => {
+        if (refundedSet.has(sid)) return;
+        const statuses = byStudent[sid] || [];
+        const nonRefunded = statuses.filter(s => s !== 'refunded');
+        if (nonRefunded.length > 0 && nonRefunded.every(s => s === 'paid')) fullyPaid++;
+      });
+      setBatchMetrics(prev => ({ ...prev, [batchId]: { loading: false, total, refunded, finalEnroll, fullyPaid } }));
+    } catch (e) {
+      setBatchMetrics(prev => ({ ...prev, [batchId]: { loading: false, total: 0, refunded: 0, finalEnroll: 0, fullyPaid: 0 } }));
+    }
+  };
+
+  const toggleExpand = (batchId: string) => {
+    setExpandedBatches(prev => {
+      const next = new Set(prev);
+      if (next.has(batchId)) {
+        next.delete(batchId);
+      } else {
+        next.add(batchId);
+        if (!batchMetrics[batchId]) loadBatchMetrics(batchId);
+      }
+      return next;
+    });
+  };
+
   const [formData, setFormData] = useState<BatchFormData>({
     name: '',
     course_id: '',
