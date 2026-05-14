@@ -152,6 +152,11 @@ export function usePathwayGroupedRecordings(
           .filter(([, submission]) => submission.status === 'approved')
           .map(([assignmentId]) => assignmentId)
       );
+      const declinedAssignments = new Set(
+        Array.from(latestSubmissionByAssignment.entries())
+          .filter(([, submission]) => submission.status === 'declined')
+          .map(([assignmentId]) => assignmentId)
+      );
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
