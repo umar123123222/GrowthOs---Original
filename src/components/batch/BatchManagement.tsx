@@ -647,6 +647,8 @@ export function BatchManagement() {
                   const m = batchMetrics[batch.id];
                   const refundPct = m && m.total > 0 ? Math.round((m.refunded / m.total) * 100) : 0;
                   const paidPct = m && m.finalEnroll > 0 ? Math.round((m.fullyPaid / m.finalEnroll) * 100) : 0;
+                  const dropout = m ? Math.max(0, m.finalEnroll - m.fullyPaid) : 0;
+                  const dropoutPct = m && m.finalEnroll > 0 ? Math.round((dropout / m.finalEnroll) * 100) : 0;
                   return (
                   <React.Fragment key={batch.id}>
                   <TableRow key={batch.id}>
@@ -710,7 +712,7 @@ export function BatchManagement() {
                             <Loader2 className="w-4 h-4 animate-spin" /> Loading metrics...
                           </div>
                         ) : (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                             <div className="rounded-md border bg-background p-3">
                               <div className="text-xs uppercase text-muted-foreground">Total Enrollments</div>
                               <div className="text-2xl font-semibold mt-1">{m.total}</div>
@@ -731,6 +733,13 @@ export function BatchManagement() {
                               <div className="text-2xl font-semibold mt-1">
                                 {m.fullyPaid}
                                 <span className="text-sm text-muted-foreground font-normal ml-2">({paidPct}%)</span>
+                              </div>
+                            </div>
+                            <div className="rounded-md border bg-background p-3">
+                              <div className="text-xs uppercase text-muted-foreground">Dropout</div>
+                              <div className="text-2xl font-semibold mt-1 text-destructive">
+                                {dropout}
+                                <span className="text-sm text-muted-foreground font-normal ml-2">({dropoutPct}%)</span>
                               </div>
                             </div>
                           </div>
