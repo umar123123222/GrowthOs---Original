@@ -632,6 +632,7 @@ export function BatchManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Pathways / Courses</TableHead>
                   <TableHead>Start Date</TableHead>
@@ -641,8 +642,19 @@ export function BatchManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {batches.map((batch) => (
+                {batches.map((batch) => {
+                  const isExpanded = expandedBatches.has(batch.id);
+                  const m = batchMetrics[batch.id];
+                  const refundPct = m && m.total > 0 ? Math.round((m.refunded / m.total) * 100) : 0;
+                  const paidPct = m && m.finalEnroll > 0 ? Math.round((m.fullyPaid / m.finalEnroll) * 100) : 0;
+                  return (
+                  <>
                   <TableRow key={batch.id}>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleExpand(batch.id)} title={isExpanded ? 'Collapse' : 'Expand metrics'}>
+                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </Button>
+                    </TableCell>
                     <TableCell className="font-medium">{batch.name}</TableCell>
                     <TableCell>
                       {getAssociationDisplay(batch.id)}
@@ -690,7 +702,45 @@ export function BatchManagement() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  {isExpanded && (
+                    <TableRow key={`${batch.id}-metrics`} className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={7} className="py-4">
+                        {!m || m.loading ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="w-4 h-4 animate-spin" /> Loading metrics...
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="rounded-md border bg-background p-3">
+                              <div className="text-xs uppercase text-muted-foreground">Total Enrollments</div>
+                              <div className="text-2xl font-semibold mt-1">{m.total}</div>
+                            </div>
+                            <div className="rounded-md border bg-background p-3">
+                              <div className="text-xs uppercase text-muted-foreground">Total Refunds</div>
+                              <div className="text-2xl font-semibold mt-1">
+                                {m.refunded}
+                                <span className="text-sm text-muted-foreground font-normal ml-2">({refundPct}%)</span>
+                              </div>
+                            </div>
+                            <div className="rounded-md border bg-background p-3">
+                              <div className="text-xs uppercase text-muted-foreground">Final Enrollments</div>
+                              <div className="text-2xl font-semibold mt-1">{m.finalEnroll}</div>
+                            </div>
+                            <div className="rounded-md border bg-background p-3">
+                              <div className="text-xs uppercase text-muted-foreground">Total Fees Paid</div>
+                              <div className="text-2xl font-semibold mt-1">
+                                {m.fullyPaid}
+                                <span className="text-sm text-muted-foreground font-normal ml-2">({paidPct}%)</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
