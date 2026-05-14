@@ -233,17 +233,15 @@ export function useAtRiskStudents(rules: AtRiskRules, configured: boolean) {
           });
         }
         if (rules.stuck_recording_days > 0) {
-          const lw = lastWatched.get(u.id);
-          const days = daysBetween(lw);
-          if (days >= rules.stuck_recording_days) {
-            reasons.push({ type: 'stuck_recording', detail: lw ? `${days}d no progress` : 'No recordings watched' });
+          const days = stuckRecording.get(u.id);
+          if (days !== undefined && days >= rules.stuck_recording_days) {
+            reasons.push({ type: 'stuck_recording', detail: `${days}d unwatched unlock` });
           }
         }
         if (rules.stuck_assignment_days > 0) {
-          const ls = lastSubmission.get(u.id);
-          const days = daysBetween(ls);
-          if (days >= rules.stuck_assignment_days) {
-            reasons.push({ type: 'stuck_assignment', detail: ls ? `${days}d no submission` : 'No submissions' });
+          const days = stuckAssignment.get(u.id);
+          if (days !== undefined && days >= rules.stuck_assignment_days) {
+            reasons.push({ type: 'stuck_assignment', detail: `${days}d unsubmitted unlock` });
           }
         }
         if (rules.missed_sessions_count > 0) {
