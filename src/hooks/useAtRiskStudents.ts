@@ -77,39 +77,96 @@ export function useAtRiskStudents(rules: AtRiskRules, configured: boolean) {
         });
       }
 
-      // 3. Latest recording_views per user
-      const lastWatched = new Map<string, string>();
-      if (rules.stuck_recording_days > 0) {
-        const { data: rv } = await supabase
-          .from('recording_views')
-          .select('user_id, watched_at')
+      // 3. Latest unlocked recording per user (and whether watched)
+      // Stuck recording: latest unlocked recording NOT yet watched after X days
+      const stuckRecording = new Map<string, number>(); // user_id -> days since unlock
+      // Stuck assignment: latest unlocked recording-with-assignment NOT yet submitted after X days
+      const stuckAssignment = new Map<string, number>();
+
+      if (rules.stuck_recording_days > 0 || rules.stuck_assignment_days > 0) {
+        const { data: unlocks } = await supabase
+          .from('user_unlocks')
+          .select('user_id, recording_id, unlocked_at, is_unlocked')
           .in('user_id', userIds)
-          .eq('watched', true)
-          .order('watched_at', { ascending: false })
-          .limit(5000);
-        (rv || []).forEach(r => {
-          if (r.user_id && r.watched_at && !lastWatched.has(r.user_id)) {
-            lastWatched.set(r.user_id, r.watched_at);
+          .eq('is_unlocked', true)
+          .order('unlocked_at', { ascending: false })
+          .limit(10000);
+
+        const allRecordingIds = [...new Set((unlocks || []).map(u => u.recording_id).filter(Boolean) as string[])];
+        let lessonAssignmentMap = new Map<string, string | null>();
+        if (allRecordingIds.length) {
+          const { data: lessons } = await supabase
+            .from('available_lessons')
+            .select('id, assignment_id')
+            .in('id', allRecordingIds);
+          lessonAssignmentMap = new Map((lessons || []).map(l => [l.id, l.assignment_id]));
+        }
+
+        // Watched recordings set per user
+        const watchedSet = new Map<string, Set<string>>();
+        if (rules.stuck_recording_days > 0 && allRecordingIds.length) {
+          const { data: views } = await supabase
+            .from('recording_views')
+            .select('user_id, recording_id')
+            .in('user_id', userIds)
+            .eq('watched', true)
+            .limit(20000);
+          (views || []).forEach(v => {
+            if (!v.user_id || !v.recording_id) return;
+            if (!watchedSet.has(v.user_id)) watchedSet.set(v.user_id, new Set());
+            watchedSet.get(v.user_id)!.add(v.recording_id);
+          });
+        }
+
+        // Submissions set per user (assignment_id keys)
+        const submittedSet = new Map<string, Set<string>>();
+        if (rules.stuck_assignment_days > 0 && studentIds.length) {
+          const { data: subs } = await supabase
+            .from('submissions')
+            .select('student_id, assignment_id')
+            .in('student_id', studentIds)
+            .limit(20000);
+          (subs || []).forEach(s => {
+            const uid = studentIdToUserId.get(s.student_id);
+            if (!uid || !s.assignment_id) return;
+            if (!submittedSet.has(uid)) submittedSet.set(uid, new Set());
+            submittedSet.get(uid)!.add(s.assignment_id);
+          });
+        }
+
+        // Walk unlocks ordered desc; first unwatched → stuck recording; first unsubmitted assignment → stuck assignment
+        const seenRecUser = new Set<string>();
+        const seenAsnUser = new Set<string>();
+        (unlocks || []).forEach(u => {
+          if (!u.user_id || !u.recording_id || !u.unlocked_at) return;
+          const days = daysBetween(u.unlocked_at);
+
+          if (rules.stuck_recording_days > 0 && !seenRecUser.has(u.user_id)) {
+            const watched = watchedSet.get(u.user_id)?.has(u.recording_id);
+            if (!watched) {
+              stuckRecording.set(u.user_id, days);
+              seenRecUser.add(u.user_id);
+            } else {
+              // already watched their latest unlock → not stuck on recordings
+              seenRecUser.add(u.user_id);
+            }
+          }
+
+          if (rules.stuck_assignment_days > 0 && !seenAsnUser.has(u.user_id)) {
+            const aid = lessonAssignmentMap.get(u.recording_id);
+            if (aid) {
+              const submitted = submittedSet.get(u.user_id)?.has(aid);
+              if (!submitted) {
+                stuckAssignment.set(u.user_id, days);
+                seenAsnUser.add(u.user_id);
+              } else {
+                seenAsnUser.add(u.user_id);
+              }
+            }
           }
         });
       }
 
-      // 4. Latest submission per user
-      const lastSubmission = new Map<string, string>();
-      if (rules.stuck_assignment_days > 0 && studentIds.length) {
-        const { data: subs } = await supabase
-          .from('submissions')
-          .select('student_id, submitted_at')
-          .in('student_id', studentIds)
-          .order('submitted_at', { ascending: false })
-          .limit(5000);
-        (subs || []).forEach(s => {
-          const uid = studentIdToUserId.get(s.student_id);
-          if (uid && s.submitted_at && !lastSubmission.has(uid)) {
-            lastSubmission.set(uid, s.submitted_at);
-          }
-        });
-      }
 
       // 5. Missed sessions count (proxy: completed sessions in last 30d minus attendance)
       const missedCounts = new Map<string, number>();
@@ -176,17 +233,15 @@ export function useAtRiskStudents(rules: AtRiskRules, configured: boolean) {
           });
         }
         if (rules.stuck_recording_days > 0) {
-          const lw = lastWatched.get(u.id);
-          const days = daysBetween(lw);
-          if (days >= rules.stuck_recording_days) {
-            reasons.push({ type: 'stuck_recording', detail: lw ? `${days}d no progress` : 'No recordings watched' });
+          const days = stuckRecording.get(u.id);
+          if (days !== undefined && days >= rules.stuck_recording_days) {
+            reasons.push({ type: 'stuck_recording', detail: `${days}d unwatched unlock` });
           }
         }
         if (rules.stuck_assignment_days > 0) {
-          const ls = lastSubmission.get(u.id);
-          const days = daysBetween(ls);
-          if (days >= rules.stuck_assignment_days) {
-            reasons.push({ type: 'stuck_assignment', detail: ls ? `${days}d no submission` : 'No submissions' });
+          const days = stuckAssignment.get(u.id);
+          if (days !== undefined && days >= rules.stuck_assignment_days) {
+            reasons.push({ type: 'stuck_assignment', detail: `${days}d unsubmitted unlock` });
           }
         }
         if (rules.missed_sessions_count > 0) {
