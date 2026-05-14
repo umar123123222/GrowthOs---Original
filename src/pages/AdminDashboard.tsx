@@ -53,7 +53,7 @@ export default function AdminDashboard() {
       case 'content':
         return <ContentManagement />;
       case 'financial':
-        return <FinancialManagement />;
+        return <StudentAnalytics />;
       case 'mentors':
         return <MentorManagement />;
       case 'activity':
