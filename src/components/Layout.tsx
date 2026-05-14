@@ -484,16 +484,21 @@ const Layout = memo(({
         icon: FolderOpen
       }, {
         name: "Students",
-        href: "/superadmin?tab=students",
-        icon: Users
+        icon: Users,
+        isExpandable: true,
+        subItems: [{
+          name: "All Students",
+          href: "/superadmin?tab=students",
+          icon: Users
+        }, {
+          name: "At Risk Students",
+          href: "/at-risk",
+          icon: AlertTriangle
+        }]
       }, {
         name: "Analytics",
         href: "/superadmin?tab=analytics",
         icon: BarChart3
-      }, {
-        name: "Recovery",
-        href: "/superadmin?tab=recovery",
-        icon: LifeBuoy
       }, {
         name: "Support",
         href: "/superadmin?tab=support",
