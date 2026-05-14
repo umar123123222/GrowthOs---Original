@@ -488,6 +488,7 @@ const getStatusBadge = (status: string) => {
                             <SelectItem value="due">Due</SelectItem>
                             <SelectItem value="overdue">Overdue</SelectItem>
                             <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="refunded">Refunded</SelectItem>
                           </SelectContent>
                       </Select>
                       
