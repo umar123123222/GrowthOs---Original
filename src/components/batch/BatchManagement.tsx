@@ -48,11 +48,11 @@ export function BatchManagement() {
   const loadBatchMetrics = async (batchId: string) => {
     setBatchMetrics(prev => ({ ...prev, [batchId]: { loading: true, total: 0, refunded: 0, finalEnroll: 0, fullyPaid: 0 } }));
     try {
-      const { data: students } = await supabase
-        .from('students')
-        .select('id')
+      const { data: enrollments } = await supabase
+        .from('course_enrollments')
+        .select('student_id')
         .eq('batch_id', batchId);
-      const studentIds = (students || []).map(s => s.id);
+      const studentIds = [...new Set((enrollments || []).map(e => e.student_id as string))];
       const total = studentIds.length;
       if (total === 0) {
         setBatchMetrics(prev => ({ ...prev, [batchId]: { loading: false, total: 0, refunded: 0, finalEnroll: 0, fullyPaid: 0 } }));
