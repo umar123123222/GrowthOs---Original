@@ -152,6 +152,11 @@ export function usePathwayGroupedRecordings(
           .filter(([, submission]) => submission.status === 'approved')
           .map(([assignmentId]) => assignmentId)
       );
+      const declinedAssignments = new Set(
+        Array.from(latestSubmissionByAssignment.entries())
+          .filter(([, submission]) => submission.status === 'declined')
+          .map(([assignmentId]) => assignmentId)
+      );
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -198,8 +203,11 @@ export function usePathwayGroupedRecordings(
               hasAssignment: !!lesson.assignment_id,
               assignmentId: lesson.assignment_id,
               assignmentSubmitted: lesson.assignment_id ? submittedAssignments.has(lesson.assignment_id) : false,
+              assignmentDeclined: lesson.assignment_id ? declinedAssignments.has(lesson.assignment_id) : false,
               lockReason,
               dripUnlockDate,
+              blockingLessonTitle: null,
+              blockingAssignmentDeclined: false,
             };
           });
 
@@ -247,17 +255,31 @@ export function usePathwayGroupedRecordings(
           if (!current.isUnlocked && blockingByPreviousAssignment) {
             // Walk backwards to find the actual blocking predecessor
             let allPredecessorsMet = true;
+            let blocker: typeof current | null = null;
             for (let j = i - 1; j >= 0; j--) {
               const pred = allCourseRecordings[j];
-              if (!pred.isWatched) { allPredecessorsMet = false; break; }
+              if (!pred.isWatched) { allPredecessorsMet = false; blocker = pred; break; }
               if (pred.hasAssignment && pred.assignmentId && !approvedAssignments.has(pred.assignmentId)) {
                 allPredecessorsMet = false;
+                blocker = pred;
                 break;
               }
             }
             if (allPredecessorsMet) {
               current.isUnlocked = true;
               current.lockReason = null;
+            } else if (blocker) {
+              current.blockingLessonTitle = blocker.recording_title;
+              if (blocker.hasAssignment && blocker.assignmentId && declinedAssignments.has(blocker.assignmentId)) {
+                current.lockReason = 'previous_assignment_declined';
+                current.blockingAssignmentDeclined = true;
+              } else if (blocker.hasAssignment && blocker.assignmentId && submittedAssignments.has(blocker.assignmentId) && !approvedAssignments.has(blocker.assignmentId)) {
+                current.lockReason = 'previous_assignment_not_approved';
+              } else if (blocker.hasAssignment && blocker.assignmentId) {
+                current.lockReason = 'previous_assignment_not_submitted';
+              } else {
+                current.lockReason = 'previous_lesson_not_watched';
+              }
             }
           }
         }
