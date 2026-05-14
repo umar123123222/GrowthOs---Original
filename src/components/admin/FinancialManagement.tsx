@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { supabase } from '@/integrations/supabase/client';
-import { DollarSign, TrendingUp, AlertTriangle, Download, Search, CalendarIcon, Clock } from 'lucide-react';
+import { DollarSign, TrendingUp, AlertTriangle, Download, Search, CalendarIcon, Clock, Undo2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { RefundDialog } from './RefundDialog';
 
 interface Invoice {
   id: string;
@@ -45,6 +46,8 @@ export const FinancialManagement = () => {
   const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
   const [extensionInvoiceId, setExtensionInvoiceId] = useState<string | null>(null);
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
+  const [refundOpen, setRefundOpen] = useState(false);
+  const [refundContext, setRefundContext] = useState<{ studentId: string; email?: string; invoiceId?: string } | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -301,7 +304,8 @@ const getStatusBadge = (status: string) => {
     issued: { color: 'bg-amber-500', label: 'Issued' },
     overdue: { color: 'bg-red-500', label: 'Overdue' },
     due: { color: 'bg-red-500', label: 'Due' },
-    failed: { color: 'bg-gray-500', label: 'Failed' }
+    failed: { color: 'bg-gray-500', label: 'Failed' },
+    refunded: { color: 'bg-purple-500', label: 'Refunded' }
   };
   const config = statusConfig[status] || { color: 'bg-gray-500', label: status };
   return (
@@ -484,6 +488,7 @@ const getStatusBadge = (status: string) => {
                             <SelectItem value="due">Due</SelectItem>
                             <SelectItem value="overdue">Overdue</SelectItem>
                             <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="refunded">Refunded</SelectItem>
                           </SelectContent>
                       </Select>
                       
@@ -542,6 +547,25 @@ const getStatusBadge = (status: string) => {
                           </PopoverContent>
                         </Popover>
                       )}
+
+                      {invoice.status === 'paid' && invoice.student_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setRefundContext({
+                              studentId: invoice.student_id!,
+                              email: invoice.users?.email,
+                              invoiceId: invoice.id,
+                            });
+                            setRefundOpen(true);
+                          }}
+                        >
+                          <Undo2 className="w-3 h-3" />
+                          Refund
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -550,6 +574,17 @@ const getStatusBadge = (status: string) => {
           </Table>
         </CardContent>
       </Card>
+
+      {refundContext && (
+        <RefundDialog
+          open={refundOpen}
+          onOpenChange={(o) => { setRefundOpen(o); if (!o) setRefundContext(null); }}
+          studentId={refundContext.studentId}
+          studentEmail={refundContext.email}
+          initialInvoiceId={refundContext.invoiceId}
+          onSuccess={fetchInvoices}
+        />
+      )}
     </div>
   );
 };
