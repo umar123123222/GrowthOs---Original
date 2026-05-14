@@ -547,6 +547,25 @@ const getStatusBadge = (status: string) => {
                           </PopoverContent>
                         </Popover>
                       )}
+
+                      {invoice.status === 'paid' && invoice.student_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 border-destructive/40 text-destructive hover:bg-destructive/10"
+                          onClick={() => {
+                            setRefundContext({
+                              studentId: invoice.student_id!,
+                              email: invoice.users?.email,
+                              invoiceId: invoice.id,
+                            });
+                            setRefundOpen(true);
+                          }}
+                        >
+                          <Undo2 className="w-3 h-3" />
+                          Refund
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
