@@ -40,6 +40,7 @@ export function useAtRiskStudents(rules: AtRiskRules, configured: boolean) {
         .from('users')
         .select('id, full_name, email, phone, last_login_at, last_active_at, status, lms_status')
         .eq('role', 'student')
+        .eq('lms_status', 'active')
         .limit(1000);
 
       const userIds = (usersData || []).map(u => u.id);
