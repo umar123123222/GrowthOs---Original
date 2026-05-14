@@ -199,7 +199,7 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
         </div>
       </div>;
   }
-  return <div className="p-6 space-y-6">
+  return <div className="p-6 space-y-6 px-[5px]">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Student Analytics</h1>
         <p className="text-gray-600 mt-2">Comprehensive overview of student progress and engagement</p>
