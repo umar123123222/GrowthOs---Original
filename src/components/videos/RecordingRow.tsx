@@ -71,15 +71,36 @@ export const RecordingRow: React.FC<RecordingRowProps> = ({
           )}
           {userLMSStatus === 'active' && !recording.isUnlocked && (
             <span className="text-orange-600 font-medium text-xs mt-1 block">
-              {recording.lockReason === 'previous_lesson_not_watched' && 'Complete previous lesson to unlock'}
-              {recording.lockReason === 'previous_assignment_not_submitted' && 'Submit previous assignment to unlock'}
-              {recording.lockReason === 'previous_assignment_not_approved' && 'Previous assignment pending approval'}
-              {recording.lockReason === 'drip_locked' && recording.dripUnlockDate &&
-                `Unlocks on ${new Date(recording.dripUnlockDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`
-              }
-              {recording.lockReason === 'fees_not_cleared' && 'Not started yet'}
-              {recording.lockReason === 'not_started_yet' && 'Not started yet'}
-              {!recording.lockReason && 'Complete previous lessons to unlock'}
+              {(() => {
+                const blocker = recording.blockingLessonTitle;
+                switch (recording.lockReason) {
+                  case 'previous_lesson_not_watched':
+                    return blocker
+                      ? `Watch "${blocker}" to unlock this lesson`
+                      : 'Watch the previous lesson to unlock this one';
+                  case 'previous_assignment_not_submitted':
+                    return blocker
+                      ? `Submit the assignment for "${blocker}" to unlock this lesson`
+                      : 'Submit the previous assignment to unlock this lesson';
+                  case 'previous_assignment_not_approved':
+                    return blocker
+                      ? `Waiting for your "${blocker}" assignment to be approved`
+                      : 'Your previous assignment is waiting to be reviewed';
+                  case 'previous_assignment_declined':
+                    return blocker
+                      ? `Your "${blocker}" assignment was declined — please resubmit to unlock`
+                      : 'Your previous assignment was declined — please resubmit to unlock';
+                  case 'drip_locked':
+                    return recording.dripUnlockDate
+                      ? `Scheduled to unlock on ${new Date(recording.dripUnlockDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`
+                      : 'Scheduled to unlock soon';
+                  case 'fees_not_cleared':
+                  case 'not_started_yet':
+                    return 'Clear your fees to start this lesson';
+                  default:
+                    return 'Complete the previous lesson to unlock this one';
+                }
+              })()}
             </span>
           )}
         </div>
