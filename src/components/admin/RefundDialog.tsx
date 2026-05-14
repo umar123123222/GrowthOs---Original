@@ -57,7 +57,7 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
       const pathwayIds = [...new Set((data || []).map((i: any) => i.pathway_id).filter(Boolean))];
       const [coursesRes, pathwaysRes] = await Promise.all([
         courseIds.length ? supabase.from('courses').select('id, title').in('id', courseIds as string[]) : Promise.resolve({ data: [] as any[] }),
-        pathwayIds.length ? supabase.from('pathways').select('id, name').in('id', pathwayIds as string[]) : Promise.resolve({ data: [] as any[] }),
+        pathwayIds.length ? supabase.from('learning_pathways').select('id, name').in('id', pathwayIds as string[]) : Promise.resolve({ data: [] as any[] }),
       ]);
       const cMap = new Map((coursesRes.data || []).map((c: any) => [c.id, c.title]));
       const pMap = new Map((pathwaysRes.data || []).map((p: any) => [p.id, p.name]));
