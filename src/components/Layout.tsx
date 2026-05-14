@@ -444,21 +444,17 @@ const Layout = memo(({
         href: "/superadmin",
         icon: Monitor
       }, {
-        name: "Courses",
-        href: "/superadmin?tab=courses",
-        icon: GraduationCap
-      }, {
-        name: "Pathways",
-        href: "/superadmin?tab=pathways",
-        icon: Route
-      }, {
         name: "Content",
         icon: BookOpen,
         isExpandable: true,
         subItems: [{
-          name: "Modules",
-          href: "/superadmin?tab=modules",
-          icon: BookOpen
+          name: "Pathways",
+          href: "/superadmin?tab=pathways",
+          icon: Route
+        }, {
+          name: "Courses",
+          href: "/superadmin?tab=courses",
+          icon: GraduationCap
         }, {
           name: "Recordings",
           href: "/superadmin?tab=recordings",
@@ -467,6 +463,10 @@ const Layout = memo(({
           name: "Assignments",
           href: "/superadmin?tab=assignments",
           icon: FileText
+        }, {
+          name: "Resources",
+          href: "/superadmin?tab=resources",
+          icon: FolderOpen
         }, {
           name: "Submissions",
           href: "/superadmin?tab=submissions",
@@ -481,14 +481,6 @@ const Layout = memo(({
           icon: Trophy
         }]
       }, {
-        name: "Batches",
-        href: "/superadmin?tab=batches",
-        icon: Layers
-      }, {
-        name: "Resources",
-        href: "/superadmin?tab=resources",
-        icon: FolderOpen
-      }, {
         name: "Students",
         icon: Users,
         isExpandable: true,
@@ -497,9 +489,13 @@ const Layout = memo(({
           href: "/superadmin?tab=students",
           icon: Users
         }, {
-          name: "At Risk Students",
+          name: "At Risk",
           href: "/at-risk",
           icon: AlertTriangle
+        }, {
+          name: "Batches",
+          href: "/superadmin?tab=batches",
+          icon: Layers
         }]
       }, {
         name: "Analytics",
@@ -514,13 +510,13 @@ const Layout = memo(({
         href: "/teams",
         icon: UserCheck
       }, {
-        name: "Error Logs",
-        href: "/superadmin?tab=error-logs",
-        icon: AlertTriangle
-      }, {
         name: "Company",
         href: "/superadmin?tab=company-settings",
         icon: Building2
+      }, {
+        name: "Error Logs",
+        href: "/superadmin?tab=error-logs",
+        icon: AlertTriangle
       }, {
         name: "Profile",
         href: "/profile",
@@ -532,21 +528,17 @@ const Layout = memo(({
         href: "/admin",
         icon: Monitor
       }, {
-        name: "Courses",
-        href: "/admin?tab=courses",
-        icon: GraduationCap
-      }, {
-        name: "Pathways",
-        href: "/admin?tab=pathways",
-        icon: Route
-      }, {
         name: "Content",
         icon: BookOpen,
         isExpandable: true,
         subItems: [{
-          name: "Modules",
-          href: "/admin?tab=modules",
-          icon: BookOpen
+          name: "Pathways",
+          href: "/admin?tab=pathways",
+          icon: Route
+        }, {
+          name: "Courses",
+          href: "/admin?tab=courses",
+          icon: GraduationCap
         }, {
           name: "Recordings",
           href: "/admin?tab=recordings",
@@ -555,6 +547,10 @@ const Layout = memo(({
           name: "Assignments",
           href: "/admin?tab=assignments",
           icon: FileText
+        }, {
+          name: "Resources",
+          href: "/admin?tab=resources",
+          icon: FolderOpen
         }, {
           name: "Submissions",
           href: "/admin?tab=submissions",
@@ -569,14 +565,6 @@ const Layout = memo(({
           icon: Trophy
         }]
       }, {
-        name: "Batches",
-        href: "/admin?tab=batches",
-        icon: Layers
-      }, {
-        name: "Resources",
-        href: "/admin?tab=resources",
-        icon: FolderOpen
-      }, {
         name: "Students",
         icon: Users,
         isExpandable: true,
@@ -585,9 +573,13 @@ const Layout = memo(({
           href: "/admin?tab=students",
           icon: Users
         }, {
-          name: "At Risk Students",
+          name: "At Risk",
           href: "/at-risk",
           icon: AlertTriangle
+        }, {
+          name: "Batches",
+          href: "/admin?tab=batches",
+          icon: Layers
         }]
       }, {
         name: "Analytics",
@@ -601,14 +593,6 @@ const Layout = memo(({
         name: "Teams",
         href: "/teams",
         icon: UserCheck
-      }, {
-        name: "Error Logs",
-        href: "/admin?tab=error-logs",
-        icon: AlertTriangle
-      }, {
-        name: "Company",
-        href: "/admin?tab=company-settings",
-        icon: Building2
       }, {
         name: "Profile",
         href: "/profile",
