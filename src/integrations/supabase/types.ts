@@ -94,6 +94,39 @@ export type Database = {
           },
         ]
       }
+      at_risk_rules: {
+        Row: {
+          configured: boolean
+          created_at: string
+          id: number
+          missed_sessions_count: number
+          no_login_days: number
+          stuck_assignment_days: number
+          stuck_recording_days: number
+          updated_at: string
+        }
+        Insert: {
+          configured?: boolean
+          created_at?: string
+          id?: number
+          missed_sessions_count?: number
+          no_login_days?: number
+          stuck_assignment_days?: number
+          stuck_recording_days?: number
+          updated_at?: string
+        }
+        Update: {
+          configured?: boolean
+          created_at?: string
+          id?: number
+          missed_sessions_count?: number
+          no_login_days?: number
+          stuck_assignment_days?: number
+          stuck_recording_days?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       available_lessons: {
         Row: {
           assignment_id: string | null
@@ -2160,6 +2193,94 @@ export type Database = {
             columns: ["session_id"]
             isOneToOne: false
             referencedRelation: "success_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_mentor_assignments: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          mentor_id: string
+          student_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          mentor_id: string
+          student_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          mentor_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_mentor_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_mentor_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_mentor_assignments_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_mentor_assignments_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_mentor_assignments_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_mentor_assignments_mentor_id_fkey"
+            columns: ["mentor_id"]
+            isOneToOne: false
+            referencedRelation: "users_safe_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_mentor_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "user_security_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_mentor_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_mentor_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: true
+            referencedRelation: "users_safe_view"
             referencedColumns: ["id"]
           },
         ]
