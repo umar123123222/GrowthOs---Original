@@ -337,7 +337,8 @@ export function StudentDashboard() {
           setCurrentLockReason({
             reason: firstLockedRecording.lockReason || 'locked',
             unlockDate: firstLockedRecording.dripUnlockDate || undefined,
-            nextLesson: firstLockedRecording.recording_title
+            nextLesson: firstLockedRecording.recording_title,
+            blockingLessonTitle: firstLockedRecording.blockingLessonTitle || null,
           });
         } else {
           setCurrentLockReason(null);
