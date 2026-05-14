@@ -304,7 +304,8 @@ const getStatusBadge = (status: string) => {
     issued: { color: 'bg-amber-500', label: 'Issued' },
     overdue: { color: 'bg-red-500', label: 'Overdue' },
     due: { color: 'bg-red-500', label: 'Due' },
-    failed: { color: 'bg-gray-500', label: 'Failed' }
+    failed: { color: 'bg-gray-500', label: 'Failed' },
+    refunded: { color: 'bg-purple-500', label: 'Refunded' }
   };
   const config = statusConfig[status] || { color: 'bg-gray-500', label: status };
   return (
