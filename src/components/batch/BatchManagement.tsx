@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Edit, Trash2, Users, Calendar, Clock, AlertTriangle, BookOpen, Route, UserPlus, X, MessageCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Calendar, Clock, AlertTriangle, BookOpen, Route, UserPlus, X, MessageCircle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
 import { BatchStudentAssignment } from './BatchStudentAssignment';
 import { useBatches, type Batch, type BatchFormData } from '@/hooks/useBatches';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +42,60 @@ export function BatchManagement() {
   const [selectedPathways, setSelectedPathways] = useState<string[]>([]);
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [batchAssociations, setBatchAssociations] = useState<Record<string, BatchAssociations>>({});
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const [batchMetrics, setBatchMetrics] = useState<Record<string, { loading: boolean; total: number; refunded: number; finalEnroll: number; fullyPaid: number } | undefined>>({});
+
+  const loadBatchMetrics = async (batchId: string) => {
+    setBatchMetrics(prev => ({ ...prev, [batchId]: { loading: true, total: 0, refunded: 0, finalEnroll: 0, fullyPaid: 0 } }));
+    try {
+      const { data: enrollments } = await supabase
+        .from('course_enrollments')
+        .select('student_id')
+        .eq('batch_id', batchId);
+      const studentIds = [...new Set((enrollments || []).map(e => e.student_id as string))];
+      const total = studentIds.length;
+      if (total === 0) {
+        setBatchMetrics(prev => ({ ...prev, [batchId]: { loading: false, total: 0, refunded: 0, finalEnroll: 0, fullyPaid: 0 } }));
+        return;
+      }
+      const { data: invoices } = await supabase
+        .from('invoices')
+        .select('student_id, status')
+        .in('student_id', studentIds);
+      const refundedSet = new Set<string>();
+      const byStudent: Record<string, string[]> = {};
+      (invoices || []).forEach(inv => {
+        if (inv.status === 'refunded') refundedSet.add(inv.student_id as string);
+        (byStudent[inv.student_id as string] ||= []).push(inv.status as string);
+      });
+      const refunded = refundedSet.size;
+      const finalEnroll = total - refunded;
+      let fullyPaid = 0;
+      studentIds.forEach(sid => {
+        if (refundedSet.has(sid)) return;
+        const statuses = byStudent[sid] || [];
+        const nonRefunded = statuses.filter(s => s !== 'refunded');
+        if (nonRefunded.length > 0 && nonRefunded.every(s => s === 'paid')) fullyPaid++;
+      });
+      setBatchMetrics(prev => ({ ...prev, [batchId]: { loading: false, total, refunded, finalEnroll, fullyPaid } }));
+    } catch (e) {
+      setBatchMetrics(prev => ({ ...prev, [batchId]: { loading: false, total: 0, refunded: 0, finalEnroll: 0, fullyPaid: 0 } }));
+    }
+  };
+
+  const toggleExpand = (batchId: string) => {
+    setExpandedBatches(prev => {
+      const next = new Set(prev);
+      if (next.has(batchId)) {
+        next.delete(batchId);
+      } else {
+        next.add(batchId);
+        if (!batchMetrics[batchId]) loadBatchMetrics(batchId);
+      }
+      return next;
+    });
+  };
+
   const [formData, setFormData] = useState<BatchFormData>({
     name: '',
     course_id: '',
@@ -578,6 +632,7 @@ export function BatchManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Pathways / Courses</TableHead>
                   <TableHead>Start Date</TableHead>
@@ -587,8 +642,19 @@ export function BatchManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {batches.map((batch) => (
+                {batches.map((batch) => {
+                  const isExpanded = expandedBatches.has(batch.id);
+                  const m = batchMetrics[batch.id];
+                  const refundPct = m && m.total > 0 ? Math.round((m.refunded / m.total) * 100) : 0;
+                  const paidPct = m && m.finalEnroll > 0 ? Math.round((m.fullyPaid / m.finalEnroll) * 100) : 0;
+                  return (
+                  <React.Fragment key={batch.id}>
                   <TableRow key={batch.id}>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleExpand(batch.id)} title={isExpanded ? 'Collapse' : 'Expand metrics'}>
+                        {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                      </Button>
+                    </TableCell>
                     <TableCell className="font-medium">{batch.name}</TableCell>
                     <TableCell>
                       {getAssociationDisplay(batch.id)}
@@ -636,7 +702,45 @@ export function BatchManagement() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  {isExpanded && (
+                    <TableRow key={`${batch.id}-metrics`} className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={7} className="py-4">
+                        {!m || m.loading ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <Loader2 className="w-4 h-4 animate-spin" /> Loading metrics...
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="rounded-md border bg-background p-3">
+                              <div className="text-xs uppercase text-muted-foreground">Total Enrollments</div>
+                              <div className="text-2xl font-semibold mt-1">{m.total}</div>
+                            </div>
+                            <div className="rounded-md border bg-background p-3">
+                              <div className="text-xs uppercase text-muted-foreground">Total Refunds</div>
+                              <div className="text-2xl font-semibold mt-1">
+                                {m.refunded}
+                                <span className="text-sm text-muted-foreground font-normal ml-2">({refundPct}%)</span>
+                              </div>
+                            </div>
+                            <div className="rounded-md border bg-background p-3">
+                              <div className="text-xs uppercase text-muted-foreground">Final Enrollments</div>
+                              <div className="text-2xl font-semibold mt-1">{m.finalEnroll}</div>
+                            </div>
+                            <div className="rounded-md border bg-background p-3">
+                              <div className="text-xs uppercase text-muted-foreground">Total Fees Paid</div>
+                              <div className="text-2xl font-semibold mt-1">
+                                {m.fullyPaid}
+                                <span className="text-sm text-muted-foreground font-normal ml-2">({paidPct}%)</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </React.Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
