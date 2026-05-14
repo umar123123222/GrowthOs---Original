@@ -17,8 +17,13 @@ export interface CourseRecording {
   hasAssignment: boolean;
   assignmentId?: string;
   assignmentSubmitted: boolean;
+  assignmentDeclined?: boolean;
   lockReason?: string | null;
   dripUnlockDate?: string | null;
+  /** Title of the specific predecessor lesson that is currently blocking this one */
+  blockingLessonTitle?: string | null;
+  /** True when the predecessor blocking this lesson has a declined submission */
+  blockingAssignmentDeclined?: boolean;
 }
 
 export interface CourseModule {
