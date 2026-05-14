@@ -218,12 +218,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           }
         }
       }
-          if (allPredecessorsMet) {
-            current.isUnlocked = true;
-            current.lockReason = null;
-          }
-        }
-      }
+
 
       // Frontend override: if LMS is active but RPC returns fees_not_cleared, apply sequential logic
       if (studentLMSStatus === 'active') {
