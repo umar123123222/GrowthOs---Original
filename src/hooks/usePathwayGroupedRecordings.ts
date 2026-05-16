@@ -390,9 +390,10 @@ export function usePathwayGroupedRecordings(
 
       // Pathway timeline gate: the per-course RPC unlocks the first lesson of
       // every course independently. For pathway students, future pathway courses
-      // must remain locked until the pathway map marks that course available.
+      // must remain locked until they become the current pathway step. Previously
+      // completed courses stay accessible for review.
       for (const group of groups) {
-        if (group.isPathwayAvailable) continue;
+        if (group.isCurrentPathwayCourse || group.isCompletedPathwayCourse) continue;
 
         for (const mod of group.modules) {
           for (const rec of mod.recordings) {
