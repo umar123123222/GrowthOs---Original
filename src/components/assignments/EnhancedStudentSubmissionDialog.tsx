@@ -241,32 +241,25 @@ export const EnhancedStudentSubmissionDialog = ({
     }
   };
 
-  const getSubmissionTypeBadge = () => {
-    const types = {
-      text: { label: 'Text Response', icon: FileText, color: 'bg-blue-100 text-blue-800' },
-      links: { label: 'Link Submission', icon: Link, color: 'bg-green-100 text-green-800' },
-      attachments: { label: 'File Upload', icon: Upload, color: 'bg-purple-100 text-purple-800' }
-    };
-    
-    const type = types[assignment.submission_type];
-    const Icon = type.icon;
-    
-    return (
-      <Badge variant="outline" className={type.color}>
-        <Icon className="w-3 h-3 mr-1" />
-        {type.label}
-      </Badge>
-    );
-  };
+  const submissionTypeMeta = {
+    text: { label: 'Text Response', icon: FileText, accent: 'bg-primary/10 text-primary border-primary/20' },
+    links: { label: 'Link Submission', icon: Link, accent: 'bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/20' },
+    attachments: { label: 'File Upload', icon: Upload, accent: 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20' },
+  } as const;
+  const typeMeta = submissionTypeMeta[assignment.submission_type];
+  const TypeIcon = typeMeta.icon;
 
   const renderSubmissionForm = () => {
     if (hasSubmitted) {
       return (
-        <div className="flex items-center gap-2 text-success">
-          <CheckCircle className="w-4 h-4" />
-          <p className="text-sm font-medium">
-            Assignment already submitted and under review
-          </p>
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-green-500/10 border border-green-500/20">
+          <div className="w-9 h-9 rounded-lg bg-green-500/15 flex items-center justify-center text-green-700 dark:text-green-400 shrink-0">
+            <CheckCircle className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-green-700 dark:text-green-400">Submission received</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Your assignment is under review. You'll be notified once it's graded.</p>
+          </div>
         </div>
       );
     }
@@ -274,18 +267,20 @@ export const EnhancedStudentSubmissionDialog = ({
     switch (assignment.submission_type) {
       case 'text':
         return (
-          <div className="space-y-3">
-            <label htmlFor="content" className="block text-sm font-medium">
-              Your Response
-            </label>
+          <div className="space-y-2">
+            <label htmlFor="content" className="block text-sm font-semibold">Your Response</label>
             <Textarea
               id="content"
-              placeholder="Enter your assignment response here..."
+              placeholder="Type your assignment response here..."
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={8}
-              className="min-h-[200px]"
+              className="min-h-[200px] resize-y rounded-xl"
             />
+            <div className="flex justify-between items-center text-xs text-muted-foreground">
+              <span>Be clear and concise. You can edit before submitting.</span>
+              <span>{content.trim().split(/\s+/).filter(Boolean).length} words</span>
+            </div>
           </div>
         );
 
@@ -293,34 +288,40 @@ export const EnhancedStudentSubmissionDialog = ({
         return (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium">Links</label>
-              <Button type="button" variant="outline" size="sm" onClick={handleAddLink}>
-                <Plus className="w-3 h-3 mr-1" />
+              <label className="block text-sm font-semibold">Links</label>
+              <Button type="button" variant="outline" size="sm" onClick={handleAddLink} className="h-8">
+                <Plus className="w-3.5 h-3.5 mr-1" />
                 Add Link
               </Button>
             </div>
-            {links.map((link, index) => (
-              <div key={index} className="flex gap-2">
-                <Input
-                  placeholder="https://example.com"
-                  value={link}
-                  onChange={(e) => handleLinkChange(index, e.target.value)}
-                  className="flex-1"
-                />
-                {links.length > 1 && (
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => handleRemoveLink(index)}
-                  >
-                    <X className="w-3 h-3" />
-                  </Button>
-                )}
-              </div>
-            ))}
+            <div className="space-y-2">
+              {links.map((link, index) => (
+                <div key={index} className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Link className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                    <Input
+                      placeholder="https://example.com"
+                      value={link}
+                      onChange={(e) => handleLinkChange(index, e.target.value)}
+                      className="pl-9 rounded-xl"
+                    />
+                  </div>
+                  {links.length > 1 && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleRemoveLink(index)}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Add links to your work, portfolio, or relevant resources.
+              Paste Google Drive, Notion, Figma, or other view-only links to your work.
             </p>
           </div>
         );
@@ -328,18 +329,18 @@ export const EnhancedStudentSubmissionDialog = ({
       case 'attachments':
         return (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium">Attachments</label>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload className="w-3 h-3 mr-1" />
-                Add Files
-              </Button>
-            </div>
+            <label className="block text-sm font-semibold">Attachments</label>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-colors rounded-xl p-6 flex flex-col items-center justify-center text-center group"
+            >
+              <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                <Upload className="w-5 h-5" />
+              </div>
+              <p className="text-sm font-semibold text-foreground">Click to upload files</p>
+              <p className="text-xs text-muted-foreground mt-0.5">PDF, DOC, TXT, JPG, PNG, GIF</p>
+            </button>
             <input
               ref={fileInputRef}
               type="file"
@@ -351,29 +352,29 @@ export const EnhancedStudentSubmissionDialog = ({
             {files.length > 0 && (
               <div className="space-y-2">
                 {files.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 border rounded">
-                    <div className="flex items-center gap-2">
-                      <Upload className="w-4 h-4 text-muted-foreground" />
-                      <span className="text-sm">{file.name}</span>
-                      <span className="text-xs text-muted-foreground">
-                        ({Math.round(file.size / 1024)} KB)
-                      </span>
+                  <div key={index} className="flex items-center justify-between gap-3 p-3 rounded-xl bg-muted/40 border border-border">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg bg-background border border-border flex items-center justify-center text-muted-foreground shrink-0">
+                        <FileText className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{file.name}</p>
+                        <p className="text-xs text-muted-foreground">{Math.round(file.size / 1024)} KB</p>
+                      </div>
                     </div>
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
-                      size="sm"
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleRemoveFile(index)}
+                      className="text-muted-foreground hover:text-destructive shrink-0"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </Button>
                   </div>
                 ))}
               </div>
             )}
-            <p className="text-xs text-muted-foreground">
-              Upload documents, images, or other files related to your assignment.
-            </p>
           </div>
         );
 
@@ -384,50 +385,59 @@ export const EnhancedStudentSubmissionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Submit Assignment</DialogTitle>
-          <div className="flex items-center gap-2">
-            <p className="text-sm text-muted-foreground flex-1">
-              {assignment.name}
-            </p>
-            {getSubmissionTypeBadge()}
+      <DialogContent className="sm:max-w-xl p-0 overflow-hidden gap-0 max-h-[92vh] flex flex-col">
+        {/* Header */}
+        <DialogHeader className="p-6 pb-4 border-b border-border space-y-3 text-left">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${typeMeta.accent}`}>
+                <TypeIcon className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <DialogTitle className="text-lg font-bold">
+                  {hasSubmitted ? 'Submission Details' : 'Submit Assignment'}
+                </DialogTitle>
+                <p className="text-xs text-muted-foreground mt-0.5">{typeMeta.label}</p>
+              </div>
+            </div>
           </div>
+          <h3 className="text-sm font-semibold text-foreground/90 leading-snug">{assignment.name}</h3>
         </DialogHeader>
-        
-        <div className="space-y-4">
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Assignment Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {assignment.description && (
-                <p className="text-sm text-muted-foreground mb-3">
-                  {assignment.description}
-                </p>
-              )}
-              <p className="text-sm text-muted-foreground">
-                Complete the assignment and submit your work below.
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {assignment.description && (
+            <div className="rounded-xl bg-muted/40 border border-border p-4">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                Assignment Brief
               </p>
-            </CardContent>
-          </Card>
-
-          {renderSubmissionForm()}
-
-          {!hasSubmitted && (
-            <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button onClick={handleSubmit} className="flex-1" disabled={isSubmitting}>
-                {isSubmitting ? "Submitting..." : "Submit Assignment"}
-              </Button>
+              <p className="text-sm text-foreground/80 leading-relaxed whitespace-pre-wrap">
+                {assignment.description}
+              </p>
             </div>
           )}
 
-          {hasSubmitted && (
-            <div className="flex justify-end pt-4">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+          {renderSubmissionForm()}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 sm:p-6 pt-4 border-t border-border bg-muted/20">
+          {!hasSubmitted ? (
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1 font-semibold">
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                className="flex-1 font-bold shadow-md shadow-primary/20"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Submitting..." : "Submit Assignment"}
+              </Button>
+            </div>
+          ) : (
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="font-semibold">
                 Close
               </Button>
             </div>
