@@ -361,7 +361,11 @@ export function usePathwayGroupedRecordings(
         // immediate one) so a lesson without an assignment between two assignment-gated
         // lessons can't let the chain "leak" — e.g. lesson 5 stays unlocked because
         // lesson 4 has no assignment, even though lesson 2's assignment is still pending.
-        for (let i = 1; i < allCourseRecordings.length; i++) {
+        // SKIP this safety net entirely for courses where the student's enrollment has
+        // full bypass (drip_override+sequential_override true, both *_enabled false) —
+        // in that case assignment locks must not be enforced.
+        const skipAssignmentSafetyNet = fullBypassCourseIds.has(group.courseId);
+        for (let i = 1; i < allCourseRecordings.length && !skipAssignmentSafetyNet; i++) {
           const current = allCourseRecordings[i];
           if (!current.isUnlocked) continue;
 
