@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { safeMaybeSingle } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
 import { getStudentVideoAccessState } from '@/lib/student-video-access';
 
