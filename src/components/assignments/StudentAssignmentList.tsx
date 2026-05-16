@@ -225,7 +225,11 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     availableAssignments = assignments.filter(a => getSubmissionStatus(a.id)?.status === 'approved');
   } else {
     // Unlocked
-    availableAssignments = assignments.filter(a => isAssignmentUnlocked(a));
+    availableAssignments = assignments.filter(a => {
+      if (!isAssignmentUnlocked(a)) return false;
+      const status = getSubmissionStatus(a.id)?.status;
+      return !status || status === 'declined' || status === 'pending';
+    });
   }
   return <div className="space-y-4 sm:space-y-6">
       <div>
