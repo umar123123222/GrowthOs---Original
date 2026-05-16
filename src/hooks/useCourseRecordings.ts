@@ -37,6 +37,30 @@ export interface CourseModule {
   watchedLessons: number;
 }
 
+interface LessonRow {
+  id: string;
+  recording_title: string | null;
+  recording_url: string | null;
+  sequence_order: number | null;
+  duration_min: number | null;
+  module: string;
+  assignment_id: string | null;
+}
+
+interface UnlockStatusRow {
+  recording_id: string;
+  is_unlocked: boolean;
+  lock_reason: string | null;
+  drip_unlock_date: string | null;
+}
+
+interface SubmissionRow {
+  assignment_id: string;
+  status: string;
+  version: number | null;
+  created_at: string | null;
+}
+
 interface UseCourseRecordingsReturn {
   modules: CourseModule[];
   recordings: CourseRecording[];
@@ -76,7 +100,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       // Fetch lessons for these modules
       const moduleIds = modulesData?.map(m => m.id) || [];
       
-      let lessonsData: any[] = [];
+      let lessonsData: LessonRow[] = [];
       if (moduleIds.length > 0) {
         const { data, error: lessonsError } = await supabase
           .from('available_lessons')
@@ -85,7 +109,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           .order('sequence_order', { ascending: true });
 
         if (lessonsError) throw lessonsError;
-        lessonsData = data || [];
+        lessonsData = (data || []) as LessonRow[];
       }
 
       // Fetch unlock status, student LMS status, views, submissions, and access overrides in parallel
@@ -108,7 +132,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       const hasVideoBypass = videoAccessState.hasVideoBypass;
 
       const unlockStatusMap = new Map<string, { isUnlocked: boolean; lockReason?: string; dripUnlockDate?: string }>();
-      (unlockData || []).forEach((u: any) => {
+      ((unlockData || []) as UnlockStatusRow[]).forEach((u) => {
         unlockStatusMap.set(u.recording_id, {
           isUnlocked: u.is_unlocked,
           lockReason: u.lock_reason,
@@ -119,7 +143,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       const watchedMap = new Map((viewsResult.data || []).map(v => [v.recording_id, v.watched]));
 
       const latestSubmissionByAssignment = new Map<string, { status: string; version: number; createdAt: number }>();
-      (submissionsResult.data || []).forEach((submission: any) => {
+      ((submissionsResult.data || []) as SubmissionRow[]).forEach((submission) => {
         const version = Number(submission.version || 0);
         const createdAt = submission.created_at ? new Date(submission.created_at).getTime() : 0;
         const existing = latestSubmissionByAssignment.get(submission.assignment_id);
