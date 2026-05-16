@@ -373,12 +373,20 @@ export function StudentDashboard() {
         }
       }
 
-      // Build a set of unlocked recording IDs from the already-loaded recordings data.
-      // fetchDashboardData is gated on `!loading` (which includes recordingsLoading), so by
-      // the time we get here the recordings array reflects the actual unlock state.
-      const unlockedRecordingIds = new Set(
-        (recordings || []).filter(r => r.isUnlocked).map(r => r.id)
-      );
+      // Build a set of unlocked recording IDs across ALL the student's courses (not just
+      // the active one). Otherwise pending assignments from other enrolled / pathway
+      // courses would be hidden from the "Next Assignment" card even though they're
+      // legitimately unlocked and waiting on the student.
+      const { data: userUnlocks } = await supabase
+        .from('user_unlocks')
+        .select('recording_id, is_unlocked')
+        .eq('user_id', user.id)
+        .eq('is_unlocked', true);
+
+      const unlockedRecordingIds = new Set<string>([
+        ...(recordings || []).filter(r => r.isUnlocked).map(r => r.id),
+        ...((userUnlocks || []).map(u => u.recording_id).filter(Boolean) as string[]),
+      ]);
 
       const classified: Assignment[] = (assignments || [])
         .map(a => {
