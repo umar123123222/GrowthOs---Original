@@ -74,8 +74,7 @@ const Messages = () => {
             message: newMessage,
             type: messageType,
             timestamp: new Date().toISOString()
-          },
-          status: 'queued'
+          }
         });
 
       if (error) throw error;
