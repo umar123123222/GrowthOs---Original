@@ -284,31 +284,45 @@ export function usePathwayGroupedRecordings(
           }
         }
 
-        // SAFETY NET: Re-lock lessons that the RPC returned as unlocked but whose
-        // immediate predecessor's assignment is NOT approved. The RPC short-circuits
-        // unlocked when current.watched=true, bypassing the "previous assignment must
-        // be approved" rule.
+        // SAFETY NET: Re-lock lessons whose chain of predecessors isn't fully complete.
+        // Walks backwards through ALL prior lessons in the course (not just the
+        // immediate one) so a lesson without an assignment between two assignment-gated
+        // lessons can't let the chain "leak" — e.g. lesson 5 stays unlocked because
+        // lesson 4 has no assignment, even though lesson 2's assignment is still pending.
         for (let i = 1; i < allCourseRecordings.length; i++) {
           const current = allCourseRecordings[i];
           if (!current.isUnlocked) continue;
-          const predecessor = allCourseRecordings[i - 1];
-          if (!predecessor) continue;
 
-          if (predecessor.hasAssignment && predecessor.assignmentId && !approvedAssignments.has(predecessor.assignmentId)) {
-            current.isUnlocked = false;
-            current.blockingLessonTitle = predecessor.recording_title;
-            if (declinedAssignments.has(predecessor.assignmentId)) {
-              current.lockReason = 'previous_assignment_declined';
-              current.blockingAssignmentDeclined = true;
-            } else if (submittedAssignments.has(predecessor.assignmentId)) {
-              current.lockReason = 'previous_assignment_not_approved';
-            } else {
-              current.lockReason = 'previous_assignment_not_submitted';
+          let blocker: CourseRecording | null = null;
+          let reason: string | null = null;
+
+          for (let j = i - 1; j >= 0; j--) {
+            const pred = allCourseRecordings[j];
+
+            if (pred.hasAssignment && pred.assignmentId && !approvedAssignments.has(pred.assignmentId)) {
+              blocker = pred;
+              if (declinedAssignments.has(pred.assignmentId)) {
+                reason = 'previous_assignment_declined';
+              } else if (submittedAssignments.has(pred.assignmentId)) {
+                reason = 'previous_assignment_not_approved';
+              } else {
+                reason = 'previous_assignment_not_submitted';
+              }
+              break;
             }
-          } else if (!predecessor.isWatched) {
+
+            if (!pred.isWatched) {
+              blocker = pred;
+              reason = 'previous_lesson_not_watched';
+              break;
+            }
+          }
+
+          if (blocker && reason) {
             current.isUnlocked = false;
-            current.blockingLessonTitle = predecessor.recording_title;
-            current.lockReason = 'previous_lesson_not_watched';
+            current.blockingLessonTitle = blocker.recording_title;
+            current.lockReason = reason;
+            current.blockingAssignmentDeclined = reason === 'previous_assignment_declined';
           }
         }
 
