@@ -196,7 +196,25 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     return session.drip_days;
   };
 
-  const hasChanges = Object.keys(editedDripDays).length > 0 || Object.keys(editedSessionDripDays).length > 0 || Object.keys(editedSessionTitles).length > 0;
+  const hasChanges = Object.keys(editedDripDays).length > 0 || Object.keys(editedSessionDripDays).length > 0 || Object.keys(editedSessionTitles).length > 0 || Object.keys(editedSequenceOrders).length > 0;
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleReorderRecordings = (moduleId: string, oldIndex: number, newIndex: number) => {
+    setRecordings(prev => {
+      const moduleRecs = prev.filter(r => r.module_id === moduleId);
+      const others = prev.filter(r => r.module_id !== moduleId);
+      const reordered = arrayMove(moduleRecs, oldIndex, newIndex);
+      const updatedEdits: Record<string, number> = {};
+      const updatedModuleRecs = reordered.map((r, idx) => {
+        const newSeq = idx + 1;
+        if (r.sequence_order !== newSeq) updatedEdits[r.id] = newSeq;
+        return { ...r, sequence_order: newSeq };
+      });
+      setEditedSequenceOrders(curr => ({ ...curr, ...updatedEdits }));
+      return [...others, ...updatedModuleRecs];
+    });
+  };
 
   /**
    * Compute schedule_date for a session based on earliest batch start_date + drip_days.
