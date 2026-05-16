@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
+import { getStudentVideoAccessState } from '@/lib/student-video-access';
 import type { CourseRecording, CourseModule } from '@/hooks/useCourseRecordings';
 
 export interface CourseGroup {
@@ -100,14 +101,14 @@ export function usePathwayGroupedRecordings(
 
       const courseIds = pathwayCourses.map(pc => pc.course_id);
 
-      // Fetch courses, modules, views, submissions, and student LMS status in parallel
+      // Fetch courses, modules, views, submissions, student LMS status, and access overrides in parallel
       const [
         { data: coursesData },
         { data: modulesData },
         { data: viewsData },
         { data: submissionsData },
         { data: studentData },
-        { data: enrollmentsData },
+        videoAccessState,
       ] = await Promise.all([
         supabase.from('courses').select('id, title').in('id', courseIds),
         supabase.from('modules').select('id, title, order, course_id').in('course_id', courseIds).order('order', { ascending: true }),
@@ -117,28 +118,14 @@ export function usePathwayGroupedRecordings(
           .select('assignment_id, status, version, created_at')
           .eq('student_id', user.id),
         supabase.from('users').select('lms_status').eq('id', user.id).maybeSingle(),
-        supabase
-          .from('course_enrollments')
-          .select('course_id, pathway_id, drip_override, drip_enabled, sequential_override, sequential_enabled')
-          .eq('student_id', user.id),
+        getStudentVideoAccessState(user.id),
       ]);
 
       const studentLMSStatus = studentData?.lms_status || 'active';
 
-      // Bypass detection: if ANY of this student's enrollments has drip disabled
-      // (drip_override=true & drip_enabled=false) or sequential disabled
-      // (sequential_override=true & sequential_enabled=false), the bypass applies to
-      // ALL courses this student sees — assignment locks are disabled everywhere.
-      const studentHasBypass = ((enrollmentsData || []) as Array<{
-        drip_override: boolean | null;
-        drip_enabled: boolean | null;
-        sequential_override: boolean | null;
-        sequential_enabled: boolean | null;
-      }>).some((e) => {
-        const dripDisabled = e.drip_override === true && e.drip_enabled === false;
-        const sequentialDisabled = e.sequential_override === true && e.sequential_enabled === false;
-        return dripDisabled || sequentialDisabled;
-      });
+      // Bypass detection: if ANY active enrollment for this student has drip disabled
+      // or sequential disabled, all visible pathway videos are fully unlocked.
+      const studentHasBypass = videoAccessState.hasVideoBypass;
 
       const fullBypassCourseIds = new Set<string>();
       if (studentHasBypass) {

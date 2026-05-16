@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
+import { getStudentVideoAccessState } from '@/lib/student-video-access';
 
 export interface CourseRecording {
   id: string;
@@ -34,6 +35,30 @@ export interface CourseModule {
   isLocked: boolean;
   totalLessons: number;
   watchedLessons: number;
+}
+
+interface LessonRow {
+  id: string;
+  recording_title: string | null;
+  recording_url: string | null;
+  sequence_order: number | null;
+  duration_min: number | null;
+  module: string;
+  assignment_id: string | null;
+}
+
+interface UnlockStatusRow {
+  recording_id: string;
+  is_unlocked: boolean;
+  lock_reason: string | null;
+  drip_unlock_date: string | null;
+}
+
+interface SubmissionRow {
+  assignment_id: string;
+  status: string;
+  version: number | null;
+  created_at: string | null;
 }
 
 interface UseCourseRecordingsReturn {
@@ -75,7 +100,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       // Fetch lessons for these modules
       const moduleIds = modulesData?.map(m => m.id) || [];
       
-      let lessonsData: any[] = [];
+      let lessonsData: LessonRow[] = [];
       if (moduleIds.length > 0) {
         const { data, error: lessonsError } = await supabase
           .from('available_lessons')
@@ -84,11 +109,11 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           .order('sequence_order', { ascending: true });
 
         if (lessonsError) throw lessonsError;
-        lessonsData = data || [];
+        lessonsData = (data || []) as LessonRow[];
       }
 
-      // Fetch unlock status, student LMS status, views, and submissions in parallel
-      const [unlockResult, studentResult, viewsResult, submissionsResult] = await Promise.all([
+      // Fetch unlock status, student LMS status, views, submissions, and access overrides in parallel
+      const [unlockResult, studentResult, viewsResult, submissionsResult, videoAccessState] = await Promise.all([
         supabase.rpc('get_course_sequential_unlock_status', {
           p_user_id: user.id,
           p_course_id: courseId
@@ -99,13 +124,15 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           .from('submissions')
           .select('assignment_id, status, version, created_at')
           .eq('student_id', user.id),
+        getStudentVideoAccessState(user.id),
       ]);
 
       const unlockData = unlockResult.data;
       const studentLMSStatus = studentResult.data?.lms_status || 'active';
+      const hasVideoBypass = videoAccessState.hasVideoBypass;
 
       const unlockStatusMap = new Map<string, { isUnlocked: boolean; lockReason?: string; dripUnlockDate?: string }>();
-      (unlockData || []).forEach((u: any) => {
+      ((unlockData || []) as UnlockStatusRow[]).forEach((u) => {
         unlockStatusMap.set(u.recording_id, {
           isUnlocked: u.is_unlocked,
           lockReason: u.lock_reason,
@@ -116,7 +143,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       const watchedMap = new Map((viewsResult.data || []).map(v => [v.recording_id, v.watched]));
 
       const latestSubmissionByAssignment = new Map<string, { status: string; version: number; createdAt: number }>();
-      (submissionsResult.data || []).forEach((submission: any) => {
+      ((submissionsResult.data || []) as SubmissionRow[]).forEach((submission) => {
         const version = Number(submission.version || 0);
         const createdAt = submission.created_at ? new Date(submission.created_at).getTime() : 0;
         const existing = latestSubmissionByAssignment.get(submission.assignment_id);
@@ -161,14 +188,14 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           module_id: lesson.module,
           module_title: module?.title || 'Unknown Module',
           module_order: module?.order || 0,
-          isUnlocked: unlockStatus?.isUnlocked || false,
+          isUnlocked: hasVideoBypass ? true : unlockStatus?.isUnlocked || false,
           isWatched: watchedMap.get(lesson.id) || false,
           hasAssignment: !!lesson.assignment_id,
           assignmentId: lesson.assignment_id,
           assignmentSubmitted: lesson.assignment_id ? submittedAssignments.has(lesson.assignment_id) : false,
           assignmentDeclined: lesson.assignment_id ? declinedAssignments.has(lesson.assignment_id) : false,
-          lockReason: unlockStatus?.lockReason || null,
-          dripUnlockDate: unlockStatus?.dripUnlockDate || null,
+          lockReason: hasVideoBypass ? null : unlockStatus?.lockReason || null,
+          dripUnlockDate: hasVideoBypass ? null : unlockStatus?.dripUnlockDate || null,
           blockingLessonTitle: null,
           blockingAssignmentDeclined: false,
         };
@@ -180,7 +207,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         return a.sequence_order - b.sequence_order;
       });
 
-      for (let i = 1; i < sortedRecordings.length; i++) {
+      for (let i = 1; i < sortedRecordings.length && !hasVideoBypass; i++) {
         const current = sortedRecordings[i];
         const blockingByPreviousAssignment =
           current.lockReason === 'previous_assignment_not_approved' ||
@@ -224,7 +251,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       // a lesson without an assignment between two assignment-gated lessons would
       // otherwise let the chain "leak" — e.g. lesson 5 stays unlocked because lesson 4
       // has no assignment, even though lesson 2's assignment is still pending.
-      for (let i = 1; i < sortedRecordings.length; i++) {
+      for (let i = 1; i < sortedRecordings.length && !hasVideoBypass; i++) {
         const current = sortedRecordings[i];
         if (!current.isUnlocked) continue;
 
@@ -262,7 +289,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       }
 
 
-      if (studentLMSStatus === 'active') {
+      if (studentLMSStatus === 'active' && !hasVideoBypass) {
         const sortedBySequence = [...processedRecordings].sort((a, b) => {
           if (a.module_order !== b.module_order) return a.module_order - b.module_order;
           return a.sequence_order - b.sequence_order;
