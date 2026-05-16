@@ -576,7 +576,8 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                       </DndContext>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
                 {(courseData.sessions.length > 0 || true) && (
                   <div className="space-y-1">
