@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { safeMaybeSingle } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
+import { getStudentVideoAccessState } from '@/lib/student-video-access';
 
 interface RecordingUnlock {
   recording_id: string;
@@ -19,6 +20,7 @@ interface RecordingUnlock {
 export const useRecordingUnlocks = () => {
   const { user } = useAuth();
   const [unlocks, setUnlocks] = useState<RecordingUnlock[]>([]);
+  const [hasVideoBypass, setHasVideoBypass] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -112,27 +114,32 @@ export const useRecordingUnlocks = () => {
     try {
       logger.debug('Fetching unlock status for user:', { userId: user.id });
       
-      // Always use sequential unlock logic (hardcoded behavior)
-      const { data, error } = await supabase.rpc('get_sequential_unlock_status', {
-        p_user_id: user.id
-      });
+      // Always use sequential unlock logic unless drip/sequential access is disabled for this student.
+      const [{ data, error }, videoAccessState] = await Promise.all([
+        supabase.rpc('get_sequential_unlock_status', {
+          p_user_id: user.id
+        }),
+        getStudentVideoAccessState(user.id),
+      ]);
 
       if (error) {
         logger.error('Error fetching sequential unlock status:', error);
         throw error;
       }
 
+      setHasVideoBypass(videoAccessState.hasVideoBypass);
+
       // Transform to match existing interface with new fields
       const transformedData = (data || []).map(item => ({
         recording_id: item.recording_id,
         sequence_order: item.sequence_order,
-        is_unlocked: item.is_unlocked,
-        unlock_reason: item.unlock_reason,
+        is_unlocked: videoAccessState.hasVideoBypass ? true : item.is_unlocked,
+        unlock_reason: videoAccessState.hasVideoBypass ? 'Drip disabled' : item.unlock_reason,
         assignment_required: item.assignment_required,
-        assignment_completed: item.assignment_completed,
+        assignment_completed: videoAccessState.hasVideoBypass ? true : item.assignment_completed,
         recording_watched: item.recording_watched,
-        drip_locked: item.drip_locked || false,
-        drip_unlock_date: item.drip_unlock_date || null
+        drip_locked: videoAccessState.hasVideoBypass ? false : item.drip_locked || false,
+        drip_unlock_date: videoAccessState.hasVideoBypass ? null : item.drip_unlock_date || null
       }));
 
       logger.debug('Sequential unlock data:', { data: transformedData });
@@ -140,6 +147,7 @@ export const useRecordingUnlocks = () => {
     } catch (error) {
       logger.error('Error fetching recording unlocks:', error);
       // No fallback - maintain strict sequential behavior
+      setHasVideoBypass(false);
       setUnlocks([]);
     } finally {
       setLoading(false);
@@ -147,6 +155,7 @@ export const useRecordingUnlocks = () => {
   };
 
   const isRecordingUnlocked = (recordingId: string) => {
+    if (hasVideoBypass) return true;
     const unlock = unlocks.find(unlock => unlock.recording_id === recordingId);
     return unlock?.is_unlocked || false;
   };
@@ -162,6 +171,7 @@ export const useRecordingUnlocks = () => {
 
   return {
     unlocks,
+    hasVideoBypass,
     loading,
     isRecordingUnlocked,
     getRecordingStatus,
