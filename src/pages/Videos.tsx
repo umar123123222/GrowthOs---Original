@@ -76,7 +76,8 @@ const Videos = () => {
     loading: pathwayRecordingsLoading,
     refreshData: refreshPathwayRecordings,
   } = usePathwayGroupedRecordings(
-    isInPathwayMode && pathwayState ? pathwayState.pathwayId : null
+    isInPathwayMode && pathwayState ? pathwayState.pathwayId : null,
+    pathwayCourses
   );
 
   // Fetch user's LMS status
