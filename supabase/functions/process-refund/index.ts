@@ -177,14 +177,32 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Resolve enrollment name (course or pathway)
-    let enrollmentName = "your enrollment";
-    if (courseIds.length) {
-      const { data: c } = await supabase.from("courses").select("title").in("id", courseIds as string[]);
-      if (c?.length) enrollmentName = c.map(x => x.title).join(", ");
-    } else if (pathwayIds.length) {
-      const { data: p } = await supabase.from("pathways").select("name").in("id", pathwayIds as string[]);
-      if (p?.length) enrollmentName = p.map(x => x.name).join(", ");
+    const names: string[] = [];
+    let resolvedCourseIds = [...courseIds];
+    let resolvedPathwayIds = [...pathwayIds];
+
+    // Fallback: derive from student's enrollments if invoices lack course/pathway ids
+    if (!resolvedCourseIds.length && !resolvedPathwayIds.length) {
+      const { data: enrolls } = await supabase
+        .from("course_enrollments")
+        .select("course_id, pathway_id")
+        .eq("student_id", studentId);
+      if (enrolls?.length) {
+        resolvedCourseIds = [...new Set(enrolls.map(e => e.course_id).filter(Boolean))] as string[];
+        resolvedPathwayIds = [...new Set(enrolls.map(e => e.pathway_id).filter(Boolean))] as string[];
+      }
     }
+
+    if (resolvedCourseIds.length) {
+      const { data: c } = await supabase.from("courses").select("title").in("id", resolvedCourseIds as string[]);
+      if (c?.length) names.push(...c.map(x => x.title).filter(Boolean));
+    }
+    if (resolvedPathwayIds.length) {
+      const { data: p } = await supabase.from("pathways").select("name").in("id", resolvedPathwayIds as string[]);
+      if (p?.length) names.push(...p.map(x => x.name).filter(Boolean));
+    }
+
+    const enrollmentName = names.length ? names.join(", ") : "your enrollment";
 
     // Company settings
     const { data: company } = await supabase
