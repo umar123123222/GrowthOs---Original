@@ -1,14 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { BookOpen, Clock, CheckCircle, XCircle, Lock } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { BookOpen, Clock, CheckCircle, XCircle, Lock, Search, ArrowRight, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useRecordingUnlocks } from '@/hooks/useRecordingUnlocks';
 import { EnhancedStudentSubmissionDialog } from './EnhancedStudentSubmissionDialog';
 import { useSearchParams } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 interface Assignment {
   id: string;
   name: string;
