@@ -574,7 +574,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                         }}
                       >
                         <SortableContext items={dedupedRecs.map(r => r.id)} strategy={verticalListSortingStrategy}>
-                          {dedupedRecs.map((rec) => {
+                          {dedupedRecs.map((rec, idx) => {
                             const currentValue = getDripDaysValue(rec);
                             const isEdited = rec.id in editedDripDays;
                             const isReordered = rec.id in editedSequenceOrders;
@@ -582,6 +582,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                               <SortableRecordingRow
                                 key={rec.id}
                                 rec={rec}
+                                displayOrder={idx + 1}
                                 currentValue={currentValue}
                                 isEdited={isEdited}
                                 isReordered={isReordered}
@@ -741,13 +742,14 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
 
 interface SortableRecordingRowProps {
   rec: RecordingItem;
+  displayOrder: number;
   currentValue: number | null;
   isEdited: boolean;
   isReordered: boolean;
   onDripDaysChange: (id: string, value: string) => void;
 }
 
-function SortableRecordingRow({ rec, currentValue, isEdited, isReordered, onDripDaysChange }: SortableRecordingRowProps) {
+function SortableRecordingRow({ rec, displayOrder, currentValue, isEdited, isReordered, onDripDaysChange }: SortableRecordingRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: rec.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -769,8 +771,8 @@ function SortableRecordingRow({ rec, currentValue, isEdited, isReordered, onDrip
       >
         <GripVertical className="w-4 h-4" />
       </button>
-      <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
-        {rec.sequence_order ?? '-'}
+      <span className="text-xs font-medium text-muted-foreground w-6 text-right shrink-0">
+        {displayOrder}
       </span>
       <span className="text-sm flex-1 truncate">{rec.recording_title || 'Untitled'}</span>
       {rec.duration_min != null && (
