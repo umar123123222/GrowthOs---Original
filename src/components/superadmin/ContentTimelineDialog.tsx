@@ -200,20 +200,25 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const handleReorderRecordings = (moduleId: string, oldIndex: number, newIndex: number) => {
-    setRecordings(prev => {
-      const moduleRecs = prev.filter(r => r.module_id === moduleId);
-      const others = prev.filter(r => r.module_id !== moduleId);
-      const reordered = arrayMove(moduleRecs, oldIndex, newIndex);
-      const updatedEdits: Record<string, number> = {};
-      const updatedModuleRecs = reordered.map((r, idx) => {
-        const newSeq = idx + 1;
-        if (r.sequence_order !== newSeq) updatedEdits[r.id] = newSeq;
-        return { ...r, sequence_order: newSeq };
-      });
-      setEditedSequenceOrders(curr => ({ ...curr, ...updatedEdits }));
-      return [...others, ...updatedModuleRecs];
+  const handleReorderRecordings = (
+    moduleId: string,
+    visibleRecs: RecordingItem[],
+    oldIndex: number,
+    newIndex: number,
+  ) => {
+    // Reorder by reassigning drip_days: the slot positions keep their drip values,
+    // and recordings move into the new slot order.
+    const reordered = arrayMove(visibleRecs, oldIndex, newIndex);
+    const dripSlots = visibleRecs.map(r => (r.id in editedDripDays ? editedDripDays[r.id] : r.drip_days));
+    const dripUpdates: Record<string, number | null> = {};
+    reordered.forEach((rec, idx) => {
+      const newDrip = dripSlots[idx];
+      const currentDrip = rec.id in editedDripDays ? editedDripDays[rec.id] : rec.drip_days;
+      if (newDrip !== currentDrip) dripUpdates[rec.id] = newDrip;
     });
+    if (Object.keys(dripUpdates).length === 0) return;
+    setEditedDripDays(curr => ({ ...curr, ...dripUpdates }));
+    setRecordings(prev => prev.map(r => (r.id in dripUpdates ? { ...r, drip_days: dripUpdates[r.id] } : r)));
   };
 
   /**
@@ -535,9 +540,21 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                 )}
 
                 {Object.entries(courseData.modules).map(([moduleId, moduleData]) => {
-                  const sortedRecs = [...moduleData.recordings].sort(
-                    (a, b) => (a.sequence_order ?? 0) - (b.sequence_order ?? 0)
-                  );
+                  // Sort by drip_days asc (nulls last), then by sequence_order
+                  const sortedRecs = [...moduleData.recordings].sort((a, b) => {
+                    const aDrip = a.drip_days ?? Number.POSITIVE_INFINITY;
+                    const bDrip = b.drip_days ?? Number.POSITIVE_INFINITY;
+                    if (aDrip !== bDrip) return aDrip - bDrip;
+                    return (a.sequence_order ?? 0) - (b.sequence_order ?? 0);
+                  });
+                  // Dedupe by recording_title (case-insensitive, trimmed) — keep first occurrence (lowest drip)
+                  const seenTitles = new Set<string>();
+                  const dedupedRecs = sortedRecs.filter(r => {
+                    const key = (r.recording_title || r.id).trim().toLowerCase();
+                    if (seenTitles.has(key)) return false;
+                    seenTitles.add(key);
+                    return true;
+                  });
                   return (
                   <div key={moduleId} className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pl-1">
@@ -550,14 +567,14 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                         onDragEnd={(event: DragEndEvent) => {
                           const { active, over } = event;
                           if (!over || active.id === over.id) return;
-                          const oldIndex = sortedRecs.findIndex(r => r.id === active.id);
-                          const newIndex = sortedRecs.findIndex(r => r.id === over.id);
+                          const oldIndex = dedupedRecs.findIndex(r => r.id === active.id);
+                          const newIndex = dedupedRecs.findIndex(r => r.id === over.id);
                           if (oldIndex === -1 || newIndex === -1) return;
-                          handleReorderRecordings(moduleId, oldIndex, newIndex);
+                          handleReorderRecordings(moduleId, dedupedRecs, oldIndex, newIndex);
                         }}
                       >
-                        <SortableContext items={sortedRecs.map(r => r.id)} strategy={verticalListSortingStrategy}>
-                          {sortedRecs.map((rec) => {
+                        <SortableContext items={dedupedRecs.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                          {dedupedRecs.map((rec) => {
                             const currentValue = getDripDaysValue(rec);
                             const isEdited = rec.id in editedDripDays;
                             const isReordered = rec.id in editedSequenceOrders;
