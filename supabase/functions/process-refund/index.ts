@@ -198,7 +198,7 @@ const handler = async (req: Request): Promise<Response> => {
       if (c?.length) names.push(...c.map(x => x.title).filter(Boolean));
     }
     if (resolvedPathwayIds.length) {
-      const { data: p } = await supabase.from("pathways").select("name").in("id", resolvedPathwayIds as string[]);
+      const { data: p } = await supabase.from("learning_pathways").select("name").in("id", resolvedPathwayIds as string[]);
       if (p?.length) names.push(...p.map(x => x.name).filter(Boolean));
     }
 
