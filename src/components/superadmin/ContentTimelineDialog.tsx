@@ -534,40 +534,46 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                   </div>
                 )}
 
-                {Object.entries(courseData.modules).map(([moduleId, moduleData]) => (
+                {Object.entries(courseData.modules).map(([moduleId, moduleData]) => {
+                  const sortedRecs = [...moduleData.recordings].sort(
+                    (a, b) => (a.sequence_order ?? 0) - (b.sequence_order ?? 0)
+                  );
+                  return (
                   <div key={moduleId} className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pl-1">
                       {moduleData.title}
                     </p>
                     <div className="border rounded-md divide-y">
-                      {moduleData.recordings.map((rec) => {
-                        const currentValue = getDripDaysValue(rec);
-                        const isEdited = rec.id in editedDripDays;
-                        return (
-                          <div key={rec.id} className="flex items-center gap-3 px-3 py-2">
-                            <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
-                              {rec.sequence_order ?? '-'}
-                            </span>
-                            <span className="text-sm flex-1 truncate">{rec.recording_title || 'Untitled'}</span>
-                            {rec.duration_min != null && (
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                {rec.duration_min}m
-                              </span>
-                            )}
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Input
-                                type="number"
-                                min={0}
-                                value={currentValue ?? ''}
-                                onChange={(e) => handleDripDaysChange(rec.id, e.target.value)}
-                                className={`w-20 h-8 text-sm ${isEdited ? 'border-primary ring-1 ring-primary/30' : ''}`}
-                                placeholder="0"
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event: DragEndEvent) => {
+                          const { active, over } = event;
+                          if (!over || active.id === over.id) return;
+                          const oldIndex = sortedRecs.findIndex(r => r.id === active.id);
+                          const newIndex = sortedRecs.findIndex(r => r.id === over.id);
+                          if (oldIndex === -1 || newIndex === -1) return;
+                          handleReorderRecordings(moduleId, oldIndex, newIndex);
+                        }}
+                      >
+                        <SortableContext items={sortedRecs.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                          {sortedRecs.map((rec) => {
+                            const currentValue = getDripDaysValue(rec);
+                            const isEdited = rec.id in editedDripDays;
+                            const isReordered = rec.id in editedSequenceOrders;
+                            return (
+                              <SortableRecordingRow
+                                key={rec.id}
+                                rec={rec}
+                                currentValue={currentValue}
+                                isEdited={isEdited}
+                                isReordered={isReordered}
+                                onDripDaysChange={handleDripDaysChange}
                               />
-                              <span className="text-xs text-muted-foreground">days</span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </SortableContext>
+                      </DndContext>
                     </div>
                   </div>
                 ))}
