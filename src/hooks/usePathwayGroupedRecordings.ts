@@ -17,9 +17,32 @@ export interface CourseGroup {
 
 interface PathwayCourseAccess {
   courseId: string;
-  isAvailable: boolean;
   isCurrent: boolean;
   isCompleted: boolean;
+}
+
+interface LessonRow {
+  id: string;
+  recording_title: string | null;
+  recording_url: string | null;
+  sequence_order: number | null;
+  duration_min: number | null;
+  module: string;
+  assignment_id: string | null;
+}
+
+interface UnlockStatusRow {
+  recording_id: string;
+  is_unlocked: boolean;
+  lock_reason: string | null;
+  drip_unlock_date: string | null;
+}
+
+interface SubmissionRow {
+  assignment_id: string;
+  status: string;
+  version: number | null;
+  created_at: string | null;
 }
 
 const EMPTY_PATHWAY_ACCESS: PathwayCourseAccess[] = [];
@@ -99,14 +122,14 @@ export function usePathwayGroupedRecordings(
 
       // Fetch lessons for all modules
       const moduleIds = modulesData?.map(m => m.id) || [];
-      let lessonsData: any[] = [];
+      let lessonsData: LessonRow[] = [];
       if (moduleIds.length > 0) {
         const { data } = await supabase
           .from('available_lessons')
           .select('id, recording_title, recording_url, sequence_order, duration_min, module, assignment_id')
           .in('module', moduleIds)
           .order('sequence_order', { ascending: true });
-        lessonsData = data || [];
+        lessonsData = (data || []) as LessonRow[];
       }
 
       // Fetch unlock status for all courses in parallel
@@ -119,7 +142,7 @@ export function usePathwayGroupedRecordings(
               p_user_id: user.id,
               p_course_id: pc.course_id,
             });
-            return res.data || [];
+            return (res.data || []) as UnlockStatusRow[];
           } catch {
             return [];
           }
@@ -127,7 +150,7 @@ export function usePathwayGroupedRecordings(
       );
 
       unlockResults.forEach(unlockData => {
-        (unlockData as any[]).forEach((u: any) => {
+        unlockData.forEach((u) => {
           unlockStatusMap.set(u.recording_id, {
             isUnlocked: u.is_unlocked,
             lockReason: u.lock_reason,
@@ -141,7 +164,7 @@ export function usePathwayGroupedRecordings(
       const pathwayAccessMap = new Map(pathwayCoursesAccess.map(course => [course.courseId, course]));
       const watchedMap = new Map((viewsData || []).map(v => [v.recording_id, v.watched]));
       const latestSubmissionByAssignment = new Map<string, { status: string; version: number; createdAt: number }>();
-      (submissionsData || []).forEach((submission: any) => {
+      ((submissionsData || []) as SubmissionRow[]).forEach((submission) => {
         const version = Number(submission.version || 0);
         const createdAt = submission.created_at ? new Date(submission.created_at).getTime() : 0;
         const existing = latestSubmissionByAssignment.get(submission.assignment_id);
