@@ -395,11 +395,21 @@ export function StudentDashboard() {
         ...((watchedResult.data || []).map(v => v.recording_id).filter(Boolean) as string[]),
       ]);
 
+      const recordingIdsByAssignment = new Map<string, string[]>();
+      for (const recording of assignmentRecordings || []) {
+        if (!recording.assignment_id) continue;
+        const ids = recordingIdsByAssignment.get(recording.assignment_id) || [];
+        ids.push(recording.id);
+        recordingIdsByAssignment.set(recording.assignment_id, ids);
+      }
+
       const classified: Assignment[] = (assignments || [])
         .map(a => {
-          const linkedRecording = assignmentRecordings?.find(r => r.assignment_id === a.id);
-          // Hide assignments whose linked recording has not been reached/watched yet
-          if (linkedRecording && !assignmentEligibleRecordingIds.has(linkedRecording.id)) return null;
+          const linkedRecordingIds = recordingIdsByAssignment.get(a.id) || [];
+          // Hide assignments only when every linked recording is still unreached.
+          // Some assignments are reused across lessons/courses, so checking only the
+          // first linked lesson can incorrectly hide a pending assignment.
+          if (linkedRecordingIds.length > 0 && !linkedRecordingIds.some(id => assignmentEligibleRecordingIds.has(id))) return null;
 
           const sub = latestByAssignment.get(a.id);
           let status: AssignmentStatus = 'not_submitted';
