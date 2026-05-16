@@ -49,6 +49,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedDripDays, setEditedDripDays] = useState<Record<string, number | null>>({});
+  const [editedSequenceOrders, setEditedSequenceOrders] = useState<Record<string, number>>({});
   const [editedSessionDripDays, setEditedSessionDripDays] = useState<Record<string, number | null>>({});
   const [editedSessionTitles, setEditedSessionTitles] = useState<Record<string, string>>({});
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
