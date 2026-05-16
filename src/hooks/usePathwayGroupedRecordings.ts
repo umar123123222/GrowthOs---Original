@@ -107,6 +107,7 @@ export function usePathwayGroupedRecordings(
         { data: viewsData },
         { data: submissionsData },
         { data: studentData },
+        { data: enrollmentsData },
       ] = await Promise.all([
         supabase.from('courses').select('id, title').in('id', courseIds),
         supabase.from('modules').select('id, title, order, course_id').in('course_id', courseIds).order('order', { ascending: true }),
@@ -116,9 +117,39 @@ export function usePathwayGroupedRecordings(
           .select('assignment_id, status, version, created_at')
           .eq('student_id', user.id),
         supabase.from('users').select('lms_status').eq('id', user.id).maybeSingle(),
+        supabase
+          .from('course_enrollments')
+          .select('course_id, pathway_id, drip_override, drip_enabled, sequential_override, sequential_enabled')
+          .eq('student_id', user.id),
       ]);
 
       const studentLMSStatus = studentData?.lms_status || 'active';
+
+      // Courses where the student has a full bypass enrollment:
+      // drip_override=true & drip_enabled=false & sequential_override=true & sequential_enabled=false
+      // For these, assignment-based sequential locks must NOT be re-applied on the frontend.
+      const fullBypassCourseIds = new Set<string>();
+      ((enrollmentsData || []) as Array<{
+        course_id: string | null;
+        pathway_id: string | null;
+        drip_override: boolean | null;
+        drip_enabled: boolean | null;
+        sequential_override: boolean | null;
+        sequential_enabled: boolean | null;
+      }>).forEach((e) => {
+        const isFullBypass =
+          e.drip_override === true &&
+          e.drip_enabled === false &&
+          e.sequential_override === true &&
+          e.sequential_enabled === false;
+        if (!isFullBypass) return;
+        if (e.course_id) {
+          fullBypassCourseIds.add(e.course_id);
+        } else if (e.pathway_id === pathwayId) {
+          // Pathway-level enrollment with full bypass applies to every course in the pathway
+          courseIds.forEach((cid) => fullBypassCourseIds.add(cid));
+        }
+      });
 
       // Fetch lessons for all modules
       const moduleIds = modulesData?.map(m => m.id) || [];
@@ -330,7 +361,11 @@ export function usePathwayGroupedRecordings(
         // immediate one) so a lesson without an assignment between two assignment-gated
         // lessons can't let the chain "leak" — e.g. lesson 5 stays unlocked because
         // lesson 4 has no assignment, even though lesson 2's assignment is still pending.
-        for (let i = 1; i < allCourseRecordings.length; i++) {
+        // SKIP this safety net entirely for courses where the student's enrollment has
+        // full bypass (drip_override+sequential_override true, both *_enabled false) —
+        // in that case assignment locks must not be enforced.
+        const skipAssignmentSafetyNet = fullBypassCourseIds.has(group.courseId);
+        for (let i = 1; i < allCourseRecordings.length && !skipAssignmentSafetyNet; i++) {
           const current = allCourseRecordings[i];
           if (!current.isUnlocked) continue;
 
