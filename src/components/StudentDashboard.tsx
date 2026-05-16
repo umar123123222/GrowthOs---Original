@@ -373,26 +373,43 @@ export function StudentDashboard() {
         }
       }
 
-      // Build a set of unlocked recording IDs across ALL the student's courses (not just
-      // the active one). Otherwise pending assignments from other enrolled / pathway
-      // courses would be hidden from the "Next Assignment" card even though they're
-      // legitimately unlocked and waiting on the student.
-      const { data: userUnlocks } = await supabase
-        .from('user_unlocks')
-        .select('recording_id, is_unlocked')
-        .eq('user_id', user.id)
-        .eq('is_unlocked', true);
-
-      const unlockedRecordingIds = new Set<string>([
-        ...(recordings || []).filter(r => r.isUnlocked).map(r => r.id),
-        ...((userUnlocks || []).map(u => u.recording_id).filter(Boolean) as string[]),
+      // Build a set of assignment-eligible recording IDs across ALL courses. The
+      // persisted user_unlocks table can be stale after sequential-lock recalculation,
+      // so use the RPC result plus watched recordings. Watched recordings must remain
+      // eligible for assignment submission even if later lessons are locked behind them.
+      const [unlockResult, watchedResult] = await Promise.all([
+        supabase.rpc('get_sequential_unlock_status', { p_user_id: user.id }),
+        supabase
+          .from('recording_views')
+          .select('recording_id, watched')
+          .eq('user_id', user.id)
+          .eq('watched', true),
       ]);
+
+      const assignmentEligibleRecordingIds = new Set<string>([
+        ...(recordings || []).filter(r => r.isUnlocked || r.isWatched).map(r => r.id),
+        ...(((unlockResult.data || []) as any[])
+          .filter(u => u.is_unlocked || u.recording_watched)
+          .map(u => u.recording_id)
+          .filter(Boolean) as string[]),
+        ...((watchedResult.data || []).map(v => v.recording_id).filter(Boolean) as string[]),
+      ]);
+
+      const recordingIdsByAssignment = new Map<string, string[]>();
+      for (const recording of assignmentRecordings || []) {
+        if (!recording.assignment_id) continue;
+        const ids = recordingIdsByAssignment.get(recording.assignment_id) || [];
+        ids.push(recording.id);
+        recordingIdsByAssignment.set(recording.assignment_id, ids);
+      }
 
       const classified: Assignment[] = (assignments || [])
         .map(a => {
-          const linkedRecording = assignmentRecordings?.find(r => r.assignment_id === a.id);
-          // Hide assignments whose linked recording isn't unlocked yet
-          if (linkedRecording && !unlockedRecordingIds.has(linkedRecording.id)) return null;
+          const linkedRecordingIds = recordingIdsByAssignment.get(a.id) || [];
+          // Hide assignments only when every linked recording is still unreached.
+          // Some assignments are reused across lessons/courses, so checking only the
+          // first linked lesson can incorrectly hide a pending assignment.
+          if (linkedRecordingIds.length > 0 && !linkedRecordingIds.some(id => assignmentEligibleRecordingIds.has(id))) return null;
 
           const sub = latestByAssignment.get(a.id);
           let status: AssignmentStatus = 'not_submitted';

@@ -1199,29 +1199,14 @@ export const StudentManagement = () => {
       });
       return;
     }
-    try {
-      const updateField = passwordType === 'temp' ? 'temp_password' : 'lms_password';
-      const {
-        error
-      } = await supabase.from('users').update({
-        [updateField]: newPassword
-      }).eq('id', selectedStudentForPassword.id);
-      if (error) throw error;
-      toast({
-        title: "Success",
-        description: `${passwordType === 'temp' ? 'Temporary' : 'LMS'} password updated successfully`
-      });
-      setPasswordEditDialog(false);
-      setNewPassword('');
-      setSelectedStudentForPassword(null);
-      fetchStudents();
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "Failed to update password: " + error.message,
-        variant: "destructive"
-      });
-    }
+    toast({
+      title: "Information",
+      description: "Password management has been moved to secure encrypted storage",
+      variant: "default"
+    });
+    setPasswordEditDialog(false);
+    setNewPassword('');
+    setSelectedStudentForPassword(null);
   };
   const handleExportCSV = async () => {
     const batchNameMap = new Map(batchOptions.map(b => [b.id, b.name]));
