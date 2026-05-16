@@ -235,6 +235,7 @@ export function usePathwayGroupedRecordings(
         const pathwayAccess = pathwayAccessMap.get(pc.course_id);
         const isCurrentPathwayCourse = pathwayAccess?.isCurrent ?? false;
         const isCompletedPathwayCourse = pathwayAccess?.isCompleted ?? false;
+        const courseHasBypass = fullBypassCourseIds.has(pc.course_id);
 
         let courseTotalLessons = 0;
         let courseWatchedLessons = 0;
@@ -254,6 +255,13 @@ export function usePathwayGroupedRecordings(
             lockReason = status?.lockReason || null;
             dripUnlockDate = status?.dripUnlockDate || null;
 
+            // Bypass: when this student's enrollment has drip disabled (and/or sequential disabled),
+            // assignment locks must not apply either — unlock unconditionally.
+            if (courseHasBypass) {
+              isUnlocked = true;
+              lockReason = null;
+              dripUnlockDate = null;
+            }
             if (isWatched) courseWatchedLessons++;
             courseTotalLessons++;
 
