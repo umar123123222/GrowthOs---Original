@@ -11,6 +11,14 @@ export interface CourseGroup {
   modules: CourseModule[];
   totalLessons: number;
   watchedLessons: number;
+  isPathwayAvailable?: boolean;
+  isCurrentPathwayCourse?: boolean;
+}
+
+interface PathwayCourseAccess {
+  courseId: string;
+  isAvailable: boolean;
+  isCurrent: boolean;
 }
 
 interface UsePathwayGroupedRecordingsReturn {
@@ -29,7 +37,8 @@ interface UsePathwayGroupedRecordingsReturn {
  * Used for non-batch pathway students.
  */
 export function usePathwayGroupedRecordings(
-  pathwayId: string | null
+  pathwayId: string | null,
+  pathwayCoursesAccess: PathwayCourseAccess[] = []
 ): UsePathwayGroupedRecordingsReturn {
   const { user } = useAuth();
   const [courseGroups, setCourseGroups] = useState<CourseGroup[]>([]);
@@ -126,6 +135,7 @@ export function usePathwayGroupedRecordings(
 
       // Build lookup maps
       const courseMap = new Map((coursesData || []).map(c => [c.id, c.title]));
+      const pathwayAccessMap = new Map(pathwayCoursesAccess.map(course => [course.courseId, course]));
       const watchedMap = new Map((viewsData || []).map(v => [v.recording_id, v.watched]));
       const latestSubmissionByAssignment = new Map<string, { status: string; version: number; createdAt: number }>();
       (submissionsData || []).forEach((submission: any) => {
@@ -167,6 +177,9 @@ export function usePathwayGroupedRecordings(
       const groups: CourseGroup[] = pathwayCourses.map(pc => {
         const courseTitle = courseMap.get(pc.course_id) || 'Unknown Course';
         const courseModules = (modulesData || []).filter(m => m.course_id === pc.course_id);
+        const pathwayAccess = pathwayAccessMap.get(pc.course_id);
+        const isPathwayAvailable = pathwayAccess?.isAvailable ?? pc.step_number === 1;
+        const isCurrentPathwayCourse = pathwayAccess?.isCurrent ?? false;
 
         let courseTotalLessons = 0;
         let courseWatchedLessons = 0;
@@ -235,6 +248,8 @@ export function usePathwayGroupedRecordings(
           modules: processedModules,
           totalLessons: courseTotalLessons,
           watchedLessons: courseWatchedLessons,
+          isPathwayAvailable,
+          isCurrentPathwayCourse,
         };
       });
 
@@ -370,6 +385,24 @@ export function usePathwayGroupedRecordings(
         }
       }
 
+      // Pathway timeline gate: the per-course RPC unlocks the first lesson of
+      // every course independently. For pathway students, future pathway courses
+      // must remain locked until the pathway map marks that course available.
+      for (const group of groups) {
+        if (group.isPathwayAvailable) continue;
+
+        for (const mod of group.modules) {
+          for (const rec of mod.recordings) {
+            rec.isUnlocked = false;
+            rec.lockReason = 'pathway_locked';
+            rec.blockingLessonTitle = null;
+            rec.blockingAssignmentDeclined = false;
+          }
+          mod.isLocked = mod.recordings.length > 0;
+          mod.watchedLessons = mod.recordings.filter(r => r.isWatched).length;
+        }
+      }
+
       setCourseGroups(groups);
       setTotalRecordings(allRecordingsCount);
       setTotalWatched(allWatchedCount);
@@ -380,7 +413,7 @@ export function usePathwayGroupedRecordings(
     } finally {
       setLoading(false);
     }
-  }, [user?.id, pathwayId]);
+  }, [user?.id, pathwayId, pathwayCoursesAccess]);
 
   useEffect(() => {
     fetchData();
