@@ -313,9 +313,19 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
         if (error) throw error;
       }
 
-      const totalUpdates = Object.keys(editedDripDays).length + Object.keys(editedSessionDripDays).length + Object.keys(editedSessionTitles).length;
+      // Save recording sequence_order changes
+      for (const [id, sequence_order] of Object.entries(editedSequenceOrders)) {
+        const { error } = await supabase
+          .from('available_lessons')
+          .update({ sequence_order })
+          .eq('id', id);
+        if (error) throw error;
+      }
+
+      const totalUpdates = Object.keys(editedDripDays).length + Object.keys(editedSessionDripDays).length + Object.keys(editedSessionTitles).length + Object.keys(editedSequenceOrders).length;
       toast({ title: "Success", description: `Updated ${totalUpdates} item(s)` });
       setEditedDripDays({});
+      setEditedSequenceOrders({});
       setEditedSessionDripDays({});
       setEditedSessionTitles({});
       await fetchAll();
