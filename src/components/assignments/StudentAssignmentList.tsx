@@ -205,14 +205,12 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     });
   }
 
-  const filteredAssignments = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return availableAssignments;
-    return availableAssignments.filter(a =>
-      a.name.toLowerCase().includes(q) ||
-      (a.description || '').toLowerCase().includes(q) ||
-      (a.recording?.recording_title || '').toLowerCase().includes(q)
-    );
+  const q = search.trim().toLowerCase();
+  const filteredAssignments = !q ? availableAssignments : availableAssignments.filter(a =>
+    a.name.toLowerCase().includes(q) ||
+    (a.description || '').toLowerCase().includes(q) ||
+    (a.recording?.recording_title || '').toLowerCase().includes(q)
+  );
   }, [availableAssignments, search]);
 
   type StatusKey = 'no_submission' | 'pending' | 'declined' | 'approved';
