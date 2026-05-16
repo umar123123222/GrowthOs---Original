@@ -539,7 +539,16 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                   </div>
                 )}
 
-                {Object.entries(courseData.modules).map(([moduleId, moduleData]) => {
+                {Object.entries(courseData.modules)
+                  .map(([moduleId, moduleData]) => {
+                    const minDrip = moduleData.recordings.reduce((min, r) => {
+                      const d = (r.id in editedDripDays ? editedDripDays[r.id] : r.drip_days) ?? Number.POSITIVE_INFINITY;
+                      return d < min ? d : min;
+                    }, Number.POSITIVE_INFINITY);
+                    return { moduleId, moduleData, minDrip };
+                  })
+                  .sort((a, b) => a.minDrip - b.minDrip)
+                  .map(({ moduleId, moduleData }) => {
                   // Sort by drip_days asc (nulls last), then by sequence_order
                   const sortedRecs = [...moduleData.recordings].sort((a, b) => {
                     const aDrip = a.drip_days ?? Number.POSITIVE_INFINITY;
