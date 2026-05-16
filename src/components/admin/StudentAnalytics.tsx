@@ -49,7 +49,8 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
     videos_watched_today: 0,
     assignments_submitted_today: 0
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [hasLoaded, setHasLoaded] = useState(false);
   
   // Filter students based on search term
   const filteredStudents = students.filter(student => 
@@ -65,9 +66,14 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
   const {
     toast
   } = useToast();
+  // Lazy-load: only fetch the heavy analytics data when user actually opens
+  // the Overview or Engagement tabs. The Payments tab has its own data fetch.
   useEffect(() => {
-    fetchAnalyticsData();
-  }, []);
+    if (!hasLoaded && (activeTab === 'overview' || activeTab === 'engagement')) {
+      setHasLoaded(true);
+      fetchAnalyticsData();
+    }
+  }, [activeTab, hasLoaded]);
   
   // Reset to first page when search term changes
   useEffect(() => {
