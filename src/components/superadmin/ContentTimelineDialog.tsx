@@ -721,3 +721,57 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     </Dialog>
   );
 }
+
+interface SortableRecordingRowProps {
+  rec: RecordingItem;
+  currentValue: number | null;
+  isEdited: boolean;
+  isReordered: boolean;
+  onDripDaysChange: (id: string, value: string) => void;
+}
+
+function SortableRecordingRow({ rec, currentValue, isEdited, isReordered, onDripDaysChange }: SortableRecordingRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: rec.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 px-3 py-2 bg-background ${isReordered ? 'border-l-2 border-primary' : ''}`}
+    >
+      <button
+        type="button"
+        className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0"
+        {...attributes}
+        {...listeners}
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+      <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
+        {rec.sequence_order ?? '-'}
+      </span>
+      <span className="text-sm flex-1 truncate">{rec.recording_title || 'Untitled'}</span>
+      {rec.duration_min != null && (
+        <span className="text-xs text-muted-foreground shrink-0">
+          {rec.duration_min}m
+        </span>
+      )}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <Input
+          type="number"
+          min={0}
+          value={currentValue ?? ''}
+          onChange={(e) => onDripDaysChange(rec.id, e.target.value)}
+          className={`w-20 h-8 text-sm ${isEdited ? 'border-primary ring-1 ring-primary/30' : ''}`}
+          placeholder="0"
+        />
+        <span className="text-xs text-muted-foreground">days</span>
+      </div>
+    </div>
+  );
+}
