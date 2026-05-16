@@ -1,1 +1,4 @@
 project_id = "majqoqagohicjigmsilu"
+
+[functions.process-refund]
+verify_jwt = true
