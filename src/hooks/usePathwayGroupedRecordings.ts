@@ -125,29 +125,25 @@ export function usePathwayGroupedRecordings(
 
       const studentLMSStatus = studentData?.lms_status || 'active';
 
-      // Courses where the student has a bypass enrollment.
-      // Rule: if drip is explicitly disabled for this student (drip_override=true & drip_enabled=false),
-      // assignment-based sequential locks must ALSO be disabled — no drip, no assignment gating.
-      // Sequential override fully off (sequential_override=true & sequential_enabled=false) also qualifies.
-      const fullBypassCourseIds = new Set<string>();
-      ((enrollmentsData || []) as Array<{
-        course_id: string | null;
-        pathway_id: string | null;
+      // Bypass detection: if ANY of this student's enrollments has drip disabled
+      // (drip_override=true & drip_enabled=false) or sequential disabled
+      // (sequential_override=true & sequential_enabled=false), the bypass applies to
+      // ALL courses this student sees — assignment locks are disabled everywhere.
+      const studentHasBypass = ((enrollmentsData || []) as Array<{
         drip_override: boolean | null;
         drip_enabled: boolean | null;
         sequential_override: boolean | null;
         sequential_enabled: boolean | null;
-      }>).forEach((e) => {
+      }>).some((e) => {
         const dripDisabled = e.drip_override === true && e.drip_enabled === false;
         const sequentialDisabled = e.sequential_override === true && e.sequential_enabled === false;
-        const isBypass = dripDisabled || sequentialDisabled;
-        if (!isBypass) return;
-        if (e.course_id) {
-          fullBypassCourseIds.add(e.course_id);
-        } else if (e.pathway_id === pathwayId) {
-          courseIds.forEach((cid) => fullBypassCourseIds.add(cid));
-        }
+        return dripDisabled || sequentialDisabled;
       });
+
+      const fullBypassCourseIds = new Set<string>();
+      if (studentHasBypass) {
+        courseIds.forEach((cid) => fullBypassCourseIds.add(cid));
+      }
 
       // Fetch lessons for all modules
       const moduleIds = modulesData?.map(m => m.id) || [];
