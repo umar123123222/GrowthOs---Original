@@ -125,9 +125,10 @@ export function usePathwayGroupedRecordings(
 
       const studentLMSStatus = studentData?.lms_status || 'active';
 
-      // Courses where the student has a full bypass enrollment:
-      // drip_override=true & drip_enabled=false & sequential_override=true & sequential_enabled=false
-      // For these, assignment-based sequential locks must NOT be re-applied on the frontend.
+      // Courses where the student has a bypass enrollment.
+      // Rule: if drip is explicitly disabled for this student (drip_override=true & drip_enabled=false),
+      // assignment-based sequential locks must ALSO be disabled — no drip, no assignment gating.
+      // Sequential override fully off (sequential_override=true & sequential_enabled=false) also qualifies.
       const fullBypassCourseIds = new Set<string>();
       ((enrollmentsData || []) as Array<{
         course_id: string | null;
@@ -137,16 +138,13 @@ export function usePathwayGroupedRecordings(
         sequential_override: boolean | null;
         sequential_enabled: boolean | null;
       }>).forEach((e) => {
-        const isFullBypass =
-          e.drip_override === true &&
-          e.drip_enabled === false &&
-          e.sequential_override === true &&
-          e.sequential_enabled === false;
-        if (!isFullBypass) return;
+        const dripDisabled = e.drip_override === true && e.drip_enabled === false;
+        const sequentialDisabled = e.sequential_override === true && e.sequential_enabled === false;
+        const isBypass = dripDisabled || sequentialDisabled;
+        if (!isBypass) return;
         if (e.course_id) {
           fullBypassCourseIds.add(e.course_id);
         } else if (e.pathway_id === pathwayId) {
-          // Pathway-level enrollment with full bypass applies to every course in the pathway
           courseIds.forEach((cid) => fullBypassCourseIds.add(cid));
         }
       });
