@@ -211,7 +211,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     (a.description || '').toLowerCase().includes(q) ||
     (a.recording?.recording_title || '').toLowerCase().includes(q)
   );
-  }, [availableAssignments, search]);
+  
 
   type StatusKey = 'no_submission' | 'pending' | 'declined' | 'approved';
   const getStatusKey = (s?: Submission): StatusKey => {
