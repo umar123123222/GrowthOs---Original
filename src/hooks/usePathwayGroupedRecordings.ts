@@ -411,24 +411,10 @@ export function usePathwayGroupedRecordings(
         }
       }
 
-      // Pathway timeline gate: the per-course RPC unlocks the first lesson of
-      // every course independently. For pathway students, future pathway courses
-      // must remain locked until they become the current pathway step. Previously
-      // completed courses stay accessible for review.
-      for (const group of groups) {
-        if (group.isCurrentPathwayCourse || group.isCompletedPathwayCourse) continue;
-
-        for (const mod of group.modules) {
-          for (const rec of mod.recordings) {
-            rec.isUnlocked = false;
-            rec.lockReason = 'pathway_locked';
-            rec.blockingLessonTitle = null;
-            rec.blockingAssignmentDeclined = false;
-          }
-          mod.isLocked = mod.recordings.length > 0;
-          mod.watchedLessons = mod.recordings.filter(r => r.isWatched).length;
-        }
-      }
+      // Pathway gating is handled purely by the drip timeline set in the pathway
+      // (per-course drip dates from the RPC). We do NOT force-lock future pathway
+      // courses based on whether the current course is completed — the drip date
+      // is the single source of truth.
 
       setCourseGroups(groups);
       setTotalRecordings(allRecordingsCount);
