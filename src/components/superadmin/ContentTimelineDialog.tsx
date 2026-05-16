@@ -562,14 +562,14 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                         onDragEnd={(event: DragEndEvent) => {
                           const { active, over } = event;
                           if (!over || active.id === over.id) return;
-                          const oldIndex = sortedRecs.findIndex(r => r.id === active.id);
-                          const newIndex = sortedRecs.findIndex(r => r.id === over.id);
+                          const oldIndex = dedupedRecs.findIndex(r => r.id === active.id);
+                          const newIndex = dedupedRecs.findIndex(r => r.id === over.id);
                           if (oldIndex === -1 || newIndex === -1) return;
-                          handleReorderRecordings(moduleId, oldIndex, newIndex);
+                          handleReorderRecordings(moduleId, dedupedRecs, oldIndex, newIndex);
                         }}
                       >
-                        <SortableContext items={sortedRecs.map(r => r.id)} strategy={verticalListSortingStrategy}>
-                          {sortedRecs.map((rec) => {
+                        <SortableContext items={dedupedRecs.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                          {dedupedRecs.map((rec) => {
                             const currentValue = getDripDaysValue(rec);
                             const isEdited = rec.id in editedDripDays;
                             const isReordered = rec.id in editedSequenceOrders;
