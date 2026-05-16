@@ -200,20 +200,25 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const handleReorderRecordings = (moduleId: string, oldIndex: number, newIndex: number) => {
-    setRecordings(prev => {
-      const moduleRecs = prev.filter(r => r.module_id === moduleId);
-      const others = prev.filter(r => r.module_id !== moduleId);
-      const reordered = arrayMove(moduleRecs, oldIndex, newIndex);
-      const updatedEdits: Record<string, number> = {};
-      const updatedModuleRecs = reordered.map((r, idx) => {
-        const newSeq = idx + 1;
-        if (r.sequence_order !== newSeq) updatedEdits[r.id] = newSeq;
-        return { ...r, sequence_order: newSeq };
-      });
-      setEditedSequenceOrders(curr => ({ ...curr, ...updatedEdits }));
-      return [...others, ...updatedModuleRecs];
+  const handleReorderRecordings = (
+    moduleId: string,
+    visibleRecs: RecordingItem[],
+    oldIndex: number,
+    newIndex: number,
+  ) => {
+    // Reorder by reassigning drip_days: the slot positions keep their drip values,
+    // and recordings move into the new slot order.
+    const reordered = arrayMove(visibleRecs, oldIndex, newIndex);
+    const dripSlots = visibleRecs.map(r => (r.id in editedDripDays ? editedDripDays[r.id] : r.drip_days));
+    const dripUpdates: Record<string, number | null> = {};
+    reordered.forEach((rec, idx) => {
+      const newDrip = dripSlots[idx];
+      const currentDrip = rec.id in editedDripDays ? editedDripDays[rec.id] : rec.drip_days;
+      if (newDrip !== currentDrip) dripUpdates[rec.id] = newDrip;
     });
+    if (Object.keys(dripUpdates).length === 0) return;
+    setEditedDripDays(curr => ({ ...curr, ...dripUpdates }));
+    setRecordings(prev => prev.map(r => (r.id in dripUpdates ? { ...r, drip_days: dripUpdates[r.id] } : r)));
   };
 
   /**
