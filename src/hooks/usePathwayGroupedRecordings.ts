@@ -11,15 +11,18 @@ export interface CourseGroup {
   modules: CourseModule[];
   totalLessons: number;
   watchedLessons: number;
-  isPathwayAvailable?: boolean;
   isCurrentPathwayCourse?: boolean;
+  isCompletedPathwayCourse?: boolean;
 }
 
 interface PathwayCourseAccess {
   courseId: string;
   isAvailable: boolean;
   isCurrent: boolean;
+  isCompleted: boolean;
 }
+
+const EMPTY_PATHWAY_ACCESS: PathwayCourseAccess[] = [];
 
 interface UsePathwayGroupedRecordingsReturn {
   courseGroups: CourseGroup[];
@@ -38,7 +41,7 @@ interface UsePathwayGroupedRecordingsReturn {
  */
 export function usePathwayGroupedRecordings(
   pathwayId: string | null,
-  pathwayCoursesAccess: PathwayCourseAccess[] = []
+  pathwayCoursesAccess: PathwayCourseAccess[] = EMPTY_PATHWAY_ACCESS
 ): UsePathwayGroupedRecordingsReturn {
   const { user } = useAuth();
   const [courseGroups, setCourseGroups] = useState<CourseGroup[]>([]);
@@ -178,8 +181,8 @@ export function usePathwayGroupedRecordings(
         const courseTitle = courseMap.get(pc.course_id) || 'Unknown Course';
         const courseModules = (modulesData || []).filter(m => m.course_id === pc.course_id);
         const pathwayAccess = pathwayAccessMap.get(pc.course_id);
-        const isPathwayAvailable = pathwayAccess?.isAvailable ?? pc.step_number === 1;
         const isCurrentPathwayCourse = pathwayAccess?.isCurrent ?? false;
+        const isCompletedPathwayCourse = pathwayAccess?.isCompleted ?? false;
 
         let courseTotalLessons = 0;
         let courseWatchedLessons = 0;
@@ -248,8 +251,8 @@ export function usePathwayGroupedRecordings(
           modules: processedModules,
           totalLessons: courseTotalLessons,
           watchedLessons: courseWatchedLessons,
-          isPathwayAvailable,
           isCurrentPathwayCourse,
+          isCompletedPathwayCourse,
         };
       });
 
