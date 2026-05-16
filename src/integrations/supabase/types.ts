@@ -1187,6 +1187,11 @@ export type Database = {
           paid_at: string | null
           pathway_id: string | null
           payment_method: string | null
+          refund_amount: number | null
+          refund_method: string | null
+          refund_reason: string | null
+          refunded_at: string | null
+          refunded_by: string | null
           second_reminder_sent: boolean | null
           second_reminder_sent_at: string | null
           status: string | null
@@ -1209,6 +1214,11 @@ export type Database = {
           paid_at?: string | null
           pathway_id?: string | null
           payment_method?: string | null
+          refund_amount?: number | null
+          refund_method?: string | null
+          refund_reason?: string | null
+          refunded_at?: string | null
+          refunded_by?: string | null
           second_reminder_sent?: boolean | null
           second_reminder_sent_at?: string | null
           status?: string | null
@@ -1231,6 +1241,11 @@ export type Database = {
           paid_at?: string | null
           pathway_id?: string | null
           payment_method?: string | null
+          refund_amount?: number | null
+          refund_method?: string | null
+          refund_reason?: string | null
+          refunded_at?: string | null
+          refunded_by?: string | null
           second_reminder_sent?: boolean | null
           second_reminder_sent_at?: string | null
           status?: string | null
