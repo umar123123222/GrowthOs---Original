@@ -1,0 +1,6 @@
+ALTER TABLE public.invoices
+  ADD COLUMN IF NOT EXISTS refunded_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS refund_amount NUMERIC,
+  ADD COLUMN IF NOT EXISTS refund_reason TEXT,
+  ADD COLUMN IF NOT EXISTS refund_method TEXT,
+  ADD COLUMN IF NOT EXISTS refunded_by UUID;
