@@ -177,47 +177,20 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     })[0];
   };
-  const getStatusBadge = (submission?: Submission) => {
-    if (!submission) {
-      return;
-    }
-    switch (submission.status) {
-      case 'approved':
-        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Approved
-          </Badge>;
-      case 'declined':
-        return <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
-            <XCircle className="w-3 h-3 mr-1" />
-            Declined
-          </Badge>;
-      case 'pending':
-        return <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-            <Clock className="w-3 h-3 mr-1" />
-            Under Review
-          </Badge>;
-      default:
-        return null;
-    }
-  };
+  const [search, setSearch] = useState('');
+
   const handleSubmissionComplete = () => {
     fetchData();
   };
+
   if (loading || unlocksLoading) {
-    return <div className="flex justify-center items-center h-64">Loading assignments...</div>;
+    return <div className="flex justify-center items-center h-64 text-muted-foreground">Loading assignments...</div>;
   }
 
   // Build filtered lists based on selected tab
   const isAssignmentUnlocked = (assignment: Assignment) => {
-    // If assignment has no linked recording, it's always available
     if (!assignment.recording) return true;
-    
     const linkedRecordingId = assignment.recording.id;
-    
-    // Assignment is available if the linked recording is UNLOCKED (not just watched)
-    // This prevents a deadlock where the recording is locked waiting for assignment submission
-    // but the assignment isn't visible because the recording hasn't been watched yet
     return isRecordingUnlocked(linkedRecordingId) || watchedRecordingIds.has(linkedRecordingId);
   };
 
@@ -225,68 +198,239 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
   if (filterMode === 'submitted') {
     availableAssignments = assignments.filter(a => getSubmissionStatus(a.id)?.status === 'approved');
   } else {
-    // Unlocked
     availableAssignments = assignments.filter(a => {
       if (!isAssignmentUnlocked(a)) return false;
       const status = getSubmissionStatus(a.id)?.status;
       return !status || status === 'declined' || status === 'pending';
     });
   }
-  return <div className="space-y-4 sm:space-y-6">
-      <div>
-        <h1 className="text-xl sm:text-3xl font-bold">My Assignments</h1>
-        <p className="text-sm sm:text-base text-muted-foreground">Complete and submit your course assignments</p>
+
+  const filteredAssignments = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return availableAssignments;
+    return availableAssignments.filter(a =>
+      a.name.toLowerCase().includes(q) ||
+      (a.description || '').toLowerCase().includes(q) ||
+      (a.recording?.recording_title || '').toLowerCase().includes(q)
+    );
+  }, [availableAssignments, search]);
+
+  type StatusKey = 'no_submission' | 'pending' | 'declined' | 'approved';
+  const getStatusKey = (s?: Submission): StatusKey => {
+    if (!s) return 'no_submission';
+    if (s.status === 'approved') return 'approved';
+    if (s.status === 'declined') return 'declined';
+    return 'pending';
+  };
+
+  const statusMeta: Record<StatusKey, { label: string; chip: string; border: string; hoverTitle: string }> = {
+    no_submission: {
+      label: 'No Submission',
+      chip: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+      border: 'border-border hover:border-primary/40',
+      hoverTitle: 'group-hover:text-primary',
+    },
+    pending: {
+      label: 'Pending Review',
+      chip: 'bg-primary/10 text-primary border-primary/20',
+      border: 'border-border',
+      hoverTitle: '',
+    },
+    declined: {
+      label: 'Declined — Action Required',
+      chip: 'bg-destructive/10 text-destructive border-destructive/20',
+      border: 'border-destructive/30 hover:border-destructive/50',
+      hoverTitle: 'group-hover:text-destructive',
+    },
+    approved: {
+      label: 'Approved',
+      chip: 'bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30',
+      border: 'border-green-500/30',
+      hoverTitle: '',
+    },
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Toolbar: title summary + search */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h2 className="text-lg sm:text-xl font-bold tracking-tight">
+            {filterMode === 'submitted' ? 'Approved Assignments' : 'Outstanding Assignments'}
+          </h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {filterMode === 'submitted'
+              ? 'Coursework you have successfully completed'
+              : 'Pending, declined, and ready-to-submit work'}
+          </p>
+        </div>
+        <div className="relative w-full sm:w-72">
+          <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search assignments..."
+            className="pl-9 bg-muted/40 border-transparent focus-visible:bg-background"
+          />
+        </div>
       </div>
 
-      {availableAssignments.length === 0 ? <Card>
-          <CardContent className="text-center py-8">
-            <BookOpen className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No assignments available</h3>
-            <p className="text-muted-foreground">
-              Watch the prerequisite recordings to unlock assignments.
+      {filteredAssignments.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="text-center py-12">
+            <div className="mx-auto w-14 h-14 rounded-2xl bg-muted flex items-center justify-center mb-4">
+              <BookOpen className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <h3 className="text-base font-semibold">
+              {search
+                ? 'No matches found'
+                : filterMode === 'submitted'
+                  ? 'No approved assignments yet'
+                  : 'You\'re all caught up'}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
+              {search
+                ? 'Try a different search term.'
+                : filterMode === 'submitted'
+                  ? 'Submitted assignments will appear here once approved by your instructor.'
+                  : 'Watch the prerequisite recordings to unlock new assignments.'}
             </p>
           </CardContent>
-        </Card> : <div className="grid gap-6">
-          {availableAssignments.map(assignment => {
-        const submission = getSubmissionStatus(assignment.id);
-        const hasSubmitted = !!submission;
-        return <Card key={assignment.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="text-xl">{assignment.name}</CardTitle>
-                      {assignment.description && <p className="text-muted-foreground mt-1">{assignment.description}</p>}
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Assigned: {new Date(assignment.created_at).toLocaleDateString()}
-                      </p>
-                      {assignment.recording && <p className="text-sm text-muted-foreground">
-                          <Lock className="w-3 h-3 inline mr-1" />
-                          Unlocked after: {assignment.recording.recording_title}
-                        </p>}
-                    </div>
-                    {getStatusBadge(submission)}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between items-center">
-                    <div>
-                      {submission?.notes && <div className="text-sm">
-                          <p className="font-medium">Instructor Notes:</p>
-                          <p className="text-muted-foreground">{submission.notes}</p>
-                        </div>}
-                    </div>
-                    <Button onClick={() => {
-                setSelectedAssignment(assignment);
-                setIsDialogOpen(true);
-              }} variant={hasSubmitted ? "outline" : "default"} disabled={submission?.status === 'approved'}>
-                      {submission?.status === 'approved' ? 'Completed' : submission?.status === 'declined' ? 'Resubmit' : hasSubmitted ? 'View Submission' : 'Submit Assignment'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>;
-      })}
-        </div>}
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {filteredAssignments.map(assignment => {
+            const submission = getSubmissionStatus(assignment.id);
+            const hasSubmitted = !!submission;
+            const statusKey = getStatusKey(submission);
+            const meta = statusMeta[statusKey];
+            const isApproved = statusKey === 'approved';
+            const isDeclined = statusKey === 'declined';
+            const isPending = statusKey === 'pending';
 
-      {selectedAssignment && <EnhancedStudentSubmissionDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} assignment={selectedAssignment} userId={user?.id || ''} hasSubmitted={!!getSubmissionStatus(selectedAssignment.id) && getSubmissionStatus(selectedAssignment.id)?.status !== 'declined'} onSubmissionComplete={handleSubmissionComplete} />}
-    </div>;
+            return (
+              <Card
+                key={assignment.id}
+                className={cn(
+                  'group transition-all duration-300 shadow-sm hover:shadow-lg p-5 sm:p-6 flex flex-col',
+                  meta.border,
+                  isApproved && 'bg-green-500/5'
+                )}
+              >
+                {/* Top row: status chip + date */}
+                <div className="flex justify-between items-start gap-3 mb-4">
+                  <span className={cn(
+                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider border',
+                    meta.chip
+                  )}>
+                    {isApproved && <CheckCircle className="w-3 h-3" />}
+                    {isDeclined && <AlertCircle className="w-3 h-3" />}
+                    {isPending && <Clock className="w-3 h-3" />}
+                    {meta.label}
+                  </span>
+                  <div className="flex flex-col items-end shrink-0">
+                    <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-tight">
+                      {isApproved || isPending ? 'Submitted' : 'Assigned'}
+                    </span>
+                    <span className="text-sm font-bold text-foreground">
+                      {new Date((submission?.created_at) || assignment.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Title + description */}
+                <h3 className={cn(
+                  'text-lg sm:text-xl font-bold text-foreground transition-colors line-clamp-2',
+                  meta.hoverTitle
+                )}>
+                  {assignment.name}
+                </h3>
+                {assignment.description && (
+                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed line-clamp-3">
+                    {assignment.description}
+                  </p>
+                )}
+
+                {/* Instructor notes for declined */}
+                {isDeclined && submission?.notes && (
+                  <div className="mt-4 p-3 rounded-xl bg-destructive/5 border border-destructive/20">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-destructive mb-1">
+                      Instructor Feedback
+                    </p>
+                    <p className="text-sm text-foreground/80 leading-relaxed">{submission.notes}</p>
+                  </div>
+                )}
+
+                {/* Prerequisite block */}
+                {assignment.recording && !isApproved && (
+                  <div className="mt-4 p-3 rounded-xl bg-muted/50 border border-border/60">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                        <Lock className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase leading-none">
+                          Unlocked after
+                        </p>
+                        <p className="text-sm font-semibold text-foreground truncate">
+                          {assignment.recording.recording_title}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-auto pt-5">
+                  {isApproved ? (
+                    <Button
+                      variant="ghost"
+                      onClick={() => { setSelectedAssignment(assignment); setIsDialogOpen(true); }}
+                      className="px-0 text-green-700 dark:text-green-400 hover:bg-transparent hover:text-green-800 dark:hover:text-green-300 font-bold group/btn"
+                    >
+                      View Submission
+                      <ArrowRight className="w-4 h-4 ml-2 transition-transform group-hover/btn:translate-x-1" />
+                    </Button>
+                  ) : isDeclined ? (
+                    <Button
+                      onClick={() => { setSelectedAssignment(assignment); setIsDialogOpen(true); }}
+                      variant="outline"
+                      className="w-full font-bold border-2 border-foreground text-foreground hover:bg-foreground hover:text-background"
+                    >
+                      Resubmit Assignment
+                    </Button>
+                  ) : isPending ? (
+                    <Button
+                      onClick={() => { setSelectedAssignment(assignment); setIsDialogOpen(true); }}
+                      variant="outline"
+                      className="w-full font-semibold"
+                    >
+                      View Submission
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => { setSelectedAssignment(assignment); setIsDialogOpen(true); }}
+                      className="w-full font-bold shadow-md shadow-primary/20 transition-all group-hover:scale-[1.02] active:scale-95"
+                    >
+                      Submit Assignment
+                    </Button>
+                  )}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {selectedAssignment && (
+        <EnhancedStudentSubmissionDialog
+          open={isDialogOpen}
+          onOpenChange={setIsDialogOpen}
+          assignment={selectedAssignment}
+          userId={user?.id || ''}
+          hasSubmitted={!!getSubmissionStatus(selectedAssignment.id) && getSubmissionStatus(selectedAssignment.id)?.status !== 'declined'}
+          onSubmissionComplete={handleSubmissionComplete}
+        />
+      )}
+    </div>
+  );
 }
