@@ -222,7 +222,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
 
   let availableAssignments: Assignment[] = [];
   if (filterMode === 'submitted') {
-    availableAssignments = assignments.filter(a => !!getSubmissionStatus(a.id));
+    availableAssignments = assignments.filter(a => getSubmissionStatus(a.id)?.status === 'approved');
   } else {
     // Unlocked
     availableAssignments = assignments.filter(a => isAssignmentUnlocked(a));
