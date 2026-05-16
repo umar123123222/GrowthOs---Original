@@ -535,9 +535,21 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                 )}
 
                 {Object.entries(courseData.modules).map(([moduleId, moduleData]) => {
-                  const sortedRecs = [...moduleData.recordings].sort(
-                    (a, b) => (a.sequence_order ?? 0) - (b.sequence_order ?? 0)
-                  );
+                  // Sort by drip_days asc (nulls last), then by sequence_order
+                  const sortedRecs = [...moduleData.recordings].sort((a, b) => {
+                    const aDrip = a.drip_days ?? Number.POSITIVE_INFINITY;
+                    const bDrip = b.drip_days ?? Number.POSITIVE_INFINITY;
+                    if (aDrip !== bDrip) return aDrip - bDrip;
+                    return (a.sequence_order ?? 0) - (b.sequence_order ?? 0);
+                  });
+                  // Dedupe by recording_title (case-insensitive, trimmed) — keep first occurrence (lowest drip)
+                  const seenTitles = new Set<string>();
+                  const dedupedRecs = sortedRecs.filter(r => {
+                    const key = (r.recording_title || r.id).trim().toLowerCase();
+                    if (seenTitles.has(key)) return false;
+                    seenTitles.add(key);
+                    return true;
+                  });
                   return (
                   <div key={moduleId} className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pl-1">
