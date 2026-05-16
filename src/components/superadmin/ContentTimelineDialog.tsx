@@ -3,7 +3,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Save, Loader2, Video, Plus, Check, X, Trash2 } from 'lucide-react';
+import { Clock, Save, Loader2, Video, Plus, Check, X, Trash2, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
@@ -46,6 +49,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editedDripDays, setEditedDripDays] = useState<Record<string, number | null>>({});
+  const [editedSequenceOrders, setEditedSequenceOrders] = useState<Record<string, number>>({});
   const [editedSessionDripDays, setEditedSessionDripDays] = useState<Record<string, number | null>>({});
   const [editedSessionTitles, setEditedSessionTitles] = useState<Record<string, string>>({});
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null);
@@ -60,6 +64,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     if (open && entityId) {
       fetchAll();
       setEditedDripDays({});
+      setEditedSequenceOrders({});
       setEditedSessionDripDays({});
       setEditedSessionTitles({});
       setEditingTitleId(null);
@@ -191,7 +196,25 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     return session.drip_days;
   };
 
-  const hasChanges = Object.keys(editedDripDays).length > 0 || Object.keys(editedSessionDripDays).length > 0 || Object.keys(editedSessionTitles).length > 0;
+  const hasChanges = Object.keys(editedDripDays).length > 0 || Object.keys(editedSessionDripDays).length > 0 || Object.keys(editedSessionTitles).length > 0 || Object.keys(editedSequenceOrders).length > 0;
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleReorderRecordings = (moduleId: string, oldIndex: number, newIndex: number) => {
+    setRecordings(prev => {
+      const moduleRecs = prev.filter(r => r.module_id === moduleId);
+      const others = prev.filter(r => r.module_id !== moduleId);
+      const reordered = arrayMove(moduleRecs, oldIndex, newIndex);
+      const updatedEdits: Record<string, number> = {};
+      const updatedModuleRecs = reordered.map((r, idx) => {
+        const newSeq = idx + 1;
+        if (r.sequence_order !== newSeq) updatedEdits[r.id] = newSeq;
+        return { ...r, sequence_order: newSeq };
+      });
+      setEditedSequenceOrders(curr => ({ ...curr, ...updatedEdits }));
+      return [...others, ...updatedModuleRecs];
+    });
+  };
 
   /**
    * Compute schedule_date for a session based on earliest batch start_date + drip_days.
@@ -290,9 +313,19 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
         if (error) throw error;
       }
 
-      const totalUpdates = Object.keys(editedDripDays).length + Object.keys(editedSessionDripDays).length + Object.keys(editedSessionTitles).length;
+      // Save recording sequence_order changes
+      for (const [id, sequence_order] of Object.entries(editedSequenceOrders)) {
+        const { error } = await supabase
+          .from('available_lessons')
+          .update({ sequence_order })
+          .eq('id', id);
+        if (error) throw error;
+      }
+
+      const totalUpdates = Object.keys(editedDripDays).length + Object.keys(editedSessionDripDays).length + Object.keys(editedSessionTitles).length + Object.keys(editedSequenceOrders).length;
       toast({ title: "Success", description: `Updated ${totalUpdates} item(s)` });
       setEditedDripDays({});
+      setEditedSequenceOrders({});
       setEditedSessionDripDays({});
       setEditedSessionTitles({});
       await fetchAll();
@@ -501,43 +534,50 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                   </div>
                 )}
 
-                {Object.entries(courseData.modules).map(([moduleId, moduleData]) => (
+                {Object.entries(courseData.modules).map(([moduleId, moduleData]) => {
+                  const sortedRecs = [...moduleData.recordings].sort(
+                    (a, b) => (a.sequence_order ?? 0) - (b.sequence_order ?? 0)
+                  );
+                  return (
                   <div key={moduleId} className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pl-1">
                       {moduleData.title}
                     </p>
                     <div className="border rounded-md divide-y">
-                      {moduleData.recordings.map((rec) => {
-                        const currentValue = getDripDaysValue(rec);
-                        const isEdited = rec.id in editedDripDays;
-                        return (
-                          <div key={rec.id} className="flex items-center gap-3 px-3 py-2">
-                            <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
-                              {rec.sequence_order ?? '-'}
-                            </span>
-                            <span className="text-sm flex-1 truncate">{rec.recording_title || 'Untitled'}</span>
-                            {rec.duration_min != null && (
-                              <span className="text-xs text-muted-foreground shrink-0">
-                                {rec.duration_min}m
-                              </span>
-                            )}
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Input
-                                type="number"
-                                min={0}
-                                value={currentValue ?? ''}
-                                onChange={(e) => handleDripDaysChange(rec.id, e.target.value)}
-                                className={`w-20 h-8 text-sm ${isEdited ? 'border-primary ring-1 ring-primary/30' : ''}`}
-                                placeholder="0"
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event: DragEndEvent) => {
+                          const { active, over } = event;
+                          if (!over || active.id === over.id) return;
+                          const oldIndex = sortedRecs.findIndex(r => r.id === active.id);
+                          const newIndex = sortedRecs.findIndex(r => r.id === over.id);
+                          if (oldIndex === -1 || newIndex === -1) return;
+                          handleReorderRecordings(moduleId, oldIndex, newIndex);
+                        }}
+                      >
+                        <SortableContext items={sortedRecs.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                          {sortedRecs.map((rec) => {
+                            const currentValue = getDripDaysValue(rec);
+                            const isEdited = rec.id in editedDripDays;
+                            const isReordered = rec.id in editedSequenceOrders;
+                            return (
+                              <SortableRecordingRow
+                                key={rec.id}
+                                rec={rec}
+                                currentValue={currentValue}
+                                isEdited={isEdited}
+                                isReordered={isReordered}
+                                onDripDaysChange={handleDripDaysChange}
                               />
-                              <span className="text-xs text-muted-foreground">days</span>
-                            </div>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </SortableContext>
+                      </DndContext>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
 
                 {(courseData.sessions.length > 0 || true) && (
                   <div className="space-y-1">
@@ -679,5 +719,59 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface SortableRecordingRowProps {
+  rec: RecordingItem;
+  currentValue: number | null;
+  isEdited: boolean;
+  isReordered: boolean;
+  onDripDaysChange: (id: string, value: string) => void;
+}
+
+function SortableRecordingRow({ rec, currentValue, isEdited, isReordered, onDripDaysChange }: SortableRecordingRowProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: rec.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center gap-3 px-3 py-2 bg-background ${isReordered ? 'border-l-2 border-primary' : ''}`}
+    >
+      <button
+        type="button"
+        className="touch-none cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground shrink-0"
+        {...attributes}
+        {...listeners}
+        aria-label="Drag to reorder"
+      >
+        <GripVertical className="w-4 h-4" />
+      </button>
+      <span className="text-xs text-muted-foreground w-6 text-right shrink-0">
+        {rec.sequence_order ?? '-'}
+      </span>
+      <span className="text-sm flex-1 truncate">{rec.recording_title || 'Untitled'}</span>
+      {rec.duration_min != null && (
+        <span className="text-xs text-muted-foreground shrink-0">
+          {rec.duration_min}m
+        </span>
+      )}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <Input
+          type="number"
+          min={0}
+          value={currentValue ?? ''}
+          onChange={(e) => onDripDaysChange(rec.id, e.target.value)}
+          className={`w-20 h-8 text-sm ${isEdited ? 'border-primary ring-1 ring-primary/30' : ''}`}
+          placeholder="0"
+        />
+        <span className="text-xs text-muted-foreground">days</span>
+      </div>
+    </div>
   );
 }
