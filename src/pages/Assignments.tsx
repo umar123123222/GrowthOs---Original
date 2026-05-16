@@ -39,13 +39,16 @@ const Assignments = ({ user }: AssignmentsProps = {}) => {
 
   // Student view uses the dedicated list with correct locking logic
   return (
-    <main className="p-3 sm:p-6 space-y-4 sm:space-y-6">
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-xl sm:text-2xl font-semibold">Assignments</h1>
+    <main className="p-3 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      <header className="space-y-5">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">My Assignments</h1>
+          <p className="text-sm text-muted-foreground mt-1">Track your progress and submit your work</p>
+        </div>
         <Tabs value={tab} onValueChange={(v) => setTab(v as 'unlocked' | 'submitted')}>
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="unlocked" className="flex-1 sm:flex-none">Unlocked</TabsTrigger>
-            <TabsTrigger value="submitted" className="flex-1 sm:flex-none">Submitted</TabsTrigger>
+          <TabsList className="bg-muted/60 p-1 rounded-xl">
+            <TabsTrigger value="unlocked" className="rounded-lg data-[state=active]:shadow-sm font-semibold">Unlocked</TabsTrigger>
+            <TabsTrigger value="submitted" className="rounded-lg data-[state=active]:shadow-sm font-semibold">Submitted</TabsTrigger>
           </TabsList>
         </Tabs>
       </header>
