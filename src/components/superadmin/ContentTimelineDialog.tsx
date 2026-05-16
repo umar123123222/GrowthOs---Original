@@ -64,6 +64,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     if (open && entityId) {
       fetchAll();
       setEditedDripDays({});
+      setEditedSequenceOrders({});
       setEditedSessionDripDays({});
       setEditedSessionTitles({});
       setEditingTitleId(null);
