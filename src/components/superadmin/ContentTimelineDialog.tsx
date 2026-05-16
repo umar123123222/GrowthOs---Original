@@ -574,7 +574,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                         }}
                       >
                         <SortableContext items={dedupedRecs.map(r => r.id)} strategy={verticalListSortingStrategy}>
-                          {dedupedRecs.map((rec) => {
+                          {dedupedRecs.map((rec, idx) => {
                             const currentValue = getDripDaysValue(rec);
                             const isEdited = rec.id in editedDripDays;
                             const isReordered = rec.id in editedSequenceOrders;
@@ -582,6 +582,7 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                               <SortableRecordingRow
                                 key={rec.id}
                                 rec={rec}
+                                displayOrder={idx + 1}
                                 currentValue={currentValue}
                                 isEdited={isEdited}
                                 isReordered={isReordered}
