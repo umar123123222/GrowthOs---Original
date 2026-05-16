@@ -94,6 +94,8 @@ export const RecordingRow: React.FC<RecordingRowProps> = ({
                     return recording.dripUnlockDate
                       ? `Scheduled to unlock on ${new Date(recording.dripUnlockDate).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}`
                       : 'Scheduled to unlock soon';
+                  case 'pathway_locked':
+                    return 'Complete the current pathway course to unlock this course';
                   case 'fees_not_cleared':
                   case 'not_started_yet':
                     return 'Clear your fees to start this lesson';
