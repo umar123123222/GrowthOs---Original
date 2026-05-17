@@ -151,15 +151,17 @@ const NotificationDropdown = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch last 5 unread notifications
+      // Fetch recent unread notifications (overfetch then filter, so students
+      // still get 5 relevant items even if some are filtered out).
       const {
         data,
         error
       } = await supabase.from('notifications').select('*').eq('user_id', user.id).eq('status', 'sent').order('sent_at', {
         ascending: false
-      }).limit(5);
+      }).limit(role === 'student' ? 50 : 5);
       if (error) throw error;
-      const enriched = await enrichNotifications(data || []);
+      const filtered = (data || []).filter(n => isRelevantNotificationForRole(n, role)).slice(0, 5);
+      const enriched = await enrichNotifications(filtered);
       setNotifications(enriched);
       setUnreadCount(enriched?.length || 0);
     } catch (error) {
