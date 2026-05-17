@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { Bell, Check, Eye, EyeOff, AlertCircle, Info, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { isRelevantNotificationForRole } from "@/lib/notification-filter";
 interface Notification {
   id: string;
   type: string;
