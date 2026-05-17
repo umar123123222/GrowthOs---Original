@@ -142,6 +142,31 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
+    // Notify the student (in-app)
+    try {
+      await supabase.from("notifications").insert({
+        user_id: userId,
+        type: "invoice_paid",
+        template_key: "invoice_paid",
+        channel: "in_app",
+        status: "sent",
+        sent_at: now,
+        payload: {
+          title: `Fee payment confirmed${invoice.installment_number ? ` (Installment #${invoice.installment_number})` : ''}`,
+          message: `Your payment of ${invoice.amount ?? ''} has been recorded. Thank you!`,
+          data: {
+            invoice_id: invoiceId,
+            amount: invoice.amount,
+            installment_number: invoice.installment_number ?? null,
+            course_id: invoice.course_id || null,
+            pathway_id: invoice.pathway_id || null,
+          },
+        },
+      });
+    } catch (notifErr) {
+      console.warn("Failed to insert invoice_paid notification:", notifErr);
+    }
+
     console.log(`✅ Payment processed - Invoice: ${invoiceId}, User: ${userId}`);
 
     return new Response(
