@@ -29,6 +29,8 @@ const NotificationDropdown = () => {
   const {
     toast
   } = useToast();
+  const { user: authUser } = useAuth();
+  const role = authUser?.role;
   const getKeyAndData = (n: Notification) => {
     const key = (n as any).template_key || n.type;
     const data = n.payload?.data || n.payload?.metadata || n.payload || {};
