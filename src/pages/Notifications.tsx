@@ -128,6 +128,7 @@ const Notifications = () => {
         filter: `user_id=eq.${user.id}`
       }, (payload: any) => {
         const n = payload.new as Notification;
+        if (!isRelevantNotificationForRole(n, role)) return;
         enrichNotifications([n]).then(enriched => {
           setNotifications(prev => [enriched[0], ...prev]);
         });
@@ -136,7 +137,7 @@ const Notifications = () => {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, []);
+  }, [role]);
   const fetchNotifications = async () => {
     try {
       const {
