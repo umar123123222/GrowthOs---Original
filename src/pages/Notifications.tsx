@@ -275,6 +275,15 @@ const Notifications = () => {
       case 'invoice_issued':
       case 'invoice_due':
         return data.invoice_id ? `/admin/financials?invoice=${data.invoice_id}` : '/admin/financials';
+      case 'invoice_paid':
+        return '/fees';
+      case 'content_unlocked':
+        return data.recording_id ? `/videos?recordingId=${data.recording_id}` : '/videos';
+      case 'assignment_unlocked':
+      case 'assignment_reviewed':
+        return data.assignment_id ? `/assignments?assignmentId=${data.assignment_id}` : '/assignments';
+      case 'resource_changed':
+        return '/resources';
       case 'student_added':
         return data.student_id ? `/students?studentId=${data.student_id}` : '/students';
       case 'learning_item_changed':
