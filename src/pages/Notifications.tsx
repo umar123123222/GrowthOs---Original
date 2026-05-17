@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Bell, Check, Clock, AlertCircle, Info, ExternalLink, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { isRelevantNotificationForRole } from "@/lib/notification-filter";
 interface Notification {
   id: string;
   type: string;
