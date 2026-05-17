@@ -1,99 +1,68 @@
-## Resources Feature
+## Goal
 
-A new "Resources" page where admins/superadmins publish curated content (links, files, notes, tables) grouped into named sections, targeted to students by pathway, course, batch, or "all active students."
+Restrict the in-app notifications visible to **students** (bell dropdown + `/notifications` page) to only those directly relevant to them. Staff (admin, superadmin, mentor, enrollment_manager, support_member) keep seeing everything they see today.
 
-### Data model
+## Student allowlist (final)
 
-**`resource_sections`**
-- name, description, icon, display_order, is_active
-- created_by
+| # | Event | Source notification |
+|---|---|---|
+| 1 | Success session added or edited | `learning_item_changed` where `item_type='success_session'` and `action in ('insert','update')` (also legacy `success_session` type) |
+| 2 | Invoice generated | existing `invoice_issued` |
+| 3 | Invoice marked paid | NEW `invoice_paid` — emit from `mark-invoice-paid` edge function |
+| 4 | New video dripped (newly unlocked for this student) | NEW `content_unlocked` — emit from `notify-content-unlocked` for recordings only |
+| 5 | New assignment unlocked | NEW `assignment_unlocked` — emit when the gating recording for an assignment unlocks for the student |
+| 6 | Assignment approved / declined | NEW `assignment_reviewed` (status in payload) — emit from the submission-review path (currently only mentor is notified) |
+| 7 | Resource added or edited | NEW `resource_changed` — emit from a DB trigger on `resources` / `resource_sections` for every student in the resource's audience |
 
-**`resources`** (belongs to a section)
-- section_id, title, description, display_order, is_active
-- `content_type`: `link` | `file` | `rich_text` | `table`
-- `content`: jsonb — shape depends on type:
-  - link: `{ url, open_in_new_tab }`
-  - file: `{ storage_path, file_name, mime_type, size }`
-  - rich_text: `{ html }` (sanitized with DOMPurify on render)
-  - table: `{ columns: [{key,label}], rows: [{...}] }`
+Everything else is hidden for students: `ticket_updated`, `student_added`, `module`, `financial`, `lms_suspended`, `fee_extension`, `installment_*`, updates/deletes of recordings, raw `recording`/`learning_item_changed` for new content additions by admins (those become noise — students get the `content_unlocked` / `assignment_unlocked` events instead).
 
-**`resource_audiences`** (one resource → many rules; OR-combined; if `all_students=true` exists, it wins)
-- resource_id
-- `audience_type`: `all` | `pathway` | `course` | `batch`
-- `target_id` uuid (nullable when type=`all`)
+## Implementation
 
-**Storage bucket**: `resources` (private) — files served via signed URLs from a small edge function or Supabase signed URL API.
+### A. Frontend allowlist (immediate effect on existing data)
 
-### Visibility logic (student page)
+New `src/lib/notification-filter.ts` exporting `isStudentRelevantNotification(n, role)`:
+- If `role !== 'student'` → return `true`
+- Else return `true` only when the notification's `template_key || type` is in the allowlist above, with payload-level checks for action (`insert|update` for success sessions; `approved|declined` for assignment review).
 
-Show a resource if:
-1. Student's `lms_status = 'active'` AND
-2. The resource's section is active AND resource is active AND
-3. Any audience rule matches:
-   - type `all`, OR
-   - type `pathway` and student has matching `course_enrollments.pathway_id`, OR
-   - type `course` and student has matching `course_enrollments.course_id`, OR
-   - type `batch` and student has matching `course_enrollments.batch_id`
+Apply in:
+- `src/components/NotificationDropdown.tsx` — filter after fetch + on realtime insert; recompute `unreadCount` from the filtered list.
+- `src/pages/Notifications.tsx` — same, plus filter the realtime INSERT handler.
 
-Implemented as a SQL helper `public.user_can_see_resource(_user, _resource)` used in RLS for `resources` and inferred for `resource_sections` (a section is visible if it has ≥1 visible resource).
+Also extend the display/enrichment maps in both files with titles + links for the new keys:
+- `invoice_paid` → "Fee payment confirmed" → `/fees`
+- `content_unlocked` → "New video unlocked: <title>" → `/videos?recordingId=<id>`
+- `assignment_unlocked` → "New assignment unlocked: <name>" → `/assignments?assignmentId=<id>`
+- `assignment_reviewed` → "Assignment <approved|declined>: <name>" → `/assignments?assignmentId=<id>`
+- `resource_changed` → "Resource <added|updated>: <title>" → `/resources`
 
-### RLS
+User role is read via the existing `useUserRole` hook (used elsewhere).
 
-- `resource_sections`, `resources`, `resource_audiences`:
-  - Admin/superadmin: full manage
-  - Students: SELECT only when `lms_status='active'` and visibility rule matches
-  - Mentor/enrollment_manager/support_member: SELECT all (read-only)
-- Storage `resources` bucket: admin/superadmin manage; students read only when they can see the parent resource.
+### B. Backend emitters (so the allowlisted events actually fire)
 
-### Admin UI
+1. **`invoice_paid`** — in `supabase/functions/mark-invoice-paid/index.ts`, after the invoice row flips to `paid`, insert into `notifications` for that student's `user_id` with `type='invoice_paid'`, `template_key='invoice_paid'`, payload `{ title, message, data: { invoice_id, amount, installment_number } }`.
 
-New tab inside `StudentsManagement` (or a new top-level admin page) — **"Resources"**:
-- Sections list with drag-reorder, add/edit/delete
-- Inside a section: add/edit/delete resources
-- Resource editor:
-  - Title, description, type picker
-  - Type-specific editor:
-    - link: URL input
-    - file: drag-drop upload to `resources` bucket
-    - rich_text: simple textarea + minimal formatting (or textarea with markdown for v1)
-    - table: dynamic columns + rows grid
-  - Audience builder: pill list — add rules (`All students`, `Pathway: X`, `Course: Y`, `Batch: Z`); OR-combined
-- All inputs validated with zod (length limits, URL/email shape).
+2. **`content_unlocked`** + **`assignment_unlocked`** — in `supabase/functions/notify-content-unlocked/index.ts` (already triggered on `user_unlocks` inserts):
+   - When the unlocked item is a recording → emit `content_unlocked` to that student.
+   - Additionally look up the recording's `assignment_id`; if present, emit `assignment_unlocked` to the same student.
 
-### Student UI
+3. **`assignment_reviewed`** — find the place that updates submission status to `approved`/`declined` (search for `submissions` table updates / `notify_submission_status_change`). Add a `notifications` insert targeting the student `user_id` with payload `{ title, message, data: { submission_id, assignment_id, status } }`.
 
-New route `/resources` (added to student sidebar, gated to `lms_status='active'` via existing `RoleGuard` + active check):
-- Sections rendered as accordion/cards
-- Resources rendered by type:
-  - link → button opening URL in new tab
-  - file → download button (signed URL)
-  - rich_text → sanitized HTML
-  - table → responsive shadcn `<Table>`
-- Empty state when no resources match.
+4. **`resource_changed`** — DB trigger on `resources` (and `resource_audiences` change): for each user that `user_can_see_resource(_user, resource_id)` returns true for, insert a `notifications` row with `type='resource_changed'`. Use a SECURITY DEFINER function `notify_resource_change(resource_id, action)` invoked from AFTER INSERT/UPDATE triggers.
 
-### Files
+### C. Phasing (recommended)
 
-New:
-- `supabase/migrations/<ts>_resources.sql` — tables, RLS, helper fn, storage bucket + policies
-- `src/pages/admin/ResourcesManagement.tsx`
-- `src/components/resources/SectionEditor.tsx`
-- `src/components/resources/ResourceEditor.tsx`
-- `src/components/resources/AudienceBuilder.tsx`
-- `src/components/resources/ResourceContentEditors/{LinkEditor,FileEditor,RichTextEditor,TableEditor}.tsx`
-- `src/pages/Resources.tsx` (student-facing)
-- `src/components/resources/ResourceRenderer.tsx`
-- `src/hooks/useResources.ts`
+1. **Phase 1 (small, ships now):** Frontend filter + display strings. Immediately cleans up the student view — old noisy notifications stop appearing. (No backend change.)
+2. **Phase 2:** Add the 4 new backend emitters (`invoice_paid`, `content_unlocked`/`assignment_unlocked`, `assignment_reviewed`, `resource_changed`). Each is a small focused change.
 
-Modified:
-- `src/App.tsx` — add `/resources` route + admin route
-- Admin sidebar + student sidebar — add nav entry
-- `src/pages/StudentsManagement.tsx` — link/tab to Resources management (or top-level admin nav)
+I'll do both phases in one pass unless you want Phase 1 first to verify the filter behaves right.
 
-### Suggestions / opinions
+## Out of scope
 
-- Keep v1 rich text as **markdown** (rendered with `react-markdown`) — safer than HTML and good enough for notes. Upgrade to a WYSIWYG later if needed.
-- Add a per-resource `published_at` field so admins can draft before exposing — useful but optional; I'll include `is_active` only unless you want drafts.
-- Consider a future `resource_views` table for analytics ("who opened this PDF") — out of scope for v1.
-- Audience is **OR** (any matching rule shows it). True AND combinations (e.g., "Pathway X AND Batch Y") add UI complexity for marginal value; if you need it, say so and I'll switch to rule-groups.
+- Email / SMS templates for the new events (in-app only).
+- Backfilling / cleaning historic noisy rows from `notifications` (they're just filtered out of the student UI).
+- Notification mute settings UI changes.
 
-Confirm and I'll build it.
+## Files touched
+
+New: `src/lib/notification-filter.ts`
+Modified: `src/components/NotificationDropdown.tsx`, `src/pages/Notifications.tsx`, `supabase/functions/mark-invoice-paid/index.ts`, `supabase/functions/notify-content-unlocked/index.ts`, submission-review path (TBD on read), one new SQL migration for `resource_changed` trigger.
