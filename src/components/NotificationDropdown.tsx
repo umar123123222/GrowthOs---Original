@@ -128,6 +128,7 @@ const NotificationDropdown = () => {
         filter: `user_id=eq.${user.id}`
       }, (payload: any) => {
         const newNotif = payload.new as Notification;
+        if (!isRelevantNotificationForRole(newNotif, role)) return;
         // Only count unread (status 'sent')
         if (newNotif.status === 'sent') {
           setUnreadCount(prev => prev >= 9 ? prev : prev + 1);
@@ -140,7 +141,7 @@ const NotificationDropdown = () => {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, []);
+  }, [role]);
   const fetchNotifications = async () => {
     try {
       const {
