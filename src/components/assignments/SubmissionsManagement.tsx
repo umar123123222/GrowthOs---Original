@@ -297,6 +297,41 @@ export function SubmissionsManagement({
             if (emailErr) console.warn('Failed to queue review email:', emailErr);
           });
         }
+
+        // In-app notification for the student
+        try {
+          const { data: studentRow } = await supabase
+            .from('students')
+            .select('user_id')
+            .eq('id', reviewedSubmission.student_id)
+            .maybeSingle();
+          const studentUserId = studentRow?.user_id;
+          if (studentUserId) {
+            await supabase.from('notifications').insert({
+              user_id: studentUserId,
+              type: 'assignment_reviewed',
+              template_key: 'assignment_reviewed',
+              channel: 'in_app',
+              status: 'sent',
+              sent_at: new Date().toISOString(),
+              payload: {
+                title: status === 'approved'
+                  ? `Assignment approved: ${assignmentName}`
+                  : `Assignment declined: ${assignmentName}`,
+                message: status === 'approved'
+                  ? `Your submission for "${assignmentName}" was approved.${reviewNotes.trim() ? ` Feedback: ${reviewNotes.trim()}` : ''}`
+                  : `Your submission for "${assignmentName}" needs revision.${reviewNotes.trim() ? ` Feedback: ${reviewNotes.trim()}` : ''}`,
+                data: {
+                  submission_id: submissionId,
+                  assignment_id: reviewedSubmission.assignment_id,
+                  status,
+                },
+              },
+            });
+          }
+        } catch (notifErr) {
+          console.warn('Failed to insert assignment_reviewed notification:', notifErr);
+        }
       }
 
       toast({

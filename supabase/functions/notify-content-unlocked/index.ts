@@ -154,14 +154,57 @@ serve(async (req: Request) => {
       console.log(`Unlock notification queued for ${student.email}`);
     }
 
-    // Also create in-app notification
+    // Also create in-app notification(s) for the student
+    const nowIso = new Date().toISOString();
     await supabase.from('notifications').insert({
       user_id,
-      title: `New Content Unlocked: ${recordingTitle}`,
-      message: `${recordingTitle} is now available${hasAssignment ? ' with an assignment' : ''}. Start learning!`,
-      type: 'content',
-      action_url: siteUrl ? `${siteUrl}/videos` : '/videos',
+      type: 'content_unlocked',
+      template_key: 'content_unlocked',
+      channel: 'in_app',
+      status: 'sent',
+      sent_at: nowIso,
+      payload: {
+        title: `New video unlocked: ${recordingTitle}`,
+        message: `${recordingTitle} is now available${moduleName ? ` in ${moduleName}` : ''}.`,
+        data: {
+          recording_id,
+          recording_title: recordingTitle,
+          module_id: lesson.module || null,
+          assignment_id: lesson.assignment_id || null,
+        },
+      },
     });
+
+    if (hasAssignment) {
+      // Look up assignment name for a nicer title
+      let assignmentName = 'New assignment';
+      try {
+        const { data: a } = await supabase
+          .from('assignments')
+          .select('name')
+          .eq('id', lesson.assignment_id)
+          .single();
+        if (a?.name) assignmentName = a.name;
+      } catch (_e) { /* ignore */ }
+
+      await supabase.from('notifications').insert({
+        user_id,
+        type: 'assignment_unlocked',
+        template_key: 'assignment_unlocked',
+        channel: 'in_app',
+        status: 'sent',
+        sent_at: nowIso,
+        payload: {
+          title: `New assignment unlocked: ${assignmentName}`,
+          message: `Complete "${assignmentName}" to continue your progress.`,
+          data: {
+            assignment_id: lesson.assignment_id,
+            recording_id,
+            recording_title: recordingTitle,
+          },
+        },
+      });
+    }
 
     return new Response(
       JSON.stringify({ success: true, message: `Notification sent to ${student.email}` }),

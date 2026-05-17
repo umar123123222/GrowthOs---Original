@@ -8,6 +8,8 @@ import { Switch } from "@/components/ui/switch";
 import { Bell, Check, Clock, AlertCircle, Info, ExternalLink, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { isRelevantNotificationForRole } from "@/lib/notification-filter";
 interface Notification {
   id: string;
   type: string;
@@ -29,6 +31,8 @@ const Notifications = () => {
     toast
   } = useToast();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
+  const role = authUser?.role;
   const getKeyAndData = (n: Notification) => {
     const key = (n as any).template_key || n.type;
     const data = n.payload?.data || n.payload?.metadata || n.payload || {};
@@ -124,6 +128,7 @@ const Notifications = () => {
         filter: `user_id=eq.${user.id}`
       }, (payload: any) => {
         const n = payload.new as Notification;
+        if (!isRelevantNotificationForRole(n, role)) return;
         enrichNotifications([n]).then(enriched => {
           setNotifications(prev => [enriched[0], ...prev]);
         });
@@ -132,7 +137,7 @@ const Notifications = () => {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, []);
+  }, [role]);
   const fetchNotifications = async () => {
     try {
       const {
@@ -146,9 +151,10 @@ const Notifications = () => {
         error
       } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('sent_at', {
         ascending: false
-      });
+      }).limit(200);
       if (error) throw error;
-      const enriched = await enrichNotifications(data || []);
+      const filtered = (data || []).filter(n => isRelevantNotificationForRole(n, role));
+      const enriched = await enrichNotifications(filtered);
       setNotifications(enriched);
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -269,6 +275,15 @@ const Notifications = () => {
       case 'invoice_issued':
       case 'invoice_due':
         return data.invoice_id ? `/admin/financials?invoice=${data.invoice_id}` : '/admin/financials';
+      case 'invoice_paid':
+        return '/fees';
+      case 'content_unlocked':
+        return data.recording_id ? `/videos?recordingId=${data.recording_id}` : '/videos';
+      case 'assignment_unlocked':
+      case 'assignment_reviewed':
+        return data.assignment_id ? `/assignments?assignmentId=${data.assignment_id}` : '/assignments';
+      case 'resource_changed':
+        return '/resources';
       case 'student_added':
         return data.student_id ? `/students?studentId=${data.student_id}` : '/students';
       case 'learning_item_changed':

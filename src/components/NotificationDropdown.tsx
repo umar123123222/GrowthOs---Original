@@ -8,6 +8,8 @@ import { Separator } from "@/components/ui/separator";
 import { Bell, Check, Eye, EyeOff, AlertCircle, Info, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { isRelevantNotificationForRole } from "@/lib/notification-filter";
 interface Notification {
   id: string;
   type: string;
@@ -27,6 +29,8 @@ const NotificationDropdown = () => {
   const {
     toast
   } = useToast();
+  const { user: authUser } = useAuth();
+  const role = authUser?.role;
   const getKeyAndData = (n: Notification) => {
     const key = (n as any).template_key || n.type;
     const data = n.payload?.data || n.payload?.metadata || n.payload || {};
@@ -124,6 +128,7 @@ const NotificationDropdown = () => {
         filter: `user_id=eq.${user.id}`
       }, (payload: any) => {
         const newNotif = payload.new as Notification;
+        if (!isRelevantNotificationForRole(newNotif, role)) return;
         // Only count unread (status 'sent')
         if (newNotif.status === 'sent') {
           setUnreadCount(prev => prev >= 9 ? prev : prev + 1);
@@ -136,7 +141,7 @@ const NotificationDropdown = () => {
     return () => {
       if (channel) supabase.removeChannel(channel);
     };
-  }, []);
+  }, [role]);
   const fetchNotifications = async () => {
     try {
       const {
@@ -146,15 +151,17 @@ const NotificationDropdown = () => {
       } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch last 5 unread notifications
+      // Fetch recent unread notifications (overfetch then filter, so students
+      // still get 5 relevant items even if some are filtered out).
       const {
         data,
         error
       } = await supabase.from('notifications').select('*').eq('user_id', user.id).eq('status', 'sent').order('sent_at', {
         ascending: false
-      }).limit(5);
+      }).limit(role === 'student' ? 50 : 5);
       if (error) throw error;
-      const enriched = await enrichNotifications(data || []);
+      const filtered = (data || []).filter(n => isRelevantNotificationForRole(n, role)).slice(0, 5);
+      const enriched = await enrichNotifications(filtered);
       setNotifications(enriched);
       setUnreadCount(enriched?.length || 0);
     } catch (error) {
