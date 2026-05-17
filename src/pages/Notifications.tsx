@@ -151,9 +151,10 @@ const Notifications = () => {
         error
       } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('sent_at', {
         ascending: false
-      });
+      }).limit(200);
       if (error) throw error;
-      const enriched = await enrichNotifications(data || []);
+      const filtered = (data || []).filter(n => isRelevantNotificationForRole(n, role));
+      const enriched = await enrichNotifications(filtered);
       setNotifications(enriched);
     } catch (error) {
       console.error('Error fetching notifications:', error);
