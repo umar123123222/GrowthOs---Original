@@ -374,8 +374,8 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: companySettings } = await supabaseAdmin
         .from('company_settings')
         .select('original_fee_amount')
-        .eq('id', 1)
-        .single();
+        .limit(1)
+        .maybeSingle();
       
       if (companySettings) {
         baseFeeAmount = companySettings.original_fee_amount || 0;
