@@ -236,7 +236,7 @@ serve(async (req) => {
 
     const { data: companySettings, error: companyErr } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods, billing_email_cc, overdue_penalty_type, overdue_penalty_amount, suspension_notice_note')
+      .select('lms_url, currency, company_name, company_email, address, contact_email, primary_phone, payment_methods, overdue_penalty_type, overdue_penalty_amount, suspension_notice_note')
       .limit(1)
       .maybeSingle();
 
@@ -250,13 +250,13 @@ serve(async (req) => {
     const currency = companySettings?.currency || 'PKR';
     const currencySymbol = getCurrencySymbol(currency);
     const companyDetails: CompanyDetails = {
-      company_name: companySettings?.company_name || 'Your Company',
+      company_name: companySettings?.company_name || 'IDMPakistan',
       address: companySettings?.address || '',
-      contact_email: companySettings?.contact_email || '',
+      contact_email: companySettings?.contact_email || companySettings?.company_email || '',
       primary_phone: companySettings?.primary_phone || ''
     };
     const paymentMethods = companySettings?.payment_methods || [];
-    const billingCc = companySettings?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC') || '';
+    const billingCc = Deno.env.get('BILLING_EMAIL_CC') || '';
     const penaltyType = companySettings?.overdue_penalty_type || '';
     const penaltyAmount = companySettings?.overdue_penalty_amount || 0;
     const suspensionNoticeNote = companySettings?.suspension_notice_note || '';
