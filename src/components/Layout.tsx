@@ -461,6 +461,18 @@ const Layout = memo(({
             icon: LayoutGrid
           }]
         }, {
+          name: "Recordings",
+          href: "/superadmin?tab=recordings",
+          icon: Video
+        }, {
+          name: "Assignments",
+          href: "/superadmin?tab=assignments",
+          icon: FileText
+        }, {
+          name: "Resources",
+          href: "/superadmin?tab=resources",
+          icon: FolderOpen
+        }, {
           name: "Submissions",
           href: "/superadmin?tab=submissions",
           icon: FileText
@@ -537,6 +549,18 @@ const Layout = memo(({
             href: "/admin?tab=modules",
             icon: LayoutGrid
           }]
+        }, {
+          name: "Recordings",
+          href: "/admin?tab=recordings",
+          icon: Video
+        }, {
+          name: "Assignments",
+          href: "/admin?tab=assignments",
+          icon: FileText
+        }, {
+          name: "Resources",
+          href: "/admin?tab=resources",
+          icon: FolderOpen
         }, {
           name: "Submissions",
           href: "/admin?tab=submissions",
