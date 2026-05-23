@@ -224,11 +224,17 @@ serve(async (req) => {
     }
 
     // Get company settings
-    const { data: companySettings } = await supabaseAdmin
+    const { data: companySettings, error: companyErr } = await supabaseAdmin
       .from('company_settings')
       .select('currency, company_name, contact_email, address, primary_phone, payment_methods, billing_email_cc')
-      .eq('id', 1)
-      .single();
+      .limit(1)
+      .maybeSingle();
+
+    if (companyErr || !companySettings) {
+      console.error('[resend-invoice] Failed to load company_settings:', companyErr);
+    } else {
+      console.log('[resend-invoice] Loaded company_settings:', { company_name: companySettings.company_name, contact_email: companySettings.contact_email });
+    }
 
     const currency = companySettings?.currency || 'USD';
     const currencySymbol = getCurrencySymbol(currency);
