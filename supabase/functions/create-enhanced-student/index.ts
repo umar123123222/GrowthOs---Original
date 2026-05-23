@@ -51,6 +51,7 @@ interface CompanyDetails {
   address: string;
   contact_email: string;
   primary_phone: string;
+  company_email?: string;
 }
 
 function generateSecurePassword(): string {
@@ -596,7 +597,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get company settings including currency and company details
     const { data: companyDetailsData, error: companyDetailsError } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods, billing_email_cc, notification_email_cc')
+      .select('lms_url, currency, company_name, company_email, address, contact_email, primary_phone, payment_methods')
       .limit(1)
       .maybeSingle();
 
@@ -612,10 +613,11 @@ const handler = async (req: Request): Promise<Response> => {
     const loginUrl = companyDetailsData?.lms_url || 'https://growthos.core47.ai';
     const currency = companyDetailsData?.currency || 'PKR';
     const companyDetails: CompanyDetails = {
-      company_name: companyDetailsData?.company_name || 'Your Company',
+      company_name: companyDetailsData?.company_name || 'IDMPakistan',
       address: companyDetailsData?.address || '',
-      contact_email: companyDetailsData?.contact_email || '',
-      primary_phone: companyDetailsData?.primary_phone || ''
+      contact_email: companyDetailsData?.contact_email || companyDetailsData?.company_email || '',
+      primary_phone: companyDetailsData?.primary_phone || '',
+      company_email: companyDetailsData?.company_email || companyDetailsData?.contact_email || ''
     };
 
     // Handle installment creation based on final fee
@@ -752,15 +754,15 @@ const handler = async (req: Request): Promise<Response> => {
     try {
       const smtpClient = SMTPClient.fromEnv();
       if (companyDetails.company_name) smtpClient.setFromName(companyDetails.company_name);
-      const notificationCc = companyDetailsData?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
+      const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
       
       await smtpClient.sendEmail({
         to: email,
-        subject: `Welcome to ${companyDetails.company_name || 'Your Company'} - Your LMS Access Credentials`,
+        subject: `Welcome to ${companyDetails.company_name} - Your LMS Access Credentials`,
         ...(notificationCc ? { cc: notificationCc } : {}),
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Welcome to ${companyDetails.company_name || 'Your Company'}, ${full_name}!</h2>
+            <h2>Welcome to ${companyDetails.company_name}, ${full_name}!</h2>
             
             <p>Your student account has been created successfully. Here are your login credentials:</p>
             
@@ -783,7 +785,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <p>If you have any questions, please contact our support team.</p>
             
-            <p>Best regards,<br>${companyDetails.company_name || 'Your Company'} Team</p>
+            <p>Best regards,<br>${companyDetails.company_name} Team</p>
           </div>
         `,
       });
