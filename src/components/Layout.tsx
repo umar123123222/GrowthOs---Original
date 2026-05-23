@@ -433,8 +433,8 @@ const Layout = memo(({
     }
   }, []);
 
-  // Check if any course submenu is active to keep it expanded
-  const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=submissions') || location.search.includes('tab=success-sessions') || location.search.includes('tab=milestones');
+  // Check if any nested course submenu is active to keep it expanded
+  const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=resources');
 
   // Memoize navigation to prevent unnecessary re-renders
   const navigation = useMemo(() => {
@@ -454,23 +454,24 @@ const Layout = memo(({
         }, {
           name: "Courses",
           href: "/superadmin?tab=courses",
-          icon: GraduationCap
-        }, {
-          name: "Modules",
-          href: "/superadmin?tab=modules",
-          icon: LayoutGrid
-        }, {
-          name: "Recordings",
-          href: "/superadmin?tab=recordings",
-          icon: Video
-        }, {
-          name: "Assignments",
-          href: "/superadmin?tab=assignments",
-          icon: FileText
-        }, {
-          name: "Resources",
-          href: "/superadmin?tab=resources",
-          icon: FolderOpen
+          icon: GraduationCap,
+          subItems: [{
+            name: "Modules",
+            href: "/superadmin?tab=modules",
+            icon: LayoutGrid
+          }, {
+            name: "Recordings",
+            href: "/superadmin?tab=recordings",
+            icon: Video
+          }, {
+            name: "Assignments",
+            href: "/superadmin?tab=assignments",
+            icon: FileText
+          }, {
+            name: "Resources",
+            href: "/superadmin?tab=resources",
+            icon: FolderOpen
+          }]
         }, {
           name: "Submissions",
           href: "/superadmin?tab=submissions",
@@ -542,23 +543,24 @@ const Layout = memo(({
         }, {
           name: "Courses",
           href: "/admin?tab=courses",
-          icon: GraduationCap
-        }, {
-          name: "Modules",
-          href: "/admin?tab=modules",
-          icon: LayoutGrid
-        }, {
-          name: "Recordings",
-          href: "/admin?tab=recordings",
-          icon: Video
-        }, {
-          name: "Assignments",
-          href: "/admin?tab=assignments",
-          icon: FileText
-        }, {
-          name: "Resources",
-          href: "/admin?tab=resources",
-          icon: FolderOpen
+          icon: GraduationCap,
+          subItems: [{
+            name: "Modules",
+            href: "/admin?tab=modules",
+            icon: LayoutGrid
+          }, {
+            name: "Recordings",
+            href: "/admin?tab=recordings",
+            icon: Video
+          }, {
+            name: "Assignments",
+            href: "/admin?tab=assignments",
+            icon: FileText
+          }, {
+            name: "Resources",
+            href: "/admin?tab=resources",
+            icon: FolderOpen
+          }]
         }, {
           name: "Submissions",
           href: "/admin?tab=submissions",
@@ -774,6 +776,18 @@ const Layout = memo(({
     }
   }, [isCourseMenuActive]);
 
+  // Auto-expand Content and Courses menus when nested course tabs are active
+  useEffect(() => {
+    if (isCourseMenuActive) {
+      setExpandedMenus(prev => {
+        const next = new Set(prev);
+        next.add("Content");
+        next.add("Courses");
+        return next;
+      });
+    }
+  }, [isCourseMenuActive]);
+
   // Optimized logging with error handling and debouncing
   const logActivityRef = useRef<NodeJS.Timeout>();
   useEffect(() => {
@@ -972,11 +986,50 @@ const Layout = memo(({
                               
                               {isExpanded && <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
                                 {item.subItems?.map(subItem => {
-                                  const isActive = location.search.includes(`tab=${subItem.href.split('=')[1]}`);
                                   const SubIcon = subItem.icon;
-                                  return <Link 
-                                    key={subItem.name} 
-                                    to={subItem.href} 
+                                  if (subItem.subItems) {
+                                    const isNestedExpanded = expandedMenus.has(subItem.name);
+                                    const isAnyNestedActive = subItem.subItems.some(nested => location.search.includes(`tab=${nested.href.split('=')[1]}`));
+                                    return (
+                                      <div key={subItem.name}>
+                                        <div className="flex items-center">
+                                          <Link
+                                            to={subItem.href}
+                                            className={`flex-1 flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isAnyNestedActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" : "text-gray-600 hover:bg-gray-100"}`}
+                                            onClick={() => setMobileMenuOpen(false)}
+                                          >
+                                            <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isAnyNestedActive ? "text-gray-900" : "text-gray-400"}`} />
+                                            {subItem.name}
+                                          </Link>
+                                          <button
+                                            onClick={() => toggleMenu(subItem.name)}
+                                            className="px-2 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-all duration-200"
+                                          >
+                                            {isNestedExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                          </button>
+                                        </div>
+                                        {isNestedExpanded && <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
+                                          {subItem.subItems.map(nestedItem => {
+                                            const isNestedActive = location.search.includes(`tab=${nestedItem.href.split('=')[1]}`);
+                                            const NestedIcon = nestedItem.icon;
+                                            return <Link
+                                              key={nestedItem.name}
+                                              to={nestedItem.href}
+                                              className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isNestedActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" : "text-gray-600 hover:bg-gray-100"}`}
+                                              onClick={() => setMobileMenuOpen(false)}
+                                            >
+                                              <NestedIcon className={`mr-3 h-4 w-4 transition-colors ${isNestedActive ? "text-gray-900" : "text-gray-400"}`} />
+                                              {nestedItem.name}
+                                            </Link>;
+                                          })}
+                                        </div>}
+                                      </div>
+                                    );
+                                  }
+                                  const isActive = location.search.includes(`tab=${subItem.href.split('=')[1]}`);
+                                  return <Link
+                                    key={subItem.name}
+                                    to={subItem.href}
                                     className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" : "text-gray-600 hover:bg-gray-100"}`}
                                     onClick={() => setMobileMenuOpen(false)}
                                   >
@@ -1173,8 +1226,47 @@ const Layout = memo(({
                       
                       {isExpanded && !sidebarCollapsed && <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
                           {item.subItems?.map(subItem => {
-                      const isActive = location.search.includes(`tab=${subItem.href.split('=')[1]}`);
                       const SubIcon = subItem.icon;
+                      if (subItem.subItems) {
+                        const isNestedExpanded = expandedMenus.has(subItem.name);
+                        const isAnyNestedActive = subItem.subItems.some(nested => location.search.includes(`tab=${nested.href.split('=')[1]}`));
+                        return (
+                          <div key={subItem.name}>
+                            <div className="flex items-center">
+                              <Link
+                                to={subItem.href}
+                                onMouseEnter={() => prefetchByHref(subItem.href)}
+                                className={`flex-1 flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isAnyNestedActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`}
+                              >
+                                <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isAnyNestedActive ? "text-gray-900" : "text-gray-400"}`} />
+                                {subItem.name}
+                              </Link>
+                              <button
+                                onClick={() => toggleMenu(subItem.name)}
+                                className="px-2 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-all duration-200 hover-scale"
+                              >
+                                {isNestedExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                              </button>
+                            </div>
+                            {isNestedExpanded && <div className="ml-4 mt-2 space-y-1 animate-accordion-down">
+                              {subItem.subItems.map(nestedItem => {
+                                const isNestedActive = location.search.includes(`tab=${nestedItem.href.split('=')[1]}`);
+                                const NestedIcon = nestedItem.icon;
+                                return <Link
+                                  key={nestedItem.name}
+                                  to={nestedItem.href}
+                                  onMouseEnter={() => prefetchByHref(nestedItem.href)}
+                                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isNestedActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`}
+                                >
+                                  <NestedIcon className={`mr-3 h-4 w-4 transition-colors ${isNestedActive ? "text-gray-900" : "text-gray-400"}`} />
+                                  {nestedItem.name}
+                                </Link>;
+                              })}
+                            </div>}
+                          </div>
+                        );
+                      }
+                      const isActive = location.search.includes(`tab=${subItem.href.split('=')[1]}`);
                       return <Link key={subItem.name} to={subItem.href} onMouseEnter={() => prefetchByHref(subItem.href)} className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`}>
                                 <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
                                 {subItem.name}
