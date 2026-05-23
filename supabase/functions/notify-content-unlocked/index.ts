@@ -62,15 +62,19 @@ serve(async (req: Request) => {
     }
 
     // Get company settings for branding
-    const { data: settings } = await supabase
+    const { data: settings, error: settingsErr } = await supabase
       .from('company_settings')
-      .select('company_name, site_url, logo_url, notification_email_cc')
+      .select('company_name, lms_url, company_logo, notification_email_cc')
       .limit(1)
-      .single();
+      .maybeSingle();
+
+    if (settingsErr) {
+      console.error('[notify-content-unlocked] Failed to load company_settings:', settingsErr);
+    }
 
     const companyName = settings?.company_name || 'Learning Platform';
-    const siteUrl = settings?.site_url || Deno.env.get('SITE_URL') || '';
-    const logoUrl = settings?.logo_url || '';
+    const siteUrl = settings?.lms_url || Deno.env.get('SITE_URL') || '';
+    const logoUrl = settings?.company_logo || '';
     const recordingTitle = lesson.recording_title || 'New Content';
     const hasAssignment = !!lesson.assignment_id;
 
