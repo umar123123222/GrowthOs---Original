@@ -239,8 +239,8 @@ serve(async (req) => {
 
     const currency = companySettings?.currency || 'PKR';
     const currencySymbol = getCurrencySymbol(currency);
-    const companyName = companySettings?.company_name || 'The Learning Team';
-    const companyEmail = companySettings?.contact_email || 'support@company.com';
+    const companyName = companySettings?.company_name || 'Your Company';
+    const companyEmail = companySettings?.contact_email || '';
     const companyAddress = companySettings?.address || '';
     const companyPhone = companySettings?.primary_phone || '';
     const paymentMethods = (companySettings?.payment_methods as any[]) || [];
