@@ -1894,23 +1894,26 @@ export type Database = {
       recording_attachments: {
         Row: {
           file_name: string
-          file_url: string
+          file_url: string | null
           id: string
           recording_id: string
+          resource_id: string | null
           uploaded_at: string
         }
         Insert: {
           file_name: string
-          file_url: string
+          file_url?: string | null
           id?: string
           recording_id: string
+          resource_id?: string | null
           uploaded_at?: string
         }
         Update: {
           file_name?: string
-          file_url?: string
+          file_url?: string | null
           id?: string
           recording_id?: string
+          resource_id?: string | null
           uploaded_at?: string
         }
         Relationships: [
@@ -1919,6 +1922,13 @@ export type Database = {
             columns: ["recording_id"]
             isOneToOne: false
             referencedRelation: "available_lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recording_attachments_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resources"
             referencedColumns: ["id"]
           },
         ]
