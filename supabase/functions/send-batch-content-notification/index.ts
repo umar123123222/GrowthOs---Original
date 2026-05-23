@@ -227,18 +227,22 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const lmsUrl = Deno.env.get("LMS_URL") || "https://growthos-final.lovable.app";
     const notificationCcSecret = Deno.env.get("NOTIFICATION_EMAIL_CC");
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch notification CC from company settings, fall back to secret
-    const { data: ccSettings } = await supabase
+    // Fetch company settings for sender branding and LMS links.
+    const { data: companySettings, error: companySettingsError } = await supabase
       .from('company_settings')
-      .select('notification_email_cc')
-      .eq('id', 1)
-      .single();
-    const notificationCc = ccSettings?.notification_email_cc || notificationCcSecret;
+      .select('company_name, lms_url')
+      .limit(1)
+      .maybeSingle();
+    if (companySettingsError) {
+      console.error('[send-batch-content-notification] Failed to load company_settings:', companySettingsError);
+    }
+    const companyName = companySettings?.company_name || 'IDMPakistan';
+    const lmsUrl = companySettings?.lms_url || Deno.env.get("LMS_URL") || "https://growthos.idmpakistan.pk";
+    const notificationCc = notificationCcSecret;
 
     const body: NotificationRequest = await req.json();
     const {
@@ -322,6 +326,7 @@ const handler = async (req: Request): Promise<Response> => {
     let smtpClient: SMTPClient | null = null;
     try {
       smtpClient = SMTPClient.fromEnv();
+      smtpClient.setFromName(companyName);
     } catch (error) {
       console.error("SMTP not configured, will queue emails:", error);
     }
@@ -339,7 +344,8 @@ const handler = async (req: Request): Promise<Response> => {
           description,
           meeting_link,
           start_datetime,
-          lmsUrl
+          lmsUrl,
+          companyName
         );
         const subject = getEmailSubject(item_type, title);
 
