@@ -78,7 +78,7 @@ export function RecordingAttachmentsManager({ recordingId }: RecordingAttachment
 
   const sectionsById = useMemo(() => {
     const m: Record<string, string> = {};
-    sections.forEach(s => { m[s.id] = s.title; });
+    sections.forEach(s => { m[s.id] = s.name; });
     return m;
   }, [sections]);
 
