@@ -895,6 +895,7 @@ const handler = async (req: Request): Promise<Response> => {
 async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
     const smtpClient = SMTPClient.fromEnv();
+    if (companyDetails.company_name) smtpClient.setFromName(companyDetails.company_name);
     const studentEmail = invoice.student_email;
     const studentName = invoice.student_name;
     const dueDate = new Date(invoice.due_date).toLocaleDateString();
