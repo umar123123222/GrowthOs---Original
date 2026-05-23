@@ -14,6 +14,7 @@ import { logger } from '@/lib/logger';
 import CurrentModuleCard from "@/components/CurrentModuleCard";
 import { obfuscateUrl, deobfuscateUrl } from "@/lib/utils";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
+import { getResourceFileSignedUrl } from "@/hooks/useResources";
 
 // Sanitize video URLs by removing garbage prefixes
 const sanitizeVideoUrl = (url: string): string => {
