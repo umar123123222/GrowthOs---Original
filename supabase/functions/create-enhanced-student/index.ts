@@ -647,7 +647,8 @@ const handler = async (req: Request): Promise<Response> => {
         const { data: installmentSettings } = await supabaseAdmin
           .from('company_settings')
           .select('invoice_overdue_days, invoice_send_gap_days')
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         // Fetch batch start_date if batch_id is provided
         let batchStartDate: Date | null = null;
