@@ -433,8 +433,8 @@ const Layout = memo(({
     }
   }, []);
 
-  // Check if any course submenu is active to keep it expanded
-  const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=submissions') || location.search.includes('tab=success-sessions') || location.search.includes('tab=milestones');
+  // Check if any nested course submenu is active to keep it expanded
+  const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=resources');
 
   // Memoize navigation to prevent unnecessary re-renders
   const navigation = useMemo(() => {
@@ -454,23 +454,24 @@ const Layout = memo(({
         }, {
           name: "Courses",
           href: "/superadmin?tab=courses",
-          icon: GraduationCap
-        }, {
-          name: "Modules",
-          href: "/superadmin?tab=modules",
-          icon: LayoutGrid
-        }, {
-          name: "Recordings",
-          href: "/superadmin?tab=recordings",
-          icon: Video
-        }, {
-          name: "Assignments",
-          href: "/superadmin?tab=assignments",
-          icon: FileText
-        }, {
-          name: "Resources",
-          href: "/superadmin?tab=resources",
-          icon: FolderOpen
+          icon: GraduationCap,
+          subItems: [{
+            name: "Modules",
+            href: "/superadmin?tab=modules",
+            icon: LayoutGrid
+          }, {
+            name: "Recordings",
+            href: "/superadmin?tab=recordings",
+            icon: Video
+          }, {
+            name: "Assignments",
+            href: "/superadmin?tab=assignments",
+            icon: FileText
+          }, {
+            name: "Resources",
+            href: "/superadmin?tab=resources",
+            icon: FolderOpen
+          }]
         }, {
           name: "Submissions",
           href: "/superadmin?tab=submissions",
@@ -542,23 +543,24 @@ const Layout = memo(({
         }, {
           name: "Courses",
           href: "/admin?tab=courses",
-          icon: GraduationCap
-        }, {
-          name: "Modules",
-          href: "/admin?tab=modules",
-          icon: LayoutGrid
-        }, {
-          name: "Recordings",
-          href: "/admin?tab=recordings",
-          icon: Video
-        }, {
-          name: "Assignments",
-          href: "/admin?tab=assignments",
-          icon: FileText
-        }, {
-          name: "Resources",
-          href: "/admin?tab=resources",
-          icon: FolderOpen
+          icon: GraduationCap,
+          subItems: [{
+            name: "Modules",
+            href: "/admin?tab=modules",
+            icon: LayoutGrid
+          }, {
+            name: "Recordings",
+            href: "/admin?tab=recordings",
+            icon: Video
+          }, {
+            name: "Assignments",
+            href: "/admin?tab=assignments",
+            icon: FileText
+          }, {
+            name: "Resources",
+            href: "/admin?tab=resources",
+            icon: FolderOpen
+          }]
         }, {
           name: "Submissions",
           href: "/admin?tab=submissions",
@@ -771,6 +773,18 @@ const Layout = memo(({
   useEffect(() => {
     if (isCourseMenuActive) {
       setCourseMenuOpen(true);
+    }
+  }, [isCourseMenuActive]);
+
+  // Auto-expand Content and Courses menus when nested course tabs are active
+  useEffect(() => {
+    if (isCourseMenuActive) {
+      setExpandedMenus(prev => {
+        const next = new Set(prev);
+        next.add("Content");
+        next.add("Courses");
+        return next;
+      });
     }
   }, [isCourseMenuActive]);
 
