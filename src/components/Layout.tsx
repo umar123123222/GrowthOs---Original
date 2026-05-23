@@ -778,17 +778,17 @@ const Layout = memo(({
     }
   }, [isCourseMenuActive]);
 
-  // Auto-expand Content and Courses menus when nested course tabs are active
+  // Auto-expand Content menu when any of its sub-tabs are active; only add Courses when a Courses sub-tab is active
   useEffect(() => {
-    if (isCourseMenuActive) {
+    if (isContentMenuActive) {
       setExpandedMenus(prev => {
         const next = new Set(prev);
         next.add("Content");
-        next.add("Courses");
+        if (isCourseMenuActive) next.add("Courses");
         return next;
       });
     }
-  }, [isCourseMenuActive]);
+  }, [isContentMenuActive, isCourseMenuActive]);
 
   // Optimized logging with error handling and debouncing
   const logActivityRef = useRef<NodeJS.Timeout>();
