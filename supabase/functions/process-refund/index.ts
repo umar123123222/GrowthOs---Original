@@ -26,10 +26,10 @@ function sanitizeEmail(value: string): string {
   return m ? m[1].trim() : trimmed;
 }
 
-async function sendEmail(to: string, subject: string, html: string, cc?: string) {
+async function sendEmail(to: string, subject: string, html: string, cc?: string, fromNameOverride?: string) {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   const fromEmail = Deno.env.get("SMTP_FROM_EMAIL");
-  const fromName = Deno.env.get("SMTP_FROM_NAME") || "Growth OS";
+  const fromName = fromNameOverride || Deno.env.get("SMTP_FROM_NAME") || "Your Company";
   if (!resendApiKey || !fromEmail) {
     console.warn("Email skipped: RESEND_API_KEY or SMTP_FROM_EMAIL missing");
     return;
