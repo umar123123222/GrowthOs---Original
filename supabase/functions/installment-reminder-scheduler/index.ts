@@ -193,8 +193,10 @@ async function sendBillingEmail(options: {
   pdfBuffer: Uint8Array | null;
   installmentNumber: number;
   billingCc?: string;
+  fromName?: string;
 }): Promise<void> {
   const smtpClient = SMTPClient.fromEnv();
+  if (options.fromName) smtpClient.setFromName(options.fromName);
   const billingCc = options.billingCc;
 
   const emailPayload: any = {
