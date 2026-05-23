@@ -9,9 +9,9 @@ const corsHeaders = {
 }
 
 // Shared currency symbol helper
-function getCurrencySymbol(curr: string = 'USD'): string {
+function getCurrencySymbol(curr: string = 'PKR'): string {
   const symbols: Record<string, string> = {
-    USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
+    USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: 'Rs'
   };
   return symbols[curr] || curr;
 }
@@ -245,7 +245,7 @@ serve(async (req) => {
     }
     
     const loginUrl = companySettings?.lms_url || 'https://growthos.core47.ai';
-    const currency = companySettings?.currency || 'USD';
+    const currency = companySettings?.currency || 'PKR';
     const currencySymbol = getCurrencySymbol(currency);
     const companyDetails: CompanyDetails = {
       company_name: companySettings?.company_name || 'Your Company',

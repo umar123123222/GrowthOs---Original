@@ -601,7 +601,7 @@ const handler = async (req: Request): Promise<Response> => {
       .single();
     
     const loginUrl = companyDetailsData?.lms_url || 'https://growthos.core47.ai';
-    const currency = companyDetailsData?.currency || 'USD';
+    const currency = companyDetailsData?.currency || 'PKR';
     const companyDetails: CompanyDetails = {
       company_name: companyDetailsData?.company_name || 'Your Company',
       address: companyDetailsData?.address || '',
@@ -888,9 +888,9 @@ async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: s
     const dueDate = new Date(invoice.due_date).toLocaleDateString();
     
     // Get currency symbol
-    const getCurrencySymbol = (curr: string = 'USD') => {
+    const getCurrencySymbol = (curr: string = 'PKR') => {
       const symbols: { [key: string]: string } = {
-        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
+        USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: 'Rs'
       };
       return symbols[curr] || curr;
     };

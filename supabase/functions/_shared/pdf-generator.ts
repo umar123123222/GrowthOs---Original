@@ -93,14 +93,14 @@ export async function generateInvoicePDF(invoiceData: InvoiceData, companyDetail
 
 function generateInvoiceHTML(invoiceData: InvoiceData, companyDetails: CompanyDetails): string {
   // Currency symbol helper function
-  const getCurrencySymbol = (currency: string = 'USD') => {
+  const getCurrencySymbol = (currency: string = 'PKR') => {
     const symbols: { [key: string]: string } = {
-      USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
+      USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: 'Rs'
     };
     return symbols[currency] || currency;
   };
 
-  const currency = invoiceData.currency || 'USD';
+  const currency = invoiceData.currency || 'PKR';
   const currencySymbol = getCurrencySymbol(currency);
 
   return `

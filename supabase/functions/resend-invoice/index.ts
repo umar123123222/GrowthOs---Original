@@ -7,9 +7,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-function getCurrencySymbol(curr: string = 'USD'): string {
+function getCurrencySymbol(curr: string = 'PKR'): string {
   const symbols: Record<string, string> = {
-    USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: '₨'
+    USD: '$', EUR: '€', GBP: '£', INR: '₹', CAD: 'C$', AUD: 'A$', PKR: 'Rs'
   };
   return symbols[curr] || curr;
 }
@@ -236,7 +236,7 @@ serve(async (req) => {
       console.log('[resend-invoice] Loaded company_settings:', { company_name: companySettings.company_name, contact_email: companySettings.contact_email });
     }
 
-    const currency = companySettings?.currency || 'USD';
+    const currency = companySettings?.currency || 'PKR';
     const currencySymbol = getCurrencySymbol(currency);
     const companyName = companySettings?.company_name || 'The Learning Team';
     const companyEmail = companySettings?.contact_email || 'support@company.com';
