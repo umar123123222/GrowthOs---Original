@@ -112,6 +112,10 @@ export const useUpsertResource = () => {
       audiences: Array<Pick<ResourceAudience, "audience_type" | "target_id">>;
     }) => {
       const { resource, audiences } = payload;
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error("Your session has expired. Please sign in again to save changes.");
+      }
       let resourceId = resource.id;
       if (resourceId) {
         const { error } = await supabase
@@ -128,7 +132,6 @@ export const useUpsertResource = () => {
           .eq("id", resourceId);
         if (error) throw error;
       } else {
-        const { data: u } = await supabase.auth.getUser();
         const { data, error } = await supabase
           .from("resources")
           .insert({
@@ -139,7 +142,7 @@ export const useUpsertResource = () => {
             content: resource.content,
             display_order: resource.display_order ?? 0,
             is_active: resource.is_active ?? true,
-            created_by: u.user?.id,
+            created_by: sessionData.session.user.id,
           })
           .select("id")
           .single();
