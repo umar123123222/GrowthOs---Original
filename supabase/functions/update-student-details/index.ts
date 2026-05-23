@@ -289,6 +289,7 @@ serve(async (req) => {
                       ).join('');
 
                       const smtpClient = SMTPClient.fromEnv();
+                      smtpClient.setFromName(companyName);
                       await smtpClient.sendEmail({
                         to: email,
                         subject: `${companyName} - Missed Session Recordings Available`,
