@@ -433,8 +433,10 @@ const Layout = memo(({
     }
   }, []);
 
-  // Check if any nested course submenu is active to keep it expanded
-  const isCourseMenuActive = location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=resources');
+  // Check if any Content submenu is active to keep Content expanded
+  const isContentMenuActive = location.search.includes('tab=pathways') || location.search.includes('tab=courses') || location.search.includes('tab=modules') || location.search.includes('tab=recordings') || location.search.includes('tab=assignments') || location.search.includes('tab=resources');
+  // Courses submenu only contains Modules — only expand Courses when modules tab is active
+  const isCourseMenuActive = location.search.includes('tab=modules');
 
   // Memoize navigation to prevent unnecessary re-renders
   const navigation = useMemo(() => {
