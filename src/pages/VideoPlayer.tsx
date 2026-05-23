@@ -254,7 +254,7 @@ const VideoPlayer = () => {
         const {
           data,
           error
-        } = (await supabase.from('recording_attachments' as any).select('id, file_name, file_url, uploaded_at').eq('recording_id', currentVideo.id).order('uploaded_at', {
+        } = (await supabase.from('recording_attachments' as any).select('id, file_name, file_url, uploaded_at, resource_id').eq('recording_id', currentVideo.id).order('uploaded_at', {
           ascending: false
         })) as any;
         if (!error) setAttachments(data as Attachment[] || []);
