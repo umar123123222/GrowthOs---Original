@@ -466,6 +466,7 @@ serve(async (req) => {
 
         console.log('Initializing SMTP client...');
         const smtpClient = SMTPClient.fromEnv();
+        smtpClient.setFromName(companyName);
         
         console.log('Sending email to:', email);
         await smtpClient.sendEmail({
