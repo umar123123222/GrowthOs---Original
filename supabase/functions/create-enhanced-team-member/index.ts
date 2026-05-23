@@ -197,27 +197,33 @@ const handler = async (req: Request): Promise<Response> => {
       // Continue anyway - email can be sent manually
     }
 
-    // Get LMS URL from company settings
-    const { data: companySettings } = await supabaseAdmin
+    // Get company settings (LMS URL, branding, CC)
+    const { data: companySettings, error: companyErr } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url, notification_email_cc')
-      .eq('id', 1)
-      .single();
-    
+      .select('company_name, lms_url, notification_email_cc, contact_email, primary_phone')
+      .limit(1)
+      .maybeSingle();
+
+    if (companyErr) {
+      console.error('[create-enhanced-team-member] Failed to load company_settings:', companyErr);
+    }
+
+    const companyName = companySettings?.company_name || 'Your Company';
     const loginUrl = companySettings?.lms_url || 'https://growthos.core47.ai';
 
     // Send welcome email with credentials via SMTP
     try {
       const smtpClient = SMTPClient.fromEnv();
-      
+      smtpClient.setFromName(companyName);
+
       const notificationCc = companySettings?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
       await smtpClient.sendEmail({
         to: email,
-        subject: 'Welcome to Growth OS - Your Login Credentials',
+        subject: `Welcome to ${companyName} - Your Login Credentials`,
         ...(notificationCc ? { cc: notificationCc } : {}),
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Welcome to Growth OS, ${full_name}!</h2>
+            <h2>Welcome to ${companyName}, ${full_name}!</h2>
             
             <p>Your ${role} account has been created successfully. Here are your login credentials:</p>
             
@@ -239,7 +245,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <p>If you have any questions, please contact the system administrator.</p>
             
-            <p>Best regards,<br>Growth OS Team</p>
+            <p>Best regards,<br>${companyName} Team</p>
           </div>
         `,
       });
