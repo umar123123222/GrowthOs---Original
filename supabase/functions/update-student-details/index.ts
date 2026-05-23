@@ -274,9 +274,10 @@ serve(async (req) => {
                       const { data: companySettings } = await supabaseAdmin
                         .from('company_settings')
                         .select('company_name, lms_url')
-                        .single();
+                        .limit(1)
+                        .maybeSingle();
 
-                      const companyName = companySettings?.company_name || 'Growth OS';
+                      const companyName = companySettings?.company_name || 'Your Company';
                       const lmsUrl = companySettings?.lms_url || '';
 
                       const sessionListHtml = sessionLinks.map(s =>
@@ -288,6 +289,7 @@ serve(async (req) => {
                       ).join('');
 
                       const smtpClient = SMTPClient.fromEnv();
+                      smtpClient.setFromName(companyName);
                       await smtpClient.sendEmail({
                         to: email,
                         subject: `${companyName} - Missed Session Recordings Available`,
@@ -437,13 +439,14 @@ serve(async (req) => {
         const { data: companySettings, error: companyError } = await supabaseAdmin
           .from('company_settings')
           .select('company_name, company_logo, lms_url, notification_email_cc')
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         if (companyError) {
           console.error('Error fetching company settings:', companyError);
         }
 
-        const companyName = companySettings?.company_name || 'Growth OS';
+        const companyName = companySettings?.company_name || 'Your Company';
         const loginUrl = companySettings?.lms_url || Deno.env.get('SUPABASE_URL') || '';
 
         console.log('Company settings retrieved:', { companyName, loginUrl });
@@ -463,6 +466,7 @@ serve(async (req) => {
 
         console.log('Initializing SMTP client...');
         const smtpClient = SMTPClient.fromEnv();
+        smtpClient.setFromName(companyName);
         
         console.log('Sending email to:', email);
         await smtpClient.sendEmail({

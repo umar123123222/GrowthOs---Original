@@ -751,15 +751,16 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       const smtpClient = SMTPClient.fromEnv();
+      if (companyDetails.company_name) smtpClient.setFromName(companyDetails.company_name);
       const notificationCc = companyDetailsData?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
       
       await smtpClient.sendEmail({
         to: email,
-        subject: 'Welcome to Growth OS - Your LMS Access Credentials',
+        subject: `Welcome to ${companyDetails.company_name || 'Your Company'} - Your LMS Access Credentials`,
         ...(notificationCc ? { cc: notificationCc } : {}),
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h2>Welcome to Growth OS, ${full_name}!</h2>
+            <h2>Welcome to ${companyDetails.company_name || 'Your Company'}, ${full_name}!</h2>
             
             <p>Your student account has been created successfully. Here are your login credentials:</p>
             
@@ -782,7 +783,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <p>If you have any questions, please contact our support team.</p>
             
-            <p>Best regards,<br>Growth OS Team</p>
+            <p>Best regards,<br>${companyDetails.company_name || 'Your Company'} Team</p>
           </div>
         `,
       });
@@ -894,6 +895,7 @@ const handler = async (req: Request): Promise<Response> => {
 async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: string, companyDetails: CompanyDetails, paymentMethods: any[]) {
   try {
     const smtpClient = SMTPClient.fromEnv();
+    if (companyDetails.company_name) smtpClient.setFromName(companyDetails.company_name);
     const studentEmail = invoice.student_email;
     const studentName = invoice.student_name;
     const dueDate = new Date(invoice.due_date).toLocaleDateString();

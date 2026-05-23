@@ -66,6 +66,32 @@ export class SMTPClient {
     this.useResend = !!this.resendApiKey;
   }
 
+  /** Override the From display name (e.g. with the company_name from company_settings). */
+  setFromName(name: string) {
+    if (name && name.trim()) {
+      this.fromName = name.trim();
+    }
+  }
+
+  /**
+   * Load company_name from company_settings and use it as the From display name.
+   * Safe no-op on failure. Pass any supabase client (service role recommended).
+   */
+  async applyCompanyBranding(supabase: any): Promise<void> {
+    try {
+      const { data } = await supabase
+        .from('company_settings')
+        .select('company_name')
+        .limit(1)
+        .maybeSingle();
+      if (data?.company_name) {
+        this.fromName = data.company_name;
+      }
+    } catch (e) {
+      console.error('[SMTPClient] Failed to load company_name for From header:', e);
+    }
+  }
+
   static fromEnv(): SMTPClient {
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const rawFromEmail = Deno.env.get('SMTP_FROM_EMAIL');

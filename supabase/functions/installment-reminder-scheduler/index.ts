@@ -193,8 +193,10 @@ async function sendBillingEmail(options: {
   pdfBuffer: Uint8Array | null;
   installmentNumber: number;
   billingCc?: string;
+  fromName?: string;
 }): Promise<void> {
   const smtpClient = SMTPClient.fromEnv();
+  if (options.fromName) smtpClient.setFromName(options.fromName);
   const billingCc = options.billingCc;
 
   const emailPayload: any = {
@@ -354,6 +356,7 @@ serve(async (req) => {
             pdfBuffer,
             installmentNumber: invoice.installment_number,
             billingCc,
+            fromName: companyDetails.company_name,
           });
         } catch (emailError) {
           console.error(`[Email FAILED] Issue email for installment #${invoice.installment_number} to ${invoice.students.users.email}:`, emailError.message);
@@ -467,6 +470,7 @@ serve(async (req) => {
               pdfBuffer,
               installmentNumber: invoice.installment_number,
               billingCc,
+            fromName: companyDetails.company_name,
             });
           } catch (emailError) {
             console.error(`[Email FAILED] Due email for installment #${invoice.installment_number} to ${studentEmail}:`, emailError.message);
@@ -562,6 +566,7 @@ serve(async (req) => {
               pdfBuffer,
               installmentNumber: invoice.installment_number,
               billingCc,
+            fromName: companyDetails.company_name,
             });
             emailSent = true;
           } catch (emailError) {
@@ -621,6 +626,7 @@ serve(async (req) => {
               pdfBuffer,
               installmentNumber: invoice.installment_number,
               billingCc,
+            fromName: companyDetails.company_name,
             });
             emailSent = true;
           } catch (emailError) {

@@ -25,11 +25,12 @@ async function sendEmail(options: {
   subject: string;
   html: string;
   cc?: string;
+  fromName?: string;
 }): Promise<void> {
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
   const rawFromEmail = Deno.env.get('SMTP_FROM_EMAIL');
   const fromEmail = rawFromEmail ? sanitizeEmail(rawFromEmail) : '';
-  const fromName = Deno.env.get('SMTP_FROM_NAME') || 'Growth OS';
+  const fromName = options.fromName || Deno.env.get('SMTP_FROM_NAME') || 'Your Company';
 
   if (!resendApiKey) {
     throw new Error('RESEND_API_KEY is not configured');
@@ -238,8 +239,8 @@ serve(async (req) => {
 
     const currency = companySettings?.currency || 'PKR';
     const currencySymbol = getCurrencySymbol(currency);
-    const companyName = companySettings?.company_name || 'The Learning Team';
-    const companyEmail = companySettings?.contact_email || 'support@company.com';
+    const companyName = companySettings?.company_name || 'Your Company';
+    const companyEmail = companySettings?.contact_email || '';
     const companyAddress = companySettings?.address || '';
     const companyPhone = companySettings?.primary_phone || '';
     const paymentMethods = (companySettings?.payment_methods as any[]) || [];
@@ -358,6 +359,7 @@ serve(async (req) => {
           to: studentEmail,
           subject: `Invoice ${invoiceNumber} - Installment #${invoice.installment_number} for ${enrollmentName} - Due ${dueDate}`,
           html,
+          fromName: companyName,
           ...(billingCc ? { cc: billingCc } : {}),
         });
 
