@@ -221,7 +221,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Add note to student record (visible in Student Notes panel)
     if (userId) {
       const installmentList = invoices.map(i => `#${i.installment_number}`).join(", ");
-      const noteText = `Refund processed: ${currencySymbol(company?.currency || "USD")}${totalRefund.toLocaleString()} for installment(s) ${installmentList}. Method: ${body.refund_method}. Reason: ${body.reason}`;
+      const noteText = `Refund processed: ${currencySymbol(currency)}${totalRefund.toLocaleString()} for installment(s) ${installmentList}. Method: ${body.refund_method}. Reason: ${body.reason}`;
       await supabase.from("user_activity_logs").insert({
         user_id: userId,
         activity_type: "admin_note",
