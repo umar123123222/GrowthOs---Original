@@ -227,7 +227,7 @@ serve(async (req) => {
     // Get company settings
     const { data: companySettings, error: companyErr } = await supabaseAdmin
       .from('company_settings')
-      .select('currency, company_name, contact_email, address, primary_phone, payment_methods, billing_email_cc')
+      .select('currency, company_name, company_email, contact_email, address, primary_phone, payment_methods')
       .limit(1)
       .maybeSingle();
 
@@ -239,8 +239,8 @@ serve(async (req) => {
 
     const currency = companySettings?.currency || 'PKR';
     const currencySymbol = getCurrencySymbol(currency);
-    const companyName = companySettings?.company_name || 'Your Company';
-    const companyEmail = companySettings?.contact_email || '';
+    const companyName = companySettings?.company_name || 'IDMPakistan';
+    const companyEmail = companySettings?.contact_email || companySettings?.company_email || '';
     const companyAddress = companySettings?.address || '';
     const companyPhone = companySettings?.primary_phone || '';
     const paymentMethods = (companySettings?.payment_methods as any[]) || [];
@@ -315,7 +315,7 @@ serve(async (req) => {
       (pathways || []).forEach((p: any) => pathwayMap.set(p.id, p.name));
     }
 
-    const billingCc = companySettings?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC');
+    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
     let sentCount = 0;
     let failedCount = 0;
     const errors: string[] = [];
