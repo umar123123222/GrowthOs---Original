@@ -205,16 +205,18 @@ const handler = async (req: Request): Promise<Response> => {
     const enrollmentName = names.length ? names.join(", ") : "your enrollment";
 
     // Company settings
-    const { data: company } = await supabase
+    const { data: company, error: companyErr } = await supabase
       .from("company_settings")
       .select("company_name, company_email, contact_email, primary_phone, address, currency")
-      .eq("id", 1).maybeSingle();
+      .limit(1).maybeSingle();
 
-    const companyName = company?.company_name || "Growth OS";
+    if (companyErr) console.error('[process-refund] Failed to load company_settings:', companyErr);
+
+    const companyName = company?.company_name || "Your Company";
     const companyEmail = company?.company_email || company?.contact_email || "";
     const companyPhone = company?.primary_phone || "";
     const companyAddress = company?.address || "";
-    const currency = company?.currency || "USD";
+    const currency = company?.currency || "PKR";
 
     // Add note to student record (visible in Student Notes panel)
     if (userId) {
