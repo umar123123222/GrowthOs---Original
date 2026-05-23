@@ -71,8 +71,9 @@ const VideoPlayer = () => {
   interface Attachment {
     id: string;
     file_name: string;
-    file_url: string;
+    file_url: string | null;
     uploaded_at: string;
+    resource_id?: string | null;
   }
   const [attachments, setAttachments] = useState<Attachment[]>([]);
 
