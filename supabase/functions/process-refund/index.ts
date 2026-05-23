@@ -16,8 +16,8 @@ interface RefundRequest {
   suspend_lms?: boolean;
 }
 
-function currencySymbol(c: string = "USD") {
-  return ({ USD: "$", EUR: "€", GBP: "£", INR: "₹", PKR: "₨", CAD: "C$", AUD: "A$" } as Record<string, string>)[c] || c;
+function currencySymbol(c: string = "PKR") {
+  return ({ USD: "$", EUR: "€", GBP: "£", INR: "₹", PKR: "Rs", CAD: "C$", AUD: "A$" } as Record<string, string>)[c] || c;
 }
 
 function sanitizeEmail(value: string): string {
@@ -29,7 +29,7 @@ function sanitizeEmail(value: string): string {
 async function sendEmail(to: string, subject: string, html: string, cc?: string, fromNameOverride?: string) {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   const fromEmail = Deno.env.get("SMTP_FROM_EMAIL");
-  const fromName = fromNameOverride || Deno.env.get("SMTP_FROM_NAME") || "Your Company";
+  const fromName = fromNameOverride || Deno.env.get("SMTP_FROM_NAME") || "IDMPakistan";
   if (!resendApiKey || !fromEmail) {
     console.warn("Email skipped: RESEND_API_KEY or SMTP_FROM_EMAIL missing");
     return;
@@ -212,7 +212,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (companyErr) console.error('[process-refund] Failed to load company_settings:', companyErr);
 
-    const companyName = company?.company_name || "Your Company";
+    const companyName = company?.company_name || "IDMPakistan";
     const companyEmail = company?.company_email || company?.contact_email || "";
     const companyPhone = company?.primary_phone || "";
     const companyAddress = company?.address || "";

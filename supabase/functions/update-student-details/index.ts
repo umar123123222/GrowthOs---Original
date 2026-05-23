@@ -277,7 +277,7 @@ serve(async (req) => {
                         .limit(1)
                         .maybeSingle();
 
-                      const companyName = companySettings?.company_name || 'Your Company';
+                      const companyName = companySettings?.company_name || 'IDMPakistan';
                       const lmsUrl = companySettings?.lms_url || '';
 
                       const sessionListHtml = sessionLinks.map(s =>
@@ -438,7 +438,7 @@ serve(async (req) => {
         console.log('Fetching company settings...');
         const { data: companySettings, error: companyError } = await supabaseAdmin
           .from('company_settings')
-          .select('company_name, company_logo, lms_url, notification_email_cc')
+          .select('company_name, company_logo, lms_url')
           .limit(1)
           .maybeSingle();
 
@@ -446,7 +446,7 @@ serve(async (req) => {
           console.error('Error fetching company settings:', companyError);
         }
 
-        const companyName = companySettings?.company_name || 'Your Company';
+        const companyName = companySettings?.company_name || 'IDMPakistan';
         const loginUrl = companySettings?.lms_url || Deno.env.get('SUPABASE_URL') || '';
 
         console.log('Company settings retrieved:', { companyName, loginUrl });
@@ -458,7 +458,7 @@ serve(async (req) => {
         }
 
         // Read CC email from function secrets
-        const ccEmail = companySettings?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
+        const ccEmail = Deno.env.get('NOTIFICATION_EMAIL_CC');
         console.log('CC configuration:', { 
           has_cc: !!ccEmail, 
           cc_email: ccEmail ? '***@***.***' : 'none' 

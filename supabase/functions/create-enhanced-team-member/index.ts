@@ -200,7 +200,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get company settings (LMS URL, branding, CC)
     const { data: companySettings, error: companyErr } = await supabaseAdmin
       .from('company_settings')
-      .select('company_name, lms_url, notification_email_cc, contact_email, primary_phone')
+      .select('company_name, lms_url, contact_email, primary_phone')
       .limit(1)
       .maybeSingle();
 
@@ -208,7 +208,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error('[create-enhanced-team-member] Failed to load company_settings:', companyErr);
     }
 
-    const companyName = companySettings?.company_name || 'Your Company';
+    const companyName = companySettings?.company_name || 'IDMPakistan';
     const loginUrl = companySettings?.lms_url || 'https://growthos.core47.ai';
 
     // Send welcome email with credentials via SMTP
@@ -216,7 +216,7 @@ const handler = async (req: Request): Promise<Response> => {
       const smtpClient = SMTPClient.fromEnv();
       smtpClient.setFromName(companyName);
 
-      const notificationCc = companySettings?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
+      const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
       await smtpClient.sendEmail({
         to: email,
         subject: `Welcome to ${companyName} - Your Login Credentials`,
