@@ -64,7 +64,7 @@ serve(async (req: Request) => {
     // Get company settings for branding
     const { data: settings, error: settingsErr } = await supabase
       .from('company_settings')
-      .select('company_name, lms_url, company_logo, notification_email_cc')
+      .select('company_name, lms_url, company_logo')
       .limit(1)
       .maybeSingle();
 
@@ -129,7 +129,7 @@ serve(async (req: Request) => {
 </html>`;
 
     // Get notification CC
-    const notificationCc = settings?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC') || '';
+    const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC') || '';
 
     // Try to send directly first, fall back to queue
     try {
