@@ -1057,7 +1057,7 @@ const Layout = memo(({
         </div>
       </header>
 
-      <AnnouncementBanner onVisibilityChange={setIsBannerVisible} />
+      {user?.role === 'student' && <AnnouncementBanner onVisibilityChange={setIsBannerVisible} />}
 
       <div className="flex">
         {/* Sidebar - Desktop only, hidden on mobile */}
