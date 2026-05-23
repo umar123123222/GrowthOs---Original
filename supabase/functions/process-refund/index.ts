@@ -16,8 +16,8 @@ interface RefundRequest {
   suspend_lms?: boolean;
 }
 
-function currencySymbol(c: string = "USD") {
-  return ({ USD: "$", EUR: "€", GBP: "£", INR: "₹", PKR: "₨", CAD: "C$", AUD: "A$" } as Record<string, string>)[c] || c;
+function currencySymbol(c: string = "PKR") {
+  return ({ USD: "$", EUR: "€", GBP: "£", INR: "₹", PKR: "Rs", CAD: "C$", AUD: "A$" } as Record<string, string>)[c] || c;
 }
 
 function sanitizeEmail(value: string): string {
@@ -212,7 +212,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (companyErr) console.error('[process-refund] Failed to load company_settings:', companyErr);
 
-    const companyName = company?.company_name || "Your Company";
+    const companyName = company?.company_name || "IDMPakistan";
     const companyEmail = company?.company_email || company?.contact_email || "";
     const companyPhone = company?.primary_phone || "";
     const companyAddress = company?.address || "";
