@@ -3,7 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Upload, FileText } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, Upload, FileText, Eye, Download } from "lucide-react";
 import { uploadResourceFile } from "@/hooks/useResources";
 import { useToast } from "@/hooks/use-toast";
 
