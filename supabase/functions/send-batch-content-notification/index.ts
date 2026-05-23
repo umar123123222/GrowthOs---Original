@@ -32,7 +32,8 @@ function generateEmailHTML(
   description: string | undefined,
   meetingLink: string | undefined,
   startDatetime: string | undefined,
-  lmsUrl: string
+  lmsUrl: string,
+  companyName: string
 ): string {
   const firstName = studentName?.split(" ")[0] || "Student";
 
@@ -79,7 +80,7 @@ function generateEmailHTML(
       </div>
       
       <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px;">
-        Keep up the great work! 🚀
+        ${companyName} • Keep up the great work! 🚀
       </p>
     </div>
   </div>
@@ -146,7 +147,7 @@ function generateEmailHTML(
       </div>
       
       <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px;">
-        See you there! 🎉
+        ${companyName} • See you there! 🎉
       </p>
     </div>
   </div>
@@ -197,7 +198,7 @@ function generateEmailHTML(
       </div>
       
       <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px;">
-        You've got this! 💪
+        ${companyName} • You've got this! 💪
       </p>
     </div>
   </div>
