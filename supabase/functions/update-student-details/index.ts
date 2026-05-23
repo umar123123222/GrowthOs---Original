@@ -439,13 +439,14 @@ serve(async (req) => {
         const { data: companySettings, error: companyError } = await supabaseAdmin
           .from('company_settings')
           .select('company_name, company_logo, lms_url, notification_email_cc')
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         if (companyError) {
           console.error('Error fetching company settings:', companyError);
         }
 
-        const companyName = companySettings?.company_name || 'Growth OS';
+        const companyName = companySettings?.company_name || 'Your Company';
         const loginUrl = companySettings?.lms_url || Deno.env.get('SUPABASE_URL') || '';
 
         console.log('Company settings retrieved:', { companyName, loginUrl });
