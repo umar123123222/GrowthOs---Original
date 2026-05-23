@@ -817,13 +817,7 @@ const handler = async (req: Request): Promise<Response> => {
     // ── Send invoice email in background (non-critical) ──
     const sendInvoiceInBackground = async () => {
       try {
-        const { data: invoiceSettings } = await supabaseAdmin
-          .from('company_settings')
-          .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days, payment_methods, currency')
-          .limit(1)
-          .maybeSingle();
-
-        if (invoiceSettings) {
+        if (companyDetailsData) {
           const { data: firstInvoice } = await supabaseAdmin
             .from('invoices')
             .select('*')
@@ -838,7 +832,7 @@ const handler = async (req: Request): Promise<Response> => {
               due_date: firstInvoice.due_date,
               student_email: email,
               student_name: full_name
-            }, loginUrl, currency, companyDetails, invoiceSettings?.payment_methods || []);
+            }, loginUrl, currency, companyDetails, companyDetailsData?.payment_methods || []);
             console.log('First invoice email sent successfully');
           }
         }
@@ -922,7 +916,7 @@ async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: s
       </div>
     `).join('');
     
-    const billingCc = (companyDetails as any)?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC');
+    const billingCc = Deno.env.get('BILLING_EMAIL_CC');
     await smtpClient.sendEmail({
       to: studentEmail,
       subject: `Invoice #${invoice.installment_number.toString().padStart(3, '0')} - Payment Due ${dueDate}`,
