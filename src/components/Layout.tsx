@@ -456,6 +456,10 @@ const Layout = memo(({
           href: "/superadmin?tab=courses",
           icon: GraduationCap
         }, {
+          name: "Modules",
+          href: "/superadmin?tab=modules",
+          icon: LayoutGrid
+        }, {
           name: "Recordings",
           href: "/superadmin?tab=recordings",
           icon: Video
