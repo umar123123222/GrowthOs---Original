@@ -25,11 +25,12 @@ async function sendEmail(options: {
   subject: string;
   html: string;
   cc?: string;
+  fromName?: string;
 }): Promise<void> {
   const resendApiKey = Deno.env.get('RESEND_API_KEY');
   const rawFromEmail = Deno.env.get('SMTP_FROM_EMAIL');
   const fromEmail = rawFromEmail ? sanitizeEmail(rawFromEmail) : '';
-  const fromName = Deno.env.get('SMTP_FROM_NAME') || 'Growth OS';
+  const fromName = options.fromName || Deno.env.get('SMTP_FROM_NAME') || 'Your Company';
 
   if (!resendApiKey) {
     throw new Error('RESEND_API_KEY is not configured');
