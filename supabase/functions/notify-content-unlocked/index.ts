@@ -134,6 +134,7 @@ serve(async (req: Request) => {
     // Try to send directly first, fall back to queue
     try {
       const emailClient = SMTPClient.fromEnv();
+      if (settings?.company_name) emailClient.setFromName(settings.company_name);
       await emailClient.sendEmail({
         to: student.email,
         subject,
