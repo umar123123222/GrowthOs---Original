@@ -29,17 +29,30 @@ export function ResourceRenderer({ resource }: { resource: Resource }) {
   }
 
   if (resource.content_type === "file") {
+    const allowPreview = resource.content?.allow_preview ?? true;
+    const allowDownload = resource.content?.allow_download ?? true;
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <FileText className="h-4 w-4 text-muted-foreground" />
         <span className="text-sm text-muted-foreground">{resource.content?.file_name}</span>
-        {fileUrl && (
-          <a href={fileUrl} target="_blank" rel="noopener noreferrer" download>
+        {fileUrl && allowPreview && (
+          <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+            <Button variant="outline" size="sm" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Preview
+            </Button>
+          </a>
+        )}
+        {fileUrl && allowDownload && (
+          <a href={fileUrl} target="_blank" rel="noopener noreferrer" download={resource.content?.file_name || true}>
             <Button variant="outline" size="sm" className="gap-2">
               <Download className="h-4 w-4" />
               Download
             </Button>
           </a>
+        )}
+        {!allowPreview && !allowDownload && (
+          <span className="text-xs text-muted-foreground italic">Access restricted</span>
         )}
       </div>
     );

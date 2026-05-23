@@ -3,7 +3,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Plus, Trash2, Upload, FileText } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, Upload, FileText, Eye, Download } from "lucide-react";
 import { uploadResourceFile } from "@/hooks/useResources";
 import { useToast } from "@/hooks/use-toast";
 
@@ -40,9 +41,12 @@ export function RichTextEditor({ value, onChange }: EditorProps<{ markdown?: str
   );
 }
 
-export function FileEditor({ value, onChange }: EditorProps<{ storage_path?: string; file_name?: string; mime_type?: string; size?: number }>) {
+export function FileEditor({ value, onChange }: EditorProps<{ storage_path?: string; file_name?: string; mime_type?: string; size?: number; allow_preview?: boolean; allow_download?: boolean }>) {
   const [uploading, setUploading] = useState(false);
   const { toast } = useToast();
+
+  const allowPreview = value?.allow_preview ?? true;
+  const allowDownload = value?.allow_download ?? true;
 
   const handleFile = async (f: File) => {
     if (f.size > 50 * 1024 * 1024) {
@@ -52,7 +56,7 @@ export function FileEditor({ value, onChange }: EditorProps<{ storage_path?: str
     setUploading(true);
     try {
       const meta = await uploadResourceFile(f);
-      onChange(meta);
+      onChange({ ...meta, allow_preview: allowPreview, allow_download: allowDownload });
     } catch (e: any) {
       toast({ title: "Upload failed", description: e.message, variant: "destructive" });
     } finally {
@@ -61,7 +65,7 @@ export function FileEditor({ value, onChange }: EditorProps<{ storage_path?: str
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <Label>File</Label>
       {value?.file_name ? (
         <div className="flex items-center gap-2 p-3 border rounded">
@@ -70,7 +74,7 @@ export function FileEditor({ value, onChange }: EditorProps<{ storage_path?: str
             <div className="font-medium truncate">{value.file_name}</div>
             <div className="text-xs text-muted-foreground">{((value.size ?? 0) / 1024).toFixed(1)} KB</div>
           </div>
-          <Button type="button" size="sm" variant="ghost" onClick={() => onChange({})}>
+          <Button type="button" size="sm" variant="ghost" onClick={() => onChange({ allow_preview: allowPreview, allow_download: allowDownload })}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -86,6 +90,32 @@ export function FileEditor({ value, onChange }: EditorProps<{ storage_path?: str
           />
         </label>
       )}
+
+      <div className="space-y-2 rounded-md border p-3 bg-muted/20">
+        <p className="text-xs font-medium text-muted-foreground">Student access controls</p>
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="allow-preview" className="flex items-center gap-2 cursor-pointer text-sm font-normal">
+            <Eye className="h-4 w-4 text-muted-foreground" />
+            Allow in-app preview
+          </Label>
+          <Switch
+            id="allow-preview"
+            checked={allowPreview}
+            onCheckedChange={(v) => onChange({ ...value, allow_preview: v })}
+          />
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <Label htmlFor="allow-download" className="flex items-center gap-2 cursor-pointer text-sm font-normal">
+            <Download className="h-4 w-4 text-muted-foreground" />
+            Allow file download
+          </Label>
+          <Switch
+            id="allow-download"
+            checked={allowDownload}
+            onCheckedChange={(v) => onChange({ ...value, allow_download: v })}
+          />
+        </div>
+      </div>
     </div>
   );
 }
