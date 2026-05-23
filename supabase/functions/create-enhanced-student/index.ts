@@ -817,7 +817,8 @@ const handler = async (req: Request): Promise<Response> => {
         const { data: invoiceSettings } = await supabaseAdmin
           .from('company_settings')
           .select('original_fee_amount, invoice_overdue_days, invoice_send_gap_days, payment_methods, currency')
-          .single();
+          .limit(1)
+          .maybeSingle();
 
         if (invoiceSettings) {
           const { data: firstInvoice } = await supabaseAdmin
