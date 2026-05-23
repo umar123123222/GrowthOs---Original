@@ -783,7 +783,7 @@ const handler = async (req: Request): Promise<Response> => {
             
             <p>If you have any questions, please contact our support team.</p>
             
-            <p>Best regards,<br>Growth OS Team</p>
+            <p>Best regards,<br>${companyDetails.company_name || 'Your Company'} Team</p>
           </div>
         `,
       });
