@@ -359,6 +359,7 @@ serve(async (req) => {
           to: studentEmail,
           subject: `Invoice ${invoiceNumber} - Installment #${invoice.installment_number} for ${enrollmentName} - Due ${dueDate}`,
           html,
+          fromName: companyName,
           ...(billingCc ? { cc: billingCc } : {}),
         });
 
