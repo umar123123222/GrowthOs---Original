@@ -594,12 +594,21 @@ const handler = async (req: Request): Promise<Response> => {
       });
 
     // Get company settings including currency and company details
-    const { data: companyDetailsData } = await supabaseAdmin
+    const { data: companyDetailsData, error: companyDetailsError } = await supabaseAdmin
       .from('company_settings')
       .select('lms_url, currency, company_name, address, contact_email, primary_phone, payment_methods, billing_email_cc, notification_email_cc')
-      .eq('id', 1)
-      .single();
-    
+      .limit(1)
+      .maybeSingle();
+
+    if (companyDetailsError) {
+      console.error('Error fetching company_settings:', companyDetailsError);
+    }
+    if (!companyDetailsData) {
+      console.error('company_settings returned no row - emails will fall back to placeholders');
+    } else {
+      console.log('Loaded company_settings:', { company_name: companyDetailsData.company_name, contact_email: companyDetailsData.contact_email });
+    }
+
     const loginUrl = companyDetailsData?.lms_url || 'https://growthos.core47.ai';
     const currency = companyDetailsData?.currency || 'PKR';
     const companyDetails: CompanyDetails = {
