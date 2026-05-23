@@ -96,7 +96,7 @@ export class SMTPClient {
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const rawFromEmail = Deno.env.get('SMTP_FROM_EMAIL');
     const fromEmail = rawFromEmail ? SMTPClient.sanitizeEmail(rawFromEmail) : undefined;
-    const fromName = Deno.env.get('SMTP_FROM_NAME') || 'Growth OS';
+    const fromName = Deno.env.get('SMTP_FROM_NAME') || 'IDMPakistan';
 
     if (rawFromEmail && rawFromEmail !== fromEmail) {
       console.log(`[EmailClient] Sanitized SMTP_FROM_EMAIL: "${rawFromEmail}" → "${fromEmail}"`);
@@ -347,7 +347,7 @@ export class SMTPClient {
           `Date: ${new Date().toUTCString()}`,
           'MIME-Version: 1.0',
           `Content-Type: multipart/mixed; boundary="${boundary}"`,
-          `X-Mailer: Growth OS`,
+          `X-Mailer: IDMPakistan`,
           `X-Priority: 3`,
           '',
           `--${boundary}`,
@@ -386,7 +386,7 @@ export class SMTPClient {
           'MIME-Version: 1.0',
           'Content-Type: text/html; charset=utf-8',
           'Content-Transfer-Encoding: 8bit',
-          `X-Mailer: Growth OS`,
+          `X-Mailer: IDMPakistan`,
           `X-Priority: 3`,
           '',
           html,
