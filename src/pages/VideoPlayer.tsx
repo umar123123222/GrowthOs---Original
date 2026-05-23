@@ -399,9 +399,25 @@ const VideoPlayer = () => {
                     <h3 className="font-semibold mb-2 text-base">Attachments</h3>
                     <ul className="list-disc list-inside space-y-1">
                       {attachments.map(att => <li key={att.id}>
-                          <a href={att.file_url} target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                let url = att.file_url || '';
+                                if (att.resource_id) {
+                                  const { data: res } = await supabase.from('resources').select('content').eq('id', att.resource_id).maybeSingle();
+                                  const path = (res as any)?.content?.storage_path;
+                                  if (path) url = await getResourceFileSignedUrl(path);
+                                }
+                                if (url) window.open(url, '_blank', 'noopener,noreferrer');
+                              } catch (e) {
+                                logger.error('Failed to open attachment', e);
+                              }
+                            }}
+                            className="text-primary underline"
+                          >
                             {att.file_name}
-                          </a>
+                          </button>
                         </li>)}
                     </ul>
                   </div>}
