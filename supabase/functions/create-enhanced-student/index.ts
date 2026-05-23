@@ -751,11 +751,12 @@ const handler = async (req: Request): Promise<Response> => {
 
     try {
       const smtpClient = SMTPClient.fromEnv();
+      if (companyDetails.company_name) smtpClient.setFromName(companyDetails.company_name);
       const notificationCc = companyDetailsData?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
       
       await smtpClient.sendEmail({
         to: email,
-        subject: 'Welcome to Growth OS - Your LMS Access Credentials',
+        subject: `Welcome to ${companyDetails.company_name || 'Your Company'} - Your LMS Access Credentials`,
         ...(notificationCc ? { cc: notificationCc } : {}),
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
