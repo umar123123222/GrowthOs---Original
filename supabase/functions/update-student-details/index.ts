@@ -274,9 +274,10 @@ serve(async (req) => {
                       const { data: companySettings } = await supabaseAdmin
                         .from('company_settings')
                         .select('company_name, lms_url')
-                        .single();
+                        .limit(1)
+                        .maybeSingle();
 
-                      const companyName = companySettings?.company_name || 'Growth OS';
+                      const companyName = companySettings?.company_name || 'Your Company';
                       const lmsUrl = companySettings?.lms_url || '';
 
                       const sessionListHtml = sessionLinks.map(s =>
