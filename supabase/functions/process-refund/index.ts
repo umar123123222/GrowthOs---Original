@@ -29,7 +29,7 @@ function sanitizeEmail(value: string): string {
 async function sendEmail(to: string, subject: string, html: string, cc?: string, fromNameOverride?: string) {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   const fromEmail = Deno.env.get("SMTP_FROM_EMAIL");
-  const fromName = fromNameOverride || Deno.env.get("SMTP_FROM_NAME") || "Your Company";
+  const fromName = fromNameOverride || Deno.env.get("SMTP_FROM_NAME") || "IDMPakistan";
   if (!resendApiKey || !fromEmail) {
     console.warn("Email skipped: RESEND_API_KEY or SMTP_FROM_EMAIL missing");
     return;
