@@ -255,6 +255,27 @@ const AdminTeams = () => {
     }
   };
 
+  const handleToggleBan = async (member: TeamMember) => {
+    const blocked = !member.login_blocked;
+    const { data, error } = await supabase.rpc('set_user_login_blocked', {
+      target_user_id: member.id,
+      blocked,
+    });
+    if (error || (data as any)?.success === false) {
+      toast({
+        title: 'Error',
+        description: (data as any)?.error || error?.message || 'Failed to update login access',
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({
+      title: blocked ? 'Login banned' : 'Login restored',
+      description: `${member.full_name} ${blocked ? 'can no longer sign in' : 'can sign in again'}.`,
+    });
+    fetchTeamMembers();
+  };
+
   const handleViewActivity = (member: TeamMember) => {
     setSelectedMember(member);
     setIsActivityDialogOpen(true);
