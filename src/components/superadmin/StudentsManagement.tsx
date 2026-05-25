@@ -3411,6 +3411,18 @@ export function StudentsManagement() {
                               return `Logged out`;
                             case 'profile_updated':
                               return `Updated profile ${metadata.fields_changed ? `(Changed: ${metadata.fields_changed.join(', ')})` : ''}`;
+                            case 'student_created':
+                              return `Student account created${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'user_created':
+                              return `Student account created${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'course_enrolled':
+                              return `Enrolled in course "${metadata.course_title || metadata.course_name || 'Unknown'}"${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'course_unenrolled':
+                              return `Unenrolled from course "${metadata.course_title || metadata.course_name || 'Unknown'}"${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'pathway_enrolled':
+                              return `Assigned to pathway "${metadata.pathway_name || metadata.pathway_title || 'Unknown'}"${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'pathway_unenrolled':
+                              return `Removed from pathway "${metadata.pathway_name || metadata.pathway_title || 'Unknown'}"${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
                             default:
                               return formatActivityType(log.activity_type);
                           }
