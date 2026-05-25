@@ -3726,6 +3726,7 @@ export type Database = {
         | "mentor"
         | "student"
         | "support_member"
+        | "viewer"
       assignment_submission_status:
         | "submitted"
         | "under_review"
@@ -3866,6 +3867,7 @@ export const Constants = {
         "mentor",
         "student",
         "support_member",
+        "viewer",
       ],
       assignment_submission_status: [
         "submitted",
