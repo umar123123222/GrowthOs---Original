@@ -479,6 +479,18 @@ const handler = async (req: Request): Promise<Response> => {
           console.error('Course enrollment error (non-fatal):', enrollError);
         } else {
           console.log('Student enrolled in course:', selectedCourseId, 'with batch:', batch_id || 'none');
+          try {
+            const { data: courseInfo } = await supabaseAdmin
+              .from('courses').select('title').eq('id', selectedCourseId).maybeSingle();
+            await supabaseAdmin.from('admin_logs').insert({
+              entity_type: 'user',
+              entity_id: userId,
+              action: 'course_enrolled',
+              description: `Enrolled in course "${courseInfo?.title || 'Unknown'}"`,
+              performed_by: createdBy,
+              data: { target_user_id: userId, course_id: selectedCourseId, course_title: courseInfo?.title || null }
+            });
+          } catch (e) { console.error('Enrollment log failed:', e); }
         }
       } else if (selectedPathwayId) {
         // For pathway, get the first course and enroll with pathway_id
@@ -517,12 +529,24 @@ const handler = async (req: Request): Promise<Response> => {
           console.error('Pathway enrollment error (non-fatal):', enrollError);
         } else {
           console.log('Student enrolled in pathway:', selectedPathwayId, 'with batch:', batch_id || 'none');
+          try {
+            const { data: pathwayInfo } = await supabaseAdmin
+              .from('learning_pathways').select('name').eq('id', selectedPathwayId).maybeSingle();
+            await supabaseAdmin.from('admin_logs').insert({
+              entity_type: 'user',
+              entity_id: userId,
+              action: 'pathway_enrolled',
+              description: `Assigned to pathway "${pathwayInfo?.name || 'Unknown'}"`,
+              performed_by: createdBy,
+              data: { target_user_id: userId, pathway_id: selectedPathwayId, pathway_name: pathwayInfo?.name || null }
+            });
+          } catch (e) { console.error('Enrollment log failed:', e); }
         }
       } else {
         // Fallback: Auto-enroll in default course
         const { data: defaultCourse } = await supabaseAdmin
           .from('courses')
-          .select('id, price')
+          .select('id, price, title')
           .eq('is_active', true)
           .order('sequence_order', { ascending: true })
           .limit(1)
@@ -547,6 +571,16 @@ const handler = async (req: Request): Promise<Response> => {
             console.error('Default course enrollment error (non-fatal):', enrollError);
           } else {
             console.log('Student auto-enrolled in default course:', defaultCourse.id);
+            try {
+              await supabaseAdmin.from('admin_logs').insert({
+                entity_type: 'user',
+                entity_id: userId,
+                action: 'course_enrolled',
+                description: `Enrolled in course "${(defaultCourse as any).title || 'Unknown'}"`,
+                performed_by: createdBy,
+                data: { target_user_id: userId, course_id: defaultCourse.id, course_title: (defaultCourse as any).title || null }
+              });
+            } catch (e) { console.error('Enrollment log failed:', e); }
           }
         }
       }
