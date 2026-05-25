@@ -79,7 +79,7 @@ const AdminTeams = () => {
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .in('role', ['mentor', 'enrollment_manager', 'support_member'])
+        .in('role', ['mentor', 'enrollment_manager', 'support_member', 'viewer'])
         .order('created_at', { ascending: false });
 
       if (error) throw error;
