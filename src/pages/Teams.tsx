@@ -404,9 +404,13 @@ const Teams = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={member.status === 'Active' ? 'default' : 'destructive'} className="bg-lime-600">
-                      {member.status}
-                    </Badge>
+                    {member.login_blocked ? (
+                      <Badge variant="destructive">Banned</Badge>
+                    ) : (
+                      <Badge variant={member.status === 'Active' ? 'default' : 'destructive'} className={member.status === 'Active' ? 'bg-lime-600' : ''}>
+                        {member.status}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {member.last_active_at ? new Date(member.last_active_at).toLocaleDateString() : 'Never'}
