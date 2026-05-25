@@ -982,7 +982,12 @@ export function CompanySettings() {
             </div>
           </CardContent>
         </Card>
+          </div>
+        </TabsContent>
 
+        {/* BILLING */}
+        <TabsContent value="billing" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Billing Configuration */}
         <Card className="lg:col-span-2">
           <CardHeader>
