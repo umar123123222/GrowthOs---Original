@@ -58,7 +58,7 @@ const VideoPlayer = () => {
     user,
     loading: authLoading
   } = useAuth();
-  const { recordings } = useStudentRecordings();
+  const { recordings, refreshRecordings } = useStudentRecordings();
   const [showSuccessPartner, setShowSuccessPartner] = useState(false);
   const [checkedItems, setCheckedItems] = useState<{
     [key: number]: boolean;
@@ -339,6 +339,9 @@ const VideoPlayer = () => {
           timestamp: new Date().toISOString()
         }
       });
+
+      // Refresh recordings/unlocks so the next lesson becomes available
+      refreshRecordings();
 
       // Check if should show rating
       setTimeout(() => {
