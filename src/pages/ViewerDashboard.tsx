@@ -6,7 +6,7 @@ import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { BatchManagement } from '@/components/batch';
-import ResourcesManagement from '@/pages/admin/ResourcesManagement';
+import Resources from '@/pages/Resources';
 import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
 
 /**
@@ -23,7 +23,7 @@ export default function ViewerDashboard() {
       case 'recordings':
         return <RecordingsManagement />;
       case 'resources':
-        return <ResourcesManagement />;
+        return <Resources />;
       case 'submissions':
         return <SubmissionsManagement userRole="superadmin" />;
       case 'success-sessions':
