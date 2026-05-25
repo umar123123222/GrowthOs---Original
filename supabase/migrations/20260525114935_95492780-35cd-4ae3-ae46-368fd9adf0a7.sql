@@ -1,0 +1,1 @@
+CREATE POLICY "Viewers can view all activity logs" ON public.user_activity_logs FOR SELECT USING (has_role(auth.uid(), 'viewer'::app_role));
