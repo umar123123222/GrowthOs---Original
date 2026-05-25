@@ -58,7 +58,7 @@ const VideoPlayer = () => {
     user,
     loading: authLoading
   } = useAuth();
-  const { recordings } = useStudentRecordings();
+  const { recordings, refreshRecordings } = useStudentRecordings();
   const [showSuccessPartner, setShowSuccessPartner] = useState(false);
   const [checkedItems, setCheckedItems] = useState<{
     [key: number]: boolean;
