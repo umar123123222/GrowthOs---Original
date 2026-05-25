@@ -412,7 +412,37 @@ const AdminTeams = () => {
                         <Activity className="w-4 h-4 mr-1" />
                         Activity
                       </Button>
-                      
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            {member.login_blocked ? (
+                              <><ShieldCheck className="w-4 h-4 mr-1" />Unban</>
+                            ) : (
+                              <><Ban className="w-4 h-4 mr-1" />Ban login</>
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {member.login_blocked ? 'Restore login access?' : 'Ban from logging in?'}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {member.login_blocked
+                                ? `${member.full_name} will be able to sign in again.`
+                                : `${member.full_name} will be immediately blocked from signing in. Their data is preserved.`}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleToggleBan(member)}>
+                              {member.login_blocked ? 'Restore access' : 'Ban login'}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="outline" size="sm">
@@ -422,6 +452,17 @@ const AdminTeams = () => {
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              This will permanently delete {member.full_name} and remove all their data. This action cannot be undone.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteMember(member.id, member.full_name)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
                               This will permanently delete {member.full_name} and remove all their data. This action cannot be undone.
