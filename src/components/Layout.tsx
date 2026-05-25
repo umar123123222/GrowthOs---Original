@@ -705,6 +705,17 @@ const Layout = memo(({
         href: "/profile",
         icon: User
       }];
+    } else if (isUserViewer) {
+      return [
+        { name: "Dashboard", href: "/viewer", icon: Monitor },
+        { name: "Recordings", href: "/viewer?tab=recordings", icon: Video },
+        { name: "Resources", href: "/viewer?tab=resources", icon: FolderOpen },
+        { name: "Submissions", href: "/viewer?tab=submissions", icon: FileText },
+        { name: "Success Sessions", href: "/viewer?tab=success-sessions", icon: Calendar },
+        { name: "Students", href: "/viewer?tab=students", icon: Users },
+        { name: "Batches", href: "/viewer?tab=batches", icon: Layers },
+        { name: "Profile", href: "/profile", icon: User },
+      ];
     }
 
     // Default navigation for other users (students)
