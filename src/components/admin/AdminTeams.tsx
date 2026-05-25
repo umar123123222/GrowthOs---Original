@@ -42,7 +42,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserManagement } from '@/hooks/useUserManagement';
-import { Plus, Activity, Trash2 } from 'lucide-react';
+import { Plus, Activity, Trash2, Ban, ShieldCheck } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -53,6 +53,7 @@ interface TeamMember {
   created_at: string;
   last_active_at: string;
   status: string;
+  login_blocked?: boolean;
 }
 
 const AdminTeams = () => {
