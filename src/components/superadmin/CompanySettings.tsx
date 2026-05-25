@@ -480,7 +480,12 @@ export function CompanySettings() {
             </div>
           </CardContent>
         </Card>
+          </div>
+        </TabsContent>
 
+        {/* FEATURES */}
+        <TabsContent value="features" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Multi-Course Feature */}
         <Card>
           <CardHeader>
