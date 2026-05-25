@@ -76,6 +76,7 @@ const Messages = lazy(() => import("./pages/Messages"));
 const Teams = lazy(() => import("./pages/Teams"));
 const AtRiskStudents = lazy(() => import("./pages/AtRiskStudents"));
 const StudentsManagement = lazy(() => import("./pages/StudentsManagement"));
+const ViewerDashboard = lazy(() => import("./pages/ViewerDashboard"));
 // Layout with retry logic to prevent cache issues
 const Layout = lazy(() => 
   import("./components/Layout").catch(async (error) => {
@@ -253,6 +254,7 @@ const App = () => {
                         user.role === 'superadmin' ? <SuperadminDashboard /> :
                         user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
                         user.role === 'support_member' ? <SupportMemberDashboard /> :
+                        user.role === 'viewer' ? <ViewerDashboard /> :
                         <Dashboard user={user} />
                       } />
                       
@@ -263,6 +265,7 @@ const App = () => {
                         user.role === 'superadmin' ? <SuperadminDashboard /> :
                         user.role === 'enrollment_manager' ? <EnrollmentManagerDashboard /> :
                         user.role === 'support_member' ? <SupportMemberDashboard /> :
+                        user.role === 'viewer' ? <ViewerDashboard /> :
                         <Dashboard user={user} />
                       } />
                       
@@ -359,6 +362,11 @@ const App = () => {
                       <Route path="enrollment-manager" element={
                         <RoleGuard allowedRoles={["enrollment_manager"]}>
                           <EnrollmentManagerDashboard />
+                        </RoleGuard>
+                      } />
+                      <Route path="viewer" element={
+                        <RoleGuard allowedRoles={["viewer"]}>
+                          <ViewerDashboard />
                         </RoleGuard>
                       } />
 
