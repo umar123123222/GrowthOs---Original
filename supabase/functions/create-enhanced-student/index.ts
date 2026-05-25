@@ -430,6 +430,24 @@ const handler = async (req: Request): Promise<Response> => {
       fees_cleared: finalFeeAmount === 0
     });
 
+    // Log student creation event
+    try {
+      await supabaseAdmin.from('admin_logs').insert({
+        entity_type: 'user',
+        entity_id: userId,
+        action: 'student_created',
+        description: `Student account created for ${full_name}`,
+        performed_by: createdBy,
+        data: {
+          target_user_id: userId,
+          student_name: full_name,
+          student_email: email,
+        }
+      });
+    } catch (e) {
+      console.error('Failed to log student creation (non-fatal):', e);
+    }
+
     // Enroll student in selected course or pathway
     try {
       const hasFee = finalFeeAmount > 0;
