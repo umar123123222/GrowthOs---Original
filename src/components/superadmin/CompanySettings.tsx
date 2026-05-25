@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen, Clock, Megaphone, Info, AlertTriangle, AlertCircle, CheckCircle, MessageCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen, Clock, Megaphone, Info, AlertTriangle, AlertCircle, CheckCircle, MessageCircle, Save, Sparkles, GraduationCap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
@@ -345,34 +346,55 @@ export function CompanySettings() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-lg">Loading company settings...</div>
+      <div className="flex items-center justify-center p-12">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-muted-foreground">Loading company settings…</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <Settings className="h-8 w-8" />
-            Company Settings
-          </h1>
-          <p className="text-muted-foreground">
-            Configure your organization details and billing parameters
-          </p>
+    <div className="space-y-6 pb-8">
+      {/* Sticky header */}
+      <div className="sticky top-0 z-20 -mx-4 md:-mx-6 px-4 md:px-6 py-4 bg-background/85 backdrop-blur-md border-b border-border/60">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+              <Settings className="h-5 w-5" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Company Settings</h1>
+              <p className="text-xs text-muted-foreground">Configure organization details, billing, features and communications</p>
+            </div>
+          </div>
+          <Button onClick={handleSave} disabled={saving} size="lg" className="shadow-sm">
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving…' : 'Save Settings'}
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Logo Upload Section */}
-        <div className="lg:col-span-2">
-          <LogoUploadSection 
-            currentLogo={getLogoUrl(settings.branding, 'header')}
-            onLogoUpdate={handleLogoUpdate}
-          />
-        </div>
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-6">
+          <TabsTrigger value="general" className="gap-2"><Building2 className="h-4 w-4" /><span className="hidden sm:inline">General</span></TabsTrigger>
+          <TabsTrigger value="features" className="gap-2"><Sparkles className="h-4 w-4" /><span className="hidden sm:inline">Features</span></TabsTrigger>
+          <TabsTrigger value="onboarding" className="gap-2"><GraduationCap className="h-4 w-4" /><span className="hidden sm:inline">Onboarding</span></TabsTrigger>
+          <TabsTrigger value="communication" className="gap-2"><Mail className="h-4 w-4" /><span className="hidden sm:inline">Communication</span></TabsTrigger>
+          <TabsTrigger value="billing" className="gap-2"><DollarSign className="h-4 w-4" /><span className="hidden sm:inline">Billing</span></TabsTrigger>
+        </TabsList>
+
+        {/* GENERAL */}
+        <TabsContent value="general" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="lg:col-span-2">
+              <LogoUploadSection
+                currentLogo={getLogoUrl(settings.branding, 'header')}
+                onLogoUpdate={handleLogoUpdate}
+              />
+            </div>
+
 
         {/* Company Information */}
         <Card>
@@ -458,7 +480,12 @@ export function CompanySettings() {
             </div>
           </CardContent>
         </Card>
+          </div>
+        </TabsContent>
 
+        {/* FEATURES */}
+        <TabsContent value="features" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Multi-Course Feature */}
         <Card>
           <CardHeader>
@@ -687,7 +714,12 @@ export function CompanySettings() {
             )}
           </CardContent>
         </Card>
+          </div>
+        </TabsContent>
 
+        {/* ONBOARDING */}
+        <TabsContent value="onboarding" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Student Sign-in & Questionnaire */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -874,7 +906,12 @@ export function CompanySettings() {
             </div>
           </CardContent>
         </Card>
+          </div>
+        </TabsContent>
 
+        {/* COMMUNICATION */}
+        <TabsContent value="communication" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Live Chat Widget */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -945,7 +982,12 @@ export function CompanySettings() {
             </div>
           </CardContent>
         </Card>
+          </div>
+        </TabsContent>
 
+        {/* BILLING */}
+        <TabsContent value="billing" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Billing Configuration */}
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -1193,19 +1235,20 @@ export function CompanySettings() {
           </CardContent>
         </Card>
 
-
-        {/* Save Button */}
+        {/* Save Button (bottom) */}
         <div className="lg:col-span-2 flex justify-end">
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             disabled={saving}
             size="lg"
           >
-            {saving ? 'Saving...' : 'Save Settings'}
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving…' : 'Save Settings'}
           </Button>
         </div>
-      </div>
-
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
