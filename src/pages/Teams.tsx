@@ -61,7 +61,7 @@ const Teams = () => {
       } = await supabase
         .from('users')
         .select('*')
-        .in('role', user?.role === 'superadmin' ? ['superadmin', 'admin', 'mentor', 'enrollment_manager', 'support_member'] : ['admin', 'mentor', 'enrollment_manager', 'support_member'])
+        .in('role', user?.role === 'superadmin' ? ['superadmin', 'admin', 'mentor', 'enrollment_manager', 'support_member', 'viewer'] : ['admin', 'mentor', 'enrollment_manager', 'support_member', 'viewer'])
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -323,6 +323,7 @@ const Teams = () => {
                      <SelectItem value="mentor">Mentor</SelectItem>
                      <SelectItem value="enrollment_manager">Enrollment Manager</SelectItem>
                      <SelectItem value="support_member">Support Member</SelectItem>
+                     <SelectItem value="viewer">Viewer (read-only)</SelectItem>
                    </SelectContent>
                 </Select>
               </div>
