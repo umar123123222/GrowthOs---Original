@@ -340,6 +340,9 @@ const VideoPlayer = () => {
         }
       });
 
+      // Refresh recordings/unlocks so the next lesson becomes available
+      refreshRecordings();
+
       // Check if should show rating
       setTimeout(() => {
         checkVideoCompletion();
