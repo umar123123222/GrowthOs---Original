@@ -3429,6 +3429,9 @@ export function StudentsManagement() {
                               log.activity_type === 'support_ticket_replied' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 
                               log.activity_type === 'success_session_scheduled' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 
                               log.activity_type === 'success_session_attended' ? 'bg-teal-100 text-teal-800 border-teal-200' : 
+                              log.activity_type === 'student_created' || log.activity_type === 'user_created' ? 'bg-violet-100 text-violet-800 border-violet-200' :
+                              log.activity_type === 'course_enrolled' || log.activity_type === 'pathway_enrolled' ? 'bg-sky-100 text-sky-800 border-sky-200' :
+                              log.activity_type === 'course_unenrolled' || log.activity_type === 'pathway_unenrolled' ? 'bg-rose-100 text-rose-800 border-rose-200' :
                               'bg-gray-100 text-gray-800 border-gray-200'
                             }`}>
                               {log.activity_type.replace(/_/g, ' ')}
