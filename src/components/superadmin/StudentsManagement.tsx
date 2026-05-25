@@ -3374,6 +3374,11 @@ export function StudentsManagement() {
                   <SelectItem value="module_completed">Module Completed</SelectItem>
                   <SelectItem value="profile_updated">Profile Updated</SelectItem>
                   <SelectItem value="certificate_generated">Certificate Generated</SelectItem>
+                  <SelectItem value="student_created">Student Created</SelectItem>
+                  <SelectItem value="course_enrolled">Course Enrolled</SelectItem>
+                  <SelectItem value="course_unenrolled">Course Unenrolled</SelectItem>
+                  <SelectItem value="pathway_enrolled">Pathway Assigned</SelectItem>
+                  <SelectItem value="pathway_unenrolled">Pathway Removed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
