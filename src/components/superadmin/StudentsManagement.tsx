@@ -1300,7 +1300,8 @@ export function StudentsManagement() {
       const trackedActions = [
         'course_enrolled', 'course_unenrolled',
         'pathway_enrolled', 'pathway_unenrolled',
-        'student_created', 'user_created'
+        'student_created', 'user_created',
+        'drip_content_toggled'
       ];
       const { data: adminLogsByEntity } = await supabase
         .from('admin_logs')
