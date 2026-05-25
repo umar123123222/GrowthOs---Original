@@ -1274,14 +1274,105 @@ export function StudentsManagement() {
       const student = students.find(s => s.id === studentId);
       if (!student) return;
       setSelectedStudentForLogs(student);
-      const {
-        data,
-        error
-      } = await supabase.from('user_activity_logs').select('*').eq('user_id', studentId).order('occurred_at', {
-        ascending: false
-      }).limit(50);
-      if (error) throw error;
-      setActivityLogs(data || []);
+
+      // 1. Standard user_activity_logs
+      const { data: userLogs, error: userLogsError } = await supabase
+        .from('user_activity_logs')
+        .select('*')
+        .eq('user_id', studentId)
+        .order('occurred_at', { ascending: false })
+        .limit(100);
+      if (userLogsError) throw userLogsError;
+
+      // 2. admin_logs: events targeting this student (enrollments, etc.)
+      const trackedActions = [
+        'course_enrolled', 'course_unenrolled',
+        'pathway_enrolled', 'pathway_unenrolled',
+        'student_created', 'user_created'
+      ];
+      const { data: adminLogsByEntity } = await supabase
+        .from('admin_logs')
+        .select('*')
+        .eq('entity_type', 'user')
+        .eq('entity_id', studentId)
+        .in('action', trackedActions)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      const { data: adminLogsByTarget } = await supabase
+        .from('admin_logs')
+        .select('*')
+        .filter('data->>target_user_id', 'eq', studentId)
+        .in('action', trackedActions)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      const adminLogsRaw = [...(adminLogsByEntity || []), ...(adminLogsByTarget || [])];
+      // De-dupe
+      const adminLogsMap = new Map<string, any>();
+      adminLogsRaw.forEach(l => adminLogsMap.set(l.id, l));
+      const adminLogs = Array.from(adminLogsMap.values());
+
+      // 3. Resolve performer names
+      const performerIds = Array.from(new Set(
+        adminLogs.map(l => l.performed_by).filter(Boolean)
+      ));
+      if (student.created_by) performerIds.push(student.created_by);
+      const uniquePerformerIds = Array.from(new Set(performerIds));
+      let performerMap = new Map<string, string>();
+      if (uniquePerformerIds.length > 0) {
+        const { data: performers } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .in('id', uniquePerformerIds);
+        performers?.forEach((p: any) => {
+          performerMap.set(p.id, p.full_name || p.email || 'Unknown');
+        });
+      }
+
+      // 4. Map admin_logs to ActivityLog shape
+      const mappedAdminLogs: ActivityLog[] = adminLogs.map(l => ({
+        id: `admin_${l.id}`,
+        activity_type: l.action,
+        occurred_at: l.created_at,
+        reference_id: l.entity_id,
+        metadata: {
+          ...(l.data || {}),
+          description: l.description,
+          performed_by: l.performed_by,
+          performed_by_name: l.performed_by ? (performerMap.get(l.performed_by) || 'Unknown') : 'System',
+        }
+      }));
+
+      // 5. Synthesize student_created event from users table
+      const syntheticCreated: ActivityLog | null = student.created_at ? {
+        id: `synthetic_created_${student.id}`,
+        activity_type: 'student_created',
+        occurred_at: student.created_at,
+        reference_id: student.id,
+        metadata: {
+          performed_by: student.created_by || null,
+          performed_by_name: student.created_by
+            ? (performerMap.get(student.created_by) || student.creator?.full_name || student.creator?.email || 'Unknown')
+            : 'System',
+          student_name: student.full_name,
+          student_email: student.email,
+        }
+      } : null;
+
+      // 6. Merge, de-dupe synthetic vs real created, sort desc
+      const hasRealCreated = mappedAdminLogs.some(l =>
+        l.activity_type === 'student_created' || l.activity_type === 'user_created'
+      );
+      const merged: ActivityLog[] = [
+        ...(userLogs || []) as ActivityLog[],
+        ...mappedAdminLogs,
+        ...(syntheticCreated && !hasRealCreated ? [syntheticCreated] : []),
+      ].sort((a, b) =>
+        new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
+      );
+
+      setActivityLogs(merged);
       setActivityLogsDialog(true);
     } catch (error) {
       console.error('Error fetching activity logs:', error);
