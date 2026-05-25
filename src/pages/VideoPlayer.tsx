@@ -342,6 +342,8 @@ const VideoPlayer = () => {
 
       // Refresh recordings/unlocks so the next lesson becomes available
       refreshRecordings();
+      setTimeout(() => refreshRecordings(), 800);
+      setTimeout(() => refreshRecordings(), 2500);
 
       // Check if should show rating
       setTimeout(() => {
