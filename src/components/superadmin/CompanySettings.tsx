@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen, Clock, Megaphone, Info, AlertTriangle, AlertCircle, CheckCircle, MessageCircle } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Building2, Phone, DollarSign, Settings, FileText, Calendar, HelpCircle, Plus, Trash2, Edit3, GripVertical, Eye, Mail, Send, BookOpen, Clock, Megaphone, Info, AlertTriangle, AlertCircle, CheckCircle, MessageCircle, Save, Sparkles, GraduationCap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { LogoUploadSection } from '@/components/LogoUploadSection';
 import { QuestionEditor } from '@/components/questionnaire/QuestionEditor';
