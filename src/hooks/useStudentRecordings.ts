@@ -109,8 +109,9 @@ export const useStudentRecordings = () => {
     }
   };
 
-  const refreshRecordings = () => {
-    fetchRecordings();
+  const refreshRecordings = async () => {
+    await refreshUnlocks();
+    await fetchRecordings();
   };
 
   return {
