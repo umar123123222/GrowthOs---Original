@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserManagement } from '@/hooks/useUserManagement';
-import { Plus, Activity, Eye, Edit, Trash2, Key } from 'lucide-react';
+import { Plus, Activity, Eye, Edit, Trash2, Key, Ban, ShieldCheck } from 'lucide-react';
 import { useAuth, User } from '@/hooks/useAuth';
 import AdminTeams from '@/components/admin/AdminTeams';
 import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
