@@ -159,6 +159,11 @@ export const ACTIVITY_TYPES = {
   DRIP_CONTENT_TOGGLED: 'drip_content_toggled',
   MENTOR_ASSIGNED: 'mentor_assigned',
   MENTOR_REMOVED: 'mentor_removed',
+  STUDENT_CREATED: 'student_created',
+  COURSE_ENROLLED: 'course_enrolled',
+  COURSE_UNENROLLED: 'course_unenrolled',
+  PATHWAY_ENROLLED: 'pathway_enrolled',
+  PATHWAY_UNENROLLED: 'pathway_unenrolled',
 } as const;
 
 // Helper function to log specific activities with common patterns

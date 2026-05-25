@@ -1274,14 +1274,105 @@ export function StudentsManagement() {
       const student = students.find(s => s.id === studentId);
       if (!student) return;
       setSelectedStudentForLogs(student);
-      const {
-        data,
-        error
-      } = await supabase.from('user_activity_logs').select('*').eq('user_id', studentId).order('occurred_at', {
-        ascending: false
-      }).limit(50);
-      if (error) throw error;
-      setActivityLogs(data || []);
+
+      // 1. Standard user_activity_logs
+      const { data: userLogs, error: userLogsError } = await supabase
+        .from('user_activity_logs')
+        .select('*')
+        .eq('user_id', studentId)
+        .order('occurred_at', { ascending: false })
+        .limit(100);
+      if (userLogsError) throw userLogsError;
+
+      // 2. admin_logs: events targeting this student (enrollments, etc.)
+      const trackedActions = [
+        'course_enrolled', 'course_unenrolled',
+        'pathway_enrolled', 'pathway_unenrolled',
+        'student_created', 'user_created'
+      ];
+      const { data: adminLogsByEntity } = await supabase
+        .from('admin_logs')
+        .select('*')
+        .eq('entity_type', 'user')
+        .eq('entity_id', studentId)
+        .in('action', trackedActions)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      const { data: adminLogsByTarget } = await supabase
+        .from('admin_logs')
+        .select('*')
+        .filter('data->>target_user_id', 'eq', studentId)
+        .in('action', trackedActions)
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      const adminLogsRaw = [...(adminLogsByEntity || []), ...(adminLogsByTarget || [])];
+      // De-dupe
+      const adminLogsMap = new Map<string, any>();
+      adminLogsRaw.forEach(l => adminLogsMap.set(l.id, l));
+      const adminLogs = Array.from(adminLogsMap.values());
+
+      // 3. Resolve performer names
+      const performerIds = Array.from(new Set(
+        adminLogs.map(l => l.performed_by).filter(Boolean)
+      ));
+      if (student.created_by) performerIds.push(student.created_by);
+      const uniquePerformerIds = Array.from(new Set(performerIds));
+      let performerMap = new Map<string, string>();
+      if (uniquePerformerIds.length > 0) {
+        const { data: performers } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .in('id', uniquePerformerIds);
+        performers?.forEach((p: any) => {
+          performerMap.set(p.id, p.full_name || p.email || 'Unknown');
+        });
+      }
+
+      // 4. Map admin_logs to ActivityLog shape
+      const mappedAdminLogs: ActivityLog[] = adminLogs.map(l => ({
+        id: `admin_${l.id}`,
+        activity_type: l.action,
+        occurred_at: l.created_at,
+        reference_id: l.entity_id,
+        metadata: {
+          ...(l.data || {}),
+          description: l.description,
+          performed_by: l.performed_by,
+          performed_by_name: l.performed_by ? (performerMap.get(l.performed_by) || 'Unknown') : 'System',
+        }
+      }));
+
+      // 5. Synthesize student_created event from users table
+      const syntheticCreated: ActivityLog | null = student.created_at ? {
+        id: `synthetic_created_${student.id}`,
+        activity_type: 'student_created',
+        occurred_at: student.created_at,
+        reference_id: student.id,
+        metadata: {
+          performed_by: student.created_by || null,
+          performed_by_name: student.created_by
+            ? (performerMap.get(student.created_by) || student.creator?.full_name || student.creator?.email || 'Unknown')
+            : 'System',
+          student_name: student.full_name,
+          student_email: student.email,
+        }
+      } : null;
+
+      // 6. Merge, de-dupe synthetic vs real created, sort desc
+      const hasRealCreated = mappedAdminLogs.some(l =>
+        l.activity_type === 'student_created' || l.activity_type === 'user_created'
+      );
+      const merged: ActivityLog[] = [
+        ...(userLogs || []) as ActivityLog[],
+        ...mappedAdminLogs,
+        ...(syntheticCreated && !hasRealCreated ? [syntheticCreated] : []),
+      ].sort((a, b) =>
+        new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime()
+      );
+
+      setActivityLogs(merged);
       setActivityLogsDialog(true);
     } catch (error) {
       console.error('Error fetching activity logs:', error);
@@ -1726,6 +1817,14 @@ export function StudentsManagement() {
       const selectedIds = Array.from(selectedStudents);
       const chunkSize = 50;
 
+      // Resolve label of selected course/pathway for log description
+      let selectedLabel = '';
+      if (bulkAccessType === 'course') {
+        selectedLabel = bulkAccessCourses.find(c => c.id === bulkAccessSelectedId)?.title || '';
+      } else {
+        selectedLabel = bulkAccessPathways.find(p => p.id === bulkAccessSelectedId)?.name || '';
+      }
+
       if (bulkAccessAction === 'grant') {
         // Get student records for selected users
         for (let i = 0; i < selectedIds.length; i += chunkSize) {
@@ -1778,6 +1877,21 @@ export function StudentsManagement() {
             const { error: insertError } = await supabase.from('course_enrollments').insert(enrollmentData);
             if (insertError) {
               console.error('Failed to insert enrollment for student', record.id, insertError);
+            } else {
+              // Log assignment
+              logAdminAction({
+                performedBy: user?.id || null,
+                targetUserId: record.user_id,
+                entityType: 'user',
+                entityId: record.user_id,
+                action: bulkAccessType === 'course' ? ACTIVITY_TYPES.COURSE_ENROLLED : ACTIVITY_TYPES.PATHWAY_ENROLLED,
+                description: bulkAccessType === 'course'
+                  ? `Enrolled in course "${selectedLabel}"`
+                  : `Assigned to pathway "${selectedLabel}"`,
+                data: bulkAccessType === 'course'
+                  ? { course_id: bulkAccessSelectedId, course_title: selectedLabel }
+                  : { pathway_id: bulkAccessSelectedId, pathway_name: selectedLabel }
+              });
             }
           }
         }
@@ -1793,11 +1907,25 @@ export function StudentsManagement() {
           const chunk = selectedIds.slice(i, i + chunkSize);
           const { data: studentRecords } = await supabase
             .from('students')
-            .select('id')
+            .select('id, user_id')
             .in('user_id', chunk);
 
           if (!studentRecords) continue;
           const studentRecordIds = studentRecords.map(r => r.id);
+          const recordToUserId = new Map(studentRecords.map(r => [r.id, r.user_id]));
+
+          // Find which enrollments will be revoked so we can log per-student
+          let lookupQuery = supabase
+            .from('course_enrollments')
+            .select('id, student_id')
+            .in('student_id', studentRecordIds)
+            .neq('status', 'cancelled');
+          if (bulkAccessType === 'course') {
+            lookupQuery = lookupQuery.eq('course_id', bulkAccessSelectedId);
+          } else {
+            lookupQuery = lookupQuery.eq('pathway_id', bulkAccessSelectedId);
+          }
+          const { data: toRevoke } = await lookupQuery;
 
           let revokeQuery = supabase
             .from('course_enrollments')
@@ -1810,6 +1938,25 @@ export function StudentsManagement() {
             revokeQuery = revokeQuery.eq('pathway_id', bulkAccessSelectedId);
           }
           await revokeQuery;
+
+          // Log per affected student
+          (toRevoke || []).forEach((row: any) => {
+            const userIdForRecord = recordToUserId.get(row.student_id);
+            if (!userIdForRecord) return;
+            logAdminAction({
+              performedBy: user?.id || null,
+              targetUserId: userIdForRecord,
+              entityType: 'user',
+              entityId: userIdForRecord,
+              action: bulkAccessType === 'course' ? ACTIVITY_TYPES.COURSE_UNENROLLED : ACTIVITY_TYPES.PATHWAY_UNENROLLED,
+              description: bulkAccessType === 'course'
+                ? `Unenrolled from course "${selectedLabel}"`
+                : `Removed from pathway "${selectedLabel}"`,
+              data: bulkAccessType === 'course'
+                ? { course_id: bulkAccessSelectedId, course_title: selectedLabel }
+                : { pathway_id: bulkAccessSelectedId, pathway_name: selectedLabel }
+            });
+          });
         }
         toast({ title: 'Success', description: `Access revoked for ${selectedStudents.size} student(s)` });
       }
@@ -3227,6 +3374,11 @@ export function StudentsManagement() {
                   <SelectItem value="module_completed">Module Completed</SelectItem>
                   <SelectItem value="profile_updated">Profile Updated</SelectItem>
                   <SelectItem value="certificate_generated">Certificate Generated</SelectItem>
+                  <SelectItem value="student_created">Student Created</SelectItem>
+                  <SelectItem value="course_enrolled">Course Enrolled</SelectItem>
+                  <SelectItem value="course_unenrolled">Course Unenrolled</SelectItem>
+                  <SelectItem value="pathway_enrolled">Pathway Assigned</SelectItem>
+                  <SelectItem value="pathway_unenrolled">Pathway Removed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -3277,6 +3429,9 @@ export function StudentsManagement() {
                               log.activity_type === 'support_ticket_replied' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' : 
                               log.activity_type === 'success_session_scheduled' ? 'bg-indigo-100 text-indigo-800 border-indigo-200' : 
                               log.activity_type === 'success_session_attended' ? 'bg-teal-100 text-teal-800 border-teal-200' : 
+                              log.activity_type === 'student_created' || log.activity_type === 'user_created' ? 'bg-violet-100 text-violet-800 border-violet-200' :
+                              log.activity_type === 'course_enrolled' || log.activity_type === 'pathway_enrolled' ? 'bg-sky-100 text-sky-800 border-sky-200' :
+                              log.activity_type === 'course_unenrolled' || log.activity_type === 'pathway_unenrolled' ? 'bg-rose-100 text-rose-800 border-rose-200' :
                               'bg-gray-100 text-gray-800 border-gray-200'
                             }`}>
                               {log.activity_type.replace(/_/g, ' ')}
@@ -3320,6 +3475,18 @@ export function StudentsManagement() {
                               return `Logged out`;
                             case 'profile_updated':
                               return `Updated profile ${metadata.fields_changed ? `(Changed: ${metadata.fields_changed.join(', ')})` : ''}`;
+                            case 'student_created':
+                              return `Student account created${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'user_created':
+                              return `Student account created${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'course_enrolled':
+                              return `Enrolled in course "${metadata.course_title || metadata.course_name || 'Unknown'}"${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'course_unenrolled':
+                              return `Unenrolled from course "${metadata.course_title || metadata.course_name || 'Unknown'}"${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'pathway_enrolled':
+                              return `Assigned to pathway "${metadata.pathway_name || metadata.pathway_title || 'Unknown'}"${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'pathway_unenrolled':
+                              return `Removed from pathway "${metadata.pathway_name || metadata.pathway_title || 'Unknown'}"${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
                             default:
                               return formatActivityType(log.activity_type);
                           }
