@@ -1235,19 +1235,20 @@ export function CompanySettings() {
           </CardContent>
         </Card>
 
-
-        {/* Save Button */}
+        {/* Save Button (bottom) */}
         <div className="lg:col-span-2 flex justify-end">
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             disabled={saving}
             size="lg"
           >
-            {saving ? 'Saving...' : 'Save Settings'}
+            <Save className="h-4 w-4 mr-2" />
+            {saving ? 'Saving…' : 'Save Settings'}
           </Button>
         </div>
-      </div>
-
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
