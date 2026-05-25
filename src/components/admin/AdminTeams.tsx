@@ -463,17 +463,6 @@ const AdminTeams = () => {
                               onClick={() => handleDeleteMember(member.id, member.full_name)}
                               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                             >
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This will permanently delete {member.full_name} and remove all their data. This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteMember(member.id, member.full_name)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
                               Delete
                             </AlertDialogAction>
                           </AlertDialogFooter>
