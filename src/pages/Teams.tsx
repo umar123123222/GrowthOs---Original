@@ -27,6 +27,7 @@ interface TeamMember {
   created_at: string;
   last_active_at: string;
   status: string;
+  login_blocked?: boolean;
   password_display?: string;
 }
 const Teams = () => {
