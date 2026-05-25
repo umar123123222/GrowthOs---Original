@@ -395,9 +395,13 @@ const AdminTeams = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={member.status === 'Active' ? 'default' : 'destructive'}>
-                      {member.status}
-                    </Badge>
+                    {member.login_blocked ? (
+                      <Badge variant="destructive">Banned</Badge>
+                    ) : (
+                      <Badge variant={member.status === 'Active' ? 'default' : 'destructive'}>
+                        {member.status}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {member.last_active_at ? new Date(member.last_active_at).toLocaleDateString() : 'Never'}
