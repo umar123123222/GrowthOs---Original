@@ -164,7 +164,7 @@ const VideoPlayer = () => {
           // Resolve module name and course name from module UUID
                   let moduleName = 'Module';
           let courseName = '';
-                  let courseId = null;
+                  let courseId: string | null = null;
           if (data.module) {
             const { data: moduleData } = await supabase
               .from('modules')
