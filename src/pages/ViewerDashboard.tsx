@@ -6,7 +6,7 @@ import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { BatchManagement } from '@/components/batch';
-import ResourcesManagement from '@/pages/admin/ResourcesManagement';
+import Resources from '@/pages/Resources';
 import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
 
 /**
