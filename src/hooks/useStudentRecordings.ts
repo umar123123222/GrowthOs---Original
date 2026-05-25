@@ -19,7 +19,7 @@ interface Recording {
 
 export const useStudentRecordings = () => {
   const { user } = useAuth();
-  const { isRecordingUnlocked, loading: unlocksLoading } = useRecordingUnlocks();
+  const { isRecordingUnlocked, refreshUnlocks, loading: unlocksLoading } = useRecordingUnlocks();
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [loading, setLoading] = useState(true);
 
