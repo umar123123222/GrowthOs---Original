@@ -3500,6 +3500,8 @@ export function StudentsManagement() {
                               return `Assigned to pathway "${metadata.pathway_name || metadata.pathway_title || 'Unknown'}"${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
                             case 'pathway_unenrolled':
                               return `Removed from pathway "${metadata.pathway_name || metadata.pathway_title || 'Unknown'}"${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
+                            case 'drip_content_toggled':
+                              return `${metadata.drip_disabled ? 'Skipped drip schedule' : 'Re-enabled drip schedule'}${metadata.performed_by_name ? ` by ${metadata.performed_by_name}` : ''}`;
                             default:
                               return formatActivityType(log.activity_type);
                           }
