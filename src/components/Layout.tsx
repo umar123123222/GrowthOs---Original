@@ -781,7 +781,7 @@ const Layout = memo(({
       icon: User
     };
     return [...withIntegrations, profileItem];
-  }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager, isUserSupportMember, connectionStatus]);
+  }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager, isUserSupportMember, isUserViewer, connectionStatus]);
 
   // Auto-expand course menu if any course tab is active
   useEffect(() => {
