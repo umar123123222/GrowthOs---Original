@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, RefreshCw, ArrowRight } from "lucide-react";
-import { useStudentRecordings } from "@/hooks/useStudentRecordings";
+import { useCourseRecordings } from "@/hooks/useCourseRecordings";
 import SuccessPartner from "@/components/SuccessPartner";
 import { LectureRating } from "@/components/LectureRating";
 import { supabase } from "@/integrations/supabase/client";
@@ -58,12 +58,12 @@ const VideoPlayer = () => {
     user,
     loading: authLoading
   } = useAuth();
-  const { recordings, refreshRecordings } = useStudentRecordings();
   const [showSuccessPartner, setShowSuccessPartner] = useState(false);
   const [checkedItems, setCheckedItems] = useState<{
     [key: number]: boolean;
   }>({});
   const [currentVideo, setCurrentVideo] = useState<any>(null);
+  const { recordings, refreshData: refreshRecordings } = useCourseRecordings(currentVideo?.courseId || null);
   const [showRating, setShowRating] = useState(false);
   const [videoUrlError, setVideoUrlError] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
@@ -162,8 +162,9 @@ const VideoPlayer = () => {
         if (error) throw error;
         if (data) {
           // Resolve module name and course name from module UUID
-          let moduleName = 'Module';
+                  let moduleName = 'Module';
           let courseName = '';
+                  let courseId: string | null = null;
           if (data.module) {
             const { data: moduleData } = await supabase
               .from('modules')
@@ -172,6 +173,7 @@ const VideoPlayer = () => {
               .maybeSingle();
             if (moduleData) {
               moduleName = moduleData.title || 'Module';
+                      courseId = moduleData.course_id;
               if (moduleData.course_id) {
                 const { data: courseData } = await supabase
                   .from('courses')
@@ -190,6 +192,7 @@ const VideoPlayer = () => {
             duration: data.duration_min ? `${data.duration_min} min` : 'N/A',
             module: moduleName,
             moduleId: data.module,
+              courseId,
             courseName: courseName,
             checklist: ['Watch the complete video', 'Take notes on key concepts', 'Complete any related assignments', 'Mark lesson as complete']
           });
@@ -448,8 +451,15 @@ const VideoPlayer = () => {
                   const current = recordings.find(r => r.id === currentVideo?.id);
                   const next = current
                     ? recordings
-                        .filter(r => r.isUnlocked && r.sequence_order > current.sequence_order)
-                        .sort((a, b) => a.sequence_order - b.sequence_order)[0]
+                        .filter(r => r.isUnlocked && (
+                          r.module_order > current.module_order ||
+                          (r.module_order === current.module_order && r.sequence_order > current.sequence_order)
+                        ))
+                        .sort((a, b) =>
+                          a.module_order === b.module_order
+                            ? a.sequence_order - b.sequence_order
+                            : a.module_order - b.module_order
+                        )[0]
                     : null;
                   return (
                     <div className="mt-8 flex justify-center gap-3 flex-wrap">
