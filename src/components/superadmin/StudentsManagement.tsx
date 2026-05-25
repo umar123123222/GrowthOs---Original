@@ -1187,12 +1187,24 @@ export function StudentsManagement() {
         next.set(recordId, !currentlyDisabled);
         return next;
       });
+      await logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: student.id,
+        entityType: 'student_drip_setting',
+        entityId: recordId,
+        action: ACTIVITY_TYPES.DRIP_CONTENT_TOGGLED,
+        description: currentlyDisabled
+          ? `Drip schedule re-enabled for ${student.full_name}`
+          : `Drip schedule skipped for ${student.full_name} (immediate access to all recordings)`,
+        data: { drip_disabled: !currentlyDisabled, student_name: student.full_name }
+      });
       toast({
         title: currentlyDisabled ? 'Drip schedule re-enabled' : 'Drip schedule skipped',
         description: currentlyDisabled
           ? `${student.full_name} will now follow the drip schedule for unwatched videos.`
           : `${student.full_name} now has immediate access to all course recordings.`,
       });
+
     } catch (e: any) {
       console.error('handleToggleDripForStudent error', e);
       toast({ title: 'Error', description: e?.message || 'Failed to update drip setting', variant: 'destructive' });
