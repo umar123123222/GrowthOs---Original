@@ -1,68 +1,70 @@
 ## Goal
+Introduce a new **`viewer`** role. Viewers can only navigate to:
+1. Dashboard
+2. Modules & Videos (Recordings)
+3. Resources
+4. Submissions
+5. Success Sessions
+6. Students Management
+7. Batches
 
-Restrict the in-app notifications visible to **students** (bell dropdown + `/notifications` page) to only those directly relevant to them. Staff (admin, superadmin, mentor, enrollment_manager, support_member) keep seeing everything they see today.
-
-## Student allowlist (final)
-
-| # | Event | Source notification |
-|---|---|---|
-| 1 | Success session added or edited | `learning_item_changed` where `item_type='success_session'` and `action in ('insert','update')` (also legacy `success_session` type) |
-| 2 | Invoice generated | existing `invoice_issued` |
-| 3 | Invoice marked paid | NEW `invoice_paid` — emit from `mark-invoice-paid` edge function |
-| 4 | New video dripped (newly unlocked for this student) | NEW `content_unlocked` — emit from `notify-content-unlocked` for recordings only |
-| 5 | New assignment unlocked | NEW `assignment_unlocked` — emit when the gating recording for an assignment unlocks for the student |
-| 6 | Assignment approved / declined | NEW `assignment_reviewed` (status in payload) — emit from the submission-review path (currently only mentor is notified) |
-| 7 | Resource added or edited | NEW `resource_changed` — emit from a DB trigger on `resources` / `resource_sections` for every student in the resource's audience |
-
-Everything else is hidden for students: `ticket_updated`, `student_added`, `module`, `financial`, `lms_suspended`, `fee_extension`, `installment_*`, updates/deletes of recordings, raw `recording`/`learning_item_changed` for new content additions by admins (those become noise — students get the `content_unlocked` / `assignment_unlocked` events instead).
+On every allowed page, all buttons/controls that create, edit, delete, assign, unassign, toggle, approve/reject, send, reset, or otherwise mutate data must be hidden for viewers. They can still open detail dialogs in read-only mode (no save/edit/delete actions visible).
 
 ## Implementation
 
-### A. Frontend allowlist (immediate effect on existing data)
+### 1. Database
+- Add `'viewer'` to the `app_role` enum.
+- RLS: viewers get the same SELECT permissions as admin (read-only). They get **no** INSERT/UPDATE/DELETE policies — write attempts fail server-side as a defense-in-depth backup to the UI guards.
+- Add `has_role(uid, 'viewer')` to relevant SELECT policies on the tables shown on the listed pages (students, batches, recordings, resources, assignment_submissions, success_sessions, etc.).
 
-New `src/lib/notification-filter.ts` exporting `isStudentRelevantNotification(n, role)`:
-- If `role !== 'student'` → return `true`
-- Else return `true` only when the notification's `template_key || type` is in the allowlist above, with payload-level checks for action (`insert|update` for success sessions; `approved|declined` for assignment review).
+### 2. Auth & Types
+- Add `'viewer'` to the `role` union in `src/types/common.ts` and `src/hooks/useAuth.ts` re-exports.
+- `RoleGuard` already takes string[] — no change needed.
 
-Apply in:
-- `src/components/NotificationDropdown.tsx` — filter after fetch + on realtime insert; recompute `unreadCount` from the filtered list.
-- `src/pages/Notifications.tsx` — same, plus filter the realtime INSERT handler.
+### 3. Routing (`src/App.tsx`)
+- Root `/` and `/dashboard` for viewer → render a new lightweight `ViewerDashboard` (or reuse `SuperadminDashboard` in read-only mode — see decision below).
+- Add `RoleGuard` allow `viewer` on: `/videos`, `/videos/:moduleId/:lessonId`, `/resources`, `/students`, plus a new `/viewer` route that hosts the Submissions / Success Sessions / Batches views (re-using existing superadmin components, gated to read-only).
+- Block all other routes for viewer (`<Navigate to="/" />`).
 
-Also extend the display/enrichment maps in both files with titles + links for the new keys:
-- `invoice_paid` → "Fee payment confirmed" → `/fees`
-- `content_unlocked` → "New video unlocked: <title>" → `/videos?recordingId=<id>`
-- `assignment_unlocked` → "New assignment unlocked: <name>" → `/assignments?assignmentId=<id>`
-- `assignment_reviewed` → "Assignment <approved|declined>: <name>" → `/assignments?assignmentId=<id>`
-- `resource_changed` → "Resource <added|updated>: <title>" → `/resources`
+### 4. Navigation (`src/components/Layout.tsx`)
+- Add `isUserViewer`. Build a dedicated nav list for viewer containing only the 7 allowed entries.
+- Hide Teams, Support, Admin Panel, Super Admin, Connect, Profile-edit links beyond what's needed.
 
-User role is read via the existing `useUserRole` hook (used elsewhere).
+### 5. Read-only enforcement on shared components
+Add a single helper `useIsReadOnly()` (returns `user.role === 'viewer'`). In each of the following components, wrap action buttons with `{!isReadOnly && …}`:
+- `src/components/superadmin/StudentsManagement.tsx` — Add Student, Edit, Delete, Reset Password, Assign/Unassign Pathway, Skip Drip, Suspend, etc.
+- `src/components/superadmin/SuccessSessionsManagement.tsx` — Create/Edit/Delete/Reschedule.
+- `src/components/assignments/SubmissionsManagement.tsx` — Approve/Reject/Comment/Score.
+- `src/components/superadmin/RecordingAttachmentsManager.tsx` + recordings tab UI — Upload/Edit/Delete.
+- Resources page — Upload/Edit/Delete.
+- Batches tab UI — Create/Edit/Delete/Assign.
+- Dashboard quick-action cards — keep navigation cards, hide any "create" CTAs.
 
-### B. Backend emitters (so the allowlisted events actually fire)
+### 6. Creation flow
+- Superadmin can create a viewer from `/teams` (same dialog as other staff roles). Add `'viewer'` to the role dropdown and to the `create-enhanced-team-member` edge function's allowed roles.
 
-1. **`invoice_paid`** — in `supabase/functions/mark-invoice-paid/index.ts`, after the invoice row flips to `paid`, insert into `notifications` for that student's `user_id` with `type='invoice_paid'`, `template_key='invoice_paid'`, payload `{ title, message, data: { invoice_id, amount, installment_number } }`.
+### 7. Activity logging
+- Viewer logins are logged like any other user. No write-action logs (they can't write).
 
-2. **`content_unlocked`** + **`assignment_unlocked`** — in `supabase/functions/notify-content-unlocked/index.ts` (already triggered on `user_unlocks` inserts):
-   - When the unlocked item is a recording → emit `content_unlocked` to that student.
-   - Additionally look up the recording's `assignment_id`; if present, emit `assignment_unlocked` to the same student.
+## Decisions needed
+1. Where should viewer land for "Submissions / Success Sessions / Batches"? Options:
+   a) Reuse the existing `/superadmin?tab=…` URLs and let viewer access just those tabs (simpler, requires guarding the SuperadminDashboard tab list to only show allowed tabs for viewer).
+   b) Build a dedicated `/viewer` page mirroring those tabs.
+   **Recommendation: (a)** — much less duplication; we just filter the tab list and pass a `readOnly` flag to each tab component.
 
-3. **`assignment_reviewed`** — find the place that updates submission status to `approved`/`declined` (search for `submissions` table updates / `notify_submission_status_change`). Add a `notifications` insert targeting the student `user_id` with payload `{ title, message, data: { submission_id, assignment_id, status } }`.
+2. Should viewer be allowed to **download/export** (CSV, PDF, attachments)? These don't mutate data.
+   **Recommendation: yes, allow downloads** (still read-only).
 
-4. **`resource_changed`** — DB trigger on `resources` (and `resource_audiences` change): for each user that `user_can_see_resource(_user, resource_id)` returns true for, insert a `notifications` row with `type='resource_changed'`. Use a SECURITY DEFINER function `notify_resource_change(resource_id, action)` invoked from AFTER INSERT/UPDATE triggers.
+3. Should viewer see student PII (emails, phone, payment status)?
+   **Recommendation: yes** — needed for the listed pages to be useful. Confirm if you want anything redacted.
 
-### C. Phasing (recommended)
+## Files to touch (high level)
+- 1 migration (enum + policies)
+- `src/types/common.ts`, `src/hooks/useAuth.ts`
+- `src/App.tsx`, `src/components/Layout.tsx`, `src/components/RoleGuard.tsx` (no change), `src/pages/SuperadminDashboard.tsx` (filter tabs for viewer)
+- `src/components/superadmin/StudentsManagement.tsx`, `SuccessSessionsManagement.tsx`, batches component, recordings components
+- `src/components/assignments/SubmissionsManagement.tsx`
+- `src/pages/Resources.tsx` / admin `ResourcesManagement.tsx`
+- `src/pages/Teams.tsx` + `supabase/functions/create-enhanced-team-member/index.ts` (add viewer to allowed roles)
 
-1. **Phase 1 (small, ships now):** Frontend filter + display strings. Immediately cleans up the student view — old noisy notifications stop appearing. (No backend change.)
-2. **Phase 2:** Add the 4 new backend emitters (`invoice_paid`, `content_unlocked`/`assignment_unlocked`, `assignment_reviewed`, `resource_changed`). Each is a small focused change.
-
-I'll do both phases in one pass unless you want Phase 1 first to verify the filter behaves right.
-
-## Out of scope
-
-- Email / SMS templates for the new events (in-app only).
-- Backfilling / cleaning historic noisy rows from `notifications` (they're just filtered out of the student UI).
-- Notification mute settings UI changes.
-
-## Files touched
-
-New: `src/lib/notification-filter.ts`
-Modified: `src/components/NotificationDropdown.tsx`, `src/pages/Notifications.tsx`, `supabase/functions/mark-invoice-paid/index.ts`, `supabase/functions/notify-content-unlocked/index.ts`, submission-review path (TBD on read), one new SQL migration for `resource_changed` trigger.
+Please confirm decisions 1–3 (or just say "go ahead with the recommendations") and I'll implement.
