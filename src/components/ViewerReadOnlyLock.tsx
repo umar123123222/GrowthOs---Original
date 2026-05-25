@@ -145,7 +145,7 @@ function applyLock(root: HTMLElement) {
         'input:not([type="search"]), textarea, select'
       ).forEach((field) => {
         field.disabled = true;
-        field.readOnly = true;
+        if ('readOnly' in field) (field as HTMLInputElement | HTMLTextAreaElement).readOnly = true;
       });
     }
   });
