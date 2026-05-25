@@ -445,6 +445,15 @@ export function StudentAccessManagement({
           next.delete(pathwayId);
           return next;
         });
+        await logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: studentUserId,
+          entityType: 'pathway_enrollment',
+          entityId: enrollment.id,
+          action: ACTIVITY_TYPES.PATHWAY_UNENROLLED,
+          description: `Removed from pathway "${pathway?.name || 'Unknown'}"`,
+          data: { pathway_id: pathwayId, pathway_name: pathway?.name }
+        });
         toast({ title: 'Access Terminated', description: 'Pathway access has been removed' });
       } else if (!isCurrentlyEnrolled && enrollment) {
         // Reactivate existing enrollment
@@ -455,6 +464,15 @@ export function StudentAccessManagement({
         if (error) throw error;
 
         setSelectedPathways(prev => new Set(prev).add(pathwayId));
+        await logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: studentUserId,
+          entityType: 'pathway_enrollment',
+          entityId: enrollment.id,
+          action: ACTIVITY_TYPES.PATHWAY_ENROLLED,
+          description: `Assigned to pathway "${pathway?.name || 'Unknown'}"`,
+          data: { pathway_id: pathwayId, pathway_name: pathway?.name, reactivated: true }
+        });
         toast({ title: 'Access Granted', description: 'Pathway access has been restored' });
       } else {
         // Create a single pathway enrollment using the first course in the pathway
@@ -501,8 +519,18 @@ export function StudentAccessManagement({
           await createEnrollmentInvoices('pathway', pathway.id, pathway.name, pathway.price, pathway.max_installments);
         }
 
+        await logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: studentUserId,
+          entityType: 'pathway_enrollment',
+          entityId: pathwayId,
+          action: ACTIVITY_TYPES.PATHWAY_ENROLLED,
+          description: `Assigned to pathway "${pathway?.name || 'Unknown'}"`,
+          data: { pathway_id: pathwayId, pathway_name: pathway?.name }
+        });
         toast({ title: 'Access Granted', description: 'Pathway access has been added' });
       }
+
 
       // Refresh enrollments
       const { data } = await supabase.from('course_enrollments').select('*').eq('student_id', studentId);
