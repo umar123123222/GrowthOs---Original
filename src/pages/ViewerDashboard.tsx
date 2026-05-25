@@ -23,7 +23,7 @@ export default function ViewerDashboard() {
       case 'recordings':
         return <RecordingsManagement />;
       case 'resources':
-        return <ResourcesManagement />;
+        return <Resources />;
       case 'submissions':
         return <SubmissionsManagement userRole="superadmin" />;
       case 'success-sessions':
