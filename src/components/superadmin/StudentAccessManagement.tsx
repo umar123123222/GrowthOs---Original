@@ -339,6 +339,15 @@ export function StudentAccessManagement({
           next.delete(courseId);
           return next;
         });
+        await logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: studentUserId,
+          entityType: 'course_enrollment',
+          entityId: enrollment.id,
+          action: ACTIVITY_TYPES.COURSE_UNENROLLED,
+          description: `Removed from course "${course?.title || 'Unknown'}"`,
+          data: { course_id: courseId, course_name: course?.title }
+        });
         toast({ title: 'Access Terminated', description: 'Course access has been removed' });
       } else if (!isCurrentlyEnrolled && enrollment) {
         // Reactivate existing enrollment
@@ -349,6 +358,15 @@ export function StudentAccessManagement({
         if (error) throw error;
 
         setSelectedCourses(prev => new Set(prev).add(courseId));
+        await logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: studentUserId,
+          entityType: 'course_enrollment',
+          entityId: enrollment.id,
+          action: ACTIVITY_TYPES.COURSE_ENROLLED,
+          description: `Assigned to course "${course?.title || 'Unknown'}"`,
+          data: { course_id: courseId, course_name: course?.title, reactivated: true }
+        });
         toast({ title: 'Access Granted', description: 'Course access has been restored' });
       } else {
         // Create new enrollment with payment tracking and access expiry
@@ -382,8 +400,18 @@ export function StudentAccessManagement({
           await createEnrollmentInvoices('course', course.id, course.title, course.price, course.max_installments);
         }
         
+        await logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: studentUserId,
+          entityType: 'course_enrollment',
+          entityId: courseId,
+          action: ACTIVITY_TYPES.COURSE_ENROLLED,
+          description: `Assigned to course "${course?.title || 'Unknown'}"`,
+          data: { course_id: courseId, course_name: course?.title }
+        });
         toast({ title: 'Access Granted', description: 'Course access has been added' });
       }
+
 
       // Refresh enrollments
       const { data } = await supabase.from('course_enrollments').select('*').eq('student_id', studentId);
