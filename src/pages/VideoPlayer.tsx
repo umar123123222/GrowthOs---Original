@@ -439,12 +439,34 @@ const VideoPlayer = () => {
                 {/* Lecture Rating - Shows after video is marked complete */}
                 {showRating && currentVideo && <LectureRating recordingId={currentVideo.id} lessonTitle={currentVideo.title} />}
 
-                <div className="mt-8 flex justify-center">
-                  <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    {videoWatched ? 'Completed' : 'Mark Complete'}
-                  </Button>
-                </div>
+                {(() => {
+                  const current = recordings.find(r => r.id === currentVideo?.id);
+                  const next = current
+                    ? recordings
+                        .filter(r => r.isUnlocked && r.sequence_order > current.sequence_order)
+                        .sort((a, b) => a.sequence_order - b.sequence_order)[0]
+                    : null;
+                  return (
+                    <div className="mt-8 flex justify-center gap-3 flex-wrap">
+                      <Button size="sm" onClick={handleMarkComplete} disabled={videoWatched}>
+                        <CheckCircle className="w-4 h-4 mr-2" />
+                        {videoWatched ? 'Completed' : 'Mark Complete'}
+                      </Button>
+                      {videoWatched && next && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() =>
+                            navigate(`/video-player?id=${next.id}&title=${encodeURIComponent(next.recording_title || '')}`)
+                          }
+                        >
+                          Next Lesson
+                          <ArrowRight className="w-4 h-4 ml-2" />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </CardContent>
           </Card>
