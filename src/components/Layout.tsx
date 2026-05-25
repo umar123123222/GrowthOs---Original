@@ -241,6 +241,7 @@ const Layout = memo(({
   const isUserMentor = user?.role === 'mentor';
   const isUserEnrollmentManager = user?.role === 'enrollment_manager';
   const isUserSupportMember = user?.role === 'support_member';
+  const isUserViewer = user?.role === 'viewer';
   const isUserAdminOrSuperadmin = isUserSuperadmin || isUserAdmin;
   
   // Close mobile menu on route change
