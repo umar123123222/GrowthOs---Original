@@ -1405,12 +1405,24 @@ export const StudentManagement = () => {
         next.set(recordId, willDisable);
         return next;
       });
+      await logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: student.id,
+        entityType: 'student_drip_setting',
+        entityId: recordId,
+        action: ACTIVITY_TYPES.DRIP_CONTENT_TOGGLED,
+        description: willDisable
+          ? `Drip schedule skipped for ${student.full_name} (immediate access to all recordings)`
+          : `Drip schedule re-enabled for ${student.full_name}`,
+        data: { drip_disabled: willDisable, student_name: student.full_name }
+      });
       toast({
         title: willDisable ? 'Drip Disabled' : 'Drip Re-enabled',
         description: willDisable
           ? `${student.full_name} now has full immediate access to all enrolled course recordings.`
           : `${student.full_name}'s unwatched videos will follow the drip schedule again.`,
       });
+
     } catch (e: any) {
       console.error('Toggle drip error:', e);
       toast({ title: 'Error', description: e.message || 'Failed to update drip setting', variant: 'destructive' });
