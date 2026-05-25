@@ -174,6 +174,15 @@ const Login = () => {
           role: userData.role
         });
 
+        // Block users banned from logging in
+        if ((userData as any).login_blocked === true) {
+          safeLogger.warn('User login is blocked', { userId: userData.id });
+          const errorMessage = `Login Blocked|Your login access has been disabled by an administrator. Please contact support if you believe this is a mistake.`;
+          sessionStorage.setItem('suspension_error', errorMessage);
+          await supabase.auth.signOut();
+          return;
+        }
+
         // Only block suspended students from signing in
         if (userData.role === 'student' && userData.lms_status === 'suspended') {
           safeLogger.warn('Student LMS access is suspended', {

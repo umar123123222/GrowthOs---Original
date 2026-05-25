@@ -3080,6 +3080,7 @@ export type Database = {
           last_login_at: string | null
           lms_status: string | null
           lms_user_id: string | null
+          login_blocked: boolean
           meta_ads_credentials: string | null
           original_password: string | null
           password_display: string
@@ -3102,6 +3103,7 @@ export type Database = {
           last_login_at?: string | null
           lms_status?: string | null
           lms_user_id?: string | null
+          login_blocked?: boolean
           meta_ads_credentials?: string | null
           original_password?: string | null
           password_display: string
@@ -3124,6 +3126,7 @@ export type Database = {
           last_login_at?: string | null
           lms_status?: string | null
           lms_user_id?: string | null
+          login_blocked?: boolean
           meta_ads_credentials?: string | null
           original_password?: string | null
           password_display?: string
@@ -3690,6 +3693,10 @@ export type Database = {
       send_test_notification: {
         Args: { payload: Json; template_key: string }
         Returns: string[]
+      }
+      set_user_login_blocked: {
+        Args: { blocked: boolean; target_user_id: string }
+        Returns: Json
       }
       student_can_view_success_session: {
         Args: { _batch_id: string; _batch_ids: Json; _course_id: string }

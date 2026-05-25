@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserManagement } from '@/hooks/useUserManagement';
-import { Plus, Activity, Eye, Edit, Trash2, Key } from 'lucide-react';
+import { Plus, Activity, Eye, Edit, Trash2, Key, Ban, ShieldCheck } from 'lucide-react';
 import { useAuth, User } from '@/hooks/useAuth';
 import AdminTeams from '@/components/admin/AdminTeams';
 import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
@@ -27,6 +27,7 @@ interface TeamMember {
   created_at: string;
   last_active_at: string;
   status: string;
+  login_blocked?: boolean;
   password_display?: string;
 }
 const Teams = () => {
@@ -259,6 +260,27 @@ const Teams = () => {
       fetchTeamMembers();
     }
   };
+
+  const handleToggleBan = async (member: TeamMember) => {
+    const blocked = !member.login_blocked;
+    const { data, error } = await supabase.rpc('set_user_login_blocked', {
+      target_user_id: member.id,
+      blocked,
+    });
+    if (error || (data as any)?.success === false) {
+      toast({
+        title: 'Error',
+        description: (data as any)?.error || error?.message || 'Failed to update login access',
+        variant: 'destructive',
+      });
+      return;
+    }
+    toast({
+      title: blocked ? 'Login banned' : 'Login restored',
+      description: `${member.full_name} ${blocked ? 'can no longer sign in' : 'can sign in again'}.`,
+    });
+    fetchTeamMembers();
+  };
   useEffect(() => {
     fetchTeamMembers();
   }, []);
@@ -382,9 +404,13 @@ const Teams = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={member.status === 'Active' ? 'default' : 'destructive'} className="bg-lime-600">
-                      {member.status}
-                    </Badge>
+                    {member.login_blocked ? (
+                      <Badge variant="destructive">Banned</Badge>
+                    ) : (
+                      <Badge variant={member.status === 'Active' ? 'default' : 'destructive'} className={member.status === 'Active' ? 'bg-lime-600' : ''}>
+                        {member.status}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {member.last_active_at ? new Date(member.last_active_at).toLocaleDateString() : 'Never'}
@@ -445,7 +471,37 @@ const Teams = () => {
                           Activity
                         </Button>
                       </ActivityLogsDialog>
-                      
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            {member.login_blocked ? (
+                              <><ShieldCheck className="w-4 h-4 mr-1" />Unban</>
+                            ) : (
+                              <><Ban className="w-4 h-4 mr-1" />Ban login</>
+                            )}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {member.login_blocked ? 'Restore login access?' : 'Ban from logging in?'}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {member.login_blocked
+                                ? `${member.full_name} will be able to sign in again.`
+                                : `${member.full_name} will be immediately blocked from signing in. Their data is preserved.`}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleToggleBan(member)}>
+                              {member.login_blocked ? 'Restore access' : 'Ban login'}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
                           <Button variant="outline" size="sm">
