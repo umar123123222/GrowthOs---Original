@@ -714,7 +714,12 @@ export function CompanySettings() {
             )}
           </CardContent>
         </Card>
+          </div>
+        </TabsContent>
 
+        {/* ONBOARDING */}
+        <TabsContent value="onboarding" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Student Sign-in & Questionnaire */}
         <Card className="lg:col-span-2">
           <CardHeader>
