@@ -1817,6 +1817,14 @@ export function StudentsManagement() {
       const selectedIds = Array.from(selectedStudents);
       const chunkSize = 50;
 
+      // Resolve label of selected course/pathway for log description
+      let selectedLabel = '';
+      if (bulkAccessType === 'course') {
+        selectedLabel = bulkAccessCourses.find(c => c.id === bulkAccessSelectedId)?.title || '';
+      } else {
+        selectedLabel = bulkAccessPathways.find(p => p.id === bulkAccessSelectedId)?.name || '';
+      }
+
       if (bulkAccessAction === 'grant') {
         // Get student records for selected users
         for (let i = 0; i < selectedIds.length; i += chunkSize) {
@@ -1869,6 +1877,21 @@ export function StudentsManagement() {
             const { error: insertError } = await supabase.from('course_enrollments').insert(enrollmentData);
             if (insertError) {
               console.error('Failed to insert enrollment for student', record.id, insertError);
+            } else {
+              // Log assignment
+              logAdminAction({
+                performedBy: user?.id || null,
+                targetUserId: record.user_id,
+                entityType: 'user',
+                entityId: record.user_id,
+                action: bulkAccessType === 'course' ? ACTIVITY_TYPES.COURSE_ENROLLED : ACTIVITY_TYPES.PATHWAY_ENROLLED,
+                description: bulkAccessType === 'course'
+                  ? `Enrolled in course "${selectedLabel}"`
+                  : `Assigned to pathway "${selectedLabel}"`,
+                data: bulkAccessType === 'course'
+                  ? { course_id: bulkAccessSelectedId, course_title: selectedLabel }
+                  : { pathway_id: bulkAccessSelectedId, pathway_name: selectedLabel }
+              });
             }
           }
         }
@@ -1884,11 +1907,25 @@ export function StudentsManagement() {
           const chunk = selectedIds.slice(i, i + chunkSize);
           const { data: studentRecords } = await supabase
             .from('students')
-            .select('id')
+            .select('id, user_id')
             .in('user_id', chunk);
 
           if (!studentRecords) continue;
           const studentRecordIds = studentRecords.map(r => r.id);
+          const recordToUserId = new Map(studentRecords.map(r => [r.id, r.user_id]));
+
+          // Find which enrollments will be revoked so we can log per-student
+          let lookupQuery = supabase
+            .from('course_enrollments')
+            .select('id, student_id')
+            .in('student_id', studentRecordIds)
+            .neq('status', 'cancelled');
+          if (bulkAccessType === 'course') {
+            lookupQuery = lookupQuery.eq('course_id', bulkAccessSelectedId);
+          } else {
+            lookupQuery = lookupQuery.eq('pathway_id', bulkAccessSelectedId);
+          }
+          const { data: toRevoke } = await lookupQuery;
 
           let revokeQuery = supabase
             .from('course_enrollments')
@@ -1901,6 +1938,25 @@ export function StudentsManagement() {
             revokeQuery = revokeQuery.eq('pathway_id', bulkAccessSelectedId);
           }
           await revokeQuery;
+
+          // Log per affected student
+          (toRevoke || []).forEach((row: any) => {
+            const userIdForRecord = recordToUserId.get(row.student_id);
+            if (!userIdForRecord) return;
+            logAdminAction({
+              performedBy: user?.id || null,
+              targetUserId: userIdForRecord,
+              entityType: 'user',
+              entityId: userIdForRecord,
+              action: bulkAccessType === 'course' ? ACTIVITY_TYPES.COURSE_UNENROLLED : ACTIVITY_TYPES.PATHWAY_UNENROLLED,
+              description: bulkAccessType === 'course'
+                ? `Unenrolled from course "${selectedLabel}"`
+                : `Removed from pathway "${selectedLabel}"`,
+              data: bulkAccessType === 'course'
+                ? { course_id: bulkAccessSelectedId, course_title: selectedLabel }
+                : { pathway_id: bulkAccessSelectedId, pathway_name: selectedLabel }
+            });
+          });
         }
         toast({ title: 'Success', description: `Access revoked for ${selectedStudents.size} student(s)` });
       }
