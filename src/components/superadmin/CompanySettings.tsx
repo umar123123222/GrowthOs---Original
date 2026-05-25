@@ -906,7 +906,12 @@ export function CompanySettings() {
             </div>
           </CardContent>
         </Card>
+          </div>
+        </TabsContent>
 
+        {/* COMMUNICATION */}
+        <TabsContent value="communication" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Live Chat Widget */}
         <Card className="lg:col-span-2">
           <CardHeader>
