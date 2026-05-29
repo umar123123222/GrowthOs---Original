@@ -529,6 +529,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
 
   // Handle module reordering
   const handleModuleDragEnd = async (event: DragEndEvent) => {
+    if (readOnly) return;
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
