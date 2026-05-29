@@ -117,13 +117,15 @@ function SortableRecordingRow({
         style={style}
         className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 hover:bg-muted/50 transition-colors animate-fade-in"
       >
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing hover:text-primary transition-colors flex justify-center"
-        >
-          <GripVertical className="w-5 h-5" />
-        </div>
+        {!readOnly ? (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing hover:text-primary transition-colors flex justify-center"
+          >
+            <GripVertical className="w-5 h-5" />
+          </div>
+        ) : <div />}
         <div className="flex justify-center">
           <CollapsibleTrigger asChild>
             <Button
