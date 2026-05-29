@@ -195,17 +195,19 @@ function SortableRecordingRow({
               <p className="text-sm text-gray-600">{recording.notes}</p>
             </div>
           )}
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">Video URL:</p>
-            <a 
-              href={recording.recording_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:underline break-all"
-            >
-              {recording.recording_url}
-            </a>
-          </div>
+          {!readOnly && (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Video URL:</p>
+              <a 
+                href={recording.recording_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:underline break-all"
+              >
+                {recording.recording_url}
+              </a>
+            </div>
+          )}
           <div className="pt-2">
             <RecordingRatingDetails 
               recordingId={recording.id} 
