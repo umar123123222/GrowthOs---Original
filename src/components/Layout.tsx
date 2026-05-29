@@ -708,7 +708,10 @@ const Layout = memo(({
     } else if (isUserViewer) {
       return [
         { name: "Dashboard", href: "/viewer", icon: Monitor },
+        { name: "Courses", href: "/viewer?tab=courses", icon: BookOpen },
+        { name: "Modules", href: "/viewer?tab=modules", icon: LayoutGrid },
         { name: "Recordings", href: "/viewer?tab=recordings", icon: Video },
+        { name: "Assignments", href: "/viewer?tab=assignments", icon: GraduationCap },
         { name: "Resources", href: "/viewer?tab=resources", icon: FolderOpen },
         { name: "Submissions", href: "/viewer?tab=submissions", icon: FileText },
         { name: "Success Sessions", href: "/viewer?tab=success-sessions", icon: Calendar },
