@@ -408,7 +408,7 @@ class ErrorHandler {
     if (error?.code === '23505' || message.includes('duplicate')) {
       return 'duplicate_entry';
     }
-    if (error?.code?.startsWith('PGRST') || error?.hint) {
+    if (typeof error?.code === 'string' && error.code.startsWith('PGRST') || error?.hint) {
       return 'database_error';
     }
 
@@ -475,15 +475,62 @@ class ErrorHandler {
   }
 }
 
+// Patterns we deliberately ignore — third-party extensions, wallet probes, browser quirks.
+const IGNORED_ERROR_PATTERNS = [
+  /MetaMask/i,
+  /chrome-extension:\/\//i,
+  /moz-extension:\/\//i,
+  /ResizeObserver loop/i,
+  /Non-Error promise rejection captured/i,
+  /Cannot set property attributeName of #<MutationRecord>/i,
+  /Lock broken by another request/i,
+  /Lock .* was released because another request stole it/i,
+];
+
+const shouldIgnoreError = (err: any): boolean => {
+  const msg = typeof err === 'string' ? err : err?.message || '';
+  const stack = err?.stack || '';
+  return IGNORED_ERROR_PATTERNS.some(p => p.test(msg) || p.test(stack));
+};
+
 // Global error handler for uncaught errors
 export const setupGlobalErrorHandling = () => {
   window.addEventListener('error', (event) => {
-    errorHandler.handleError(event.error, 'global_error', false);
+    if (shouldIgnoreError(event.error || event.message)) return;
+    try {
+      errorHandler.handleError(event.error, 'global_error', false);
+    } catch { /* never throw from the error handler */ }
   });
 
   window.addEventListener('unhandledrejection', (event) => {
-    errorHandler.handleError(event.reason, 'unhandled_promise');
+    if (shouldIgnoreError(event.reason)) {
+      event.preventDefault();
+      return;
+    }
+    try {
+      errorHandler.handleError(event.reason, 'unhandled_promise', false);
+    } catch { /* never throw from the error handler */ }
     event.preventDefault();
+  });
+
+  // Stale chunk recovery — after a deploy, dynamic imports for old hashes 404.
+  // Reload once to grab the fresh index.html instead of showing a broken page.
+  const handlePreloadError = (msg: string) => {
+    if (!/Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError/i.test(msg)) {
+      return false;
+    }
+    const KEY = '__chunk_reload_at';
+    const last = Number(sessionStorage.getItem(KEY) || 0);
+    if (Date.now() - last < 10_000) return true; // already reloaded recently, avoid loop
+    sessionStorage.setItem(KEY, String(Date.now()));
+    window.location.reload();
+    return true;
+  };
+  window.addEventListener('vite:preloadError', (e: any) => {
+    if (handlePreloadError(e?.payload?.message || e?.message || '')) e.preventDefault?.();
+  });
+  window.addEventListener('error', (e) => {
+    handlePreloadError(e?.message || '');
   });
 };
 

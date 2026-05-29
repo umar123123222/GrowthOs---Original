@@ -102,7 +102,7 @@ const Teams = () => {
         setIsAdding(false);
         return;
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { safeLogger.warn('Email existence check failed, proceeding to create', e); }
     try {
       const response = await supabase.functions.invoke('create-enhanced-team-member', {
         body: { email: newMember.email.toLowerCase().trim(), full_name: newMember.full_name.trim(), role: newMember.role }
