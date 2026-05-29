@@ -352,9 +352,10 @@ export class SMTPClient {
           '',
           `--${boundary}`,
           'Content-Type: text/html; charset=utf-8',
-          'Content-Transfer-Encoding: 8bit',
+          'Content-Transfer-Encoding: base64',
           '',
-          html,
+          btoa(String.fromCharCode(...new TextEncoder().encode(html)))
+            .replace(/(.{76})/g, '$1\r\n'),
           '',
         ];
 
