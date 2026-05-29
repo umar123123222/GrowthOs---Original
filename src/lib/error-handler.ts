@@ -478,7 +478,7 @@ class ErrorHandler {
 // Global error handler for uncaught errors
 export const setupGlobalErrorHandling = () => {
   window.addEventListener('error', (event) => {
-    errorHandler.handleError(event.error, 'global_error');
+    errorHandler.handleError(event.error, 'global_error', false);
   });
 
   window.addEventListener('unhandledrejection', (event) => {
