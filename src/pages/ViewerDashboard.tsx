@@ -6,8 +6,12 @@ import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { BatchManagement } from '@/components/batch';
+import { CourseManagement } from '@/components/superadmin/CourseManagement';
+import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
+import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
 import Resources from '@/pages/Resources';
 import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
+
 
 /**
  * Read-only dashboard for the `viewer` role.
