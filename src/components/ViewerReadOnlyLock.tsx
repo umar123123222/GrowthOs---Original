@@ -94,14 +94,9 @@ function shouldHide(el: Element): boolean {
   // Don't hide things explicitly marked safe
   if (el.closest('[data-viewer-allow="true"]')) return false;
 
-  // Never hide tab triggers, accordion triggers, dropdown menu items used for navigation,
-  // or close buttons inside dialogs (X buttons)
+  // Never hide nav-style triggers (tabs/menu items/options/accordions that toggle content)
   const role = el.getAttribute('role');
   if (role === 'tab' || role === 'menuitem' || role === 'option') return false;
-  if (el.getAttribute('data-state') && el.tagName === 'BUTTON' && (el.getAttribute('aria-controls') || el.getAttribute('aria-expanded'))) {
-    // Accordion / collapsible / tabs trigger
-    return false;
-  }
 
   const text = (el.textContent || '').trim();
   const aria = el.getAttribute('aria-label') || '';
@@ -109,12 +104,10 @@ function shouldHide(el: Element): boolean {
   const haystack = `${text} ${aria} ${title}`.trim();
 
   if (!haystack) {
-    // Icon-only button — check sr-only label
     const sr = el.querySelector('.sr-only');
     if (sr && sr.textContent) {
       return ACTION_PATTERNS.some((p) => p.test(sr.textContent!));
     }
-    // No identifiable text — leave it (likely a navigation icon)
     return false;
   }
 
@@ -123,6 +116,22 @@ function shouldHide(el: Element): boolean {
 
   return ACTION_PATTERNS.some((p) => p.test(haystack));
 }
+
+function hideInstallmentSection(root: HTMLElement) {
+  const labels = root.querySelectorAll<HTMLElement>('label, .text-sm, .text-xs, p, span, div');
+  labels.forEach((el) => {
+    if (el.hasAttribute('data-viewer-section-hidden')) return;
+    const txt = (el.textContent || '').trim();
+    if (txt === 'Installment Payments') {
+      const section = el.parentElement;
+      if (section && !section.hasAttribute('data-viewer-section-hidden')) {
+        section.setAttribute('data-viewer-section-hidden', 'true');
+        (section as HTMLElement).style.display = 'none';
+      }
+    }
+  });
+}
+
 
 function applyLock(root: HTMLElement) {
   const candidates = root.querySelectorAll<HTMLElement>(
