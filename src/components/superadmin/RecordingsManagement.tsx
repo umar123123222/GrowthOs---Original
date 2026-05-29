@@ -1072,7 +1072,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
               <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
                 <div></div>
                 <div></div>
-                <div>Title <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span></div>
+                <div>Title {!readOnly && <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>}</div>
                 <div className="text-center">Duration</div>
                 <div className="text-center">Order</div>
                 {!readOnly && <div className="text-center">Actions</div>}
