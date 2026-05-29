@@ -36,10 +36,17 @@ export default function ViewerDashboard() {
         return <StudentsManagement />;
       case 'batches':
         return <BatchManagement />;
+      case 'courses':
+        return <CourseManagement readOnly />;
+      case 'modules':
+        return <ModulesManagement readOnly />;
+      case 'assignments':
+        return <AssignmentManagement readOnly />;
       case 'dashboard':
       default:
         return <StudentAnalytics />;
     }
+
   };
 
   return (
