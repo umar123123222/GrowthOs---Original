@@ -25,7 +25,7 @@ export default function ViewerDashboard() {
   const renderContent = () => {
     switch (activeTab) {
       case 'recordings':
-        return <RecordingsManagement />;
+        return <RecordingsManagement readOnly />;
       case 'resources':
         return <Resources />;
       case 'submissions':
