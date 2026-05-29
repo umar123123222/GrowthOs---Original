@@ -86,13 +86,15 @@ function SortableModuleRow({ module, index, onEdit, onDelete, courses, readOnly 
       className="hover:bg-gray-50 transition-colors animate-fade-in"
     >
       <TableCell>
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing hover:text-primary transition-colors"
-        >
-          <GripVertical className="w-5 h-5" />
-        </div>
+        {!readOnly && (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing hover:text-primary transition-colors"
+          >
+            <GripVertical className="w-5 h-5" />
+          </div>
+        )}
       </TableCell>
       <TableCell className="font-medium">{module.title}</TableCell>
       <TableCell className="max-w-xs">
