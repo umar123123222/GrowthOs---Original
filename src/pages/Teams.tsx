@@ -157,8 +157,6 @@ const Teams = () => {
 
   useEffect(() => { fetchTeamMembers(); }, []);
 
-  if (user?.role === 'admin') return <AdminTeams />;
-
   const counts = useMemo(() => ({
     total: teamMembers.length,
     admin: teamMembers.filter(m => m.role === 'admin').length,
@@ -177,6 +175,8 @@ const Teams = () => {
       return m.full_name?.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q);
     });
   }, [teamMembers, search, roleFilter]);
+
+  if (user?.role === 'admin') return <AdminTeams />;
 
   if (loading) {
     return (
