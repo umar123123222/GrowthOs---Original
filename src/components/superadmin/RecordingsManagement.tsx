@@ -513,6 +513,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
 
   // Handle recording reordering
   const handleRecordingDragEnd = async (event: DragEndEvent) => {
+    if (readOnly) return;
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
