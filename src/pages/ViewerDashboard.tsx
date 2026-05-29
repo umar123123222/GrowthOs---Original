@@ -6,8 +6,12 @@ import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { BatchManagement } from '@/components/batch';
+import { CourseManagement } from '@/components/superadmin/CourseManagement';
+import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
+import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
 import Resources from '@/pages/Resources';
 import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
+
 
 /**
  * Read-only dashboard for the `viewer` role.
@@ -32,10 +36,17 @@ export default function ViewerDashboard() {
         return <StudentsManagement />;
       case 'batches':
         return <BatchManagement />;
+      case 'courses':
+        return <CourseManagement readOnly />;
+      case 'modules':
+        return <ModulesManagement readOnly />;
+      case 'assignments':
+        return <AssignmentManagement readOnly />;
       case 'dashboard':
       default:
         return <StudentAnalytics />;
     }
+
   };
 
   return (
