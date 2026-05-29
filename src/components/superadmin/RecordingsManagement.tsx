@@ -117,13 +117,15 @@ function SortableRecordingRow({
         style={style}
         className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 hover:bg-muted/50 transition-colors animate-fade-in"
       >
-        <div
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing hover:text-primary transition-colors flex justify-center"
-        >
-          <GripVertical className="w-5 h-5" />
-        </div>
+        {!readOnly ? (
+          <div
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing hover:text-primary transition-colors flex justify-center"
+          >
+            <GripVertical className="w-5 h-5" />
+          </div>
+        ) : <div />}
         <div className="flex justify-center">
           <CollapsibleTrigger asChild>
             <Button
@@ -193,17 +195,19 @@ function SortableRecordingRow({
               <p className="text-sm text-gray-600">{recording.notes}</p>
             </div>
           )}
-          <div>
-            <p className="text-sm font-medium text-gray-700 mb-1">Video URL:</p>
-            <a 
-              href={recording.recording_url} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-sm text-blue-600 hover:underline break-all"
-            >
-              {recording.recording_url}
-            </a>
-          </div>
+          {!readOnly && (
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-1">Video URL:</p>
+              <a 
+                href={recording.recording_url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-sm text-blue-600 hover:underline break-all"
+              >
+                {recording.recording_url}
+              </a>
+            </div>
+          )}
           <div className="pt-2">
             <RecordingRatingDetails 
               recordingId={recording.id} 
@@ -509,6 +513,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
 
   // Handle recording reordering
   const handleRecordingDragEnd = async (event: DragEndEvent) => {
+    if (readOnly) return;
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
@@ -1024,7 +1029,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                     <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
                       <div></div>
                       <div></div>
-                      <div>Title <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span></div>
+                      <div>Title {!readOnly && <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>}</div>
                       <div className="text-center">Duration</div>
                       <div className="text-center">Order</div>
                       {!readOnly && <div className="text-center">Actions</div>}
@@ -1068,7 +1073,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
               <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
                 <div></div>
                 <div></div>
-                <div>Title <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span></div>
+                <div>Title {!readOnly && <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>}</div>
                 <div className="text-center">Duration</div>
                 <div className="text-center">Order</div>
                 {!readOnly && <div className="text-center">Actions</div>}
