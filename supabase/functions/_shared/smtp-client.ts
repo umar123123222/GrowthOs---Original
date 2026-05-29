@@ -352,9 +352,10 @@ export class SMTPClient {
           '',
           `--${boundary}`,
           'Content-Type: text/html; charset=utf-8',
-          'Content-Transfer-Encoding: 8bit',
+          'Content-Transfer-Encoding: base64',
           '',
-          html,
+          btoa(String.fromCharCode(...new TextEncoder().encode(html)))
+            .replace(/(.{76})/g, '$1\r\n'),
           '',
         ];
 
@@ -375,7 +376,13 @@ export class SMTPClient {
         emailParts.push(`--${boundary}--`);
         emailContent = emailParts.join('\r\n');
       } else {
-        // Simple HTML email
+        // Simple HTML email — base64-encode the body so long lines / 8-bit
+        // chars (emojis) can't be mangled by intermediate MTAs (which was
+        // causing Gmail to render raw "<td style=" snippets in the body).
+        const encoder = new TextEncoder();
+        const htmlBytes = encoder.encode(html);
+        const htmlBase64 = btoa(String.fromCharCode(...htmlBytes))
+          .replace(/(.{76})/g, '$1\r\n');
         emailContent = [
           `From: ${config.fromName} <${config.fromEmail}>`,
           `To: ${to}`,
@@ -385,11 +392,11 @@ export class SMTPClient {
           `Date: ${new Date().toUTCString()}`,
           'MIME-Version: 1.0',
           'Content-Type: text/html; charset=utf-8',
-          'Content-Transfer-Encoding: 8bit',
+          'Content-Transfer-Encoding: base64',
           `X-Mailer: IDMPakistan`,
           `X-Priority: 3`,
           '',
-          html,
+          htmlBase64,
         ].join('\r\n');
       }
 
