@@ -408,7 +408,7 @@ class ErrorHandler {
     if (error?.code === '23505' || message.includes('duplicate')) {
       return 'duplicate_entry';
     }
-    if (error?.code?.startsWith('PGRST') || error?.hint) {
+    if (typeof error?.code === 'string' && error.code.startsWith('PGRST') || error?.hint) {
       return 'database_error';
     }
 
