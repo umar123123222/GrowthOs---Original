@@ -144,6 +144,9 @@ function applyLock(root: HTMLElement) {
     }
   });
 
+  hideInstallmentSection(root);
+
+
   // Disable form inputs so a viewer can't type into edit forms that still slip through.
   // (Filter/search inputs are still allowed because we only target inputs inside
   //  open dialogs / forms that have a submit-style action.)
