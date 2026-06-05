@@ -387,6 +387,51 @@ const handler = async (req: Request): Promise<Response> => {
                </tr>`
             : '';
 
+          const row = (label: string, value: string) => `
+            <tr>
+              <td style="padding:10px 0;border-bottom:1px solid ${border};font-family:Arial,Helvetica,sans-serif;font-size:13px;color:${subtext};width:40%;vertical-align:top;">${escapeHtml(label)}</td>
+              <td style="padding:10px 0;border-bottom:1px solid ${border};font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};vertical-align:top;">${value}</td>
+            </tr>`;
+
+          const batchBlock = `<tr>
+              <td style="padding:0 32px 8px;">
+                <h2 style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:18px;color:${text};">🎓 Your Batch Details</h2>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 28px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border:1px solid ${border};border-radius:12px;background:#fafbff;">
+                  <tr><td style="padding:6px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      ${row('Batch', batchName ? escapeHtml(batchName) : naContact)}
+                      ${row('Orientation Date', orientationDate ? escapeHtml(orientationDate) : naContact)}
+                      ${row('WhatsApp Group', whatsappLink ? `<a href="${escapeHtml(whatsappLink)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:600;">Join WhatsApp Group →</a>` : naContact)}
+                      <tr>
+                        <td style="padding:10px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:${subtext};width:40%;vertical-align:top;">Facebook Community</td>
+                        <td style="padding:10px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};vertical-align:top;">${facebookLink ? `<a href="${escapeHtml(facebookLink)}" target="_blank" style="color:#1d4ed8;text-decoration:none;font-weight:600;">Join Facebook Community →</a>` : naContact}</td>
+                      </tr>
+                    </table>
+                  </td></tr>
+                </table>
+              </td>
+            </tr>`;
+
+          const supportBlock = (supportEmail || supportPhone) ? `<tr>
+              <td style="padding:0 32px 8px;">
+                <h2 style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:18px;color:${text};">💬 Need Help? Contact Support</h2>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 28px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border:1px solid ${border};border-radius:12px;background:#fff7ed;">
+                  <tr><td style="padding:18px 22px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};line-height:1.7;">
+                    ${supportEmail ? `<div>📧 <strong>Email:</strong> <a href="mailto:${escapeHtml(supportEmail)}" style="color:${primary};text-decoration:none;">${escapeHtml(supportEmail)}</a></div>` : ''}
+                    ${supportPhone ? `<div>📞 <strong>Phone:</strong> <a href="tel:${escapeHtml(supportPhone.replace(/\s+/g,''))}" style="color:${primary};text-decoration:none;">${escapeHtml(supportPhone)}</a></div>` : ''}
+                  </td></tr>
+                </table>
+              </td>
+            </tr>` : '';
+
           const ctaBlock = lmsUrl
             ? `<tr>
                  <td align="center" style="padding:0 32px 32px;">
