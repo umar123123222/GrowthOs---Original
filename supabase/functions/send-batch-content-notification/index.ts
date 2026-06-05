@@ -222,12 +222,12 @@ function generateEmailHTML(
 </html>`;
 }
 
-function getEmailSubject(itemType: string, title: string): string {
+function getEmailSubject(itemType: string, title: string, isReminder?: boolean): string {
   switch (itemType) {
     case "RECORDING":
       return `New Recording Available: ${title}`;
     case "LIVE_SESSION":
-      return `Live Session Scheduled: ${title}`;
+      return isReminder ? `Reminder: ${title} starts in 3 hours` : `Live Session Scheduled: ${title}`;
     case "ASSIGNMENT":
       return `New Assignment Available: ${title}`;
     default:
