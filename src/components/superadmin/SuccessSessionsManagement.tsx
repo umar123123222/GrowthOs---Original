@@ -1359,23 +1359,23 @@ export function SuccessSessionsManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell className="min-w-[180px]">
-                        <div className="flex space-x-2">
+                        <div className="flex items-center gap-1">
                           {session.status === 'draft' && (
                             <Button
                               variant="default"
                               size="sm"
                               onClick={() => handlePublish(session)}
                               disabled={!session.link || !session.start_time || publishing === session.id}
-                              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+                              className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
                               title={!session.link || !session.start_time ? "Add Zoom link & start time first" : "Publish & notify students"}
                             >
-                              <Send className="w-4 h-4 mr-1" />
-                              {publishing === session.id ? 'Publishing...' : 'Publish'}
+                              <Send className="w-3.5 h-3.5 mr-1" />
+                              {publishing === session.id ? 'Publishing…' : 'Publish'}
                             </Button>
                           )}
                           <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => {
                               if (session.link) {
                                 window.open(session.link, '_blank');
@@ -1387,37 +1387,37 @@ export function SuccessSessionsManagement() {
                                 });
                               }
                             }}
-                            className="hover-scale hover:bg-blue-50 hover:border-blue-300"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                             disabled={!session.link}
                             title="Open session link"
                           >
                             <LinkIcon className="w-4 h-4" />
                           </Button>
                           <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleOpenDialog(session)}
-                            className="hover-scale hover:bg-green-50 hover:border-green-300"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                             title="Edit session"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
                           {session.course_id && pathwayCourses.some(pc => pc.course_id === session.course_id) && (
                             <Button
-                              variant="outline"
-                              size="sm"
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleToggleShared(session)}
-                              className={`hover-scale ${session.pathway_id ? 'hover:bg-blue-50 hover:border-blue-300' : 'hover:bg-purple-50 hover:border-purple-300'}`}
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                               title={session.pathway_id ? 'Make shared across pathways' : 'Separate per pathway'}
                             >
                               {session.pathway_id ? <LinkIcon className="w-4 h-4" /> : <Users2 className="w-4 h-4" />}
                             </Button>
                           )}
                           <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleDelete(session.id)}
-                            className="hover-scale hover:bg-red-50 hover:border-red-300"
+                            className="h-8 w-8 text-muted-foreground hover:text-rose-600 hover:bg-rose-50"
                             title="Delete session"
                           >
                             <Trash2 className="w-4 h-4" />
