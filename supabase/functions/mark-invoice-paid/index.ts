@@ -84,13 +84,33 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface PaymentProof {
+  filename: string;
+  content_base64: string;
+  content_type: string;
+}
+
 interface MarkInvoicePaidRequest {
   invoice_id?: string;
   student_id?: string;
   installment_number?: number;
   amount?: number;
   due_date?: string;
+  payment_date?: string;
+  payment_method?: string;
+  payment_notes?: string;
+  payment_proof?: PaymentProof;
 }
+
+function base64ToUint8(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+const CURRENCY_SYMBOLS: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', INR: '₹', PKR: 'Rs ', CAD: 'C$', AUD: 'A$' };
+const currencySymbol = (c?: string) => CURRENCY_SYMBOLS[(c || 'PKR').toUpperCase()] || `${c || ''} `;
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
