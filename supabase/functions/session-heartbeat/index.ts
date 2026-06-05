@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
     // See if session already exists
     const { data: existing } = await admin
       .from('student_sessions')
-      .select('id, ip_address, country, city, region, first_seen_at')
+      .select('id, ip_address, country, city, region, first_seen_at, latitude, longitude, geo_source')
       .eq('user_id', userId)
       .eq('session_token', body.session_token)
       .maybeSingle()
@@ -135,12 +135,34 @@ Deno.serve(async (req) => {
     let country = existing?.country
     let city = existing?.city
     let region = existing?.region
-    // Only resolve geo when IP changed or first time
-    if (!existing || existing.ip_address !== ip) {
-      const geo = await lookupGeo(ip)
+    let latitude: number | null = existing?.latitude ?? null
+    let longitude: number | null = existing?.longitude ?? null
+    let accuracy: number | null = null
+    let geo_source: string | null = existing?.geo_source ?? null
+
+    if (body.coords && Number.isFinite(body.coords.latitude) && Number.isFinite(body.coords.longitude)) {
+      const newLat = body.coords.latitude
+      const newLon = body.coords.longitude
+      accuracy = typeof body.coords.accuracy === 'number' ? body.coords.accuracy : null
+      const moved =
+        latitude == null || longitude == null ||
+        Math.abs(newLat - latitude) > 0.01 || Math.abs(newLon - longitude) > 0.01
+      latitude = newLat
+      longitude = newLon
+      if (moved || geo_source !== 'gps') {
+        const geo = await reverseGeocode(newLat, newLon)
+        country = geo.country ?? country
+        city = geo.city ?? city
+        region = geo.region ?? region
+      }
+      geo_source = 'gps'
+    } else if (!existing || existing.ip_address !== ip) {
+      // Fall back to IP-based geo only when no GPS is provided
+      const geo = await lookupGeoByIp(ip)
       country = geo.country ?? country
       city = geo.city ?? city
       region = geo.region ?? region
+      if (!geo_source) geo_source = 'ip'
     }
 
     const nowIso = new Date().toISOString()
@@ -154,10 +176,15 @@ Deno.serve(async (req) => {
       country: country ?? null,
       city: city ?? null,
       region: region ?? null,
+      latitude,
+      longitude,
+      geo_accuracy_m: accuracy,
+      geo_source,
       current_activity: body.current_activity ?? null,
       last_heartbeat_at: nowIso,
       ended_at: null as string | null,
     }
+
 
     const { error: upErr } = await admin
       .from('student_sessions')
