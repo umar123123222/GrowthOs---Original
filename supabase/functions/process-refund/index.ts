@@ -77,6 +77,7 @@ function buildEmailHtml(p: {
   companyName: string;
   companyEmail: string;
   companyPhone: string;
+  companyPhone2?: string;
   companyAddress: string;
   hasProof?: boolean;
 }) {
@@ -105,6 +106,7 @@ function buildEmailHtml(p: {
           <p style="margin:0;"><strong>${p.companyName}</strong></p>
           ${p.companyAddress ? `<p style="margin:0;">${p.companyAddress}</p>` : ""}
           ${p.companyPhone ? `<p style="margin:0;">Phone: ${p.companyPhone}</p>` : ""}
+          ${p.companyPhone2 ? `<p style="margin:0;">Alt Phone: ${p.companyPhone2}</p>` : ""}
           ${p.companyEmail ? `<p style="margin:0;">Email: ${p.companyEmail}</p>` : ""}
         </div>
       </div>
