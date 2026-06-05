@@ -263,15 +263,15 @@ export function SuccessSessionsManagement() {
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'draft':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-amber-50 text-amber-700 border border-amber-200';
       case 'upcoming':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-50 text-blue-700 border border-blue-200';
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
       case 'cancelled':
-        return 'bg-red-100 text-red-800';
+        return 'bg-rose-50 text-rose-700 border border-rose-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground border border-border';
     }
   };
 
@@ -746,21 +746,42 @@ export function SuccessSessionsManagement() {
     );
   }
 
+  const stats = (() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let upcoming = 0, drafts = 0, completed = 0, todayCount = 0;
+    sessions.forEach(s => {
+      const status = (s.status || '').toLowerCase();
+      if (status === 'draft') drafts++;
+      else if (status === 'upcoming') upcoming++;
+      else if (status === 'completed') completed++;
+      try {
+        const d = new Date(s.schedule_date);
+        d.setHours(0, 0, 0, 0);
+        if (d.getTime() === today.getTime()) todayCount++;
+      } catch {}
+    });
+    return { total: sessions.length, upcoming, drafts, completed, today: todayCount };
+  })();
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="flex justify-between items-center">
-        <div className="animate-fade-in">
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-orange-600 bg-clip-text text-transparent">
-            Success Sessions Management
+    <div className="space-y-6 animate-fade-in">
+      {/* Page header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+            Success Sessions
           </h2>
-          <p className="text-muted-foreground mt-1 text-lg">Manage scheduled success sessions and their status</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Schedule, publish and manage live mentor sessions for your batches.
+          </p>
         </div>
-        
+
         <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
           <DialogTrigger asChild>
-            <Button 
+            <Button
               onClick={() => handleOpenDialog()}
-              className="hover-scale bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               Schedule Session
@@ -1051,7 +1072,7 @@ export function SuccessSessionsManagement() {
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+                <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   {editingSession ? 'Update Session' : 'Schedule Session'}
                 </Button>
               </div>
@@ -1061,6 +1082,24 @@ export function SuccessSessionsManagement() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Stat strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total', value: stats.total, accent: 'text-foreground' },
+          { label: 'Today', value: stats.today, accent: 'text-primary' },
+          { label: 'Upcoming', value: stats.upcoming, accent: 'text-blue-600' },
+          { label: 'Drafts', value: stats.drafts, accent: 'text-amber-600' },
+        ].map(s => (
+          <Card key={s.label} className="border border-border/60 shadow-none">
+            <CardContent className="p-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{s.label}</p>
+              <p className={`text-2xl font-semibold mt-1 ${s.accent}`}>{s.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
 
       {/* Upcoming 7 Days Sessions */}
       <UpcomingSessionsPreview
@@ -1073,15 +1112,17 @@ export function SuccessSessionsManagement() {
         onEdit={handleOpenDialog}
       />
 
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
-        <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 border-b space-y-3">
-          <CardTitle className="flex items-center text-xl">
-            <Video className="w-6 h-6 mr-3 text-orange-600" />
-            All Success Sessions
-          </CardTitle>
+      <Card className="border border-border/60 shadow-sm animate-fade-in">
+        <CardHeader className="border-b border-border/60 bg-muted/30 space-y-3 py-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center text-base font-semibold text-foreground">
+              <Video className="w-5 h-5 mr-2 text-primary" />
+              All Success Sessions
+            </CardTitle>
+          </div>
 
           {/* Filter Row */}
-          <div className="flex flex-wrap gap-2 items-end">
+          <div className="flex flex-wrap gap-2 items-center">
             <div className="relative flex-1 min-w-[180px] max-w-[260px]">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -1191,10 +1232,20 @@ export function SuccessSessionsManagement() {
               return true;
             });
             if (filtered.length === 0) return (
-              <div className="text-center py-16 animate-fade-in">
-                <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-muted-foreground mb-2">No sessions found</h3>
-                <p className="text-muted-foreground">{sessions.length > 0 ? 'Try adjusting your filters' : 'Schedule your first success session to get started'}</p>
+              <div className="text-center py-16 px-6 animate-fade-in">
+                <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                  <Video className="w-7 h-7 text-muted-foreground" />
+                </div>
+                <h3 className="text-base font-semibold text-foreground mb-1">No sessions found</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {sessions.length > 0 ? 'Try adjusting your filters to see more results.' : 'Schedule your first success session to get started.'}
+                </p>
+                {sessions.length === 0 && (
+                  <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Schedule Session
+                  </Button>
+                )}
               </div>
             );
             return (
@@ -1214,10 +1265,10 @@ export function SuccessSessionsManagement() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((session, index) => (
-                    <TableRow 
-                      key={session.id} 
-                      className="hover:bg-gray-50 transition-colors animate-fade-in"
-                      style={{ animationDelay: `${index * 100}ms` }}
+                    <TableRow
+                      key={session.id}
+                      className="hover:bg-muted/40 transition-colors animate-fade-in"
+                      style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
                     >
                       <TableCell className="font-medium min-w-[200px]">
                         <div className="font-semibold truncate max-w-[180px]" title={session.title}>
@@ -1308,23 +1359,23 @@ export function SuccessSessionsManagement() {
                         </Badge>
                       </TableCell>
                       <TableCell className="min-w-[180px]">
-                        <div className="flex space-x-2">
+                        <div className="flex items-center gap-1">
                           {session.status === 'draft' && (
                             <Button
                               variant="default"
                               size="sm"
                               onClick={() => handlePublish(session)}
                               disabled={!session.link || !session.start_time || publishing === session.id}
-                              className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white"
+                              className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
                               title={!session.link || !session.start_time ? "Add Zoom link & start time first" : "Publish & notify students"}
                             >
-                              <Send className="w-4 h-4 mr-1" />
-                              {publishing === session.id ? 'Publishing...' : 'Publish'}
+                              <Send className="w-3.5 h-3.5 mr-1" />
+                              {publishing === session.id ? 'Publishing…' : 'Publish'}
                             </Button>
                           )}
                           <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => {
                               if (session.link) {
                                 window.open(session.link, '_blank');
@@ -1336,37 +1387,37 @@ export function SuccessSessionsManagement() {
                                 });
                               }
                             }}
-                            className="hover-scale hover:bg-blue-50 hover:border-blue-300"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                             disabled={!session.link}
                             title="Open session link"
                           >
                             <LinkIcon className="w-4 h-4" />
                           </Button>
                           <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleOpenDialog(session)}
-                            className="hover-scale hover:bg-green-50 hover:border-green-300"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                             title="Edit session"
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
                           {session.course_id && pathwayCourses.some(pc => pc.course_id === session.course_id) && (
                             <Button
-                              variant="outline"
-                              size="sm"
+                              variant="ghost"
+                              size="icon"
                               onClick={() => handleToggleShared(session)}
-                              className={`hover-scale ${session.pathway_id ? 'hover:bg-blue-50 hover:border-blue-300' : 'hover:bg-purple-50 hover:border-purple-300'}`}
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
                               title={session.pathway_id ? 'Make shared across pathways' : 'Separate per pathway'}
                             >
                               {session.pathway_id ? <LinkIcon className="w-4 h-4" /> : <Users2 className="w-4 h-4" />}
                             </Button>
                           )}
                           <Button
-                            variant="outline"
-                            size="sm"
+                            variant="ghost"
+                            size="icon"
                             onClick={() => handleDelete(session.id)}
-                            className="hover-scale hover:bg-red-50 hover:border-red-300"
+                            className="h-8 w-8 text-muted-foreground hover:text-rose-600 hover:bg-rose-50"
                             title="Delete session"
                           >
                             <Trash2 className="w-4 h-4" />
