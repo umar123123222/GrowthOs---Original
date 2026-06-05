@@ -28,8 +28,10 @@ export function SuspensionDialog({ open, onOpenChange, studentName, onConfirm, l
   const [note, setNote] = useState('');
   const [autoUnsuspendDate, setAutoUnsuspendDate] = useState<Date | undefined>();
   const [scheduleSuspendDate, setScheduleSuspendDate] = useState<Date | undefined>();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const handleConfirm = () => {
+    setConfirmOpen(false);
     onConfirm({ note, autoUnsuspendDate, scheduleSuspendDate });
     setNote('');
     setAutoUnsuspendDate(undefined);
