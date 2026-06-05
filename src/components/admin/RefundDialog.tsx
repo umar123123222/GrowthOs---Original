@@ -9,7 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { AlertTriangle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Loader2, Upload, X } from 'lucide-react';
+
+const CURRENCY_SYMBOLS: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', INR: '₹', PKR: 'Rs ', CAD: 'C$', AUD: 'A$' };
+const sym = (c?: string) => CURRENCY_SYMBOLS[(c || 'PKR').toUpperCase()] || `${c || ''} `;
 
 interface RefundableInvoice {
   id: string;
@@ -37,11 +40,15 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
   const [reason, setReason] = useState('');
   const [refundMethod, setRefundMethod] = useState('bank_transfer');
   const [refundDate, setRefundDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [currency, setCurrency] = useState<string>('PKR');
+  const [proofFile, setProofFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!open || !studentId) return;
     (async () => {
       setLoading(true);
+      const { data: cs } = await supabase.from('company_settings').select('currency').limit(1).maybeSingle();
+      if (cs?.currency) setCurrency(cs.currency);
       const { data, error } = await supabase
         .from('invoices')
         .select('id, installment_number, amount, course_id, pathway_id')
@@ -96,6 +103,23 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
     setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      let proofPayload: { filename: string; content_base64: string; content_type: string } | undefined;
+      if (proofFile) {
+        if (proofFile.size > 8 * 1024 * 1024) {
+          toast({ title: 'File too large', description: 'Proof must be under 8 MB.', variant: 'destructive' });
+          setSubmitting(false);
+          return;
+        }
+        const buf = await proofFile.arrayBuffer();
+        let binary = '';
+        const bytes = new Uint8Array(buf);
+        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+        proofPayload = {
+          filename: proofFile.name,
+          content_base64: btoa(binary),
+          content_type: proofFile.type || 'application/octet-stream',
+        };
+      }
       const { data, error } = await supabase.functions.invoke('process-refund', {
         body: {
           invoice_ids: Array.from(selected),
@@ -104,6 +128,7 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
           refund_date: new Date(refundDate).toISOString(),
           performed_by: user?.id,
           suspend_lms: true,
+          proof_attachment: proofPayload,
         },
       });
       if (error) throw error;
@@ -111,6 +136,7 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
       toast({ title: 'Refund processed', description: `${selected.size} installment(s) refunded. Confirmation emailed to ${studentEmail || 'student'}.` });
       onOpenChange(false);
       setReason('');
+      setProofFile(null);
       onSuccess?.();
     } catch (e: any) {
       toast({ title: 'Refund failed', description: e?.message || 'Unknown error', variant: 'destructive' });
@@ -143,7 +169,7 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
                     <div className="text-sm font-medium">Installment #{inv.installment_number}</div>
                     <div className="text-xs text-muted-foreground">{inv.course_name || inv.pathway_name || 'General'}</div>
                   </div>
-                  <div className="font-semibold">${inv.amount.toLocaleString()}</div>
+                  <div className="font-semibold">{sym(currency)}{inv.amount.toLocaleString()}</div>
                 </label>
               ))}
             </div>
@@ -173,10 +199,36 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
               <Textarea id="refund-reason" rows={3} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Student requested refund within cooling-off period" />
             </div>
 
+            <div>
+              <Label htmlFor="refund-proof">Proof of Refund <span className="text-muted-foreground text-xs">(optional, max 8 MB — will be attached to email)</span></Label>
+              {proofFile ? (
+                <div className="flex items-center justify-between gap-2 p-2 border rounded-md bg-muted/30">
+                  <div className="text-sm truncate flex-1">
+                    <span className="font-medium">{proofFile.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">({(proofFile.size / 1024).toFixed(1)} KB)</span>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setProofFile(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <label htmlFor="refund-proof" className="flex items-center justify-center gap-2 p-3 border border-dashed rounded-md text-sm text-muted-foreground hover:bg-muted/30 cursor-pointer">
+                  <Upload className="w-4 h-4" /> Click to upload receipt / screenshot (PDF, image)
+                </label>
+              )}
+              <Input
+                id="refund-proof"
+                type="file"
+                className="hidden"
+                accept="image/*,application/pdf"
+                onChange={e => setProofFile(e.target.files?.[0] || null)}
+              />
+            </div>
+
             <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-900">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <div>
-                Total to refund: <strong>${total.toLocaleString()}</strong>. The student's LMS access will be suspended immediately.
+                Total to refund: <strong>{sym(currency)}{total.toLocaleString()}</strong>. The student's LMS access will be suspended immediately.
               </div>
             </div>
           </div>

@@ -14,6 +14,11 @@ interface RefundRequest {
   refund_date?: string;
   performed_by?: string;
   suspend_lms?: boolean;
+  proof_attachment?: {
+    filename: string;
+    content_base64: string;
+    content_type?: string;
+  };
 }
 
 function currencySymbol(c: string = "PKR") {
@@ -26,7 +31,14 @@ function sanitizeEmail(value: string): string {
   return m ? m[1].trim() : trimmed;
 }
 
-async function sendEmail(to: string, subject: string, html: string, cc?: string, fromNameOverride?: string) {
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  cc?: string,
+  fromNameOverride?: string,
+  attachments?: Array<{ filename: string; content: string; content_type?: string }>,
+) {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   const fromEmail = Deno.env.get("SMTP_FROM_EMAIL");
   const fromName = fromNameOverride || Deno.env.get("SMTP_FROM_NAME") || "IDMPakistan";
@@ -42,6 +54,13 @@ async function sendEmail(to: string, subject: string, html: string, cc?: string,
     html,
   };
   if (cc) payload.cc = [cc];
+  if (attachments?.length) {
+    payload.attachments = attachments.map(a => ({
+      filename: a.filename,
+      content: a.content,
+      ...(a.content_type ? { content_type: a.content_type } : {}),
+    }));
+  }
   const { error } = await resend.emails.send(payload as any);
   if (error) console.error("Resend error:", error);
 }
@@ -59,6 +78,7 @@ function buildEmailHtml(p: {
   companyEmail: string;
   companyPhone: string;
   companyAddress: string;
+  hasProof?: boolean;
 }) {
   const sym = currencySymbol(p.currency);
   const installments = p.installmentNumbers.map(n => `#${n}`).join(", ");
@@ -79,7 +99,7 @@ function buildEmailHtml(p: {
           <tr><td style="padding:12px 8px;background:#f3f4f6;font-size:16px;"><strong>Total Refunded</strong></td><td style="padding:12px 8px;background:#f3f4f6;font-size:16px;text-align:right;"><strong>${sym}${p.totalAmount.toLocaleString()}</strong></td></tr>
         </table>
         ${p.reason ? `<p style="background:#fffbeb;border-left:3px solid #f59e0b;padding:10px 14px;margin:16px 0;"><strong>Note:</strong> ${p.reason}</p>` : ""}
-        <p>Your LMS access has been suspended as part of this refund. You will receive another email with the transaction details and proof of the refund. If this was done in error, please reply to this email.</p>
+        <p>Your LMS access has been suspended as part of this refund.${p.hasProof ? " A copy of the refund proof is attached to this email." : ""} If this was done in error, please reply to this email.</p>
         <hr style="border:none;border-top:1px solid #eee;margin:24px 0;"/>
         <div style="font-size:13px;color:#666;line-height:1.6;">
           <p style="margin:0;"><strong>${p.companyName}</strong></p>
@@ -271,9 +291,17 @@ const handler = async (req: Request): Promise<Response> => {
         companyEmail,
         companyPhone,
         companyAddress,
+        hasProof: !!body.proof_attachment,
       });
       const cc = Deno.env.get("BILLING_EMAIL_CC") || undefined;
-      await sendEmail(studentEmail, `Refund Confirmation — ${companyName}`, html, cc, companyName);
+      const attachments = body.proof_attachment
+        ? [{
+            filename: body.proof_attachment.filename,
+            content: body.proof_attachment.content_base64,
+            content_type: body.proof_attachment.content_type,
+          }]
+        : undefined;
+      await sendEmail(studentEmail, `Refund Confirmation — ${companyName}`, html, cc, companyName, attachments);
     }
 
     return new Response(JSON.stringify({
