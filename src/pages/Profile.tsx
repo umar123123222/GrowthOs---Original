@@ -32,6 +32,7 @@ const Profile = () => {
     full_name: '',
     email: ''
   });
+  const [batchName, setBatchName] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Update profile data when user changes
@@ -43,6 +44,35 @@ const Profile = () => {
       });
     }
   }, [user]);
+
+  // Fetch active batch for the student
+  useEffect(() => {
+    let cancelled = false;
+    const fetchBatch = async () => {
+      if (!user?.id) return;
+      try {
+        const { data: enr } = await supabase
+          .from('course_enrollments')
+          .select('batch_id')
+          .eq('student_id', user.id)
+          .eq('status', 'active')
+          .not('batch_id', 'is', null)
+          .limit(1);
+        const batchId = enr?.[0]?.batch_id;
+        if (!batchId) { if (!cancelled) setBatchName(null); return; }
+        const { data: batch } = await supabase
+          .from('batches')
+          .select('name')
+          .eq('id', batchId)
+          .maybeSingle();
+        if (!cancelled) setBatchName(batch?.name || null);
+      } catch {
+        if (!cancelled) setBatchName(null);
+      }
+    };
+    fetchBatch();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const updateProfile = async () => {
     if (!user?.id) {
