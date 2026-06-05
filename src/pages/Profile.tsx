@@ -296,6 +296,25 @@ const Profile = () => {
               <p className="text-xs text-blue-600">Email cannot be changed</p>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Student ID</Label>
+                <Input
+                  value={user.id}
+                  readOnly
+                  className="bg-gray-100 border-gray-300 cursor-not-allowed font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Batch</Label>
+                <Input
+                  value={batchName || 'N/A'}
+                  readOnly
+                  className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                />
+              </div>
+            </div>
+
             <div className="flex justify-end pt-4">
               <Button 
                 onClick={updateProfile}
