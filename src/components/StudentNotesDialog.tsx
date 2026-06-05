@@ -289,9 +289,9 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl p-0 gap-0 overflow-hidden max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl p-0 gap-0 overflow-hidden h-[85vh] max-h-[85vh] flex flex-col">
         {/* Header */}
-        <DialogHeader className="px-6 pt-5 pb-4 border-b bg-muted/40 space-y-0">
+        <DialogHeader className="px-6 pt-5 pb-4 border-b bg-muted/40 space-y-0 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm shrink-0">
               {getInitials(studentName)}
@@ -310,7 +310,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
         </DialogHeader>
 
         {/* Composer */}
-        <div className="px-6 py-4 border-b bg-background">
+        <div className="px-6 py-4 border-b bg-background shrink-0">
           <div className="rounded-lg border bg-card focus-within:ring-2 focus-within:ring-ring focus-within:border-ring transition-all">
             <Textarea
               placeholder="Add a note about this student..."
@@ -348,7 +348,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
 
         {/* Filter chips */}
         {notes.length > 0 && (
-          <div className="px-6 py-3 border-b bg-background flex flex-wrap gap-1.5">
+          <div className="px-6 py-3 border-b bg-background flex flex-wrap gap-1.5 shrink-0">
             {filters.map((f) => {
               const count = counts[f.key];
               const active = filter === f.key;
@@ -380,8 +380,9 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
         )}
 
         {/* Timeline */}
-        <ScrollArea className="flex-1 min-h-0">
+        <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="px-6 py-4">
+
             {loading ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -470,7 +471,8 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
+
       </DialogContent>
     </Dialog>
   );
