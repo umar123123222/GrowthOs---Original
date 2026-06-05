@@ -323,7 +323,7 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
               </div>
 
               {/* Assignment List */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2 min-h-0">
+              <div className="max-h-[55vh] overflow-y-auto custom-scrollbar pr-1 space-y-2">
                 {assignments.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                     <ClipboardList className="w-10 h-10 mb-3 opacity-30" />
