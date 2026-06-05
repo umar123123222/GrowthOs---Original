@@ -2,3 +2,6 @@ project_id = "majqoqagohicjigmsilu"
 
 [functions.process-refund]
 verify_jwt = true
+
+[functions.session-heartbeat]
+verify_jwt = false

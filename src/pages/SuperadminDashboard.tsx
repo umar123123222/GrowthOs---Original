@@ -9,6 +9,7 @@ import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
 import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
 import { StudentsManagement } from '@/components/superadmin/StudentsManagement';
+import { ActiveSessionsManagement } from '@/components/superadmin/ActiveSessionsManagement';
 import { SuccessSessionsManagement } from '@/components/superadmin/SuccessSessionsManagement';
 import { SubmissionsManagement } from '@/components/assignments/SubmissionsManagement';
 import { SupportManagement } from '@/components/superadmin/SupportManagement';
@@ -57,6 +58,8 @@ export default function SuperadminDashboard() {
         return <SuccessSessionsManagement />;
       case 'students':
         return <StudentsManagement />;
+      case 'active-sessions':
+        return <ActiveSessionsManagement />;
       case 'submissions':
         return <SubmissionsManagement userRole="superadmin" />;
       case 'support':

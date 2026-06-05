@@ -17,6 +17,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PendingInvoice } from "@/types/common";
 import { logger } from "@/lib/logger";
 import { RoleGuard } from "@/components/RoleGuard";
+import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
 
 const AdminTabRedirect = ({ user, tab }: { user: any; tab: string }) => {
   if (user?.role === 'superadmin') return <Navigate to={`/superadmin?tab=${tab}`} replace />;
@@ -140,6 +141,7 @@ const App = () => {
   const { user, loading, refreshUser } = useAuth();
   const [showPaywall, setShowPaywall] = useState(false);
   const [pendingInvoice, setPendingInvoice] = useState<PendingInvoice | null>(null);
+  useSessionHeartbeat(user?.id);
 
   // Note: Global redirect protection is now handled in main.tsx
 
