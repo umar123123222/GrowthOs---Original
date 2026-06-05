@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { MessageSquare, Send, Loader2, ShieldAlert } from 'lucide-react';
+import { MessageSquare, Send, Loader2, ShieldAlert, CalendarClock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,9 +14,12 @@ interface Note {
   note: string;
   created_at: string;
   created_by_name: string;
-  type: 'note' | 'suspension';
+  type: 'note' | 'suspension' | 'fee_extension';
   autoUnsuspendDate?: string;
+  previousDueDate?: string;
+  newDueDate?: string;
 }
+
 
 interface StudentNotesDialogProps {
   open: boolean;
@@ -42,20 +45,36 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
   const fetchNotes = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('user_activity_logs')
-        .select('id, metadata, occurred_at, activity_type')
-        .eq('user_id', studentId)
-        .in('activity_type', ['admin_note', 'lms_suspended'])
-        .order('occurred_at', { ascending: false });
+      const [activityRes, extensionRes] = await Promise.all([
+        supabase
+          .from('user_activity_logs')
+          .select('id, metadata, occurred_at, activity_type')
+          .eq('user_id', studentId)
+          .in('activity_type', ['admin_note', 'lms_suspended'])
+          .order('occurred_at', { ascending: false }),
+        supabase
+          .from('admin_logs')
+          .select('id, data, created_at, performed_by, action')
+          .eq('action', 'fee_extension_granted')
+          .filter('data->>target_user_id', 'eq', studentId)
+          .order('created_at', { ascending: false }),
+      ]);
 
-      if (error) throw error;
+      if (activityRes.error) throw activityRes.error;
 
-      // Resolve creator names
-      const creatorIds = [...new Set((data || []).map(d => {
-        const meta = d.metadata as any;
-        return meta?.created_by || meta?.suspended_by;
-      }).filter(Boolean))];
+      const activityData = activityRes.data || [];
+      const extensionData = extensionRes.data || [];
+
+      // Resolve creator names from both sources
+      const creatorIds = [
+        ...new Set([
+          ...activityData.map(d => {
+            const meta = d.metadata as any;
+            return meta?.created_by || meta?.suspended_by;
+          }),
+          ...extensionData.map(e => e.performed_by),
+        ].filter(Boolean)),
+      ];
       let creatorMap: Record<string, string> = {};
       if (creatorIds.length > 0) {
         const { data: creators } = await supabase
@@ -65,7 +84,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
         creatorMap = Object.fromEntries((creators || []).map(c => [c.id, c.full_name]));
       }
 
-      setNotes((data || []).map(d => {
+      const activityNotes: Note[] = activityData.map(d => {
         const meta = d.metadata as any;
         const isSuspension = d.activity_type === 'lms_suspended';
         return {
@@ -76,7 +95,28 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
           type: isSuspension ? 'suspension' as const : 'note' as const,
           autoUnsuspendDate: isSuspension ? meta?.auto_unsuspend_date : undefined,
         };
-      }));
+      });
+
+      const extensionNotes: Note[] = extensionData.map(e => {
+        const d = (e.data as any) || {};
+        const reason = d.reason ? ` Reason: ${d.reason}` : '';
+        const instLabel = d.installment_number ? ` (Installment #${d.installment_number})` : '';
+        return {
+          id: e.id,
+          note: `Fee due date extended${instLabel}.${reason}`,
+          created_at: e.created_at,
+          created_by_name: e.performed_by ? (creatorMap[e.performed_by] || 'Admin') : 'System',
+          type: 'fee_extension' as const,
+          previousDueDate: d.previous_due_date,
+          newDueDate: d.new_due_date,
+        };
+      });
+
+      const merged = [...activityNotes, ...extensionNotes].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setNotes(merged);
+
     } catch (error) {
       console.error('Error fetching notes:', error);
     } finally {
@@ -153,14 +193,27 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
             ) : (
               <div className="space-y-3">
                 {notes.map((note) => (
-                  <div key={note.id} className={`rounded-lg border p-3 space-y-1 ${note.type === 'suspension' ? 'border-red-200 bg-red-50' : ''}`}>
+                  <div key={note.id} className={`rounded-lg border p-3 space-y-1 ${note.type === 'suspension' ? 'border-red-200 bg-red-50' : note.type === 'fee_extension' ? 'border-amber-200 bg-amber-50' : ''}`}>
                     {note.type === 'suspension' && (
                       <div className="flex items-center gap-1.5 text-xs font-medium text-red-600 mb-1">
                         <ShieldAlert className="w-3.5 h-3.5" />
                         Suspension
                       </div>
                     )}
+                    {note.type === 'fee_extension' && (
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 mb-1">
+                        <CalendarClock className="w-3.5 h-3.5" />
+                        Fee Extension
+                      </div>
+                    )}
                     <p className="text-sm whitespace-pre-wrap">{note.note}</p>
+                    {note.type === 'fee_extension' && (note.previousDueDate || note.newDueDate) && (
+                      <p className="text-xs text-amber-700">
+                        {note.previousDueDate && <span className="line-through opacity-70">{format(new Date(note.previousDueDate), 'MMM d, yyyy')}</span>}
+                        {note.previousDueDate && note.newDueDate && ' → '}
+                        {note.newDueDate && <span className="font-medium">{format(new Date(note.newDueDate), 'MMM d, yyyy')}</span>}
+                      </p>
+                    )}
                     {note.autoUnsuspendDate && (
                       <p className="text-xs text-red-500">Auto-unsuspend: {format(new Date(note.autoUnsuspendDate), 'MMM d, yyyy')}</p>
                     )}
@@ -169,6 +222,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
                       <span>{format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}</span>
                     </div>
                   </div>
+
                 ))}
               </div>
             )}
