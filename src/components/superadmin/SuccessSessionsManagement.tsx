@@ -635,7 +635,9 @@ export function SuccessSessionsManagement() {
                 title: session.title,
                 description: session.description,
                 meeting_link: session.link,
-                start_datetime: session.start_time
+                start_datetime: session.start_time,
+                mentor_name: session.mentor_name,
+                cta_path: '/live-sessions',
               }
             });
           } catch (notifyError) {
