@@ -270,6 +270,9 @@ const handler = async (req: Request): Promise<Response> => {
       meeting_link,
       start_datetime,
       timeline_item_id,
+      mentor_name,
+      cta_path,
+      is_reminder,
     } = body;
 
     // Validate required fields
