@@ -293,6 +293,7 @@ const handler = async (req: Request): Promise<Response> => {
         companyName,
         companyEmail,
         companyPhone,
+        companyPhone2,
         companyAddress,
         hasProof: !!body.proof_attachment,
       });
