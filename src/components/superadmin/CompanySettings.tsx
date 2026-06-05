@@ -61,6 +61,7 @@ interface CompanySettingsData {
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
   onboarding_video_url?: string;
+  onboarding_video_enabled?: boolean;
   onboarding_document_url?: string;
   onboarding_document_name?: string;
   // Live Chat
