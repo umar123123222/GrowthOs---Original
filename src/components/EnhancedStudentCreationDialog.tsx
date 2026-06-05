@@ -5,9 +5,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, BadgePercent, BookOpen, Route, Settings2, ChevronDown, ChevronUp, Users, UserPlus, Upload } from 'lucide-react'
+import { Loader2, BadgePercent, BookOpen, Route, Settings2, ChevronDown, ChevronUp, Users, UserPlus, Upload, User, Mail, Phone, GraduationCap, CheckCircle2, Sparkles } from 'lucide-react'
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions'
 import { useEnhancedStudentCreation } from '@/hooks/useEnhancedStudentCreation'
 import { useAuth } from '@/hooks/useAuth'
@@ -294,279 +293,322 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
 
   return (
     <Dialog open={open} onOpenChange={(open) => !isSubmitting && onOpenChange(open)}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40">
-        <DialogHeader>
-          <DialogTitle>
-            {showSuccess ? '✅ Student Created Successfully!' : 'Add New Student'}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[92vh] overflow-hidden p-0 gap-0">
+        {/* Decorative header */}
+        <div className="relative border-b bg-gradient-to-br from-primary/5 via-background to-background px-6 pt-6 pb-5">
+          <DialogHeader className="space-y-1">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                {showSuccess ? <CheckCircle2 className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-semibold tracking-tight">
+                  {showSuccess ? 'Student Created Successfully' : 'Add New Student'}
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {showSuccess
+                    ? 'Credentials have been delivered to their inbox.'
+                    : 'Enroll a new student and configure their plan in one go.'}
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
+
+        <div className="overflow-y-auto px-6 py-5 max-h-[calc(92vh-7rem)] scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
         
         {showSuccess ? (
-          <div className="space-y-4 py-6">
-            <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
-                <strong>{createdStudentInfo?.full_name}</strong> has been added successfully.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Student ID: <strong>{createdStudentInfo?.student_id}</strong>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Credentials have been sent to <strong>{createdStudentInfo?.email}</strong>
-              </p>
+          <div className="space-y-6 py-8">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-4 ring-emerald-50 dark:ring-emerald-500/5">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-base font-medium text-foreground">
+                  {createdStudentInfo?.full_name} is all set
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Credentials sent to <span className="font-medium text-foreground">{createdStudentInfo?.email}</span>
+                </p>
+              </div>
+            </div>
+            <div className="mx-auto max-w-xs rounded-lg border bg-muted/30 px-4 py-3 text-center">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Student ID</p>
+              <p className="text-sm font-mono font-semibold text-foreground mt-0.5">{createdStudentInfo?.student_id}</p>
             </div>
           </div>
         ) : (
           <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as 'single' | 'bulk')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="single" className="gap-2">
+            <TabsList className="grid w-full grid-cols-2 mb-5 h-11 p-1 bg-muted/60">
+              <TabsTrigger value="single" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <UserPlus className="h-4 w-4" />
                 Single Student
               </TabsTrigger>
-              <TabsTrigger value="bulk" className="gap-2">
+              <TabsTrigger value="bulk" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Upload className="h-4 w-4" />
                 Bulk Upload
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="single">
-          <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Two-column grid for main fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Student Name *</Label>
-              <Input
-                id="full_name"
-                value={formData.full_name}
-                onChange={(e) => handleInputChange('full_name', e.target.value)}
-                placeholder="Enter student's full name"
-                required
-              />
+            <TabsContent value="single" className="mt-0">
+          <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Personal Info Section */}
+          <div className="rounded-xl border bg-card p-5 space-y-4">
+            <div className="flex items-center gap-2 pb-1">
+              <User className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Personal Information</h3>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="Enter email address"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => {
-                  let value = e.target.value.trim()
-                  // Keep only digits and optional leading +
-                  value = value.replace(/[^\d+]/g, '')
-                  // Ensure only one + at the start
-                  if (value.indexOf('+') > 0) {
-                    value = value.replace(/\+/g, '')
-                  }
-                  // Convert 92xxxxxxxxxx to +92xxxxxxxxxx
-                  if (value.startsWith('92') && !value.startsWith('+')) {
-                    value = '+' + value
-                  }
-                  handleInputChange('phone', value)
-                }}
-                placeholder="+923001234567"
-                pattern="^\+?[1-9]\d{1,14}$"
-                title="Enter phone in E.164 format (e.g., +923001234567)"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="installments">Number of Installments *</Label>
-              <Select 
-                value={formData.installment_count.toString()} 
-                onValueChange={(value) => handleInputChange('installment_count', parseInt(value))}
-                disabled={installmentLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select installment plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {installmentOptions.map((option) => {
-                    const count = parseInt(option.value.split('_')[0])
-                    return (
-                      <SelectItem key={option.value} value={count.toString()}>
-                        {option.label}
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="full_name" className="text-xs font-medium text-muted-foreground">Student Name *</Label>
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => handleInputChange('full_name', e.target.value)}
+                  placeholder="John Doe"
+                  className="h-10"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">Email Address *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="student@example.com"
+                    className="h-10 pl-9"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-1.5">
+                <Label htmlFor="phone" className="text-xs font-medium text-muted-foreground">Phone Number *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      let value = e.target.value.trim()
+                      value = value.replace(/[^\d+]/g, '')
+                      if (value.indexOf('+') > 0) {
+                        value = value.replace(/\+/g, '')
+                      }
+                      if (value.startsWith('92') && !value.startsWith('+')) {
+                        value = '+' + value
+                      }
+                      handleInputChange('phone', value)
+                    }}
+                    placeholder="+923001234567"
+                    pattern="^\+?[1-9]\d{1,14}$"
+                    title="Enter phone in E.164 format (e.g., +923001234567)"
+                    className="h-10 pl-9"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-1.5">
+                <Label htmlFor="installments" className="text-xs font-medium text-muted-foreground">Number of Installments *</Label>
+                <Select 
+                  value={formData.installment_count.toString()} 
+                  onValueChange={(value) => handleInputChange('installment_count', parseInt(value))}
+                  disabled={installmentLoading}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select installment plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {installmentOptions.map((option) => {
+                      const count = parseInt(option.value.split('_')[0])
+                      return (
+                        <SelectItem key={option.value} value={count.toString()}>
+                          {option.label}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
 
+
           {/* Course/Pathway Selection */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Enrollment *</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Enrollment Type</Label>
-                <RadioGroup
-                  value={formData.enrollment_type}
-                  onValueChange={(value) => handleEnrollmentTypeChange(value as EnrollmentType)}
-                  className="flex gap-4"
+          <div className="rounded-xl border bg-card p-5 space-y-4">
+            <div className="flex items-center gap-2 pb-1">
+              <GraduationCap className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Enrollment <span className="text-destructive">*</span></h3>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Enrollment Type</Label>
+              <RadioGroup
+                value={formData.enrollment_type}
+                onValueChange={(value) => handleEnrollmentTypeChange(value as EnrollmentType)}
+                className="grid grid-cols-2 gap-3"
+              >
+                <label
+                  htmlFor="enroll-course"
+                  className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${
+                    formData.enrollment_type === 'course'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                      : 'border-border hover:border-primary/40 hover:bg-muted/40'
+                  }`}
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="course" id="enroll-course" />
-                    <Label htmlFor="enroll-course" className="flex items-center gap-1.5 cursor-pointer">
-                      <BookOpen className="w-4 h-4" />
-                      Course
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="pathway" id="enroll-pathway" />
-                    <Label htmlFor="enroll-pathway" className="flex items-center gap-1.5 cursor-pointer">
-                      <Route className="w-4 h-4" />
-                      Pathway
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
+                  <RadioGroupItem value="course" id="enroll-course" />
+                  <BookOpen className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Course</span>
+                </label>
+                <label
+                  htmlFor="enroll-pathway"
+                  className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${
+                    formData.enrollment_type === 'pathway'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                      : 'border-border hover:border-primary/40 hover:bg-muted/40'
+                  }`}
+                >
+                  <RadioGroupItem value="pathway" id="enroll-pathway" />
+                  <Route className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Pathway</span>
+                </label>
+              </RadioGroup>
+            </div>
 
-              {formData.enrollment_type === 'course' ? (
-                <div className="space-y-2">
-                  <Label>Select Course *</Label>
-                  <Select
-                    value={formData.course_id}
-                    onValueChange={(value) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        course_id: value,
-                        discount_amount: 0,
-                        discount_percentage: 0,
-                        discount_type: 'none'
-                      }))
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a course" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border z-50">
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.title} - {currency} {(course.price || 0).toLocaleString()}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Select Pathway *</Label>
-                  <Select
-                    value={formData.pathway_id}
-                    onValueChange={(value) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        pathway_id: value,
-                        discount_amount: 0,
-                        discount_percentage: 0,
-                        discount_type: 'none'
-                      }))
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a pathway" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border z-50">
-                      {pathways.map((pathway) => (
-                        <SelectItem key={pathway.id} value={pathway.id}>
-                          {pathway.name} - {currency} {(pathway.price || 0).toLocaleString()}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Show price info */}
-              {selectedPrice > 0 && (
-                <div className="p-3 rounded-lg bg-muted/50 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Fee:</span>
-                    <span className="font-semibold">{currency} {selectedPrice.toLocaleString()}</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Batch Selection (Optional) */}
-          {batches.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Batch Assignment (Optional)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Label>Select Batch</Label>
+            {formData.enrollment_type === 'course' ? (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Select Course *</Label>
                 <Select
-                  value={formData.batch_id || "none"}
+                  value={formData.course_id}
                   onValueChange={(value) => {
-                    setBatchUserSelected(true)
-                    setFormData(prev => ({ ...prev, batch_id: value === "none" ? "" : value }))
+                    setFormData(prev => ({
+                      ...prev,
+                      course_id: value,
+                      discount_amount: 0,
+                      discount_percentage: 0,
+                      discount_type: 'none'
+                    }))
                   }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a batch" />
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select a course" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border z-50">
-                    <SelectItem value="none">No Batch (Use LMS Access Date)</SelectItem>
-                    {batches.map((batch) => (
-                      <SelectItem key={batch.id} value={batch.id}>
-                        {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title} — {currency} {(course.price || 0).toLocaleString()}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  If assigned to a batch, content drip will be calculated from the batch start date instead of LMS access date.
-                </p>
-              </CardContent>
-            </Card>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Select Pathway *</Label>
+                <Select
+                  value={formData.pathway_id}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      pathway_id: value,
+                      discount_amount: 0,
+                      discount_percentage: 0,
+                      discount_type: 'none'
+                    }))
+                  }}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select a pathway" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50">
+                    {pathways.map((pathway) => (
+                      <SelectItem key={pathway.id} value={pathway.id}>
+                        {pathway.name} — {currency} {(pathway.price || 0).toLocaleString()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Show price info */}
+            {selectedPrice > 0 && (
+              <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Total Fee</span>
+                <span className="text-base font-semibold text-foreground">{currency} {selectedPrice.toLocaleString()}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Batch Selection (Optional) */}
+          {batches.length > 0 && (
+            <div className="rounded-xl border bg-card p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">Batch Assignment</h3>
+                </div>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded">Optional</span>
+              </div>
+              <Select
+                value={formData.batch_id || "none"}
+                onValueChange={(value) => {
+                  setBatchUserSelected(true)
+                  setFormData(prev => ({ ...prev, batch_id: value === "none" ? "" : value }))
+                }}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Select a batch" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  <SelectItem value="none">No Batch (Use LMS Access Date)</SelectItem>
+                  {batches.map((batch) => (
+                    <SelectItem key={batch.id} value={batch.id}>
+                      {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                If assigned to a batch, content drip is calculated from the batch start date instead of the LMS access date.
+              </p>
+            </div>
           )}
+
+
 
           {/* Access Settings Section (Drip/Sequential Override) */}
           {canApplyDiscount && (formData.course_id || formData.pathway_id) && (
             <Collapsible open={accessSettingsOpen} onOpenChange={setAccessSettingsOpen}>
-              <Card className="border-blue-200 bg-blue-50/50">
+              <div className="rounded-xl border bg-card overflow-hidden">
                 <CollapsibleTrigger asChild>
-                  <CardHeader className="pb-3 cursor-pointer hover:bg-blue-100/50 transition-colors">
-                    <CardTitle className="text-sm flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Settings2 className="h-4 w-4" />
-                        Access Settings (Admin Only)
-                      </span>
-                      {accessSettingsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </CardTitle>
-                  </CardHeader>
+                  <button type="button" className="w-full flex items-center justify-between p-5 hover:bg-muted/40 transition-colors text-left">
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="h-4 w-4 text-primary" />
+                      <h3 className="text-sm font-semibold text-foreground">Access Settings</h3>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded">Admin</span>
+                    </div>
+                    {accessSettingsOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                  </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <CardContent className="space-y-4 pt-0">
-                    <p className="text-xs text-muted-foreground">
-                      Override company/course settings for this specific student.
+                  <div className="px-5 pb-5 space-y-4 border-t bg-muted/20">
+                    <p className="text-xs text-muted-foreground pt-4">
+                      Override company/course defaults for this specific student.
                     </p>
-                    
+
                     {/* Content Dripping Override */}
-                    <div className="space-y-3 p-3 rounded-lg border border-blue-200 bg-white/50">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="drip-override" className="flex flex-col">
-                          <span>Override Content Dripping</span>
+                    <div className="space-y-3 p-4 rounded-lg border bg-background">
+                      <div className="flex items-center justify-between gap-4">
+                        <Label htmlFor="drip-override" className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium">Override Content Dripping</span>
                           <span className="font-normal text-xs text-muted-foreground">
                             Control when recordings become available
                           </span>
@@ -577,34 +619,34 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                           onCheckedChange={(checked) => handleInputChange('drip_override', checked ? 1 : 0)}
                         />
                       </div>
-                      
+
                       {formData.drip_override && (
                         <RadioGroup
                           value={formData.drip_enabled ? 'enabled' : 'disabled'}
                           onValueChange={(value) => handleInputChange('drip_enabled', value === 'enabled' ? 1 : 0)}
-                          className="pl-4 space-y-2"
+                          className="pl-1 pt-2 space-y-2 border-t pt-3"
                         >
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="disabled" id="drip-disabled" />
-                            <Label htmlFor="drip-disabled" className="font-normal cursor-pointer">
+                            <Label htmlFor="drip-disabled" className="font-normal text-sm cursor-pointer">
                               Disable dripping (all content available immediately)
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="enabled" id="drip-enabled" />
-                            <Label htmlFor="drip-enabled" className="font-normal cursor-pointer">
+                            <Label htmlFor="drip-enabled" className="font-normal text-sm cursor-pointer">
                               Enable dripping (content unlocks over time)
                             </Label>
                           </div>
                         </RadioGroup>
                       )}
                     </div>
-                    
+
                     {/* Sequential Unlock Override */}
-                    <div className="space-y-3 p-3 rounded-lg border border-blue-200 bg-white/50">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="sequential-override" className="flex flex-col">
-                          <span>Override Sequential Unlock</span>
+                    <div className="space-y-3 p-4 rounded-lg border bg-background">
+                      <div className="flex items-center justify-between gap-4">
+                        <Label htmlFor="sequential-override" className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium">Override Sequential Unlock</span>
                           <span className="font-normal text-xs text-muted-foreground">
                             Control whether recordings must be watched in order
                           </span>
@@ -615,72 +657,71 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                           onCheckedChange={(checked) => handleInputChange('sequential_override', checked ? 1 : 0)}
                         />
                       </div>
-                      
+
                       {formData.sequential_override && (
                         <RadioGroup
                           value={formData.sequential_enabled ? 'enabled' : 'disabled'}
                           onValueChange={(value) => handleInputChange('sequential_enabled', value === 'enabled' ? 1 : 0)}
-                          className="pl-4 space-y-2"
+                          className="pl-1 pt-2 space-y-2 border-t pt-3"
                         >
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="disabled" id="sequential-disabled" />
-                            <Label htmlFor="sequential-disabled" className="font-normal cursor-pointer">
+                            <Label htmlFor="sequential-disabled" className="font-normal text-sm cursor-pointer">
                               Disable sequential unlock (watch any recording)
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="enabled" id="sequential-enabled" />
-                            <Label htmlFor="sequential-enabled" className="font-normal cursor-pointer">
+                            <Label htmlFor="sequential-enabled" className="font-normal text-sm cursor-pointer">
                               Enable sequential unlock (must watch in order)
                             </Label>
                           </div>
                         </RadioGroup>
                       )}
                     </div>
-                  </CardContent>
+                  </div>
                 </CollapsibleContent>
-              </Card>
+              </div>
             </Collapsible>
           )}
 
-          {/* Admin-Only Discount Section - Full Width */}
+          {/* Admin-Only Discount Section */}
           {canApplyDiscount && selectedPrice > 0 && (
-            <Card className="border-orange-200 bg-orange-50/50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <BadgePercent className="h-4 w-4" />
-                  Discount (Admin Only)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Discount Type</Label>
-                    <Select
-                      value={formData.discount_type}
-                      onValueChange={(value: 'none' | 'fixed' | 'percentage') => {
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          discount_type: value,
-                          discount_amount: 0,
-                          discount_percentage: 0
-                        }))
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Discount</SelectItem>
-                        <SelectItem value="fixed">Fixed Amount</SelectItem>
-                        <SelectItem value="percentage">Percentage</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <div className="rounded-xl border bg-card p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <BadgePercent className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Discount</h3>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded">Admin</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Discount Type</Label>
+                  <Select
+                    value={formData.discount_type}
+                    onValueChange={(value: 'none' | 'fixed' | 'percentage') => {
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        discount_type: value,
+                        discount_amount: 0,
+                        discount_percentage: 0
+                      }))
+                    }}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Discount</SelectItem>
+                      <SelectItem value="fixed">Fixed Amount</SelectItem>
+                      <SelectItem value="percentage">Percentage</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 {formData.discount_type === 'fixed' && (
-                  <div className="space-y-2">
-                    <Label>Discount Amount ({currency})</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Discount Amount ({currency})</Label>
                     <Input
                       type="number"
                       min="0"
@@ -692,13 +733,14 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                         handleInputChange('discount_amount', Math.min(selectedPrice, Math.max(0, value)))
                       }}
                       placeholder="0.00"
+                      className="h-10"
                     />
                   </div>
                 )}
 
                 {formData.discount_type === 'percentage' && (
-                  <div className="space-y-2">
-                    <Label>Discount Percentage (%)</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Discount Percentage (%)</Label>
                     <Input
                       type="number"
                       min="0"
@@ -710,68 +752,76 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                         handleInputChange('discount_percentage', Math.min(100, Math.max(0, value)))
                       }}
                       placeholder="0.00"
+                      className="h-10"
                     />
                   </div>
                 )}
-                </div>
+              </div>
 
-                {formData.discount_type !== 'none' && (
-                  <div className="pt-2 space-y-1 border-t border-orange-200">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Original Fee:</span>
-                      <span className="font-medium">{currency} {calculatedAmounts.originalFee.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-orange-600">
-                      <span>Discount:</span>
-                      <span className="font-medium">- {currency} {calculatedAmounts.discountApplied.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-base font-semibold border-t border-orange-200 pt-1">
-                      <span>Final Fee:</span>
-                      <span>{currency} {calculatedAmounts.finalAmount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Per Installment:</span>
-                      <span>{currency} {calculatedAmounts.perInstallment.toLocaleString()}</span>
-                    </div>
+              {formData.discount_type !== 'none' && (
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Original Fee</span>
+                    <span className="font-medium">{currency} {calculatedAmounts.originalFee.toLocaleString()}</span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400">
+                    <span>Discount Applied</span>
+                    <span className="font-medium">− {currency} {calculatedAmounts.discountApplied.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-semibold border-t pt-2">
+                    <span>Final Fee</span>
+                    <span className="text-primary">{currency} {calculatedAmounts.finalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Per Installment</span>
+                    <span>{currency} {calculatedAmounts.perInstallment.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
-          
-            <div className="flex gap-2 pt-4">
+
+            {/* Submission status */}
+            {(isLoading || isSubmitting) && currentStep && (
+              <div className="rounded-lg border bg-primary/5 px-4 py-3 flex items-center gap-3">
+                <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">{currentStep}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentStep.includes('account') && 'Step 1 of 3'}
+                    {currentStep.includes('profile') && 'Step 2 of 3'}
+                    {currentStep.includes('email') && 'Step 3 of 3 — Almost done!'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2 sticky bottom-0 -mx-6 -mb-5 px-6 py-4 bg-background/95 backdrop-blur border-t">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={isLoading || isSubmitting}
+                className="sm:flex-none"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading || isSubmitting || !isFormValid || installmentLoading}
+                className="sm:flex-1 gap-2"
               >
-                {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {(isLoading || isSubmitting) ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
                 Create Student
               </Button>
             </div>
-            
-            {(isLoading || isSubmitting) && currentStep && (
-              <div className="pt-2 space-y-2">
-                <p className="text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  {currentStep}
-                </p>
-                <div className="text-xs text-muted-foreground text-center">
-                  {currentStep.includes('account') && 'Step 1/3'}
-                  {currentStep.includes('profile') && 'Step 2/3'}
-                  {currentStep.includes('email') && 'Step 3/3 - Almost done!'}
-                </div>
-              </div>
-            )}
           </form>
             </TabsContent>
+
             
             <TabsContent value="bulk">
               <BulkStudentUpload
@@ -796,6 +846,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             </TabsContent>
           </Tabs>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   )
