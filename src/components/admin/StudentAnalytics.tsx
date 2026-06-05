@@ -620,5 +620,10 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
           <PaymentReports />
         </TabsContent>
       </Tabs>
+      <StudentEngagementDetail
+        open={!!detailStudent}
+        onOpenChange={(o) => { if (!o) setDetailStudent(null); }}
+        student={detailStudent ? { id: detailStudent.id, full_name: detailStudent.full_name, email: detailStudent.email } : null}
+      />
     </div>;
 };
