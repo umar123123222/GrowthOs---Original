@@ -697,7 +697,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                             </td>
                           </tr>
                         )}
-                      </>
+                      </React.Fragment>
                     );
                   })}
                 </tbody>
