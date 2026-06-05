@@ -443,139 +443,147 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
 
 
           {/* Course/Pathway Selection */}
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Enrollment *</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Enrollment Type</Label>
-                <RadioGroup
-                  value={formData.enrollment_type}
-                  onValueChange={(value) => handleEnrollmentTypeChange(value as EnrollmentType)}
-                  className="flex gap-4"
+          <div className="rounded-xl border bg-card p-5 space-y-4">
+            <div className="flex items-center gap-2 pb-1">
+              <GraduationCap className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Enrollment <span className="text-destructive">*</span></h3>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-medium text-muted-foreground">Enrollment Type</Label>
+              <RadioGroup
+                value={formData.enrollment_type}
+                onValueChange={(value) => handleEnrollmentTypeChange(value as EnrollmentType)}
+                className="grid grid-cols-2 gap-3"
+              >
+                <label
+                  htmlFor="enroll-course"
+                  className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${
+                    formData.enrollment_type === 'course'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                      : 'border-border hover:border-primary/40 hover:bg-muted/40'
+                  }`}
                 >
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="course" id="enroll-course" />
-                    <Label htmlFor="enroll-course" className="flex items-center gap-1.5 cursor-pointer">
-                      <BookOpen className="w-4 h-4" />
-                      Course
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="pathway" id="enroll-pathway" />
-                    <Label htmlFor="enroll-pathway" className="flex items-center gap-1.5 cursor-pointer">
-                      <Route className="w-4 h-4" />
-                      Pathway
-                    </Label>
-                  </div>
-                </RadioGroup>
-              </div>
+                  <RadioGroupItem value="course" id="enroll-course" />
+                  <BookOpen className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Course</span>
+                </label>
+                <label
+                  htmlFor="enroll-pathway"
+                  className={`flex items-center gap-3 rounded-lg border p-3 cursor-pointer transition-all ${
+                    formData.enrollment_type === 'pathway'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                      : 'border-border hover:border-primary/40 hover:bg-muted/40'
+                  }`}
+                >
+                  <RadioGroupItem value="pathway" id="enroll-pathway" />
+                  <Route className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Pathway</span>
+                </label>
+              </RadioGroup>
+            </div>
 
-              {formData.enrollment_type === 'course' ? (
-                <div className="space-y-2">
-                  <Label>Select Course *</Label>
-                  <Select
-                    value={formData.course_id}
-                    onValueChange={(value) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        course_id: value,
-                        discount_amount: 0,
-                        discount_percentage: 0,
-                        discount_type: 'none'
-                      }))
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a course" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border z-50">
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.title} - {currency} {(course.price || 0).toLocaleString()}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label>Select Pathway *</Label>
-                  <Select
-                    value={formData.pathway_id}
-                    onValueChange={(value) => {
-                      setFormData(prev => ({
-                        ...prev,
-                        pathway_id: value,
-                        discount_amount: 0,
-                        discount_percentage: 0,
-                        discount_type: 'none'
-                      }))
-                    }}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a pathway" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border z-50">
-                      {pathways.map((pathway) => (
-                        <SelectItem key={pathway.id} value={pathway.id}>
-                          {pathway.name} - {currency} {(pathway.price || 0).toLocaleString()}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Show price info */}
-              {selectedPrice > 0 && (
-                <div className="p-3 rounded-lg bg-muted/50 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total Fee:</span>
-                    <span className="font-semibold">{currency} {selectedPrice.toLocaleString()}</span>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Batch Selection (Optional) */}
-          {batches.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  Batch Assignment (Optional)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Label>Select Batch</Label>
+            {formData.enrollment_type === 'course' ? (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Select Course *</Label>
                 <Select
-                  value={formData.batch_id || "none"}
+                  value={formData.course_id}
                   onValueChange={(value) => {
-                    setBatchUserSelected(true)
-                    setFormData(prev => ({ ...prev, batch_id: value === "none" ? "" : value }))
+                    setFormData(prev => ({
+                      ...prev,
+                      course_id: value,
+                      discount_amount: 0,
+                      discount_percentage: 0,
+                      discount_type: 'none'
+                    }))
                   }}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a batch" />
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select a course" />
                   </SelectTrigger>
                   <SelectContent className="bg-background border z-50">
-                    <SelectItem value="none">No Batch (Use LMS Access Date)</SelectItem>
-                    {batches.map((batch) => (
-                      <SelectItem key={batch.id} value={batch.id}>
-                        {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
+                    {courses.map((course) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.title} — {currency} {(course.price || 0).toLocaleString()}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  If assigned to a batch, content drip will be calculated from the batch start date instead of LMS access date.
-                </p>
-              </CardContent>
-            </Card>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Select Pathway *</Label>
+                <Select
+                  value={formData.pathway_id}
+                  onValueChange={(value) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      pathway_id: value,
+                      discount_amount: 0,
+                      discount_percentage: 0,
+                      discount_type: 'none'
+                    }))
+                  }}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select a pathway" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-background border z-50">
+                    {pathways.map((pathway) => (
+                      <SelectItem key={pathway.id} value={pathway.id}>
+                        {pathway.name} — {currency} {(pathway.price || 0).toLocaleString()}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Show price info */}
+            {selectedPrice > 0 && (
+              <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Total Fee</span>
+                <span className="text-base font-semibold text-foreground">{currency} {selectedPrice.toLocaleString()}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Batch Selection (Optional) */}
+          {batches.length > 0 && (
+            <div className="rounded-xl border bg-card p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-semibold text-foreground">Batch Assignment</h3>
+                </div>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded">Optional</span>
+              </div>
+              <Select
+                value={formData.batch_id || "none"}
+                onValueChange={(value) => {
+                  setBatchUserSelected(true)
+                  setFormData(prev => ({ ...prev, batch_id: value === "none" ? "" : value }))
+                }}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Select a batch" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border z-50">
+                  <SelectItem value="none">No Batch (Use LMS Access Date)</SelectItem>
+                  {batches.map((batch) => (
+                    <SelectItem key={batch.id} value={batch.id}>
+                      {batch.name} (Start: {new Date(batch.start_date).toLocaleDateString()})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                If assigned to a batch, content drip is calculated from the batch start date instead of the LMS access date.
+              </p>
+            </div>
           )}
+
+
 
           {/* Access Settings Section (Drip/Sequential Override) */}
           {canApplyDiscount && (formData.course_id || formData.pathway_id) && (
