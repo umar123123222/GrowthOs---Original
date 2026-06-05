@@ -191,9 +191,14 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       logout: 'bg-gray-100 text-gray-800',
       page_visit: 'bg-cyan-100 text-cyan-800',
       video_watched: 'bg-green-100 text-green-800',
+      video_opened: 'bg-teal-100 text-teal-800',
+      live_session_joined: 'bg-indigo-100 text-indigo-800',
       assignment_submitted: 'bg-purple-100 text-purple-800',
       profile_updated: 'bg-yellow-100 text-yellow-800',
       module_completed: 'bg-emerald-100 text-emerald-800',
+      fee_extension_granted: 'bg-amber-100 text-amber-800',
+      lms_suspended: 'bg-red-100 text-red-800',
+      scheduled_suspension_created: 'bg-orange-100 text-orange-800',
       // Invoice/payment related
       payment_recorded: 'bg-emerald-100 text-emerald-800',
       invoice_status_changed: 'bg-amber-100 text-amber-800',
@@ -216,31 +221,93 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   };
 
   const formatLogDetails = (log: ActivityLog): string => {
-    return log.description || log.action.replace(/_/g, ' ');
+    const data: any = log.data || {};
+    switch (log.action) {
+      case 'video_watched':
+        return `Completed video: ${data.video_title || data.videoId || 'Unknown'}`;
+      case 'video_opened':
+        return `Opened video: ${data.video_title || 'Unknown'}${data.already_watched ? ' (already completed)' : ''}`;
+      case 'live_session_joined':
+        return `Joined live session: ${data.session_title || 'Unknown session'}`;
+      case 'fee_extension_granted':
+        return `Fee due date extended${data.installment_number ? ` (Installment #${data.installment_number})` : ''}`;
+      case 'lms_suspended':
+        return `Student suspended${data.student_name ? `: ${data.student_name}` : ''}`;
+      case 'scheduled_suspension_created':
+        return `Suspension scheduled${data.schedule_suspend_date ? ` for ${new Date(data.schedule_suspend_date).toLocaleDateString()}` : ''}`;
+      case 'page_visit':
+        return `Visited page: ${data.page || '/'}`;
+      default:
+        return log.description || log.action.replace(/_/g, ' ');
+    }
   };
 
   const formatSubDetails = (log: ActivityLog): React.ReactNode => {
-    const data = log.data || {};
-    
-    if (log.action === 'lms_suspended') {
-      const note = data.suspension_note || data.note || data.reason;
+    const data: any = log.data || {};
+    const performerName = log.users?.full_name;
+
+    if (log.action === 'video_watched' || log.action === 'video_opened') {
       return (
-        <div className="space-y-0.5">
-          {note && <div className="text-xs text-destructive font-medium">Reason: {note}</div>}
-          {data.auto_unsuspend_date && (
-            <div className="text-xs">Auto-unsuspend: {new Date(data.auto_unsuspend_date).toLocaleDateString()}</div>
-          )}
-          {log.users?.full_name && <div className="text-xs">By: {log.users.full_name}</div>}
+        <div className="space-y-0.5 text-xs">
+          {data.course_name && <div>Course: <span className="font-medium">{data.course_name}</span></div>}
+          {data.module_name && <div>Module: <span className="font-medium">{data.module_name}</span></div>}
+          <div className={log.action === 'video_watched' || data.already_watched ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+            {log.action === 'video_watched' || data.already_watched ? '✓ Completed' : '○ Not completed'}
+          </div>
         </div>
       );
     }
-    
+
+    if (log.action === 'live_session_joined') {
+      return (
+        <div className="space-y-0.5 text-xs">
+          {data.session_date && <div>Scheduled: {new Date(data.session_date).toLocaleString()}</div>}
+          {data.host_name && <div>Host: {data.host_name}</div>}
+        </div>
+      );
+    }
+
+    if (log.action === 'fee_extension_granted') {
+      return (
+        <div className="space-y-0.5 text-xs">
+          {data.previous_due_date && (
+            <div>From: <span className="line-through opacity-70">{new Date(data.previous_due_date).toLocaleDateString()}</span></div>
+          )}
+          {data.new_due_date && (
+            <div>To: <span className="font-medium text-amber-700">{new Date(data.new_due_date).toLocaleDateString()}</span></div>
+          )}
+          {data.reason && <div className="italic">Reason: "{data.reason}"</div>}
+          {performerName && <div>By: <span className="font-medium">{performerName}</span></div>}
+        </div>
+      );
+    }
+
+    if (log.action === 'lms_suspended' || log.action === 'scheduled_suspension_created') {
+      const note = data.suspension_note || data.note || data.reason;
+      return (
+        <div className="space-y-0.5 text-xs">
+          {note && <div className="text-destructive font-medium">Reason: {note}</div>}
+          {data.schedule_suspend_date && (
+            <div>Scheduled: {new Date(data.schedule_suspend_date).toLocaleDateString()}</div>
+          )}
+          {data.auto_unsuspend_date && (
+            <div>Auto-unsuspend: {new Date(data.auto_unsuspend_date).toLocaleDateString()}</div>
+          )}
+          {performerName ? (
+            <div>By: <span className="font-medium">{performerName}</span></div>
+          ) : (
+            <div className="text-muted-foreground italic">By: System (auto)</div>
+          )}
+        </div>
+      );
+    }
+
     if (log.action === 'admin_note') {
       const note = data.note || data.suspension_note;
       return (
         <div className="space-y-0.5">
           {note && <div className="text-xs italic">"{note}"</div>}
-          {log.users?.full_name && <div className="text-xs">By: {log.users.full_name}</div>}
+          {performerName && <div className="text-xs">By: {performerName}</div>}
         </div>
       );
     }
@@ -256,6 +323,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
 
     return <span className="text-xs text-muted-foreground">—</span>;
   };
+
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = (log.users?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -334,10 +402,16 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     <SelectItem value="login">Login</SelectItem>
                     <SelectItem value="logout">Logout</SelectItem>
                     <SelectItem value="page_visit">Page Visit</SelectItem>
-                    <SelectItem value="video_watched">Video Watched</SelectItem>
+                    <SelectItem value="video_opened">Video Opened</SelectItem>
+                    <SelectItem value="video_watched">Video Completed</SelectItem>
+                    <SelectItem value="live_session_joined">Live Session Joined</SelectItem>
                     <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
                     <SelectItem value="profile_updated">Profile Updated</SelectItem>
                     <SelectItem value="module_completed">Module Completed</SelectItem>
+                    <SelectItem value="fee_extension_granted">Fee Extension Granted</SelectItem>
+                    <SelectItem value="lms_suspended">LMS Suspended</SelectItem>
+                    <SelectItem value="scheduled_suspension_created">Suspension Scheduled</SelectItem>
+
                     {/* Invoice/Payments */}
                     <SelectItem value="payment_recorded">Payment Recorded</SelectItem>
                     <SelectItem value="invoice_status_changed">Invoice Status Changed</SelectItem>

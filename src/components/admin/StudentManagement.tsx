@@ -673,6 +673,18 @@ export const StudentManagement = () => {
         return;
       }
 
+      const reason = window.prompt(
+        `Extend ${student.full_name}'s due date to ${format(newDueDate, 'PPP')}.\n\nReason for extension (optional):`,
+        ''
+      );
+      if (reason === null) {
+        setExtensionPopoverOpen(null);
+        setExtensionDate(undefined);
+        return;
+      }
+
+      const previousDueDate = invoice.extended_due_date || invoice.due_date;
+
       // Update extended_due_date
       const { error: updateError } = await supabase
         .from('invoices')
@@ -683,6 +695,26 @@ export const StudentManagement = () => {
         .eq('id', invoice.id);
 
       if (updateError) throw updateError;
+
+      await logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: student.id,
+        entityType: 'invoice',
+        entityId: invoice.id,
+        action: 'fee_extension_granted',
+        description: `Extended fee due date for ${student.full_name}`,
+        data: {
+          invoice_id: invoice.id,
+          installment_number: invoice.installment_number,
+          previous_due_date: previousDueDate,
+          new_due_date: newDueDate.toISOString(),
+          reason: reason?.trim() || null,
+          lms_reactivated: student.lms_status === 'suspended',
+          student_name: student.full_name,
+        }
+      });
+
+
 
       // If LMS was suspended, reactivate it
       if (student.lms_status === 'suspended') {

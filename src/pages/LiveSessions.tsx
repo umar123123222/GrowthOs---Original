@@ -9,6 +9,8 @@ import { safeLogger } from '@/lib/safe-logger';
 import { VideoPreviewDialog } from '@/components/VideoPreviewDialog';
 import { InactiveLMSBanner } from '@/components/InactiveLMSBanner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { logToAdminLogs } from '@/lib/activity-logger';
+
 import { 
   Video, 
   Calendar, 
@@ -346,6 +348,24 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       const { error } = await supabase
         .from('session_attendance').insert({ user_id: user.id, session_id: sessionId });
       if (error && error.code !== '23505') throw error;
+
+      // Log to admin_logs so it shows in the activity log dialog
+      const session = [...upcomingSessions, ...recordedSessions].find(s => s.id === sessionId);
+      await logToAdminLogs({
+        performed_by: user.id,
+        target_user_id: user.id,
+        entity_type: 'live_session',
+        entity_id: sessionId,
+        action: 'live_session_joined',
+        description: `Joined live session: ${session?.title || 'Unknown'}`,
+        data: {
+          session_id: sessionId,
+          session_title: session?.title || null,
+          session_date: session?.start_time || session?.schedule_date || null,
+          host_name: session?.mentor_name || null,
+        }
+      });
+
       window.open(sessionLink, '_blank');
       await fetchAttendance();
       toast({ title: "Joined Session", description: "Attendance recorded successfully" });
@@ -354,6 +374,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
       toast({ title: "Error", description: "Failed to join session", variant: "destructive" });
     }
   };
+
 
   const hasAttended = (sessionId: string) => attendance.some(a => a.session_id === sessionId);
 

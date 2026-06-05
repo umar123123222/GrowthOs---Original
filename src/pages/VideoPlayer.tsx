@@ -237,6 +237,15 @@ const VideoPlayer = () => {
     const autoMarkWatched = async () => {
       if (!user?.id || !currentVideo?.id) return;
       try {
+        // Check prior watched status to differentiate "opened" vs "completed now"
+        const { data: prior } = await supabase
+          .from('recording_views')
+          .select('watched')
+          .eq('user_id', user.id)
+          .eq('recording_id', currentVideo.id)
+          .maybeSingle();
+        const alreadyWatched = !!prior?.watched;
+
         await supabase.from('recording_views').upsert({
           user_id: user.id,
           recording_id: currentVideo.id,
@@ -245,12 +254,40 @@ const VideoPlayer = () => {
         }, { onConflict: 'user_id,recording_id' });
         setVideoWatched(true);
         logger.info('Auto-marked video as watched:', currentVideo.id);
+
+        const courseNameParam = searchParams.get('course') ? decodeURIComponent(searchParams.get('course') || '') : undefined;
+        const metaBase = {
+          video_title: currentVideo.title,
+          module_name: currentVideo.module,
+          course_name: courseNameParam || currentVideo.courseName || 'N/A',
+          timestamp: new Date().toISOString(),
+          already_watched: alreadyWatched
+        };
+
+        // Always log that the user opened the video (gives admins per-video page-visit context)
+        logUserActivity({
+          user_id: user.id,
+          activity_type: 'video_opened',
+          reference_id: currentVideo.id,
+          metadata: metaBase
+        });
+
+        // Log a completion event only the first time it transitions to watched
+        if (!alreadyWatched) {
+          logUserActivity({
+            user_id: user.id,
+            activity_type: ACTIVITY_TYPES.VIDEO_WATCHED,
+            reference_id: currentVideo.id,
+            metadata: metaBase
+          });
+        }
       } catch (error) {
         logger.error('Error auto-marking video watched:', error);
       }
     };
     autoMarkWatched();
   }, [user?.id, currentVideo?.id]);
+
 
   // Load attachments for current video
   useEffect(() => {

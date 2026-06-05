@@ -879,6 +879,18 @@ export function StudentsManagement() {
         return;
       }
 
+      // Ask the admin for a reason — recorded in the activity log
+      const reason = window.prompt(
+        `Extend ${student.full_name}'s due date to ${format(newDueDate, 'PPP')}.\n\nReason for extension (optional):`,
+        ''
+      );
+      // null = cancelled
+      if (reason === null) {
+        setExtensionPopoverOpen(null);
+        setExtensionDate(undefined);
+        return;
+      }
+
       // Find the latest unpaid invoice
       const { data: invoice, error: invoiceError } = await supabase
         .from('invoices')
@@ -900,6 +912,8 @@ export function StudentsManagement() {
         return;
       }
 
+      const previousDueDate = invoice.extended_due_date || invoice.due_date;
+
       // Update the invoice with extended_due_date
       const { error: updateError } = await supabase
         .from('invoices')
@@ -910,6 +924,27 @@ export function StudentsManagement() {
         .eq('id', invoice.id);
 
       if (updateError) throw updateError;
+
+      // Log fee extension to admin_logs
+      await logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: student.id,
+        entityType: 'invoice',
+        entityId: invoice.id,
+        action: 'fee_extension_granted',
+        description: `Extended fee due date for ${student.full_name}`,
+        data: {
+          invoice_id: invoice.id,
+          installment_number: invoice.installment_number,
+          previous_due_date: previousDueDate,
+          new_due_date: newDueDate.toISOString(),
+          reason: reason?.trim() || null,
+          lms_reactivated: student.lms_status === 'suspended',
+          student_name: student.full_name,
+        }
+      });
+
+
 
       // If student was suspended, reactivate LMS
       if (student.lms_status === 'suspended') {
