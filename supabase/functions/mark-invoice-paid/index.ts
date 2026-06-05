@@ -272,7 +272,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       const { data: rs } = await supabase
         .from("company_settings")
-        .select("company_name, company_logo, currency, contact_email, company_email, primary_phone, secondary_phone, lms_url")
+        .select("company_name, company_logo, currency, contact_email, company_email, primary_phone, secondary_phone, lms_url, billing_email_cc, notification_email_cc")
         .eq("id", 1).maybeSingle();
 
       if (userRec?.email) {
