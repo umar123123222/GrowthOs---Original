@@ -74,7 +74,8 @@ serve(async (req: Request) => {
 
     const companyName = settings?.company_name || 'Learning Platform';
     const siteUrl = settings?.lms_url || Deno.env.get('SITE_URL') || '';
-    const logoUrl = settings?.company_logo || '';
+    const rawLogo = settings?.company_logo || '';
+    const logoUrl = rawLogo && !rawLogo.startsWith('data:') ? rawLogo : '';
     const recordingTitle = lesson.recording_title || 'New Content';
     const hasAssignment = !!lesson.assignment_id;
 
