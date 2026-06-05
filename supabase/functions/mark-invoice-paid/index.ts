@@ -461,8 +461,9 @@ const handler = async (req: Request): Promise<Response> => {
 
           const firstName = (userRec.full_name || 'there').split(' ')[0];
 
-          const headerLogo = logoUrl
-            ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(companyName)}" height="40" style="display:block;height:40px;width:auto;border:0;outline:none;text-decoration:none;" />`
+          const safeLogo = logoUrl && !logoUrl.startsWith('data:') ? logoUrl : '';
+          const headerLogo = safeLogo
+            ? `<img src="${escapeHtml(safeLogo)}" alt="${escapeHtml(companyName)}" height="40" style="display:block;height:40px;width:auto;border:0;outline:none;text-decoration:none;" />`
             : `<div style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;letter-spacing:0.3px;">${escapeHtml(companyName)}</div>`;
 
           const videoBlock = videoEnabled && videoUrl
