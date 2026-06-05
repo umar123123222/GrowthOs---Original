@@ -14,10 +14,12 @@ interface Note {
   note: string;
   created_at: string;
   created_by_name: string;
-  type: 'note' | 'suspension' | 'fee_extension';
+  type: 'note' | 'suspension' | 'fee_extension' | 'scheduled_suspension';
   autoUnsuspendDate?: string;
   previousDueDate?: string;
   newDueDate?: string;
+  scheduleSuspendDate?: string;
+  scheduledStatus?: string;
 }
 
 
@@ -45,7 +47,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
   const fetchNotes = async () => {
     setLoading(true);
     try {
-      const [activityRes, extensionRes] = await Promise.all([
+      const [activityRes, extensionRes, scheduledRes] = await Promise.all([
         supabase
           .from('user_activity_logs')
           .select('id, metadata, occurred_at, activity_type')
@@ -58,12 +60,18 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
           .eq('action', 'fee_extension_granted')
           .filter('data->>target_user_id', 'eq', studentId)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('scheduled_suspensions' as any)
+          .select('id, schedule_suspend_date, auto_unsuspend_date, reason, status, created_by, created_at, executed_at, cancelled_at')
+          .eq('user_id', studentId)
+          .order('created_at', { ascending: false }),
       ]);
 
       if (activityRes.error) throw activityRes.error;
 
       const activityData = activityRes.data || [];
       const extensionData = extensionRes.data || [];
+      const scheduledData = (scheduledRes.data as any[]) || [];
 
       // Resolve creator names from both sources
       const creatorIds = [
@@ -73,6 +81,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
             return meta?.created_by || meta?.suspended_by;
           }),
           ...extensionData.map(e => e.performed_by),
+          ...scheduledData.map(s => s.created_by),
         ].filter(Boolean)),
       ];
       let creatorMap: Record<string, string> = {};
@@ -112,7 +121,26 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
         };
       });
 
-      const merged = [...activityNotes, ...extensionNotes].sort(
+      const scheduledNotes: Note[] = scheduledData.map(s => {
+        const status = s.cancelled_at ? 'cancelled' : s.executed_at ? 'executed' : (s.status || 'pending');
+        const reasonStr = s.reason ? ` Reason: ${s.reason}` : '';
+        const label =
+          status === 'cancelled' ? 'Scheduled suspension cancelled.' :
+          status === 'executed' ? 'Scheduled suspension executed.' :
+          `Suspension scheduled for ${format(new Date(s.schedule_suspend_date), 'MMM d, yyyy h:mm a')}.${s.auto_unsuspend_date ? ` Auto-unsuspend on ${format(new Date(s.auto_unsuspend_date), 'MMM d, yyyy')}.` : ''}`;
+        return {
+          id: `sched-${s.id}`,
+          note: `${label}${reasonStr}`,
+          created_at: s.created_at,
+          created_by_name: s.created_by ? (creatorMap[s.created_by] || 'Admin') : 'System',
+          type: 'scheduled_suspension' as const,
+          scheduleSuspendDate: s.schedule_suspend_date,
+          autoUnsuspendDate: s.auto_unsuspend_date,
+          scheduledStatus: status,
+        };
+      });
+
+      const merged = [...activityNotes, ...extensionNotes, ...scheduledNotes].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
       setNotes(merged);
@@ -193,7 +221,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
             ) : (
               <div className="space-y-3">
                 {notes.map((note) => (
-                  <div key={note.id} className={`rounded-lg border p-3 space-y-1 ${note.type === 'suspension' ? 'border-red-200 bg-red-50' : note.type === 'fee_extension' ? 'border-amber-200 bg-amber-50' : ''}`}>
+                  <div key={note.id} className={`rounded-lg border p-3 space-y-1 ${note.type === 'suspension' ? 'border-red-200 bg-red-50' : note.type === 'fee_extension' ? 'border-amber-200 bg-amber-50' : note.type === 'scheduled_suspension' ? (note.scheduledStatus === 'cancelled' ? 'border-muted bg-muted/30' : note.scheduledStatus === 'executed' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50') : ''}`}>
                     {note.type === 'suspension' && (
                       <div className="flex items-center gap-1.5 text-xs font-medium text-red-600 mb-1">
                         <ShieldAlert className="w-3.5 h-3.5" />
@@ -204,6 +232,12 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
                       <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 mb-1">
                         <CalendarClock className="w-3.5 h-3.5" />
                         Fee Extension
+                      </div>
+                    )}
+                    {note.type === 'scheduled_suspension' && (
+                      <div className={`flex items-center gap-1.5 text-xs font-medium mb-1 ${note.scheduledStatus === 'cancelled' ? 'text-muted-foreground' : note.scheduledStatus === 'executed' ? 'text-red-600' : 'text-amber-700'}`}>
+                        <CalendarClock className="w-3.5 h-3.5" />
+                        {note.scheduledStatus === 'cancelled' ? 'Scheduled Suspension (Cancelled)' : note.scheduledStatus === 'executed' ? 'Scheduled Suspension (Executed)' : 'Scheduled Suspension (Pending)'}
                       </div>
                     )}
                     <p className="text-sm whitespace-pre-wrap">{note.note}</p>
