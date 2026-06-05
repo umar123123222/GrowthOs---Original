@@ -262,14 +262,30 @@ const handler = async (req: Request): Promise<Response> => {
 
         const { data: settings } = await supabase
           .from("company_settings")
-          .select("company_name, company_logo, lms_url, onboarding_video_url, onboarding_video_enabled, onboarding_document_url, onboarding_document_name, onboarding_pointers")
+          .select("company_name, company_logo, lms_url, contact_email, company_email, primary_phone, secondary_phone, onboarding_video_url, onboarding_video_enabled, onboarding_document_url, onboarding_document_name, onboarding_pointers")
           .eq("id", 1)
           .maybeSingle();
+
+        // Find the student's batch via their most recent course enrollment with a batch
+        let batchInfo: { name?: string; start_date?: string | null; whatsapp_group_link?: string | null; facebook_community_link?: string | null } | null = null;
+        try {
+          const { data: enrol } = await supabase
+            .from("course_enrollments")
+            .select("batch_id, batches:batch_id(name, start_date, whatsapp_group_link, facebook_community_link)")
+            .eq("student_id", invoice.student_id)
+            .not("batch_id", "is", null)
+            .order("enrolled_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (enrol && (enrol as any).batches) batchInfo = (enrol as any).batches;
+        } catch (_e) { /* ignore */ }
 
         if (userRec?.email) {
           const companyName = settings?.company_name || 'Our Team';
           const logoUrl: string = settings?.company_logo || '';
           const lmsUrl: string = settings?.lms_url || '';
+          const supportEmail: string = settings?.contact_email || settings?.company_email || '';
+          const supportPhone: string = settings?.primary_phone || settings?.secondary_phone || '';
           const videoUrl: string = settings?.onboarding_video_url || '';
           const videoEnabled: boolean = settings?.onboarding_video_enabled ?? true;
           const docUrl: string = settings?.onboarding_document_url || '';
@@ -277,6 +293,14 @@ const handler = async (req: Request): Promise<Response> => {
           const pointers: string[] = Array.isArray(settings?.onboarding_pointers)
             ? (settings!.onboarding_pointers as string[]).filter((p: string) => p && p.trim() !== '')
             : [];
+
+          const naContact = `Not available — please contact support${supportEmail ? ` at <a href="mailto:${escapeHtml(supportEmail)}" style="color:#4f46e5;text-decoration:none;">${escapeHtml(supportEmail)}</a>` : ''}.`;
+          const batchName = batchInfo?.name || '';
+          const orientationDate = batchInfo?.start_date
+            ? new Date(batchInfo.start_date as string).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+            : '';
+          const whatsappLink = batchInfo?.whatsapp_group_link || '';
+          const facebookLink = batchInfo?.facebook_community_link || '';
 
           // Brand tokens
           const primary = '#4f46e5';      // indigo-600
