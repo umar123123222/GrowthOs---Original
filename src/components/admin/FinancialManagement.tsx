@@ -525,6 +525,12 @@ const getStatusBadge = (status: string) => {
                             setRefundOpen(true);
                             return;
                           }
+                          if (value === 'paid') {
+                            if (invoice.status === 'paid') return;
+                            setMarkPaidContext({ invoiceId: invoice.id, email: invoice.users?.email });
+                            setMarkPaidOpen(true);
+                            return;
+                          }
                           updateInvoiceStatus(invoice.id, value);
                         }}
                       >
