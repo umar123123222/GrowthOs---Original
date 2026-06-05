@@ -5,3 +5,6 @@ verify_jwt = true
 
 [functions.session-heartbeat]
 verify_jwt = false
+
+[functions.success-session-reminder]
+verify_jwt = false
