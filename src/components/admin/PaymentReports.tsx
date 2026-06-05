@@ -13,6 +13,9 @@ import { CalendarIcon, Search, DollarSign, Users, TrendingUp, Download, ChevronL
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { RefundDialog } from './RefundDialog';
+import { logAdminAction } from '@/lib/activity-logger';
+import { useAuth } from '@/hooks/useAuth';
+
 
 interface InvoiceRecord {
   id: string;
