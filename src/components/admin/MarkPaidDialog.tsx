@@ -22,12 +22,14 @@ interface InvoiceLite {
 interface MarkPaidDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  invoiceId: string;
+  invoiceId?: string;
+  studentRecordId?: string;
+  installmentNumber?: number;
   studentEmail?: string;
   onSuccess?: () => void;
 }
 
-export function MarkPaidDialog({ open, onOpenChange, invoiceId, studentEmail, onSuccess }: MarkPaidDialogProps) {
+export function MarkPaidDialog({ open, onOpenChange, invoiceId, studentRecordId, installmentNumber, studentEmail, onSuccess }: MarkPaidDialogProps) {
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
   const [invoice, setInvoice] = useState<InvoiceLite | null>(null);
@@ -38,16 +40,26 @@ export function MarkPaidDialog({ open, onOpenChange, invoiceId, studentEmail, on
   const [proofFile, setProofFile] = useState<File | null>(null);
 
   useEffect(() => {
-    if (!open || !invoiceId) return;
+    if (!open) return;
     (async () => {
-      const [{ data: cs }, { data: inv }] = await Promise.all([
-        supabase.from('company_settings').select('currency').limit(1).maybeSingle(),
-        supabase.from('invoices').select('id, installment_number, amount').eq('id', invoiceId).maybeSingle(),
-      ]);
+      const { data: cs } = await supabase.from('company_settings').select('currency').limit(1).maybeSingle();
       if (cs?.currency) setCurrency(cs.currency);
+      let inv: any = null;
+      if (invoiceId) {
+        const { data } = await supabase.from('invoices').select('id, installment_number, amount').eq('id', invoiceId).maybeSingle();
+        inv = data;
+      } else if (studentRecordId && installmentNumber) {
+        const { data } = await supabase.from('invoices')
+          .select('id, installment_number, amount')
+          .eq('student_id', studentRecordId)
+          .eq('installment_number', installmentNumber)
+          .maybeSingle();
+        inv = data;
+      }
       if (inv) setInvoice(inv as InvoiceLite);
+      else setInvoice(installmentNumber ? { id: '', installment_number: installmentNumber, amount: null } : null);
     })();
-  }, [open, invoiceId]);
+  }, [open, invoiceId, studentRecordId, installmentNumber]);
 
   const submit = async () => {
     setSubmitting(true);
