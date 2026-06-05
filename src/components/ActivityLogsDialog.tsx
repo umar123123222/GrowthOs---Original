@@ -328,17 +328,20 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
     const data: any = log.data || {};
     const performerName = log.users?.full_name;
 
-    if (log.action === 'video_watched' || log.action === 'video_opened') {
+    const isVideoPage = log.action === 'page_visit' && typeof data.page === 'string' && data.page.startsWith('/video-player');
+    if (log.action === 'video_watched' || log.action === 'video_opened' || (isVideoPage && data.video_title)) {
+      const completed = log.action === 'video_watched' || data.already_watched;
       return (
         <div className="space-y-0.5 text-xs">
           {data.course_name && <div>Course: <span className="font-medium">{data.course_name}</span></div>}
           {data.module_name && <div>Module: <span className="font-medium">{data.module_name}</span></div>}
-          <div className={log.action === 'video_watched' || data.already_watched ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
-            {log.action === 'video_watched' || data.already_watched ? '✓ Completed' : '○ Not completed'}
+          <div className={completed ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+            {completed ? '✓ Completed' : '○ Not completed'}
           </div>
         </div>
       );
     }
+
 
     if (log.action === 'live_session_joined') {
       return (
