@@ -649,7 +649,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get company settings including currency and company details
     const { data: companyDetailsData, error: companyDetailsError } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url, currency, company_name, company_email, address, contact_email, primary_phone, payment_methods')
+      .select('lms_url, currency, company_name, company_email, address, contact_email, primary_phone, secondary_phone, payment_methods')
       .limit(1)
       .maybeSingle();
 
@@ -669,6 +669,7 @@ const handler = async (req: Request): Promise<Response> => {
       address: companyDetailsData?.address || '',
       contact_email: companyDetailsData?.contact_email || companyDetailsData?.company_email || '',
       primary_phone: companyDetailsData?.primary_phone || '',
+      secondary_phone: companyDetailsData?.secondary_phone || '',
       company_email: companyDetailsData?.company_email || companyDetailsData?.contact_email || ''
     };
 
