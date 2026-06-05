@@ -84,13 +84,33 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface PaymentProof {
+  filename: string;
+  content_base64: string;
+  content_type: string;
+}
+
 interface MarkInvoicePaidRequest {
   invoice_id?: string;
   student_id?: string;
   installment_number?: number;
   amount?: number;
   due_date?: string;
+  payment_date?: string;
+  payment_method?: string;
+  payment_notes?: string;
+  payment_proof?: PaymentProof;
 }
+
+function base64ToUint8(b64: string): Uint8Array {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+const CURRENCY_SYMBOLS: Record<string, string> = { USD: '$', EUR: '€', GBP: '£', INR: '₹', PKR: 'Rs ', CAD: 'C$', AUD: 'A$' };
+const currencySymbol = (c?: string) => CURRENCY_SYMBOLS[(c || 'PKR').toUpperCase()] || `${c || ''} `;
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
@@ -243,6 +263,132 @@ const handler = async (req: Request): Promise<Response> => {
       });
     } catch (notifErr) {
       console.warn("Failed to insert invoice_paid notification:", notifErr);
+    }
+
+    // Send payment receipt to the student (every paid invoice)
+    try {
+      const { data: userRec } = await supabase
+        .from("users").select("email, full_name").eq("id", userId).maybeSingle();
+
+      const { data: rs } = await supabase
+        .from("company_settings")
+        .select("company_name, company_logo, currency, contact_email, company_email, primary_phone, secondary_phone, lms_url")
+        .eq("id", 1).maybeSingle();
+
+      if (userRec?.email) {
+        const companyName = rs?.company_name || 'Our Team';
+        const logoUrl: string = rs?.company_logo || '';
+        const supportEmail: string = rs?.contact_email || rs?.company_email || '';
+        const supportPhone: string = rs?.primary_phone || rs?.secondary_phone || '';
+        const currencyCode = rs?.currency || 'PKR';
+        const cSym = currencySymbol(currencyCode);
+        const firstName = (userRec.full_name || 'there').split(' ')[0];
+
+        const primary = '#4f46e5';
+        const primaryDark = '#3730a3';
+        const text = '#0f172a';
+        const subtext = '#475569';
+        const border = '#e5e7eb';
+        const bg = '#f4f6fb';
+        const surface = '#ffffff';
+
+        const paidAtDisplay = new Date(requestData.payment_date || now).toLocaleDateString('en-US', {
+          year: 'numeric', month: 'long', day: 'numeric'
+        });
+        const methodLabels: Record<string, string> = {
+          bank_transfer: 'Bank Transfer', card: 'Card', cash: 'Cash', cheque: 'Cheque',
+          online: 'Online Gateway', other: 'Other',
+        };
+        const methodLabel = requestData.payment_method ? (methodLabels[requestData.payment_method] || requestData.payment_method) : '—';
+        const amountDisplay = `${cSym}${Number(invoice.amount || 0).toLocaleString()}`;
+        const receiptNo = `RCPT-${String(invoiceId).slice(0, 8).toUpperCase()}`;
+        const notesHtml = requestData.payment_notes ? escapeHtml(requestData.payment_notes) : '';
+        const hasProof = !!requestData.payment_proof?.content_base64;
+
+        const headerLogo = logoUrl
+          ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(companyName)}" height="40" style="display:block;height:40px;width:auto;border:0;outline:none;text-decoration:none;" />`
+          : `<div style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;">${escapeHtml(companyName)}</div>`;
+
+        const rowHtml = (label: string, value: string) => `
+          <tr>
+            <td style="padding:12px 0;border-bottom:1px solid ${border};font-family:Arial,Helvetica,sans-serif;font-size:13px;color:${subtext};width:45%;">${escapeHtml(label)}</td>
+            <td style="padding:12px 0;border-bottom:1px solid ${border};font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};font-weight:600;text-align:right;">${value}</td>
+          </tr>`;
+
+        const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8" /><meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Payment Receipt — ${escapeHtml(companyName)}</title></head>
+<body style="margin:0;padding:0;background:${bg};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">Receipt for your payment of ${amountDisplay} to ${escapeHtml(companyName)}.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${bg};">
+  <tr><td align="center" style="padding:32px 16px;">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:${surface};border-radius:16px;overflow:hidden;box-shadow:0 6px 24px rgba(15,23,42,0.06);">
+      <tr><td style="background:linear-gradient(135deg,${primaryDark} 0%,${primary} 100%);padding:24px 32px;">${headerLogo}</td></tr>
+      <tr><td style="padding:36px 32px 8px;">
+        <div style="display:inline-block;padding:6px 12px;background:#ecfdf5;color:#047857;border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;margin-bottom:14px;">✓ Payment Received</div>
+        <h1 style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:24px;line-height:1.25;color:${text};">Thank you, ${escapeHtml(firstName)}!</h1>
+        <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${subtext};">
+          We've received your payment. This email is your official receipt — please keep it for your records.
+        </p>
+      </td></tr>
+      <tr><td style="padding:24px 32px 8px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border:1px solid ${border};border-radius:12px;background:#fafbff;">
+          <tr><td style="padding:8px 22px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              ${rowHtml('Receipt No.', escapeHtml(receiptNo))}
+              ${invoice.installment_number ? rowHtml('Installment', `#${invoice.installment_number}`) : ''}
+              ${rowHtml('Payment Date', escapeHtml(paidAtDisplay))}
+              ${rowHtml('Payment Method', escapeHtml(methodLabel))}
+              ${notesHtml ? rowHtml('Notes', notesHtml) : ''}
+              <tr>
+                <td style="padding:16px 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};font-weight:700;">Amount Paid</td>
+                <td style="padding:16px 0 4px;font-family:Arial,Helvetica,sans-serif;font-size:20px;color:${primary};font-weight:800;text-align:right;">${escapeHtml(amountDisplay)}</td>
+              </tr>
+            </table>
+          </td></tr>
+        </table>
+      </td></tr>
+      ${hasProof ? `<tr><td style="padding:8px 32px 0;">
+        <div style="padding:12px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e3a8a;">
+          📎 A copy of your payment proof is attached to this email.
+        </div>
+      </td></tr>` : ''}
+      ${(supportEmail || supportPhone) ? `<tr><td style="padding:20px 32px 28px;">
+        <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:${subtext};">Questions about this receipt?</p>
+        ${supportEmail ? `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};">📧 <a href="mailto:${escapeHtml(supportEmail)}" style="color:${primary};text-decoration:none;">${escapeHtml(supportEmail)}</a></div>` : ''}
+        ${supportPhone ? `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};">📞 <a href="tel:${escapeHtml(supportPhone.replace(/\\s+/g,''))}" style="color:${primary};text-decoration:none;">${escapeHtml(supportPhone)}</a></div>` : ''}
+      </td></tr>` : ''}
+      <tr><td style="padding:20px 32px 28px;border-top:1px solid ${border};background:#fafbff;">
+        <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;">© ${new Date().getFullYear()} ${escapeHtml(companyName)}. All rights reserved.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>`;
+
+        try {
+          const smtpClient = (SMTPClient as any).fromEnv();
+          if (rs?.company_name) smtpClient.setFromName(rs.company_name);
+          const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
+          const attachments = requestData.payment_proof ? [{
+            filename: requestData.payment_proof.filename,
+            content: base64ToUint8(requestData.payment_proof.content_base64),
+            contentType: requestData.payment_proof.content_type || 'application/octet-stream',
+          }] : undefined;
+          await smtpClient.sendEmail({
+            to: userRec.email,
+            subject: `Payment Receipt ${receiptNo} — ${companyName}`,
+            ...(notificationCc ? { cc: notificationCc } : {}),
+            html,
+            ...(attachments ? { attachments } : {}),
+          });
+          console.log(`✉️  Payment receipt sent to ${userRec.email}${attachments ? ' with proof attached' : ''}`);
+        } catch (mailErr) {
+          console.warn("Failed to send payment receipt:", mailErr);
+        }
+      }
+    } catch (receiptErr) {
+      console.warn("Payment receipt block failed:", receiptErr);
     }
 
     // Send onboarding welcome email when this is the student's FIRST paid invoice

@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RefundDialog } from './RefundDialog';
+import { MarkPaidDialog } from './MarkPaidDialog';
 import { logAdminAction } from '@/lib/activity-logger';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -51,6 +52,8 @@ export const FinancialManagement = () => {
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundContext, setRefundContext] = useState<{ studentId: string; email?: string; invoiceId?: string } | null>(null);
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markPaidContext, setMarkPaidContext] = useState<{ invoiceId: string; email?: string } | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -522,6 +525,12 @@ const getStatusBadge = (status: string) => {
                             setRefundOpen(true);
                             return;
                           }
+                          if (value === 'paid') {
+                            if (invoice.status === 'paid') return;
+                            setMarkPaidContext({ invoiceId: invoice.id, email: invoice.users?.email });
+                            setMarkPaidOpen(true);
+                            return;
+                          }
                           updateInvoiceStatus(invoice.id, value);
                         }}
                       >
@@ -629,6 +638,15 @@ const getStatusBadge = (status: string) => {
           studentId={refundContext.studentId}
           studentEmail={refundContext.email}
           initialInvoiceId={refundContext.invoiceId}
+          onSuccess={fetchInvoices}
+        />
+      )}
+      {markPaidContext && (
+        <MarkPaidDialog
+          open={markPaidOpen}
+          onOpenChange={(o) => { setMarkPaidOpen(o); if (!o) setMarkPaidContext(null); }}
+          invoiceId={markPaidContext.invoiceId}
+          studentEmail={markPaidContext.email}
           onSuccess={fetchInvoices}
         />
       )}

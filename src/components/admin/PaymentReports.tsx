@@ -13,6 +13,7 @@ import { CalendarIcon, Search, DollarSign, Users, TrendingUp, Download, ChevronL
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { RefundDialog } from './RefundDialog';
+import { MarkPaidDialog } from './MarkPaidDialog';
 import { logAdminAction } from '@/lib/activity-logger';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -67,6 +68,8 @@ export const PaymentReports = () => {
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundContext, setRefundContext] = useState<{ studentId: string; email?: string; invoiceId?: string } | null>(null);
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markPaidContext, setMarkPaidContext] = useState<{ invoiceId: string; email?: string } | null>(null);
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -605,6 +608,12 @@ export const PaymentReports = () => {
                             setRefundOpen(true);
                             return;
                           }
+                          if (v === 'paid') {
+                            if (r.status === 'paid') return;
+                            setMarkPaidContext({ invoiceId: r.id, email: r.email });
+                            setMarkPaidOpen(true);
+                            return;
+                          }
                           updateInvoiceStatus(r.id, v);
                         }}>
                           <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
@@ -704,6 +713,15 @@ export const PaymentReports = () => {
           studentId={refundContext.studentId}
           studentEmail={refundContext.email}
           initialInvoiceId={refundContext.invoiceId}
+          onSuccess={fetchRecords}
+        />
+      )}
+      {markPaidContext && (
+        <MarkPaidDialog
+          open={markPaidOpen}
+          onOpenChange={(o) => { setMarkPaidOpen(o); if (!o) setMarkPaidContext(null); }}
+          invoiceId={markPaidContext.invoiceId}
+          studentEmail={markPaidContext.email}
           onSuccess={fetchRecords}
         />
       )}
