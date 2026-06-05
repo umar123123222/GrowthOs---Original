@@ -31,6 +31,7 @@ import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 import { useScheduledSuspensions } from '@/hooks/useScheduledSuspensions';
 import type { SuspensionConfirmData } from '@/components/SuspensionDialog';
 import jsPDF from 'jspdf';
+import { MarkPaidDialog } from '@/components/admin/MarkPaidDialog';
 interface Student {
   id: string;
   student_id: string;
@@ -1640,6 +1641,9 @@ export function StudentsManagement() {
       outstandingRaw: outstanding
     };
   };
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markPaidCtx, setMarkPaidCtx] = useState<{ studentRecordId: string; installmentNumber: number; email?: string } | null>(null);
+
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
       const student = students.find(s => s.id === studentId);
@@ -1651,45 +1655,26 @@ export function StudentsManagement() {
       }
 
       // Check if already paid
-      const {
-        data: invoiceRow,
-        error: fetchInvErr
-      } = await supabase.from('invoices').select('id, status').eq('student_id', student.student_record_id).eq('installment_number', installmentNumber).maybeSingle();
+      const { data: invoiceRow, error: fetchInvErr } = await supabase
+        .from('invoices').select('id, status')
+        .eq('student_id', student.student_record_id)
+        .eq('installment_number', installmentNumber)
+        .maybeSingle();
       if (fetchInvErr) throw fetchInvErr;
       if (invoiceRow && invoiceRow.status === 'paid') {
-        toast({
-          title: "Already Paid",
-          description: "This installment has already been marked as paid",
-          variant: "destructive"
-        });
+        toast({ title: 'Already Paid', description: 'This installment has already been marked as paid', variant: 'destructive' });
         return;
       }
 
-      // Use the edge function to mark as paid (avoids trigger issues)
-      const { data, error } = await supabase.functions.invoke('mark-invoice-paid', {
-        body: {
-          student_id: student.student_record_id,
-          installment_number: installmentNumber,
-          ...(invoiceRow ? { invoice_id: invoiceRow.id } : {})
-        }
+      setMarkPaidCtx({
+        studentRecordId: student.student_record_id,
+        installmentNumber,
+        email: student.email,
       });
-
-      if (error) throw error;
-      if (data && !data.success) throw new Error(data.error || 'Failed to mark installment as paid');
-
-      toast({
-        title: 'Success',
-        description: `Installment ${installmentNumber} marked as paid`
-      });
-      fetchInstallmentPayments();
-      fetchStudents();
+      setMarkPaidOpen(true);
     } catch (error: any) {
-      console.error('Error marking installment as paid:', error);
-      toast({
-        title: 'Error',
-        description: error?.message || 'Failed to mark installment as paid',
-        variant: 'destructive'
-      });
+      console.error('Error opening mark-paid dialog:', error);
+      toast({ title: 'Error', description: error?.message || 'Failed to open payment dialog', variant: 'destructive' });
     }
   };
   const handleSelectStudent = (studentId: string, checked: boolean) => {
@@ -3961,5 +3946,16 @@ export function StudentsManagement() {
         studentId={selectedStudentForNotes?.id || ''}
         studentName={selectedStudentForNotes?.full_name || ''}
       />
+
+      {markPaidCtx && (
+        <MarkPaidDialog
+          open={markPaidOpen}
+          onOpenChange={(o) => { setMarkPaidOpen(o); if (!o) setMarkPaidCtx(null); }}
+          studentRecordId={markPaidCtx.studentRecordId}
+          installmentNumber={markPaidCtx.installmentNumber}
+          studentEmail={markPaidCtx.email}
+          onSuccess={() => { fetchInstallmentPayments(); fetchStudents(); }}
+        />
+      )}
     </div>;
 }
