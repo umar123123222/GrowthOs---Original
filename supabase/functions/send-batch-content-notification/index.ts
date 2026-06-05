@@ -341,12 +341,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Extract unique students
-    const students: Student[] = enrollments
-      .filter((e: any) => e.users?.email)
-      .map((e: any) => ({
-        id: e.users.id,
-        email: e.users.email,
-        full_name: e.users.full_name || "Student",
+    const students: Student[] = Array.from(usersById.values())
+      .filter((u) => !!u.email)
+      .map((u) => ({
+        id: u.id,
+        email: u.email,
+        full_name: u.full_name || "Student",
       }));
 
     console.log(`Sending notifications to ${students.length} students`);
