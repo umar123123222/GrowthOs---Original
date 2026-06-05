@@ -31,7 +31,14 @@ function sanitizeEmail(value: string): string {
   return m ? m[1].trim() : trimmed;
 }
 
-async function sendEmail(to: string, subject: string, html: string, cc?: string, fromNameOverride?: string) {
+async function sendEmail(
+  to: string,
+  subject: string,
+  html: string,
+  cc?: string,
+  fromNameOverride?: string,
+  attachments?: Array<{ filename: string; content: string; content_type?: string }>,
+) {
   const resendApiKey = Deno.env.get("RESEND_API_KEY");
   const fromEmail = Deno.env.get("SMTP_FROM_EMAIL");
   const fromName = fromNameOverride || Deno.env.get("SMTP_FROM_NAME") || "IDMPakistan";
@@ -47,6 +54,13 @@ async function sendEmail(to: string, subject: string, html: string, cc?: string,
     html,
   };
   if (cc) payload.cc = [cc];
+  if (attachments?.length) {
+    payload.attachments = attachments.map(a => ({
+      filename: a.filename,
+      content: a.content,
+      ...(a.content_type ? { content_type: a.content_type } : {}),
+    }));
+  }
   const { error } = await resend.emails.send(payload as any);
   if (error) console.error("Resend error:", error);
 }
