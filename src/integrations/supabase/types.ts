@@ -3596,6 +3596,7 @@ export type Database = {
           total_steps: number
         }[]
       }
+      get_student_analytics_summary: { Args: never; Returns: Json }
       get_student_courses: {
         Args: { p_user_id: string }
         Returns: {

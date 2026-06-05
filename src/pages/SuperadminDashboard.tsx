@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,7 +17,7 @@ import { CompanySettings } from '@/components/superadmin/CompanySettings';
 import { SequentialUnlockAdmin } from '@/components/admin/SequentialUnlockAdmin';
 import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAnalytics';
 import { MilestoneManagement } from '@/components/admin/MilestoneManagement';
-import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
+const StudentAnalytics = lazy(() => import('@/components/admin/StudentAnalytics').then(m => ({ default: m.StudentAnalytics })));
 import { ErrorLogsManagement } from '@/components/superadmin/ErrorLogsManagement';
 import { CourseManagement } from '@/components/superadmin/CourseManagement';
 import { PathwayManagement } from '@/components/superadmin/PathwayManagement';
@@ -73,7 +73,11 @@ export default function SuperadminDashboard() {
       case 'milestones':
         return <MilestoneManagement />;
       case 'analytics':
-        return <StudentAnalytics />;
+        return (
+          <Suspense fallback={<div className="p-6 animate-pulse space-y-4"><div className="h-8 bg-muted rounded w-1/4"/><div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-6">{[...Array(6)].map((_,i)=><div key={i} className="h-32 bg-muted rounded-lg"/>)}</div></div>}>
+            <StudentAnalytics />
+          </Suspense>
+        );
       case 'error-logs':
         return <ErrorLogsManagement />;
       case 'courses':
