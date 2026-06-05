@@ -5,15 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
-import { Activity, Download, Search, X } from 'lucide-react';
+import { Activity, Download, Search, ChevronDown, ChevronRight, Inbox } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { RoleGuard } from '@/components/RoleGuard';
 import { logger } from '@/lib/logger';
-import { ExpandableSubDetails } from '@/components/ExpandableSubDetails';
+import { cn } from '@/lib/utils';
 
 interface ActivityLog {
   id: string;
