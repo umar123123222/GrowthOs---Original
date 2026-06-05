@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { safeLogger } from '@/lib/safe-logger';
+import { ExpandableSubDetails } from '@/components/ExpandableSubDetails';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -3474,6 +3475,8 @@ export function StudentsManagement() {
                                 return `Visited video player: "${metadata.video_title}"`;
                               }
                               return `Visited page: ${metadata.page || metadata.url || 'Unknown page'}`;
+                            case 'video_opened':
+                              return `Opened video: "${metadata.video_title || metadata.title || 'Unknown video'}"${metadata.module_name ? ` — Module: "${metadata.module_name}"` : ''}${metadata.course_name && metadata.course_name !== 'N/A' ? ` — Course: "${metadata.course_name}"` : ''}${metadata.already_watched ? ' (already completed)' : ''}`;
                             case 'video_watched':
                               return `Watched video: "${metadata.video_title || metadata.title || 'Unknown video'}"${metadata.module_name ? ` — Module: "${metadata.module_name}"` : ''}${metadata.course_name && metadata.course_name !== 'N/A' ? ` — Course: "${metadata.course_name}"` : ''}`;
                             case 'assignment_submitted':
@@ -3547,11 +3550,7 @@ export function StudentsManagement() {
                                  );
                                }
                                if (metadata && Object.keys(metadata).length > 0) {
-                                 return (
-                                   <div className="text-xs opacity-60 max-w-[250px] truncate">
-                                     {JSON.stringify(metadata)}
-                                   </div>
-                                 );
+                                 return <ExpandableSubDetails data={metadata} />;
                                }
                                return <span className="text-xs text-muted-foreground">—</span>;
                              })()}
