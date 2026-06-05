@@ -96,22 +96,66 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       const targetIds = (data || []).map(l => (l.data as any)?.target_user_id).filter(Boolean) as string[];
       const allUserIds = [...new Set([...performerIds, ...targetIds])];
 
-      // Batch fetch user details in parallel
+      // Collect recording/session IDs to enrich legacy logs without titles
+      const recordingIds = new Set<string>();
+      const sessionIds = new Set<string>();
+      (data || []).forEach((l: any) => {
+        const d = l.data || {};
+        const isVideoAction = ['video_watched', 'video_opened'].includes(l.action);
+        const isVideoPage = l.action === 'page_visit' && typeof d.page === 'string' && d.page.startsWith('/video-player');
+        const isSessionEvent = l.action === 'live_session_joined';
+        const refId = d.reference_id || d.videoId || d.recording_id || l.entity_id;
+        if ((isVideoAction || isVideoPage) && refId && !d.video_title) recordingIds.add(refId);
+        if (isSessionEvent && refId && !d.session_title) sessionIds.add(refId);
+      });
+
+      // Batch fetch users, recordings, sessions in parallel
       const userMap = new Map<string, { email: string; role: string; full_name: string }>();
-      if (allUserIds.length > 0) {
+      const recordingMap = new Map<string, { title: string; module_id: string | null }>();
+      const moduleMap = new Map<string, { title: string; course_id: string | null }>();
+      const courseMap = new Map<string, string>();
+      const sessionMap = new Map<string, { title: string; start_time: string | null; mentor_name: string | null }>();
+
+      const fetchUsers = async () => {
+        if (!allUserIds.length) return;
         const batchSize = 100;
         const batches: string[][] = [];
-        for (let i = 0; i < allUserIds.length; i += batchSize) {
-          batches.push(allUserIds.slice(i, i + batchSize));
-        }
-        const results = await Promise.all(
-          batches.map(batch =>
-            supabase.from('users').select('id, email, role, full_name').in('id', batch)
-          )
-        );
+        for (let i = 0; i < allUserIds.length; i += batchSize) batches.push(allUserIds.slice(i, i + batchSize));
+        const results = await Promise.all(batches.map(b =>
+          supabase.from('users').select('id, email, role, full_name').in('id', b)
+        ));
         results.forEach(({ data: users }) => {
           (users || []).forEach(u => userMap.set(u.id, { email: u.email, full_name: u.full_name, role: u.role }));
         });
+      };
+      const fetchRecordings = async () => {
+        if (!recordingIds.size) return;
+        const { data: recs } = await supabase
+          .from('available_lessons')
+          .select('id, recording_title, module')
+          .in('id', Array.from(recordingIds));
+        (recs || []).forEach((r: any) => recordingMap.set(r.id, { title: r.recording_title, module_id: r.module }));
+      };
+      const fetchSessions = async () => {
+        if (!sessionIds.size) return;
+        const { data: ss } = await supabase
+          .from('success_sessions')
+          .select('id, title, start_time, mentor_name')
+          .in('id', Array.from(sessionIds));
+        (ss || []).forEach((s: any) => sessionMap.set(s.id, { title: s.title, start_time: s.start_time, mentor_name: s.mentor_name }));
+      };
+      await Promise.all([fetchUsers(), fetchRecordings(), fetchSessions()]);
+
+      // Resolve modules + courses for fetched recordings
+      const moduleIds = Array.from(new Set(Array.from(recordingMap.values()).map(r => r.module_id).filter(Boolean))) as string[];
+      if (moduleIds.length) {
+        const { data: mods } = await supabase.from('modules').select('id, title, course_id').in('id', moduleIds);
+        (mods || []).forEach((m: any) => moduleMap.set(m.id, { title: m.title, course_id: m.course_id }));
+        const courseIds = Array.from(new Set((mods || []).map((m: any) => m.course_id).filter(Boolean))) as string[];
+        if (courseIds.length) {
+          const { data: courses } = await supabase.from('courses').select('id, title').in('id', courseIds);
+          (courses || []).forEach((c: any) => courseMap.set(c.id, c.title));
+        }
       }
 
       const restrictSuperadmin = user.role === 'admin' || user.role === 'enrollment_manager';
@@ -119,17 +163,37 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       const logsWithUsers = (data || [])
         .filter(log => {
           if (!restrictSuperadmin) return true;
-          // Hide logs performed by superadmins from admins/EMs
           const performer = log.performed_by ? userMap.get(log.performed_by) : null;
           return !performer || performer.role !== 'superadmin';
         })
         .map(log => {
           const performer = log.performed_by ? userMap.get(log.performed_by) : null;
-          const targetUserId = (log.data as any)?.target_user_id;
+          const d: any = log.data || {};
+          const targetUserId = d.target_user_id;
           const target = targetUserId ? userMap.get(targetUserId) : null;
           const displayUser = performer || (target ? { ...target } : null);
+
+          // Enrich data with recording/session/course context for legacy rows
+          const enrichedData: any = { ...d };
+          const refId = d.reference_id || d.videoId || d.recording_id || log.entity_id;
+          const rec = refId ? recordingMap.get(refId) : null;
+          if (rec) {
+            if (!enrichedData.video_title) enrichedData.video_title = rec.title;
+            const mod = rec.module_id ? moduleMap.get(rec.module_id) : null;
+            if (mod && !enrichedData.module_name) enrichedData.module_name = mod.title;
+            const courseTitle = mod?.course_id ? courseMap.get(mod.course_id) : null;
+            if (courseTitle && !enrichedData.course_name) enrichedData.course_name = courseTitle;
+          }
+          const sess = refId ? sessionMap.get(refId) : null;
+          if (sess) {
+            if (!enrichedData.session_title) enrichedData.session_title = sess.title;
+            if (!enrichedData.session_date && sess.start_time) enrichedData.session_date = sess.start_time;
+            if (!enrichedData.host_name && sess.mentor_name) enrichedData.host_name = sess.mentor_name;
+          }
+
           return {
             ...log,
+            data: enrichedData,
             users: displayUser ? { email: displayUser.email, role: displayUser.role, full_name: displayUser.full_name } : null,
             target_user: target ? { email: target.email, full_name: target.full_name } : null,
           };
@@ -235,28 +299,49 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         return `Student suspended${data.student_name ? `: ${data.student_name}` : ''}`;
       case 'scheduled_suspension_created':
         return `Suspension scheduled${data.schedule_suspend_date ? ` for ${new Date(data.schedule_suspend_date).toLocaleDateString()}` : ''}`;
-      case 'page_visit':
-        return `Visited page: ${data.page || '/'}`;
+      case 'page_visit': {
+        const page: string = data.page || '/';
+        if (page.startsWith('/video-player')) {
+          return `Opened video: ${data.video_title || 'Unknown video'}`;
+        }
+        const pageNames: Record<string, string> = {
+          '/': 'Dashboard',
+          '/dashboard': 'Dashboard',
+          '/videos': 'Videos library',
+          '/live-sessions': 'Live sessions',
+          '/assignments': 'Assignments',
+          '/leaderboard': 'Leaderboard',
+          '/notifications': 'Notifications',
+          '/profile': 'Profile',
+          '/messages': 'Messages',
+          '/support': 'Support',
+        };
+        return `Visited: ${pageNames[page] || page}`;
+      }
       default:
         return log.description || log.action.replace(/_/g, ' ');
     }
   };
 
+
   const formatSubDetails = (log: ActivityLog): React.ReactNode => {
     const data: any = log.data || {};
     const performerName = log.users?.full_name;
 
-    if (log.action === 'video_watched' || log.action === 'video_opened') {
+    const isVideoPage = log.action === 'page_visit' && typeof data.page === 'string' && data.page.startsWith('/video-player');
+    if (log.action === 'video_watched' || log.action === 'video_opened' || (isVideoPage && data.video_title)) {
+      const completed = log.action === 'video_watched' || data.already_watched;
       return (
         <div className="space-y-0.5 text-xs">
           {data.course_name && <div>Course: <span className="font-medium">{data.course_name}</span></div>}
           {data.module_name && <div>Module: <span className="font-medium">{data.module_name}</span></div>}
-          <div className={log.action === 'video_watched' || data.already_watched ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
-            {log.action === 'video_watched' || data.already_watched ? '✓ Completed' : '○ Not completed'}
+          <div className={completed ? 'text-green-600 font-medium' : 'text-amber-600 font-medium'}>
+            {completed ? '✓ Completed' : '○ Not completed'}
           </div>
         </div>
       );
     }
+
 
     if (log.action === 'live_session_joined') {
       return (
