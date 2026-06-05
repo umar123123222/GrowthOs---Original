@@ -504,6 +504,10 @@ const Layout = memo(({
           name: "Batches",
           href: "/superadmin?tab=batches",
           icon: Layers
+        }, {
+          name: "Active Sessions",
+          href: "/superadmin?tab=active-sessions",
+          icon: Activity
         }]
       }, {
         name: "Analytics",
