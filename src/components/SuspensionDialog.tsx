@@ -165,8 +165,11 @@ export function SuspensionDialog({ open, onOpenChange, studentName, onConfirm, l
           </Button>
           <Button
             variant={isScheduled ? "default" : "destructive"}
-            onClick={handleConfirm}
-            disabled={loading}
+            onClick={() => {
+              if (!note.trim()) return;
+              setConfirmOpen(true);
+            }}
+            disabled={loading || !note.trim()}
             className={isScheduled ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}
           >
             {loading
@@ -177,5 +180,45 @@ export function SuspensionDialog({ open, onOpenChange, studentName, onConfirm, l
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-destructive flex items-center gap-2">
+            <Ban className="w-5 h-5" />
+            {isScheduled ? 'Schedule Suspension?' : 'Suspend Student Now?'}
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="space-y-2 text-sm">
+              <p>
+                {isScheduled ? (
+                  <>This will automatically suspend <strong>{studentName}</strong> on <strong>{format(scheduleSuspendDate!, 'PPP')}</strong>, revoking their LMS access.</>
+                ) : (
+                  <>This will immediately suspend <strong>{studentName}</strong> and revoke their LMS access.</>
+                )}
+              </p>
+              <div className="rounded-md border bg-muted/40 p-2 space-y-1">
+                <p><span className="text-muted-foreground">Reason:</span> {note}</p>
+                {autoUnsuspendDate && (
+                  <p><span className="text-muted-foreground">Auto-unsuspend on:</span> {format(autoUnsuspendDate, 'PPP')}</p>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">This action can be reversed by changing the LMS status back to active.</p>
+            </div>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={loading}>Go Back</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={loading}
+            onClick={(e) => { e.preventDefault(); handleConfirm(); }}
+            className={isScheduled ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-destructive text-destructive-foreground hover:bg-destructive/90"}
+          >
+            Yes, {isScheduled ? 'Schedule' : 'Suspend'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }
