@@ -588,29 +588,28 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
           {/* Access Settings Section (Drip/Sequential Override) */}
           {canApplyDiscount && (formData.course_id || formData.pathway_id) && (
             <Collapsible open={accessSettingsOpen} onOpenChange={setAccessSettingsOpen}>
-              <Card className="border-blue-200 bg-blue-50/50">
+              <div className="rounded-xl border bg-card overflow-hidden">
                 <CollapsibleTrigger asChild>
-                  <CardHeader className="pb-3 cursor-pointer hover:bg-blue-100/50 transition-colors">
-                    <CardTitle className="text-sm flex items-center justify-between">
-                      <span className="flex items-center gap-2">
-                        <Settings2 className="h-4 w-4" />
-                        Access Settings (Admin Only)
-                      </span>
-                      {accessSettingsOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </CardTitle>
-                  </CardHeader>
+                  <button type="button" className="w-full flex items-center justify-between p-5 hover:bg-muted/40 transition-colors text-left">
+                    <div className="flex items-center gap-2">
+                      <Settings2 className="h-4 w-4 text-primary" />
+                      <h3 className="text-sm font-semibold text-foreground">Access Settings</h3>
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded">Admin</span>
+                    </div>
+                    {accessSettingsOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                  </button>
                 </CollapsibleTrigger>
                 <CollapsibleContent>
-                  <CardContent className="space-y-4 pt-0">
-                    <p className="text-xs text-muted-foreground">
-                      Override company/course settings for this specific student.
+                  <div className="px-5 pb-5 space-y-4 border-t bg-muted/20">
+                    <p className="text-xs text-muted-foreground pt-4">
+                      Override company/course defaults for this specific student.
                     </p>
-                    
+
                     {/* Content Dripping Override */}
-                    <div className="space-y-3 p-3 rounded-lg border border-blue-200 bg-white/50">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="drip-override" className="flex flex-col">
-                          <span>Override Content Dripping</span>
+                    <div className="space-y-3 p-4 rounded-lg border bg-background">
+                      <div className="flex items-center justify-between gap-4">
+                        <Label htmlFor="drip-override" className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium">Override Content Dripping</span>
                           <span className="font-normal text-xs text-muted-foreground">
                             Control when recordings become available
                           </span>
@@ -621,34 +620,34 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                           onCheckedChange={(checked) => handleInputChange('drip_override', checked ? 1 : 0)}
                         />
                       </div>
-                      
+
                       {formData.drip_override && (
                         <RadioGroup
                           value={formData.drip_enabled ? 'enabled' : 'disabled'}
                           onValueChange={(value) => handleInputChange('drip_enabled', value === 'enabled' ? 1 : 0)}
-                          className="pl-4 space-y-2"
+                          className="pl-1 pt-2 space-y-2 border-t pt-3"
                         >
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="disabled" id="drip-disabled" />
-                            <Label htmlFor="drip-disabled" className="font-normal cursor-pointer">
+                            <Label htmlFor="drip-disabled" className="font-normal text-sm cursor-pointer">
                               Disable dripping (all content available immediately)
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="enabled" id="drip-enabled" />
-                            <Label htmlFor="drip-enabled" className="font-normal cursor-pointer">
+                            <Label htmlFor="drip-enabled" className="font-normal text-sm cursor-pointer">
                               Enable dripping (content unlocks over time)
                             </Label>
                           </div>
                         </RadioGroup>
                       )}
                     </div>
-                    
+
                     {/* Sequential Unlock Override */}
-                    <div className="space-y-3 p-3 rounded-lg border border-blue-200 bg-white/50">
-                      <div className="flex items-center justify-between">
-                        <Label htmlFor="sequential-override" className="flex flex-col">
-                          <span>Override Sequential Unlock</span>
+                    <div className="space-y-3 p-4 rounded-lg border bg-background">
+                      <div className="flex items-center justify-between gap-4">
+                        <Label htmlFor="sequential-override" className="flex flex-col gap-0.5">
+                          <span className="text-sm font-medium">Override Sequential Unlock</span>
                           <span className="font-normal text-xs text-muted-foreground">
                             Control whether recordings must be watched in order
                           </span>
@@ -659,72 +658,71 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                           onCheckedChange={(checked) => handleInputChange('sequential_override', checked ? 1 : 0)}
                         />
                       </div>
-                      
+
                       {formData.sequential_override && (
                         <RadioGroup
                           value={formData.sequential_enabled ? 'enabled' : 'disabled'}
                           onValueChange={(value) => handleInputChange('sequential_enabled', value === 'enabled' ? 1 : 0)}
-                          className="pl-4 space-y-2"
+                          className="pl-1 pt-2 space-y-2 border-t pt-3"
                         >
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="disabled" id="sequential-disabled" />
-                            <Label htmlFor="sequential-disabled" className="font-normal cursor-pointer">
+                            <Label htmlFor="sequential-disabled" className="font-normal text-sm cursor-pointer">
                               Disable sequential unlock (watch any recording)
                             </Label>
                           </div>
                           <div className="flex items-center space-x-2">
                             <RadioGroupItem value="enabled" id="sequential-enabled" />
-                            <Label htmlFor="sequential-enabled" className="font-normal cursor-pointer">
+                            <Label htmlFor="sequential-enabled" className="font-normal text-sm cursor-pointer">
                               Enable sequential unlock (must watch in order)
                             </Label>
                           </div>
                         </RadioGroup>
                       )}
                     </div>
-                  </CardContent>
+                  </div>
                 </CollapsibleContent>
-              </Card>
+              </div>
             </Collapsible>
           )}
 
-          {/* Admin-Only Discount Section - Full Width */}
+          {/* Admin-Only Discount Section */}
           {canApplyDiscount && selectedPrice > 0 && (
-            <Card className="border-orange-200 bg-orange-50/50">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <BadgePercent className="h-4 w-4" />
-                  Discount (Admin Only)
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Discount Type</Label>
-                    <Select
-                      value={formData.discount_type}
-                      onValueChange={(value: 'none' | 'fixed' | 'percentage') => {
-                        setFormData(prev => ({ 
-                          ...prev, 
-                          discount_type: value,
-                          discount_amount: 0,
-                          discount_percentage: 0
-                        }))
-                      }}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No Discount</SelectItem>
-                        <SelectItem value="fixed">Fixed Amount</SelectItem>
-                        <SelectItem value="percentage">Percentage</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            <div className="rounded-xl border bg-card p-5 space-y-4">
+              <div className="flex items-center gap-2">
+                <BadgePercent className="h-4 w-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">Discount</h3>
+                <span className="text-[10px] uppercase tracking-wider text-muted-foreground bg-muted px-2 py-0.5 rounded">Admin</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-muted-foreground">Discount Type</Label>
+                  <Select
+                    value={formData.discount_type}
+                    onValueChange={(value: 'none' | 'fixed' | 'percentage') => {
+                      setFormData(prev => ({ 
+                        ...prev, 
+                        discount_type: value,
+                        discount_amount: 0,
+                        discount_percentage: 0
+                      }))
+                    }}
+                  >
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No Discount</SelectItem>
+                      <SelectItem value="fixed">Fixed Amount</SelectItem>
+                      <SelectItem value="percentage">Percentage</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 {formData.discount_type === 'fixed' && (
-                  <div className="space-y-2">
-                    <Label>Discount Amount ({currency})</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Discount Amount ({currency})</Label>
                     <Input
                       type="number"
                       min="0"
@@ -736,13 +734,14 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                         handleInputChange('discount_amount', Math.min(selectedPrice, Math.max(0, value)))
                       }}
                       placeholder="0.00"
+                      className="h-10"
                     />
                   </div>
                 )}
 
                 {formData.discount_type === 'percentage' && (
-                  <div className="space-y-2">
-                    <Label>Discount Percentage (%)</Label>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-muted-foreground">Discount Percentage (%)</Label>
                     <Input
                       type="number"
                       min="0"
@@ -754,68 +753,76 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                         handleInputChange('discount_percentage', Math.min(100, Math.max(0, value)))
                       }}
                       placeholder="0.00"
+                      className="h-10"
                     />
                   </div>
                 )}
-                </div>
+              </div>
 
-                {formData.discount_type !== 'none' && (
-                  <div className="pt-2 space-y-1 border-t border-orange-200">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Original Fee:</span>
-                      <span className="font-medium">{currency} {calculatedAmounts.originalFee.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm text-orange-600">
-                      <span>Discount:</span>
-                      <span className="font-medium">- {currency} {calculatedAmounts.discountApplied.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-base font-semibold border-t border-orange-200 pt-1">
-                      <span>Final Fee:</span>
-                      <span>{currency} {calculatedAmounts.finalAmount.toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>Per Installment:</span>
-                      <span>{currency} {calculatedAmounts.perInstallment.toLocaleString()}</span>
-                    </div>
+              {formData.discount_type !== 'none' && (
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Original Fee</span>
+                    <span className="font-medium">{currency} {calculatedAmounts.originalFee.toLocaleString()}</span>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                  <div className="flex justify-between text-sm text-emerald-600 dark:text-emerald-400">
+                    <span>Discount Applied</span>
+                    <span className="font-medium">− {currency} {calculatedAmounts.discountApplied.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-base font-semibold border-t pt-2">
+                    <span>Final Fee</span>
+                    <span className="text-primary">{currency} {calculatedAmounts.finalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Per Installment</span>
+                    <span>{currency} {calculatedAmounts.perInstallment.toLocaleString()}</span>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
-          
-            <div className="flex gap-2 pt-4">
+
+            {/* Submission status */}
+            {(isLoading || isSubmitting) && currentStep && (
+              <div className="rounded-lg border bg-primary/5 px-4 py-3 flex items-center gap-3">
+                <Loader2 className="h-4 w-4 animate-spin text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground">{currentStep}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentStep.includes('account') && 'Step 1 of 3'}
+                    {currentStep.includes('profile') && 'Step 2 of 3'}
+                    {currentStep.includes('email') && 'Step 3 of 3 — Almost done!'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2 sticky bottom-0 -mx-6 -mb-5 px-6 py-4 bg-background/95 backdrop-blur border-t">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => onOpenChange(false)}
                 disabled={isLoading || isSubmitting}
+                className="sm:flex-none"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading || isSubmitting || !isFormValid || installmentLoading}
+                className="sm:flex-1 gap-2"
               >
-                {(isLoading || isSubmitting) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {(isLoading || isSubmitting) ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
                 Create Student
               </Button>
             </div>
-            
-            {(isLoading || isSubmitting) && currentStep && (
-              <div className="pt-2 space-y-2">
-                <p className="text-sm text-muted-foreground text-center flex items-center justify-center gap-2">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  {currentStep}
-                </p>
-                <div className="text-xs text-muted-foreground text-center">
-                  {currentStep.includes('account') && 'Step 1/3'}
-                  {currentStep.includes('profile') && 'Step 2/3'}
-                  {currentStep.includes('email') && 'Step 3/3 - Almost done!'}
-                </div>
-              </div>
-            )}
           </form>
             </TabsContent>
+
             
             <TabsContent value="bulk">
               <BulkStudentUpload
