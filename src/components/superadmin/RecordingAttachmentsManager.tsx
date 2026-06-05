@@ -162,7 +162,7 @@ export function RecordingAttachmentsManager({ recordingId }: RecordingAttachment
         <p className="text-sm text-muted-foreground">
           Attach files from the Resources library to this recording.
         </p>
-        <Button onClick={openPicker} className="hover-scale">
+        <Button type="button" onClick={openPicker} className="hover-scale">
           <FolderOpen className="w-4 h-4 mr-2" /> Select from Resources
         </Button>
       </div>
@@ -184,7 +184,7 @@ export function RecordingAttachmentsManager({ recordingId }: RecordingAttachment
                   {att.file_name}
                 </button>
               </div>
-              <Button variant="outline" size="sm" onClick={() => deleteAttachment(att)} className="hover-scale">
+              <Button type="button" variant="outline" size="sm" onClick={() => deleteAttachment(att)} className="hover-scale">
                 <Trash2 className="w-4 h-4" />
               </Button>
             </li>
@@ -244,8 +244,8 @@ export function RecordingAttachmentsManager({ recordingId }: RecordingAttachment
           </ScrollArea>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPickerOpen(false)} disabled={saving}>Cancel</Button>
-            <Button onClick={onAttachSelected} disabled={saving || selectedIds.size === 0}>
+            <Button type="button" variant="outline" onClick={() => setPickerOpen(false)} disabled={saving}>Cancel</Button>
+            <Button type="button" onClick={onAttachSelected} disabled={saving || selectedIds.size === 0}>
               Attach {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
             </Button>
           </DialogFooter>
