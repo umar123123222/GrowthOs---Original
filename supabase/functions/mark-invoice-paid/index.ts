@@ -262,14 +262,30 @@ const handler = async (req: Request): Promise<Response> => {
 
         const { data: settings } = await supabase
           .from("company_settings")
-          .select("company_name, company_logo, lms_url, onboarding_video_url, onboarding_video_enabled, onboarding_document_url, onboarding_document_name, onboarding_pointers")
+          .select("company_name, company_logo, lms_url, contact_email, company_email, primary_phone, secondary_phone, onboarding_video_url, onboarding_video_enabled, onboarding_document_url, onboarding_document_name, onboarding_pointers")
           .eq("id", 1)
           .maybeSingle();
+
+        // Find the student's batch via their most recent course enrollment with a batch
+        let batchInfo: { name?: string; start_date?: string | null; whatsapp_group_link?: string | null; facebook_community_link?: string | null } | null = null;
+        try {
+          const { data: enrol } = await supabase
+            .from("course_enrollments")
+            .select("batch_id, batches:batch_id(name, start_date, whatsapp_group_link, facebook_community_link)")
+            .eq("student_id", invoice.student_id)
+            .not("batch_id", "is", null)
+            .order("enrolled_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          if (enrol && (enrol as any).batches) batchInfo = (enrol as any).batches;
+        } catch (_e) { /* ignore */ }
 
         if (userRec?.email) {
           const companyName = settings?.company_name || 'Our Team';
           const logoUrl: string = settings?.company_logo || '';
           const lmsUrl: string = settings?.lms_url || '';
+          const supportEmail: string = settings?.contact_email || settings?.company_email || '';
+          const supportPhone: string = settings?.primary_phone || settings?.secondary_phone || '';
           const videoUrl: string = settings?.onboarding_video_url || '';
           const videoEnabled: boolean = settings?.onboarding_video_enabled ?? true;
           const docUrl: string = settings?.onboarding_document_url || '';
@@ -277,6 +293,14 @@ const handler = async (req: Request): Promise<Response> => {
           const pointers: string[] = Array.isArray(settings?.onboarding_pointers)
             ? (settings!.onboarding_pointers as string[]).filter((p: string) => p && p.trim() !== '')
             : [];
+
+          const naContact = `Not available — please contact support${supportEmail ? ` at <a href="mailto:${escapeHtml(supportEmail)}" style="color:#4f46e5;text-decoration:none;">${escapeHtml(supportEmail)}</a>` : ''}.`;
+          const batchName = batchInfo?.name || '';
+          const orientationDate = batchInfo?.start_date
+            ? new Date(batchInfo.start_date as string).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+            : '';
+          const whatsappLink = batchInfo?.whatsapp_group_link || '';
+          const facebookLink = batchInfo?.facebook_community_link || '';
 
           // Brand tokens
           const primary = '#4f46e5';      // indigo-600
@@ -363,6 +387,51 @@ const handler = async (req: Request): Promise<Response> => {
                </tr>`
             : '';
 
+          const row = (label: string, value: string) => `
+            <tr>
+              <td style="padding:10px 0;border-bottom:1px solid ${border};font-family:Arial,Helvetica,sans-serif;font-size:13px;color:${subtext};width:40%;vertical-align:top;">${escapeHtml(label)}</td>
+              <td style="padding:10px 0;border-bottom:1px solid ${border};font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};vertical-align:top;">${value}</td>
+            </tr>`;
+
+          const batchBlock = `<tr>
+              <td style="padding:0 32px 8px;">
+                <h2 style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:18px;color:${text};">🎓 Your Batch Details</h2>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 28px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;border:1px solid ${border};border-radius:12px;background:#fafbff;">
+                  <tr><td style="padding:6px 20px;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      ${row('Batch', batchName ? escapeHtml(batchName) : naContact)}
+                      ${row('Orientation Date', orientationDate ? escapeHtml(orientationDate) : naContact)}
+                      ${row('WhatsApp Group', whatsappLink ? `<a href="${escapeHtml(whatsappLink)}" target="_blank" style="color:#16a34a;text-decoration:none;font-weight:600;">Join WhatsApp Group →</a>` : naContact)}
+                      <tr>
+                        <td style="padding:10px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:${subtext};width:40%;vertical-align:top;">Facebook Community</td>
+                        <td style="padding:10px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};vertical-align:top;">${facebookLink ? `<a href="${escapeHtml(facebookLink)}" target="_blank" style="color:#1d4ed8;text-decoration:none;font-weight:600;">Join Facebook Community →</a>` : naContact}</td>
+                      </tr>
+                    </table>
+                  </td></tr>
+                </table>
+              </td>
+            </tr>`;
+
+          const supportBlock = (supportEmail || supportPhone) ? `<tr>
+              <td style="padding:0 32px 8px;">
+                <h2 style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:18px;color:${text};">💬 Need Help? Contact Support</h2>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 32px 28px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border:1px solid ${border};border-radius:12px;background:#fff7ed;">
+                  <tr><td style="padding:18px 22px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};line-height:1.7;">
+                    ${supportEmail ? `<div>📧 <strong>Email:</strong> <a href="mailto:${escapeHtml(supportEmail)}" style="color:${primary};text-decoration:none;">${escapeHtml(supportEmail)}</a></div>` : ''}
+                    ${supportPhone ? `<div>📞 <strong>Phone:</strong> <a href="tel:${escapeHtml(supportPhone.replace(/\s+/g,''))}" style="color:${primary};text-decoration:none;">${escapeHtml(supportPhone)}</a></div>` : ''}
+                  </td></tr>
+                </table>
+              </td>
+            </tr>` : '';
+
           const ctaBlock = lmsUrl
             ? `<tr>
                  <td align="center" style="padding:0 32px 32px;">
@@ -406,9 +475,11 @@ const handler = async (req: Request): Promise<Response> => {
 
           <tr><td style="padding:24px 32px 8px;"><div style="height:1px;background:${border};line-height:1px;font-size:0;">&nbsp;</div></td></tr>
 
+          ${batchBlock}
           ${videoBlock}
           ${docBlock}
           ${pointersBlock}
+          ${supportBlock}
           ${ctaBlock}
 
           <!-- Footer -->
