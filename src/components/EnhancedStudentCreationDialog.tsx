@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Loader2, BadgePercent, BookOpen, Route, Settings2, ChevronDown, ChevronUp, Users, UserPlus, Upload } from 'lucide-react'
+import { Loader2, BadgePercent, BookOpen, Route, Settings2, ChevronDown, ChevronUp, Users, UserPlus, Upload, User, Mail, Phone, CreditCard, GraduationCap, CheckCircle2, Sparkles, Copy } from 'lucide-react'
 import { useInstallmentOptions } from '@/hooks/useInstallmentOptions'
 import { useEnhancedStudentCreation } from '@/hooks/useEnhancedStudentCreation'
 import { useAuth } from '@/hooks/useAuth'
