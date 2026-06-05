@@ -205,17 +205,24 @@ export function BatchManagement() {
 
   const handleOpenDialog = async (batch?: Batch) => {
     if (batch) {
-      setEditingBatch(batch);
+      // Fetch latest record so support links reflect any recent saves
+      const { data: fresh } = await supabase
+        .from('batches')
+        .select('*')
+        .eq('id', batch.id)
+        .maybeSingle();
+      const source: any = fresh || batch;
+      setEditingBatch({ ...(batch as any), ...source });
       setFormData({
-        name: batch.name,
-        course_id: batch.course_id || '',
-        pathway_id: batch.pathway_id || '',
-        start_date: batch.start_date,
-        timezone: batch.timezone,
-        default_session_time: batch.default_session_time,
-        status: batch.status,
-        whatsapp_group_link: (batch as any).whatsapp_group_link || '',
-        facebook_community_link: (batch as any).facebook_community_link || ''
+        name: source.name,
+        course_id: source.course_id || '',
+        pathway_id: source.pathway_id || '',
+        start_date: source.start_date,
+        timezone: source.timezone,
+        default_session_time: source.default_session_time,
+        status: source.status,
+        whatsapp_group_link: source.whatsapp_group_link || '',
+        facebook_community_link: source.facebook_community_link || ''
       });
       await fetchBatchAssociations(batch.id);
     } else {
