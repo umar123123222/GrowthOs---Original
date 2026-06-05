@@ -434,8 +434,6 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
                     </div>
                   );
                 })}
-                  );
-                })}
               </div>
             </TabsContent>
           </Tabs>
