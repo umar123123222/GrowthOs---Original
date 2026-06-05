@@ -287,8 +287,8 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
 
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-600">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredStudents.length)} of {filteredStudents.length} students
-              {searchTerm && ` (filtered from ${students.length} total)`}
+              Showing {filteredCount === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + students.length, filteredCount)} of {filteredCount} students
+              {debouncedSearch && ` (filtered from ${overviewStats.total_students} total)`}
             </p>
           </div>
           
