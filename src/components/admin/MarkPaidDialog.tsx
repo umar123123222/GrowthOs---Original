@@ -81,15 +81,19 @@ export function MarkPaidDialog({ open, onOpenChange, invoiceId, studentRecordId,
           content_type: proofFile.type || 'application/octet-stream',
         };
       }
-      const { data, error } = await supabase.functions.invoke('mark-invoice-paid', {
-        body: {
-          invoice_id: invoiceId,
-          payment_date: new Date(paymentDate).toISOString(),
-          payment_method: paymentMethod,
-          payment_notes: notes.trim() || undefined,
-          payment_proof: proofPayload,
-        },
-      });
+      const body: any = {
+        payment_date: new Date(paymentDate).toISOString(),
+        payment_method: paymentMethod,
+        payment_notes: notes.trim() || undefined,
+        payment_proof: proofPayload,
+      };
+      if (invoiceId) body.invoice_id = invoiceId;
+      else if (invoice?.id) body.invoice_id = invoice.id;
+      else if (studentRecordId && installmentNumber) {
+        body.student_id = studentRecordId;
+        body.installment_number = installmentNumber;
+      }
+      const { data, error } = await supabase.functions.invoke('mark-invoice-paid', { body });
       if (error) throw error;
       if (!(data as any)?.success) throw new Error((data as any)?.error || 'Failed to mark as paid');
       toast({
