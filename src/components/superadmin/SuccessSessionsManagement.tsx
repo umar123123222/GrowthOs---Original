@@ -746,21 +746,42 @@ export function SuccessSessionsManagement() {
     );
   }
 
+  const stats = (() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let upcoming = 0, drafts = 0, completed = 0, todayCount = 0;
+    sessions.forEach(s => {
+      const status = (s.status || '').toLowerCase();
+      if (status === 'draft') drafts++;
+      else if (status === 'upcoming') upcoming++;
+      else if (status === 'completed') completed++;
+      try {
+        const d = new Date(s.schedule_date);
+        d.setHours(0, 0, 0, 0);
+        if (d.getTime() === today.getTime()) todayCount++;
+      } catch {}
+    });
+    return { total: sessions.length, upcoming, drafts, completed, today: todayCount };
+  })();
+
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="flex justify-between items-center">
-        <div className="animate-fade-in">
-          <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-orange-600 bg-clip-text text-transparent">
-            Success Sessions Management
+    <div className="space-y-6 animate-fade-in">
+      {/* Page header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
+            Success Sessions
           </h2>
-          <p className="text-muted-foreground mt-1 text-lg">Manage scheduled success sessions and their status</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Schedule, publish and manage live mentor sessions for your batches.
+          </p>
         </div>
-        
+
         <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) handleCloseDialog(); else setDialogOpen(true); }}>
           <DialogTrigger asChild>
-            <Button 
+            <Button
               onClick={() => handleOpenDialog()}
-              className="hover-scale bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
             >
               <Plus className="w-4 h-4 mr-2" />
               Schedule Session
