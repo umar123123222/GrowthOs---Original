@@ -144,7 +144,11 @@ export function ActiveSessionsManagement() {
       label: 'Active Users Now',
       value: totalActive,
       icon: Users,
-      accent: 'text-emerald-600 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-500/10 ring-emerald-200 dark:ring-emerald-500/20',
+      accent:
+        'text-emerald-600 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-500/10 ring-emerald-200 dark:ring-emerald-500/20',
+      cardClass:
+        'bg-gradient-to-br from-emerald-50 via-emerald-50/40 to-background border-emerald-200/70 dark:from-emerald-500/10 dark:via-emerald-500/5 dark:border-emerald-500/20',
+      bar: 'bg-emerald-500',
       hint: 'Live within the last 90s',
     },
     {
@@ -154,13 +158,21 @@ export function ActiveSessionsManagement() {
       accent: totalConcurrent
         ? 'text-amber-600 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-500/10 ring-amber-200 dark:ring-amber-500/20'
         : 'text-muted-foreground bg-muted ring-border',
+      cardClass: totalConcurrent
+        ? 'bg-gradient-to-br from-amber-50 via-amber-50/40 to-background border-amber-200/70 dark:from-amber-500/10 dark:via-amber-500/5 dark:border-amber-500/20'
+        : 'bg-card border-border/60',
+      bar: totalConcurrent ? 'bg-amber-500' : 'bg-muted-foreground/30',
       hint: 'Users on 2+ devices',
     },
     {
       label: 'Open Sessions',
       value: sessions.length,
       icon: Monitor,
-      accent: 'text-primary bg-primary/10 ring-primary/20',
+      accent:
+        'text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-500/10 ring-sky-200 dark:ring-sky-500/20',
+      cardClass:
+        'bg-gradient-to-br from-sky-50 via-sky-50/40 to-background border-sky-200/70 dark:from-sky-500/10 dark:via-sky-500/5 dark:border-sky-500/20',
+      bar: 'bg-sky-500',
       hint: 'Total active devices',
     },
   ];
@@ -168,33 +180,47 @@ export function ActiveSessionsManagement() {
   return (
     <div className="space-y-6 p-2 md:p-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            </span>
-            <span className="text-xs font-medium uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-              Live
-            </span>
+      <div className="relative overflow-hidden rounded-2xl border border-emerald-200/60 bg-gradient-to-br from-emerald-50 via-background to-sky-50 dark:from-emerald-500/10 dark:via-background dark:to-sky-500/10 dark:border-emerald-500/20 p-5 md:p-6">
+        <div className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-emerald-300/20 blur-3xl dark:bg-emerald-500/10" />
+        <div className="pointer-events-none absolute -bottom-16 -left-16 h-48 w-48 rounded-full bg-sky-300/20 blur-3xl dark:bg-sky-500/10" />
+        <div className="relative flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-2.5 py-1 ring-1 ring-emerald-500/20">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+              </span>
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                Live
+              </span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+              Active Sessions &amp; Devices
+            </h1>
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              Live view of students currently using the LMS, with device, location and what's playing right now.
+            </p>
           </div>
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
-            Active Sessions &amp; Devices
-          </h1>
-          <p className="text-sm text-muted-foreground max-w-2xl">
-            Live view of students currently using the LMS, with device, location and what's playing right now.
-          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={load}
+            disabled={loading}
+            className="shrink-0 bg-background/80 backdrop-blur border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 dark:border-emerald-500/30 dark:hover:bg-emerald-500/10"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
+          </Button>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="shrink-0">
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
-        </Button>
       </div>
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {stats.map((s) => (
-          <Card key={s.label} className="overflow-hidden border-border/60 hover:shadow-sm transition-shadow">
+          <Card
+            key={s.label}
+            className={`relative overflow-hidden hover:shadow-md transition-shadow ${s.cardClass}`}
+          >
+            <span className={`absolute left-0 top-0 h-full w-1 ${s.bar}`} />
             <CardContent className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1.5">
