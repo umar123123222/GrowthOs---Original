@@ -22,6 +22,7 @@ function generateBrandedInvoiceHtml(params: {
   companyEmail: string;
   companyAddress: string;
   companyPhone: string;
+  companyPhone2?: string;
   studentName: string;
   studentEmail: string;
   studentId: string;
