@@ -7,6 +7,7 @@ interface HeartbeatBody {
   user_agent?: string
   device_label?: string
   current_activity?: Record<string, unknown> | null
+  coords?: { latitude: number; longitude: number; accuracy?: number } | null
   end?: boolean
 }
 
@@ -16,12 +17,42 @@ function parseIp(req: Request): string | null {
   return req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip')
 }
 
-async function lookupGeo(ip: string | null): Promise<{ country?: string; city?: string; region?: string }> {
-  if (!ip || ip === '127.0.0.1' || ip.startsWith('::')) return {}
-
-  // Try ipwho.is first — generally more accurate for South Asia than ipapi.co
+async function reverseGeocode(lat: number, lon: number): Promise<{ country?: string; city?: string; region?: string }> {
+  // BigDataCloud — free, no API key, accurate reverse-geocoding
   try {
-    const r = await fetch(`https://ipwho.is/${ip}`, { headers: { 'User-Agent': 'lms-session-heartbeat/1.0' } })
+    const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`)
+    if (r.ok) {
+      const j = await r.json()
+      const city = j.city || j.locality || j.localityInfo?.administrative?.[3]?.name
+      if (city || j.countryName) {
+        return { country: j.countryName, city, region: j.principalSubdivision }
+      }
+    }
+  } catch { /* fall through */ }
+
+  // Fallback: Nominatim (OSM)
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`, {
+      headers: { 'User-Agent': 'lms-session-heartbeat/1.0' },
+    })
+    if (r.ok) {
+      const j = await r.json()
+      const a = j.address || {}
+      return {
+        country: a.country,
+        city: a.city || a.town || a.village || a.suburb || a.county,
+        region: a.state || a.region,
+      }
+    }
+  } catch { /* noop */ }
+
+  return {}
+}
+
+async function lookupGeoByIp(ip: string | null): Promise<{ country?: string; city?: string; region?: string }> {
+  if (!ip || ip === '127.0.0.1' || ip.startsWith('::')) return {}
+  try {
+    const r = await fetch(`https://ipwho.is/${ip}`)
     if (r.ok) {
       const j = await r.json()
       if (j && j.success !== false && (j.city || j.country)) {
@@ -29,8 +60,6 @@ async function lookupGeo(ip: string | null): Promise<{ country?: string; city?: 
       }
     }
   } catch { /* fall through */ }
-
-  // Fallback: ip-api.com (HTTPS via pro is paid, but http works server-side from Deno)
   try {
     const r = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city`)
     if (r.ok) {
@@ -39,17 +68,8 @@ async function lookupGeo(ip: string | null): Promise<{ country?: string; city?: 
         return { country: j.country, city: j.city, region: j.regionName }
       }
     }
-  } catch { /* fall through */ }
-
-  // Final fallback: ipapi.co
-  try {
-    const r = await fetch(`https://ipapi.co/${ip}/json/`, { headers: { 'User-Agent': 'lms-session-heartbeat/1.0' } })
-    if (!r.ok) return {}
-    const j = await r.json()
-    return { country: j.country_name || j.country, city: j.city, region: j.region }
-  } catch {
-    return {}
-  }
+  } catch { /* noop */ }
+  return {}
 }
 
 Deno.serve(async (req) => {
@@ -100,7 +120,7 @@ Deno.serve(async (req) => {
     // See if session already exists
     const { data: existing } = await admin
       .from('student_sessions')
-      .select('id, ip_address, country, city, region, first_seen_at')
+      .select('id, ip_address, country, city, region, first_seen_at, latitude, longitude, geo_source')
       .eq('user_id', userId)
       .eq('session_token', body.session_token)
       .maybeSingle()
@@ -115,12 +135,34 @@ Deno.serve(async (req) => {
     let country = existing?.country
     let city = existing?.city
     let region = existing?.region
-    // Only resolve geo when IP changed or first time
-    if (!existing || existing.ip_address !== ip) {
-      const geo = await lookupGeo(ip)
+    let latitude: number | null = existing?.latitude ?? null
+    let longitude: number | null = existing?.longitude ?? null
+    let accuracy: number | null = null
+    let geo_source: string | null = existing?.geo_source ?? null
+
+    if (body.coords && Number.isFinite(body.coords.latitude) && Number.isFinite(body.coords.longitude)) {
+      const newLat = body.coords.latitude
+      const newLon = body.coords.longitude
+      accuracy = typeof body.coords.accuracy === 'number' ? body.coords.accuracy : null
+      const moved =
+        latitude == null || longitude == null ||
+        Math.abs(newLat - latitude) > 0.01 || Math.abs(newLon - longitude) > 0.01
+      latitude = newLat
+      longitude = newLon
+      if (moved || geo_source !== 'gps') {
+        const geo = await reverseGeocode(newLat, newLon)
+        country = geo.country ?? country
+        city = geo.city ?? city
+        region = geo.region ?? region
+      }
+      geo_source = 'gps'
+    } else if (!existing || existing.ip_address !== ip) {
+      // Fall back to IP-based geo only when no GPS is provided
+      const geo = await lookupGeoByIp(ip)
       country = geo.country ?? country
       city = geo.city ?? city
       region = geo.region ?? region
+      if (!geo_source) geo_source = 'ip'
     }
 
     const nowIso = new Date().toISOString()
@@ -134,10 +176,15 @@ Deno.serve(async (req) => {
       country: country ?? null,
       city: city ?? null,
       region: region ?? null,
+      latitude,
+      longitude,
+      geo_accuracy_m: accuracy,
+      geo_source,
       current_activity: body.current_activity ?? null,
       last_heartbeat_at: nowIso,
       ended_at: null as string | null,
     }
+
 
     const { error: upErr } = await admin
       .from('student_sessions')

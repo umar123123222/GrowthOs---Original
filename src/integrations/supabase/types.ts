@@ -2422,9 +2422,13 @@ export type Database = {
           device_label: string | null
           ended_at: string | null
           first_seen_at: string
+          geo_accuracy_m: number | null
+          geo_source: string | null
           id: string
           ip_address: string | null
           last_heartbeat_at: string
+          latitude: number | null
+          longitude: number | null
           region: string | null
           session_token: string
           updated_at: string
@@ -2440,9 +2444,13 @@ export type Database = {
           device_label?: string | null
           ended_at?: string | null
           first_seen_at?: string
+          geo_accuracy_m?: number | null
+          geo_source?: string | null
           id?: string
           ip_address?: string | null
           last_heartbeat_at?: string
+          latitude?: number | null
+          longitude?: number | null
           region?: string | null
           session_token: string
           updated_at?: string
@@ -2458,9 +2466,13 @@ export type Database = {
           device_label?: string | null
           ended_at?: string | null
           first_seen_at?: string
+          geo_accuracy_m?: number | null
+          geo_source?: string | null
           id?: string
           ip_address?: string | null
           last_heartbeat_at?: string
+          latitude?: number | null
+          longitude?: number | null
           region?: string | null
           session_token?: string
           updated_at?: string

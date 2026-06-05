@@ -59,9 +59,55 @@ async function fingerprint(): Promise<string> {
 
 let currentActivity: Activity = null;
 
+type Coords = { latitude: number; longitude: number; accuracy?: number; ts: number };
+let cachedCoords: Coords | null = null;
+let lastGeoAttempt = 0;
+const GEO_TTL_MS = 10 * 60_000;
+const GEO_RETRY_MS = 60_000;
+
+function requestCoords(): Promise<Coords | null> {
+  return new Promise((resolve) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    const timeoutId = window.setTimeout(() => resolve(null), 8000);
+    try {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          window.clearTimeout(timeoutId);
+          resolve({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy,
+            ts: Date.now(),
+          });
+        },
+        () => {
+          window.clearTimeout(timeoutId);
+          resolve(null);
+        },
+        { enableHighAccuracy: true, maximumAge: 5 * 60_000, timeout: 7000 }
+      );
+    } catch {
+      window.clearTimeout(timeoutId);
+      resolve(null);
+    }
+  });
+}
+
+async function ensureCoords(): Promise<Coords | null> {
+  const now = Date.now();
+  if (cachedCoords && now - cachedCoords.ts < GEO_TTL_MS) return cachedCoords;
+  if (now - lastGeoAttempt < GEO_RETRY_MS && cachedCoords) return cachedCoords;
+  lastGeoAttempt = now;
+  const c = await requestCoords();
+  if (c) cachedCoords = c;
+  return cachedCoords;
+}
+
 export function setSessionActivity(a: Activity) {
   currentActivity = a;
-  // fire a custom event so the hook can immediately push
   try {
     window.dispatchEvent(new CustomEvent('lms:session-activity-changed'));
   } catch {
@@ -78,6 +124,7 @@ export function useSessionHeartbeat(userId?: string | null) {
     if (!userId) return;
     try {
       const ua = navigator.userAgent;
+      const coords = extra?.end ? null : await ensureCoords();
       await supabase.functions.invoke('session-heartbeat', {
         body: {
           session_token: tokenRef.current,
@@ -85,6 +132,9 @@ export function useSessionHeartbeat(userId?: string | null) {
           user_agent: ua,
           device_label: getDeviceLabel(ua),
           current_activity: currentActivity,
+          coords: coords
+            ? { latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy }
+            : null,
           ...(extra || {}),
         },
       });
