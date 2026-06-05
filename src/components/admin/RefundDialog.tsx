@@ -169,7 +169,7 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
                     <div className="text-sm font-medium">Installment #{inv.installment_number}</div>
                     <div className="text-xs text-muted-foreground">{inv.course_name || inv.pathway_name || 'General'}</div>
                   </div>
-                  <div className="font-semibold">${inv.amount.toLocaleString()}</div>
+                  <div className="font-semibold">{sym(currency)}{inv.amount.toLocaleString()}</div>
                 </label>
               ))}
             </div>
