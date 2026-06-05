@@ -199,10 +199,36 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
               <Textarea id="refund-reason" rows={3} value={reason} onChange={e => setReason(e.target.value)} placeholder="e.g. Student requested refund within cooling-off period" />
             </div>
 
+            <div>
+              <Label htmlFor="refund-proof">Proof of Refund <span className="text-muted-foreground text-xs">(optional, max 8 MB — will be attached to email)</span></Label>
+              {proofFile ? (
+                <div className="flex items-center justify-between gap-2 p-2 border rounded-md bg-muted/30">
+                  <div className="text-sm truncate flex-1">
+                    <span className="font-medium">{proofFile.name}</span>
+                    <span className="text-xs text-muted-foreground ml-2">({(proofFile.size / 1024).toFixed(1)} KB)</span>
+                  </div>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setProofFile(null)}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ) : (
+                <label htmlFor="refund-proof" className="flex items-center justify-center gap-2 p-3 border border-dashed rounded-md text-sm text-muted-foreground hover:bg-muted/30 cursor-pointer">
+                  <Upload className="w-4 h-4" /> Click to upload receipt / screenshot (PDF, image)
+                </label>
+              )}
+              <Input
+                id="refund-proof"
+                type="file"
+                className="hidden"
+                accept="image/*,application/pdf"
+                onChange={e => setProofFile(e.target.files?.[0] || null)}
+              />
+            </div>
+
             <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md text-sm text-amber-900">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <div>
-                Total to refund: <strong>${total.toLocaleString()}</strong>. The student's LMS access will be suspended immediately.
+                Total to refund: <strong>{sym(currency)}{total.toLocaleString()}</strong>. The student's LMS access will be suspended immediately.
               </div>
             </div>
           </div>
