@@ -300,17 +300,10 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get enrolled students for this batch
+    // Get enrolled students for this batch (no FK relationship defined, fetch in two steps)
     const { data: enrollments, error: enrollmentError } = await supabase
       .from("course_enrollments")
-      .select(`
-        user_id,
-        users:user_id (
-          id,
-          email,
-          full_name
-        )
-      `)
+      .select("user_id")
       .eq("batch_id", batch_id)
       .eq("status", "active");
 
@@ -322,6 +315,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const userIds = Array.from(new Set((enrollments || []).map((e: any) => e.user_id).filter(Boolean)));
+    let usersById = new Map<string, { id: string; email: string; full_name: string }>();
+    if (userIds.length > 0) {
+      const { data: usersData, error: usersError } = await supabase
+        .from("users")
+        .select("id, email, full_name")
+        .in("id", userIds);
+      if (usersError) {
+        console.error("Error fetching users:", usersError);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch enrolled students" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      usersById = new Map((usersData || []).map((u: any) => [u.id, u]));
+    }
+
     if (!enrollments || enrollments.length === 0) {
       console.log("No students enrolled in this batch");
       return new Response(
@@ -331,12 +341,12 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Extract unique students
-    const students: Student[] = enrollments
-      .filter((e: any) => e.users?.email)
-      .map((e: any) => ({
-        id: e.users.id,
-        email: e.users.email,
-        full_name: e.users.full_name || "Student",
+    const students: Student[] = Array.from(usersById.values())
+      .filter((u) => !!u.email)
+      .map((u) => ({
+        id: u.id,
+        email: u.email,
+        full_name: u.full_name || "Student",
       }));
 
     console.log(`Sending notifications to ${students.length} students`);
