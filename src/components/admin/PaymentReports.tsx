@@ -68,6 +68,8 @@ export const PaymentReports = () => {
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
   const [refundOpen, setRefundOpen] = useState(false);
   const [refundContext, setRefundContext] = useState<{ studentId: string; email?: string; invoiceId?: string } | null>(null);
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markPaidContext, setMarkPaidContext] = useState<{ invoiceId: string; email?: string } | null>(null);
 
   const { toast } = useToast();
   const { user } = useAuth();
