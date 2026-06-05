@@ -36,9 +36,13 @@ function generateEmailHTML(
   meetingLink: string | undefined,
   startDatetime: string | undefined,
   lmsUrl: string,
-  companyName: string
+  companyName: string,
+  mentorName?: string,
+  ctaPath?: string,
+  isReminder?: boolean,
 ): string {
   const firstName = studentName?.split(" ")[0] || "Student";
+  const ctaUrl = ctaPath ? `${lmsUrl.replace(/\/$/, '')}${ctaPath.startsWith('/') ? ctaPath : '/' + ctaPath}` : lmsUrl;
 
   if (itemType === "RECORDING") {
     return `
