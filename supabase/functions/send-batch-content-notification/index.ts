@@ -364,9 +364,12 @@ const handler = async (req: Request): Promise<Response> => {
           meeting_link,
           start_datetime,
           lmsUrl,
-          companyName
+          companyName,
+          mentor_name,
+          cta_path,
+          is_reminder,
         );
-        const subject = getEmailSubject(item_type, title);
+        const subject = getEmailSubject(item_type, title, is_reminder);
 
         if (smtpClient) {
           // Send directly via SMTP
