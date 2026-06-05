@@ -162,6 +162,11 @@ export function StudentsManagement() {
   const [timeTick, setTimeTick] = useState(0);
   const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
+  const [extensionConfirm, setExtensionConfirm] = useState<{ student: Student; date: Date } | null>(null);
+  const [extensionReason, setExtensionReason] = useState('');
+  const [extensionSaving, setExtensionSaving] = useState(false);
+  const [lmsStatusConfirm, setLmsStatusConfirm] = useState<{ student: Student; status: string } | null>(null);
+  const [lmsStatusSaving, setLmsStatusSaving] = useState(false);
   const [accessManagementOpen, setAccessManagementOpen] = useState(false);
   const [selectedStudentForAccess, setSelectedStudentForAccess] = useState<Student | null>(null);
   const [companyCurrency, setCompanyCurrency] = useState<string>('PKR');
