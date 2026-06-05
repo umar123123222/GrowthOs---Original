@@ -187,7 +187,7 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
             </div>
 
             {/* ─── Videos Tab ─── */}
-            <TabsContent value="videos" className="flex-1 flex flex-col min-h-0 m-0 mt-0 px-6 pb-6 pt-4">
+            <TabsContent value="videos" className="flex flex-col min-h-0 m-0 mt-0 px-6 pb-6 pt-4 data-[state=inactive]:hidden">
               {/* Video Stats */}
               <div className="grid grid-cols-4 gap-3 mb-4 shrink-0">
                 <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
