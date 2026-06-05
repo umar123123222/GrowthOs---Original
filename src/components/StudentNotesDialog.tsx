@@ -121,7 +121,26 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
         };
       });
 
-      const merged = [...activityNotes, ...extensionNotes].sort(
+      const scheduledNotes: Note[] = scheduledData.map(s => {
+        const status = s.cancelled_at ? 'cancelled' : s.executed_at ? 'executed' : (s.status || 'pending');
+        const reasonStr = s.reason ? ` Reason: ${s.reason}` : '';
+        const label =
+          status === 'cancelled' ? 'Scheduled suspension cancelled.' :
+          status === 'executed' ? 'Scheduled suspension executed.' :
+          `Suspension scheduled for ${format(new Date(s.schedule_suspend_date), 'MMM d, yyyy h:mm a')}.${s.auto_unsuspend_date ? ` Auto-unsuspend on ${format(new Date(s.auto_unsuspend_date), 'MMM d, yyyy')}.` : ''}`;
+        return {
+          id: `sched-${s.id}`,
+          note: `${label}${reasonStr}`,
+          created_at: s.created_at,
+          created_by_name: s.created_by ? (creatorMap[s.created_by] || 'Admin') : 'System',
+          type: 'scheduled_suspension' as const,
+          scheduleSuspendDate: s.schedule_suspend_date,
+          autoUnsuspendDate: s.auto_unsuspend_date,
+          scheduledStatus: status,
+        };
+      });
+
+      const merged = [...activityNotes, ...extensionNotes, ...scheduledNotes].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
       setNotes(merged);
