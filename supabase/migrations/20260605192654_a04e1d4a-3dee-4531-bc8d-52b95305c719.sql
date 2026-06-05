@@ -1,0 +1,1 @@
+ALTER TABLE public.success_sessions ADD COLUMN IF NOT EXISTS reminder_3h_sent_at TIMESTAMPTZ;
