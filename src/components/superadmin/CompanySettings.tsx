@@ -64,6 +64,7 @@ interface CompanySettingsData {
   onboarding_video_enabled?: boolean;
   onboarding_document_url?: string;
   onboarding_document_name?: string;
+  onboarding_pointers?: string[];
   // Live Chat
   livechat_code?: string;
   // Multi-Course Feature
@@ -118,6 +119,7 @@ export function CompanySettings() {
     onboarding_video_enabled: true,
     onboarding_document_url: '',
     onboarding_document_name: '',
+    onboarding_pointers: [],
     // Live Chat
     livechat_code: '',
     // Multi-Course Feature
@@ -990,7 +992,107 @@ export function CompanySettings() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Student Onboarding Pointers */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Student Onboarding Pointers
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Add quick tips or pointers shown to students during their onboarding. You can add, edit, reorder, or delete them.
+              </p>
+
+              {(settings.onboarding_pointers || []).length === 0 && (
+                <div className="text-sm text-muted-foreground italic p-4 border border-dashed rounded-md text-center">
+                  No pointers yet. Click "Add Pointer" to create one.
+                </div>
+              )}
+
+              <div className="space-y-2">
+                {(settings.onboarding_pointers || []).map((pointer, index) => (
+                  <div key={index} className="flex items-start gap-2">
+                    <span className="mt-2 text-xs font-medium text-muted-foreground w-6 text-right">
+                      {index + 1}.
+                    </span>
+                    <Textarea
+                      value={pointer}
+                      onChange={(e) => {
+                        const next = [...(settings.onboarding_pointers || [])];
+                        next[index] = e.target.value;
+                        setSettings(prev => ({ ...prev, onboarding_pointers: next }));
+                      }}
+                      placeholder="Enter onboarding pointer..."
+                      rows={2}
+                      className="flex-1"
+                    />
+                    <div className="flex flex-col gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={index === 0}
+                        onClick={() => {
+                          const next = [...(settings.onboarding_pointers || [])];
+                          [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                          setSettings(prev => ({ ...prev, onboarding_pointers: next }));
+                        }}
+                        title="Move up"
+                      >
+                        ↑
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={index === (settings.onboarding_pointers || []).length - 1}
+                        onClick={() => {
+                          const next = [...(settings.onboarding_pointers || [])];
+                          [next[index + 1], next[index]] = [next[index], next[index + 1]];
+                          setSettings(prev => ({ ...prev, onboarding_pointers: next }));
+                        }}
+                        title="Move down"
+                      >
+                        ↓
+                      </Button>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        const next = (settings.onboarding_pointers || []).filter((_, i) => i !== index);
+                        setSettings(prev => ({ ...prev, onboarding_pointers: next }));
+                      }}
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const next = [...(settings.onboarding_pointers || []), ''];
+                  setSettings(prev => ({ ...prev, onboarding_pointers: next }));
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Pointer
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
           </div>
+
         </TabsContent>
 
         {/* COMMUNICATION */}
