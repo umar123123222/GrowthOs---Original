@@ -1083,6 +1083,24 @@ export function SuccessSessionsManagement() {
         </Dialog>
       </div>
 
+      {/* Stat strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total', value: stats.total, accent: 'text-foreground' },
+          { label: 'Today', value: stats.today, accent: 'text-primary' },
+          { label: 'Upcoming', value: stats.upcoming, accent: 'text-blue-600' },
+          { label: 'Drafts', value: stats.drafts, accent: 'text-amber-600' },
+        ].map(s => (
+          <Card key={s.label} className="border border-border/60 shadow-none">
+            <CardContent className="p-4">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{s.label}</p>
+              <p className={`text-2xl font-semibold mt-1 ${s.accent}`}>{s.value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+
       {/* Upcoming 7 Days Sessions */}
       <UpcomingSessionsPreview
         sessions={sessions}
