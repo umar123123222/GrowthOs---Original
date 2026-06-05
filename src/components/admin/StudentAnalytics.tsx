@@ -36,160 +36,92 @@ interface StudentAnalyticsProps {
   hidePayments?: boolean;
 }
 
+// Module-level cache so switching tabs/re-mounting renders instantly
+let _cache: { students: StudentAnalytics[]; overview: OverviewStats; ts: number } | null = null;
+const CACHE_TTL_MS = 5 * 60_000;
+
 export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps) => {
-  const [students, setStudents] = useState<StudentAnalytics[]>([]);
+  const [students, setStudents] = useState<StudentAnalytics[]>(_cache?.students ?? []);
   const [activeTab, setActiveTab] = useState<'overview' | 'engagement' | 'payments' | string>('overview');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
-  const [overviewStats, setOverviewStats] = useState<OverviewStats>({
-    total_students: 0,
-    active_students: 0,
-    avg_progress: 0,
-    total_completions: 0,
-    videos_watched_today: 0,
-    assignments_submitted_today: 0
-  });
+  const [overviewStats, setOverviewStats] = useState<OverviewStats>(
+    _cache?.overview ?? {
+      total_students: 0,
+      active_students: 0,
+      avg_progress: 0,
+      total_completions: 0,
+      videos_watched_today: 0,
+      assignments_submitted_today: 0,
+    }
+  );
   const [loading, setLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
-  
+  const [hasLoaded, setHasLoaded] = useState(!!_cache);
+
   // Filter students based on search term
-  const filteredStudents = students.filter(student => 
+  const filteredStudents = students.filter(student =>
     student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
-  
+
   const studentsPerPage = 12;
   const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
   const startIndex = (currentPage - 1) * studentsPerPage;
   const endIndex = startIndex + studentsPerPage;
   const currentStudents = filteredStudents.slice(startIndex, endIndex);
-  const {
-    toast
-  } = useToast();
-  // Lazy-load: only fetch the heavy analytics data when user actually opens
-  // the Overview or Engagement tabs. The Payments tab has its own data fetch.
+  const { toast } = useToast();
+
+  // Fetch once when the user opens overview/engagement. Skip if cache is fresh.
   useEffect(() => {
-    if (!hasLoaded && (activeTab === 'overview' || activeTab === 'engagement')) {
+    if (activeTab !== 'overview' && activeTab !== 'engagement') return;
+    const cacheFresh = _cache && Date.now() - _cache.ts < CACHE_TTL_MS;
+    if (cacheFresh) {
+      // hydrate from cache (covers re-mount) then refresh in background
+      setStudents(_cache!.students);
+      setOverviewStats(_cache!.overview);
+      setHasLoaded(true);
+      return;
+    }
+    if (!hasLoaded) {
       setHasLoaded(true);
       fetchAnalyticsData();
     }
-  }, [activeTab, hasLoaded]);
-  
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
   // Reset to first page when search term changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
   const fetchAnalyticsData = async () => {
     try {
-      setLoading(true);
+      // Only show full-screen loader on cold start
+      if (!_cache) setLoading(true);
 
-      // Fetch students with their progress data
-      const {
-        data: studentsData,
-        error: studentsError
-      } = await supabase.from('users').select(`
-          id,
-          full_name,
-          email,
-          status,
-          created_at,
-          last_active_at,
-          students!inner(
-            enrollment_date,
-            onboarding_completed
-          )
-        `).eq('role', 'student');
-      if (studentsError) throw studentsError;
+      const { data, error } = await supabase.rpc('get_student_analytics_summary' as any);
+      if (error) throw error;
 
-      // Helper to fetch ALL rows (Supabase caps at 1000 per request)
-      const fetchAll = async <T,>(table: string, columns: string, filter?: (q: any) => any): Promise<T[]> => {
-        const pageSize = 1000;
-        let from = 0;
-        const all: T[] = [];
-        // Loop until fewer than pageSize rows are returned
-        // eslint-disable-next-line no-constant-condition
-        while (true) {
-          let q: any = supabase.from(table as any).select(columns).range(from, from + pageSize - 1);
-          if (filter) q = filter(q);
-          const { data, error } = await q;
-          if (error) throw error;
-          const rows = (data || []) as T[];
-          all.push(...rows);
-          if (rows.length < pageSize) break;
-          from += pageSize;
-        }
-        return all;
+      const payload = (data || {}) as { overview?: OverviewStats; students?: StudentAnalytics[] };
+      const nextStudents = payload.students ?? [];
+      const nextOverview = payload.overview ?? {
+        total_students: 0,
+        active_students: 0,
+        avg_progress: 0,
+        total_completions: 0,
+        videos_watched_today: 0,
+        assignments_submitted_today: 0,
       };
 
-      // Fetch recording views (paginated — table can exceed 1000 rows)
-      const recordingViews = await fetchAll<{ user_id: string; recording_id: string; watched: boolean; watched_at: string | null }>(
-        'recording_views',
-        'user_id, recording_id, watched, watched_at'
-      );
-
-      // Fetch total available recordings
-      const {
-        data: totalRecordings,
-        error: recordingsError
-      } = await supabase.from('available_lessons').select('id');
-      if (recordingsError) throw recordingsError;
-
-      // Fetch assignments data
-      const {
-        data: assignments,
-        error: assignmentsError
-      } = await supabase.from('assignments').select('id');
-      if (assignmentsError) throw assignmentsError;
-
-      // Fetch submissions (paginated — table can exceed 1000 rows)
-      const submissions = await fetchAll<{ student_id: string; assignment_id: string; status: string; submitted_at: string | null }>(
-        'submissions',
-        'student_id, assignment_id, status, submitted_at'
-      );
-
-      // Process student analytics (use users.last_active_at instead of scanning user_activity_logs which is too large to query unfiltered)
-      const processedStudents = studentsData?.map(student => {
-        const studentViews = recordingViews?.filter(view => view.user_id === student.id) || [];
-        const watchedVideos = studentViews.filter(view => view.watched).length;
-        const studentSubmissions = submissions?.filter(sub => sub.student_id === student.id) || [];
-        const completedAssignments = studentSubmissions.filter(sub => sub.status === 'approved').length;
-        const progress = Math.round((watchedVideos / (totalRecordings?.length || 1) * 0.6 + completedAssignments / (assignments?.length || 1) * 0.4) * 100);
-        return {
-          id: student.id,
-          full_name: student.full_name || 'Unknown',
-          email: student.email || '',
-          status: student.status || 'active',
-          enrollment_date: student.students?.[0]?.enrollment_date || student.created_at,
-          videos_watched: watchedVideos,
-          videos_total: totalRecordings?.length || 0,
-          assignments_completed: completedAssignments,
-          assignments_total: assignments?.length || 0,
-          last_activity: student.last_active_at || '',
-          progress_percentage: progress,
-          current_module: 'Module 1' // This would need proper module tracking
-        };
-      }) || [];
-
-      // Calculate overview stats
-      const today = new Date().toISOString().split('T')[0];
-      const todayViews = recordingViews?.filter(view => view.watched_at && view.watched_at.startsWith(today)).length || 0;
-      const todaySubmissions = submissions?.filter(sub => sub.submitted_at && sub.submitted_at.startsWith(today)).length || 0;
-      const stats: OverviewStats = {
-        total_students: processedStudents.length,
-        active_students: processedStudents.filter(s => s.status === 'active').length,
-        avg_progress: Math.round(processedStudents.reduce((acc, s) => acc + s.progress_percentage, 0) / processedStudents.length) || 0,
-        total_completions: processedStudents.filter(s => s.progress_percentage >= 100).length,
-        videos_watched_today: todayViews,
-        assignments_submitted_today: todaySubmissions
-      };
-      setStudents(processedStudents);
-      setOverviewStats(stats);
+      setStudents(nextStudents);
+      setOverviewStats(nextOverview);
+      _cache = { students: nextStudents, overview: nextOverview, ts: Date.now() };
     } catch (error) {
       console.error('Error fetching analytics:', error);
       toast({
-        title: "Error",
-        description: "Failed to load student analytics",
-        variant: "destructive"
+        title: 'Error',
+        description: 'Failed to load student analytics',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
