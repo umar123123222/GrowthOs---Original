@@ -45,20 +45,36 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
   const fetchNotes = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('user_activity_logs')
-        .select('id, metadata, occurred_at, activity_type')
-        .eq('user_id', studentId)
-        .in('activity_type', ['admin_note', 'lms_suspended'])
-        .order('occurred_at', { ascending: false });
+      const [activityRes, extensionRes] = await Promise.all([
+        supabase
+          .from('user_activity_logs')
+          .select('id, metadata, occurred_at, activity_type')
+          .eq('user_id', studentId)
+          .in('activity_type', ['admin_note', 'lms_suspended'])
+          .order('occurred_at', { ascending: false }),
+        supabase
+          .from('admin_logs')
+          .select('id, data, created_at, performed_by, action')
+          .eq('action', 'fee_extension_granted')
+          .filter('data->>target_user_id', 'eq', studentId)
+          .order('created_at', { ascending: false }),
+      ]);
 
-      if (error) throw error;
+      if (activityRes.error) throw activityRes.error;
 
-      // Resolve creator names
-      const creatorIds = [...new Set((data || []).map(d => {
-        const meta = d.metadata as any;
-        return meta?.created_by || meta?.suspended_by;
-      }).filter(Boolean))];
+      const activityData = activityRes.data || [];
+      const extensionData = extensionRes.data || [];
+
+      // Resolve creator names from both sources
+      const creatorIds = [
+        ...new Set([
+          ...activityData.map(d => {
+            const meta = d.metadata as any;
+            return meta?.created_by || meta?.suspended_by;
+          }),
+          ...extensionData.map(e => e.performed_by),
+        ].filter(Boolean)),
+      ];
       let creatorMap: Record<string, string> = {};
       if (creatorIds.length > 0) {
         const { data: creators } = await supabase
@@ -68,7 +84,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
         creatorMap = Object.fromEntries((creators || []).map(c => [c.id, c.full_name]));
       }
 
-      setNotes((data || []).map(d => {
+      const activityNotes: Note[] = activityData.map(d => {
         const meta = d.metadata as any;
         const isSuspension = d.activity_type === 'lms_suspended';
         return {
@@ -79,7 +95,28 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
           type: isSuspension ? 'suspension' as const : 'note' as const,
           autoUnsuspendDate: isSuspension ? meta?.auto_unsuspend_date : undefined,
         };
-      }));
+      });
+
+      const extensionNotes: Note[] = extensionData.map(e => {
+        const d = (e.data as any) || {};
+        const reason = d.reason ? ` Reason: ${d.reason}` : '';
+        const instLabel = d.installment_number ? ` (Installment #${d.installment_number})` : '';
+        return {
+          id: e.id,
+          note: `Fee due date extended${instLabel}.${reason}`,
+          created_at: e.created_at,
+          created_by_name: e.performed_by ? (creatorMap[e.performed_by] || 'Admin') : 'System',
+          type: 'fee_extension' as const,
+          previousDueDate: d.previous_due_date,
+          newDueDate: d.new_due_date,
+        };
+      });
+
+      const merged = [...activityNotes, ...extensionNotes].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setNotes(merged);
+
     } catch (error) {
       console.error('Error fetching notes:', error);
     } finally {
