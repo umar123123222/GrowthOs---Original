@@ -418,11 +418,25 @@ export function ActiveSessionsManagement() {
                                 </div>
                               </div>
                               <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2 mt-3 text-xs">
-                                <div className="flex items-center gap-1.5 text-muted-foreground" title="Approximate — derived from the device's public IP address. Mobile carriers, VPNs and ISP routing can place users hundreds of km away from their actual location.">
-                                  <MapPin className="h-3.5 w-3.5 shrink-0" />
-                                  <span className="truncate text-foreground/80">{loc}</span>
-                                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">~approx</span>
-                                </div>
+                                {(() => {
+                                  const isGps = s.geo_source === 'gps';
+                                  const tip = isGps
+                                    ? `Precise location from device GPS${s.geo_accuracy_m ? ` (±${Math.round(s.geo_accuracy_m)} m)` : ''}.`
+                                    : "Approximate — derived from the device's public IP address. Mobile carriers, VPNs and ISP routing can place users hundreds of km away from their actual location.";
+                                  return (
+                                    <div className="flex items-center gap-1.5 text-muted-foreground" title={tip}>
+                                      <MapPin className={`h-3.5 w-3.5 shrink-0 ${isGps ? 'text-emerald-600 dark:text-emerald-400' : ''}`} />
+                                      <span className="truncate text-foreground/80">{loc}</span>
+                                      {isGps ? (
+                                        <span className="text-[10px] uppercase tracking-wide font-medium text-emerald-700 dark:text-emerald-400">
+                                          GPS{s.geo_accuracy_m ? ` ±${Math.round(s.geo_accuracy_m)}m` : ''}
+                                        </span>
+                                      ) : (
+                                        <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">~approx</span>
+                                      )}
+                                    </div>
+                                  );
+                                })()}
                                 <div className="flex items-center gap-1.5 text-muted-foreground">
                                   <Globe className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate text-foreground/80 font-mono">
