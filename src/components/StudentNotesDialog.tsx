@@ -81,6 +81,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
             return meta?.created_by || meta?.suspended_by;
           }),
           ...extensionData.map(e => e.performed_by),
+          ...scheduledData.map(s => s.created_by),
         ].filter(Boolean)),
       ];
       let creatorMap: Record<string, string> = {};
