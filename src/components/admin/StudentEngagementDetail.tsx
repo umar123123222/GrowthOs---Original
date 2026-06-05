@@ -174,7 +174,7 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
             </div>
           </div>
         ) : (
-          <Tabs defaultValue="videos" className="flex-1 flex flex-col min-h-0">
+          <Tabs defaultValue="videos" className="flex flex-col min-h-0">
             <div className="px-6 pt-4 pb-0 shrink-0">
               <TabsList className="w-full grid grid-cols-2">
                 <TabsTrigger value="videos" className="gap-2">
