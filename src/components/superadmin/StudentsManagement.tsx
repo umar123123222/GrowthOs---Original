@@ -3159,7 +3159,9 @@ export function StudentsManagement() {
                                     onSelect={(date) => {
                                       if (date) {
                                         setExtensionDate(date);
-                                        grantExtension(student, date);
+                                        setExtensionPopoverOpen(null);
+                                        setExtensionReason('');
+                                        setExtensionConfirm({ student, date });
                                       }
                                     }}
                                     disabled={(date) => date < new Date()}
