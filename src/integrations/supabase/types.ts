@@ -2697,6 +2697,7 @@ export type Database = {
           mentor_id: string | null
           mentor_name: string | null
           pathway_id: string | null
+          reminder_3h_sent_at: string | null
           schedule_date: string | null
           start_time: string
           status: string | null
@@ -2720,6 +2721,7 @@ export type Database = {
           mentor_id?: string | null
           mentor_name?: string | null
           pathway_id?: string | null
+          reminder_3h_sent_at?: string | null
           schedule_date?: string | null
           start_time: string
           status?: string | null
@@ -2743,6 +2745,7 @@ export type Database = {
           mentor_id?: string | null
           mentor_name?: string | null
           pathway_id?: string | null
+          reminder_3h_sent_at?: string | null
           schedule_date?: string | null
           start_time?: string
           status?: string | null

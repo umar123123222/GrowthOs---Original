@@ -459,6 +459,35 @@ export function SuccessSessionsManagement() {
 
         if (error) throw error;
 
+        // Reset reminder flag so a fresh 3h reminder will be sent for the new schedule
+        await supabase
+          .from('success_sessions')
+          .update({ reminder_3h_sent_at: null } as any)
+          .eq('id', editingSession.id);
+
+        // Notify batch students about the schedule update
+        const updateBatchIds = resolvedBatchIds && resolvedBatchIds.length > 0 ? resolvedBatchIds : [];
+        for (const batchId of updateBatchIds) {
+          if (!batchId) continue;
+          try {
+            await supabase.functions.invoke('send-batch-content-notification', {
+              body: {
+                batch_id: batchId,
+                item_type: 'LIVE_SESSION',
+                item_id: editingSession.id,
+                title: baseSessionData.title,
+                description: baseSessionData.description,
+                meeting_link: baseSessionData.link,
+                start_datetime: baseSessionData.start_time,
+                mentor_name: baseSessionData.mentor_name,
+                cta_path: '/live-sessions',
+              }
+            });
+          } catch (notifyError) {
+            console.error('Failed to notify batch students:', notifyError);
+          }
+        }
+
         if (authUser?.id) {
           logUserActivity({
             user_id: authUser.id,
@@ -543,7 +572,9 @@ export function SuccessSessionsManagement() {
                     title: baseSessionData.title,
                     description: baseSessionData.description,
                     meeting_link: baseSessionData.link,
-                    start_datetime: baseSessionData.start_time
+                    start_datetime: baseSessionData.start_time,
+                    mentor_name: baseSessionData.mentor_name,
+                    cta_path: '/live-sessions',
                   }
                 });
               } catch (notifyError) {
@@ -604,7 +635,9 @@ export function SuccessSessionsManagement() {
                 title: session.title,
                 description: session.description,
                 meeting_link: session.link,
-                start_datetime: session.start_time
+                start_datetime: session.start_time,
+                mentor_name: session.mentor_name,
+                cta_path: '/live-sessions',
               }
             });
           } catch (notifyError) {
