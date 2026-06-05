@@ -397,13 +397,10 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       );
     }
 
-    // Default: show metadata if any
-    if (data && Object.keys(data).length > 0) {
-      return <ExpandableSubDetails data={data} />;
-    }
-
-    return <span className="text-xs text-muted-foreground">—</span>;
+    return null;
   };
+
+
 
 
   const filteredLogs = logs.filter(log => {
