@@ -11,53 +11,71 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function getYouTubeEmbed(url: string): string | null {
+function getYouTubeId(url: string): string | null {
   try {
     const u = new URL(url);
-    if (u.hostname.includes('youtu.be')) {
-      const id = u.pathname.slice(1);
-      return id ? `https://www.youtube.com/embed/${id}` : null;
-    }
+    if (u.hostname.includes('youtu.be')) return u.pathname.slice(1) || null;
     if (u.hostname.includes('youtube.com')) {
-      const id = u.searchParams.get('v');
-      if (id) return `https://www.youtube.com/embed/${id}`;
-      if (u.pathname.startsWith('/embed/')) return url;
+      const v = u.searchParams.get('v');
+      if (v) return v;
+      if (u.pathname.startsWith('/embed/')) return u.pathname.split('/')[2] || null;
+      if (u.pathname.startsWith('/shorts/')) return u.pathname.split('/')[2] || null;
     }
   } catch { /* noop */ }
   return null;
 }
 
-function getVimeoEmbed(url: string): string | null {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes('vimeo.com')) {
-      const id = u.pathname.split('/').filter(Boolean).pop();
-      return id ? `https://player.vimeo.com/video/${id}` : null;
-    }
-  } catch { /* noop */ }
-  return null;
-}
+function buildVideoCard(url: string, primary: string): string {
+  // Email clients (Gmail, Outlook) strip <iframe>. Use a thumbnail image with a play overlay
+  // that links to the video instead — this is the standard pattern for video-in-email.
+  const ytId = getYouTubeId(url);
+  const thumb = ytId
+    ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
+    : '';
 
-function buildVideoSection(url: string): string {
-  const yt = getYouTubeEmbed(url);
-  const vm = !yt ? getVimeoEmbed(url) : null;
-  const embedUrl = yt || vm || (url.includes('iframe.mediadelivery.net/embed/') ? url : null);
-  if (embedUrl) {
+  const playBadge = `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;">
+      <tr>
+        <td align="center" style="background:${primary};color:#ffffff;width:64px;height:64px;border-radius:64px;font-size:28px;line-height:64px;font-family:Arial,Helvetica,sans-serif;">
+          ▶
+        </td>
+      </tr>
+    </table>`;
+
+  if (thumb) {
     return `
-      <div style="margin: 24px 0;">
-        <h3 style="margin-bottom: 8px;">Welcome Video</h3>
-        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;background:#000;">
-          <iframe src="${escapeHtml(embedUrl)}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
-        </div>
-        <p style="font-size:13px;color:#666;margin-top:8px;">If the video doesn't load, <a href="${escapeHtml(url)}">click here to watch</a>.</p>
-      </div>`;
+      <a href="${escapeHtml(url)}" target="_blank" style="text-decoration:none;display:block;border-radius:12px;overflow:hidden;background:#000;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+          <tr>
+            <td background="${thumb}" style="background-image:url('${thumb}');background-size:cover;background-position:center;background-repeat:no-repeat;height:320px;text-align:center;vertical-align:middle;border-radius:12px;">
+              <img src="${thumb}" alt="Watch the welcome video" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;text-decoration:none;border-radius:12px;" />
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:14px 0 0;">
+              <a href="${escapeHtml(url)}" target="_blank" style="display:inline-block;padding:12px 24px;background:${primary};color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-family:Arial,Helvetica,sans-serif;font-size:14px;">▶ Watch the Welcome Video</a>
+            </td>
+          </tr>
+        </table>
+      </a>`;
   }
+
+  // Generic fallback — branded "play" card linking out
   return `
-    <div style="margin:24px 0;">
-      <h3 style="margin-bottom:8px;">Welcome Video</h3>
-      <p><a href="${escapeHtml(url)}" style="color:#2563eb;">Watch the onboarding video</a></p>
-    </div>`;
+    <a href="${escapeHtml(url)}" target="_blank" style="text-decoration:none;display:block;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border:1px solid #e5e7eb;border-radius:12px;background:linear-gradient(135deg,#0f172a 0%,${primary} 100%);">
+        <tr>
+          <td align="center" style="padding:60px 24px;">
+            ${playBadge}
+            <p style="margin:18px 0 0;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;">Watch the Welcome Video</p>
+            <p style="margin:6px 0 0;color:rgba(255,255,255,0.75);font-family:Arial,Helvetica,sans-serif;font-size:13px;">Click to open in a new tab</p>
+          </td>
+        </tr>
+      </table>
+    </a>`;
 }
+
+
 
 
 
