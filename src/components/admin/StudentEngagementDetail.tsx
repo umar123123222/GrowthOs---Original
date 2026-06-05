@@ -152,7 +152,7 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
+      <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
         {/* Header */}
         <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <div className="flex items-center gap-3">
@@ -174,7 +174,7 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
             </div>
           </div>
         ) : (
-          <Tabs defaultValue="videos" className="flex-1 flex flex-col min-h-0">
+          <Tabs defaultValue="videos" className="flex flex-col min-h-0">
             <div className="px-6 pt-4 pb-0 shrink-0">
               <TabsList className="w-full grid grid-cols-2">
                 <TabsTrigger value="videos" className="gap-2">
@@ -187,7 +187,7 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
             </div>
 
             {/* ─── Videos Tab ─── */}
-            <TabsContent value="videos" className="flex-1 flex flex-col min-h-0 m-0 mt-0 px-6 pb-6 pt-4">
+            <TabsContent value="videos" className="flex flex-col min-h-0 m-0 mt-0 px-6 pb-6 pt-4 data-[state=inactive]:hidden">
               {/* Video Stats */}
               <div className="grid grid-cols-4 gap-3 mb-4 shrink-0">
                 <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
@@ -213,7 +213,7 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
               </div>
 
               {/* Video List */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2 min-h-0">
+              <div className="max-h-[55vh] overflow-y-auto custom-scrollbar pr-1 space-y-2">
                 {videos.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                     <MonitorPlay className="w-10 h-10 mb-3 opacity-30" />
@@ -292,7 +292,7 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
             </TabsContent>
 
             {/* ─── Assignments Tab ─── */}
-            <TabsContent value="assignments" className="flex-1 flex flex-col min-h-0 m-0 mt-0 px-6 pb-6 pt-4">
+            <TabsContent value="assignments" className="flex flex-col min-h-0 m-0 mt-0 px-6 pb-6 pt-4 data-[state=inactive]:hidden">
               {/* Assignment Stats */}
               <div className="grid grid-cols-5 gap-3 mb-4 shrink-0">
                 <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
@@ -323,7 +323,7 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
               </div>
 
               {/* Assignment List */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2 min-h-0">
+              <div className="max-h-[55vh] overflow-y-auto custom-scrollbar pr-1 space-y-2">
                 {assignments.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                     <ClipboardList className="w-10 h-10 mb-3 opacity-30" />
