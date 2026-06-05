@@ -511,7 +511,19 @@ const getStatusBadge = (status: string) => {
                     <div className="flex items-center gap-2">
                       <Select
                         value={invoice.status}
-                        onValueChange={(value) => updateInvoiceStatus(invoice.id, value)}
+                        onValueChange={(value) => {
+                          if (value === 'refunded') {
+                            if (invoice.status === 'refunded' || !invoice.student_id) return;
+                            setRefundContext({
+                              studentId: invoice.student_id,
+                              email: invoice.users?.email,
+                              invoiceId: invoice.id,
+                            });
+                            setRefundOpen(true);
+                            return;
+                          }
+                          updateInvoiceStatus(invoice.id, value);
+                        }}
                       >
                         <SelectTrigger className="w-28">
                           <SelectValue />
