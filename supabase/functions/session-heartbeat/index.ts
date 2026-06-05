@@ -18,6 +18,30 @@ function parseIp(req: Request): string | null {
 
 async function lookupGeo(ip: string | null): Promise<{ country?: string; city?: string; region?: string }> {
   if (!ip || ip === '127.0.0.1' || ip.startsWith('::')) return {}
+
+  // Try ipwho.is first — generally more accurate for South Asia than ipapi.co
+  try {
+    const r = await fetch(`https://ipwho.is/${ip}`, { headers: { 'User-Agent': 'lms-session-heartbeat/1.0' } })
+    if (r.ok) {
+      const j = await r.json()
+      if (j && j.success !== false && (j.city || j.country)) {
+        return { country: j.country, city: j.city, region: j.region }
+      }
+    }
+  } catch { /* fall through */ }
+
+  // Fallback: ip-api.com (HTTPS via pro is paid, but http works server-side from Deno)
+  try {
+    const r = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city`)
+    if (r.ok) {
+      const j = await r.json()
+      if (j && j.status === 'success' && (j.city || j.country)) {
+        return { country: j.country, city: j.city, region: j.regionName }
+      }
+    }
+  } catch { /* fall through */ }
+
+  // Final fallback: ipapi.co
   try {
     const r = await fetch(`https://ipapi.co/${ip}/json/`, { headers: { 'User-Agent': 'lms-session-heartbeat/1.0' } })
     if (!r.ok) return {}

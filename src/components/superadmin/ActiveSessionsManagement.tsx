@@ -414,9 +414,10 @@ export function ActiveSessionsManagement() {
                                 </div>
                               </div>
                               <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2 mt-3 text-xs">
-                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <div className="flex items-center gap-1.5 text-muted-foreground" title="Approximate — derived from the device's public IP address. Mobile carriers, VPNs and ISP routing can place users hundreds of km away from their actual location.">
                                   <MapPin className="h-3.5 w-3.5 shrink-0" />
                                   <span className="truncate text-foreground/80">{loc}</span>
+                                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground/70">~approx</span>
                                 </div>
                                 <div className="flex items-center gap-1.5 text-muted-foreground">
                                   <Globe className="h-3.5 w-3.5 shrink-0" />
