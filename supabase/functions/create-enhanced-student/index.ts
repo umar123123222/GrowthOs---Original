@@ -1067,7 +1067,7 @@ async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: s
             <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0; color: #6b7280; font-size: 12px;">${companyDetails.company_name}</p>
               <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">${companyDetails.address}</p>
-              <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${companyDetails.contact_email} | Phone: ${companyDetails.primary_phone}</p>
+              <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${companyDetails.contact_email}${companyDetails.primary_phone ? ' | Phone: ' + companyDetails.primary_phone : ''}${companyDetails.secondary_phone ? ' | Alt: ' + companyDetails.secondary_phone : ''}</p>
             </div>
           </div>
         </body>
