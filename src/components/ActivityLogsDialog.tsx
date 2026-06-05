@@ -44,6 +44,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   const [roleFilter, setRoleFilter] = useState('all');
   const [activityFilter, setActivityFilter] = useState('all');
   const [dateRange, setDateRange] = useState('7days');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { user } = useAuth();
 
