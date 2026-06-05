@@ -219,6 +219,19 @@ const updateInvoiceStatus = async (invoiceId: string, status: string) => {
 
 const grantExtension = async (invoiceId: string, newDate: Date) => {
   try {
+    const invoice = invoices.find(i => i.id === invoiceId);
+    const reason = window.prompt(
+      `Extend due date${invoice ? ` for Installment #${invoice.installment_number}` : ''} to ${format(newDate, 'PPP')}.\n\nReason for extension (optional):`,
+      ''
+    );
+    if (reason === null) {
+      setExtensionPopoverOpen(null);
+      setExtensionDate(undefined);
+      return;
+    }
+
+    const previousDueDate = invoice?.extended_due_date || invoice?.due_date || null;
+
     const { error } = await supabase
       .from('invoices')
       .update({ 
@@ -231,7 +244,6 @@ const grantExtension = async (invoiceId: string, newDate: Date) => {
     if (error) throw error;
 
     // Get invoice details for notification
-    const invoice = invoices.find(i => i.id === invoiceId);
     if (invoice?.student_id) {
       // Get user_id from student
       const { data: student } = await supabase
@@ -260,8 +272,26 @@ const grantExtension = async (invoiceId: string, newDate: Date) => {
           .update({ lms_status: 'active' })
           .eq('id', student.user_id)
           .eq('lms_status', 'suspended');
+
+        await logAdminAction({
+          performedBy: user?.id || null,
+          targetUserId: student.user_id,
+          entityType: 'invoice',
+          entityId: invoiceId,
+          action: 'fee_extension_granted',
+          description: `Extended fee due date`,
+          data: {
+            invoice_id: invoiceId,
+            installment_number: invoice.installment_number,
+            previous_due_date: previousDueDate,
+            new_due_date: newDate.toISOString(),
+            reason: reason?.trim() || null,
+          }
+        });
       }
     }
+
+
 
     toast({ 
       title: 'Extension Granted', 
