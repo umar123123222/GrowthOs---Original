@@ -292,7 +292,7 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
             </TabsContent>
 
             {/* ─── Assignments Tab ─── */}
-            <TabsContent value="assignments" className="flex-1 flex flex-col min-h-0 m-0 mt-0 px-6 pb-6 pt-4">
+            <TabsContent value="assignments" className="flex flex-col min-h-0 m-0 mt-0 px-6 pb-6 pt-4 data-[state=inactive]:hidden">
               {/* Assignment Stats */}
               <div className="grid grid-cols-5 gap-3 mb-4 shrink-0">
                 <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
