@@ -228,7 +228,7 @@ serve(async (req) => {
     // Get company settings
     const { data: companySettings, error: companyErr } = await supabaseAdmin
       .from('company_settings')
-      .select('currency, company_name, company_email, contact_email, address, primary_phone, payment_methods')
+      .select('currency, company_name, company_email, contact_email, address, primary_phone, secondary_phone, payment_methods')
       .limit(1)
       .maybeSingle();
 
@@ -244,6 +244,7 @@ serve(async (req) => {
     const companyEmail = companySettings?.contact_email || companySettings?.company_email || '';
     const companyAddress = companySettings?.address || '';
     const companyPhone = companySettings?.primary_phone || '';
+    const companyPhone2 = companySettings?.secondary_phone || '';
     const paymentMethods = (companySettings?.payment_methods as any[]) || [];
 
     // Generate payment methods HTML
