@@ -72,6 +72,20 @@ const Profile = () => {
       }
     };
     fetchBatch();
+    const fetchStudentCode = async () => {
+      if (!user?.id) return;
+      try {
+        const { data } = await supabase
+          .from('students')
+          .select('student_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!cancelled) setStudentCode(data?.student_id || null);
+      } catch {
+        if (!cancelled) setStudentCode(null);
+      }
+    };
+    fetchStudentCode();
     return () => { cancelled = true; };
   }, [user?.id]);
 
