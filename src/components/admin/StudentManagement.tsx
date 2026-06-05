@@ -30,6 +30,7 @@ import jsPDF from 'jspdf';
 import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 import { useScheduledSuspensions } from '@/hooks/useScheduledSuspensions';
 import type { SuspensionConfirmData } from '@/components/SuspensionDialog';
+import { MarkPaidDialog } from '@/components/admin/MarkPaidDialog';
 interface Student {
   id: string;
   student_id: string;
