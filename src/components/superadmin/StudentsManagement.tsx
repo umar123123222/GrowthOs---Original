@@ -445,7 +445,7 @@ export function StudentsManagement() {
           amount: invoice.amount,
           status: invoice.status,
           created_at: invoice.created_at,
-          due_date: invoice.due_date,
+          due_date: invoice.extended_due_date || invoice.due_date,
           paid_at: invoice.paid_at
         };
         const key = String(invoice.student_id || '');
