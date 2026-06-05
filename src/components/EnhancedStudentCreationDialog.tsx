@@ -294,117 +294,153 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
 
   return (
     <Dialog open={open} onOpenChange={(open) => !isSubmitting && onOpenChange(open)}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent hover:scrollbar-thumb-muted-foreground/40">
-        <DialogHeader>
-          <DialogTitle>
-            {showSuccess ? '✅ Student Created Successfully!' : 'Add New Student'}
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[92vh] overflow-hidden p-0 gap-0">
+        {/* Decorative header */}
+        <div className="relative border-b bg-gradient-to-br from-primary/5 via-background to-background px-6 pt-6 pb-5">
+          <DialogHeader className="space-y-1">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/20">
+                {showSuccess ? <CheckCircle2 className="h-5 w-5" /> : <UserPlus className="h-5 w-5" />}
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-semibold tracking-tight">
+                  {showSuccess ? 'Student Created Successfully' : 'Add New Student'}
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {showSuccess
+                    ? 'Credentials have been delivered to their inbox.'
+                    : 'Enroll a new student and configure their plan in one go.'}
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+        </div>
+
+        <div className="overflow-y-auto px-6 py-5 max-h-[calc(92vh-7rem)] scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
         
         {showSuccess ? (
-          <div className="space-y-4 py-6">
-            <div className="text-center space-y-2">
-              <p className="text-sm text-muted-foreground">
-                <strong>{createdStudentInfo?.full_name}</strong> has been added successfully.
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Student ID: <strong>{createdStudentInfo?.student_id}</strong>
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Credentials have been sent to <strong>{createdStudentInfo?.email}</strong>
-              </p>
+          <div className="space-y-6 py-8">
+            <div className="flex flex-col items-center text-center space-y-3">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-4 ring-emerald-50 dark:ring-emerald-500/5">
+                <CheckCircle2 className="h-8 w-8" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-base font-medium text-foreground">
+                  {createdStudentInfo?.full_name} is all set
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  Credentials sent to <span className="font-medium text-foreground">{createdStudentInfo?.email}</span>
+                </p>
+              </div>
+            </div>
+            <div className="mx-auto max-w-xs rounded-lg border bg-muted/30 px-4 py-3 text-center">
+              <p className="text-xs uppercase tracking-wider text-muted-foreground">Student ID</p>
+              <p className="text-sm font-mono font-semibold text-foreground mt-0.5">{createdStudentInfo?.student_id}</p>
             </div>
           </div>
         ) : (
           <Tabs value={uploadMode} onValueChange={(v) => setUploadMode(v as 'single' | 'bulk')} className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="single" className="gap-2">
+            <TabsList className="grid w-full grid-cols-2 mb-5 h-11 p-1 bg-muted/60">
+              <TabsTrigger value="single" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <UserPlus className="h-4 w-4" />
                 Single Student
               </TabsTrigger>
-              <TabsTrigger value="bulk" className="gap-2">
+              <TabsTrigger value="bulk" className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Upload className="h-4 w-4" />
                 Bulk Upload
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="single">
-          <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Two-column grid for main fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="full_name">Student Name *</Label>
-              <Input
-                id="full_name"
-                value={formData.full_name}
-                onChange={(e) => handleInputChange('full_name', e.target.value)}
-                placeholder="Enter student's full name"
-                required
-              />
+            <TabsContent value="single" className="mt-0">
+          <form onSubmit={handleSubmit} className="space-y-5">
+          {/* Personal Info Section */}
+          <div className="rounded-xl border bg-card p-5 space-y-4">
+            <div className="flex items-center gap-2 pb-1">
+              <User className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold text-foreground">Personal Information</h3>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => handleInputChange('email', e.target.value)}
-                placeholder="Enter email address"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number *</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={(e) => {
-                  let value = e.target.value.trim()
-                  // Keep only digits and optional leading +
-                  value = value.replace(/[^\d+]/g, '')
-                  // Ensure only one + at the start
-                  if (value.indexOf('+') > 0) {
-                    value = value.replace(/\+/g, '')
-                  }
-                  // Convert 92xxxxxxxxxx to +92xxxxxxxxxx
-                  if (value.startsWith('92') && !value.startsWith('+')) {
-                    value = '+' + value
-                  }
-                  handleInputChange('phone', value)
-                }}
-                placeholder="+923001234567"
-                pattern="^\+?[1-9]\d{1,14}$"
-                title="Enter phone in E.164 format (e.g., +923001234567)"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="installments">Number of Installments *</Label>
-              <Select 
-                value={formData.installment_count.toString()} 
-                onValueChange={(value) => handleInputChange('installment_count', parseInt(value))}
-                disabled={installmentLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select installment plan" />
-                </SelectTrigger>
-                <SelectContent>
-                  {installmentOptions.map((option) => {
-                    const count = parseInt(option.value.split('_')[0])
-                    return (
-                      <SelectItem key={option.value} value={count.toString()}>
-                        {option.label}
-                      </SelectItem>
-                    )
-                  })}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="full_name" className="text-xs font-medium text-muted-foreground">Student Name *</Label>
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => handleInputChange('full_name', e.target.value)}
+                  placeholder="John Doe"
+                  className="h-10"
+                  required
+                />
+              </div>
+              
+              <div className="space-y-1.5">
+                <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">Email Address *</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => handleInputChange('email', e.target.value)}
+                    placeholder="student@example.com"
+                    className="h-10 pl-9"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-1.5">
+                <Label htmlFor="phone" className="text-xs font-medium text-muted-foreground">Phone Number *</Label>
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60 pointer-events-none" />
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => {
+                      let value = e.target.value.trim()
+                      value = value.replace(/[^\d+]/g, '')
+                      if (value.indexOf('+') > 0) {
+                        value = value.replace(/\+/g, '')
+                      }
+                      if (value.startsWith('92') && !value.startsWith('+')) {
+                        value = '+' + value
+                      }
+                      handleInputChange('phone', value)
+                    }}
+                    placeholder="+923001234567"
+                    pattern="^\+?[1-9]\d{1,14}$"
+                    title="Enter phone in E.164 format (e.g., +923001234567)"
+                    className="h-10 pl-9"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-1.5">
+                <Label htmlFor="installments" className="text-xs font-medium text-muted-foreground">Number of Installments *</Label>
+                <Select 
+                  value={formData.installment_count.toString()} 
+                  onValueChange={(value) => handleInputChange('installment_count', parseInt(value))}
+                  disabled={installmentLoading}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Select installment plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {installmentOptions.map((option) => {
+                      const count = parseInt(option.value.split('_')[0])
+                      return (
+                        <SelectItem key={option.value} value={count.toString()}>
+                          {option.label}
+                        </SelectItem>
+                      )
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
+
 
           {/* Course/Pathway Selection */}
           <Card>
