@@ -61,6 +61,7 @@ interface CompanySettingsData {
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
   onboarding_video_url?: string;
+  onboarding_video_enabled?: boolean;
   onboarding_document_url?: string;
   onboarding_document_name?: string;
   // Live Chat
@@ -114,6 +115,7 @@ export function CompanySettings() {
     enable_student_signin: false,
     questionnaire: [],
     onboarding_video_url: '',
+    onboarding_video_enabled: true,
     onboarding_document_url: '',
     onboarding_document_name: '',
     // Live Chat
@@ -882,6 +884,21 @@ export function CompanySettings() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <div className="space-y-0.5">
+                  <Label htmlFor="onboarding_video_enabled" className="text-sm font-medium">
+                    Enable Onboarding Video
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    When enabled, the video below will be shown to students on their first LMS sign-in.
+                  </p>
+                </div>
+                <Switch
+                  id="onboarding_video_enabled"
+                  checked={settings.onboarding_video_enabled ?? true}
+                  onCheckedChange={(checked) => handleInputChange('onboarding_video_enabled', checked)}
+                />
+              </div>
               <div className="space-y-2">
                 <Label htmlFor="onboarding_video_url">Onboarding Video URL</Label>
                 <Input

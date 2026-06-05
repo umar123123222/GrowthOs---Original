@@ -562,6 +562,7 @@ export type Database = {
           notification_email_cc: string | null
           onboarding_document_name: string | null
           onboarding_document_url: string | null
+          onboarding_video_enabled: boolean
           onboarding_video_url: string | null
           original_fee_amount: number
           overdue_penalty_amount: number | null
@@ -600,6 +601,7 @@ export type Database = {
           notification_email_cc?: string | null
           onboarding_document_name?: string | null
           onboarding_document_url?: string | null
+          onboarding_video_enabled?: boolean
           onboarding_video_url?: string | null
           original_fee_amount?: number
           overdue_penalty_amount?: number | null
@@ -638,6 +640,7 @@ export type Database = {
           notification_email_cc?: string | null
           onboarding_document_name?: string | null
           onboarding_document_url?: string | null
+          onboarding_video_enabled?: boolean
           onboarding_video_url?: string | null
           original_fee_amount?: number
           overdue_penalty_amount?: number | null

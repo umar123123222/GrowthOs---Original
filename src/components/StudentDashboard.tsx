@@ -151,7 +151,7 @@ export function StudentDashboard() {
         // Fetch company settings to get video URL
         const { data: settings } = await supabase
           .from('company_settings')
-          .select('onboarding_video_url')
+          .select('onboarding_video_url, onboarding_video_enabled')
           .eq('id', 1)
           .maybeSingle();
         
@@ -163,11 +163,12 @@ export function StudentDashboard() {
           .maybeSingle();
         
         const videoUrl = settings?.onboarding_video_url;
+        const videoEnabled = (settings as any)?.onboarding_video_enabled ?? true;
         const videoWatched = student?.onboarding_video_watched;
         const onboardingComplete = student?.onboarding_completed;
         
-        // Show video if URL exists, onboarding is complete, but video not watched
-        if (videoUrl && videoUrl.trim() !== '' && onboardingComplete && !videoWatched) {
+        // Show video only if enabled, URL exists, onboarding is complete, and video not watched
+        if (videoEnabled && videoUrl && videoUrl.trim() !== '' && onboardingComplete && !videoWatched) {
           setOnboardingVideoUrl(videoUrl);
           setShowOnboardingVideo(true);
         }
