@@ -378,7 +378,7 @@ const handler = async (req: Request): Promise<Response> => {
           await smtpClient.sendEmail({
             to: userRec.email,
             subject: `Payment Receipt ${receiptNo} — ${companyName}`,
-            ...(notificationCc ? { cc: notificationCc } : {}),
+            ...(billingCc ? { cc: billingCc } : {}),
             html,
             ...(attachments ? { attachments } : {}),
           });
