@@ -343,6 +343,7 @@ serve(async (req) => {
           companyEmail,
           companyAddress,
           companyPhone,
+          companyPhone2,
           studentName,
           studentEmail,
           studentId: studentDisplayId,
