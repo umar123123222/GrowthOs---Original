@@ -6,6 +6,7 @@ import { Plus, Users, Shield, DollarSign, Activity, AlertTriangle, BookOpen, Vid
 import { supabase } from '@/integrations/supabase/client';
 import { RoleGuard } from '@/components/RoleGuard';
 import { ContentManagement } from '@/components/admin/ContentManagement';
+import { ActiveSessionsManagement } from '@/components/superadmin/ActiveSessionsManagement';
 
 import { MentorManagement } from '@/components/admin/MentorManagement';
 import { ActivityLogs } from '@/components/admin/ActivityLogs';
