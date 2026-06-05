@@ -832,6 +832,7 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             </TabsContent>
           </Tabs>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   )
