@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Play, CheckCircle, Clock, FileText, Target, TrendingUp, Users, Video, ChevronLeft, ChevronRight, Search, DollarSign } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { PaymentReports } from './PaymentReports';
+import { StudentEngagementDetail } from './StudentEngagementDetail';
 interface StudentAnalytics {
   id: string;
   full_name: string;
@@ -67,6 +68,7 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
     }
   );
   const [loading, setLoading] = useState(false);
+  const [detailStudent, setDetailStudent] = useState<StudentAnalytics | null>(null);
   const { toast } = useToast();
 
   const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
@@ -293,7 +295,7 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {currentStudents.map(student => <Card key={student.id} className="shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 bg-gradient-to-br from-white to-gray-50">
+            {currentStudents.map(student => <Card key={student.id} onClick={() => setDetailStudent(student)} className="shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 bg-gradient-to-br from-white to-gray-50 cursor-pointer">
                 <CardHeader className="pb-4">
                   <div className="flex items-center space-x-4">
                     <Avatar className="w-12 h-12 ring-2 ring-blue-100">
@@ -618,5 +620,10 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
           <PaymentReports />
         </TabsContent>
       </Tabs>
+      <StudentEngagementDetail
+        open={!!detailStudent}
+        onOpenChange={(o) => { if (!o) setDetailStudent(null); }}
+        student={detailStudent ? { id: detailStudent.id, full_name: detailStudent.full_name, email: detailStudent.email } : null}
+      />
     </div>;
 };

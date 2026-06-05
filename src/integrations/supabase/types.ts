@@ -3616,6 +3616,10 @@ export type Database = {
           thumbnail_url: string
         }[]
       }
+      get_student_engagement_detail: {
+        Args: { p_user_id: string }
+        Returns: Json
+      }
       get_student_pathway_course_map: {
         Args: { p_pathway_id: string; p_user_id: string }
         Returns: {
