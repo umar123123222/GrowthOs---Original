@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,6 +17,8 @@ import {
   RefreshCw,
   Search,
   ShieldOff,
+  Users,
+  Monitor,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -137,140 +139,208 @@ export function ActiveSessionsManagement() {
     load();
   };
 
+  const stats = [
+    {
+      label: 'Active Users Now',
+      value: totalActive,
+      icon: Users,
+      accent: 'text-emerald-600 dark:text-emerald-400 bg-emerald-100/70 dark:bg-emerald-500/10 ring-emerald-200 dark:ring-emerald-500/20',
+      hint: 'Live within the last 90s',
+    },
+    {
+      label: 'Concurrent (Multi-Device)',
+      value: totalConcurrent,
+      icon: AlertTriangle,
+      accent: totalConcurrent
+        ? 'text-amber-600 dark:text-amber-400 bg-amber-100/70 dark:bg-amber-500/10 ring-amber-200 dark:ring-amber-500/20'
+        : 'text-muted-foreground bg-muted ring-border',
+      hint: 'Users on 2+ devices',
+    },
+    {
+      label: 'Open Sessions',
+      value: sessions.length,
+      icon: Monitor,
+      accent: 'text-primary bg-primary/10 ring-primary/20',
+      hint: 'Total active devices',
+    },
+  ];
+
   return (
     <div className="space-y-6 p-2 md:p-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Active Sessions & Devices</h1>
-          <p className="text-muted-foreground text-sm">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            </span>
+            <span className="text-xs font-medium uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+              Live
+            </span>
+          </div>
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+            Active Sessions &amp; Devices
+          </h1>
+          <p className="text-sm text-muted-foreground max-w-2xl">
             Live view of students currently using the LMS, with device, location and what's playing right now.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={load} disabled={loading} className="shrink-0">
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} /> Refresh
         </Button>
       </div>
 
+      {/* KPI cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Active Users Now</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Activity className="h-6 w-6 text-emerald-600" />
-              {totalActive}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Concurrent (Multi-Device)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <AlertTriangle className={`h-6 w-6 ${totalConcurrent ? 'text-amber-500' : 'text-muted-foreground'}`} />
-              {totalConcurrent}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Open Sessions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold flex items-center gap-2">
-              <Laptop className="h-6 w-6 text-primary" />
-              {sessions.length}
-            </div>
-          </CardContent>
-        </Card>
+        {stats.map((s) => (
+          <Card key={s.label} className="overflow-hidden border-border/60 hover:shadow-sm transition-shadow">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-1.5">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    {s.label}
+                  </p>
+                  <p className="text-3xl font-semibold tabular-nums text-foreground">{s.value}</p>
+                  <p className="text-xs text-muted-foreground">{s.hint}</p>
+                </div>
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ring-1 ${s.accent}`}>
+                  <s.icon className="h-5 w-5" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
+      {/* Search + filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search by name, email, IP, city, country, device…"
-            className="pl-9"
+            className="pl-9 h-10"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant={filter === 'all' ? 'default' : 'outline'} onClick={() => setFilter('all')}>
-            All ({totalActive})
-          </Button>
-          <Button
-            size="sm"
-            variant={filter === 'concurrent' ? 'default' : 'outline'}
-            onClick={() => setFilter('concurrent')}
-            className={filter === 'concurrent' ? '' : ''}
+        <div className="inline-flex items-center gap-1 rounded-lg border bg-muted/40 p-1">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-3 h-8 rounded-md text-sm font-medium transition-colors ${
+              filter === 'all'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
-            <AlertTriangle className="h-4 w-4 mr-1" /> Concurrent ({totalConcurrent})
-          </Button>
+            All <span className="opacity-60">({totalActive})</span>
+          </button>
+          <button
+            onClick={() => setFilter('concurrent')}
+            className={`px-3 h-8 rounded-md text-sm font-medium transition-colors inline-flex items-center gap-1.5 ${
+              filter === 'concurrent'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <AlertTriangle className="h-3.5 w-3.5" />
+            Concurrent <span className="opacity-60">({totalConcurrent})</span>
+          </button>
         </div>
       </div>
 
-      <Card>
+      {/* Sessions list */}
+      <Card className="border-border/60">
         <CardContent className="p-0">
           {loading && sessions.length === 0 ? (
-            <div className="p-8 text-center text-muted-foreground">Loading active sessions…</div>
+            <div className="p-12 text-center text-sm text-muted-foreground">
+              <RefreshCw className="h-6 w-6 mx-auto mb-3 animate-spin opacity-60" />
+              Loading active sessions…
+            </div>
           ) : visibleUserIds.length === 0 ? (
-            <div className="p-10 text-center text-muted-foreground">
-              <Activity className="h-10 w-10 mx-auto mb-2 opacity-40" />
-              No active sessions match your filters right now.
+            <div className="p-16 text-center">
+              <div className="mx-auto h-14 w-14 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Activity className="h-7 w-7 text-muted-foreground/60" />
+              </div>
+              <p className="text-sm font-medium text-foreground">No active sessions right now</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Try adjusting your filters or check back in a moment.
+              </p>
             </div>
           ) : (
-            <div className="divide-y">
+            <div className="divide-y divide-border/60">
               {visibleUserIds.map((uid) => {
-                const list = grouped[uid].slice().sort((a, b) => +new Date(b.last_heartbeat_at) - +new Date(a.last_heartbeat_at));
+                const list = grouped[uid]
+                  .slice()
+                  .sort((a, b) => +new Date(b.last_heartbeat_at) - +new Date(a.last_heartbeat_at));
                 const u = users[uid];
                 const concurrent = list.length > 1;
-                const locations = new Set(list.map((s) => [s.city, s.country].filter(Boolean).join(', ')).filter(Boolean));
+                const locations = new Set(
+                  list.map((s) => [s.city, s.country].filter(Boolean).join(', ')).filter(Boolean)
+                );
                 const activeVideos = list
                   .map((s) => s.current_activity?.title || s.current_activity?.recording_id)
                   .filter(Boolean) as string[];
                 const isOpen = expanded.has(uid);
                 return (
-                  <div key={uid} className="px-4 py-3">
+                  <div
+                    key={uid}
+                    className={`group transition-colors ${isOpen ? 'bg-muted/30' : 'hover:bg-muted/20'}`}
+                  >
                     <button
-                      className="w-full flex items-start gap-3 text-left"
+                      className="w-full flex items-start gap-3 text-left px-4 sm:px-5 py-4"
                       onClick={() => toggle(uid)}
                     >
-                      <div className="pt-1">
-                        {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                      <div className="pt-1.5 text-muted-foreground">
+                        {isOpen ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
+                        )}
                       </div>
-                      <div className="h-9 w-9 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold shrink-0">
-                        {(u?.full_name || u?.email || '?').slice(0, 2).toUpperCase()}
+                      <div className="relative shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary/15 to-primary/5 text-primary flex items-center justify-center text-sm font-semibold ring-1 ring-primary/20">
+                          {(u?.full_name || u?.email || '?').slice(0, 2).toUpperCase()}
+                        </div>
+                        <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-emerald-500 ring-2 ring-background" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <div className="font-medium truncate">{u?.full_name || u?.email || uid}</div>
+                          <div className="font-semibold text-sm truncate text-foreground">
+                            {u?.full_name || u?.email || uid}
+                          </div>
                           {u?.role && (
-                            <Badge variant="outline" className="text-xs capitalize">
+                            <Badge variant="secondary" className="text-[10px] capitalize font-medium">
                               {u.role}
                             </Badge>
                           )}
                           {concurrent && (
-                            <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-300 gap-1">
+                            <Badge className="text-[10px] bg-amber-100 text-amber-800 hover:bg-amber-100 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 gap-1">
                               <AlertTriangle className="h-3 w-3" />
                               {list.length} devices
                             </Badge>
                           )}
                           {locations.size > 1 && (
-                            <Badge variant="outline" className="text-xs gap-1 border-rose-300 text-rose-700">
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] gap-1 border-rose-200 text-rose-700 dark:border-rose-500/20 dark:text-rose-400"
+                            >
                               <MapPin className="h-3 w-3" /> {locations.size} locations
                             </Badge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {u?.email} • Last seen {formatDistanceToNow(new Date(list[0].last_heartbeat_at), { addSuffix: true })}
+                        <div className="text-xs text-muted-foreground truncate mt-0.5">
+                          {u?.email} <span className="opacity-50">•</span> Last seen{' '}
+                          {formatDistanceToNow(new Date(list[0].last_heartbeat_at), { addSuffix: true })}
                           {activeVideos.length > 0 && (
-                            <>
-                              {' '}• <PlayCircle className="h-3 w-3 inline -mt-0.5" /> {activeVideos.slice(0, 2).join(' / ')}
-                              {activeVideos.length > 2 ? ` +${activeVideos.length - 2}` : ''}
-                            </>
+                            <span className="inline-flex items-center gap-1 ml-1">
+                              <span className="opacity-50">•</span>
+                              <PlayCircle className="h-3 w-3 text-primary" />
+                              <span className="text-foreground/80">
+                                {activeVideos.slice(0, 2).join(' / ')}
+                                {activeVideos.length > 2 ? ` +${activeVideos.length - 2}` : ''}
+                              </span>
+                            </span>
                           )}
                         </div>
                       </div>
@@ -278,48 +348,73 @@ export function ActiveSessionsManagement() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className="text-xs gap-1"
+                          className="text-xs gap-1.5 shrink-0 hover:border-rose-300 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-500/10"
                           onClick={(e) => {
                             e.stopPropagation();
                             revokeOther(uid, list[0].id);
                           }}
                         >
-                          <ShieldOff className="h-3 w-3" /> Sign out others
+                          <ShieldOff className="h-3.5 w-3.5" /> Sign out others
                         </Button>
                       )}
                     </button>
 
                     {isOpen && (
-                      <div className="mt-3 ml-12 grid gap-2">
-                        {list.map((s) => {
+                      <div className="px-4 sm:px-5 pb-4 ml-12 grid gap-2">
+                        {list.map((s, idx) => {
                           const activity = s.current_activity || {};
-                          const loc = [s.city, s.region, s.country].filter(Boolean).join(', ') || 'Location unknown';
+                          const loc =
+                            [s.city, s.region, s.country].filter(Boolean).join(', ') || 'Location unknown';
+                          const isWatching = activity?.type === 'video';
                           return (
-                            <div key={s.id} className="rounded-lg border bg-muted/30 p-3 text-sm">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex items-center gap-2 font-medium">
-                                  <Laptop className="h-4 w-4" />
+                            <div
+                              key={s.id}
+                              className="rounded-lg border bg-background p-4 text-sm shadow-sm"
+                            >
+                              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-border/60">
+                                <div className="flex items-center gap-2 font-medium text-foreground">
+                                  <div className="h-7 w-7 rounded-md bg-muted flex items-center justify-center">
+                                    <Laptop className="h-3.5 w-3.5 text-muted-foreground" />
+                                  </div>
                                   {s.device_label || 'Unknown device'}
+                                  {idx === 0 && (
+                                    <Badge variant="outline" className="text-[10px] gap-1 border-emerald-200 text-emerald-700 dark:border-emerald-500/20 dark:text-emerald-400">
+                                      Most recent
+                                    </Badge>
+                                  )}
                                 </div>
                                 <div className="text-xs text-muted-foreground">
                                   Heartbeat {formatDistanceToNow(new Date(s.last_heartbeat_at), { addSuffix: true })}
                                 </div>
                               </div>
-                              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1 mt-2 text-xs text-muted-foreground">
-                                <div className="flex items-center gap-1.5">
-                                  <MapPin className="h-3.5 w-3.5" /> {loc}
+                              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-2 mt-3 text-xs">
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate text-foreground/80">{loc}</span>
                                 </div>
-                                <div className="flex items-center gap-1.5">
-                                  <Globe className="h-3.5 w-3.5" /> {s.ip_address || 'IP unknown'}
+                                <div className="flex items-center gap-1.5 text-muted-foreground">
+                                  <Globe className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate text-foreground/80 font-mono">
+                                    {s.ip_address || 'IP unknown'}
+                                  </span>
                                 </div>
                                 <div className="flex items-center gap-1.5 sm:col-span-2">
-                                  <PlayCircle className="h-3.5 w-3.5" />
-                                  {activity?.type === 'video'
-                                    ? `Watching: ${activity.title || activity.recording_id}`
-                                    : 'Idle (no video playing)'}
+                                  <PlayCircle
+                                    className={`h-3.5 w-3.5 shrink-0 ${
+                                      isWatching ? 'text-primary' : 'text-muted-foreground'
+                                    }`}
+                                  />
+                                  <span className={isWatching ? 'text-foreground/90' : 'text-muted-foreground italic'}>
+                                    {isWatching
+                                      ? `Watching: ${activity.title || activity.recording_id}`
+                                      : 'Idle — no video playing'}
+                                  </span>
                                 </div>
                                 {s.user_agent && (
-                                  <div className="sm:col-span-2 truncate font-mono opacity-70" title={s.user_agent}>
+                                  <div
+                                    className="sm:col-span-2 truncate font-mono text-[10px] text-muted-foreground/70 pt-1 border-t border-border/40 mt-1"
+                                    title={s.user_agent}
+                                  >
                                     {s.user_agent}
                                   </div>
                                 )}
