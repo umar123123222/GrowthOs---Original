@@ -162,6 +162,11 @@ export function StudentsManagement() {
   const [timeTick, setTimeTick] = useState(0);
   const [extensionDate, setExtensionDate] = useState<Date | undefined>(undefined);
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
+  const [extensionConfirm, setExtensionConfirm] = useState<{ student: Student; date: Date } | null>(null);
+  const [extensionReason, setExtensionReason] = useState('');
+  const [extensionSaving, setExtensionSaving] = useState(false);
+  const [lmsStatusConfirm, setLmsStatusConfirm] = useState<{ student: Student; status: string } | null>(null);
+  const [lmsStatusSaving, setLmsStatusSaving] = useState(false);
   const [accessManagementOpen, setAccessManagementOpen] = useState(false);
   const [selectedStudentForAccess, setSelectedStudentForAccess] = useState<Student | null>(null);
   const [companyCurrency, setCompanyCurrency] = useState<string>('PKR');
@@ -868,7 +873,7 @@ export function StudentsManagement() {
     }
   };
 
-  const grantExtension = async (student: Student, newDueDate: Date) => {
+  const grantExtension = async (student: Student, newDueDate: Date, reason?: string | null) => {
     try {
       if (!student.student_record_id) {
         toast({
@@ -879,17 +884,6 @@ export function StudentsManagement() {
         return;
       }
 
-      // Ask the admin for a reason — recorded in the activity log
-      const reason = window.prompt(
-        `Extend ${student.full_name}'s due date to ${format(newDueDate, 'PPP')}.\n\nReason for extension (optional):`,
-        ''
-      );
-      // null = cancelled
-      if (reason === null) {
-        setExtensionPopoverOpen(null);
-        setExtensionDate(undefined);
-        return;
-      }
 
       // Find the latest unpaid invoice
       const { data: invoice, error: invoiceError } = await supabase
@@ -3165,7 +3159,9 @@ export function StudentsManagement() {
                                     onSelect={(date) => {
                                       if (date) {
                                         setExtensionDate(date);
-                                        grantExtension(student, date);
+                                        setExtensionPopoverOpen(null);
+                                        setExtensionReason('');
+                                        setExtensionConfirm({ student, date });
                                       }
                                     }}
                                     disabled={(date) => date < new Date()}
@@ -3194,33 +3190,14 @@ export function StudentsManagement() {
                                         variant={student.lms_status === status ? "secondary" : "ghost"}
                                         size="sm"
                                         className="w-full justify-start text-sm"
-                                        onClick={async () => {
-                                          if (student.lms_status !== status) {
-                                            if (status === 'suspended') {
-                                              setStudentForSuspension(student);
-                                              setSuspensionDialogOpen(true);
-                                              return;
-                                            }
-                                            try {
-                                              const { error } = await supabase.from('users').update({
-                                                lms_status: status,
-                                                updated_at: new Date().toISOString()
-                                              }).eq('id', student.id);
-                                              if (error) throw error;
-                                              toast({
-                                                title: 'Success',
-                                                description: `LMS status updated to ${status}`
-                                              });
-                                              fetchStudents();
-                                            } catch (error) {
-                                              console.error('Error updating status:', error);
-                                              toast({
-                                                title: 'Error',
-                                                description: 'Failed to update status',
-                                                variant: 'destructive'
-                                              });
-                                            }
+                                        onClick={() => {
+                                          if (student.lms_status === status) return;
+                                          if (status === 'suspended') {
+                                            setStudentForSuspension(student);
+                                            setSuspensionDialogOpen(true);
+                                            return;
                                           }
+                                          setLmsStatusConfirm({ student, status });
                                         }}
                                         disabled={student.lms_status === status}
                                       >
@@ -3585,6 +3562,100 @@ export function StudentsManagement() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Extend Due Date Confirmation Dialog */}
+      <Dialog open={!!extensionConfirm} onOpenChange={(open) => { if (!open) { setExtensionConfirm(null); setExtensionReason(''); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Fee Extension</DialogTitle>
+          </DialogHeader>
+          {extensionConfirm && (
+            <div className="space-y-4">
+              <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
+                <p><span className="text-muted-foreground">Student:</span> <span className="font-medium">{extensionConfirm.student.full_name}</span></p>
+                {extensionConfirm.student.fees_due_date && (
+                  <p><span className="text-muted-foreground">Current due date:</span> {format(new Date(extensionConfirm.student.fees_due_date), 'PPP')}</p>
+                )}
+                <p><span className="text-muted-foreground">New due date:</span> <span className="font-medium text-amber-600">{format(extensionConfirm.date, 'PPP')}</span></p>
+                {extensionConfirm.student.lms_status === 'suspended' && (
+                  <p className="text-xs text-green-600 pt-1">LMS access will be reactivated.</p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="extension_reason">Reason (optional)</Label>
+                <textarea
+                  id="extension_reason"
+                  value={extensionReason}
+                  onChange={(e) => setExtensionReason(e.target.value)}
+                  placeholder="Reason for extending the due date…"
+                  className="mt-1 w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => { setExtensionConfirm(null); setExtensionReason(''); }} disabled={extensionSaving}>Cancel</Button>
+                <Button
+                  onClick={async () => {
+                    if (!extensionConfirm) return;
+                    setExtensionSaving(true);
+                    try {
+                      await grantExtension(extensionConfirm.student, extensionConfirm.date, extensionReason.trim() || null);
+                      setExtensionConfirm(null);
+                      setExtensionReason('');
+                    } finally {
+                      setExtensionSaving(false);
+                    }
+                  }}
+                  disabled={extensionSaving}
+                >
+                  {extensionSaving ? 'Extending…' : 'Confirm Extension'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* LMS Status Change Confirmation */}
+      <AlertDialog open={!!lmsStatusConfirm} onOpenChange={(open) => { if (!open) setLmsStatusConfirm(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm LMS Status Change</AlertDialogTitle>
+            <AlertDialogDescription>
+              {lmsStatusConfirm && (
+                <>Change LMS status for <strong>{lmsStatusConfirm.student.full_name}</strong> from <strong>{lmsStatusConfirm.student.lms_status}</strong> to <strong>{lmsStatusConfirm.status}</strong>?</>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={lmsStatusSaving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={lmsStatusSaving}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!lmsStatusConfirm) return;
+                setLmsStatusSaving(true);
+                try {
+                  const { error } = await supabase.from('users').update({
+                    lms_status: lmsStatusConfirm.status,
+                    updated_at: new Date().toISOString()
+                  }).eq('id', lmsStatusConfirm.student.id);
+                  if (error) throw error;
+                  toast({ title: 'Success', description: `LMS status updated to ${lmsStatusConfirm.status}` });
+                  setLmsStatusConfirm(null);
+                  fetchStudents();
+                } catch (error) {
+                  console.error('Error updating status:', error);
+                  toast({ title: 'Error', description: 'Failed to update status', variant: 'destructive' });
+                } finally {
+                  setLmsStatusSaving(false);
+                }
+              }}
+            >
+              Confirm
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Status Update Dialog */}
       <Dialog open={statusUpdateDialog} onOpenChange={setStatusUpdateDialog}>
