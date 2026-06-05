@@ -572,7 +572,9 @@ export function SuccessSessionsManagement() {
                     title: baseSessionData.title,
                     description: baseSessionData.description,
                     meeting_link: baseSessionData.link,
-                    start_datetime: baseSessionData.start_time
+                    start_datetime: baseSessionData.start_time,
+                    mentor_name: baseSessionData.mentor_name,
+                    cta_path: '/live-sessions',
                   }
                 });
               } catch (notifyError) {
