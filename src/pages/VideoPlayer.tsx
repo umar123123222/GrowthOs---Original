@@ -15,6 +15,7 @@ import { logger } from '@/lib/logger';
 import CurrentModuleCard from "@/components/CurrentModuleCard";
 import { obfuscateUrl, deobfuscateUrl } from "@/lib/utils";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
+import { setSessionActivity } from "@/hooks/useSessionHeartbeat";
 import { getResourceFileSignedUrl } from "@/hooks/useResources";
 
 // Sanitize video URLs by removing garbage prefixes
@@ -231,6 +232,18 @@ const VideoPlayer = () => {
       }
     }
   }, [searchParams, lessonId]);
+
+  // Broadcast which video is currently being watched for session/device tracking
+  useEffect(() => {
+    if (!currentVideo?.id) return;
+    setSessionActivity({
+      type: 'video',
+      recording_id: currentVideo.id,
+      title: currentVideo.title,
+      started_at: new Date().toISOString(),
+    });
+    return () => setSessionActivity(null);
+  }, [currentVideo?.id, currentVideo?.title]);
 
   // Auto-mark video as watched when the player page loads
   useEffect(() => {
