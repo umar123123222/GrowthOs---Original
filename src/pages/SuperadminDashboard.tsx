@@ -17,7 +17,7 @@ import { CompanySettings } from '@/components/superadmin/CompanySettings';
 import { SequentialUnlockAdmin } from '@/components/admin/SequentialUnlockAdmin';
 import { CourseCompletionAnalytics } from '@/components/admin/CourseCompletionAnalytics';
 import { MilestoneManagement } from '@/components/admin/MilestoneManagement';
-import { StudentAnalytics } from '@/components/admin/StudentAnalytics';
+const StudentAnalytics = lazy(() => import('@/components/admin/StudentAnalytics').then(m => ({ default: m.StudentAnalytics })));
 import { ErrorLogsManagement } from '@/components/superadmin/ErrorLogsManagement';
 import { CourseManagement } from '@/components/superadmin/CourseManagement';
 import { PathwayManagement } from '@/components/superadmin/PathwayManagement';
