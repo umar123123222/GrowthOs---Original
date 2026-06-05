@@ -14,10 +14,12 @@ interface Note {
   note: string;
   created_at: string;
   created_by_name: string;
-  type: 'note' | 'suspension' | 'fee_extension';
+  type: 'note' | 'suspension' | 'fee_extension' | 'scheduled_suspension';
   autoUnsuspendDate?: string;
   previousDueDate?: string;
   newDueDate?: string;
+  scheduleSuspendDate?: string;
+  scheduledStatus?: string;
 }
 
 
