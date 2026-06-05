@@ -3133,10 +3133,12 @@ export function StudentsManagement() {
                               </div>}
                             
                             <div className="flex flex-wrap gap-2 pt-3 border-t border-blue-200">
-                              <Button variant="outline" size="sm" onClick={() => handleViewActivityLogs(student.id)} className="hover-scale hover:border-blue-300 hover:text-blue-600">
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Activity Logs
-                              </Button>
+                              <ActivityLogsDialog userId={student.id} userName={student.full_name}>
+                                <Button variant="outline" size="sm" className="hover-scale hover:border-blue-300 hover:text-blue-600">
+                                  <Eye className="w-4 h-4 mr-2" />
+                                  View Activity Logs
+                                </Button>
+                              </ActivityLogsDialog>
                               <Button variant="outline" size="sm" onClick={() => { setSelectedStudentForNotes(student); setNotesDialogOpen(true); }} className="hover-scale hover:border-amber-300 hover:text-amber-600">
                                 <MessageSquare className="w-4 h-4 mr-2" />
                                 Notes
