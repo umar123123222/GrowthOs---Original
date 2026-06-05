@@ -106,6 +106,26 @@ const assignmentBadge = (unlocked: boolean, status: string) => {
   );
 };
 
+function groupByCourse<T extends { course_id: string | null; course_title: string | null }>(items: T[]) {
+  const map = new Map<string, { course_id: string | null; course_title: string; items: T[] }>();
+  for (const item of items) {
+    const key = item.course_id || '__uncategorized__';
+    if (!map.has(key)) {
+      map.set(key, {
+        course_id: item.course_id,
+        course_title: item.course_title || 'Uncategorized',
+        items: [],
+      });
+    }
+    map.get(key)!.items.push(item);
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.course_id === null) return 1;
+    if (b.course_id === null) return -1;
+    return a.course_title.localeCompare(b.course_title);
+  });
+}
+
 export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) => {
   const [loading, setLoading] = useState(false);
   const [videos, setVideos] = useState<VideoItem[]>([]);
