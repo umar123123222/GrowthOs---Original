@@ -365,7 +365,7 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-6">
               <p className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages} ({filteredStudents.length} students)
+                Page {currentPage} of {totalPages} ({filteredCount} students)
               </p>
               <div className="flex items-center gap-1">
                 <Button
