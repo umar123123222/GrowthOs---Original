@@ -291,6 +291,7 @@ const handler = async (req: Request): Promise<Response> => {
         companyEmail,
         companyPhone,
         companyAddress,
+        hasProof: !!body.proof_attachment,
       });
       const cc = Deno.env.get("BILLING_EMAIL_CC") || undefined;
       const attachments = body.proof_attachment
