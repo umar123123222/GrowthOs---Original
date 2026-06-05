@@ -563,7 +563,7 @@ const handler = async (req: Request): Promise<Response> => {
               </td>
             </tr>`;
 
-          const supportBlock = (supportEmail || supportPhone) ? `<tr>
+          const supportBlock = (supportEmail || supportPhone || supportPhone2) ? `<tr>
               <td style="padding:0 32px 8px;">
                 <h2 style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:18px;color:${text};">💬 Need Help? Contact Support</h2>
               </td>
@@ -574,6 +574,7 @@ const handler = async (req: Request): Promise<Response> => {
                   <tr><td style="padding:18px 22px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};line-height:1.7;">
                     ${supportEmail ? `<div>📧 <strong>Email:</strong> <a href="mailto:${escapeHtml(supportEmail)}" style="color:${primary};text-decoration:none;">${escapeHtml(supportEmail)}</a></div>` : ''}
                     ${supportPhone ? `<div>📞 <strong>Phone:</strong> <a href="tel:${escapeHtml(supportPhone.replace(/\s+/g,''))}" style="color:${primary};text-decoration:none;">${escapeHtml(supportPhone)}</a></div>` : ''}
+                    ${supportPhone2 ? `<div>📱 <strong>Alternate:</strong> <a href="tel:${escapeHtml(supportPhone2.replace(/\s+/g,''))}" style="color:${primary};text-decoration:none;">${escapeHtml(supportPhone2)}</a></div>` : ''}
                   </td></tr>
                 </table>
               </td>
