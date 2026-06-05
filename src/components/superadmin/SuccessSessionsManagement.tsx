@@ -787,288 +787,323 @@ export function SuccessSessionsManagement() {
               Schedule Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => { if (submitSuccess) e.preventDefault(); }}>
+          <DialogContent
+            className="max-w-2xl max-h-[90vh] p-0 overflow-hidden gap-0"
+            onPointerDownOutside={(e) => { if (submitSuccess) e.preventDefault(); }}
+          >
             {submitSuccess ? (
               <div className="flex flex-col items-center justify-center py-16 gap-4 animate-fade-in">
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                  <Check className="w-8 h-8 text-green-600" />
+                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-emerald-600" />
                 </div>
                 <p className="text-lg font-semibold text-foreground">
                   {editingSession ? 'Session Updated!' : 'Session Scheduled!'}
                 </p>
-                <p className="text-sm text-muted-foreground">Closing automatically...</p>
+                <p className="text-sm text-muted-foreground">Closing automatically…</p>
               </div>
             ) : (
             <>
-            <DialogHeader>
-              <DialogTitle>
+            <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+              <DialogTitle className="text-xl font-semibold tracking-tight">
                 {editingSession ? 'Edit Success Session' : 'Schedule New Success Session'}
               </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                {editingSession
+                  ? 'Update session details. Republishing will re-notify selected batches.'
+                  : 'Set up a live mentor session. Students in selected batches will be notified when you publish.'}
+              </p>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Session Title *</label>
-                  <Input
-                    type="text"
-                    value={formData.title}
-                    onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    required
-                    placeholder="Enter session title"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Host/Mentor *</label>
-                  <Select 
-                    value={formData.mentor_id} 
-                    onValueChange={(value) => setFormData({...formData, mentor_id: value})}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a mentor, admin, or superadmin" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-background border z-50 max-h-60">
-                      {users.map((user) => (
-                        <SelectItem key={user.id} value={user.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">{user.full_name}</span>
-                            <span className="text-xs text-muted-foreground">{user.email} • {user.role}</span>
+            <form onSubmit={handleSubmit} className="flex flex-col max-h-[calc(90vh-120px)]">
+              <div className="overflow-y-auto px-6 py-5 space-y-6">
+
+                {/* Section: Session details */}
+                <section className="space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Video className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">Session details</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-foreground">Session Title <span className="text-rose-500">*</span></label>
+                      <Input
+                        type="text"
+                        value={formData.title}
+                        onChange={(e) => setFormData({...formData, title: e.target.value})}
+                        required
+                        placeholder="e.g. Week 3 Q&A with Umar"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-foreground">Host / Mentor <span className="text-rose-500">*</span></label>
+                      <Select
+                        value={formData.mentor_id}
+                        onValueChange={(value) => setFormData({...formData, mentor_id: value})}
+                        required
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a mentor, admin, or superadmin" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-background border z-50 max-h-60">
+                          {users.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              <div className="flex flex-col">
+                                <span className="font-medium">{user.full_name}</span>
+                                <span className="text-xs text-muted-foreground">{user.email} • {user.role}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-foreground">Description</label>
+                    <Textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({...formData, description: e.target.value})}
+                      placeholder="What will this session cover? (shown to students in emails and the portal)"
+                      rows={3}
+                      className="resize-none"
+                    />
+                  </div>
+                </section>
+
+                {/* Section: Schedule */}
+                <section className="space-y-4 pt-2 border-t border-border/60">
+                  <div className="flex items-center gap-2 pt-4">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">Schedule</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-foreground">Date <span className="text-rose-500">*</span></label>
+                      <Input
+                        type="date"
+                        value={formData.schedule_date}
+                        onChange={(e) => setFormData({...formData, schedule_date: e.target.value})}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-foreground">Start Time <span className="text-rose-500">*</span></label>
+                      <Input
+                        type="time"
+                        value={formData.start_time}
+                        onChange={(e) => setFormData({...formData, start_time: e.target.value})}
+                        required
+                        step="900"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-foreground">End Time</label>
+                      <Input
+                        type="time"
+                        value={formData.end_time}
+                        onChange={(e) => setFormData({...formData, end_time: e.target.value})}
+                        step="900"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section: Zoom access */}
+                <section className="space-y-4 pt-2 border-t border-border/60">
+                  <div className="flex items-center justify-between pt-4">
+                    <div className="flex items-center gap-2">
+                      <LinkIcon className="w-4 h-4 text-primary" />
+                      <h3 className="text-sm font-semibold text-foreground">Zoom access</h3>
+                    </div>
+                    <span className="text-[11px] text-muted-foreground">Host credentials are kept private</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-foreground">Session Link <span className="text-rose-500">*</span></label>
+                    <Input
+                      type="url"
+                      value={formData.link}
+                      onChange={(e) => setFormData({...formData, link: e.target.value})}
+                      placeholder="https://zoom.us/j/..."
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-foreground">Zoom Meeting ID <span className="text-rose-500">*</span></label>
+                      <Input
+                        type="text"
+                        value={formData.zoom_meeting_id}
+                        onChange={(e) => setFormData({...formData, zoom_meeting_id: e.target.value})}
+                        required
+                        placeholder="123 456 7890"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-foreground">Zoom Passcode <span className="text-rose-500">*</span></label>
+                      <Input
+                        type="text"
+                        value={formData.zoom_passcode}
+                        onChange={(e) => setFormData({...formData, zoom_passcode: e.target.value})}
+                        required
+                        placeholder="Passcode"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-foreground">Host Login Email <span className="text-rose-500">*</span></label>
+                      <Input
+                        type="email"
+                        value={formData.host_login_email}
+                        onChange={(e) => setFormData({...formData, host_login_email: e.target.value})}
+                        required
+                        placeholder="host@example.com"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-medium text-foreground">Host Login Password <span className="text-rose-500">*</span></label>
+                      <Input
+                        type="password"
+                        value={formData.host_login_pwd}
+                        onChange={(e) => setFormData({...formData, host_login_pwd: e.target.value})}
+                        required
+                        placeholder="••••••••"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* Section: Audience */}
+                <section className="space-y-4 pt-2 border-t border-border/60">
+                  <div className="flex items-center gap-2 pt-4">
+                    <Users2 className="w-4 h-4 text-primary" />
+                    <h3 className="text-sm font-semibold text-foreground">Audience &amp; status</h3>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 text-muted-foreground" />
+                        Target Course
+                      </label>
+                      <Select
+                        value={formData.course_id}
+                        onValueChange={(value) => setFormData({ ...formData, course_id: value, batch_ids: ['__all__'] })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="All students (no filter)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__all__">All students (no filter)</SelectItem>
+                          {courses.map((course) => (
+                            <SelectItem key={course.id} value={course.id}>
+                              {course.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
+                        <Users2 className="w-3.5 h-3.5 text-muted-foreground" />
+                        Target Batch
+                      </label>
+                      <Popover open={batchPopoverOpen} onOpenChange={setBatchPopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" className="w-full justify-between font-normal">
+                            <span className="truncate">
+                              {formData.batch_ids.includes('__all__')
+                                ? 'All Batches'
+                                : formData.batch_ids.length === 1
+                                  ? (formData.batch_ids[0] === 'unbatched'
+                                    ? 'Unbatched students'
+                                    : filteredBatches.find(b => b.id === formData.batch_ids[0])?.name || formData.batch_ids[0])
+                                  : `${formData.batch_ids.length} batches selected`}
+                            </span>
+                            <Users2 className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[260px] p-2 max-h-[240px] overflow-y-auto" align="start">
+                          <div className="space-y-1">
+                            {/* All Batches option */}
+                            <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                              <Checkbox
+                                checked={formData.batch_ids.includes('__all__')}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setFormData({ ...formData, batch_ids: ['__all__'] });
+                                  } else {
+                                    setFormData({ ...formData, batch_ids: [] });
+                                  }
+                                }}
+                              />
+                              <span className="font-medium">All Batches</span>
+                            </label>
+                            {/* Unbatched option */}
+                            <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                              <Checkbox
+                                checked={formData.batch_ids.includes('unbatched') || formData.batch_ids.includes('__all__')}
+                                onCheckedChange={(checked) => {
+                                  if (formData.batch_ids.includes('__all__')) {
+                                    const allBatchIds = filteredBatches.map(b => b.id);
+                                    setFormData({ ...formData, batch_ids: checked ? ['unbatched', ...allBatchIds] : allBatchIds });
+                                    return;
+                                  }
+                                  const without = formData.batch_ids.filter(id => id !== 'unbatched');
+                                  if (checked) {
+                                    setFormData({ ...formData, batch_ids: [...without, 'unbatched'] });
+                                  } else {
+                                    setFormData({ ...formData, batch_ids: without.length ? without : ['__all__'] });
+                                  }
+                                }}
+                              />
+                              <span>Unbatched students</span>
+                            </label>
+                            <div className="border-t my-1" />
+                            {filteredBatches.map((batch) => (
+                              <label key={batch.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
+                                <Checkbox
+                                  checked={formData.batch_ids.includes(batch.id) || formData.batch_ids.includes('__all__')}
+                                  onCheckedChange={(checked) => {
+                                    if (formData.batch_ids.includes('__all__')) {
+                                      const allBatchIds = filteredBatches.map(b => b.id).filter(id => id !== batch.id);
+                                      const withUnbatched = [...allBatchIds, 'unbatched'];
+                                      setFormData({ ...formData, batch_ids: checked ? [...withUnbatched, batch.id] : withUnbatched });
+                                      return;
+                                    }
+                                    const without = formData.batch_ids.filter(id => id !== batch.id);
+                                    if (checked) {
+                                      setFormData({ ...formData, batch_ids: [...without, batch.id] });
+                                    } else {
+                                      setFormData({ ...formData, batch_ids: without.length ? without : ['__all__'] });
+                                    }
+                                  }}
+                                />
+                                <span>{batch.name}</span>
+                              </label>
+                            ))}
                           </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">Description</label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  placeholder="Enter session description"
-                  rows={3}
-                />
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Zoom Meeting ID *</label>
-                  <Input
-                    type="text"
-                    value={formData.zoom_meeting_id}
-                    onChange={(e) => setFormData({...formData, zoom_meeting_id: e.target.value})}
-                    required
-                    placeholder="Enter Zoom Meeting ID"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Zoom Passcode *</label>
-                  <Input
-                    type="text"
-                    value={formData.zoom_passcode}
-                    onChange={(e) => setFormData({...formData, zoom_passcode: e.target.value})}
-                    required
-                    placeholder="Enter Zoom Passcode"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Host Login Email *</label>
-                  <Input
-                    type="email"
-                    value={formData.host_login_email}
-                    onChange={(e) => setFormData({...formData, host_login_email: e.target.value})}
-                    required
-                    placeholder="Enter host login email"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Host Login Password *</label>
-                  <Input
-                    type="password"
-                    value={formData.host_login_pwd}
-                    onChange={(e) => setFormData({...formData, host_login_pwd: e.target.value})}
-                    required
-                    placeholder="Enter host login password"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Schedule Date *</label>
-                  <Input
-                    type="date"
-                    value={formData.schedule_date}
-                    onChange={(e) => setFormData({...formData, schedule_date: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Start Time *</label>
-                  <Input
-                    type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({...formData, start_time: e.target.value})}
-                    required
-                    step="900"
-                    placeholder="HH:MM"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">End Time</label>
-                  <Input
-                    type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({...formData, end_time: e.target.value})}
-                    step="900"
-                    placeholder="HH:MM"
-                  />
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Session Link *</label>
-                  <Input
-                    type="url"
-                    value={formData.link}
-                    onChange={(e) => setFormData({...formData, link: e.target.value})}
-                    placeholder="https://..."
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Status *</label>
-                  <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})} required>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="upcoming">Upcoming</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-medium text-foreground">Status <span className="text-rose-500">*</span></label>
+                    <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})} required>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft — save without notifying</SelectItem>
+                        <SelectItem value="upcoming">Upcoming — visible to students</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground">Tip: save as <strong>Draft</strong> first, then hit Publish from the table to notify students.</p>
+                  </div>
+                </section>
               </div>
 
-              {/* Course & Batch Targeting */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-                    <BookOpen className="w-4 h-4 text-muted-foreground" />
-                    Target Course
-                  </label>
-                  <Select
-                    value={formData.course_id}
-                    onValueChange={(value) => setFormData({ ...formData, course_id: value, batch_ids: ['__all__'] })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All students (no filter)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All students (no filter)</SelectItem>
-                      {courses.map((course) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1 flex items-center gap-1">
-                    <Users2 className="w-4 h-4 text-muted-foreground" />
-                    Target Batch
-                  </label>
-                  <Popover open={batchPopoverOpen} onOpenChange={setBatchPopoverOpen}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-between font-normal">
-                        <span className="truncate">
-                          {formData.batch_ids.includes('__all__')
-                            ? 'All Batches'
-                            : formData.batch_ids.length === 1
-                              ? (formData.batch_ids[0] === 'unbatched'
-                                ? 'Unbatched students'
-                                : filteredBatches.find(b => b.id === formData.batch_ids[0])?.name || formData.batch_ids[0])
-                              : `${formData.batch_ids.length} batches selected`}
-                        </span>
-                        <Users2 className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[260px] p-2 max-h-[240px] overflow-y-auto" align="start">
-                      <div className="space-y-1">
-                        {/* All Batches option */}
-                        <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
-                          <Checkbox
-                            checked={formData.batch_ids.includes('__all__')}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setFormData({ ...formData, batch_ids: ['__all__'] });
-                              } else {
-                                setFormData({ ...formData, batch_ids: [] });
-                              }
-                            }}
-                          />
-                          <span className="font-medium">All Batches</span>
-                        </label>
-                        {/* Unbatched option */}
-                        <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
-                          <Checkbox
-                            checked={formData.batch_ids.includes('unbatched') || formData.batch_ids.includes('__all__')}
-                            onCheckedChange={(checked) => {
-                              if (formData.batch_ids.includes('__all__')) {
-                                // Deselect "All Batches", keep only other batches minus unbatched
-                                const allBatchIds = filteredBatches.map(b => b.id);
-                                setFormData({ ...formData, batch_ids: checked ? ['unbatched', ...allBatchIds] : allBatchIds });
-                                return;
-                              }
-                              const without = formData.batch_ids.filter(id => id !== 'unbatched');
-                              if (checked) {
-                                setFormData({ ...formData, batch_ids: [...without, 'unbatched'] });
-                              } else {
-                                setFormData({ ...formData, batch_ids: without.length ? without : ['__all__'] });
-                              }
-                            }}
-                          />
-                          <span>Unbatched students</span>
-                        </label>
-                        <div className="border-t my-1" />
-                        {filteredBatches.map((batch) => (
-                          <label key={batch.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
-                            <Checkbox
-                              checked={formData.batch_ids.includes(batch.id) || formData.batch_ids.includes('__all__')}
-                              onCheckedChange={(checked) => {
-                                if (formData.batch_ids.includes('__all__')) {
-                                  // Deselect "All Batches", select all others except this one if unchecking
-                                  const allBatchIds = filteredBatches.map(b => b.id).filter(id => id !== batch.id);
-                                  const withUnbatched = [...allBatchIds, 'unbatched'];
-                                  setFormData({ ...formData, batch_ids: checked ? [...withUnbatched, batch.id] : withUnbatched });
-                                  return;
-                                }
-                                const without = formData.batch_ids.filter(id => id !== batch.id);
-                                if (checked) {
-                                  setFormData({ ...formData, batch_ids: [...without, batch.id] });
-                                } else {
-                                  setFormData({ ...formData, batch_ids: without.length ? without : ['__all__'] });
-                                }
-                              }}
-                            />
-                            <span>{batch.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              </div>
-              
-              <div className="flex justify-end space-x-2">
+              {/* Sticky footer */}
+              <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border/60 bg-muted/30">
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
                   Cancel
                 </Button>
