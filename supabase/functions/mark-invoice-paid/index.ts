@@ -431,7 +431,8 @@ const handler = async (req: Request): Promise<Response> => {
           const logoUrl: string = settings?.company_logo || '';
           const lmsUrl: string = settings?.lms_url || '';
           const supportEmail: string = settings?.contact_email || settings?.company_email || '';
-          const supportPhone: string = settings?.primary_phone || settings?.secondary_phone || '';
+          const supportPhone: string = settings?.primary_phone || '';
+          const supportPhone2: string = settings?.secondary_phone || '';
           const videoUrl: string = settings?.onboarding_video_url || '';
           const videoEnabled: boolean = settings?.onboarding_video_enabled ?? true;
           const docUrl: string = settings?.onboarding_document_url || '';
@@ -562,7 +563,7 @@ const handler = async (req: Request): Promise<Response> => {
               </td>
             </tr>`;
 
-          const supportBlock = (supportEmail || supportPhone) ? `<tr>
+          const supportBlock = (supportEmail || supportPhone || supportPhone2) ? `<tr>
               <td style="padding:0 32px 8px;">
                 <h2 style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:18px;color:${text};">💬 Need Help? Contact Support</h2>
               </td>
@@ -573,6 +574,7 @@ const handler = async (req: Request): Promise<Response> => {
                   <tr><td style="padding:18px 22px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};line-height:1.7;">
                     ${supportEmail ? `<div>📧 <strong>Email:</strong> <a href="mailto:${escapeHtml(supportEmail)}" style="color:${primary};text-decoration:none;">${escapeHtml(supportEmail)}</a></div>` : ''}
                     ${supportPhone ? `<div>📞 <strong>Phone:</strong> <a href="tel:${escapeHtml(supportPhone.replace(/\s+/g,''))}" style="color:${primary};text-decoration:none;">${escapeHtml(supportPhone)}</a></div>` : ''}
+                    ${supportPhone2 ? `<div>📱 <strong>Alternate:</strong> <a href="tel:${escapeHtml(supportPhone2.replace(/\s+/g,''))}" style="color:${primary};text-decoration:none;">${escapeHtml(supportPhone2)}</a></div>` : ''}
                   </td></tr>
                 </table>
               </td>
