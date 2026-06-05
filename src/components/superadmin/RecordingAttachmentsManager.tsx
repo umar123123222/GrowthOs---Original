@@ -184,7 +184,7 @@ export function RecordingAttachmentsManager({ recordingId }: RecordingAttachment
                   {att.file_name}
                 </button>
               </div>
-              <Button variant="outline" size="sm" onClick={() => deleteAttachment(att)} className="hover-scale">
+              <Button type="button" variant="outline" size="sm" onClick={() => deleteAttachment(att)} className="hover-scale">
                 <Trash2 className="w-4 h-4" />
               </Button>
             </li>
