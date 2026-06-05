@@ -3190,33 +3190,14 @@ export function StudentsManagement() {
                                         variant={student.lms_status === status ? "secondary" : "ghost"}
                                         size="sm"
                                         className="w-full justify-start text-sm"
-                                        onClick={async () => {
-                                          if (student.lms_status !== status) {
-                                            if (status === 'suspended') {
-                                              setStudentForSuspension(student);
-                                              setSuspensionDialogOpen(true);
-                                              return;
-                                            }
-                                            try {
-                                              const { error } = await supabase.from('users').update({
-                                                lms_status: status,
-                                                updated_at: new Date().toISOString()
-                                              }).eq('id', student.id);
-                                              if (error) throw error;
-                                              toast({
-                                                title: 'Success',
-                                                description: `LMS status updated to ${status}`
-                                              });
-                                              fetchStudents();
-                                            } catch (error) {
-                                              console.error('Error updating status:', error);
-                                              toast({
-                                                title: 'Error',
-                                                description: 'Failed to update status',
-                                                variant: 'destructive'
-                                              });
-                                            }
+                                        onClick={() => {
+                                          if (student.lms_status === status) return;
+                                          if (status === 'suspended') {
+                                            setStudentForSuspension(student);
+                                            setSuspensionDialogOpen(true);
+                                            return;
                                           }
+                                          setLmsStatusConfirm({ student, status });
                                         }}
                                         disabled={student.lms_status === status}
                                       >
