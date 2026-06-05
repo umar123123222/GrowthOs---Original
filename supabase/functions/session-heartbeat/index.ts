@@ -7,6 +7,7 @@ interface HeartbeatBody {
   user_agent?: string
   device_label?: string
   current_activity?: Record<string, unknown> | null
+  coords?: { latitude: number; longitude: number; accuracy?: number } | null
   end?: boolean
 }
 
@@ -16,12 +17,42 @@ function parseIp(req: Request): string | null {
   return req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip')
 }
 
-async function lookupGeo(ip: string | null): Promise<{ country?: string; city?: string; region?: string }> {
-  if (!ip || ip === '127.0.0.1' || ip.startsWith('::')) return {}
-
-  // Try ipwho.is first — generally more accurate for South Asia than ipapi.co
+async function reverseGeocode(lat: number, lon: number): Promise<{ country?: string; city?: string; region?: string }> {
+  // BigDataCloud — free, no API key, accurate reverse-geocoding
   try {
-    const r = await fetch(`https://ipwho.is/${ip}`, { headers: { 'User-Agent': 'lms-session-heartbeat/1.0' } })
+    const r = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`)
+    if (r.ok) {
+      const j = await r.json()
+      const city = j.city || j.locality || j.localityInfo?.administrative?.[3]?.name
+      if (city || j.countryName) {
+        return { country: j.countryName, city, region: j.principalSubdivision }
+      }
+    }
+  } catch { /* fall through */ }
+
+  // Fallback: Nominatim (OSM)
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`, {
+      headers: { 'User-Agent': 'lms-session-heartbeat/1.0' },
+    })
+    if (r.ok) {
+      const j = await r.json()
+      const a = j.address || {}
+      return {
+        country: a.country,
+        city: a.city || a.town || a.village || a.suburb || a.county,
+        region: a.state || a.region,
+      }
+    }
+  } catch { /* noop */ }
+
+  return {}
+}
+
+async function lookupGeoByIp(ip: string | null): Promise<{ country?: string; city?: string; region?: string }> {
+  if (!ip || ip === '127.0.0.1' || ip.startsWith('::')) return {}
+  try {
+    const r = await fetch(`https://ipwho.is/${ip}`)
     if (r.ok) {
       const j = await r.json()
       if (j && j.success !== false && (j.city || j.country)) {
@@ -29,8 +60,6 @@ async function lookupGeo(ip: string | null): Promise<{ country?: string; city?: 
       }
     }
   } catch { /* fall through */ }
-
-  // Fallback: ip-api.com (HTTPS via pro is paid, but http works server-side from Deno)
   try {
     const r = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city`)
     if (r.ok) {
@@ -39,17 +68,8 @@ async function lookupGeo(ip: string | null): Promise<{ country?: string; city?: 
         return { country: j.country, city: j.city, region: j.regionName }
       }
     }
-  } catch { /* fall through */ }
-
-  // Final fallback: ipapi.co
-  try {
-    const r = await fetch(`https://ipapi.co/${ip}/json/`, { headers: { 'User-Agent': 'lms-session-heartbeat/1.0' } })
-    if (!r.ok) return {}
-    const j = await r.json()
-    return { country: j.country_name || j.country, city: j.city, region: j.region }
-  } catch {
-    return {}
-  }
+  } catch { /* noop */ }
+  return {}
 }
 
 Deno.serve(async (req) => {
