@@ -14,9 +14,12 @@ interface Note {
   note: string;
   created_at: string;
   created_by_name: string;
-  type: 'note' | 'suspension';
+  type: 'note' | 'suspension' | 'fee_extension';
   autoUnsuspendDate?: string;
+  previousDueDate?: string;
+  newDueDate?: string;
 }
+
 
 interface StudentNotesDialogProps {
   open: boolean;
