@@ -13,6 +13,9 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { RefundDialog } from './RefundDialog';
+import { logAdminAction } from '@/lib/activity-logger';
+import { useAuth } from '@/hooks/useAuth';
+
 
 interface Invoice {
   id: string;
