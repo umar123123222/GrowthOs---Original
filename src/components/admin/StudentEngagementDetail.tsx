@@ -244,71 +244,79 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
                     <p className="text-sm">No videos found.</p>
                   </div>
                 )}
-                {videos.map(v => {
-                  const isLocked = !v.unlocked;
-                  const isWatched = v.watched;
-                  const isUnlockedNotWatched = v.unlocked && !v.watched;
+                {groupByCourse(videos).map(group => {
+                  const groupWatched = group.items.filter(v => v.watched).length;
                   return (
-                    <div
-                      key={v.id}
-                      className={`group relative flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-soft ${
-                        isWatched
-                          ? 'bg-success/5 border-success/20'
-                          : isUnlockedNotWatched
-                          ? 'bg-primary/5 border-primary/20'
-                          : 'bg-card border-border'
-                      }`}
-                    >
-                      {/* Left color bar */}
-                      <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${
-                        isWatched ? 'bg-success' : isUnlockedNotWatched ? 'bg-primary' : 'bg-muted-foreground/30'
-                      }`} />
-
-                      {/* Icon */}
-                      <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
-                        isWatched ? 'bg-success/15 text-success' : isUnlockedNotWatched ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {isWatched ? <Eye className="w-4 h-4" /> : isUnlockedNotWatched ? <PlayCircle className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">
-                          {v.sequence_order != null ? (
-                            <span className="text-muted-foreground mr-1">#{v.sequence_order}</span>
-                          ) : null}
-                          {v.recording_title || 'Untitled'}
+                    <div key={group.course_id ?? 'uncat'} className="space-y-2">
+                      <div className="sticky top-0 z-10 -mx-1 px-3 py-2 bg-background/95 backdrop-blur border-b border-border/60 flex items-center justify-between rounded-md">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <BookOpen className="w-4 h-4 text-primary shrink-0" />
+                          <span className="font-semibold text-sm truncate">{group.course_title}</span>
                         </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          {v.watched_at && (
-                            <span className="flex items-center gap-1 text-success">
-                              <Eye className="w-3 h-3" /> Watched {formatDate(v.watched_at)}
-                            </span>
-                          )}
-                          {v.unlocked_at && !v.watched && (
-                            <span className="flex items-center gap-1 text-primary">
-                              <Unlock className="w-3 h-3" /> Unlocked {formatDate(v.unlocked_at)}
-                            </span>
-                          )}
-                        </div>
+                        <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 shrink-0">
+                          {groupWatched}/{group.items.length} watched
+                        </Badge>
                       </div>
-
-                      {/* Badge */}
-                      <div className="shrink-0">
-                        {isWatched ? (
-                          <Badge variant="outline" className="bg-success/15 text-success border-success/30 gap-1.5 px-2.5 py-0.5 font-medium">
-                            <Eye className="w-3.5 h-3.5" /> Watched
-                          </Badge>
-                        ) : isUnlockedNotWatched ? (
-                          <Badge variant="outline" className="bg-primary/15 text-primary border-primary/30 gap-1.5 px-2.5 py-0.5 font-medium">
-                            <PlayCircle className="w-3.5 h-3.5" /> Unlocked
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-secondary/60 text-muted-foreground border-border/60 gap-1.5 px-2.5 py-0.5">
-                            <Lock className="w-3.5 h-3.5" /> Locked
-                          </Badge>
-                        )}
-                      </div>
+                      {group.items.map(v => {
+                        const isWatched = v.watched;
+                        const isUnlockedNotWatched = v.unlocked && !v.watched;
+                        return (
+                          <div
+                            key={v.id}
+                            className={`group relative flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-soft ${
+                              isWatched
+                                ? 'bg-success/5 border-success/20'
+                                : isUnlockedNotWatched
+                                ? 'bg-primary/5 border-primary/20'
+                                : 'bg-card border-border'
+                            }`}
+                          >
+                            <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${
+                              isWatched ? 'bg-success' : isUnlockedNotWatched ? 'bg-primary' : 'bg-muted-foreground/30'
+                            }`} />
+                            <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
+                              isWatched ? 'bg-success/15 text-success' : isUnlockedNotWatched ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                            }`}>
+                              {isWatched ? <Eye className="w-4 h-4" /> : isUnlockedNotWatched ? <PlayCircle className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm truncate">
+                                {v.sequence_order != null ? (
+                                  <span className="text-muted-foreground mr-1">#{v.sequence_order}</span>
+                                ) : null}
+                                {v.recording_title || 'Untitled'}
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                {v.watched_at && (
+                                  <span className="flex items-center gap-1 text-success">
+                                    <Eye className="w-3 h-3" /> Watched {formatDate(v.watched_at)}
+                                  </span>
+                                )}
+                                {v.unlocked_at && !v.watched && (
+                                  <span className="flex items-center gap-1 text-primary">
+                                    <Unlock className="w-3 h-3" /> Unlocked {formatDate(v.unlocked_at)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="shrink-0">
+                              {isWatched ? (
+                                <Badge variant="outline" className="bg-success/15 text-success border-success/30 gap-1.5 px-2.5 py-0.5 font-medium">
+                                  <Eye className="w-3.5 h-3.5" /> Watched
+                                </Badge>
+                              ) : isUnlockedNotWatched ? (
+                                <Badge variant="outline" className="bg-primary/15 text-primary border-primary/30 gap-1.5 px-2.5 py-0.5 font-medium">
+                                  <PlayCircle className="w-3.5 h-3.5" /> Unlocked
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-secondary/60 text-muted-foreground border-border/60 gap-1.5 px-2.5 py-0.5">
+                                  <Lock className="w-3.5 h-3.5" /> Locked
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
