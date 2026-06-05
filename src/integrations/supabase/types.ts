@@ -538,6 +538,7 @@ export type Database = {
         Row: {
           address: string
           announcement_banner: Json | null
+          billing_email_cc: string | null
           branding: Json | null
           company_email: string | null
           company_logo: string | null
@@ -558,6 +559,7 @@ export type Database = {
           lms_url: string | null
           maximum_installment_count: number
           multi_course_enabled: boolean | null
+          notification_email_cc: string | null
           onboarding_video_url: string | null
           original_fee_amount: number
           overdue_penalty_amount: number | null
@@ -572,6 +574,7 @@ export type Database = {
         Insert: {
           address?: string
           announcement_banner?: Json | null
+          billing_email_cc?: string | null
           branding?: Json | null
           company_email?: string | null
           company_logo?: string | null
@@ -592,6 +595,7 @@ export type Database = {
           lms_url?: string | null
           maximum_installment_count?: number
           multi_course_enabled?: boolean | null
+          notification_email_cc?: string | null
           onboarding_video_url?: string | null
           original_fee_amount?: number
           overdue_penalty_amount?: number | null
@@ -606,6 +610,7 @@ export type Database = {
         Update: {
           address?: string
           announcement_banner?: Json | null
+          billing_email_cc?: string | null
           branding?: Json | null
           company_email?: string | null
           company_logo?: string | null
@@ -626,6 +631,7 @@ export type Database = {
           lms_url?: string | null
           maximum_installment_count?: number
           multi_course_enabled?: boolean | null
+          notification_email_cc?: string | null
           onboarding_video_url?: string | null
           original_fee_amount?: number
           overdue_penalty_amount?: number | null
