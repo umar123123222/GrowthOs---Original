@@ -1,5 +1,65 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.55.0";
+import { SMTPClient } from "../_shared/smtp-client.ts";
+
+function escapeHtml(s: string): string {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function getYouTubeEmbed(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtu.be')) {
+      const id = u.pathname.slice(1);
+      return id ? `https://www.youtube.com/embed/${id}` : null;
+    }
+    if (u.hostname.includes('youtube.com')) {
+      const id = u.searchParams.get('v');
+      if (id) return `https://www.youtube.com/embed/${id}`;
+      if (u.pathname.startsWith('/embed/')) return url;
+    }
+  } catch { /* noop */ }
+  return null;
+}
+
+function getVimeoEmbed(url: string): string | null {
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('vimeo.com')) {
+      const id = u.pathname.split('/').filter(Boolean).pop();
+      return id ? `https://player.vimeo.com/video/${id}` : null;
+    }
+  } catch { /* noop */ }
+  return null;
+}
+
+function buildVideoSection(url: string): string {
+  const yt = getYouTubeEmbed(url);
+  const vm = !yt ? getVimeoEmbed(url) : null;
+  const embedUrl = yt || vm || (url.includes('iframe.mediadelivery.net/embed/') ? url : null);
+  if (embedUrl) {
+    return `
+      <div style="margin: 24px 0;">
+        <h3 style="margin-bottom: 8px;">Welcome Video</h3>
+        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;background:#000;">
+          <iframe src="${escapeHtml(embedUrl)}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
+        </div>
+        <p style="font-size:13px;color:#666;margin-top:8px;">If the video doesn't load, <a href="${escapeHtml(url)}">click here to watch</a>.</p>
+      </div>`;
+  }
+  return `
+    <div style="margin:24px 0;">
+      <h3 style="margin-bottom:8px;">Welcome Video</h3>
+      <p><a href="${escapeHtml(url)}" style="color:#2563eb;">Watch the onboarding video</a></p>
+    </div>`;
+}
+
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
