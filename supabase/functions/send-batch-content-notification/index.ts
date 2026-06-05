@@ -300,10 +300,11 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Get enrolled students for this batch (no FK relationship defined, fetch in two steps)
+    // Get enrolled students for this batch without relying on PostgREST joins.
+    // course_enrollments stores students.id in student_id, then students.user_id points to users.id.
     const { data: enrollments, error: enrollmentError } = await supabase
       .from("course_enrollments")
-      .select("user_id")
+      .select("student_id")
       .eq("batch_id", batch_id)
       .eq("status", "active");
 
@@ -315,7 +316,26 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const userIds = Array.from(new Set((enrollments || []).map((e: any) => e.user_id).filter(Boolean)));
+    const studentIds = Array.from(new Set((enrollments || []).map((e: any) => e.student_id).filter(Boolean)));
+    let userIds: string[] = [];
+
+    if (studentIds.length > 0) {
+      const { data: studentRows, error: studentsError } = await supabase
+        .from("students")
+        .select("id, user_id")
+        .in("id", studentIds);
+
+      if (studentsError) {
+        console.error("Error fetching student user IDs:", studentsError);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch enrolled students" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      userIds = Array.from(new Set((studentRows || []).map((student: any) => student.user_id).filter(Boolean)));
+    }
+
     let usersById = new Map<string, { id: string; email: string; full_name: string }>();
     if (userIds.length > 0) {
       const { data: usersData, error: usersError } = await supabase
