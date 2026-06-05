@@ -32,6 +32,10 @@ type SessionRow = {
   country: string | null;
   city: string | null;
   region: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  geo_accuracy_m: number | null;
+  geo_source: string | null;
   current_activity: any;
   first_seen_at: string;
   last_heartbeat_at: string;
