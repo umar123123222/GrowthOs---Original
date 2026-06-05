@@ -292,7 +292,14 @@ const handler = async (req: Request): Promise<Response> => {
         companyAddress,
       });
       const cc = Deno.env.get("BILLING_EMAIL_CC") || undefined;
-      await sendEmail(studentEmail, `Refund Confirmation — ${companyName}`, html, cc, companyName);
+      const attachments = body.proof_attachment
+        ? [{
+            filename: body.proof_attachment.filename,
+            content: body.proof_attachment.content_base64,
+            content_type: body.proof_attachment.content_type,
+          }]
+        : undefined;
+      await sendEmail(studentEmail, `Refund Confirmation — ${companyName}`, html, cc, companyName, attachments);
     }
 
     return new Response(JSON.stringify({
