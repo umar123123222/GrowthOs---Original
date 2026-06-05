@@ -32,6 +32,7 @@ const Profile = () => {
     full_name: '',
     email: ''
   });
+  const [batchName, setBatchName] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Update profile data when user changes
@@ -43,6 +44,35 @@ const Profile = () => {
       });
     }
   }, [user]);
+
+  // Fetch active batch for the student
+  useEffect(() => {
+    let cancelled = false;
+    const fetchBatch = async () => {
+      if (!user?.id) return;
+      try {
+        const { data: enr } = await supabase
+          .from('course_enrollments')
+          .select('batch_id')
+          .eq('student_id', user.id)
+          .eq('status', 'active')
+          .not('batch_id', 'is', null)
+          .limit(1);
+        const batchId = enr?.[0]?.batch_id;
+        if (!batchId) { if (!cancelled) setBatchName(null); return; }
+        const { data: batch } = await supabase
+          .from('batches')
+          .select('name')
+          .eq('id', batchId)
+          .maybeSingle();
+        if (!cancelled) setBatchName(batch?.name || null);
+      } catch {
+        if (!cancelled) setBatchName(null);
+      }
+    };
+    fetchBatch();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const updateProfile = async () => {
     if (!user?.id) {
@@ -264,6 +294,25 @@ const Profile = () => {
                 className="bg-gray-100 border-gray-300 cursor-not-allowed"
               />
               <p className="text-xs text-blue-600">Email cannot be changed</p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Student ID</Label>
+                <Input
+                  value={user.id}
+                  readOnly
+                  className="bg-gray-100 border-gray-300 cursor-not-allowed font-mono text-xs"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Batch</Label>
+                <Input
+                  value={batchName || 'N/A'}
+                  readOnly
+                  className="bg-gray-100 border-gray-300 cursor-not-allowed"
+                />
+              </div>
             </div>
 
             <div className="flex justify-end pt-4">
