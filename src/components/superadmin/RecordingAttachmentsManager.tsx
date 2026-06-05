@@ -162,7 +162,7 @@ export function RecordingAttachmentsManager({ recordingId }: RecordingAttachment
         <p className="text-sm text-muted-foreground">
           Attach files from the Resources library to this recording.
         </p>
-        <Button onClick={openPicker} className="hover-scale">
+        <Button type="button" onClick={openPicker} className="hover-scale">
           <FolderOpen className="w-4 h-4 mr-2" /> Select from Resources
         </Button>
       </div>
