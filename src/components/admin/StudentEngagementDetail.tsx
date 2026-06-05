@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
-import { Lock, Unlock, Eye, EyeOff, FileText, CheckCircle2, XCircle, Clock, RotateCcw } from 'lucide-react';
+import {
+  Lock, Unlock, Eye, EyeOff, FileText, CheckCircle2, XCircle, Clock,
+  RotateCcw, PlayCircle, MonitorPlay, ClipboardList, BarChart3, BookOpen
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface VideoItem {
@@ -32,26 +35,71 @@ interface Props {
   student: { id: string; full_name: string; email: string } | null;
 }
 
+const statusConfig: Record<string, { label: string; icon: React.ReactNode; badgeClass: string; barClass: string }> = {
+  approved: {
+    label: 'Approved',
+    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    badgeClass: 'bg-success/15 text-success border-success/30',
+    barClass: 'bg-success',
+  },
+  declined: {
+    label: 'Declined',
+    icon: <XCircle className="w-3.5 h-3.5" />,
+    badgeClass: 'bg-destructive/15 text-destructive border-destructive/30',
+    barClass: 'bg-destructive',
+  },
+  rejected: {
+    label: 'Declined',
+    icon: <XCircle className="w-3.5 h-3.5" />,
+    badgeClass: 'bg-destructive/15 text-destructive border-destructive/30',
+    barClass: 'bg-destructive',
+  },
+  resubmission: {
+    label: 'Resubmission',
+    icon: <RotateCcw className="w-3.5 h-3.5" />,
+    badgeClass: 'bg-warning/20 text-warning-foreground border-warning/40',
+    barClass: 'bg-warning',
+  },
+  needs_resubmission: {
+    label: 'Resubmission',
+    icon: <RotateCcw className="w-3.5 h-3.5" />,
+    badgeClass: 'bg-warning/20 text-warning-foreground border-warning/40',
+    barClass: 'bg-warning',
+  },
+  pending: {
+    label: 'Pending Review',
+    icon: <Clock className="w-3.5 h-3.5" />,
+    badgeClass: 'bg-primary/15 text-primary border-primary/30',
+    barClass: 'bg-primary',
+  },
+  submitted: {
+    label: 'Pending Review',
+    icon: <Clock className="w-3.5 h-3.5" />,
+    badgeClass: 'bg-primary/15 text-primary border-primary/30',
+    barClass: 'bg-primary',
+  },
+  not_submitted: {
+    label: 'Not Submitted',
+    icon: <FileText className="w-3.5 h-3.5" />,
+    badgeClass: 'bg-muted text-muted-foreground border-border',
+    barClass: 'bg-muted-foreground/40',
+  },
+};
+
 const assignmentBadge = (unlocked: boolean, status: string) => {
   if (!unlocked && status === 'not_submitted') {
-    return <Badge variant="secondary" className="bg-gray-100 text-gray-700"><Lock className="w-3 h-3 mr-1" /> Locked</Badge>;
+    return (
+      <Badge variant="outline" className="bg-secondary/60 text-muted-foreground border-border/60 gap-1.5 px-2.5 py-0.5">
+        <Lock className="w-3.5 h-3.5" /> Locked
+      </Badge>
+    );
   }
-  switch (status) {
-    case 'approved':
-      return <Badge className="bg-green-100 text-green-700 hover:bg-green-200"><CheckCircle2 className="w-3 h-3 mr-1" /> Approved</Badge>;
-    case 'declined':
-    case 'rejected':
-      return <Badge className="bg-red-100 text-red-700 hover:bg-red-200"><XCircle className="w-3 h-3 mr-1" /> Declined</Badge>;
-    case 'resubmission':
-    case 'needs_resubmission':
-      return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200"><RotateCcw className="w-3 h-3 mr-1" /> Resubmission</Badge>;
-    case 'pending':
-    case 'submitted':
-      return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200"><Clock className="w-3 h-3 mr-1" /> Pending Review</Badge>;
-    case 'not_submitted':
-    default:
-      return <Badge variant="outline"><FileText className="w-3 h-3 mr-1" /> Unlocked · Not submitted</Badge>;
-  }
+  const cfg = statusConfig[status] || statusConfig.not_submitted;
+  return (
+    <Badge variant="outline" className={`gap-1.5 px-2.5 py-0.5 font-medium ${cfg.badgeClass}`}>
+      {cfg.icon} {cfg.label}
+    </Badge>
+  );
 };
 
 export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) => {
@@ -86,85 +134,268 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
     };
   }, [open, student, toast]);
 
-  const unlockedVideos = videos.filter(v => v.unlocked).length;
   const watchedVideos = videos.filter(v => v.watched).length;
+  const unlockedVideos = videos.filter(v => v.unlocked).length;
   const lockedVideos = videos.length - unlockedVideos;
+  const totalVideoProgress = videos.length ? Math.round((watchedVideos / videos.length) * 100) : 0;
+
+  const approvedAssignments = assignments.filter(a => a.status === 'approved').length;
+  const pendingAssignments = assignments.filter(a => a.status === 'pending' || a.status === 'submitted').length;
+  const declinedAssignments = assignments.filter(a => a.status === 'declined' || a.status === 'rejected').length;
+  const resubmissionAssignments = assignments.filter(a => a.status === 'resubmission' || a.status === 'needs_resubmission').length;
+  const totalAssignmentProgress = assignments.length ? Math.round((approvedAssignments / assignments.length) * 100) : 0;
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return null;
+    return new Date(dateStr).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle>
-            {student?.full_name}
-            <span className="ml-2 text-sm font-normal text-muted-foreground">{student?.email}</span>
-          </DialogTitle>
+      <DialogContent className="max-w-5xl w-[95vw] h-[90vh] max-h-[90vh] p-0 flex flex-col gap-0 overflow-hidden">
+        {/* Header */}
+        <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+              {student?.full_name?.charAt(0)?.toUpperCase() || '?'}
+            </div>
+            <div>
+              <DialogTitle className="text-lg leading-tight">{student?.full_name}</DialogTitle>
+              <p className="text-sm text-muted-foreground">{student?.email}</p>
+            </div>
+          </div>
         </DialogHeader>
 
         {loading ? (
-          <div className="p-8 text-center text-muted-foreground">Loading…</div>
+          <div className="flex-1 flex items-center justify-center text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              Loading engagement data…
+            </div>
+          </div>
         ) : (
-          <ScrollArea className="flex-1 pr-4">
-            {/* Videos */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-lg font-semibold">Videos</h3>
-                <div className="flex gap-2 text-xs">
-                  <Badge className="bg-green-100 text-green-700">Watched {watchedVideos}</Badge>
-                  <Badge className="bg-blue-100 text-blue-700">Unlocked {unlockedVideos}</Badge>
-                  <Badge variant="secondary">Locked {lockedVideos}</Badge>
-                </div>
-              </div>
-              <div className="space-y-2">
-                {videos.length === 0 && <p className="text-sm text-muted-foreground">No videos found.</p>}
-                {videos.map(v => (
-                  <div key={v.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">
-                        {v.sequence_order != null ? `${v.sequence_order}. ` : ''}
-                        {v.recording_title || 'Untitled'}
-                      </div>
-                      {v.watched_at && (
-                        <div className="text-xs text-muted-foreground">
-                          Watched {new Date(v.watched_at).toLocaleDateString()}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex gap-2 shrink-0">
-                      {!v.unlocked ? (
-                        <Badge variant="secondary" className="bg-gray-100 text-gray-700"><Lock className="w-3 h-3 mr-1" /> Locked</Badge>
-                      ) : v.watched ? (
-                        <Badge className="bg-green-100 text-green-700 hover:bg-green-200"><Eye className="w-3 h-3 mr-1" /> Watched</Badge>
-                      ) : (
-                        <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200"><Unlock className="w-3 h-3 mr-1" /> Unlocked · Not watched</Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <Tabs defaultValue="videos" className="flex-1 flex flex-col min-h-0">
+            <div className="px-6 pt-4 pb-0 shrink-0">
+              <TabsList className="w-full grid grid-cols-2">
+                <TabsTrigger value="videos" className="gap-2">
+                  <MonitorPlay className="w-4 h-4" /> Videos
+                </TabsTrigger>
+                <TabsTrigger value="assignments" className="gap-2">
+                  <ClipboardList className="w-4 h-4" /> Assignments
+                </TabsTrigger>
+              </TabsList>
             </div>
 
-            {/* Assignments */}
-            <div>
-              <h3 className="text-lg font-semibold mb-3">Assignments</h3>
-              <div className="space-y-2">
-                {assignments.length === 0 && <p className="text-sm text-muted-foreground">No assignments found.</p>}
-                {assignments.map(a => (
-                  <div key={a.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">{a.name}</div>
-                      {a.submitted_at && (
-                        <div className="text-xs text-muted-foreground">
-                          Submitted {new Date(a.submitted_at).toLocaleDateString()}
-                          {a.version ? ` · v${a.version}` : ''}
-                        </div>
-                      )}
-                    </div>
-                    <div className="shrink-0">{assignmentBadge(a.unlocked, a.status)}</div>
-                  </div>
-                ))}
+            {/* ─── Videos Tab ─── */}
+            <TabsContent value="videos" className="flex-1 flex flex-col min-h-0 m-0 mt-0 px-6 pb-6 pt-4">
+              {/* Video Stats */}
+              <div className="grid grid-cols-4 gap-3 mb-4 shrink-0">
+                <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-success rounded-l-xl" />
+                  <div className="text-2xl font-bold text-success">{watchedVideos}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1"><Eye className="w-3 h-3" /> Watched</div>
+                </div>
+                <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl" />
+                  <div className="text-2xl font-bold text-primary">{unlockedVideos}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1"><Unlock className="w-3 h-3" /> Unlocked</div>
+                </div>
+                <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-muted-foreground/40 rounded-l-xl" />
+                  <div className="text-2xl font-bold text-muted-foreground">{lockedVideos}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1"><Lock className="w-3 h-3" /> Locked</div>
+                </div>
+                <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/60 rounded-l-xl" />
+                  <div className="text-2xl font-bold text-primary">{totalVideoProgress}%</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Progress</div>
+                </div>
               </div>
-            </div>
-          </ScrollArea>
+
+              {/* Video List */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2 min-h-0">
+                {videos.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <MonitorPlay className="w-10 h-10 mb-3 opacity-30" />
+                    <p className="text-sm">No videos found.</p>
+                  </div>
+                )}
+                {videos.map(v => {
+                  const isLocked = !v.unlocked;
+                  const isWatched = v.watched;
+                  const isUnlockedNotWatched = v.unlocked && !v.watched;
+                  return (
+                    <div
+                      key={v.id}
+                      className={`group relative flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-soft ${
+                        isWatched
+                          ? 'bg-success/5 border-success/20'
+                          : isUnlockedNotWatched
+                          ? 'bg-primary/5 border-primary/20'
+                          : 'bg-card border-border'
+                      }`}
+                    >
+                      {/* Left color bar */}
+                      <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${
+                        isWatched ? 'bg-success' : isUnlockedNotWatched ? 'bg-primary' : 'bg-muted-foreground/30'
+                      }`} />
+
+                      {/* Icon */}
+                      <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
+                        isWatched ? 'bg-success/15 text-success' : isUnlockedNotWatched ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                      }`}>
+                        {isWatched ? <Eye className="w-4 h-4" /> : isUnlockedNotWatched ? <PlayCircle className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {v.sequence_order != null ? (
+                            <span className="text-muted-foreground mr-1">#{v.sequence_order}</span>
+                          ) : null}
+                          {v.recording_title || 'Untitled'}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                          {v.watched_at && (
+                            <span className="flex items-center gap-1 text-success">
+                              <Eye className="w-3 h-3" /> Watched {formatDate(v.watched_at)}
+                            </span>
+                          )}
+                          {v.unlocked_at && !v.watched && (
+                            <span className="flex items-center gap-1 text-primary">
+                              <Unlock className="w-3 h-3" /> Unlocked {formatDate(v.unlocked_at)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Badge */}
+                      <div className="shrink-0">
+                        {isWatched ? (
+                          <Badge variant="outline" className="bg-success/15 text-success border-success/30 gap-1.5 px-2.5 py-0.5 font-medium">
+                            <Eye className="w-3.5 h-3.5" /> Watched
+                          </Badge>
+                        ) : isUnlockedNotWatched ? (
+                          <Badge variant="outline" className="bg-primary/15 text-primary border-primary/30 gap-1.5 px-2.5 py-0.5 font-medium">
+                            <PlayCircle className="w-3.5 h-3.5" /> Unlocked
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-secondary/60 text-muted-foreground border-border/60 gap-1.5 px-2.5 py-0.5">
+                            <Lock className="w-3.5 h-3.5" /> Locked
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </TabsContent>
+
+            {/* ─── Assignments Tab ─── */}
+            <TabsContent value="assignments" className="flex-1 flex flex-col min-h-0 m-0 mt-0 px-6 pb-6 pt-4">
+              {/* Assignment Stats */}
+              <div className="grid grid-cols-5 gap-3 mb-4 shrink-0">
+                <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-success rounded-l-xl" />
+                  <div className="text-2xl font-bold text-success">{approvedAssignments}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Approved</div>
+                </div>
+                <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary rounded-l-xl" />
+                  <div className="text-2xl font-bold text-primary">{pendingAssignments}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" /> Pending</div>
+                </div>
+                <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-destructive rounded-l-xl" />
+                  <div className="text-2xl font-bold text-destructive">{declinedAssignments}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1"><XCircle className="w-3 h-3" /> Declined</div>
+                </div>
+                <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-warning rounded-l-xl" />
+                  <div className="text-2xl font-bold text-warning-foreground">{resubmissionAssignments}</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1"><RotateCcw className="w-3 h-3" /> Resubmit</div>
+                </div>
+                <div className="rounded-xl border bg-card p-3 relative overflow-hidden">
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary/60 rounded-l-xl" />
+                  <div className="text-2xl font-bold text-primary">{totalAssignmentProgress}%</div>
+                  <div className="text-xs text-muted-foreground flex items-center gap-1"><BarChart3 className="w-3 h-3" /> Progress</div>
+                </div>
+              </div>
+
+              {/* Assignment List */}
+              <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 space-y-2 min-h-0">
+                {assignments.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <ClipboardList className="w-10 h-10 mb-3 opacity-30" />
+                    <p className="text-sm">No assignments found.</p>
+                  </div>
+                )}
+                {assignments.map(a => {
+                  const cfg = !a.unlocked && a.status === 'not_submitted'
+                    ? null
+                    : statusConfig[a.status] || statusConfig.not_submitted;
+                  return (
+                    <div
+                      key={a.id}
+                      className={`group relative flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-soft ${
+                        cfg ? `border-l-4` : ''
+                      } ${
+                        a.status === 'approved' ? 'bg-success/5 border-success/20'
+                        : a.status === 'declined' || a.status === 'rejected' ? 'bg-destructive/5 border-destructive/20'
+                        : a.status === 'resubmission' || a.status === 'needs_resubmission' ? 'bg-warning/5 border-warning/30'
+                        : a.status === 'pending' || a.status === 'submitted' ? 'bg-primary/5 border-primary/20'
+                        : a.unlocked ? 'bg-card border-border'
+                        : 'bg-secondary/30 border-border'
+                      }`}
+                    >
+                      {/* Left color bar */}
+                      {cfg && (
+                        <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${cfg.barClass}`} />
+                      )}
+
+                      {/* Icon */}
+                      <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
+                        a.status === 'approved' ? 'bg-success/15 text-success'
+                        : a.status === 'declined' || a.status === 'rejected' ? 'bg-destructive/15 text-destructive'
+                        : a.status === 'resubmission' || a.status === 'needs_resubmission' ? 'bg-warning/20 text-warning-foreground'
+                        : a.status === 'pending' || a.status === 'submitted' ? 'bg-primary/15 text-primary'
+                        : a.unlocked ? 'bg-muted text-muted-foreground'
+                        : 'bg-secondary text-muted-foreground'
+                      }`}>
+                        {a.status === 'approved' ? <CheckCircle2 className="w-4 h-4" />
+                        : a.status === 'declined' || a.status === 'rejected' ? <XCircle className="w-4 h-4" />
+                        : a.status === 'resubmission' || a.status === 'needs_resubmission' ? <RotateCcw className="w-4 h-4" />
+                        : a.status === 'pending' || a.status === 'submitted' ? <Clock className="w-4 h-4" />
+                        : a.unlocked ? <FileText className="w-4 h-4" />
+                        : <Lock className="w-4 h-4" />}
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{a.name}</div>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                          {a.submitted_at && (
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-3 h-3" /> Submitted {formatDate(a.submitted_at)}
+                              {a.version ? <span className="text-primary font-medium">· v{a.version}</span> : null}
+                            </span>
+                          )}
+                          {a.reviewed_at && (
+                            <span className="flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> Reviewed {formatDate(a.reviewed_at)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Badge */}
+                      <div className="shrink-0">{assignmentBadge(a.unlocked, a.status)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </TabsContent>
+          </Tabs>
         )}
       </DialogContent>
     </Dialog>
