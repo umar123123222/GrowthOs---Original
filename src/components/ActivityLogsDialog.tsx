@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { RoleGuard } from '@/components/RoleGuard';
 import { logger } from '@/lib/logger';
+import { ExpandableSubDetails } from '@/components/ExpandableSubDetails';
 
 interface ActivityLog {
   id: string;
