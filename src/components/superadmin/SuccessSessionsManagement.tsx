@@ -1112,15 +1112,17 @@ export function SuccessSessionsManagement() {
         onEdit={handleOpenDialog}
       />
 
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
-        <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 border-b space-y-3">
-          <CardTitle className="flex items-center text-xl">
-            <Video className="w-6 h-6 mr-3 text-orange-600" />
-            All Success Sessions
-          </CardTitle>
+      <Card className="border border-border/60 shadow-sm animate-fade-in">
+        <CardHeader className="border-b border-border/60 bg-muted/30 space-y-3 py-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center text-base font-semibold text-foreground">
+              <Video className="w-5 h-5 mr-2 text-primary" />
+              All Success Sessions
+            </CardTitle>
+          </div>
 
           {/* Filter Row */}
-          <div className="flex flex-wrap gap-2 items-end">
+          <div className="flex flex-wrap gap-2 items-center">
             <div className="relative flex-1 min-w-[180px] max-w-[260px]">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
