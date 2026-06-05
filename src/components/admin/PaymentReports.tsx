@@ -608,6 +608,12 @@ export const PaymentReports = () => {
                             setRefundOpen(true);
                             return;
                           }
+                          if (v === 'paid') {
+                            if (r.status === 'paid') return;
+                            setMarkPaidContext({ invoiceId: r.id, email: r.email });
+                            setMarkPaidOpen(true);
+                            return;
+                          }
                           updateInvoiceStatus(r.id, v);
                         }}>
                           <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
