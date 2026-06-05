@@ -33,6 +33,7 @@ const Profile = () => {
     email: ''
   });
   const [batchName, setBatchName] = useState<string | null>(null);
+  const [studentCode, setStudentCode] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Update profile data when user changes
@@ -71,6 +72,20 @@ const Profile = () => {
       }
     };
     fetchBatch();
+    const fetchStudentCode = async () => {
+      if (!user?.id) return;
+      try {
+        const { data } = await supabase
+          .from('students')
+          .select('student_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!cancelled) setStudentCode(data?.student_id || null);
+      } catch {
+        if (!cancelled) setStudentCode(null);
+      }
+    };
+    fetchStudentCode();
     return () => { cancelled = true; };
   }, [user?.id]);
 
@@ -300,9 +315,9 @@ const Profile = () => {
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">Student ID</Label>
                 <Input
-                  value={user.id}
+                  value={studentCode || 'Not assigned'}
                   readOnly
-                  className="bg-gray-100 border-gray-300 cursor-not-allowed font-mono text-xs"
+                  className="bg-gray-100 border-gray-300 cursor-not-allowed font-mono"
                 />
               </div>
               <div className="space-y-2">
