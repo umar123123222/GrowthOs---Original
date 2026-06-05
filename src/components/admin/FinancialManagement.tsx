@@ -641,6 +641,15 @@ const getStatusBadge = (status: string) => {
           onSuccess={fetchInvoices}
         />
       )}
+      {markPaidContext && (
+        <MarkPaidDialog
+          open={markPaidOpen}
+          onOpenChange={(o) => { setMarkPaidOpen(o); if (!o) setMarkPaidContext(null); }}
+          invoiceId={markPaidContext.invoiceId}
+          studentEmail={markPaidContext.email}
+          onSuccess={fetchInvoices}
+        />
+      )}
     </div>
   );
 };
