@@ -47,7 +47,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
   const fetchNotes = async () => {
     setLoading(true);
     try {
-      const [activityRes, extensionRes] = await Promise.all([
+      const [activityRes, extensionRes, scheduledRes] = await Promise.all([
         supabase
           .from('user_activity_logs')
           .select('id, metadata, occurred_at, activity_type')
@@ -60,12 +60,18 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
           .eq('action', 'fee_extension_granted')
           .filter('data->>target_user_id', 'eq', studentId)
           .order('created_at', { ascending: false }),
+        supabase
+          .from('scheduled_suspensions' as any)
+          .select('id, schedule_suspend_date, auto_unsuspend_date, reason, status, created_by, created_at, executed_at, cancelled_at')
+          .eq('user_id', studentId)
+          .order('created_at', { ascending: false }),
       ]);
 
       if (activityRes.error) throw activityRes.error;
 
       const activityData = activityRes.data || [];
       const extensionData = extensionRes.data || [];
+      const scheduledData = (scheduledRes.data as any[]) || [];
 
       // Resolve creator names from both sources
       const creatorIds = [
