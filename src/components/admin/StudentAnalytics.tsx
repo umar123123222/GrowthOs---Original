@@ -36,15 +36,26 @@ interface StudentAnalyticsProps {
   hidePayments?: boolean;
 }
 
-// Module-level cache so switching tabs/re-mounting renders instantly
-let _cache: { students: StudentAnalytics[]; overview: OverviewStats; ts: number } | null = null;
-const CACHE_TTL_MS = 5 * 60_000;
+const PAGE_SIZE = 25;
+
+// Cache last successful response so re-mounts/tab switches render instantly
+let _cache: {
+  students: StudentAnalytics[];
+  overview: OverviewStats;
+  filtered_count: number;
+  page: number;
+  search: string;
+  ts: number;
+} | null = null;
+const CACHE_TTL_MS = 60_000;
 
 export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps) => {
   const [students, setStudents] = useState<StudentAnalytics[]>(_cache?.students ?? []);
   const [activeTab, setActiveTab] = useState<'overview' | 'engagement' | 'payments' | string>('overview');
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [filteredCount, setFilteredCount] = useState<number>(_cache?.filtered_count ?? 0);
   const [overviewStats, setOverviewStats] = useState<OverviewStats>(
     _cache?.overview ?? {
       total_students: 0,
@@ -56,53 +67,49 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
     }
   );
   const [loading, setLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(!!_cache);
-
-  // Filter students based on search term
-  const filteredStudents = students.filter(student =>
-    student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const studentsPerPage = 12;
-  const totalPages = Math.ceil(filteredStudents.length / studentsPerPage);
-  const startIndex = (currentPage - 1) * studentsPerPage;
-  const endIndex = startIndex + studentsPerPage;
-  const currentStudents = filteredStudents.slice(startIndex, endIndex);
   const { toast } = useToast();
 
-  // Fetch once when the user opens overview/engagement. Skip if cache is fresh.
-  useEffect(() => {
-    if (activeTab !== 'overview' && activeTab !== 'engagement') return;
-    const cacheFresh = _cache && Date.now() - _cache.ts < CACHE_TTL_MS;
-    if (cacheFresh) {
-      // hydrate from cache (covers re-mount) then refresh in background
-      setStudents(_cache!.students);
-      setOverviewStats(_cache!.overview);
-      setHasLoaded(true);
-      return;
-    }
-    if (!hasLoaded) {
-      setHasLoaded(true);
-      fetchAnalyticsData();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
+  const startIndex = (currentPage - 1) * PAGE_SIZE;
+  const endIndex = startIndex + students.length;
+  const currentStudents = students;
 
-  // Reset to first page when search term changes
+  // Debounce search input
   useEffect(() => {
-    setCurrentPage(1);
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(t);
   }, [searchTerm]);
 
-  const fetchAnalyticsData = async () => {
+  // Reset to first page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch]);
+
+  const fetchPage = async (page: number, search: string) => {
+    const cacheHit =
+      _cache &&
+      _cache.page === page &&
+      _cache.search === search &&
+      Date.now() - _cache.ts < CACHE_TTL_MS;
+    if (cacheHit) {
+      setStudents(_cache!.students);
+      setOverviewStats(_cache!.overview);
+      setFilteredCount(_cache!.filtered_count);
+      return;
+    }
     try {
-      // Only show full-screen loader on cold start
-      if (!_cache) setLoading(true);
-
-      const { data, error } = await supabase.rpc('get_student_analytics_summary' as any);
+      if (students.length === 0) setLoading(true);
+      const { data, error } = await supabase.rpc('get_student_analytics_summary' as any, {
+        p_page: page,
+        p_page_size: PAGE_SIZE,
+        p_search: search || null,
+      });
       if (error) throw error;
-
-      const payload = (data || {}) as { overview?: OverviewStats; students?: StudentAnalytics[] };
+      const payload = (data || {}) as {
+        overview?: OverviewStats;
+        students?: StudentAnalytics[];
+        filtered_count?: number;
+      };
       const nextStudents = payload.students ?? [];
       const nextOverview = payload.overview ?? {
         total_students: 0,
@@ -112,10 +119,18 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
         videos_watched_today: 0,
         assignments_submitted_today: 0,
       };
-
+      const nextFiltered = payload.filtered_count ?? nextStudents.length;
       setStudents(nextStudents);
       setOverviewStats(nextOverview);
-      _cache = { students: nextStudents, overview: nextOverview, ts: Date.now() };
+      setFilteredCount(nextFiltered);
+      _cache = {
+        students: nextStudents,
+        overview: nextOverview,
+        filtered_count: nextFiltered,
+        page,
+        search,
+        ts: Date.now(),
+      };
     } catch (error) {
       console.error('Error fetching analytics:', error);
       toast({
@@ -127,7 +142,18 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
       setLoading(false);
     }
   };
-  if (loading) {
+
+  // Fetch when tab opens, page changes, or search changes
+  useEffect(() => {
+    if (activeTab !== 'overview' && activeTab !== 'engagement') return;
+    fetchPage(currentPage, debouncedSearch);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, currentPage, debouncedSearch]);
+
+  // Alias to keep downstream JSX (which uses filteredStudents) working
+  const filteredStudents = students;
+
+  if (loading && students.length === 0) {
     return <div className="p-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-200 rounded w-1/4"></div>
@@ -261,8 +287,8 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
 
           <div className="flex justify-between items-center">
             <p className="text-sm text-gray-600">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredStudents.length)} of {filteredStudents.length} students
-              {searchTerm && ` (filtered from ${students.length} total)`}
+              Showing {filteredCount === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + students.length, filteredCount)} of {filteredCount} students
+              {debouncedSearch && ` (filtered from ${overviewStats.total_students} total)`}
             </p>
           </div>
           
@@ -339,7 +365,7 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-6">
               <p className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages} ({filteredStudents.length} students)
+                Page {currentPage} of {totalPages} ({filteredCount} students)
               </p>
               <div className="flex items-center gap-1">
                 <Button
