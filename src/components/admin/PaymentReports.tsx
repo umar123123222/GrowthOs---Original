@@ -598,7 +598,15 @@ export const PaymentReports = () => {
                     <TableCell>{r.paymentDate ? format(new Date(r.paymentDate), 'MMM d, yyyy') : 'N/A'}</TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1.5 min-w-[140px]">
-                        <Select value={r.status} onValueChange={(v) => updateInvoiceStatus(r.id, v)}>
+                        <Select value={r.status} onValueChange={(v) => {
+                          if (v === 'refunded') {
+                            if (r.status === 'refunded' || !r.studentDbId) return;
+                            setRefundContext({ studentId: r.studentDbId, email: r.email, invoiceId: r.id });
+                            setRefundOpen(true);
+                            return;
+                          }
+                          updateInvoiceStatus(r.id, v);
+                        }}>
                           <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="pending">Pending</SelectItem>
