@@ -45,6 +45,8 @@ export default function AdminDashboard() {
         return <SuccessSessionsManagement />;
       case 'students':
         return <StudentsManagement />;
+      case 'active-sessions':
+        return <ActiveSessionsManagement />;
       case 'assignments':
         return <AssignmentManagement />;
       case 'submissions':
