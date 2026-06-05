@@ -221,7 +221,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
             ) : (
               <div className="space-y-3">
                 {notes.map((note) => (
-                  <div key={note.id} className={`rounded-lg border p-3 space-y-1 ${note.type === 'suspension' ? 'border-red-200 bg-red-50' : note.type === 'fee_extension' ? 'border-amber-200 bg-amber-50' : ''}`}>
+                  <div key={note.id} className={`rounded-lg border p-3 space-y-1 ${note.type === 'suspension' ? 'border-red-200 bg-red-50' : note.type === 'fee_extension' ? 'border-amber-200 bg-amber-50' : note.type === 'scheduled_suspension' ? (note.scheduledStatus === 'cancelled' ? 'border-muted bg-muted/30' : note.scheduledStatus === 'executed' ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50') : ''}`}>
                     {note.type === 'suspension' && (
                       <div className="flex items-center gap-1.5 text-xs font-medium text-red-600 mb-1">
                         <ShieldAlert className="w-3.5 h-3.5" />
@@ -232,6 +232,12 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
                       <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 mb-1">
                         <CalendarClock className="w-3.5 h-3.5" />
                         Fee Extension
+                      </div>
+                    )}
+                    {note.type === 'scheduled_suspension' && (
+                      <div className={`flex items-center gap-1.5 text-xs font-medium mb-1 ${note.scheduledStatus === 'cancelled' ? 'text-muted-foreground' : note.scheduledStatus === 'executed' ? 'text-red-600' : 'text-amber-700'}`}>
+                        <CalendarClock className="w-3.5 h-3.5" />
+                        {note.scheduledStatus === 'cancelled' ? 'Scheduled Suspension (Cancelled)' : note.scheduledStatus === 'executed' ? 'Scheduled Suspension (Executed)' : 'Scheduled Suspension (Pending)'}
                       </div>
                     )}
                     <p className="text-sm whitespace-pre-wrap">{note.note}</p>
