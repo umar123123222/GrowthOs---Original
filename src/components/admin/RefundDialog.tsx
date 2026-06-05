@@ -40,6 +40,8 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
   const [reason, setReason] = useState('');
   const [refundMethod, setRefundMethod] = useState('bank_transfer');
   const [refundDate, setRefundDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [currency, setCurrency] = useState<string>('PKR');
+  const [proofFile, setProofFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!open || !studentId) return;
