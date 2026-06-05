@@ -963,9 +963,26 @@ export function StudentsManagement() {
         }
       });
 
+      // Email the student about the extension (non-blocking)
+      try {
+        const { error: emailError } = await supabase.functions.invoke('send-extension-email', {
+          body: {
+            student_id: student.id,
+            invoice_id: invoice.id,
+            new_due_date: newDueDate.toISOString(),
+            previous_due_date: previousDueDate,
+            reason: reason?.trim() || null,
+            lms_reactivated: student.lms_status === 'suspended',
+          },
+        });
+        if (emailError) console.warn('Extension email failed:', emailError);
+      } catch (emailErr) {
+        console.warn('Extension email invocation error:', emailErr);
+      }
+
       toast({
         title: 'Extension Granted',
-        description: `Due date extended to ${format(newDueDate, 'PPP')}${student.lms_status === 'suspended' ? ' and LMS reactivated' : ''}.`
+        description: `Due date extended to ${format(newDueDate, 'PPP')}${student.lms_status === 'suspended' ? ' and LMS reactivated' : ''}. Student has been notified by email.`
       });
 
       setExtensionPopoverOpen(null);
