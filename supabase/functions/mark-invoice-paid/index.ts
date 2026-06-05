@@ -475,9 +475,11 @@ const handler = async (req: Request): Promise<Response> => {
 
           <tr><td style="padding:24px 32px 8px;"><div style="height:1px;background:${border};line-height:1px;font-size:0;">&nbsp;</div></td></tr>
 
+          ${batchBlock}
           ${videoBlock}
           ${docBlock}
           ${pointersBlock}
+          ${supportBlock}
           ${ctaBlock}
 
           <!-- Footer -->
