@@ -560,6 +560,8 @@ export type Database = {
           maximum_installment_count: number
           multi_course_enabled: boolean | null
           notification_email_cc: string | null
+          onboarding_document_name: string | null
+          onboarding_document_url: string | null
           onboarding_video_url: string | null
           original_fee_amount: number
           overdue_penalty_amount: number | null
@@ -596,6 +598,8 @@ export type Database = {
           maximum_installment_count?: number
           multi_course_enabled?: boolean | null
           notification_email_cc?: string | null
+          onboarding_document_name?: string | null
+          onboarding_document_url?: string | null
           onboarding_video_url?: string | null
           original_fee_amount?: number
           overdue_penalty_amount?: number | null
@@ -632,6 +636,8 @@ export type Database = {
           maximum_installment_count?: number
           multi_course_enabled?: boolean | null
           notification_email_cc?: string | null
+          onboarding_document_name?: string | null
+          onboarding_document_url?: string | null
           onboarding_video_url?: string | null
           original_fee_amount?: number
           overdue_penalty_amount?: number | null

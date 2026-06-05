@@ -61,6 +61,8 @@ interface CompanySettingsData {
   enable_student_signin: boolean;
   questionnaire: QuestionItem[];
   onboarding_video_url?: string;
+  onboarding_document_url?: string;
+  onboarding_document_name?: string;
   // Live Chat
   livechat_code?: string;
   // Multi-Course Feature
@@ -112,6 +114,8 @@ export function CompanySettings() {
     enable_student_signin: false,
     questionnaire: [],
     onboarding_video_url: '',
+    onboarding_document_url: '',
+    onboarding_document_name: '',
     // Live Chat
     livechat_code: '',
     // Multi-Course Feature
@@ -903,6 +907,69 @@ export function CompanySettings() {
                   </div>
                 )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Student Onboarding Document */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              Student Onboarding Document
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <Label htmlFor="onboarding_document">Upload Document (PDF, DOC, DOCX, etc.)</Label>
+              <Input
+                id="onboarding_document"
+                type="file"
+                accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (file.size > 25 * 1024 * 1024) {
+                    toast({ title: 'File too large', description: 'Maximum size is 25MB', variant: 'destructive' });
+                    return;
+                  }
+                  try {
+                    const ext = file.name.split('.').pop();
+                    const path = `onboarding-docs/${Date.now()}-${Math.random().toString(36).slice(2, 9)}.${ext}`;
+                    const { error: upErr } = await supabase.storage
+                      .from('company-branding')
+                      .upload(path, file, { upsert: false, contentType: file.type });
+                    if (upErr) throw upErr;
+                    const { data: { publicUrl } } = supabase.storage.from('company-branding').getPublicUrl(path);
+                    handleInputChange('onboarding_document_url', publicUrl);
+                    handleInputChange('onboarding_document_name', file.name);
+                    toast({ title: 'Document uploaded', description: file.name });
+                  } catch (err: any) {
+                    toast({ title: 'Upload failed', description: err.message || 'Could not upload document', variant: 'destructive' });
+                  }
+                }}
+              />
+              {settings.onboarding_document_url && (
+                <div className="flex items-center justify-between p-3 bg-muted rounded-md text-sm">
+                  <a href={settings.onboarding_document_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">
+                    {settings.onboarding_document_name || 'View document'}
+                  </a>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      handleInputChange('onboarding_document_url', '');
+                      handleInputChange('onboarding_document_name', '');
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Upload a document (handbook, welcome guide, terms, etc.) for students to access during onboarding. Max size: 25MB.
+              </p>
             </div>
           </CardContent>
         </Card>
