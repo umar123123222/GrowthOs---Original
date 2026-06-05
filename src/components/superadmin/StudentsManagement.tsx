@@ -3573,8 +3573,8 @@ export function StudentsManagement() {
             <div className="space-y-4">
               <div className="rounded-md border bg-muted/30 p-3 text-sm space-y-1">
                 <p><span className="text-muted-foreground">Student:</span> <span className="font-medium">{extensionConfirm.student.full_name}</span></p>
-                {extensionConfirm.student.invoice_due_date && (
-                  <p><span className="text-muted-foreground">Current due date:</span> {format(new Date(extensionConfirm.student.invoice_due_date), 'PPP')}</p>
+                {extensionConfirm.student.fees_due_date && (
+                  <p><span className="text-muted-foreground">Current due date:</span> {format(new Date(extensionConfirm.student.fees_due_date), 'PPP')}</p>
                 )}
                 <p><span className="text-muted-foreground">New due date:</span> <span className="font-medium text-amber-600">{format(extensionConfirm.date, 'PPP')}</span></p>
                 {extensionConfirm.student.lms_status === 'suspended' && (
