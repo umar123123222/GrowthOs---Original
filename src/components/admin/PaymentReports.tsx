@@ -716,6 +716,15 @@ export const PaymentReports = () => {
           onSuccess={fetchRecords}
         />
       )}
+      {markPaidContext && (
+        <MarkPaidDialog
+          open={markPaidOpen}
+          onOpenChange={(o) => { setMarkPaidOpen(o); if (!o) setMarkPaidContext(null); }}
+          invoiceId={markPaidContext.invoiceId}
+          studentEmail={markPaidContext.email}
+          onSuccess={fetchRecords}
+        />
+      )}
     </div>
   );
 };
