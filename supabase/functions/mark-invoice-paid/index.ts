@@ -227,7 +227,87 @@ const handler = async (req: Request): Promise<Response> => {
       console.warn("Failed to insert invoice_paid notification:", notifErr);
     }
 
+    // Send onboarding welcome email when this is the student's FIRST paid invoice
+    try {
+      const { count: paidCount } = await supabase
+        .from("invoices")
+        .select("id", { count: "exact", head: true })
+        .eq("student_id", invoice.student_id)
+        .eq("status", "paid");
+
+      if ((paidCount ?? 0) === 1) {
+        const { data: userRec } = await supabase
+          .from("users")
+          .select("email, full_name")
+          .eq("id", userId)
+          .maybeSingle();
+
+        const { data: settings } = await supabase
+          .from("company_settings")
+          .select("company_name, onboarding_video_url, onboarding_video_enabled, onboarding_document_url, onboarding_document_name, onboarding_pointers")
+          .eq("id", 1)
+          .maybeSingle();
+
+        if (userRec?.email) {
+          const companyName = settings?.company_name || 'Our Team';
+          const videoUrl: string = settings?.onboarding_video_url || '';
+          const videoEnabled: boolean = settings?.onboarding_video_enabled ?? true;
+          const docUrl: string = settings?.onboarding_document_url || '';
+          const docName: string = settings?.onboarding_document_name || 'Onboarding Document';
+          const pointers: string[] = Array.isArray(settings?.onboarding_pointers)
+            ? (settings!.onboarding_pointers as string[]).filter((p: string) => p && p.trim() !== '')
+            : [];
+
+          const videoSection = videoEnabled && videoUrl ? buildVideoSection(videoUrl) : '';
+          const docSection = docUrl
+            ? `<div style="margin:24px 0;">
+                 <h3 style="margin-bottom:8px;">Onboarding Document</h3>
+                 <p style="margin:0 0 8px;">Please review the attached document:</p>
+                 <p><a href="${escapeHtml(docUrl)}" style="display:inline-block;padding:10px 18px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">📎 ${escapeHtml(docName)}</a></p>
+               </div>`
+            : '';
+          const pointersSection = pointers.length > 0
+            ? `<div style="margin:24px 0;">
+                 <h3 style="margin-bottom:8px;">Important Points to Note</h3>
+                 <ul style="padding-left:20px;line-height:1.7;">
+                   ${pointers.map(p => `<li>${escapeHtml(p)}</li>`).join('')}
+                 </ul>
+               </div>`
+            : '';
+
+          const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color:#111;">
+              <h2 style="color:#111;">Welcome to ${escapeHtml(companyName)}, ${escapeHtml(userRec.full_name || 'Student')}! 🎉</h2>
+              <p>Your payment has been confirmed and your enrollment is now active. We're excited to have you on board!</p>
+              ${videoSection}
+              ${docSection}
+              ${pointersSection}
+              <p style="margin-top:32px;">If you have any questions, just reply to this email.</p>
+              <p style="color:#666;font-size:13px;margin-top:24px;">— The ${escapeHtml(companyName)} Team</p>
+            </div>`;
+
+          try {
+            const smtpClient = (SMTPClient as any).fromEnv();
+            if (settings?.company_name) smtpClient.setFromName(settings.company_name);
+            const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
+            await smtpClient.sendEmail({
+              to: userRec.email,
+              subject: `Welcome to ${companyName} — Let's Get Started`,
+              ...(notificationCc ? { cc: notificationCc } : {}),
+              html,
+            });
+            console.log(`✉️  Onboarding welcome email sent to ${userRec.email}`);
+          } catch (mailErr) {
+            console.warn("Failed to send onboarding welcome email:", mailErr);
+          }
+        }
+      }
+    } catch (welcomeErr) {
+      console.warn("Onboarding welcome email block failed:", welcomeErr);
+    }
+
     console.log(`✅ Payment processed - Invoice: ${invoiceId}, User: ${userId}`);
+
 
     return new Response(
       JSON.stringify({
