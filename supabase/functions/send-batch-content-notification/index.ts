@@ -17,6 +17,9 @@ interface NotificationRequest {
   meeting_link?: string;
   start_datetime?: string;
   timeline_item_id?: string;
+  mentor_name?: string;
+  cta_path?: string;
+  is_reminder?: boolean;
 }
 
 interface Student {
