@@ -11,53 +11,71 @@ function escapeHtml(s: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function getYouTubeEmbed(url: string): string | null {
+function getYouTubeId(url: string): string | null {
   try {
     const u = new URL(url);
-    if (u.hostname.includes('youtu.be')) {
-      const id = u.pathname.slice(1);
-      return id ? `https://www.youtube.com/embed/${id}` : null;
-    }
+    if (u.hostname.includes('youtu.be')) return u.pathname.slice(1) || null;
     if (u.hostname.includes('youtube.com')) {
-      const id = u.searchParams.get('v');
-      if (id) return `https://www.youtube.com/embed/${id}`;
-      if (u.pathname.startsWith('/embed/')) return url;
+      const v = u.searchParams.get('v');
+      if (v) return v;
+      if (u.pathname.startsWith('/embed/')) return u.pathname.split('/')[2] || null;
+      if (u.pathname.startsWith('/shorts/')) return u.pathname.split('/')[2] || null;
     }
   } catch { /* noop */ }
   return null;
 }
 
-function getVimeoEmbed(url: string): string | null {
-  try {
-    const u = new URL(url);
-    if (u.hostname.includes('vimeo.com')) {
-      const id = u.pathname.split('/').filter(Boolean).pop();
-      return id ? `https://player.vimeo.com/video/${id}` : null;
-    }
-  } catch { /* noop */ }
-  return null;
-}
+function buildVideoCard(url: string, primary: string): string {
+  // Email clients (Gmail, Outlook) strip <iframe>. Use a thumbnail image with a play overlay
+  // that links to the video instead — this is the standard pattern for video-in-email.
+  const ytId = getYouTubeId(url);
+  const thumb = ytId
+    ? `https://img.youtube.com/vi/${ytId}/hqdefault.jpg`
+    : '';
 
-function buildVideoSection(url: string): string {
-  const yt = getYouTubeEmbed(url);
-  const vm = !yt ? getVimeoEmbed(url) : null;
-  const embedUrl = yt || vm || (url.includes('iframe.mediadelivery.net/embed/') ? url : null);
-  if (embedUrl) {
+  const playBadge = `
+    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto;">
+      <tr>
+        <td align="center" style="background:${primary};color:#ffffff;width:64px;height:64px;border-radius:64px;font-size:28px;line-height:64px;font-family:Arial,Helvetica,sans-serif;">
+          ▶
+        </td>
+      </tr>
+    </table>`;
+
+  if (thumb) {
     return `
-      <div style="margin: 24px 0;">
-        <h3 style="margin-bottom: 8px;">Welcome Video</h3>
-        <div style="position:relative;padding-bottom:56.25%;height:0;overflow:hidden;border-radius:8px;background:#000;">
-          <iframe src="${escapeHtml(embedUrl)}" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen style="position:absolute;top:0;left:0;width:100%;height:100%;"></iframe>
-        </div>
-        <p style="font-size:13px;color:#666;margin-top:8px;">If the video doesn't load, <a href="${escapeHtml(url)}">click here to watch</a>.</p>
-      </div>`;
+      <a href="${escapeHtml(url)}" target="_blank" style="text-decoration:none;display:block;border-radius:12px;overflow:hidden;background:#000;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
+          <tr>
+            <td background="${thumb}" style="background-image:url('${thumb}');background-size:cover;background-position:center;background-repeat:no-repeat;height:320px;text-align:center;vertical-align:middle;border-radius:12px;">
+              <img src="${thumb}" alt="Watch the welcome video" width="600" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;text-decoration:none;border-radius:12px;" />
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:14px 0 0;">
+              <a href="${escapeHtml(url)}" target="_blank" style="display:inline-block;padding:12px 24px;background:${primary};color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-family:Arial,Helvetica,sans-serif;font-size:14px;">▶ Watch the Welcome Video</a>
+            </td>
+          </tr>
+        </table>
+      </a>`;
   }
+
+  // Generic fallback — branded "play" card linking out
   return `
-    <div style="margin:24px 0;">
-      <h3 style="margin-bottom:8px;">Welcome Video</h3>
-      <p><a href="${escapeHtml(url)}" style="color:#2563eb;">Watch the onboarding video</a></p>
-    </div>`;
+    <a href="${escapeHtml(url)}" target="_blank" style="text-decoration:none;display:block;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border:1px solid #e5e7eb;border-radius:12px;background:linear-gradient(135deg,#0f172a 0%,${primary} 100%);">
+        <tr>
+          <td align="center" style="padding:60px 24px;">
+            ${playBadge}
+            <p style="margin:18px 0 0;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:600;">Watch the Welcome Video</p>
+            <p style="margin:6px 0 0;color:rgba(255,255,255,0.75);font-family:Arial,Helvetica,sans-serif;font-size:13px;">Click to open in a new tab</p>
+          </td>
+        </tr>
+      </table>
+    </a>`;
 }
+
+
 
 
 
@@ -244,12 +262,14 @@ const handler = async (req: Request): Promise<Response> => {
 
         const { data: settings } = await supabase
           .from("company_settings")
-          .select("company_name, onboarding_video_url, onboarding_video_enabled, onboarding_document_url, onboarding_document_name, onboarding_pointers")
+          .select("company_name, company_logo, lms_url, onboarding_video_url, onboarding_video_enabled, onboarding_document_url, onboarding_document_name, onboarding_pointers")
           .eq("id", 1)
           .maybeSingle();
 
         if (userRec?.email) {
           const companyName = settings?.company_name || 'Our Team';
+          const logoUrl: string = settings?.company_logo || '';
+          const lmsUrl: string = settings?.lms_url || '';
           const videoUrl: string = settings?.onboarding_video_url || '';
           const videoEnabled: boolean = settings?.onboarding_video_enabled ?? true;
           const docUrl: string = settings?.onboarding_document_url || '';
@@ -258,33 +278,157 @@ const handler = async (req: Request): Promise<Response> => {
             ? (settings!.onboarding_pointers as string[]).filter((p: string) => p && p.trim() !== '')
             : [];
 
-          const videoSection = videoEnabled && videoUrl ? buildVideoSection(videoUrl) : '';
-          const docSection = docUrl
-            ? `<div style="margin:24px 0;">
-                 <h3 style="margin-bottom:8px;">Onboarding Document</h3>
-                 <p style="margin:0 0 8px;">Please review the attached document:</p>
-                 <p><a href="${escapeHtml(docUrl)}" style="display:inline-block;padding:10px 18px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px;">📎 ${escapeHtml(docName)}</a></p>
-               </div>`
-            : '';
-          const pointersSection = pointers.length > 0
-            ? `<div style="margin:24px 0;">
-                 <h3 style="margin-bottom:8px;">Important Points to Note</h3>
-                 <ul style="padding-left:20px;line-height:1.7;">
-                   ${pointers.map(p => `<li>${escapeHtml(p)}</li>`).join('')}
-                 </ul>
-               </div>`
+          // Brand tokens
+          const primary = '#4f46e5';      // indigo-600
+          const primaryDark = '#3730a3';  // indigo-800
+          const bg = '#f4f6fb';
+          const surface = '#ffffff';
+          const text = '#0f172a';
+          const subtext = '#475569';
+          const border = '#e5e7eb';
+
+          const firstName = (userRec.full_name || 'there').split(' ')[0];
+
+          const headerLogo = logoUrl
+            ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(companyName)}" height="40" style="display:block;height:40px;width:auto;border:0;outline:none;text-decoration:none;" />`
+            : `<div style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;letter-spacing:0.3px;">${escapeHtml(companyName)}</div>`;
+
+          const videoBlock = videoEnabled && videoUrl
+            ? `<tr>
+                 <td style="padding:0 32px 8px;">
+                   <h2 style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:18px;color:${text};">🎬 Welcome Video</h2>
+                   <p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${subtext};line-height:1.55;">A quick intro to get you up and running.</p>
+                 </td>
+               </tr>
+               <tr>
+                 <td style="padding:0 32px 28px;">
+                   ${buildVideoCard(videoUrl, primary)}
+                 </td>
+               </tr>`
             : '';
 
-          const html = `
-            <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; color:#111;">
-              <h2 style="color:#111;">Welcome to ${escapeHtml(companyName)}, ${escapeHtml(userRec.full_name || 'Student')}! 🎉</h2>
-              <p>Your payment has been confirmed and your enrollment is now active. We're excited to have you on board!</p>
-              ${videoSection}
-              ${docSection}
-              ${pointersSection}
-              <p style="margin-top:32px;">If you have any questions, just reply to this email.</p>
-              <p style="color:#666;font-size:13px;margin-top:24px;">— The ${escapeHtml(companyName)} Team</p>
-            </div>`;
+          const docBlock = docUrl
+            ? `<tr>
+                 <td style="padding:0 32px 28px;">
+                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;border:1px solid ${border};border-radius:12px;background:#fafbff;">
+                     <tr>
+                       <td style="padding:20px 22px;" valign="middle">
+                         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                           <tr>
+                             <td width="48" valign="top" style="padding-right:14px;">
+                               <div style="width:44px;height:44px;border-radius:10px;background:${primary};color:#ffffff;text-align:center;line-height:44px;font-family:Arial,Helvetica,sans-serif;font-size:20px;font-weight:700;">📄</div>
+                             </td>
+                             <td valign="middle">
+                               <div style="font-family:Arial,Helvetica,sans-serif;font-size:12px;letter-spacing:0.6px;text-transform:uppercase;color:${subtext};margin-bottom:2px;">Onboarding Document</div>
+                               <div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;color:${text};font-weight:600;word-break:break-word;">${escapeHtml(docName)}</div>
+                             </td>
+                             <td align="right" valign="middle" style="padding-left:12px;">
+                               <a href="${escapeHtml(docUrl)}" target="_blank" style="display:inline-block;padding:10px 18px;background:${primary};color:#ffffff;text-decoration:none;border-radius:8px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:600;white-space:nowrap;">Download</a>
+                             </td>
+                           </tr>
+                         </table>
+                       </td>
+                     </tr>
+                   </table>
+                 </td>
+               </tr>`
+            : '';
+
+          const pointersBlock = pointers.length > 0
+            ? `<tr>
+                 <td style="padding:0 32px 8px;">
+                   <h2 style="margin:0 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:18px;color:${text};">📌 Important Points to Note</h2>
+                 </td>
+               </tr>
+               <tr>
+                 <td style="padding:0 32px 28px;">
+                   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:separate;">
+                     ${pointers.map((p, i) => `
+                       <tr>
+                         <td style="padding:0 0 10px;">
+                           <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#f8fafc;border:1px solid ${border};border-radius:10px;">
+                             <tr>
+                               <td width="36" valign="top" style="padding:14px 0 14px 16px;">
+                                 <div style="width:26px;height:26px;border-radius:26px;background:${primary};color:#ffffff;text-align:center;line-height:26px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;">${i + 1}</div>
+                               </td>
+                               <td valign="middle" style="padding:14px 16px 14px 12px;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:${text};line-height:1.55;">
+                                 ${escapeHtml(p)}
+                               </td>
+                             </tr>
+                           </table>
+                         </td>
+                       </tr>`).join('')}
+                   </table>
+                 </td>
+               </tr>`
+            : '';
+
+          const ctaBlock = lmsUrl
+            ? `<tr>
+                 <td align="center" style="padding:0 32px 32px;">
+                   <a href="${escapeHtml(lmsUrl)}" target="_blank" style="display:inline-block;padding:14px 32px;background:${primary};color:#ffffff;text-decoration:none;border-radius:10px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;box-shadow:0 4px 14px rgba(79,70,229,0.35);">Go to Your Dashboard →</a>
+                 </td>
+               </tr>`
+            : '';
+
+          const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="color-scheme" content="light only" />
+  <meta name="supported-color-schemes" content="light" />
+  <title>Welcome to ${escapeHtml(companyName)}</title>
+</head>
+<body style="margin:0;padding:0;background:${bg};">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">Your enrollment is confirmed — here's everything you need to get started.</div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:${bg};">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;width:100%;background:${surface};border-radius:16px;overflow:hidden;box-shadow:0 6px 24px rgba(15,23,42,0.06);">
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,${primaryDark} 0%,${primary} 100%);padding:24px 32px;">
+              ${headerLogo}
+            </td>
+          </tr>
+
+          <!-- Hero -->
+          <tr>
+            <td style="padding:36px 32px 8px;">
+              <div style="display:inline-block;padding:6px 12px;background:#ecfdf5;color:#047857;border-radius:999px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;letter-spacing:0.3px;margin-bottom:14px;">✓ Payment Confirmed</div>
+              <h1 style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:26px;line-height:1.25;color:${text};">Welcome aboard, ${escapeHtml(firstName)}! 🎉</h1>
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${subtext};">
+                Your enrollment with <strong style="color:${text};">${escapeHtml(companyName)}</strong> is now active. Here's everything you need to get started.
+              </p>
+            </td>
+          </tr>
+
+          <tr><td style="padding:24px 32px 8px;"><div style="height:1px;background:${border};line-height:1px;font-size:0;">&nbsp;</div></td></tr>
+
+          ${videoBlock}
+          ${docBlock}
+          ${pointersBlock}
+          ${ctaBlock}
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px 28px;border-top:1px solid ${border};background:#fafbff;">
+              <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:${subtext};line-height:1.6;">
+                Need help? Just reply to this email — we're here for you.
+              </p>
+              <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#94a3b8;">
+                © ${new Date().getFullYear()} ${escapeHtml(companyName)}. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
 
           try {
             const smtpClient = (SMTPClient as any).fromEnv();
