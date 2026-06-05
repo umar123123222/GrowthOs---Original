@@ -108,22 +108,30 @@ function generateEmailHTML(
         })
       : "To be announced";
 
+    const headline = isReminder ? "Reminder: Live Session in 3 Hours" : "Live Session Scheduled!";
+    const intro = isReminder
+      ? "Your upcoming live session starts in about 3 hours. Get ready to join!"
+      : "A live session has been scheduled for your batch!";
+    const closing = isReminder
+      ? "See you soon — make sure you're ready a few minutes early."
+      : "Mark your calendar and join on time.";
+
     return `
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Live Session Scheduled</title>
+  <title>${headline}</title>
 </head>
 <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
   <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
     <div style="background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
       <div style="text-align: center; margin-bottom: 30px;">
         <div style="width: 60px; height: 60px; background-color: #8b5cf6; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-          <span style="font-size: 28px;">📅</span>
+          <span style="font-size: 28px;">${isReminder ? '⏰' : '📅'}</span>
         </div>
-        <h1 style="color: #1f2937; font-size: 24px; margin: 0;">Live Session Scheduled!</h1>
+        <h1 style="color: #1f2937; font-size: 24px; margin: 0;">${headline}</h1>
       </div>
       
       <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
@@ -131,7 +139,7 @@ function generateEmailHTML(
       </p>
       
       <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-        A live session has been scheduled for your batch!
+        ${intro}
       </p>
       
       <div style="background-color: #f5f3ff; border-left: 4px solid #8b5cf6; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
@@ -139,17 +147,18 @@ function generateEmailHTML(
         <p style="color: #4b5563; font-size: 14px; margin: 0 0 10px 0;">
           <strong>📆 Date & Time:</strong> ${formattedDate}
         </p>
+        ${mentorName ? `<p style="color: #4b5563; font-size: 14px; margin: 0 0 10px 0;"><strong>👤 Mentor:</strong> ${mentorName}</p>` : ""}
         ${meetingLink ? `<p style="color: #4b5563; font-size: 14px; margin: 0;"><strong>🔗 Meeting Link:</strong> <a href="${meetingLink}" style="color: #8b5cf6;">${meetingLink}</a></p>` : ""}
         ${description ? `<p style="color: #6b7280; font-size: 14px; margin-top: 10px;">${description}</p>` : ""}
       </div>
       
       <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-        Mark your calendar and join on time.
+        ${closing}
       </p>
       
       <div style="text-align: center;">
-        <a href="${lmsUrl}" style="display: inline-block; background-color: #8b5cf6; color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-          View Details
+        <a href="${ctaUrl}" style="display: inline-block; background-color: #8b5cf6; color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+          View Live Sessions
         </a>
       </div>
       
