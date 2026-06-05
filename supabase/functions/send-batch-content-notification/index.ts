@@ -393,12 +393,15 @@ const handler = async (req: Request): Promise<Response> => {
         }
 
         // Create in-app notification
+        const actionUrl = cta_path
+          ? `${lmsUrl.replace(/\/$/, '')}${cta_path.startsWith('/') ? cta_path : '/' + cta_path}`
+          : lmsUrl;
         await supabase.from("notifications").insert({
           user_id: student.id,
           title: subject,
           message: `${title}${description ? `: ${description.substring(0, 100)}...` : ""}`,
           type: "content",
-          action_url: lmsUrl,
+          action_url: actionUrl,
         });
 
         sentCount++;
