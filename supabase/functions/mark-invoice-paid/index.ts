@@ -431,7 +431,8 @@ const handler = async (req: Request): Promise<Response> => {
           const logoUrl: string = settings?.company_logo || '';
           const lmsUrl: string = settings?.lms_url || '';
           const supportEmail: string = settings?.contact_email || settings?.company_email || '';
-          const supportPhone: string = settings?.primary_phone || settings?.secondary_phone || '';
+          const supportPhone: string = settings?.primary_phone || '';
+          const supportPhone2: string = settings?.secondary_phone || '';
           const videoUrl: string = settings?.onboarding_video_url || '';
           const videoEnabled: boolean = settings?.onboarding_video_enabled ?? true;
           const docUrl: string = settings?.onboarding_document_url || '';
