@@ -78,6 +78,7 @@ function buildEmailHtml(p: {
   companyEmail: string;
   companyPhone: string;
   companyAddress: string;
+  hasProof?: boolean;
 }) {
   const sym = currencySymbol(p.currency);
   const installments = p.installmentNumbers.map(n => `#${n}`).join(", ");
