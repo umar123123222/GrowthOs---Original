@@ -50,6 +50,7 @@ export function SuspensionDialog({ open, onOpenChange, studentName, onConfirm, l
   const isScheduled = !!scheduleSuspendDate;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
