@@ -562,6 +562,7 @@ export type Database = {
           notification_email_cc: string | null
           onboarding_document_name: string | null
           onboarding_document_url: string | null
+          onboarding_pointers: Json
           onboarding_video_enabled: boolean
           onboarding_video_url: string | null
           original_fee_amount: number
@@ -601,6 +602,7 @@ export type Database = {
           notification_email_cc?: string | null
           onboarding_document_name?: string | null
           onboarding_document_url?: string | null
+          onboarding_pointers?: Json
           onboarding_video_enabled?: boolean
           onboarding_video_url?: string | null
           original_fee_amount?: number
@@ -640,6 +642,7 @@ export type Database = {
           notification_email_cc?: string | null
           onboarding_document_name?: string | null
           onboarding_document_url?: string | null
+          onboarding_pointers?: Json
           onboarding_video_enabled?: boolean
           onboarding_video_url?: string | null
           original_fee_amount?: number
