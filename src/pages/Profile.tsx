@@ -315,9 +315,9 @@ const Profile = () => {
               <div className="space-y-2">
                 <Label className="text-sm font-medium text-gray-700">Student ID</Label>
                 <Input
-                  value={user.id}
+                  value={studentCode || 'Not assigned'}
                   readOnly
-                  className="bg-gray-100 border-gray-300 cursor-not-allowed font-mono text-xs"
+                  className="bg-gray-100 border-gray-300 cursor-not-allowed font-mono"
                 />
               </div>
               <div className="space-y-2">
