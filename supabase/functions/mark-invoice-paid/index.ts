@@ -305,8 +305,9 @@ const handler = async (req: Request): Promise<Response> => {
         const notesHtml = requestData.payment_notes ? escapeHtml(requestData.payment_notes) : '';
         const hasProof = !!requestData.payment_proof?.content_base64;
 
-        const headerLogo = logoUrl
-          ? `<img src="${escapeHtml(logoUrl)}" alt="${escapeHtml(companyName)}" height="40" style="display:block;height:40px;width:auto;border:0;outline:none;text-decoration:none;" />`
+        const safeLogo = logoUrl && !logoUrl.startsWith('data:') ? logoUrl : '';
+        const headerLogo = safeLogo
+          ? `<img src="${escapeHtml(safeLogo)}" alt="${escapeHtml(companyName)}" height="40" style="display:block;height:40px;width:auto;border:0;outline:none;text-decoration:none;" />`
           : `<div style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:18px;font-weight:700;">${escapeHtml(companyName)}</div>`;
 
         const rowHtml = (label: string, value: string) => `
