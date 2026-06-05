@@ -14,6 +14,11 @@ interface RefundRequest {
   refund_date?: string;
   performed_by?: string;
   suspend_lms?: boolean;
+  proof_attachment?: {
+    filename: string;
+    content_base64: string;
+    content_type?: string;
+  };
 }
 
 function currencySymbol(c: string = "PKR") {
