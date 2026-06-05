@@ -833,61 +833,41 @@ export const StudentManagement = () => {
     doc.text(`Due Date: ${student.fees_due_date ? formatDate(student.fees_due_date) : 'N/A'}`, 20, 90);
     doc.save(`invoice_${student.student_id}.pdf`);
   };
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
+  const [markPaidCtx, setMarkPaidCtx] = useState<{ studentRecordId: string; installmentNumber: number; email?: string } | null>(null);
+
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
       const student = students.find(s => s.id === studentId);
       if (!student) return;
-      
+
       if (!student.student_record_id) {
-        toast({
-          title: 'Error',
-          description: 'Cannot record payment: missing student record',
-          variant: 'destructive'
-        });
+        toast({ title: 'Error', description: 'Cannot record payment: missing student record', variant: 'destructive' });
         return;
       }
 
-      console.log(`Marking installment ${installmentNumber} as paid for student:`, student.student_record_id);
-
-      // Call the mark-invoice-paid edge function
-      const { data, error } = await supabase.functions.invoke('mark-invoice-paid', {
-        body: {
-          student_id: student.student_record_id,
-          installment_number: installmentNumber,
-          amount: 100,
-          due_date: new Date().toISOString()
-        }
-      });
-
-      if (error) {
-        console.error('Edge function error:', error);
-        throw new Error(error.message || 'Edge function call failed');
+      const { data: invoiceRow } = await supabase
+        .from('invoices').select('id, status')
+        .eq('student_id', student.student_record_id)
+        .eq('installment_number', installmentNumber)
+        .maybeSingle();
+      if (invoiceRow && invoiceRow.status === 'paid') {
+        toast({ title: 'Already Paid', description: 'This installment has already been marked as paid', variant: 'destructive' });
+        return;
       }
 
-      if (!data?.success) {
-        console.error('Payment failed:', data?.error);
-        throw new Error(data?.error || 'Failed to process payment');
-      }
-
-      console.log('Payment processed successfully:', data);
-
-      toast({
-        title: 'Success',
-        description: `Installment ${installmentNumber} marked as paid and account activated`
+      setMarkPaidCtx({
+        studentRecordId: student.student_record_id,
+        installmentNumber,
+        email: student.email,
       });
-
-      // Refresh data
-      await fetchStudents();
-      await fetchInstallmentPayments();
+      setMarkPaidOpen(true);
     } catch (error: any) {
-      console.error('Error marking installment as paid:', error);
-      toast({
-        title: 'Error',
-        description: error?.message || 'Failed to mark installment as paid',
-        variant: 'destructive'
-      });
+      console.error('Error opening mark-paid dialog:', error);
+      toast({ title: 'Error', description: error?.message || 'Failed to open payment dialog', variant: 'destructive' });
     }
   };
+
   const handleDeleteStudent = async (studentId: string, studentName: string) => {
     const success = await deleteUser(studentId);
     if (success) {
