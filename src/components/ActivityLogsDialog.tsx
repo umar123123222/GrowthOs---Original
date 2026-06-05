@@ -1,19 +1,18 @@
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
-import { Activity, Download, Search, X } from 'lucide-react';
+import { Activity, Download, Search, ChevronDown, ChevronRight, Inbox } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { RoleGuard } from '@/components/RoleGuard';
 import { logger } from '@/lib/logger';
-import { ExpandableSubDetails } from '@/components/ExpandableSubDetails';
+import { cn } from '@/lib/utils';
 
 interface ActivityLog {
   id: string;
@@ -45,6 +44,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   const [roleFilter, setRoleFilter] = useState('all');
   const [activityFilter, setActivityFilter] = useState('all');
   const [dateRange, setDateRange] = useState('7days');
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -398,13 +398,10 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       );
     }
 
-    // Default: show metadata if any
-    if (data && Object.keys(data).length > 0) {
-      return <ExpandableSubDetails data={data} />;
-    }
-
-    return <span className="text-xs text-muted-foreground">—</span>;
+    return null;
   };
+
+
 
 
   const filteredLogs = logs.filter(log => {
@@ -415,187 +412,304 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
     return matchesSearch && matchesRole;
   });
 
+  const toggleRow = (id: string) => {
+    setExpandedRows(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const getInitials = (name?: string | null) => {
+    if (!name) return '—';
+    return name.split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]?.toUpperCase()).join('') || '—';
+  };
+
+  // Avatar color palettes by role — semantic but role-tinted via subtle accents
+  const roleAvatarClass = (role?: string) => {
+    switch (role) {
+      case 'superadmin': return 'bg-rose-100 text-rose-700';
+      case 'admin': return 'bg-violet-100 text-violet-700';
+      case 'enrollment_manager': return 'bg-pink-100 text-pink-700';
+      case 'mentor': return 'bg-emerald-100 text-emerald-700';
+      case 'student': return 'bg-sky-100 text-sky-700';
+      default: return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const roleLabel = (role?: string | null) => {
+    if (!role) return 'System';
+    return role.replace(/_/g, ' ');
+  };
+
   return (
     <RoleGuard allowedRoles={['admin', 'superadmin', 'enrollment_manager']}>
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogTrigger asChild>
           {children}
         </DialogTrigger>
-        <DialogContent className="max-w-6xl h-[90vh] flex flex-col overflow-hidden">
-          {/* Fixed Header */}
-          <DialogHeader className="flex-shrink-0 border-b bg-background">
-            <div className="flex justify-between items-center p-6 pb-4">
-              <DialogTitle className="text-lg font-semibold">
-                {userId && userName ? `Activity Logs - ${userName}` : 'Activity Logs'}
-              </DialogTitle>
-              <Button onClick={exportLogs} variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export CSV
-              </Button>
-            </div>
-            
-            {/* Fixed Filters */}
-            <div className="px-6 pb-4 space-y-4">
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="relative">
-                  <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 transform -translate-y-1/2" />
-                  <Input
-                    placeholder="Search by user or activity"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 w-64"
-                  />
-                </div>
-
-                <Select value={dateRange} onValueChange={setDateRange}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="7days">Last 7 days</SelectItem>
-                    <SelectItem value="1days">Last 24 hours</SelectItem>
-                    <SelectItem value="30days">Last 30 days</SelectItem>
-                    <SelectItem value="all">All time</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={roleFilter} onValueChange={setRoleFilter}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="student">Students</SelectItem>
-                    <SelectItem value="mentor">Mentors</SelectItem>
-                    <SelectItem value="admin">Admins</SelectItem>
-                    <SelectItem value="enrollment_manager">Enrollment Managers</SelectItem>
-                    {user?.role === 'superadmin' && (
-                      <SelectItem value="superadmin">Superadmins</SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
-
-                <Select value={activityFilter} onValueChange={setActivityFilter}>
-                  <SelectTrigger className="w-56">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Activities</SelectItem>
-                    <SelectItem value="login">Login</SelectItem>
-                    <SelectItem value="logout">Logout</SelectItem>
-                    <SelectItem value="page_visit">Page Visit</SelectItem>
-                    <SelectItem value="video_opened">Video Opened</SelectItem>
-                    <SelectItem value="video_watched">Video Completed</SelectItem>
-                    <SelectItem value="live_session_joined">Live Session Joined</SelectItem>
-                    <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
-                    <SelectItem value="profile_updated">Profile Updated</SelectItem>
-                    <SelectItem value="module_completed">Module Completed</SelectItem>
-                    <SelectItem value="fee_extension_granted">Fee Extension Granted</SelectItem>
-                    <SelectItem value="lms_suspended">LMS Suspended</SelectItem>
-                    <SelectItem value="scheduled_suspension_created">Suspension Scheduled</SelectItem>
-
-                    {/* Invoice/Payments */}
-                    <SelectItem value="payment_recorded">Payment Recorded</SelectItem>
-                    <SelectItem value="invoice_status_changed">Invoice Status Changed</SelectItem>
-                    <SelectItem value="invoice_created">Invoice Created</SelectItem>
-                    <SelectItem value="invoice_updated">Invoice Updated</SelectItem>
-                    <SelectItem value="invoice_resent">Invoice Resent</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="text-sm text-muted-foreground">
-                Showing {filteredLogs.length} of {logs.length} activities
+        <DialogContent className="max-w-6xl h-[90vh] flex flex-col overflow-hidden p-0 gap-0">
+          {/* Header */}
+          <DialogHeader className="flex-shrink-0 border-b bg-background px-6 py-4 space-y-1">
+            <div className="flex justify-between items-start gap-4">
+              <div className="min-w-0">
+                <DialogTitle className="text-xl font-semibold tracking-tight">
+                  {userId && userName ? `Activity Logs — ${userName}` : 'Activity Logs'}
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Track and monitor all system events and user actions.
+                </p>
               </div>
             </div>
           </DialogHeader>
 
-          {/* Scrollable Content */}
-          <div className="flex-1 flex flex-col min-h-0 border rounded-md mx-6 mb-6 overflow-hidden">
+          {/* Toolbar */}
+          <div className="flex-shrink-0 border-b bg-muted/40 px-4 py-3 flex flex-wrap items-center gap-2 justify-between">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative">
+                <Search className="w-4 h-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  placeholder="Search activity..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 w-64 h-9 bg-background"
+                />
+              </div>
+
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-36 h-9 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="student">Students</SelectItem>
+                  <SelectItem value="mentor">Mentors</SelectItem>
+                  <SelectItem value="admin">Admins</SelectItem>
+                  <SelectItem value="enrollment_manager">Enrollment Managers</SelectItem>
+                  {user?.role === 'superadmin' && (
+                    <SelectItem value="superadmin">Superadmins</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+
+              <Select value={activityFilter} onValueChange={setActivityFilter}>
+                <SelectTrigger className="w-48 h-9 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Activities</SelectItem>
+                  <SelectItem value="login">Login</SelectItem>
+                  <SelectItem value="logout">Logout</SelectItem>
+                  <SelectItem value="page_visit">Page Visit</SelectItem>
+                  <SelectItem value="video_opened">Video Opened</SelectItem>
+                  <SelectItem value="video_watched">Video Completed</SelectItem>
+                  <SelectItem value="live_session_joined">Live Session Joined</SelectItem>
+                  <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
+                  <SelectItem value="profile_updated">Profile Updated</SelectItem>
+                  <SelectItem value="module_completed">Module Completed</SelectItem>
+                  <SelectItem value="fee_extension_granted">Fee Extension Granted</SelectItem>
+                  <SelectItem value="lms_suspended">LMS Suspended</SelectItem>
+                  <SelectItem value="scheduled_suspension_created">Suspension Scheduled</SelectItem>
+                  <SelectItem value="payment_recorded">Payment Recorded</SelectItem>
+                  <SelectItem value="invoice_status_changed">Invoice Status Changed</SelectItem>
+                  <SelectItem value="invoice_created">Invoice Created</SelectItem>
+                  <SelectItem value="invoice_updated">Invoice Updated</SelectItem>
+                  <SelectItem value="invoice_resent">Invoice Resent</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={dateRange} onValueChange={setDateRange}>
+                <SelectTrigger className="w-36 h-9 bg-background">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1days">Last 24 hours</SelectItem>
+                  <SelectItem value="7days">Last 7 days</SelectItem>
+                  <SelectItem value="30days">Last 30 days</SelectItem>
+                  <SelectItem value="all">All time</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button onClick={exportLogs} size="sm" className="h-9">
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
+
+          {/* Body */}
+          <ScrollArea className="flex-1 min-h-0">
             {loading ? (
-              <div className="flex items-center justify-center p-8">
+              <div className="flex items-center justify-center py-16">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <span className="ml-2">Loading activity logs...</span>
+                <span className="ml-3 text-sm text-muted-foreground">Loading activity logs...</span>
+              </div>
+            ) : filteredLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-3">
+                  <Inbox className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <h3 className="text-sm font-semibold text-foreground">No activity logs found</h3>
+                <p className="text-xs text-muted-foreground max-w-xs mt-1">
+                  Try adjusting your filters or search to find what you're looking for.
+                </p>
               </div>
             ) : (
-              <>
-                {/* Fixed Table Header */}
-                <div className="flex-shrink-0 border-b bg-muted/50">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="hover:bg-transparent border-0">
-                        <TableHead className="font-medium h-12">Timestamp</TableHead>
-                        <TableHead className="font-medium h-12">Performed By</TableHead>
-                        <TableHead className="font-medium h-12">Name</TableHead>
-                        <TableHead className="font-medium h-12">Role</TableHead>
-                        <TableHead className="font-medium h-12">Activity</TableHead>
-                        <TableHead className="font-medium h-12">Details</TableHead>
-                        <TableHead className="font-medium h-12">Sub Details</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                  </Table>
-                </div>
+              <table className="w-full text-left border-collapse min-w-[850px]">
+                <thead className="bg-muted/60 sticky top-0 z-10 border-b border-border">
+                  <tr>
+                    <th className="px-5 py-3 text-[11px] font-bold text-muted-foreground uppercase tracking-wider w-40">Timestamp</th>
+                    <th className="px-5 py-3 text-[11px] font-bold text-muted-foreground uppercase tracking-wider w-60">Performed By</th>
+                    <th className="px-5 py-3 text-[11px] font-bold text-muted-foreground uppercase tracking-wider w-44">Activity</th>
+                    <th className="px-5 py-3 text-[11px] font-bold text-muted-foreground uppercase tracking-wider">Summary</th>
+                    <th className="px-5 py-3 text-[11px] font-bold text-muted-foreground uppercase tracking-wider w-12 text-center" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredLogs.map((log) => {
+                    const data: any = log.data || {};
+                    const isOpen = expandedRows.has(log.id);
+                    const ts = new Date(log.created_at);
+                    const isSystem = !log.performed_by;
+                    const displayName = isSystem
+                      ? ((log as any).target_user?.full_name || 'System')
+                      : (log.users?.full_name || 'Deleted User');
+                    const displayEmail = isSystem
+                      ? ((log as any).target_user?.email || '')
+                      : (log.users?.email || '');
+                    const role = isSystem
+                      ? ((log as any).target_user ? log.users?.role : null)
+                      : log.users?.role;
+                    const subDetails = formatSubDetails(log);
+                    const hasMetadata = data && Object.keys(data).length > 0;
+                    const canExpand = !!subDetails || hasMetadata;
 
-                {/* Scrollable Table Body */}
-                <ScrollArea className="flex-1">
-                  <Table>
-                    <TableBody>
-                      {filteredLogs.map((log) => (
-                         <TableRow key={log.id} className="hover:bg-muted/30">
-                           <TableCell className="whitespace-nowrap font-mono text-sm">
-                             {new Date(log.created_at).toLocaleString('en-US', {
-                               month: 'numeric',
-                               day: 'numeric',
-                               year: 'numeric',
-                               hour: 'numeric',
-                               minute: '2-digit',
-                               second: '2-digit',
-                               hour12: true
-                             })}
-                           </TableCell>
-                           <TableCell className="max-w-[200px] truncate">
-                             {log.performed_by 
-                               ? (log.users?.email || 'Deleted User')
-                               : 'System'}
-                           </TableCell>
-                           <TableCell className="max-w-[150px] truncate">
-                             {log.performed_by
-                               ? (log.users?.full_name || 'Deleted User')
-                               : ((log as any).target_user?.full_name || '—')}
-                           </TableCell>
-                           <TableCell>
-                             <Badge className={getRoleBadge(log.users?.role || '')}>
-                               {log.performed_by
-                                 ? (log.users?.role || 'Unknown')
-                                 : ((log as any).target_user ? log.users?.role || 'Unknown' : 'System')}
-                             </Badge>
-                           </TableCell>
-                           <TableCell>
-                             <Badge className={getActivityBadge(log.action)}>
-                               {log.action.replace('_', ' ')}
-                             </Badge>
-                           </TableCell>
-                           <TableCell className="max-w-[200px]">
-                             <div className="text-sm text-muted-foreground">
-                               {formatLogDetails(log)}
-                             </div>
-                           </TableCell>
-                           <TableCell className="max-w-[250px]">
-                             {formatSubDetails(log)}
-                           </TableCell>
-                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-
-                  {filteredLogs.length === 0 && (
-                    <div className="text-center py-8 text-muted-foreground">
-                      No activity logs found matching your criteria.
-                    </div>
-                  )}
-                </ScrollArea>
-              </>
+                    return (
+                      <React.Fragment key={log.id}>
+                        <tr
+                          className={cn(
+                            'group transition-colors',
+                            isOpen ? 'bg-primary/5' : 'hover:bg-muted/40',
+                            canExpand && 'cursor-pointer'
+                          )}
+                          onClick={() => canExpand && toggleRow(log.id)}
+                        >
+                          <td className="px-5 py-3 align-top">
+                            <div className="flex flex-col">
+                              <span className="text-sm font-medium text-foreground">
+                                {ts.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {ts.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true })}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3 align-top">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={cn(
+                                'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ring-2 ring-background shrink-0',
+                                roleAvatarClass(role || undefined)
+                              )}>
+                                {isSystem && !(log as any).target_user ? 'SY' : getInitials(displayName)}
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <span className="text-sm font-medium text-foreground truncate" title={displayEmail}>
+                                  {displayName}
+                                </span>
+                                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase border border-border bg-muted text-muted-foreground w-fit">
+                                  {roleLabel(role)}
+                                </span>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3 align-top">
+                            <span className={cn(
+                              'inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold border',
+                              getActivityBadge(log.action),
+                              'border-transparent'
+                            )}>
+                              {log.action.replace(/_/g, ' ')}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 align-top">
+                            <span className="text-sm text-muted-foreground line-clamp-2">
+                              {formatLogDetails(log)}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3 align-top text-center">
+                            {canExpand && (
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); toggleRow(log.id); }}
+                                className={cn(
+                                  'p-1 rounded-md transition-colors',
+                                  isOpen ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
+                                )}
+                                aria-label={isOpen ? 'Collapse row' : 'Expand row'}
+                              >
+                                {isOpen ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                        {isOpen && (
+                          <tr className="bg-primary/[0.03]">
+                            <td colSpan={5} className="px-5 pb-5 pt-0">
+                              <div className="bg-background border border-primary/20 rounded-lg p-4 shadow-sm space-y-4">
+                                {subDetails && (
+                                  <div>
+                                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">
+                                      Highlights
+                                    </div>
+                                    <div className="text-sm text-foreground">{subDetails}</div>
+                                  </div>
+                                )}
+                                {hasMetadata && (
+                                  <div>
+                                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2 flex items-center gap-2">
+                                      <Activity className="w-3 h-3" /> Extended Metadata
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-3 gap-x-8">
+                                      {Object.entries(data).map(([k, v]) => {
+                                        const isObj = v !== null && typeof v === 'object';
+                                        const valStr = isObj ? JSON.stringify(v, null, 2) : String(v ?? '—');
+                                        return (
+                                          <div key={k} className="space-y-1 min-w-0">
+                                            <label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">
+                                              {k.replace(/_/g, ' ')}
+                                            </label>
+                                            {isObj ? (
+                                              <pre className="text-[11px] font-mono text-foreground bg-muted/60 border border-border rounded px-2 py-1.5 whitespace-pre-wrap break-all max-h-40 overflow-auto">
+                                                {valStr}
+                                              </pre>
+                                            ) : (
+                                              <p className="text-xs text-foreground break-words" title={valStr}>
+                                                {valStr}
+                                              </p>
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
+          </ScrollArea>
+
+          {/* Footer */}
+          <div className="flex-shrink-0 px-6 py-3 bg-muted/40 border-t border-border flex items-center justify-between">
+            <div className="text-xs text-muted-foreground">
+              Showing <span className="font-semibold text-foreground">{filteredLogs.length}</span> of <span className="font-semibold text-foreground">{logs.length}</span> entries
+            </div>
           </div>
         </DialogContent>
       </Dialog>
