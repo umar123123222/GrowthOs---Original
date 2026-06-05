@@ -193,14 +193,27 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
             ) : (
               <div className="space-y-3">
                 {notes.map((note) => (
-                  <div key={note.id} className={`rounded-lg border p-3 space-y-1 ${note.type === 'suspension' ? 'border-red-200 bg-red-50' : ''}`}>
+                  <div key={note.id} className={`rounded-lg border p-3 space-y-1 ${note.type === 'suspension' ? 'border-red-200 bg-red-50' : note.type === 'fee_extension' ? 'border-amber-200 bg-amber-50' : ''}`}>
                     {note.type === 'suspension' && (
                       <div className="flex items-center gap-1.5 text-xs font-medium text-red-600 mb-1">
                         <ShieldAlert className="w-3.5 h-3.5" />
                         Suspension
                       </div>
                     )}
+                    {note.type === 'fee_extension' && (
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 mb-1">
+                        <CalendarClock className="w-3.5 h-3.5" />
+                        Fee Extension
+                      </div>
+                    )}
                     <p className="text-sm whitespace-pre-wrap">{note.note}</p>
+                    {note.type === 'fee_extension' && (note.previousDueDate || note.newDueDate) && (
+                      <p className="text-xs text-amber-700">
+                        {note.previousDueDate && <span className="line-through opacity-70">{format(new Date(note.previousDueDate), 'MMM d, yyyy')}</span>}
+                        {note.previousDueDate && note.newDueDate && ' → '}
+                        {note.newDueDate && <span className="font-medium">{format(new Date(note.newDueDate), 'MMM d, yyyy')}</span>}
+                      </p>
+                    )}
                     {note.autoUnsuspendDate && (
                       <p className="text-xs text-red-500">Auto-unsuspend: {format(new Date(note.autoUnsuspendDate), 'MMM d, yyyy')}</p>
                     )}
@@ -209,6 +222,7 @@ export function StudentNotesDialog({ open, onOpenChange, studentId, studentName 
                       <span>{format(new Date(note.created_at), 'MMM d, yyyy h:mm a')}</span>
                     </div>
                   </div>
+
                 ))}
               </div>
             )}
