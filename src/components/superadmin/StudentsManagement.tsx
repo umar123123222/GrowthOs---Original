@@ -3550,11 +3550,7 @@ export function StudentsManagement() {
                                  );
                                }
                                if (metadata && Object.keys(metadata).length > 0) {
-                                 return (
-                                   <div className="text-xs opacity-60 max-w-[250px] truncate">
-                                     {JSON.stringify(metadata)}
-                                   </div>
-                                 );
+                                 return <ExpandableSubDetails data={metadata} />;
                                }
                                return <span className="text-xs text-muted-foreground">—</span>;
                              })()}
