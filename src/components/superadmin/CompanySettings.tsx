@@ -64,6 +64,7 @@ interface CompanySettingsData {
   onboarding_video_enabled?: boolean;
   onboarding_document_url?: string;
   onboarding_document_name?: string;
+  onboarding_pointers?: string[];
   // Live Chat
   livechat_code?: string;
   // Multi-Course Feature
