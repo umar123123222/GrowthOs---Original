@@ -47,6 +47,8 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
     if (!open || !studentId) return;
     (async () => {
       setLoading(true);
+      const { data: cs } = await supabase.from('company_settings').select('currency').limit(1).maybeSingle();
+      if (cs?.currency) setCurrency(cs.currency);
       const { data, error } = await supabase
         .from('invoices')
         .select('id, installment_number, amount, course_id, pathway_id')
