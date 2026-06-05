@@ -1232,10 +1232,20 @@ export function SuccessSessionsManagement() {
               return true;
             });
             if (filtered.length === 0) return (
-              <div className="text-center py-16 animate-fade-in">
-                <Video className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-muted-foreground mb-2">No sessions found</h3>
-                <p className="text-muted-foreground">{sessions.length > 0 ? 'Try adjusting your filters' : 'Schedule your first success session to get started'}</p>
+              <div className="text-center py-16 px-6 animate-fade-in">
+                <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                  <Video className="w-7 h-7 text-muted-foreground" />
+                </div>
+                <h3 className="text-base font-semibold text-foreground mb-1">No sessions found</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  {sessions.length > 0 ? 'Try adjusting your filters to see more results.' : 'Schedule your first success session to get started.'}
+                </p>
+                {sessions.length === 0 && (
+                  <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Schedule Session
+                  </Button>
+                )}
               </div>
             );
             return (
