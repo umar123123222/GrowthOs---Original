@@ -335,6 +335,7 @@ serve(async (req) => {
             companyEmail: companyDetails.contact_email,
             companyAddress: companyDetails.address,
             companyPhone: companyDetails.primary_phone,
+            companyPhone2: companyDetails.secondary_phone,
             studentName,
             studentEmail,
             studentId: studentDisplayId,
