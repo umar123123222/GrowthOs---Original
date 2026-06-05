@@ -585,9 +585,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     const canExpand = !!subDetails || hasMetadata;
 
                     return (
-                      <>
+                      <React.Fragment key={log.id}>
                         <tr
-                          key={log.id}
                           className={cn(
                             'group transition-colors',
                             isOpen ? 'bg-primary/5' : 'hover:bg-muted/40',
