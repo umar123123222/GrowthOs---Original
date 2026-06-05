@@ -3475,6 +3475,8 @@ export function StudentsManagement() {
                                 return `Visited video player: "${metadata.video_title}"`;
                               }
                               return `Visited page: ${metadata.page || metadata.url || 'Unknown page'}`;
+                            case 'video_opened':
+                              return `Opened video: "${metadata.video_title || metadata.title || 'Unknown video'}"${metadata.module_name ? ` — Module: "${metadata.module_name}"` : ''}${metadata.course_name && metadata.course_name !== 'N/A' ? ` — Course: "${metadata.course_name}"` : ''}${metadata.already_watched ? ' (already completed)' : ''}`;
                             case 'video_watched':
                               return `Watched video: "${metadata.video_title || metadata.title || 'Unknown video'}"${metadata.module_name ? ` — Module: "${metadata.module_name}"` : ''}${metadata.course_name && metadata.course_name !== 'N/A' ? ` — Course: "${metadata.course_name}"` : ''}`;
                             case 'assignment_submitted':
