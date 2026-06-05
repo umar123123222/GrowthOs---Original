@@ -9,6 +9,8 @@ import { safeLogger } from '@/lib/safe-logger';
 import { VideoPreviewDialog } from '@/components/VideoPreviewDialog';
 import { InactiveLMSBanner } from '@/components/InactiveLMSBanner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { logToAdminLogs } from '@/lib/activity-logger';
+
 import { 
   Video, 
   Calendar, 
