@@ -923,13 +923,15 @@ export function SuccessSessionsManagement() {
 
 
                 {/* Section: Zoom access */}
-                <section className="space-y-4 pt-2 border-t border-border/60">
-                  <div className="flex items-center justify-between pt-4">
-                    <div className="flex items-center gap-2">
-                      <LinkIcon className="w-4 h-4 text-primary" />
-                      <h3 className="text-sm font-semibold text-foreground">Zoom access</h3>
+                <section className="rounded-xl border border-sky-200/70 dark:border-sky-500/20 bg-sky-50/40 dark:bg-sky-500/5 p-5 space-y-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400 ring-1 ring-sky-200 dark:ring-sky-500/20">
+                        <LinkIcon className="w-4 h-4" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-foreground">Zoom Access</h3>
                     </div>
-                    <span className="text-[11px] text-muted-foreground">Host credentials are kept private</span>
+                    <span className="text-[11px] text-sky-700 dark:text-sky-400 bg-sky-100/80 dark:bg-sky-500/10 px-2 py-0.5 rounded-full">🔒 Host credentials kept private</span>
                   </div>
                   <div className="space-y-1.5">
                     <label className="block text-xs font-medium text-foreground">Session Link <span className="text-rose-500">*</span></label>
@@ -939,6 +941,7 @@ export function SuccessSessionsManagement() {
                       onChange={(e) => setFormData({...formData, link: e.target.value})}
                       placeholder="https://zoom.us/j/..."
                       required
+                      className="bg-background"
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -950,6 +953,7 @@ export function SuccessSessionsManagement() {
                         onChange={(e) => setFormData({...formData, zoom_meeting_id: e.target.value})}
                         required
                         placeholder="123 456 7890"
+                        className="bg-background"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -960,6 +964,7 @@ export function SuccessSessionsManagement() {
                         onChange={(e) => setFormData({...formData, zoom_passcode: e.target.value})}
                         required
                         placeholder="Passcode"
+                        className="bg-background"
                       />
                     </div>
                   </div>
@@ -972,6 +977,7 @@ export function SuccessSessionsManagement() {
                         onChange={(e) => setFormData({...formData, host_login_email: e.target.value})}
                         required
                         placeholder="host@example.com"
+                        className="bg-background"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -982,17 +988,21 @@ export function SuccessSessionsManagement() {
                         onChange={(e) => setFormData({...formData, host_login_pwd: e.target.value})}
                         required
                         placeholder="••••••••"
+                        className="bg-background"
                       />
                     </div>
                   </div>
                 </section>
 
                 {/* Section: Audience */}
-                <section className="space-y-4 pt-2 border-t border-border/60">
-                  <div className="flex items-center gap-2 pt-4">
-                    <Users2 className="w-4 h-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-foreground">Audience &amp; status</h3>
+                <section className="rounded-xl border border-emerald-200/70 dark:border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-500/5 p-5 space-y-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-200 dark:ring-emerald-500/20">
+                      <Users2 className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">Audience &amp; Status</h3>
                   </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
