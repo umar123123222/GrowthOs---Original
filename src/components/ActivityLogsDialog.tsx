@@ -55,35 +55,22 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
 
   const fetchLogs = async () => {
     if (!user) return;
-    
+
+    // Only superadmins, admins, and enrollment managers can access activity logs
+    if (!['superadmin', 'admin', 'enrollment_manager'].includes(user.role || '')) {
+      setLogs([]);
+      return;
+    }
+
     setLoading(true);
     try {
       let query = supabase
         .from('admin_logs')
         .select('*')
-        .order('created_at', { ascending: false });
-
-      // Role-based filtering
-      if (user.role === 'admin' || user.role === 'enrollment_manager') {
-        // Admins and Enrollment Managers can see all activities except superadmin activities
-        const { data: users } = await supabase
-          .from('users')
-          .select('id')
-          .neq('role', 'superadmin');
-        
-        if (users) {
-          const allowedUserIds = users.map(u => u.id);
-          query = query.in('performed_by', allowedUserIds);
-        }
-      } else if (user.role !== 'superadmin') {
-        // Only superadmins, admins, and enrollment managers can access activity logs
-        setLogs([]);
-        setLoading(false);
-        return;
-      }
+        .order('created_at', { ascending: false })
+        .limit(500);
 
       // Filter by specific user if userId is provided
-      // Show logs where user performed the action OR was the target of the action
       if (userId) {
         query = query.or(`performed_by.eq.${userId},data->>target_user_id.eq.${userId}`);
       }
@@ -102,41 +89,52 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       }
 
       const { data, error } = await query;
-
       if (error) throw error;
-      
+
       // Collect all unique user IDs (performers + targets)
       const performerIds = (data || []).map(l => l.performed_by).filter(Boolean) as string[];
       const targetIds = (data || []).map(l => (l.data as any)?.target_user_id).filter(Boolean) as string[];
       const allUserIds = [...new Set([...performerIds, ...targetIds])];
 
-      // Batch fetch user details
+      // Batch fetch user details in parallel
       const userMap = new Map<string, { email: string; role: string; full_name: string }>();
       if (allUserIds.length > 0) {
         const batchSize = 100;
+        const batches: string[][] = [];
         for (let i = 0; i < allUserIds.length; i += batchSize) {
-          const batch = allUserIds.slice(i, i + batchSize);
-          const { data: users } = await supabase
-            .from('users')
-            .select('id, email, role, full_name')
-            .in('id', batch);
-          (users || []).forEach(u => userMap.set(u.id, { email: u.email, full_name: u.full_name, role: u.role }));
+          batches.push(allUserIds.slice(i, i + batchSize));
         }
+        const results = await Promise.all(
+          batches.map(batch =>
+            supabase.from('users').select('id, email, role, full_name').in('id', batch)
+          )
+        );
+        results.forEach(({ data: users }) => {
+          (users || []).forEach(u => userMap.set(u.id, { email: u.email, full_name: u.full_name, role: u.role }));
+        });
       }
 
-      const logsWithUsers = (data || []).map(log => {
-        const performer = log.performed_by ? userMap.get(log.performed_by) : null;
-        const targetUserId = (log.data as any)?.target_user_id;
-        const target = targetUserId ? userMap.get(targetUserId) : null;
-        // For system actions, show target user info as the primary user context
-        const displayUser = performer || (target ? { ...target } : null);
-        return {
-          ...log,
-          users: displayUser ? { email: displayUser.email, role: displayUser.role, full_name: displayUser.full_name } : null,
-          target_user: target ? { email: target.email, full_name: target.full_name } : null,
-        };
-      });
-      
+      const restrictSuperadmin = user.role === 'admin' || user.role === 'enrollment_manager';
+
+      const logsWithUsers = (data || [])
+        .filter(log => {
+          if (!restrictSuperadmin) return true;
+          // Hide logs performed by superadmins from admins/EMs
+          const performer = log.performed_by ? userMap.get(log.performed_by) : null;
+          return !performer || performer.role !== 'superadmin';
+        })
+        .map(log => {
+          const performer = log.performed_by ? userMap.get(log.performed_by) : null;
+          const targetUserId = (log.data as any)?.target_user_id;
+          const target = targetUserId ? userMap.get(targetUserId) : null;
+          const displayUser = performer || (target ? { ...target } : null);
+          return {
+            ...log,
+            users: displayUser ? { email: displayUser.email, role: displayUser.role, full_name: displayUser.full_name } : null,
+            target_user: target ? { email: target.email, full_name: target.full_name } : null,
+          };
+        });
+
       setLogs(logsWithUsers);
     } catch (error) {
       logger.error('Error fetching activity logs:', error);
@@ -149,6 +147,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       setLoading(false);
     }
   };
+
 
   const exportLogs = async () => {
     try {
