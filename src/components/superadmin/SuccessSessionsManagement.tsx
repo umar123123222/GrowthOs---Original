@@ -787,23 +787,31 @@ export function SuccessSessionsManagement() {
               Schedule Session
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" onPointerDownOutside={(e) => { if (submitSuccess) e.preventDefault(); }}>
+          <DialogContent
+            className="max-w-2xl max-h-[90vh] p-0 overflow-hidden gap-0"
+            onPointerDownOutside={(e) => { if (submitSuccess) e.preventDefault(); }}
+          >
             {submitSuccess ? (
               <div className="flex flex-col items-center justify-center py-16 gap-4 animate-fade-in">
-                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
-                  <Check className="w-8 h-8 text-green-600" />
+                <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <Check className="w-8 h-8 text-emerald-600" />
                 </div>
                 <p className="text-lg font-semibold text-foreground">
                   {editingSession ? 'Session Updated!' : 'Session Scheduled!'}
                 </p>
-                <p className="text-sm text-muted-foreground">Closing automatically...</p>
+                <p className="text-sm text-muted-foreground">Closing automatically…</p>
               </div>
             ) : (
             <>
-            <DialogHeader>
-              <DialogTitle>
+            <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60">
+              <DialogTitle className="text-xl font-semibold tracking-tight">
                 {editingSession ? 'Edit Success Session' : 'Schedule New Success Session'}
               </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                {editingSession
+                  ? 'Update session details. Republishing will re-notify selected batches.'
+                  : 'Set up a live mentor session. Students in selected batches will be notified when you publish.'}
+              </p>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
