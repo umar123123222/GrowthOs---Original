@@ -272,7 +272,7 @@ const handler = async (req: Request): Promise<Response> => {
 
       const { data: rs } = await supabase
         .from("company_settings")
-        .select("company_name, company_logo, currency, contact_email, company_email, primary_phone, secondary_phone, lms_url")
+        .select("company_name, company_logo, currency, contact_email, company_email, primary_phone, secondary_phone, lms_url, billing_email_cc, notification_email_cc")
         .eq("id", 1).maybeSingle();
 
       if (userRec?.email) {
@@ -369,7 +369,7 @@ const handler = async (req: Request): Promise<Response> => {
         try {
           const smtpClient = (SMTPClient as any).fromEnv();
           if (rs?.company_name) smtpClient.setFromName(rs.company_name);
-          const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
+          const billingCc = (rs as any)?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC') || (rs as any)?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
           const attachments = requestData.payment_proof ? [{
             filename: requestData.payment_proof.filename,
             content: base64ToUint8(requestData.payment_proof.content_base64),
@@ -378,7 +378,7 @@ const handler = async (req: Request): Promise<Response> => {
           await smtpClient.sendEmail({
             to: userRec.email,
             subject: `Payment Receipt ${receiptNo} — ${companyName}`,
-            ...(notificationCc ? { cc: notificationCc } : {}),
+            ...(billingCc ? { cc: billingCc } : {}),
             html,
             ...(attachments ? { attachments } : {}),
           });
