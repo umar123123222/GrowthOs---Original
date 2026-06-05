@@ -803,24 +803,33 @@ export function SuccessSessionsManagement() {
               </div>
             ) : (
             <>
-            <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60">
-              <DialogTitle className="text-xl font-semibold tracking-tight">
-                {editingSession ? 'Edit Success Session' : 'Schedule New Success Session'}
-              </DialogTitle>
-              <p className="text-sm text-muted-foreground mt-1">
-                {editingSession
-                  ? 'Update session details. Republishing will re-notify selected batches.'
-                  : 'Set up a live mentor session. Students in selected batches will be notified when you publish.'}
-              </p>
+            <DialogHeader className="px-6 pt-6 pb-5 border-b border-border/60 bg-gradient-to-br from-primary/10 via-primary/5 to-background">
+              <div className="flex items-start gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/20 shrink-0">
+                  <Video className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <DialogTitle className="text-xl font-semibold tracking-tight">
+                    {editingSession ? 'Edit Success Session' : 'Schedule New Success Session'}
+                  </DialogTitle>
+                  <p className="text-sm text-muted-foreground">
+                    {editingSession
+                      ? 'Update session details. Republishing will re-notify selected batches.'
+                      : 'Set up a live mentor session. Students in selected batches will be notified when you publish.'}
+                  </p>
+                </div>
+              </div>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="flex flex-col max-h-[calc(90vh-120px)]">
-              <div className="overflow-y-auto px-6 py-5 space-y-6">
+            <form onSubmit={handleSubmit} className="flex flex-col max-h-[calc(90vh-140px)]">
+              <div className="overflow-y-auto px-6 py-5 space-y-5">
 
                 {/* Section: Session details */}
-                <section className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Video className="w-4 h-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-foreground">Session details</h3>
+                <section className="rounded-xl border border-indigo-200/70 dark:border-indigo-500/20 bg-indigo-50/40 dark:bg-indigo-500/5 p-5 space-y-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-100 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-200 dark:ring-indigo-500/20">
+                      <Video className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">Session Details</h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
@@ -831,6 +840,7 @@ export function SuccessSessionsManagement() {
                         onChange={(e) => setFormData({...formData, title: e.target.value})}
                         required
                         placeholder="e.g. Week 3 Q&A with Umar"
+                        className="bg-background"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -840,7 +850,7 @@ export function SuccessSessionsManagement() {
                         onValueChange={(value) => setFormData({...formData, mentor_id: value})}
                         required
                       >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-background">
                           <SelectValue placeholder="Select a mentor, admin, or superadmin" />
                         </SelectTrigger>
                         <SelectContent className="bg-background border z-50 max-h-60">
@@ -863,15 +873,17 @@ export function SuccessSessionsManagement() {
                       onChange={(e) => setFormData({...formData, description: e.target.value})}
                       placeholder="What will this session cover? (shown to students in emails and the portal)"
                       rows={3}
-                      className="resize-none"
+                      className="resize-none bg-background"
                     />
                   </div>
                 </section>
 
                 {/* Section: Schedule */}
-                <section className="space-y-4 pt-2 border-t border-border/60">
-                  <div className="flex items-center gap-2 pt-4">
-                    <Clock className="w-4 h-4 text-primary" />
+                <section className="rounded-xl border border-amber-200/70 dark:border-amber-500/20 bg-amber-50/40 dark:bg-amber-500/5 p-5 space-y-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 ring-1 ring-amber-200 dark:ring-amber-500/20">
+                      <Clock className="w-4 h-4" />
+                    </div>
                     <h3 className="text-sm font-semibold text-foreground">Schedule</h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -882,6 +894,7 @@ export function SuccessSessionsManagement() {
                         value={formData.schedule_date}
                         onChange={(e) => setFormData({...formData, schedule_date: e.target.value})}
                         required
+                        className="bg-background"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -892,6 +905,7 @@ export function SuccessSessionsManagement() {
                         onChange={(e) => setFormData({...formData, start_time: e.target.value})}
                         required
                         step="900"
+                        className="bg-background"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -901,19 +915,23 @@ export function SuccessSessionsManagement() {
                         value={formData.end_time}
                         onChange={(e) => setFormData({...formData, end_time: e.target.value})}
                         step="900"
+                        className="bg-background"
                       />
                     </div>
                   </div>
                 </section>
 
+
                 {/* Section: Zoom access */}
-                <section className="space-y-4 pt-2 border-t border-border/60">
-                  <div className="flex items-center justify-between pt-4">
-                    <div className="flex items-center gap-2">
-                      <LinkIcon className="w-4 h-4 text-primary" />
-                      <h3 className="text-sm font-semibold text-foreground">Zoom access</h3>
+                <section className="rounded-xl border border-sky-200/70 dark:border-sky-500/20 bg-sky-50/40 dark:bg-sky-500/5 p-5 space-y-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-100 dark:bg-sky-500/15 text-sky-600 dark:text-sky-400 ring-1 ring-sky-200 dark:ring-sky-500/20">
+                        <LinkIcon className="w-4 h-4" />
+                      </div>
+                      <h3 className="text-sm font-semibold text-foreground">Zoom Access</h3>
                     </div>
-                    <span className="text-[11px] text-muted-foreground">Host credentials are kept private</span>
+                    <span className="text-[11px] text-sky-700 dark:text-sky-400 bg-sky-100/80 dark:bg-sky-500/10 px-2 py-0.5 rounded-full">🔒 Host credentials kept private</span>
                   </div>
                   <div className="space-y-1.5">
                     <label className="block text-xs font-medium text-foreground">Session Link <span className="text-rose-500">*</span></label>
@@ -923,6 +941,7 @@ export function SuccessSessionsManagement() {
                       onChange={(e) => setFormData({...formData, link: e.target.value})}
                       placeholder="https://zoom.us/j/..."
                       required
+                      className="bg-background"
                     />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -934,6 +953,7 @@ export function SuccessSessionsManagement() {
                         onChange={(e) => setFormData({...formData, zoom_meeting_id: e.target.value})}
                         required
                         placeholder="123 456 7890"
+                        className="bg-background"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -944,6 +964,7 @@ export function SuccessSessionsManagement() {
                         onChange={(e) => setFormData({...formData, zoom_passcode: e.target.value})}
                         required
                         placeholder="Passcode"
+                        className="bg-background"
                       />
                     </div>
                   </div>
@@ -956,6 +977,7 @@ export function SuccessSessionsManagement() {
                         onChange={(e) => setFormData({...formData, host_login_email: e.target.value})}
                         required
                         placeholder="host@example.com"
+                        className="bg-background"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -966,17 +988,21 @@ export function SuccessSessionsManagement() {
                         onChange={(e) => setFormData({...formData, host_login_pwd: e.target.value})}
                         required
                         placeholder="••••••••"
+                        className="bg-background"
                       />
                     </div>
                   </div>
                 </section>
 
                 {/* Section: Audience */}
-                <section className="space-y-4 pt-2 border-t border-border/60">
-                  <div className="flex items-center gap-2 pt-4">
-                    <Users2 className="w-4 h-4 text-primary" />
-                    <h3 className="text-sm font-semibold text-foreground">Audience &amp; status</h3>
+                <section className="rounded-xl border border-emerald-200/70 dark:border-emerald-500/20 bg-emerald-50/40 dark:bg-emerald-500/5 p-5 space-y-4">
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-200 dark:ring-emerald-500/20">
+                      <Users2 className="w-4 h-4" />
+                    </div>
+                    <h3 className="text-sm font-semibold text-foreground">Audience &amp; Status</h3>
                   </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-medium text-foreground flex items-center gap-1.5">
