@@ -17,6 +17,8 @@ interface VideoItem {
   unlocked_at: string | null;
   watched: boolean;
   watched_at: string | null;
+  course_id: string | null;
+  course_title: string | null;
 }
 
 interface AssignmentItem {
@@ -27,6 +29,8 @@ interface AssignmentItem {
   submitted_at: string | null;
   reviewed_at: string | null;
   version: number | null;
+  course_id: string | null;
+  course_title: string | null;
 }
 
 interface Props {
@@ -101,6 +105,26 @@ const assignmentBadge = (unlocked: boolean, status: string) => {
     </Badge>
   );
 };
+
+function groupByCourse<T extends { course_id: string | null; course_title: string | null }>(items: T[]) {
+  const map = new Map<string, { course_id: string | null; course_title: string; items: T[] }>();
+  for (const item of items) {
+    const key = item.course_id || '__uncategorized__';
+    if (!map.has(key)) {
+      map.set(key, {
+        course_id: item.course_id,
+        course_title: item.course_title || 'Uncategorized',
+        items: [],
+      });
+    }
+    map.get(key)!.items.push(item);
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.course_id === null) return 1;
+    if (b.course_id === null) return -1;
+    return a.course_title.localeCompare(b.course_title);
+  });
+}
 
 export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) => {
   const [loading, setLoading] = useState(false);
@@ -220,71 +244,79 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
                     <p className="text-sm">No videos found.</p>
                   </div>
                 )}
-                {videos.map(v => {
-                  const isLocked = !v.unlocked;
-                  const isWatched = v.watched;
-                  const isUnlockedNotWatched = v.unlocked && !v.watched;
+                {groupByCourse(videos).map(group => {
+                  const groupWatched = group.items.filter(v => v.watched).length;
                   return (
-                    <div
-                      key={v.id}
-                      className={`group relative flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-soft ${
-                        isWatched
-                          ? 'bg-success/5 border-success/20'
-                          : isUnlockedNotWatched
-                          ? 'bg-primary/5 border-primary/20'
-                          : 'bg-card border-border'
-                      }`}
-                    >
-                      {/* Left color bar */}
-                      <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${
-                        isWatched ? 'bg-success' : isUnlockedNotWatched ? 'bg-primary' : 'bg-muted-foreground/30'
-                      }`} />
-
-                      {/* Icon */}
-                      <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
-                        isWatched ? 'bg-success/15 text-success' : isUnlockedNotWatched ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
-                      }`}>
-                        {isWatched ? <Eye className="w-4 h-4" /> : isUnlockedNotWatched ? <PlayCircle className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">
-                          {v.sequence_order != null ? (
-                            <span className="text-muted-foreground mr-1">#{v.sequence_order}</span>
-                          ) : null}
-                          {v.recording_title || 'Untitled'}
+                    <div key={group.course_id ?? 'uncat'} className="space-y-2">
+                      <div className="sticky top-0 z-10 -mx-1 px-3 py-2 bg-background/95 backdrop-blur border-b border-border/60 flex items-center justify-between rounded-md">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <BookOpen className="w-4 h-4 text-primary shrink-0" />
+                          <span className="font-semibold text-sm truncate">{group.course_title}</span>
                         </div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          {v.watched_at && (
-                            <span className="flex items-center gap-1 text-success">
-                              <Eye className="w-3 h-3" /> Watched {formatDate(v.watched_at)}
-                            </span>
-                          )}
-                          {v.unlocked_at && !v.watched && (
-                            <span className="flex items-center gap-1 text-primary">
-                              <Unlock className="w-3 h-3" /> Unlocked {formatDate(v.unlocked_at)}
-                            </span>
-                          )}
-                        </div>
+                        <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary/30 shrink-0">
+                          {groupWatched}/{group.items.length} watched
+                        </Badge>
                       </div>
-
-                      {/* Badge */}
-                      <div className="shrink-0">
-                        {isWatched ? (
-                          <Badge variant="outline" className="bg-success/15 text-success border-success/30 gap-1.5 px-2.5 py-0.5 font-medium">
-                            <Eye className="w-3.5 h-3.5" /> Watched
-                          </Badge>
-                        ) : isUnlockedNotWatched ? (
-                          <Badge variant="outline" className="bg-primary/15 text-primary border-primary/30 gap-1.5 px-2.5 py-0.5 font-medium">
-                            <PlayCircle className="w-3.5 h-3.5" /> Unlocked
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="bg-secondary/60 text-muted-foreground border-border/60 gap-1.5 px-2.5 py-0.5">
-                            <Lock className="w-3.5 h-3.5" /> Locked
-                          </Badge>
-                        )}
-                      </div>
+                      {group.items.map(v => {
+                        const isWatched = v.watched;
+                        const isUnlockedNotWatched = v.unlocked && !v.watched;
+                        return (
+                          <div
+                            key={v.id}
+                            className={`group relative flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-soft ${
+                              isWatched
+                                ? 'bg-success/5 border-success/20'
+                                : isUnlockedNotWatched
+                                ? 'bg-primary/5 border-primary/20'
+                                : 'bg-card border-border'
+                            }`}
+                          >
+                            <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${
+                              isWatched ? 'bg-success' : isUnlockedNotWatched ? 'bg-primary' : 'bg-muted-foreground/30'
+                            }`} />
+                            <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
+                              isWatched ? 'bg-success/15 text-success' : isUnlockedNotWatched ? 'bg-primary/15 text-primary' : 'bg-muted text-muted-foreground'
+                            }`}>
+                              {isWatched ? <Eye className="w-4 h-4" /> : isUnlockedNotWatched ? <PlayCircle className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm truncate">
+                                {v.sequence_order != null ? (
+                                  <span className="text-muted-foreground mr-1">#{v.sequence_order}</span>
+                                ) : null}
+                                {v.recording_title || 'Untitled'}
+                              </div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                {v.watched_at && (
+                                  <span className="flex items-center gap-1 text-success">
+                                    <Eye className="w-3 h-3" /> Watched {formatDate(v.watched_at)}
+                                  </span>
+                                )}
+                                {v.unlocked_at && !v.watched && (
+                                  <span className="flex items-center gap-1 text-primary">
+                                    <Unlock className="w-3 h-3" /> Unlocked {formatDate(v.unlocked_at)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="shrink-0">
+                              {isWatched ? (
+                                <Badge variant="outline" className="bg-success/15 text-success border-success/30 gap-1.5 px-2.5 py-0.5 font-medium">
+                                  <Eye className="w-3.5 h-3.5" /> Watched
+                                </Badge>
+                              ) : isUnlockedNotWatched ? (
+                                <Badge variant="outline" className="bg-primary/15 text-primary border-primary/30 gap-1.5 px-2.5 py-0.5 font-medium">
+                                  <PlayCircle className="w-3.5 h-3.5" /> Unlocked
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-secondary/60 text-muted-foreground border-border/60 gap-1.5 px-2.5 py-0.5">
+                                  <Lock className="w-3.5 h-3.5" /> Locked
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
@@ -330,66 +362,75 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
                     <p className="text-sm">No assignments found.</p>
                   </div>
                 )}
-                {assignments.map(a => {
-                  const cfg = !a.unlocked && a.status === 'not_submitted'
-                    ? null
-                    : statusConfig[a.status] || statusConfig.not_submitted;
+                {groupByCourse(assignments).map(group => {
+                  const groupApproved = group.items.filter(a => a.status === 'approved').length;
                   return (
-                    <div
-                      key={a.id}
-                      className={`group relative flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-soft ${
-                        cfg ? `border-l-4` : ''
-                      } ${
-                        a.status === 'approved' ? 'bg-success/5 border-success/20'
-                        : a.status === 'declined' || a.status === 'rejected' ? 'bg-destructive/5 border-destructive/20'
-                        : a.status === 'resubmission' || a.status === 'needs_resubmission' ? 'bg-warning/5 border-warning/30'
-                        : a.status === 'pending' || a.status === 'submitted' ? 'bg-primary/5 border-primary/20'
-                        : a.unlocked ? 'bg-card border-border'
-                        : 'bg-secondary/30 border-border'
-                      }`}
-                    >
-                      {/* Left color bar */}
-                      {cfg && (
-                        <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${cfg.barClass}`} />
-                      )}
-
-                      {/* Icon */}
-                      <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
-                        a.status === 'approved' ? 'bg-success/15 text-success'
-                        : a.status === 'declined' || a.status === 'rejected' ? 'bg-destructive/15 text-destructive'
-                        : a.status === 'resubmission' || a.status === 'needs_resubmission' ? 'bg-warning/20 text-warning-foreground'
-                        : a.status === 'pending' || a.status === 'submitted' ? 'bg-primary/15 text-primary'
-                        : a.unlocked ? 'bg-muted text-muted-foreground'
-                        : 'bg-secondary text-muted-foreground'
-                      }`}>
-                        {a.status === 'approved' ? <CheckCircle2 className="w-4 h-4" />
-                        : a.status === 'declined' || a.status === 'rejected' ? <XCircle className="w-4 h-4" />
-                        : a.status === 'resubmission' || a.status === 'needs_resubmission' ? <RotateCcw className="w-4 h-4" />
-                        : a.status === 'pending' || a.status === 'submitted' ? <Clock className="w-4 h-4" />
-                        : a.unlocked ? <FileText className="w-4 h-4" />
-                        : <Lock className="w-4 h-4" />}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm truncate">{a.name}</div>
-                        <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                          {a.submitted_at && (
-                            <span className="flex items-center gap-1">
-                              <Clock className="w-3 h-3" /> Submitted {formatDate(a.submitted_at)}
-                              {a.version ? <span className="text-primary font-medium">· v{a.version}</span> : null}
-                            </span>
-                          )}
-                          {a.reviewed_at && (
-                            <span className="flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" /> Reviewed {formatDate(a.reviewed_at)}
-                            </span>
-                          )}
+                    <div key={group.course_id ?? 'uncat'} className="space-y-2">
+                      <div className="sticky top-0 z-10 -mx-1 px-3 py-2 bg-background/95 backdrop-blur border-b border-border/60 flex items-center justify-between rounded-md">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <BookOpen className="w-4 h-4 text-primary shrink-0" />
+                          <span className="font-semibold text-sm truncate">{group.course_title}</span>
                         </div>
+                        <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30 shrink-0">
+                          {groupApproved}/{group.items.length} approved
+                        </Badge>
                       </div>
-
-                      {/* Badge */}
-                      <div className="shrink-0">{assignmentBadge(a.unlocked, a.status)}</div>
+                      {group.items.map(a => {
+                        const cfg = !a.unlocked && a.status === 'not_submitted'
+                          ? null
+                          : statusConfig[a.status] || statusConfig.not_submitted;
+                        return (
+                          <div
+                            key={a.id}
+                            className={`group relative flex items-center gap-4 rounded-xl border p-4 transition-all hover:shadow-soft ${
+                              cfg ? `border-l-4` : ''
+                            } ${
+                              a.status === 'approved' ? 'bg-success/5 border-success/20'
+                              : a.status === 'declined' || a.status === 'rejected' ? 'bg-destructive/5 border-destructive/20'
+                              : a.status === 'resubmission' || a.status === 'needs_resubmission' ? 'bg-warning/5 border-warning/30'
+                              : a.status === 'pending' || a.status === 'submitted' ? 'bg-primary/5 border-primary/20'
+                              : a.unlocked ? 'bg-card border-border'
+                              : 'bg-secondary/30 border-border'
+                            }`}
+                          >
+                            {cfg && (
+                              <div className={`absolute left-0 top-3 bottom-3 w-1 rounded-full ${cfg.barClass}`} />
+                            )}
+                            <div className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${
+                              a.status === 'approved' ? 'bg-success/15 text-success'
+                              : a.status === 'declined' || a.status === 'rejected' ? 'bg-destructive/15 text-destructive'
+                              : a.status === 'resubmission' || a.status === 'needs_resubmission' ? 'bg-warning/20 text-warning-foreground'
+                              : a.status === 'pending' || a.status === 'submitted' ? 'bg-primary/15 text-primary'
+                              : a.unlocked ? 'bg-muted text-muted-foreground'
+                              : 'bg-secondary text-muted-foreground'
+                            }`}>
+                              {a.status === 'approved' ? <CheckCircle2 className="w-4 h-4" />
+                              : a.status === 'declined' || a.status === 'rejected' ? <XCircle className="w-4 h-4" />
+                              : a.status === 'resubmission' || a.status === 'needs_resubmission' ? <RotateCcw className="w-4 h-4" />
+                              : a.status === 'pending' || a.status === 'submitted' ? <Clock className="w-4 h-4" />
+                              : a.unlocked ? <FileText className="w-4 h-4" />
+                              : <Lock className="w-4 h-4" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm truncate">{a.name}</div>
+                              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                                {a.submitted_at && (
+                                  <span className="flex items-center gap-1">
+                                    <Clock className="w-3 h-3" /> Submitted {formatDate(a.submitted_at)}
+                                    {a.version ? <span className="text-primary font-medium">· v{a.version}</span> : null}
+                                  </span>
+                                )}
+                                {a.reviewed_at && (
+                                  <span className="flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" /> Reviewed {formatDate(a.reviewed_at)}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="shrink-0">{assignmentBadge(a.unlocked, a.status)}</div>
+                          </div>
+                        );
+                      })}
                     </div>
                   );
                 })}
