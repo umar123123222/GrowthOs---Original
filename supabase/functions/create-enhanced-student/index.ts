@@ -649,7 +649,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Get company settings including currency and company details
     const { data: companyDetailsData, error: companyDetailsError } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url, currency, company_name, company_email, address, contact_email, primary_phone, payment_methods')
+      .select('lms_url, currency, company_name, company_email, address, contact_email, primary_phone, secondary_phone, payment_methods')
       .limit(1)
       .maybeSingle();
 
@@ -669,6 +669,7 @@ const handler = async (req: Request): Promise<Response> => {
       address: companyDetailsData?.address || '',
       contact_email: companyDetailsData?.contact_email || companyDetailsData?.company_email || '',
       primary_phone: companyDetailsData?.primary_phone || '',
+      secondary_phone: companyDetailsData?.secondary_phone || '',
       company_email: companyDetailsData?.company_email || companyDetailsData?.contact_email || ''
     };
 
@@ -1066,7 +1067,7 @@ async function sendFirstInvoiceEmail(invoice: any, loginUrl: string, currency: s
             <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0; color: #6b7280; font-size: 12px;">${companyDetails.company_name}</p>
               <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">${companyDetails.address}</p>
-              <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${companyDetails.contact_email} | Phone: ${companyDetails.primary_phone}</p>
+              <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${companyDetails.contact_email}${companyDetails.primary_phone ? ' | Phone: ' + companyDetails.primary_phone : ''}${companyDetails.secondary_phone ? ' | Alt: ' + companyDetails.secondary_phone : ''}</p>
             </div>
           </div>
         </body>

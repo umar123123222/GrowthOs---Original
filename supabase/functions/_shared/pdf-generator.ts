@@ -39,6 +39,7 @@ export interface CompanyDetails {
   address: string;
   contact_email: string;
   primary_phone: string;
+  secondary_phone?: string;
   company_logo?: string;
 }
 
@@ -507,7 +508,7 @@ function generateInvoiceHTML(invoiceData: InvoiceData, companyDetails: CompanyDe
             <div class="company-footer">
                 <div>${companyDetails.company_name}</div>
                 <div>${companyDetails.address}</div>
-                <div>${companyDetails.contact_email} | ${companyDetails.primary_phone}</div>
+                <div>${companyDetails.contact_email}${companyDetails.primary_phone ? ' | Phone: ' + companyDetails.primary_phone : ''}${companyDetails.secondary_phone ? ' | Alt: ' + companyDetails.secondary_phone : ''}</div>
             </div>
         </div>
     </div>

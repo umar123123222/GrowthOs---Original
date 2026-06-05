@@ -59,6 +59,7 @@ function generateInvoiceEmailHtml(params: {
   companyEmail: string;
   companyAddress: string;
   companyPhone: string;
+  companyPhone2?: string;
   studentName: string;
   studentEmail: string;
   studentId: string;
@@ -168,7 +169,7 @@ function generateInvoiceEmailHtml(params: {
         <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
           <p style="margin: 0; color: #6b7280; font-size: 12px;">${params.companyName}</p>
           <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">${params.companyAddress}</p>
-          <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${params.companyEmail} | Phone: ${params.companyPhone}</p>
+          <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${params.companyEmail}${params.companyPhone ? ' | Phone: ' + params.companyPhone : ''}${params.companyPhone2 ? ' | Alt: ' + params.companyPhone2 : ''}</p>
         </div>
       </div>
     </body>
@@ -227,7 +228,7 @@ serve(async (req) => {
     // Get company settings
     const { data: companySettings, error: companyErr } = await supabaseAdmin
       .from('company_settings')
-      .select('currency, company_name, company_email, contact_email, address, primary_phone, payment_methods')
+      .select('currency, company_name, company_email, contact_email, address, primary_phone, secondary_phone, payment_methods')
       .limit(1)
       .maybeSingle();
 
@@ -243,6 +244,7 @@ serve(async (req) => {
     const companyEmail = companySettings?.contact_email || companySettings?.company_email || '';
     const companyAddress = companySettings?.address || '';
     const companyPhone = companySettings?.primary_phone || '';
+    const companyPhone2 = companySettings?.secondary_phone || '';
     const paymentMethods = (companySettings?.payment_methods as any[]) || [];
 
     // Generate payment methods HTML
@@ -341,6 +343,7 @@ serve(async (req) => {
           companyEmail,
           companyAddress,
           companyPhone,
+          companyPhone2,
           studentName,
           studentEmail,
           studentId: studentDisplayId,

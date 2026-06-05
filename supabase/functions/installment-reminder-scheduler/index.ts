@@ -22,6 +22,7 @@ function generateBrandedInvoiceHtml(params: {
   companyEmail: string;
   companyAddress: string;
   companyPhone: string;
+  companyPhone2?: string;
   studentName: string;
   studentEmail: string;
   studentId: string;
@@ -137,7 +138,7 @@ function generateBrandedInvoiceHtml(params: {
         <div style="background-color: #f3f4f6; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
           <p style="margin: 0; color: #6b7280; font-size: 12px;">${params.companyName}</p>
           <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">${params.companyAddress}</p>
-          <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${params.companyEmail} | Phone: ${params.companyPhone}</p>
+          <p style="margin: 5px 0 0 0; color: #6b7280; font-size: 12px;">Email: ${params.companyEmail}${params.companyPhone ? ' | Phone: ' + params.companyPhone : ''}${params.companyPhone2 ? ' | Alt: ' + params.companyPhone2 : ''}</p>
         </div>
       </div>
     </body>
@@ -236,7 +237,7 @@ serve(async (req) => {
 
     const { data: companySettings, error: companyErr } = await supabaseAdmin
       .from('company_settings')
-      .select('lms_url, currency, company_name, company_email, address, contact_email, primary_phone, payment_methods, overdue_penalty_type, overdue_penalty_amount, suspension_notice_note')
+      .select('lms_url, currency, company_name, company_email, address, contact_email, primary_phone, secondary_phone, payment_methods, overdue_penalty_type, overdue_penalty_amount, suspension_notice_note')
       .limit(1)
       .maybeSingle();
 
@@ -253,7 +254,8 @@ serve(async (req) => {
       company_name: companySettings?.company_name || 'IDMPakistan',
       address: companySettings?.address || '',
       contact_email: companySettings?.contact_email || companySettings?.company_email || '',
-      primary_phone: companySettings?.primary_phone || ''
+      primary_phone: companySettings?.primary_phone || '',
+      secondary_phone: companySettings?.secondary_phone || ''
     };
     const paymentMethods = companySettings?.payment_methods || [];
     const billingCc = Deno.env.get('BILLING_EMAIL_CC') || '';
@@ -333,6 +335,7 @@ serve(async (req) => {
             companyEmail: companyDetails.contact_email,
             companyAddress: companyDetails.address,
             companyPhone: companyDetails.primary_phone,
+            companyPhone2: companyDetails.secondary_phone,
             studentName,
             studentEmail,
             studentId: studentDisplayId,
