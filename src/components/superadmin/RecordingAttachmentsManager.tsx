@@ -244,8 +244,8 @@ export function RecordingAttachmentsManager({ recordingId }: RecordingAttachment
           </ScrollArea>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPickerOpen(false)} disabled={saving}>Cancel</Button>
-            <Button onClick={onAttachSelected} disabled={saving || selectedIds.size === 0}>
+            <Button type="button" variant="outline" onClick={() => setPickerOpen(false)} disabled={saving}>Cancel</Button>
+            <Button type="button" onClick={onAttachSelected} disabled={saving || selectedIds.size === 0}>
               Attach {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
             </Button>
           </DialogFooter>
