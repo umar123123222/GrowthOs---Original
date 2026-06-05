@@ -119,6 +119,7 @@ export function CompanySettings() {
     onboarding_video_enabled: true,
     onboarding_document_url: '',
     onboarding_document_name: '',
+    onboarding_pointers: [],
     // Live Chat
     livechat_code: '',
     // Multi-Course Feature
