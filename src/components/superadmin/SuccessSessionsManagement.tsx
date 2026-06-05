@@ -1072,7 +1072,7 @@ export function SuccessSessionsManagement() {
                 <Button type="button" variant="outline" onClick={handleCloseDialog}>
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+                <Button type="submit" className="bg-primary hover:bg-primary/90 text-primary-foreground">
                   {editingSession ? 'Update Session' : 'Schedule Session'}
                 </Button>
               </div>
