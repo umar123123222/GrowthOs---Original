@@ -33,6 +33,7 @@ const Profile = () => {
     email: ''
   });
   const [batchName, setBatchName] = useState<string | null>(null);
+  const [studentCode, setStudentCode] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Update profile data when user changes
