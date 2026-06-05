@@ -1,70 +1,73 @@
-## Goal
-Introduce a new **`viewer`** role. Viewers can only navigate to:
-1. Dashboard
-2. Modules & Videos (Recordings)
-3. Resources
-4. Submissions
-5. Success Sessions
-6. Students Management
-7. Batches
+# Multi-Device & Concurrent Session Detection
 
-On every allowed page, all buttons/controls that create, edit, delete, assign, unassign, toggle, approve/reject, send, reset, or otherwise mutate data must be hidden for viewers. They can still open detail dialogs in read-only mode (no save/edit/delete actions visible).
+Track every student session (device, browser, IP, approximate location) and flag when the same account is actively used from 2+ devices at the same time — including watching different or the same video simultaneously.
 
-## Implementation
+## What gets built
 
-### 1. Database
-- Add `'viewer'` to the `app_role` enum.
-- RLS: viewers get the same SELECT permissions as admin (read-only). They get **no** INSERT/UPDATE/DELETE policies — write attempts fail server-side as a defense-in-depth backup to the UI guards.
-- Add `has_role(uid, 'viewer')` to relevant SELECT policies on the tables shown on the listed pages (students, batches, recordings, resources, assignment_submissions, success_sessions, etc.).
+### 1. Session tracking table
+New `student_sessions` table capturing each active browser session:
+- `user_id`, `session_token` (random per-tab id stored in localStorage)
+- `device_fingerprint` (hash of UA + screen + platform)
+- `user_agent`, `device_label` (e.g. "Chrome on Windows")
+- `ip_address`, `country`, `city` (resolved via ipapi.co in edge function)
+- `first_seen_at`, `last_heartbeat_at`
+- `current_activity` (JSON: `{ type: 'video', recording_id, title, started_at }` or `null`)
 
-### 2. Auth & Types
-- Add `'viewer'` to the `role` union in `src/types/common.ts` and `src/hooks/useAuth.ts` re-exports.
-- `RoleGuard` already takes string[] — no change needed.
+### 2. Heartbeat + activity reporting (frontend)
+- On login / app load: create a session row via edge function `session-heartbeat` (resolves IP + geo server-side).
+- Every 30s while tab is open: ping `session-heartbeat` to update `last_heartbeat_at` and `current_activity`.
+- When a student opens a video: send `current_activity = { type:'video', recording_id, title }`.
+- On tab close / logout: mark session ended.
+- Active = `last_heartbeat_at` within last 90 seconds.
 
-### 3. Routing (`src/App.tsx`)
-- Root `/` and `/dashboard` for viewer → render a new lightweight `ViewerDashboard` (or reuse `SuperadminDashboard` in read-only mode — see decision below).
-- Add `RoleGuard` allow `viewer` on: `/videos`, `/videos/:moduleId/:lessonId`, `/resources`, `/students`, plus a new `/viewer` route that hosts the Submissions / Success Sessions / Batches views (re-using existing superadmin components, gated to read-only).
-- Block all other routes for viewer (`<Navigate to="/" />`).
+### 3. Concurrent-use detection
+A session is "concurrent" when a user has 2+ rows with heartbeats in the last 90s. The view `student_concurrent_sessions` exposes:
+- which students are currently using LMS from multiple devices
+- per device: location, device, what video (if any) is playing right now
+- flag `same_video` vs `different_video`
 
-### 4. Navigation (`src/components/Layout.tsx`)
-- Add `isUserViewer`. Build a dedicated nav list for viewer containing only the 7 allowed entries.
-- Hide Teams, Support, Admin Panel, Super Admin, Connect, Profile-edit links beyond what's needed.
+Concurrent events are also logged into `admin_logs` (entity_type `concurrent_session`) so they appear in the existing global activity log and per-student notes/activity timelines automatically.
 
-### 5. Read-only enforcement on shared components
-Add a single helper `useIsReadOnly()` (returns `user.role === 'viewer'`). In each of the following components, wrap action buttons with `{!isReadOnly && …}`:
-- `src/components/superadmin/StudentsManagement.tsx` — Add Student, Edit, Delete, Reset Password, Assign/Unassign Pathway, Skip Drip, Suspend, etc.
-- `src/components/superadmin/SuccessSessionsManagement.tsx` — Create/Edit/Delete/Reschedule.
-- `src/components/assignments/SubmissionsManagement.tsx` — Approve/Reject/Comment/Score.
-- `src/components/superadmin/RecordingAttachmentsManager.tsx` + recordings tab UI — Upload/Edit/Delete.
-- Resources page — Upload/Edit/Delete.
-- Batches tab UI — Create/Edit/Delete/Assign.
-- Dashboard quick-action cards — keep navigation cards, hide any "create" CTAs.
+### 4. Admin UI
 
-### 6. Creation flow
-- Superadmin can create a viewer from `/teams` (same dialog as other staff roles). Add `'viewer'` to the role dropdown and to the `create-enhanced-team-member` edge function's allowed roles.
+**a) New "Active Sessions" tab in Superadmin → Students**
+- Live table of currently-active students, grouped by user.
+- Badge "⚠ Concurrent" (amber) when a student has >1 active device.
+- Each row expands to show every device: location (city, country, IP), browser/OS, last heartbeat, what's currently playing.
 
-### 7. Activity logging
-- Viewer logins are logged like any other user. No write-action logs (they can't write).
+**b) Student profile → new "Sessions & Devices" section**
+- History of last 30 days of sessions for that student.
+- Highlighted rows where overlap was detected, with the overlapping device pair and timestamp.
+- Filter: All / Concurrent only / By country.
 
-## Decisions needed
-1. Where should viewer land for "Submissions / Success Sessions / Batches"? Options:
-   a) Reuse the existing `/superadmin?tab=…` URLs and let viewer access just those tabs (simpler, requires guarding the SuperadminDashboard tab list to only show allowed tabs for viewer).
-   b) Build a dedicated `/viewer` page mirroring those tabs.
-   **Recommendation: (a)** — much less duplication; we just filter the tab list and pass a `readOnly` flag to each tab component.
+**c) Global activity log**
+- New activity type `concurrent_session_detected` showing in the existing dialog with metadata (devices, locations, videos).
 
-2. Should viewer be allowed to **download/export** (CSV, PDF, attachments)? These don't mutate data.
-   **Recommendation: yes, allow downloads** (still read-only).
+### 5. Optional admin action
+"Force sign-out all other devices" button on the student row — invalidates all sessions except the most recent by deleting their rows and bumping a `sessions_revoked_at` field on the user; the frontend heartbeat checks this and logs the user out if their session was revoked.
 
-3. Should viewer see student PII (emails, phone, payment status)?
-   **Recommendation: yes** — needed for the listed pages to be useful. Confirm if you want anything redacted.
+## Technical details
 
-## Files to touch (high level)
-- 1 migration (enum + policies)
-- `src/types/common.ts`, `src/hooks/useAuth.ts`
-- `src/App.tsx`, `src/components/Layout.tsx`, `src/components/RoleGuard.tsx` (no change), `src/pages/SuperadminDashboard.tsx` (filter tabs for viewer)
-- `src/components/superadmin/StudentsManagement.tsx`, `SuccessSessionsManagement.tsx`, batches component, recordings components
-- `src/components/assignments/SubmissionsManagement.tsx`
-- `src/pages/Resources.tsx` / admin `ResourcesManagement.tsx`
-- `src/pages/Teams.tsx` + `supabase/functions/create-enhanced-team-member/index.ts` (add viewer to allowed roles)
+- **Table**: `public.student_sessions` with RLS — student can see/update own rows; admin/superadmin can see all via `has_role`. Standard GRANTs for `authenticated` + `service_role`.
+- **Edge function `session-heartbeat`** (verify_jwt=false, validates JWT in code): accepts `{ session_token, device_fingerprint, user_agent, current_activity }`, reads caller IP from `x-forwarded-for`, resolves geo via free ipapi.co (no key) with graceful fallback, upserts the session row.
+- **View `student_concurrent_sessions`**: `SELECT user_id, count(*) filter (where last_heartbeat_at > now() - interval '90 seconds') AS active_devices ... HAVING count > 1`.
+- **Trigger / cron**: `pg_cron` job every minute that scans the view and writes new `admin_logs` rows for newly-detected concurrent events (deduped by user_id + 5-minute window).
+- **Cleanup**: cron deletes session rows with `last_heartbeat_at < now() - interval '30 days'`.
+- **Frontend hook** `useSessionHeartbeat()` mounted once in the authenticated layout; uses `navigator.userAgent`, screen size, and a stable localStorage token for fingerprint. Video player calls `setActivity({type:'video', recording_id, title})` on play and clears on pause/unmount.
+- **Geo accuracy note**: IP-based geolocation is city-level and approximate; VPNs will mask true location. This will be surfaced in the UI tooltip.
 
-Please confirm decisions 1–3 (or just say "go ahead with the recommendations") and I'll implement.
+## Out of scope (can add later)
+- Blocking concurrent logins automatically (currently detection + manual force-signout only).
+- Email alerts to admin on every concurrent event (only logged to activity feed for now).
+- Device naming by the student themselves.
+
+## Files to add/edit
+- Migration: create `student_sessions`, view, cron jobs, RLS, grants.
+- New edge function: `supabase/functions/session-heartbeat/index.ts`.
+- New hook: `src/hooks/useSessionHeartbeat.ts`.
+- Wire into authenticated layout + video player components.
+- New component: `src/components/superadmin/ActiveSessionsTab.tsx`.
+- New component: `src/components/StudentSessionsHistory.tsx` (used in profile dialog).
+- Extend `ActivityLogsDialog` mapping to render `concurrent_session_detected` type.
+
+Confirm and I'll implement.
