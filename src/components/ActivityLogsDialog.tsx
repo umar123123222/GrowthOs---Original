@@ -400,11 +400,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
 
     // Default: show metadata if any
     if (data && Object.keys(data).length > 0) {
-      return (
-        <div className="text-xs opacity-60 max-w-[250px] truncate">
-          {JSON.stringify(data)}
-        </div>
-      );
+      return <ExpandableSubDetails data={data} />;
     }
 
     return <span className="text-xs text-muted-foreground">—</span>;
