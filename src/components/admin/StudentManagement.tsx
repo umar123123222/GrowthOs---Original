@@ -2215,5 +2215,16 @@ export const StudentManagement = () => {
         studentId={selectedStudentForNotes?.id || ''}
         studentName={selectedStudentForNotes?.full_name || ''}
       />
+
+      {markPaidCtx && (
+        <MarkPaidDialog
+          open={markPaidOpen}
+          onOpenChange={(o) => { setMarkPaidOpen(o); if (!o) setMarkPaidCtx(null); }}
+          studentRecordId={markPaidCtx.studentRecordId}
+          installmentNumber={markPaidCtx.installmentNumber}
+          studentEmail={markPaidCtx.email}
+          onSuccess={() => { fetchStudents(); fetchInstallmentPayments(); }}
+        />
+      )}
     </div>;
 };
