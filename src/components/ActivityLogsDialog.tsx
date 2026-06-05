@@ -402,10 +402,16 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                     <SelectItem value="login">Login</SelectItem>
                     <SelectItem value="logout">Logout</SelectItem>
                     <SelectItem value="page_visit">Page Visit</SelectItem>
-                    <SelectItem value="video_watched">Video Watched</SelectItem>
+                    <SelectItem value="video_opened">Video Opened</SelectItem>
+                    <SelectItem value="video_watched">Video Completed</SelectItem>
+                    <SelectItem value="live_session_joined">Live Session Joined</SelectItem>
                     <SelectItem value="assignment_submitted">Assignment Submitted</SelectItem>
                     <SelectItem value="profile_updated">Profile Updated</SelectItem>
                     <SelectItem value="module_completed">Module Completed</SelectItem>
+                    <SelectItem value="fee_extension_granted">Fee Extension Granted</SelectItem>
+                    <SelectItem value="lms_suspended">LMS Suspended</SelectItem>
+                    <SelectItem value="scheduled_suspension_created">Suspension Scheduled</SelectItem>
+
                     {/* Invoice/Payments */}
                     <SelectItem value="payment_recorded">Payment Recorded</SelectItem>
                     <SelectItem value="invoice_status_changed">Invoice Status Changed</SelectItem>
