@@ -256,13 +256,31 @@ export const PaymentReports = () => {
 
   const grantExtension = async (invoiceId: string, newDate: Date) => {
     try {
+      const inv = records.find(r => r.id === invoiceId);
+      const reason = window.prompt(
+        `Extend due date${inv ? ` for ${inv.studentName} (Installment #${inv.installmentNumber})` : ''} to ${format(newDate, 'PPP')}.\n\nReason for extension (optional):`,
+        ''
+      );
+      if (reason === null) {
+        setExtensionPopoverOpen(null);
+        setExtensionDate(undefined);
+        return;
+      }
+
+      // Fetch previous due date for the log
+      const { data: priorInvoice } = await supabase
+        .from('invoices')
+        .select('due_date, extended_due_date, installment_number')
+        .eq('id', invoiceId)
+        .maybeSingle();
+      const previousDueDate = priorInvoice?.extended_due_date || priorInvoice?.due_date || null;
+
       const { error } = await supabase
         .from('invoices')
         .update({ extended_due_date: newDate.toISOString(), status: 'pending' })
         .eq('id', invoiceId);
       if (error) throw error;
 
-      const inv = records.find(r => r.id === invoiceId);
       if (inv?.studentDbId) {
         const { data: student } = await supabase.from('students').select('user_id').eq('id', inv.studentDbId).single();
         if (student?.user_id) {
@@ -274,6 +292,23 @@ export const PaymentReports = () => {
             p_metadata: { invoice_id: invoiceId, new_due_date: newDate.toISOString(), installment_number: inv.installmentNumber }
           });
           await supabase.from('users').update({ lms_status: 'active' }).eq('id', student.user_id).eq('lms_status', 'suspended');
+
+          await logAdminAction({
+            performedBy: user?.id || null,
+            targetUserId: student.user_id,
+            entityType: 'invoice',
+            entityId: invoiceId,
+            action: 'fee_extension_granted',
+            description: `Extended fee due date for ${inv.studentName}`,
+            data: {
+              invoice_id: invoiceId,
+              installment_number: inv.installmentNumber,
+              previous_due_date: previousDueDate,
+              new_due_date: newDate.toISOString(),
+              reason: reason?.trim() || null,
+              student_name: inv.studentName,
+            }
+          });
         }
       }
       toast({ title: 'Extension Granted', description: `Due date extended to ${format(newDate, 'PPP')}` });
@@ -284,6 +319,8 @@ export const PaymentReports = () => {
       toast({ title: 'Error', description: e?.message || 'Failed to grant extension', variant: 'destructive' });
     }
   };
+
+
 
   const clearExtension = async (invoiceId: string) => {
     try {
