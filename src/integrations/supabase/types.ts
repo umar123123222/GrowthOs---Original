@@ -2412,6 +2412,63 @@ export type Database = {
         }
         Relationships: []
       }
+      student_sessions: {
+        Row: {
+          city: string | null
+          country: string | null
+          created_at: string
+          current_activity: Json | null
+          device_fingerprint: string | null
+          device_label: string | null
+          ended_at: string | null
+          first_seen_at: string
+          id: string
+          ip_address: string | null
+          last_heartbeat_at: string
+          region: string | null
+          session_token: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          current_activity?: Json | null
+          device_fingerprint?: string | null
+          device_label?: string | null
+          ended_at?: string | null
+          first_seen_at?: string
+          id?: string
+          ip_address?: string | null
+          last_heartbeat_at?: string
+          region?: string | null
+          session_token: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          created_at?: string
+          current_activity?: Json | null
+          device_fingerprint?: string | null
+          device_label?: string | null
+          ended_at?: string | null
+          first_seen_at?: string
+          id?: string
+          ip_address?: string | null
+          last_heartbeat_at?: string
+          region?: string | null
+          session_token?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           answers_json: Json | null
@@ -3105,6 +3162,7 @@ export type Database = {
           password_hash: string
           phone: string | null
           role: string
+          sessions_revoked_at: string | null
           shopify_credentials: string | null
           status: string | null
           updated_at: string | null
@@ -3128,6 +3186,7 @@ export type Database = {
           password_hash: string
           phone?: string | null
           role: string
+          sessions_revoked_at?: string | null
           shopify_credentials?: string | null
           status?: string | null
           updated_at?: string | null
@@ -3151,6 +3210,7 @@ export type Database = {
           password_hash?: string
           phone?: string | null
           role?: string
+          sessions_revoked_at?: string | null
           shopify_credentials?: string | null
           status?: string | null
           updated_at?: string | null
@@ -3181,6 +3241,17 @@ export type Database = {
       }
     }
     Views: {
+      student_concurrent_sessions_v: {
+        Row: {
+          active_device_count: number | null
+          distinct_locations: number | null
+          distinct_videos_now: number | null
+          last_heartbeat_at: string | null
+          sessions: Json | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       user_security_summary: {
         Row: {
           created_at: string | null
