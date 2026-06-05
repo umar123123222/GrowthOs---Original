@@ -17,6 +17,8 @@ interface VideoItem {
   unlocked_at: string | null;
   watched: boolean;
   watched_at: string | null;
+  course_id: string | null;
+  course_title: string | null;
 }
 
 interface AssignmentItem {
@@ -27,6 +29,8 @@ interface AssignmentItem {
   submitted_at: string | null;
   reviewed_at: string | null;
   version: number | null;
+  course_id: string | null;
+  course_title: string | null;
 }
 
 interface Props {
