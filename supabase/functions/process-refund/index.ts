@@ -229,7 +229,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Company settings
     const { data: company, error: companyErr } = await supabase
       .from("company_settings")
-      .select("company_name, company_email, contact_email, primary_phone, address, currency")
+      .select("company_name, company_email, contact_email, primary_phone, secondary_phone, address, currency")
       .limit(1).maybeSingle();
 
     if (companyErr) console.error('[process-refund] Failed to load company_settings:', companyErr);
@@ -237,6 +237,7 @@ const handler = async (req: Request): Promise<Response> => {
     const companyName = company?.company_name || "IDMPakistan";
     const companyEmail = company?.company_email || company?.contact_email || "";
     const companyPhone = company?.primary_phone || "";
+    const companyPhone2 = company?.secondary_phone || "";
     const companyAddress = company?.address || "";
     const currency = company?.currency || "PKR";
 
