@@ -108,13 +108,14 @@ function generateEmailHTML(
         })
       : "To be announced";
 
-    const headline = isReminder ? "Reminder: Live Session in 3 Hours" : "Live Session Scheduled!";
+    const headline = isReminder ? "Starting in 3 Hours" : "You're Invited to a Live Session";
+    const eyebrow = isReminder ? "Reminder" : "Live Session";
     const intro = isReminder
-      ? "Your upcoming live session starts in about 3 hours. Get ready to join!"
-      : "A live session has been scheduled for your batch!";
+      ? "Your live session starts soon. Here are the details so you can join on time."
+      : "A new live session has been scheduled for your batch. Here's everything you need to know.";
     const closing = isReminder
-      ? "See you soon — make sure you're ready a few minutes early."
-      : "Mark your calendar and join on time.";
+      ? "Tip: log in a few minutes early to settle in before it begins."
+      : "Add it to your calendar so you don't miss it.";
 
     return `
 <!DOCTYPE html>
@@ -124,47 +125,42 @@ function generateEmailHTML(
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${headline}</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
-  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-    <div style="background-color: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-      <div style="text-align: center; margin-bottom: 30px;">
-        <div style="width: 60px; height: 60px; background-color: #8b5cf6; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
-          <span style="font-size: 28px;">${isReminder ? '⏰' : '📅'}</span>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f4f4f7; color: #1f2937;">
+  <div style="max-width: 560px; margin: 0 auto; padding: 32px 16px;">
+    <div style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 8px 24px rgba(15,23,42,0.06); border: 1px solid #eef0f4;">
+      <div style="background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%); padding: 32px;">
+        <p style="color: rgba(255,255,255,0.85); font-size: 12px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; margin: 0 0 8px;">${eyebrow}</p>
+        <h1 style="color: #ffffff; font-size: 24px; line-height: 1.3; margin: 0; font-weight: 700;">${headline}</h1>
+      </div>
+
+      <div style="padding: 32px;">
+        <p style="color: #111827; font-size: 16px; line-height: 1.6; margin: 0 0 12px;">Hi ${firstName},</p>
+        <p style="color: #4b5563; font-size: 15px; line-height: 1.65; margin: 0 0 24px;">${intro}</p>
+
+        <div style="border: 1px solid #ececf3; border-radius: 12px; padding: 20px 22px; margin-bottom: 24px; background-color: #fafafe;">
+          <p style="color: #111827; font-size: 17px; font-weight: 600; margin: 0 0 16px; line-height: 1.4;">${title}</p>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; font-size: 14px; color: #374151;">
+            <tr>
+              <td style="padding: 6px 0; color: #6b7280; width: 90px; vertical-align: top;">Date</td>
+              <td style="padding: 6px 0; color: #111827; font-weight: 500;">${formattedDate}</td>
+            </tr>
+            ${mentorName ? `<tr><td style="padding: 6px 0; color: #6b7280; vertical-align: top;">Mentor</td><td style="padding: 6px 0; color: #111827; font-weight: 500;">${mentorName}</td></tr>` : ""}
+            ${description ? `<tr><td style="padding: 6px 0; color: #6b7280; vertical-align: top;">Details</td><td style="padding: 6px 0; color: #4b5563;">${description}</td></tr>` : ""}
+          </table>
         </div>
-        <h1 style="color: #1f2937; font-size: 24px; margin: 0;">${headline}</h1>
+
+        <div style="text-align: center; margin: 28px 0 12px;">
+          <a href="${ctaUrl}" style="display: inline-block; background-color: #6d28d9; color: #ffffff; padding: 13px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 15px;">
+            View Live Sessions
+          </a>
+        </div>
+
+        <p style="color: #6b7280; font-size: 13px; line-height: 1.6; margin: 16px 0 0; text-align: center;">${closing}</p>
       </div>
-      
-      <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-        Hi ${firstName},
-      </p>
-      
-      <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-        ${intro}
-      </p>
-      
-      <div style="background-color: #f5f3ff; border-left: 4px solid #8b5cf6; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
-        <h2 style="color: #5b21b6; font-size: 18px; margin: 0 0 15px 0;">🎯 ${title}</h2>
-        <p style="color: #4b5563; font-size: 14px; margin: 0 0 10px 0;">
-          <strong>📆 Date & Time:</strong> ${formattedDate}
-        </p>
-        ${mentorName ? `<p style="color: #4b5563; font-size: 14px; margin: 0 0 10px 0;"><strong>👤 Mentor:</strong> ${mentorName}</p>` : ""}
-        ${meetingLink ? `<p style="color: #4b5563; font-size: 14px; margin: 0;"><strong>🔗 Meeting Link:</strong> <a href="${meetingLink}" style="color: #8b5cf6;">${meetingLink}</a></p>` : ""}
-        ${description ? `<p style="color: #6b7280; font-size: 14px; margin-top: 10px;">${description}</p>` : ""}
+
+      <div style="padding: 18px 32px; border-top: 1px solid #f1f1f5; background-color: #fafafc; text-align: center;">
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">${companyName}</p>
       </div>
-      
-      <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-        ${closing}
-      </p>
-      
-      <div style="text-align: center;">
-        <a href="${ctaUrl}" style="display: inline-block; background-color: #8b5cf6; color: #ffffff; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
-          View Live Sessions
-        </a>
-      </div>
-      
-      <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 40px;">
-        ${companyName} • See you there! 🎉
-      </p>
     </div>
   </div>
 </body>
