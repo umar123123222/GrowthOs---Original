@@ -299,12 +299,30 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         return `Student suspended${data.student_name ? `: ${data.student_name}` : ''}`;
       case 'scheduled_suspension_created':
         return `Suspension scheduled${data.schedule_suspend_date ? ` for ${new Date(data.schedule_suspend_date).toLocaleDateString()}` : ''}`;
-      case 'page_visit':
-        return `Visited page: ${data.page || '/'}`;
+      case 'page_visit': {
+        const page: string = data.page || '/';
+        if (page.startsWith('/video-player')) {
+          return `Opened video: ${data.video_title || 'Unknown video'}`;
+        }
+        const pageNames: Record<string, string> = {
+          '/': 'Dashboard',
+          '/dashboard': 'Dashboard',
+          '/videos': 'Videos library',
+          '/live-sessions': 'Live sessions',
+          '/assignments': 'Assignments',
+          '/leaderboard': 'Leaderboard',
+          '/notifications': 'Notifications',
+          '/profile': 'Profile',
+          '/messages': 'Messages',
+          '/support': 'Support',
+        };
+        return `Visited: ${pageNames[page] || page}`;
+      }
       default:
         return log.description || log.action.replace(/_/g, ' ');
     }
   };
+
 
   const formatSubDetails = (log: ActivityLog): React.ReactNode => {
     const data: any = log.data || {};
