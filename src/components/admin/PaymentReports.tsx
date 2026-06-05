@@ -69,6 +69,8 @@ export const PaymentReports = () => {
   const [refundContext, setRefundContext] = useState<{ studentId: string; email?: string; invoiceId?: string } | null>(null);
 
   const { toast } = useToast();
+  const { user } = useAuth();
+
 
   useEffect(() => {
     fetchCurrency();
