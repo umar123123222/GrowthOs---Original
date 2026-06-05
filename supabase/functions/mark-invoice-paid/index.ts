@@ -369,7 +369,7 @@ const handler = async (req: Request): Promise<Response> => {
         try {
           const smtpClient = (SMTPClient as any).fromEnv();
           if (rs?.company_name) smtpClient.setFromName(rs.company_name);
-          const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC');
+          const billingCc = (rs as any)?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC') || (rs as any)?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
           const attachments = requestData.payment_proof ? [{
             filename: requestData.payment_proof.filename,
             content: base64ToUint8(requestData.payment_proof.content_base64),
