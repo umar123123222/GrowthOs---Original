@@ -873,7 +873,7 @@ export function StudentsManagement() {
     }
   };
 
-  const grantExtension = async (student: Student, newDueDate: Date) => {
+  const grantExtension = async (student: Student, newDueDate: Date, reason?: string | null) => {
     try {
       if (!student.student_record_id) {
         toast({
@@ -884,17 +884,6 @@ export function StudentsManagement() {
         return;
       }
 
-      // Ask the admin for a reason — recorded in the activity log
-      const reason = window.prompt(
-        `Extend ${student.full_name}'s due date to ${format(newDueDate, 'PPP')}.\n\nReason for extension (optional):`,
-        ''
-      );
-      // null = cancelled
-      if (reason === null) {
-        setExtensionPopoverOpen(null);
-        setExtensionDate(undefined);
-        return;
-      }
 
       // Find the latest unpaid invoice
       const { data: invoice, error: invoiceError } = await supabase
