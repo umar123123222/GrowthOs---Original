@@ -1265,10 +1265,10 @@ export function SuccessSessionsManagement() {
                 </TableHeader>
                 <TableBody>
                   {filtered.map((session, index) => (
-                    <TableRow 
-                      key={session.id} 
-                      className="hover:bg-gray-50 transition-colors animate-fade-in"
-                      style={{ animationDelay: `${index * 100}ms` }}
+                    <TableRow
+                      key={session.id}
+                      className="hover:bg-muted/40 transition-colors animate-fade-in"
+                      style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
                     >
                       <TableCell className="font-medium min-w-[200px]">
                         <div className="font-semibold truncate max-w-[180px]" title={session.title}>
