@@ -115,6 +115,7 @@ export function CompanySettings() {
     enable_student_signin: false,
     questionnaire: [],
     onboarding_video_url: '',
+    onboarding_video_enabled: true,
     onboarding_document_url: '',
     onboarding_document_name: '',
     // Live Chat
