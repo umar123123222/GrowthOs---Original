@@ -64,6 +64,7 @@ serve(async (req) => {
               meeting_link: s.link,
               start_datetime: s.start_time,
               mentor_name: s.mentor_name,
+              mentor_id: (s as any).mentor_id || undefined,
               cta_path: "/live-sessions",
               is_reminder: true,
             },
