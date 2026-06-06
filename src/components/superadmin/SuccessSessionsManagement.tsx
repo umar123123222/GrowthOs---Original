@@ -645,6 +645,7 @@ export function SuccessSessionsManagement() {
                 meeting_link: session.link,
                 start_datetime: session.start_time,
                 mentor_name: session.mentor_name,
+                mentor_id: session.mentor_id || undefined,
                 cta_path: '/live-sessions',
               }
             });
