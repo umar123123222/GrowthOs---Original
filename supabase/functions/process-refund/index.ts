@@ -286,6 +286,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send confirmation email
     if (studentEmail) {
+      const proofList = (body.proof_attachments && body.proof_attachments.length)
+        ? body.proof_attachments
+        : (body.proof_attachment ? [body.proof_attachment] : []);
       const html = buildEmailHtml({
         studentName,
         totalAmount: totalRefund,
@@ -300,15 +303,15 @@ const handler = async (req: Request): Promise<Response> => {
         companyPhone,
         companyPhone2,
         companyAddress,
-        hasProof: !!body.proof_attachment,
+        hasProof: proofList.length > 0,
       });
       const cc = Deno.env.get("BILLING_EMAIL_CC") || undefined;
-      const attachments = body.proof_attachment
-        ? [{
-            filename: body.proof_attachment.filename,
-            content: body.proof_attachment.content_base64,
-            content_type: body.proof_attachment.content_type,
-          }]
+      const attachments = proofList.length
+        ? proofList.map(p => ({
+            filename: p.filename,
+            content: p.content_base64,
+            content_type: p.content_type,
+          }))
         : undefined;
       await sendEmail(studentEmail, `Refund Confirmation — ${companyName}`, html, cc, companyName, attachments);
     }
