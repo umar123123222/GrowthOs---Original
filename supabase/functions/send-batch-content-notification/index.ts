@@ -290,6 +290,7 @@ const handler = async (req: Request): Promise<Response> => {
       cta_path,
       is_reminder,
       is_recording_update,
+      is_update,
     } = body;
 
     // Validate required fields
