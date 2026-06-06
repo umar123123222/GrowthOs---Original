@@ -20,6 +20,7 @@ interface NotificationRequest {
   mentor_name?: string;
   cta_path?: string;
   is_reminder?: boolean;
+  is_recording_update?: boolean;
 }
 
 interface Student {
