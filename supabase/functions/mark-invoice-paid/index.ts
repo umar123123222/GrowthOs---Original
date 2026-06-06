@@ -355,7 +355,7 @@ const handler = async (req: Request): Promise<Response> => {
       </td></tr>
       ${hasProof ? `<tr><td style="padding:8px 32px 0;">
         <div style="padding:12px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e3a8a;">
-          📎 A copy of your payment proof is attached to this email.
+          📎 ${proofList.length > 1 ? `${proofList.length} payment proof files are attached to this email.` : 'A copy of your payment proof is attached to this email.'}
         </div>
       </td></tr>` : ''}
       ${(supportEmail || supportPhone) ? `<tr><td style="padding:20px 32px 28px;">
