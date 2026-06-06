@@ -37,7 +37,13 @@ export function MarkPaidDialog({ open, onOpenChange, invoiceId, studentRecordId,
   const [paymentDate, setPaymentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [paymentMethod, setPaymentMethod] = useState('bank_transfer');
   const [notes, setNotes] = useState('');
-  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
+
+  const addProofFiles = (files: FileList | null) => {
+    if (!files?.length) return;
+    setProofFiles(prev => [...prev, ...Array.from(files)]);
+  };
+  const removeProofAt = (i: number) => setProofFiles(prev => prev.filter((_, idx) => idx !== i));
 
   useEffect(() => {
     if (!open) return;
