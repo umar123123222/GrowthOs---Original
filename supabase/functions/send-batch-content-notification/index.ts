@@ -110,14 +110,21 @@ function generateEmailHTML(
         })
       : "To be announced";
 
-    const headline = isReminder ? "Starting in 3 Hours" : "You're Invited to a Live Session";
-    const eyebrow = isReminder ? "Reminder" : "Live Session";
-    const intro = isReminder
-      ? "Your live session starts soon. Here are the details so you can join on time."
-      : "A new live session has been scheduled for your batch. Here's everything you need to know.";
-    const closing = isReminder
-      ? "Tip: log in a few minutes early to settle in before it begins."
-      : "Add it to your calendar so you don't miss it.";
+    const headline = isRecordingUpdate
+      ? "Session Recording Available"
+      : isReminder ? "Starting in 3 Hours" : "You're Invited to a Live Session";
+    const eyebrow = isRecordingUpdate ? "Recording" : (isReminder ? "Reminder" : "Live Session");
+    const intro = isRecordingUpdate
+      ? "The live session has ended. The recording is now available — catch up at your convenience."
+      : isReminder
+        ? "Your live session starts soon. Here are the details so you can join on time."
+        : "A new live session has been scheduled for your batch. Here's everything you need to know.";
+    const closing = isRecordingUpdate
+      ? "Click below to watch the recording."
+      : isReminder
+        ? "Tip: log in a few minutes early to settle in before it begins."
+        : "Add it to your calendar so you don't miss it.";
+    const ctaLabel = isRecordingUpdate ? "Watch Recording" : "View Live Sessions";
 
     return `
 <!DOCTYPE html>
