@@ -405,8 +405,9 @@ const handler = async (req: Request): Promise<Response> => {
           mentor_name,
           cta_path,
           is_reminder,
+          is_recording_update,
         );
-        const subject = getEmailSubject(item_type, title, is_reminder);
+        const subject = getEmailSubject(item_type, title, is_reminder, is_recording_update);
 
         if (smtpClient) {
           // Send directly via SMTP
