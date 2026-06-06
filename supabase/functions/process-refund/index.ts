@@ -19,6 +19,11 @@ interface RefundRequest {
     content_base64: string;
     content_type?: string;
   };
+  proof_attachments?: Array<{
+    filename: string;
+    content_base64: string;
+    content_type?: string;
+  }>;
 }
 
 function currencySymbol(c: string = "PKR") {
