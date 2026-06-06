@@ -22,6 +22,7 @@ interface NotificationRequest {
   cta_path?: string;
   is_reminder?: boolean;
   is_recording_update?: boolean;
+  is_update?: boolean;
 }
 
 interface Student {
