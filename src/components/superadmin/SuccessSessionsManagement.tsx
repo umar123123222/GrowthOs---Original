@@ -488,6 +488,7 @@ export function SuccessSessionsManagement() {
                 mentor_id: baseSessionData.mentor_id || undefined,
                 cta_path: isRecordingUpdate ? '/videos' : '/live-sessions',
                 is_recording_update: isRecordingUpdate,
+                is_update: !isRecordingUpdate,
               }
             });
           } catch (notifyError) {
