@@ -378,7 +378,31 @@ const handler = async (req: Request): Promise<Response> => {
         full_name: u.full_name || "Student",
       }));
 
-    console.log(`Sending notifications to ${students.length} students`);
+    // Include assigned mentor as recipient for LIVE_SESSION scheduled/reminder emails
+    // (skip recording-availability updates which are student-only)
+    if (
+      item_type === "LIVE_SESSION" &&
+      !is_recording_update &&
+      mentor_id &&
+      !students.some((s) => s.id === mentor_id)
+    ) {
+      const { data: mentorUser, error: mentorError } = await supabase
+        .from("users")
+        .select("id, email, full_name")
+        .eq("id", mentor_id)
+        .maybeSingle();
+      if (mentorError) {
+        console.error("Failed to fetch mentor user:", mentorError);
+      } else if (mentorUser?.email) {
+        students.push({
+          id: mentorUser.id,
+          email: mentorUser.email,
+          full_name: mentorUser.full_name || mentor_name || "Mentor",
+        });
+      }
+    }
+
+    console.log(`Sending notifications to ${students.length} recipients`);
 
     // Initialize SMTP client
     let smtpClient: SMTPClient | null = null;
