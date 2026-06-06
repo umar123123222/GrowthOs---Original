@@ -100,6 +100,7 @@ interface MarkInvoicePaidRequest {
   payment_method?: string;
   payment_notes?: string;
   payment_proof?: PaymentProof;
+  payment_proofs?: PaymentProof[];
 }
 
 function base64ToUint8(b64: string): Uint8Array {
@@ -303,7 +304,10 @@ const handler = async (req: Request): Promise<Response> => {
         const amountDisplay = `${cSym}${Number(invoice.amount || 0).toLocaleString()}`;
         const receiptNo = `RCPT-${String(invoiceId).slice(0, 8).toUpperCase()}`;
         const notesHtml = requestData.payment_notes ? escapeHtml(requestData.payment_notes) : '';
-        const hasProof = !!requestData.payment_proof?.content_base64;
+        const proofList: PaymentProof[] = (requestData.payment_proofs && requestData.payment_proofs.length)
+          ? requestData.payment_proofs
+          : (requestData.payment_proof ? [requestData.payment_proof] : []);
+        const hasProof = proofList.length > 0;
 
         const safeLogo = logoUrl && !logoUrl.startsWith('data:') ? logoUrl : '';
         const headerLogo = safeLogo
@@ -351,7 +355,7 @@ const handler = async (req: Request): Promise<Response> => {
       </td></tr>
       ${hasProof ? `<tr><td style="padding:8px 32px 0;">
         <div style="padding:12px 16px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#1e3a8a;">
-          📎 A copy of your payment proof is attached to this email.
+          📎 ${proofList.length > 1 ? `${proofList.length} payment proof files are attached to this email.` : 'A copy of your payment proof is attached to this email.'}
         </div>
       </td></tr>` : ''}
       ${(supportEmail || supportPhone) ? `<tr><td style="padding:20px 32px 28px;">
@@ -371,11 +375,11 @@ const handler = async (req: Request): Promise<Response> => {
           const smtpClient = (SMTPClient as any).fromEnv();
           if (rs?.company_name) smtpClient.setFromName(rs.company_name);
           const billingCc = (rs as any)?.billing_email_cc || Deno.env.get('BILLING_EMAIL_CC') || (rs as any)?.notification_email_cc || Deno.env.get('NOTIFICATION_EMAIL_CC');
-          const attachments = requestData.payment_proof ? [{
-            filename: requestData.payment_proof.filename,
-            content: base64ToUint8(requestData.payment_proof.content_base64),
-            contentType: requestData.payment_proof.content_type || 'application/octet-stream',
-          }] : undefined;
+          const attachments = proofList.length ? proofList.map(p => ({
+            filename: p.filename,
+            content: base64ToUint8(p.content_base64),
+            contentType: p.content_type || 'application/octet-stream',
+          })) : undefined;
           await smtpClient.sendEmail({
             to: userRec.email,
             subject: `Payment Receipt ${receiptNo} — ${companyName}`,
@@ -383,7 +387,7 @@ const handler = async (req: Request): Promise<Response> => {
             html,
             ...(attachments ? { attachments } : {}),
           });
-          console.log(`✉️  Payment receipt sent to ${userRec.email}${attachments ? ' with proof attached' : ''}`);
+          console.log(`✉️  Payment receipt sent to ${userRec.email}${attachments ? ` with ${attachments.length} proof file(s) attached` : ''}`);
         } catch (mailErr) {
           console.warn("Failed to send payment receipt:", mailErr);
         }

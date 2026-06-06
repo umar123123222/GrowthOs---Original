@@ -41,7 +41,13 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
   const [refundMethod, setRefundMethod] = useState('bank_transfer');
   const [refundDate, setRefundDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [currency, setCurrency] = useState<string>('PKR');
-  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofFiles, setProofFiles] = useState<File[]>([]);
+
+  const addProofFiles = (files: FileList | null) => {
+    if (!files?.length) return;
+    setProofFiles(prev => [...prev, ...Array.from(files)]);
+  };
+  const removeProofAt = (i: number) => setProofFiles(prev => prev.filter((_, idx) => idx !== i));
 
   useEffect(() => {
     if (!open || !studentId) return;
@@ -103,22 +109,22 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
     setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      let proofPayload: { filename: string; content_base64: string; content_type: string } | undefined;
-      if (proofFile) {
-        if (proofFile.size > 8 * 1024 * 1024) {
-          toast({ title: 'File too large', description: 'Proof must be under 8 MB.', variant: 'destructive' });
+      const proofPayloads: { filename: string; content_base64: string; content_type: string }[] = [];
+      for (const f of proofFiles) {
+        if (f.size > 8 * 1024 * 1024) {
+          toast({ title: 'File too large', description: `${f.name} exceeds 8 MB.`, variant: 'destructive' });
           setSubmitting(false);
           return;
         }
-        const buf = await proofFile.arrayBuffer();
+        const buf = await f.arrayBuffer();
         let binary = '';
         const bytes = new Uint8Array(buf);
         for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-        proofPayload = {
-          filename: proofFile.name,
+        proofPayloads.push({
+          filename: f.name,
           content_base64: btoa(binary),
-          content_type: proofFile.type || 'application/octet-stream',
-        };
+          content_type: f.type || 'application/octet-stream',
+        });
       }
       const { data, error } = await supabase.functions.invoke('process-refund', {
         body: {
@@ -128,7 +134,8 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
           refund_date: new Date(refundDate).toISOString(),
           performed_by: user?.id,
           suspend_lms: true,
-          proof_attachment: proofPayload,
+          proof_attachments: proofPayloads.length ? proofPayloads : undefined,
+          proof_attachment: proofPayloads[0], // backward compatibility
         },
       });
       if (error) throw error;
@@ -136,7 +143,7 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
       toast({ title: 'Refund processed', description: `${selected.size} installment(s) refunded. Confirmation emailed to ${studentEmail || 'student'}.` });
       onOpenChange(false);
       setReason('');
-      setProofFile(null);
+      setProofFiles([]);
       onSuccess?.();
     } catch (e: any) {
       toast({ title: 'Refund failed', description: e?.message || 'Unknown error', variant: 'destructive' });
@@ -200,28 +207,32 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
             </div>
 
             <div>
-              <Label htmlFor="refund-proof">Proof of Refund <span className="text-muted-foreground text-xs">(optional, max 8 MB — will be attached to email)</span></Label>
-              {proofFile ? (
-                <div className="flex items-center justify-between gap-2 p-2 border rounded-md bg-muted/30">
-                  <div className="text-sm truncate flex-1">
-                    <span className="font-medium">{proofFile.name}</span>
-                    <span className="text-xs text-muted-foreground ml-2">({(proofFile.size / 1024).toFixed(1)} KB)</span>
-                  </div>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setProofFile(null)}>
-                    <X className="w-4 h-4" />
-                  </Button>
+              <Label htmlFor="refund-proof">Proof of Refund <span className="text-muted-foreground text-xs">(optional, max 8 MB each — attach one or more files to the email)</span></Label>
+              {proofFiles.length > 0 && (
+                <div className="space-y-2 mb-2">
+                  {proofFiles.map((f, i) => (
+                    <div key={i} className="flex items-center justify-between gap-2 p-2 border rounded-md bg-muted/30">
+                      <div className="text-sm truncate flex-1">
+                        <span className="font-medium">{f.name}</span>
+                        <span className="text-xs text-muted-foreground ml-2">({(f.size / 1024).toFixed(1)} KB)</span>
+                      </div>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeProofAt(i)}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <label htmlFor="refund-proof" className="flex items-center justify-center gap-2 p-3 border border-dashed rounded-md text-sm text-muted-foreground hover:bg-muted/30 cursor-pointer">
-                  <Upload className="w-4 h-4" /> Click to upload receipt / screenshot (PDF, image)
-                </label>
               )}
+              <label htmlFor="refund-proof" className="flex items-center justify-center gap-2 p-3 border border-dashed rounded-md text-sm text-muted-foreground hover:bg-muted/30 cursor-pointer">
+                <Upload className="w-4 h-4" /> {proofFiles.length ? 'Add more files' : 'Click to upload receipt(s) / screenshot(s) (PDF, image)'}
+              </label>
               <Input
                 id="refund-proof"
                 type="file"
+                multiple
                 className="hidden"
                 accept="image/*,application/pdf"
-                onChange={e => setProofFile(e.target.files?.[0] || null)}
+                onChange={e => { addProofFiles(e.target.files); e.target.value = ''; }}
               />
             </div>
 
