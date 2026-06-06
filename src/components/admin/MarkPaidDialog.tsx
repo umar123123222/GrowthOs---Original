@@ -70,28 +70,29 @@ export function MarkPaidDialog({ open, onOpenChange, invoiceId, studentRecordId,
   const submit = async () => {
     setSubmitting(true);
     try {
-      let proofPayload: { filename: string; content_base64: string; content_type: string } | undefined;
-      if (proofFile) {
-        if (proofFile.size > 8 * 1024 * 1024) {
-          toast({ title: 'File too large', description: 'Proof must be under 8 MB.', variant: 'destructive' });
+      const proofPayloads: { filename: string; content_base64: string; content_type: string }[] = [];
+      for (const f of proofFiles) {
+        if (f.size > 8 * 1024 * 1024) {
+          toast({ title: 'File too large', description: `${f.name} exceeds 8 MB.`, variant: 'destructive' });
           setSubmitting(false);
           return;
         }
-        const buf = await proofFile.arrayBuffer();
+        const buf = await f.arrayBuffer();
         let binary = '';
         const bytes = new Uint8Array(buf);
         for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-        proofPayload = {
-          filename: proofFile.name,
+        proofPayloads.push({
+          filename: f.name,
           content_base64: btoa(binary),
-          content_type: proofFile.type || 'application/octet-stream',
-        };
+          content_type: f.type || 'application/octet-stream',
+        });
       }
       const body: any = {
         payment_date: new Date(paymentDate).toISOString(),
         payment_method: paymentMethod,
         payment_notes: notes.trim() || undefined,
-        payment_proof: proofPayload,
+        payment_proofs: proofPayloads.length ? proofPayloads : undefined,
+        payment_proof: proofPayloads[0], // backward compatibility
       };
       if (invoiceId) body.invoice_id = invoiceId;
       else if (invoice?.id) body.invoice_id = invoice.id;
@@ -104,11 +105,11 @@ export function MarkPaidDialog({ open, onOpenChange, invoiceId, studentRecordId,
       if (!(data as any)?.success) throw new Error((data as any)?.error || 'Failed to mark as paid');
       toast({
         title: 'Invoice marked as paid',
-        description: `Receipt emailed to ${studentEmail || 'student'}${proofPayload ? ' with payment proof attached' : ''}.`,
+        description: `Receipt emailed to ${studentEmail || 'student'}${proofPayloads.length ? ` with ${proofPayloads.length} proof file(s) attached` : ''}.`,
       });
       onOpenChange(false);
       setNotes('');
-      setProofFile(null);
+      setProofFiles([]);
       onSuccess?.();
     } catch (e: any) {
       toast({ title: 'Failed', description: e?.message || 'Unknown error', variant: 'destructive' });
