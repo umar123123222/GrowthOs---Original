@@ -304,7 +304,10 @@ const handler = async (req: Request): Promise<Response> => {
         const amountDisplay = `${cSym}${Number(invoice.amount || 0).toLocaleString()}`;
         const receiptNo = `RCPT-${String(invoiceId).slice(0, 8).toUpperCase()}`;
         const notesHtml = requestData.payment_notes ? escapeHtml(requestData.payment_notes) : '';
-        const hasProof = !!requestData.payment_proof?.content_base64;
+        const proofList: PaymentProof[] = (requestData.payment_proofs && requestData.payment_proofs.length)
+          ? requestData.payment_proofs
+          : (requestData.payment_proof ? [requestData.payment_proof] : []);
+        const hasProof = proofList.length > 0;
 
         const safeLogo = logoUrl && !logoUrl.startsWith('data:') ? logoUrl : '';
         const headerLogo = safeLogo
