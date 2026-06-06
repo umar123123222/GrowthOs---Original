@@ -109,22 +109,22 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
     setSubmitting(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      let proofPayload: { filename: string; content_base64: string; content_type: string } | undefined;
-      if (proofFile) {
-        if (proofFile.size > 8 * 1024 * 1024) {
-          toast({ title: 'File too large', description: 'Proof must be under 8 MB.', variant: 'destructive' });
+      const proofPayloads: { filename: string; content_base64: string; content_type: string }[] = [];
+      for (const f of proofFiles) {
+        if (f.size > 8 * 1024 * 1024) {
+          toast({ title: 'File too large', description: `${f.name} exceeds 8 MB.`, variant: 'destructive' });
           setSubmitting(false);
           return;
         }
-        const buf = await proofFile.arrayBuffer();
+        const buf = await f.arrayBuffer();
         let binary = '';
         const bytes = new Uint8Array(buf);
         for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-        proofPayload = {
-          filename: proofFile.name,
+        proofPayloads.push({
+          filename: f.name,
           content_base64: btoa(binary),
-          content_type: proofFile.type || 'application/octet-stream',
-        };
+          content_type: f.type || 'application/octet-stream',
+        });
       }
       const { data, error } = await supabase.functions.invoke('process-refund', {
         body: {
@@ -134,7 +134,8 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
           refund_date: new Date(refundDate).toISOString(),
           performed_by: user?.id,
           suspend_lms: true,
-          proof_attachment: proofPayload,
+          proof_attachments: proofPayloads.length ? proofPayloads : undefined,
+          proof_attachment: proofPayloads[0], // backward compatibility
         },
       });
       if (error) throw error;
@@ -142,7 +143,7 @@ export function RefundDialog({ open, onOpenChange, studentId, studentEmail, init
       toast({ title: 'Refund processed', description: `${selected.size} installment(s) refunded. Confirmation emailed to ${studentEmail || 'student'}.` });
       onOpenChange(false);
       setReason('');
-      setProofFile(null);
+      setProofFiles([]);
       onSuccess?.();
     } catch (e: any) {
       toast({ title: 'Refund failed', description: e?.message || 'Unknown error', variant: 'destructive' });
