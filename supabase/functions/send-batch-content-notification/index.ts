@@ -150,7 +150,7 @@ function generateEmailHTML(
           <p style="color: #111827; font-size: 17px; font-weight: 600; margin: 0 0 16px; line-height: 1.4;">${title}</p>
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; font-size: 14px; color: #374151;">
             <tr>
-              <td style="padding: 6px 0; color: #6b7280; width: 90px; vertical-align: top;">Date</td>
+              <td style="padding: 6px 0; color: #6b7280; width: 90px; vertical-align: top;">${isRecordingUpdate ? "Held on" : "Date"}</td>
               <td style="padding: 6px 0; color: #111827; font-weight: 500;">${formattedDate}</td>
             </tr>
             ${mentorName ? `<tr><td style="padding: 6px 0; color: #6b7280; vertical-align: top;">Mentor</td><td style="padding: 6px 0; color: #111827; font-weight: 500;">${mentorName}</td></tr>` : ""}
@@ -160,7 +160,7 @@ function generateEmailHTML(
 
         <div style="text-align: center; margin: 28px 0 12px;">
           <a href="${ctaUrl}" style="display: inline-block; background-color: #6d28d9; color: #ffffff; padding: 13px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 15px;">
-            View Live Sessions
+            ${ctaLabel}
           </a>
         </div>
 
