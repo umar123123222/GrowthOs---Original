@@ -465,7 +465,12 @@ export function SuccessSessionsManagement() {
           .update({ reminder_3h_sent_at: null } as any)
           .eq('id', editingSession.id);
 
-        // Notify batch students about the schedule update
+        // Determine if this is a recording update (session already happened / marked completed)
+        const sessionStart = baseSessionData.start_time ? new Date(baseSessionData.start_time) : null;
+        const isPast = sessionStart ? sessionStart.getTime() < Date.now() : false;
+        const isRecordingUpdate = baseSessionData.status === 'completed' || isPast;
+
+        // Notify batch students about the schedule update (or recording availability)
         const updateBatchIds = resolvedBatchIds && resolvedBatchIds.length > 0 ? resolvedBatchIds : [];
         for (const batchId of updateBatchIds) {
           if (!batchId) continue;
@@ -480,7 +485,8 @@ export function SuccessSessionsManagement() {
                 meeting_link: baseSessionData.link,
                 start_datetime: baseSessionData.start_time,
                 mentor_name: baseSessionData.mentor_name,
-                cta_path: '/live-sessions',
+                cta_path: isRecordingUpdate ? '/videos' : '/live-sessions',
+                is_recording_update: isRecordingUpdate,
               }
             });
           } catch (notifyError) {

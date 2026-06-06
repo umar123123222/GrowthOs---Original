@@ -20,6 +20,7 @@ interface NotificationRequest {
   mentor_name?: string;
   cta_path?: string;
   is_reminder?: boolean;
+  is_recording_update?: boolean;
 }
 
 interface Student {
@@ -40,6 +41,7 @@ function generateEmailHTML(
   mentorName?: string,
   ctaPath?: string,
   isReminder?: boolean,
+  isRecordingUpdate?: boolean,
 ): string {
   const firstName = studentName?.split(" ")[0] || "Student";
   const ctaUrl = ctaPath ? `${lmsUrl.replace(/\/$/, '')}${ctaPath.startsWith('/') ? ctaPath : '/' + ctaPath}` : lmsUrl;
@@ -108,14 +110,21 @@ function generateEmailHTML(
         })
       : "To be announced";
 
-    const headline = isReminder ? "Starting in 3 Hours" : "You're Invited to a Live Session";
-    const eyebrow = isReminder ? "Reminder" : "Live Session";
-    const intro = isReminder
-      ? "Your live session starts soon. Here are the details so you can join on time."
-      : "A new live session has been scheduled for your batch. Here's everything you need to know.";
-    const closing = isReminder
-      ? "Tip: log in a few minutes early to settle in before it begins."
-      : "Add it to your calendar so you don't miss it.";
+    const headline = isRecordingUpdate
+      ? "Session Recording Available"
+      : isReminder ? "Starting in 3 Hours" : "You're Invited to a Live Session";
+    const eyebrow = isRecordingUpdate ? "Recording" : (isReminder ? "Reminder" : "Live Session");
+    const intro = isRecordingUpdate
+      ? "The live session has ended. The recording is now available — catch up at your convenience."
+      : isReminder
+        ? "Your live session starts soon. Here are the details so you can join on time."
+        : "A new live session has been scheduled for your batch. Here's everything you need to know.";
+    const closing = isRecordingUpdate
+      ? "Click below to watch the recording."
+      : isReminder
+        ? "Tip: log in a few minutes early to settle in before it begins."
+        : "Add it to your calendar so you don't miss it.";
+    const ctaLabel = isRecordingUpdate ? "Watch Recording" : "View Live Sessions";
 
     return `
 <!DOCTYPE html>
@@ -141,7 +150,7 @@ function generateEmailHTML(
           <p style="color: #111827; font-size: 17px; font-weight: 600; margin: 0 0 16px; line-height: 1.4;">${title}</p>
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width: 100%; font-size: 14px; color: #374151;">
             <tr>
-              <td style="padding: 6px 0; color: #6b7280; width: 90px; vertical-align: top;">Date</td>
+              <td style="padding: 6px 0; color: #6b7280; width: 90px; vertical-align: top;">${isRecordingUpdate ? "Held on" : "Date"}</td>
               <td style="padding: 6px 0; color: #111827; font-weight: 500;">${formattedDate}</td>
             </tr>
             ${mentorName ? `<tr><td style="padding: 6px 0; color: #6b7280; vertical-align: top;">Mentor</td><td style="padding: 6px 0; color: #111827; font-weight: 500;">${mentorName}</td></tr>` : ""}
@@ -151,7 +160,7 @@ function generateEmailHTML(
 
         <div style="text-align: center; margin: 28px 0 12px;">
           <a href="${ctaUrl}" style="display: inline-block; background-color: #6d28d9; color: #ffffff; padding: 13px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 15px;">
-            View Live Sessions
+            ${ctaLabel}
           </a>
         </div>
 
@@ -218,11 +227,12 @@ function generateEmailHTML(
 </html>`;
 }
 
-function getEmailSubject(itemType: string, title: string, isReminder?: boolean): string {
+function getEmailSubject(itemType: string, title: string, isReminder?: boolean, isRecordingUpdate?: boolean): string {
   switch (itemType) {
     case "RECORDING":
       return `New Recording Available: ${title}`;
     case "LIVE_SESSION":
+      if (isRecordingUpdate) return `Recording Available: ${title}`;
       return isReminder ? `Reminder: ${title} starts in 3 hours` : `Live Session Scheduled: ${title}`;
     case "ASSIGNMENT":
       return `New Assignment Available: ${title}`;
@@ -269,6 +279,7 @@ const handler = async (req: Request): Promise<Response> => {
       mentor_name,
       cta_path,
       is_reminder,
+      is_recording_update,
     } = body;
 
     // Validate required fields
@@ -394,8 +405,9 @@ const handler = async (req: Request): Promise<Response> => {
           mentor_name,
           cta_path,
           is_reminder,
+          is_recording_update,
         );
-        const subject = getEmailSubject(item_type, title, is_reminder);
+        const subject = getEmailSubject(item_type, title, is_reminder, is_recording_update);
 
         if (smtpClient) {
           // Send directly via SMTP
@@ -436,6 +448,8 @@ const handler = async (req: Request): Promise<Response> => {
         errors.push(`${student.email}: ${error.message}`);
         failedCount++;
       }
+      // Throttle to stay under provider rate limits (Resend: 2 req/sec)
+      await new Promise((resolve) => setTimeout(resolve, 600));
     }
 
     // Update timeline item notification_sent_at if provided
