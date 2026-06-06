@@ -278,6 +278,7 @@ const handler = async (req: Request): Promise<Response> => {
       start_datetime,
       timeline_item_id,
       mentor_name,
+      mentor_id,
       cta_path,
       is_reminder,
       is_recording_update,
