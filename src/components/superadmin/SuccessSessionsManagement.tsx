@@ -485,6 +485,7 @@ export function SuccessSessionsManagement() {
                 meeting_link: baseSessionData.link,
                 start_datetime: baseSessionData.start_time,
                 mentor_name: baseSessionData.mentor_name,
+                mentor_id: baseSessionData.mentor_id || undefined,
                 cta_path: isRecordingUpdate ? '/videos' : '/live-sessions',
                 is_recording_update: isRecordingUpdate,
               }
@@ -580,6 +581,7 @@ export function SuccessSessionsManagement() {
                     meeting_link: baseSessionData.link,
                     start_datetime: baseSessionData.start_time,
                     mentor_name: baseSessionData.mentor_name,
+                    mentor_id: baseSessionData.mentor_id || undefined,
                     cta_path: '/live-sessions',
                   }
                 });
@@ -643,6 +645,7 @@ export function SuccessSessionsManagement() {
                 meeting_link: session.link,
                 start_datetime: session.start_time,
                 mentor_name: session.mentor_name,
+                mentor_id: session.mentor_id || undefined,
                 cta_path: '/live-sessions',
               }
             });

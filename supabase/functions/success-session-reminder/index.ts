@@ -26,7 +26,7 @@ serve(async (req) => {
 
     const { data: sessions, error } = await supabase
       .from("success_sessions")
-      .select("id, title, description, mentor_name, link, start_time, status, batch_ids, batch_id, reminder_3h_sent_at")
+      .select("id, title, description, mentor_name, mentor_id, link, start_time, status, batch_ids, batch_id, reminder_3h_sent_at")
       .in("status", ["upcoming", "live"])
       .is("reminder_3h_sent_at", null)
       .gt("start_time", now.toISOString())
@@ -64,6 +64,7 @@ serve(async (req) => {
               meeting_link: s.link,
               start_datetime: s.start_time,
               mentor_name: s.mentor_name,
+              mentor_id: (s as any).mentor_id || undefined,
               cta_path: "/live-sessions",
               is_reminder: true,
             },
