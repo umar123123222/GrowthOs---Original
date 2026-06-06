@@ -448,6 +448,8 @@ const handler = async (req: Request): Promise<Response> => {
         errors.push(`${student.email}: ${error.message}`);
         failedCount++;
       }
+      // Throttle to stay under provider rate limits (Resend: 2 req/sec)
+      await new Promise((resolve) => setTimeout(resolve, 600));
     }
 
     // Update timeline item notification_sent_at if provided
