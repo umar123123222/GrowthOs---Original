@@ -18,6 +18,7 @@ interface NotificationRequest {
   start_datetime?: string;
   timeline_item_id?: string;
   mentor_name?: string;
+  mentor_id?: string;
   cta_path?: string;
   is_reminder?: boolean;
   is_recording_update?: boolean;
