@@ -100,6 +100,7 @@ interface MarkInvoicePaidRequest {
   payment_method?: string;
   payment_notes?: string;
   payment_proof?: PaymentProof;
+  payment_proofs?: PaymentProof[];
 }
 
 function base64ToUint8(b64: string): Uint8Array {
