@@ -111,6 +111,7 @@ function generateEmailHTML(
           day: "numeric",
           hour: "numeric",
           minute: "2-digit",
+          timeZone: "Asia/Karachi",
           timeZoneName: "short",
         })
       : "To be announced";
@@ -118,7 +119,7 @@ function generateEmailHTML(
     const headline = isRecordingUpdate
       ? "Session Recording Available"
       : isUpdate ? "Live Session Updated"
-      : isReminder ? "Starting in 3 Hours" : "You're Invited to a Live Session";
+      : isReminder ? (reminderLabel || "Starting Soon") : "You're Invited to a Live Session";
     const eyebrow = isRecordingUpdate ? "Recording" : isUpdate ? "Update" : (isReminder ? "Reminder" : "Live Session");
     const intro = isRecordingUpdate
       ? "The live session has ended. The recording is now available — catch up at your convenience."
