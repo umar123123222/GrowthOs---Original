@@ -46,6 +46,7 @@ function generateEmailHTML(
   isReminder?: boolean,
   isRecordingUpdate?: boolean,
   isUpdate?: boolean,
+  reminderLabel?: string,
 ): string {
   const firstName = studentName?.split(" ")[0] || "Student";
   const ctaUrl = ctaPath ? `${lmsUrl.replace(/\/$/, '')}${ctaPath.startsWith('/') ? ctaPath : '/' + ctaPath}` : lmsUrl;
