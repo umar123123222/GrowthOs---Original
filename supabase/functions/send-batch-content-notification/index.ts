@@ -23,6 +23,7 @@ interface NotificationRequest {
   is_reminder?: boolean;
   is_recording_update?: boolean;
   is_update?: boolean;
+  reminder_label?: string;
 }
 
 interface Student {
@@ -45,6 +46,7 @@ function generateEmailHTML(
   isReminder?: boolean,
   isRecordingUpdate?: boolean,
   isUpdate?: boolean,
+  reminderLabel?: string,
 ): string {
   const firstName = studentName?.split(" ")[0] || "Student";
   const ctaUrl = ctaPath ? `${lmsUrl.replace(/\/$/, '')}${ctaPath.startsWith('/') ? ctaPath : '/' + ctaPath}` : lmsUrl;
@@ -109,6 +111,7 @@ function generateEmailHTML(
           day: "numeric",
           hour: "numeric",
           minute: "2-digit",
+          timeZone: "Asia/Karachi",
           timeZoneName: "short",
         })
       : "To be announced";
@@ -116,7 +119,7 @@ function generateEmailHTML(
     const headline = isRecordingUpdate
       ? "Session Recording Available"
       : isUpdate ? "Live Session Updated"
-      : isReminder ? "Starting in 3 Hours" : "You're Invited to a Live Session";
+      : isReminder ? (reminderLabel || "Starting Soon") : "You're Invited to a Live Session";
     const eyebrow = isRecordingUpdate ? "Recording" : isUpdate ? "Update" : (isReminder ? "Reminder" : "Live Session");
     const intro = isRecordingUpdate
       ? "The live session has ended. The recording is now available — catch up at your convenience."
@@ -235,14 +238,14 @@ function generateEmailHTML(
 </html>`;
 }
 
-function getEmailSubject(itemType: string, title: string, isReminder?: boolean, isRecordingUpdate?: boolean, isUpdate?: boolean): string {
+function getEmailSubject(itemType: string, title: string, isReminder?: boolean, isRecordingUpdate?: boolean, isUpdate?: boolean, reminderLabel?: string): string {
   switch (itemType) {
     case "RECORDING":
       return `New Recording Available: ${title}`;
     case "LIVE_SESSION":
       if (isRecordingUpdate) return `Recording Available: ${title}`;
       if (isUpdate) return `Live Session Updated: ${title}`;
-      return isReminder ? `Reminder: ${title} starts in 3 hours` : `Live Session Scheduled: ${title}`;
+      return isReminder ? `Reminder: ${title} — ${reminderLabel || "starting soon"}` : `Live Session Scheduled: ${title}`;
     case "ASSIGNMENT":
       return `New Assignment Available: ${title}`;
     default:
@@ -291,6 +294,7 @@ const handler = async (req: Request): Promise<Response> => {
       is_reminder,
       is_recording_update,
       is_update,
+      reminder_label,
     } = body;
 
     // Validate required fields
@@ -442,8 +446,9 @@ const handler = async (req: Request): Promise<Response> => {
           is_reminder,
           is_recording_update,
           is_update,
+          reminder_label,
         );
-        const subject = getEmailSubject(item_type, title, is_reminder, is_recording_update, is_update);
+        const subject = getEmailSubject(item_type, title, is_reminder, is_recording_update, is_update, reminder_label);
 
         if (smtpClient) {
           // Send directly via SMTP

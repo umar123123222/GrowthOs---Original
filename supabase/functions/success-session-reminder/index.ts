@@ -51,6 +51,14 @@ serve(async (req) => {
         continue;
       }
 
+      const startMs = new Date((s as any).start_time).getTime();
+      const minutesUntil = Math.max(0, Math.round((startMs - now.getTime()) / 60000));
+      let reminderLabel = "Starting in ~3 hours";
+      if (minutesUntil <= 15) reminderLabel = "Starting soon";
+      else if (minutesUntil <= 45) reminderLabel = "Starting in ~30 minutes";
+      else if (minutesUntil <= 90) reminderLabel = "Starting in ~1 hour";
+      else if (minutesUntil <= 150) reminderLabel = "Starting in ~2 hours";
+
       for (const batchId of batchIds) {
         if (!batchId) continue;
         try {
@@ -67,6 +75,7 @@ serve(async (req) => {
               mentor_id: (s as any).mentor_id || undefined,
               cta_path: "/live-sessions",
               is_reminder: true,
+              reminder_label: reminderLabel,
             },
           });
         } catch (e: any) {
