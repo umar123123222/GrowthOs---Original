@@ -23,6 +23,7 @@ interface NotificationRequest {
   is_reminder?: boolean;
   is_recording_update?: boolean;
   is_update?: boolean;
+  reminder_label?: string;
 }
 
 interface Student {
