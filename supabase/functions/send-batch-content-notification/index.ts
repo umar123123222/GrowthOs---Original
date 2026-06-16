@@ -24,7 +24,22 @@ interface NotificationRequest {
   is_recording_update?: boolean;
   is_update?: boolean;
   reminder_label?: string;
+  include_mentor?: boolean;
 }
+
+const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+const parseSessionDate = (timestamp: string): Date => {
+  if (/[zZ]|[+-]\d{2}:?\d{2}$/.test(timestamp)) {
+    return new Date(timestamp);
+  }
+
+  const [datePart, timePart = "00:00:00"] = timestamp.replace(" ", "T").split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour = 0, minute = 0, second = 0] = timePart.split(":").map(Number);
+
+  return new Date(Date.UTC(year, month - 1, day, hour, minute, second) - PKT_OFFSET_MS);
+};
 
 interface Student {
   id: string;
@@ -104,7 +119,7 @@ function generateEmailHTML(
 
   if (itemType === "LIVE_SESSION") {
     const formattedDate = startDatetime
-      ? new Date(startDatetime).toLocaleString("en-US", {
+      ? parseSessionDate(startDatetime).toLocaleString("en-US", {
           weekday: "long",
           year: "numeric",
           month: "long",
@@ -295,6 +310,7 @@ const handler = async (req: Request): Promise<Response> => {
       is_recording_update,
       is_update,
       reminder_label,
+      include_mentor,
     } = body;
 
     // Validate required fields
@@ -396,6 +412,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (
       item_type === "LIVE_SESSION" &&
       !is_recording_update &&
+      include_mentor === true &&
       mentor_id &&
       !students.some((s) => s.id === mentor_id)
     ) {

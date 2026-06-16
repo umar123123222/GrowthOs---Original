@@ -6,6 +6,21 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
+
+const toPakistanTimestamp = (date: Date): string => {
+  const pakistanDate = new Date(date.getTime() + PKT_OFFSET_MS);
+  return pakistanDate.toISOString().slice(0, 19);
+};
+
+const parsePakistanTimestamp = (timestamp: string): number => {
+  const [datePart, timePart = "00:00:00"] = timestamp.replace(" ", "T").split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour = 0, minute = 0, second = 0] = timePart.split(":").map(Number);
+
+  return Date.UTC(year, month - 1, day, hour, minute, second) - PKT_OFFSET_MS;
+};
+
 // Runs on a cron schedule. For each upcoming success_session whose start_time is
 // within the next 3 hours and hasn't been reminded yet, sends an email reminder
 // to all students in its batch_ids via send-batch-content-notification.
@@ -20,17 +35,19 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const now = new Date();
-    // window: sessions starting in (now, now + 3h15m] so we catch a session
-    // crossing the 3h mark even if cron runs at coarse intervals.
-    const windowEnd = new Date(now.getTime() + (3 * 60 + 15) * 60 * 1000);
+    // success_sessions.start_time is stored as Pakistan local wall-clock time
+    // (timestamp without time zone). Compare using PKT timestamps so reminders
+    // are not sent hours late by treating local class times as UTC.
+    const pakistanNow = toPakistanTimestamp(now);
+    const pakistanWindowEnd = toPakistanTimestamp(new Date(now.getTime() + (3 * 60 + 15) * 60 * 1000));
 
     const { data: sessions, error } = await supabase
       .from("success_sessions")
       .select("id, title, description, mentor_name, mentor_id, link, start_time, status, batch_ids, batch_id, reminder_3h_sent_at")
       .in("status", ["upcoming", "live"])
       .is("reminder_3h_sent_at", null)
-      .gt("start_time", now.toISOString())
-      .lte("start_time", windowEnd.toISOString());
+      .gt("start_time", pakistanNow)
+      .lte("start_time", pakistanWindowEnd);
 
     if (error) throw error;
 
@@ -51,7 +68,7 @@ serve(async (req) => {
         continue;
       }
 
-      const startMs = new Date((s as any).start_time).getTime();
+      const startMs = parsePakistanTimestamp((s as any).start_time);
       const minutesUntil = Math.max(0, Math.round((startMs - now.getTime()) / 60000));
       let reminderLabel = "Starting in ~3 hours";
       if (minutesUntil <= 15) reminderLabel = "Starting soon";
@@ -59,7 +76,7 @@ serve(async (req) => {
       else if (minutesUntil <= 90) reminderLabel = "Starting in ~1 hour";
       else if (minutesUntil <= 150) reminderLabel = "Starting in ~2 hours";
 
-      for (const batchId of batchIds) {
+      for (const [index, batchId] of batchIds.entries()) {
         if (!batchId) continue;
         try {
           await supabase.functions.invoke("send-batch-content-notification", {
@@ -76,6 +93,7 @@ serve(async (req) => {
               cta_path: "/live-sessions",
               is_reminder: true,
               reminder_label: reminderLabel,
+              include_mentor: index === 0,
             },
           });
         } catch (e: any) {
