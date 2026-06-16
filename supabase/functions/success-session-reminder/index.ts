@@ -76,7 +76,7 @@ serve(async (req) => {
       else if (minutesUntil <= 90) reminderLabel = "Starting in ~1 hour";
       else if (minutesUntil <= 150) reminderLabel = "Starting in ~2 hours";
 
-      for (const batchId of batchIds) {
+      for (const [index, batchId] of batchIds.entries()) {
         if (!batchId) continue;
         try {
           await supabase.functions.invoke("send-batch-content-notification", {
@@ -93,6 +93,7 @@ serve(async (req) => {
               cta_path: "/live-sessions",
               is_reminder: true,
               reminder_label: reminderLabel,
+              include_mentor: index === 0,
             },
           });
         } catch (e: any) {
