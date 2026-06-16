@@ -472,7 +472,7 @@ export function SuccessSessionsManagement() {
 
         // Notify batch students about the schedule update (or recording availability)
         const updateBatchIds = resolvedBatchIds && resolvedBatchIds.length > 0 ? resolvedBatchIds : [];
-        for (const batchId of updateBatchIds) {
+        for (const [index, batchId] of updateBatchIds.entries()) {
           if (!batchId) continue;
           try {
             await supabase.functions.invoke('send-batch-content-notification', {
@@ -489,6 +489,7 @@ export function SuccessSessionsManagement() {
                 cta_path: isRecordingUpdate ? '/videos' : '/live-sessions',
                 is_recording_update: isRecordingUpdate,
                 is_update: !isRecordingUpdate,
+                include_mentor: index === 0,
               }
             });
           } catch (notifyError) {
@@ -569,7 +570,7 @@ export function SuccessSessionsManagement() {
 
         // Notify batch students for each batch in batch_ids
         if (resolvedBatchIds && resolvedBatchIds.length > 0 && newSessions.length > 0) {
-          for (const batchId of resolvedBatchIds) {
+          for (const [index, batchId] of resolvedBatchIds.entries()) {
             if (batchId) {
               try {
                 await supabase.functions.invoke('send-batch-content-notification', {
@@ -584,6 +585,7 @@ export function SuccessSessionsManagement() {
                     mentor_name: baseSessionData.mentor_name,
                     mentor_id: baseSessionData.mentor_id || undefined,
                     cta_path: '/live-sessions',
+                    include_mentor: index === 0,
                   }
                 });
               } catch (notifyError) {
@@ -633,7 +635,7 @@ export function SuccessSessionsManagement() {
 
       // Notify batch students via email + in-app for all batch_ids
       const sessionBatchIds: string[] = (session as any).batch_ids || (session.batch_id ? [session.batch_id] : []);
-      for (const batchId of sessionBatchIds) {
+      for (const [index, batchId] of sessionBatchIds.entries()) {
         if (batchId) {
           try {
             await supabase.functions.invoke('send-batch-content-notification', {
@@ -648,6 +650,7 @@ export function SuccessSessionsManagement() {
                 mentor_name: session.mentor_name,
                 mentor_id: session.mentor_id || undefined,
                 cta_path: '/live-sessions',
+                include_mentor: index === 0,
               }
             });
           } catch (notifyError) {
