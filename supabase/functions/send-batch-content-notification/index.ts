@@ -238,14 +238,14 @@ function generateEmailHTML(
 </html>`;
 }
 
-function getEmailSubject(itemType: string, title: string, isReminder?: boolean, isRecordingUpdate?: boolean, isUpdate?: boolean): string {
+function getEmailSubject(itemType: string, title: string, isReminder?: boolean, isRecordingUpdate?: boolean, isUpdate?: boolean, reminderLabel?: string): string {
   switch (itemType) {
     case "RECORDING":
       return `New Recording Available: ${title}`;
     case "LIVE_SESSION":
       if (isRecordingUpdate) return `Recording Available: ${title}`;
       if (isUpdate) return `Live Session Updated: ${title}`;
-      return isReminder ? `Reminder: ${title} starts in 3 hours` : `Live Session Scheduled: ${title}`;
+      return isReminder ? `Reminder: ${title} — ${reminderLabel || "starting soon"}` : `Live Session Scheduled: ${title}`;
     case "ASSIGNMENT":
       return `New Assignment Available: ${title}`;
     default:
