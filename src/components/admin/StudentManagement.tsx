@@ -255,12 +255,29 @@ export const StudentManagement = () => {
       }
 
       // Fetch users, students, and invoices in parallel
+      const invoicesPaginated = async () => {
+        const pageSize = 1000;
+        const all: any[] = [];
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabase
+            .from('invoices')
+            .select('student_id, status, due_date, amount, created_at')
+            .order('student_id', { ascending: true })
+            .range(from, from + pageSize - 1);
+          if (error) return { data: all, error };
+          if (!data || data.length === 0) break;
+          all.push(...data);
+          if (data.length < pageSize) break;
+        }
+        return { data: all, error: null as any };
+      };
+
       const [usersRes, studentsRes, invoicesRes] = await Promise.all([
         supabase.from('users').select('*').in('id', studentUserIds).order('created_at', {
           ascending: false
         }), 
         supabase.from('students').select('id, user_id, student_id, installment_count, fees_cleared'),
-        supabase.from('invoices').select('student_id, status, due_date, amount, created_at')
+        invoicesPaginated()
       ]);
       
       if (usersRes.error) throw usersRes.error;
