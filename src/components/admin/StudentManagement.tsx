@@ -172,18 +172,26 @@ export const StudentManagement = () => {
   }, []);
   const fetchInstallmentPayments = async () => {
     try {
-      // Use invoices table instead of installment_payments for now
-      const {
-        data,
-        error
-      } = await supabase.from('invoices').select('*').order('installment_number', {
-        ascending: true
-      });
-      if (error) throw error;
+      // Paginate to bypass PostgREST's default 1000-row cap.
+      // Without this, later students' 2nd/3rd installments were dropped,
+      // causing Total Fee Amount to show only one installment.
+      const pageSize = 1000;
+      const allInvoices: any[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('invoices')
+          .select('*')
+          .order('student_id', { ascending: true })
+          .order('installment_number', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allInvoices.push(...data);
+        if (data.length < pageSize) break;
+      }
 
-      // Group invoices by student_id and convert to installment payment format
       const paymentsMap = new Map<string, InstallmentPayment[]>();
-      data?.forEach(invoice => {
+      allInvoices.forEach(invoice => {
         const payment: InstallmentPayment = {
           id: invoice.id,
           installment_number: invoice.installment_number,
@@ -247,12 +255,29 @@ export const StudentManagement = () => {
       }
 
       // Fetch users, students, and invoices in parallel
+      const invoicesPaginated = async () => {
+        const pageSize = 1000;
+        const all: any[] = [];
+        for (let from = 0; ; from += pageSize) {
+          const { data, error } = await supabase
+            .from('invoices')
+            .select('student_id, status, due_date, amount, created_at')
+            .order('student_id', { ascending: true })
+            .range(from, from + pageSize - 1);
+          if (error) return { data: all, error };
+          if (!data || data.length === 0) break;
+          all.push(...data);
+          if (data.length < pageSize) break;
+        }
+        return { data: all, error: null as any };
+      };
+
       const [usersRes, studentsRes, invoicesRes] = await Promise.all([
         supabase.from('users').select('*').in('id', studentUserIds).order('created_at', {
           ascending: false
         }), 
         supabase.from('students').select('id, user_id, student_id, installment_count, fees_cleared'),
-        supabase.from('invoices').select('student_id, status, due_date, amount, created_at')
+        invoicesPaginated()
       ]);
       
       if (usersRes.error) throw usersRes.error;

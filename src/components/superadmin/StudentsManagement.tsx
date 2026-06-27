@@ -431,17 +431,26 @@ export function StudentsManagement() {
 
   const fetchInstallmentPayments = async () => {
     try {
-      // Fetch all invoices - we need to show complete payment history
-      const { data: invoicesData, error: invoicesError } = await supabase
-        .from('invoices')
-        .select('*')
-        .order('installment_number', { ascending: true });
-      
-      if (invoicesError) throw invoicesError;
+      // Paginate to bypass PostgREST's default 1000-row cap.
+      // Without this, later students' 2nd/3rd installments were dropped,
+      // causing Total Fee Amount to show only one installment.
+      const pageSize = 1000;
+      const invoicesData: any[] = [];
+      for (let from = 0; ; from += pageSize) {
+        const { data, error } = await supabase
+          .from('invoices')
+          .select('*')
+          .order('student_id', { ascending: true })
+          .order('installment_number', { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        invoicesData.push(...data);
+        if (data.length < pageSize) break;
+      }
 
-      // Group payments by student_id and transform to InstallmentPayment format
       const paymentsMap = new Map<string, InstallmentPayment[]>();
-      invoicesData?.forEach(invoice => {
+      invoicesData.forEach(invoice => {
         const payment: InstallmentPayment = {
           id: invoice.id,
           installment_number: invoice.installment_number,
