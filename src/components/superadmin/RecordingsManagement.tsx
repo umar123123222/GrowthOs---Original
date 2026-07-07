@@ -359,31 +359,48 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     return matchesSearch && matchesCourse && matchesModule;
   });
 
-  // Group recordings by course for display
+  // Group recordings by course -> module for display
   const groupedRecordings = useMemo(() => {
-    if (filterCourseId !== 'all') return null; // No grouping when a specific course is filtered
-    
-    const groups = new Map<string, { courseTitle: string; recordings: Recording[] }>();
-    
+    type ModuleGroup = { moduleId: string; moduleTitle: string; moduleOrder: number; recordings: Recording[] };
+    type CourseGroup = { courseId: string; courseTitle: string; modules: ModuleGroup[] };
+
+    const courseMap = new Map<string, CourseGroup>();
+
     for (const recording of filteredRecordings) {
       const courseId = recording.module?.course_id || '__none__';
       const courseTitle = courses.find(c => c.id === courseId)?.title || 'No Course (Global)';
-      
-      if (!groups.has(courseId)) {
-        groups.set(courseId, { courseTitle, recordings: [] });
+      const moduleId = recording.module?.id || '__unassigned__';
+      const moduleTitle = recording.module?.title || 'Unassigned';
+      const moduleOrder = modules.find(m => m.id === moduleId)?.order ?? 9999;
+
+      if (!courseMap.has(courseId)) {
+        courseMap.set(courseId, { courseId, courseTitle, modules: [] });
       }
-      groups.get(courseId)!.recordings.push(recording);
+      const courseGroup = courseMap.get(courseId)!;
+      let moduleGroup = courseGroup.modules.find(m => m.moduleId === moduleId);
+      if (!moduleGroup) {
+        moduleGroup = { moduleId, moduleTitle, moduleOrder, recordings: [] };
+        courseGroup.modules.push(moduleGroup);
+      }
+      moduleGroup.recordings.push(recording);
     }
-    
-    // Sort: named courses first (by title), "No Course" last
-    const sorted = Array.from(groups.entries()).sort(([aId, a], [bId, b]) => {
-      if (aId === '__none__') return 1;
-      if (bId === '__none__') return -1;
+
+    // Sort modules within each course by module.order, and recordings within each module by sequence_order
+    for (const course of courseMap.values()) {
+      course.modules.sort((a, b) => a.moduleOrder - b.moduleOrder);
+      for (const m of course.modules) {
+        m.recordings.sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
+      }
+    }
+
+    // Sort courses: named first (by title), "No Course" last
+    return Array.from(courseMap.values()).sort((a, b) => {
+      if (a.courseId === '__none__') return 1;
+      if (b.courseId === '__none__') return -1;
       return a.courseTitle.localeCompare(b.courseTitle);
     });
-    
-    return sorted;
-  }, [filteredRecordings, filterCourseId, courses]);
+  }, [filteredRecordings, courses, modules]);
+
 
   const fetchAssignments = async () => {
     try {
