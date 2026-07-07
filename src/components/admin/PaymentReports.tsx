@@ -82,7 +82,16 @@ export const PaymentReports = () => {
     fetchRecords();
   }, []);
 
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, courseFilter, statusFilter]);
+  // When user searches, refetch ignoring date range so all matching invoices show
+  useEffect(() => {
+    setCurrentPage(1);
+    const t = setTimeout(() => {
+      fetchRecords(undefined, searchTerm.trim());
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => { setCurrentPage(1); }, [courseFilter, statusFilter]);
 
   const fetchCurrency = async () => {
     const { data } = await supabase.from('company_settings').select('currency').single();
@@ -94,16 +103,18 @@ export const PaymentReports = () => {
     if (data) setCourses(data);
   };
 
-  const fetchRecords = async (useRange?: { from: Date; to: Date }) => {
+  const fetchRecords = async (useRange?: { from: Date; to: Date }, searchOverride?: string) => {
     const range = useRange || dateRange;
+    const search = (searchOverride ?? searchTerm).trim();
+    const hasSearch = search.length > 0;
     try {
       setTableLoading(true);
 
       const fromIso = range.from.toISOString();
       const toIso = range.to.toISOString();
 
-      const invoices = await fetchAll((from, to) =>
-        supabase
+      const invoices = await fetchAll((from, to) => {
+        let q = supabase
           .from('invoices')
           .select(`
             id, amount, paid_at, due_date, extended_due_date, installment_number, status,
@@ -111,10 +122,12 @@ export const PaymentReports = () => {
             students!inner(id, student_id, user_id, users!inner(full_name, email)),
             courses(title),
             learning_pathways(name)
-          `)
-          .or(`and(paid_at.gte.${fromIso},paid_at.lte.${toIso}),and(paid_at.is.null,due_date.gte.${fromIso},due_date.lte.${toIso})`)
-          .range(from, to)
-      );
+          `);
+        if (!hasSearch) {
+          q = q.or(`and(paid_at.gte.${fromIso},paid_at.lte.${toIso}),and(paid_at.is.null,due_date.gte.${fromIso},due_date.lte.${toIso})`);
+        }
+        return q.range(from, to);
+      });
 
       const fromMs = range.from.getTime();
       const toMs = range.to.getTime();
@@ -136,7 +149,7 @@ export const PaymentReports = () => {
           status: inv.status,
         }))
         .filter((r) => {
-          // include row if either paid_at OR due_date falls in range
+          if (hasSearch) return true; // when searching, show all matching invoices regardless of date
           const refDate = r.paymentDate ? new Date(r.paymentDate).getTime() : new Date(r.dueDate).getTime();
           return refDate >= fromMs && refDate <= toMs;
         });
