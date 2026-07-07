@@ -226,8 +226,14 @@ export const PaymentReports = () => {
     };
   }, [filteredRecords]);
 
-  const totalPages = Math.ceil(filteredRecords.length / itemsPerPage);
-  const paginated = filteredRecords.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const sortedRecords = useMemo(() => {
+    return [...filteredRecords].sort((a, b) => {
+      if (a.studentId !== b.studentId) return a.studentId.localeCompare(b.studentId);
+      return a.installmentNumber - b.installmentNumber;
+    });
+  }, [filteredRecords]);
+  const totalPages = Math.ceil(sortedRecords.length / itemsPerPage);
+  const paginated = sortedRecords.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const formatCurrency = (amount: number) =>
     new Intl.NumberFormat('en-PK', { style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
