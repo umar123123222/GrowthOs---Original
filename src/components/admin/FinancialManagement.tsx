@@ -90,10 +90,13 @@ const fetchInvoices = async () => {
 
     // Fetch related data
     if (studentIds.length) {
-      const [{ data: students, error: sErr }, { data: users, error: uErr }] = await Promise.all([
+      const [{ data: students, error: sErr }] = await Promise.all([
         supabase.from('students').select('id, user_id').in('id', studentIds),
-        supabase.from('users').select('id, email')
       ]);
+      const userIds = (students || []).map((s: any) => s.user_id).filter(Boolean);
+      const { data: users, error: uErr } = userIds.length
+        ? await supabase.from('users').select('id, email').in('id', userIds)
+        : { data: [], error: null } as any;
       if (sErr) throw sErr;
       if (uErr) throw uErr;
       (students || []).forEach((s: any) => studentMap.set(s.id, s.user_id));
