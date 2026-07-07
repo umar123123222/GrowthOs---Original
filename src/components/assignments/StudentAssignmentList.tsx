@@ -11,6 +11,7 @@ import { useRecordingUnlocks } from '@/hooks/useRecordingUnlocks';
 import { EnhancedStudentSubmissionDialog } from './EnhancedStudentSubmissionDialog';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { LoadMoreButton } from '@/components/common/LoadMoreButton';
 interface Assignment {
   id: string;
   name: string;
