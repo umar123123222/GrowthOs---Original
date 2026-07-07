@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MessageSquare, AlertCircle, Clock, CheckCircle, Reply, User, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { TablePager } from '@/components/common/TablePager';
 
 interface StudentEnrollment {
   course_title?: string;
@@ -319,7 +320,7 @@ export function SupportManagement() {
   const filteredTickets = tickets
     .filter(ticket => {
       // Combine open and in_progress as "active" tickets
-      const statusMatch = filterStatus === 'all' 
+      const statusMatch = filterStatus === 'all'
         || (filterStatus === 'active' && (ticket.status === 'open' || ticket.status === 'in_progress'))
         || ticket.status === filterStatus;
       const typeMatch = filterType === 'all' || (ticket.category && ticket.category === filterType);
@@ -329,6 +330,12 @@ export function SupportManagement() {
       // Sort by priority (urgent > high > medium > low)
       return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
     });
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
+  const totalPages = Math.max(1, Math.ceil(filteredTickets.length / pageSize));
+  const pagedTickets = filteredTickets.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  useEffect(() => { setCurrentPage(1); }, [filterStatus, filterType]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading support tickets...</div>;
@@ -393,7 +400,7 @@ export function SupportManagement() {
               </TableRow>
             </TableHeader>
             <TableBody>
-                {filteredTickets.map((ticket) => (
+                {pagedTickets.map((ticket) => (
                   <TableRow key={ticket.id} className="table-row-hover">
                   <TableCell>
                     <div>
@@ -627,6 +634,14 @@ export function SupportManagement() {
               ))}
             </TableBody>
           </Table>
+          <TablePager
+            page={currentPage}
+            pageCount={totalPages}
+            totalItems={filteredTickets.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            itemLabel="tickets"
+          />
         </CardContent>
       </Card>
     </div>
