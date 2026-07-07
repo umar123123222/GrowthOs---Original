@@ -18,6 +18,8 @@ import { PendingInvoice } from "@/types/common";
 import { logger } from "@/lib/logger";
 import { RoleGuard } from "@/components/RoleGuard";
 import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
+import { GlobalProgressBar } from "@/components/system/GlobalProgressBar";
+import { RouteProgressListener } from "@/components/system/RouteProgressListener";
 
 const AdminTabRedirect = ({ user, tab }: { user: any; tab: string }) => {
   if (user?.role === 'superadmin') return <Navigate to={`/superadmin?tab=${tab}`} replace />;
@@ -235,7 +237,9 @@ const App = () => {
             <Toaster />
             <Sonner />
             <DynamicFavicon />
+            <GlobalProgressBar />
             <BrowserRouter>
+              <RouteProgressListener />
               <Suspense fallback={<PageLoader />}>
                 <Routes>
                   {/* Public routes - accessible without authentication */}
