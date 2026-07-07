@@ -48,8 +48,19 @@ export function formatDreamGoalForDisplay(summary: string | null): string {
   return summary;
 }
 
+const PLACEHOLDER_SUMMARIES = [
+  'questionnaire was disabled - onboarding auto-completed',
+  'questionnaire was disabled',
+  'onboarding auto-completed',
+];
+
+function isPlaceholderSummary(value: string): boolean {
+  const lower = value.trim().toLowerCase();
+  return PLACEHOLDER_SUMMARIES.some(p => lower.includes(p));
+}
+
 export function extractFinancialGoalForDisplay(summary: string | null): string {
-  if (!summary || summary.trim() === '') {
+  if (!summary || summary.trim() === '' || isPlaceholderSummary(summary)) {
     return "Set your financial goal and reason for earning this money.";
   }
   
