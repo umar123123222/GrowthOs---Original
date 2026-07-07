@@ -174,7 +174,32 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
   };
 
   if (loading || unlocksLoading) {
-    return <div className="flex justify-center items-center h-64 text-muted-foreground">Loading assignments...</div>;
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-56" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <Skeleton className="h-10 w-full sm:w-72" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i} className="p-5 sm:p-6">
+              <div className="flex justify-between items-start gap-3 mb-4">
+                <Skeleton className="h-6 w-32" />
+                <Skeleton className="h-8 w-20" />
+              </div>
+              <Skeleton className="h-6 w-3/4 mb-3" />
+              <Skeleton className="h-4 w-full mb-2" />
+              <Skeleton className="h-4 w-5/6 mb-6" />
+              <Skeleton className="h-14 w-full rounded-xl mb-5" />
+              <Skeleton className="h-10 w-full rounded-md" />
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   // Build filtered lists based on selected tab
