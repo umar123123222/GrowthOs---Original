@@ -58,7 +58,9 @@ interface Module {
   id: string;
   title: string;
   course_id: string | null;
+  order?: number | null;
 }
+
 
 interface Course {
   id: string;
@@ -74,7 +76,7 @@ interface Assignment {
 // Sortable Recording Row Component
 function SortableRecordingRow({ 
   recording, 
-  index, 
+  displayOrder,
   isExpanded, 
   onToggleExpand, 
   onEdit, 
@@ -85,7 +87,7 @@ function SortableRecordingRow({
   readOnly
 }: {
   recording: Recording;
-  index: number;
+  displayOrder: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
   onEdit: (recording: Recording) => void;
@@ -95,6 +97,7 @@ function SortableRecordingRow({
   courses: Course[];
   readOnly?: boolean;
 }) {
+
   const {
     attributes,
     listeners,
@@ -142,8 +145,9 @@ function SortableRecordingRow({
           {recording.duration_min} min
         </div>
         <div className="text-center">
-          <Badge variant="outline">{recording.sequence_order || 0}</Badge>
+          <Badge variant="outline">{displayOrder}</Badge>
         </div>
+
         <div className="flex justify-center gap-2">
           <Button
             variant="outline"
@@ -317,7 +321,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     try {
       const { data, error } = await supabase
         .from('modules')
-        .select('id, title, course_id')
+        .select('id, title, course_id, order')
         .order('order');
 
       if (error) throw error;
@@ -326,6 +330,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
       safeLogger.error('Error fetching modules:', error);
     }
   };
+
 
   // Filter modules based on selected course (for form)
   const filteredModules = formData.course_id 
@@ -354,31 +359,48 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     return matchesSearch && matchesCourse && matchesModule;
   });
 
-  // Group recordings by course for display
+  // Group recordings by course -> module for display
   const groupedRecordings = useMemo(() => {
-    if (filterCourseId !== 'all') return null; // No grouping when a specific course is filtered
-    
-    const groups = new Map<string, { courseTitle: string; recordings: Recording[] }>();
-    
+    type ModuleGroup = { moduleId: string; moduleTitle: string; moduleOrder: number; recordings: Recording[] };
+    type CourseGroup = { courseId: string; courseTitle: string; modules: ModuleGroup[] };
+
+    const courseMap = new Map<string, CourseGroup>();
+
     for (const recording of filteredRecordings) {
       const courseId = recording.module?.course_id || '__none__';
       const courseTitle = courses.find(c => c.id === courseId)?.title || 'No Course (Global)';
-      
-      if (!groups.has(courseId)) {
-        groups.set(courseId, { courseTitle, recordings: [] });
+      const moduleId = recording.module?.id || '__unassigned__';
+      const moduleTitle = recording.module?.title || 'Unassigned';
+      const moduleOrder = modules.find(m => m.id === moduleId)?.order ?? 9999;
+
+      if (!courseMap.has(courseId)) {
+        courseMap.set(courseId, { courseId, courseTitle, modules: [] });
       }
-      groups.get(courseId)!.recordings.push(recording);
+      const courseGroup = courseMap.get(courseId)!;
+      let moduleGroup = courseGroup.modules.find(m => m.moduleId === moduleId);
+      if (!moduleGroup) {
+        moduleGroup = { moduleId, moduleTitle, moduleOrder, recordings: [] };
+        courseGroup.modules.push(moduleGroup);
+      }
+      moduleGroup.recordings.push(recording);
     }
-    
-    // Sort: named courses first (by title), "No Course" last
-    const sorted = Array.from(groups.entries()).sort(([aId, a], [bId, b]) => {
-      if (aId === '__none__') return 1;
-      if (bId === '__none__') return -1;
+
+    // Sort modules within each course by module.order, and recordings within each module by sequence_order
+    for (const course of courseMap.values()) {
+      course.modules.sort((a, b) => a.moduleOrder - b.moduleOrder);
+      for (const m of course.modules) {
+        m.recordings.sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
+      }
+    }
+
+    // Sort courses: named first (by title), "No Course" last
+    return Array.from(courseMap.values()).sort((a, b) => {
+      if (a.courseId === '__none__') return 1;
+      if (b.courseId === '__none__') return -1;
       return a.courseTitle.localeCompare(b.courseTitle);
     });
-    
-    return sorted;
-  }, [filteredRecordings, filterCourseId, courses]);
+  }, [filteredRecordings, courses, modules]);
+
 
   const fetchAssignments = async () => {
     try {
@@ -511,8 +533,8 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     })
   );
 
-  // Handle recording reordering
-  const handleRecordingDragEnd = async (event: DragEndEvent) => {
+  // Handle recording reordering within a single module
+  const handleModuleDragEnd = (moduleRecordings: Recording[]) => async (event: DragEndEvent) => {
     if (readOnly) return;
     const { active, over } = event;
 
@@ -520,32 +542,27 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
       return;
     }
 
-    const oldIndex = recordings.findIndex((r) => r.id === active.id);
-    const newIndex = recordings.findIndex((r) => r.id === over.id);
+    const oldIndex = moduleRecordings.findIndex((r) => r.id === active.id);
+    const newIndex = moduleRecordings.findIndex((r) => r.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
 
-    const newRecordings = arrayMove(recordings, oldIndex, newIndex);
-    
-    // Update order numbers sequentially
-    const updatedRecordings = newRecordings.map((recording, index) => ({
-      ...recording,
-      sequence_order: index + 1
+    const reordered = arrayMove(moduleRecordings, oldIndex, newIndex);
+    const updates = reordered.map((recording, index) => ({
+      id: recording.id,
+      sequence_order: index + 1,
     }));
-    
-    // Update UI immediately
-    setRecordings(updatedRecordings);
 
-    // Update order in database
+    // Optimistic UI update: patch the sequence_order on the affected recordings in state
+    const updateMap = new Map(updates.map(u => [u.id, u.sequence_order]));
+    setRecordings(prev => prev.map(r => updateMap.has(r.id) ? { ...r, sequence_order: updateMap.get(r.id)! } : r));
+
     try {
-      const updates = updatedRecordings.map((recording, index) => ({
-        id: recording.id,
-        sequence_order: index + 1
-      }));
-
       for (const update of updates) {
-        await supabase
+        const { error } = await supabase
           .from('available_lessons')
           .update({ sequence_order: update.sequence_order })
           .eq('id', update.id);
+        if (error) throw error;
       }
 
       toast({
@@ -563,6 +580,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
       fetchRecordings();
     }
   };
+
 
   const handleRecordingDeleted = (recordingId: string) => {
     setRecordings(prev => prev.filter(r => r.id !== recordingId));
@@ -1014,102 +1032,74 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                 {recordings.length === 0 ? 'Upload your first recording to get started' : 'Try adjusting your search or filters'}
               </p>
             </div>
-          ) : groupedRecordings ? (
-            /* Grouped by course view */
-            <div data-testid="recordings-table" className="w-full">
-              {groupedRecordings.map(([courseId, group]) => (
-                <Collapsible key={courseId} defaultOpen>
-                  <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-muted/50 border-b hover:bg-muted/70 transition-colors">
-                    <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
-                    <span className="font-semibold text-base">{group.courseTitle}</span>
-                    <Badge variant="secondary" className="ml-auto">{group.recordings.length} recordings</Badge>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    {/* Header */}
-                    <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
-                      <div></div>
-                      <div></div>
-                      <div>Title {!readOnly && <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>}</div>
-                      <div className="text-center">Duration</div>
-                      <div className="text-center">Order</div>
-                      {!readOnly && <div className="text-center">Actions</div>}
-                    </div>
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleRecordingDragEnd}
-                    >
-                      <div className="divide-y">
-                        <SortableContext
-                          items={group.recordings.map(r => r.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {group.recordings.map((recording, index) => (
-                            <SortableRecordingRow
-                              key={recording.id}
-                              recording={recording}
-                              index={index}
-                              isExpanded={expandedRecordings.has(recording.id)}
-                              onToggleExpand={() => toggleRecordingExpansion(recording.id)}
-                              onEdit={handleEdit}
-                              onDelete={handleDelete}
-                              onRefresh={fetchRecordings}
-                              onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
-                              courses={courses}
-                              readOnly={readOnly}
-                            />
-                          ))}
-                        </SortableContext>
-                      </div>
-                    </DndContext>
-                  </CollapsibleContent>
-                </Collapsible>
-              ))}
-            </div>
           ) : (
-            /* Flat list when specific course is filtered */
+            /* Grouped by course -> module view */
             <div data-testid="recordings-table" className="w-full">
-              {/* Header */}
-              <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
-                <div></div>
-                <div></div>
-                <div>Title {!readOnly && <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>}</div>
-                <div className="text-center">Duration</div>
-                <div className="text-center">Order</div>
-                {!readOnly && <div className="text-center">Actions</div>}
-              </div>
-              
-              {/* Body */}
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleRecordingDragEnd}
-              >
-                <div className="divide-y">
-                  <SortableContext
-                    items={filteredRecordings.map(r => r.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {filteredRecordings.map((recording, index) => (
-                      <SortableRecordingRow
-                        key={recording.id}
-                        recording={recording}
-                        index={index}
-                        isExpanded={expandedRecordings.has(recording.id)}
-                        onToggleExpand={() => toggleRecordingExpansion(recording.id)}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onRefresh={fetchRecordings}
-                        onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
-                        courses={courses}
-                        readOnly={readOnly}
-                      />
-                    ))}
-                  </SortableContext>
-                </div>
-              </DndContext>
+              {groupedRecordings.map((courseGroup) => {
+                const courseTotal = courseGroup.modules.reduce((sum, m) => sum + m.recordings.length, 0);
+                return (
+                  <Collapsible key={courseGroup.courseId} defaultOpen>
+                    <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-muted/50 border-b hover:bg-muted/70 transition-colors">
+                      <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
+                      <span className="font-semibold text-base">{courseGroup.courseTitle}</span>
+                      <Badge variant="secondary" className="ml-auto">{courseTotal} recordings</Badge>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      {courseGroup.modules.map((moduleGroup) => (
+                        <Collapsible key={moduleGroup.moduleId} defaultOpen>
+                          <CollapsibleTrigger className="flex items-center gap-3 w-full py-2 px-6 bg-muted/20 border-b hover:bg-muted/40 transition-colors">
+                            <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
+                            <span className="font-medium text-sm">{moduleGroup.moduleTitle}</span>
+                            <Badge variant="outline" className="ml-auto text-xs">{moduleGroup.recordings.length} videos</Badge>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            {/* Header */}
+                            <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
+                              <div></div>
+                              <div></div>
+                              <div>Title {!readOnly && <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>}</div>
+                              <div className="text-center">Duration</div>
+                              <div className="text-center">Order</div>
+                              {!readOnly && <div className="text-center">Actions</div>}
+                            </div>
+                            <DndContext
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={handleModuleDragEnd(moduleGroup.recordings)}
+                            >
+                              <div className="divide-y">
+                                <SortableContext
+                                  items={moduleGroup.recordings.map(r => r.id)}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  {moduleGroup.recordings.map((recording, index) => (
+                                    <SortableRecordingRow
+                                      key={recording.id}
+                                      recording={recording}
+                                      displayOrder={index + 1}
+                                      isExpanded={expandedRecordings.has(recording.id)}
+                                      onToggleExpand={() => toggleRecordingExpansion(recording.id)}
+                                      onEdit={handleEdit}
+                                      onDelete={handleDelete}
+                                      onRefresh={fetchRecordings}
+                                      onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
+                                      courses={courses}
+                                      readOnly={readOnly}
+                                    />
+                                  ))}
+                                </SortableContext>
+                              </div>
+                            </DndContext>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
             </div>
           )}
+
         </CardContent>
       </Card>
 
