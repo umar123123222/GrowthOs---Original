@@ -332,14 +332,26 @@ export function StudentDashboard() {
         const completedItems = watchedRecordings + submittedAssignments;
         setCourseProgress(totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0);
         
-        // Find first locked recording and its reason
+        // Show the first video in unlock order:
+        // 1) first unlocked-and-unwatched recording (the actual "next to play"),
+        // 2) else first locked recording (so student sees why they can't continue),
+        // 3) else the very first recording of the course/pathway.
+        const firstUnlockedUnwatched = recordings.find(r => r.isUnlocked && !r.isWatched);
         const firstLockedRecording = recordings.find(r => !r.isUnlocked);
-        if (firstLockedRecording) {
+        const target = firstUnlockedUnwatched || firstLockedRecording || recordings[0];
+
+        if (target && !target.isUnlocked) {
           setCurrentLockReason({
-            reason: firstLockedRecording.lockReason || 'locked',
-            unlockDate: firstLockedRecording.dripUnlockDate || undefined,
-            nextLesson: firstLockedRecording.recording_title,
-            blockingLessonTitle: firstLockedRecording.blockingLessonTitle || null,
+            reason: target.lockReason || 'locked',
+            unlockDate: target.dripUnlockDate || undefined,
+            nextLesson: target.recording_title,
+            blockingLessonTitle: target.blockingLessonTitle || null,
+          });
+        } else if (target) {
+          // Unlocked (and typically unwatched) — surface the title without a lock badge.
+          setCurrentLockReason({
+            reason: 'unlocked',
+            nextLesson: target.recording_title,
           });
         } else {
           setCurrentLockReason(null);
