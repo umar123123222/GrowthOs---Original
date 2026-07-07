@@ -836,32 +836,25 @@ export function StudentDashboard() {
         {(() => {
           const isLocked = !!currentLockReason && currentLockReason.reason !== 'unlocked';
           return (
-        <Card 
-          className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
+        <Card
+          className={`hover:shadow-md transition-shadow duration-300 border-l-4 animate-fade-in cursor-pointer ${
             isLocked ? 'border-l-amber-400' : 'border-l-green-400'
           }`}
           onClick={() => navigate('/videos')}
         >
-          <div className={`absolute inset-0 bg-gradient-to-r transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
-            isLocked ? 'from-amber-50/0 via-amber-50/50 to-amber-50/0' : 'from-green-50/0 via-green-50/50 to-green-50/0'
-          }`}></div>
-          <CardHeader className="pb-3 relative z-10">
+          <CardHeader className="pb-3">
             <CardTitle className={`flex items-center gap-2 text-base font-medium ${
               isLocked ? 'text-amber-600' : 'text-green-600'
             }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 ${
-                isLocked ? 'bg-amber-50 group-hover:bg-amber-100' : 'bg-green-50 group-hover:bg-green-100'
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                isLocked ? 'bg-amber-50 dark:bg-amber-900/20' : 'bg-green-50 dark:bg-green-900/20'
               }`}>
-                {isLocked ? (
-                  <Lock className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
-                ) : (
-                  <Play className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
-                )}
+                {isLocked ? <Lock className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </div>
-              <span className="group-hover:translate-x-1 transition-transform duration-300">Continue Learning</span>
+              <span>Continue Learning</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent>
             <div className="space-y-3">
               {/* Current course/lesson info */}
               <div>
