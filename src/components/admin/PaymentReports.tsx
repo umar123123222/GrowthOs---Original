@@ -98,6 +98,9 @@ export const PaymentReports = () => {
     try {
       setTableLoading(true);
 
+      const fromIso = range.from.toISOString();
+      const toIso = range.to.toISOString();
+
       const { data: invoices, error } = await supabase
         .from('invoices')
         .select(`
@@ -106,7 +109,9 @@ export const PaymentReports = () => {
           students!inner(id, student_id, user_id, users!inner(full_name, email)),
           courses(title),
           learning_pathways(name)
-        `);
+        `)
+        .or(`and(paid_at.gte.${fromIso},paid_at.lte.${toIso}),and(paid_at.is.null,due_date.gte.${fromIso},due_date.lte.${toIso})`)
+        .limit(10000);
 
       if (error) throw error;
 
