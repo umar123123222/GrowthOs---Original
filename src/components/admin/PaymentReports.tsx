@@ -461,8 +461,8 @@ export const PaymentReports = () => {
         </Card>
       </div>
 
-      {/* Secondary Stat Row: Pending / Overdue */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Secondary Stat Row: Pending / Overdue / Refunds */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-l-4 border-l-yellow-500">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -483,6 +483,17 @@ export const PaymentReports = () => {
           <CardContent>
             <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.overdueAmount)}</div>
             <p className="text-xs text-muted-foreground">Past due in range</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Undo2 className="h-4 w-4" /> Refunds
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-purple-600">{formatCurrency(stats.refundedAmount)}</div>
+            <p className="text-xs text-muted-foreground">{stats.refundedCount} refunded {stats.refundedCount === 1 ? 'invoice' : 'invoices'}</p>
           </CardContent>
         </Card>
       </div>
