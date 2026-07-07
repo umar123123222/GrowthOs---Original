@@ -321,7 +321,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     try {
       const { data, error } = await supabase
         .from('modules')
-        .select('id, title, course_id')
+        .select('id, title, course_id, order')
         .order('order');
 
       if (error) throw error;
@@ -330,6 +330,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
       safeLogger.error('Error fetching modules:', error);
     }
   };
+
 
   // Filter modules based on selected course (for form)
   const filteredModules = formData.course_id 
