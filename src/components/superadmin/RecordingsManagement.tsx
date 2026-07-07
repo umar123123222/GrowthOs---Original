@@ -145,8 +145,9 @@ function SortableRecordingRow({
           {recording.duration_min} min
         </div>
         <div className="text-center">
-          <Badge variant="outline">{recording.sequence_order || 0}</Badge>
+          <Badge variant="outline">{displayOrder}</Badge>
         </div>
+
         <div className="flex justify-center gap-2">
           <Button
             variant="outline"
