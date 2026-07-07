@@ -941,12 +941,12 @@ export function StudentDashboard() {
                 </div>
               )}
               
-              <Button 
+              <Button
                 size="sm"
-                className="w-full text-sm font-normal group-hover:scale-105 transition-all duration-300 relative overflow-hidden"
+                className="w-full text-sm font-normal"
                 variant={currentLockReason?.reason === 'fees_not_cleared' ? 'destructive' : 'default'}
               >
-                <span className="relative z-10 flex items-center gap-2">
+                <span className="flex items-center gap-2">
                   {currentLockReason?.reason === 'fees_not_cleared' ? 'View Payment' : 'Go to Videos'}
                   <ArrowRight className="w-4 h-4" />
                 </span>
@@ -957,30 +957,25 @@ export function StudentDashboard() {
           );
         })()}
 
-
-
         {/* Next Assignment Card */}
-        <Card className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
+        <Card className={`hover:shadow-md transition-shadow duration-300 border-l-4 animate-fade-in ${
           assignmentDueStatus === 'overdue' ? 'border-l-red-400' : 'border-l-orange-400'
         }`} style={{ animationDelay: '150ms' }}>
-          <div className={`absolute inset-0 bg-gradient-to-r transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
-            assignmentDueStatus === 'overdue' ? 'from-red-50/0 via-red-50/50 to-red-50/0' : 'from-orange-50/0 via-orange-50/50 to-orange-50/0'
-          }`}></div>
-          <CardHeader className="pb-3 relative z-10">
+          <CardHeader className="pb-3">
             <CardTitle className={`flex items-center gap-2 text-base font-medium ${
               assignmentDueStatus === 'overdue' ? 'text-red-600' : 'text-orange-600'
             }`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 transition-all duration-300 ${
-                assignmentDueStatus === 'overdue' 
-                  ? 'bg-red-50 group-hover:bg-red-100 group-hover:animate-pulse' 
-                  : 'bg-orange-50 group-hover:bg-orange-100 group-hover:rotate-12'
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                assignmentDueStatus === 'overdue'
+                  ? 'bg-red-50 dark:bg-red-900/20'
+                  : 'bg-orange-50 dark:bg-orange-900/20'
               }`}>
-                <Upload className="w-4 h-4 group-hover:scale-110 group-hover:-translate-y-0.5 transition-all duration-300" />
+                <Upload className="w-4 h-4" />
               </div>
-              <span className="group-hover:translate-x-1 transition-transform duration-300">Next Assignment</span>
+              <span>Next Assignment</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent>
             {pendingItems.length > 0 ? (
               <div className="space-y-3">
                 <ul className="space-y-2">
@@ -1004,79 +999,75 @@ export function StudentDashboard() {
                 </ul>
                 <Button
                   onClick={handleSubmitAssignment}
-                  className="w-full text-sm font-normal group-hover:scale-105 transition-all duration-300"
+                  className="w-full text-sm font-normal"
                   variant={pendingItems.some(i => i.status === 'needs_revision') ? 'destructive' : 'default'}
                   size="sm"
                 >
-                  <span className="relative z-10">
-                    {pendingItems.every(i => i.status === 'pending_review') ? 'View Submissions' : 'Open Assignments'}
-                  </span>
+                  {pendingItems.every(i => i.status === 'pending_review') ? 'View Submissions' : 'Open Assignments'}
                 </Button>
               </div>
             ) : (
               <div className="text-center py-6">
-                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
-                <p className="text-xs text-muted-foreground group-hover:text-green-600 transition-colors duration-300">All assignments completed!</p>
+                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">All assignments completed!</p>
               </div>
             )}
           </CardContent>
         </Card>
 
         {/* Integrations Card */}
-        <Card className="hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 border-l-purple-400 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '300ms' }}>
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-50/0 via-purple-50/50 to-purple-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <CardHeader className="pb-3 relative z-10">
+        <Card className="hover:shadow-md transition-shadow duration-300 border-l-4 border-l-purple-400 animate-fade-in" style={{ animationDelay: '300ms' }}>
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-purple-600 text-base font-medium">
-              <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center group-hover:bg-purple-100 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                <Zap className="w-4 h-4 group-hover:scale-110 group-hover:text-yellow-500 transition-all duration-300" />
+              <div className="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                <Zap className="w-4 h-4" />
               </div>
-              <span className="group-hover:translate-x-1 transition-transform duration-300">Integrations</span>
+              <span>Integrations</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md group-hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+          <CardContent>
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
                 <div className="flex items-center gap-2">
-                  <ShoppingBag className="w-4 h-4 text-green-600 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
-                  <span className="font-normal text-sm group-hover:translate-x-0.5 transition-transform duration-300">Shopify</span>
+                  <ShoppingBag className="w-4 h-4 text-green-600" />
+                  <span className="font-normal text-sm">Shopify</span>
                 </div>
                 {shopifyConnected ? (
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                     <span className="text-xs text-green-600">Connected</span>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" className="text-xs h-6 px-2 hover:scale-105 transition-transform duration-200">
+                  <Button variant="outline" size="sm" className="text-xs h-6 px-2" onClick={() => setConnectDialogOpen(true)}>
                     Connect
                   </Button>
                 )}
               </div>
-              
-              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md group-hover:bg-muted/50 transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+
+              <div className="flex items-center justify-between p-2 bg-muted/30 rounded-md">
                 <div className="flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-blue-600 group-hover:scale-110 group-hover:rotate-12 transition-all duration-300" />
-                  <span className="font-normal text-sm group-hover:translate-x-0.5 transition-transform duration-300">Meta Ads</span>
+                  <TrendingUp className="w-4 h-4 text-blue-600" />
+                  <span className="font-normal text-sm">Meta Ads</span>
                 </div>
                 {metaConnected ? (
-                  <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
                     <span className="text-xs text-green-600">Connected</span>
                   </div>
                 ) : (
-                  <Button variant="outline" size="sm" className="text-xs h-6 px-2 hover:scale-105 transition-transform duration-200">
+                  <Button variant="outline" size="sm" className="text-xs h-6 px-2" onClick={() => setConnectDialogOpen(true)}>
                     Connect
                   </Button>
                 )}
               </div>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 size="sm"
-                className="w-full text-xs font-normal group-hover:scale-105 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300 relative overflow-hidden"
+                className="w-full text-xs font-normal hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20"
                 onClick={() => setConnectDialogOpen(true)}
               >
-                <span className="relative z-10">Manage Connections</span>
-                <div className="absolute inset-0 bg-purple-100/50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                Manage Connections
               </Button>
             </div>
           </CardContent>
