@@ -49,6 +49,7 @@ interface PaymentStats {
 
 export const PaymentReports = () => {
   const [records, setRecords] = useState<InvoiceRecord[]>([]);
+  const [refundsInRange, setRefundsInRange] = useState<{ amount: number; courseId: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -158,6 +159,27 @@ export const PaymentReports = () => {
         });
 
       setRecords(processed);
+
+      // Fetch refunds independently by refunded_at within selected range (ignores due/issue date)
+      if (!hasSearch) {
+        const refunds = await fetchAll((from, to) =>
+          supabase
+            .from('invoices')
+            .select('refund_amount, amount, course_id, refunded_at')
+            .eq('status', 'refunded')
+            .gte('refunded_at', fromIso)
+            .lte('refunded_at', toIso)
+            .range(from, to)
+        );
+        setRefundsInRange(
+          (refunds || []).map((r: any) => ({
+            amount: Number(r.refund_amount ?? r.amount ?? 0),
+            courseId: r.course_id || null,
+          }))
+        );
+      } else {
+        setRefundsInRange([]);
+      }
     } catch (e: any) {
       console.error(e);
       toast({ title: 'Error', description: 'Failed to load payment data', variant: 'destructive' });
@@ -219,8 +241,10 @@ export const PaymentReports = () => {
         return eff && new Date(eff) < now;
       })
       .reduce((s, r) => s + r.amount, 0);
-    const refunded = filteredRecords.filter(r => r.status === 'refunded');
-    const refundedAmount = refunded.reduce((s, r) => s + r.amount, 0);
+    const refundsFiltered = refundsInRange.filter(r =>
+      courseFilter === 'all' || r.courseId === courseFilter
+    );
+    const refundedAmount = refundsFiltered.reduce((s, r) => s + r.amount, 0);
     return {
       totalPayments: paid.length,
       totalAmount,
@@ -228,10 +252,10 @@ export const PaymentReports = () => {
       avgPaymentAmount: paid.length > 0 ? totalAmount / paid.length : 0,
       pendingAmount,
       overdueAmount,
-      refundedCount: refunded.length,
+      refundedCount: refundsFiltered.length,
       refundedAmount,
     };
-  }, [filteredRecords]);
+  }, [filteredRecords, refundsInRange, courseFilter]);
 
   const sortedRecords = useMemo(() => {
     return [...filteredRecords].sort((a, b) => {
