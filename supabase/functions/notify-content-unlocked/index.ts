@@ -129,36 +129,10 @@ serve(async (req: Request) => {
 </body>
 </html>`;
 
-    // Get notification CC
-    const notificationCc = Deno.env.get('NOTIFICATION_EMAIL_CC') || '';
+    // Email notifications for recording unlocks are intentionally disabled.
+    // Students still receive the in-app notification below.
+    console.log(`Skipping unlock email for ${student.email} (recording emails disabled)`);
 
-    // Try to send directly first, fall back to queue
-    try {
-      const emailClient = SMTPClient.fromEnv();
-      if (settings?.company_name) emailClient.setFromName(settings.company_name);
-      await emailClient.sendEmail({
-        to: student.email,
-        subject,
-        html: htmlContent,
-        ...(notificationCc ? { cc: notificationCc } : {}),
-      });
-      console.log(`Unlock notification sent directly to ${student.email}`);
-    } catch (sendError) {
-      console.warn('Direct send failed, queuing email:', sendError.message);
-      // Fall back to email queue
-      await supabase.from('email_queue').insert({
-        user_id,
-        recipient_email: student.email,
-        recipient_name: student.full_name,
-        email_type: 'content_unlocked',
-        status: 'pending',
-        subject,
-        html_content: htmlContent,
-        cc_email: notificationCc || null,
-        credentials: { recording_title: recordingTitle, has_assignment: hasAssignment },
-      });
-      console.log(`Unlock notification queued for ${student.email}`);
-    }
 
     // Also create in-app notification(s) for the student
     const nowIso = new Date().toISOString();
