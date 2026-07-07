@@ -58,7 +58,9 @@ interface Module {
   id: string;
   title: string;
   course_id: string | null;
+  order?: number | null;
 }
+
 
 interface Course {
   id: string;
