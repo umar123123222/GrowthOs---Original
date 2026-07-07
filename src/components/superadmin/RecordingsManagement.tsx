@@ -1032,102 +1032,74 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                 {recordings.length === 0 ? 'Upload your first recording to get started' : 'Try adjusting your search or filters'}
               </p>
             </div>
-          ) : groupedRecordings ? (
-            /* Grouped by course view */
-            <div data-testid="recordings-table" className="w-full">
-              {groupedRecordings.map(([courseId, group]) => (
-                <Collapsible key={courseId} defaultOpen>
-                  <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-muted/50 border-b hover:bg-muted/70 transition-colors">
-                    <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
-                    <span className="font-semibold text-base">{group.courseTitle}</span>
-                    <Badge variant="secondary" className="ml-auto">{group.recordings.length} recordings</Badge>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    {/* Header */}
-                    <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
-                      <div></div>
-                      <div></div>
-                      <div>Title {!readOnly && <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>}</div>
-                      <div className="text-center">Duration</div>
-                      <div className="text-center">Order</div>
-                      {!readOnly && <div className="text-center">Actions</div>}
-                    </div>
-                    <DndContext
-                      sensors={sensors}
-                      collisionDetection={closestCenter}
-                      onDragEnd={handleRecordingDragEnd}
-                    >
-                      <div className="divide-y">
-                        <SortableContext
-                          items={group.recordings.map(r => r.id)}
-                          strategy={verticalListSortingStrategy}
-                        >
-                          {group.recordings.map((recording, index) => (
-                            <SortableRecordingRow
-                              key={recording.id}
-                              recording={recording}
-                              index={index}
-                              isExpanded={expandedRecordings.has(recording.id)}
-                              onToggleExpand={() => toggleRecordingExpansion(recording.id)}
-                              onEdit={handleEdit}
-                              onDelete={handleDelete}
-                              onRefresh={fetchRecordings}
-                              onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
-                              courses={courses}
-                              readOnly={readOnly}
-                            />
-                          ))}
-                        </SortableContext>
-                      </div>
-                    </DndContext>
-                  </CollapsibleContent>
-                </Collapsible>
-              ))}
-            </div>
           ) : (
-            /* Flat list when specific course is filtered */
+            /* Grouped by course -> module view */
             <div data-testid="recordings-table" className="w-full">
-              {/* Header */}
-              <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
-                <div></div>
-                <div></div>
-                <div>Title {!readOnly && <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>}</div>
-                <div className="text-center">Duration</div>
-                <div className="text-center">Order</div>
-                {!readOnly && <div className="text-center">Actions</div>}
-              </div>
-              
-              {/* Body */}
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleRecordingDragEnd}
-              >
-                <div className="divide-y">
-                  <SortableContext
-                    items={filteredRecordings.map(r => r.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    {filteredRecordings.map((recording, index) => (
-                      <SortableRecordingRow
-                        key={recording.id}
-                        recording={recording}
-                        index={index}
-                        isExpanded={expandedRecordings.has(recording.id)}
-                        onToggleExpand={() => toggleRecordingExpansion(recording.id)}
-                        onEdit={handleEdit}
-                        onDelete={handleDelete}
-                        onRefresh={fetchRecordings}
-                        onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
-                        courses={courses}
-                        readOnly={readOnly}
-                      />
-                    ))}
-                  </SortableContext>
-                </div>
-              </DndContext>
+              {groupedRecordings.map((courseGroup) => {
+                const courseTotal = courseGroup.modules.reduce((sum, m) => sum + m.recordings.length, 0);
+                return (
+                  <Collapsible key={courseGroup.courseId} defaultOpen>
+                    <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-muted/50 border-b hover:bg-muted/70 transition-colors">
+                      <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
+                      <span className="font-semibold text-base">{courseGroup.courseTitle}</span>
+                      <Badge variant="secondary" className="ml-auto">{courseTotal} recordings</Badge>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      {courseGroup.modules.map((moduleGroup) => (
+                        <Collapsible key={moduleGroup.moduleId} defaultOpen>
+                          <CollapsibleTrigger className="flex items-center gap-3 w-full py-2 px-6 bg-muted/20 border-b hover:bg-muted/40 transition-colors">
+                            <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
+                            <span className="font-medium text-sm">{moduleGroup.moduleTitle}</span>
+                            <Badge variant="outline" className="ml-auto text-xs">{moduleGroup.recordings.length} videos</Badge>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            {/* Header */}
+                            <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
+                              <div></div>
+                              <div></div>
+                              <div>Title {!readOnly && <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>}</div>
+                              <div className="text-center">Duration</div>
+                              <div className="text-center">Order</div>
+                              {!readOnly && <div className="text-center">Actions</div>}
+                            </div>
+                            <DndContext
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={handleModuleDragEnd(moduleGroup.recordings)}
+                            >
+                              <div className="divide-y">
+                                <SortableContext
+                                  items={moduleGroup.recordings.map(r => r.id)}
+                                  strategy={verticalListSortingStrategy}
+                                >
+                                  {moduleGroup.recordings.map((recording, index) => (
+                                    <SortableRecordingRow
+                                      key={recording.id}
+                                      recording={recording}
+                                      displayOrder={index + 1}
+                                      isExpanded={expandedRecordings.has(recording.id)}
+                                      onToggleExpand={() => toggleRecordingExpansion(recording.id)}
+                                      onEdit={handleEdit}
+                                      onDelete={handleDelete}
+                                      onRefresh={fetchRecordings}
+                                      onView={(rec) => setPreviewRecording({ title: rec.recording_title, url: rec.recording_url })}
+                                      courses={courses}
+                                      readOnly={readOnly}
+                                    />
+                                  ))}
+                                </SortableContext>
+                              </div>
+                            </DndContext>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      ))}
+                    </CollapsibleContent>
+                  </Collapsible>
+                );
+              })}
             </div>
           )}
+
         </CardContent>
       </Card>
 
