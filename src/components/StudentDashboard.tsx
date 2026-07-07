@@ -827,16 +827,7 @@ export function StudentDashboard() {
       {/* Interactive Three-Card Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Continue Learning Card - Shows current course/lesson status with lock reason */}
-        <Card 
-          className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
-            currentLockReason ? 'border-l-amber-400' : 'border-l-green-400'
-          }`}
-          onClick={() => navigate('/videos')}
-        >
-          <div className={`absolute inset-0 bg-gradient-to-r transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
-            currentLockReason ? 'from-amber-50/0 via-amber-50/50 to-amber-50/0' : 'from-green-50/0 via-green-50/50 to-green-50/0'
-          }`}></div>
-          <CardHeader className="pb-3 relative z-10">
+
         {(() => {
           const isLocked = !!currentLockReason && currentLockReason.reason !== 'unlocked';
           return (
