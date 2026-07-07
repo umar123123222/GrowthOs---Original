@@ -159,6 +159,27 @@ export const PaymentReports = () => {
         });
 
       setRecords(processed);
+
+      // Fetch refunds independently by refunded_at within selected range (ignores due/issue date)
+      if (!hasSearch) {
+        const refunds = await fetchAll((from, to) =>
+          supabase
+            .from('invoices')
+            .select('refund_amount, amount, course_id, refunded_at')
+            .eq('status', 'refunded')
+            .gte('refunded_at', fromIso)
+            .lte('refunded_at', toIso)
+            .range(from, to)
+        );
+        setRefundsInRange(
+          (refunds || []).map((r: any) => ({
+            amount: Number(r.refund_amount ?? r.amount ?? 0),
+            courseId: r.course_id || null,
+          }))
+        );
+      } else {
+        setRefundsInRange([]);
+      }
     } catch (e: any) {
       console.error(e);
       toast({ title: 'Error', description: 'Failed to load payment data', variant: 'destructive' });
