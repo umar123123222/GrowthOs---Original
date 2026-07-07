@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { LoadMoreButton } from "@/components/common/LoadMoreButton";
 interface SupportTicket {
   id: string;
   title: string;
@@ -264,6 +265,9 @@ const Support = () => {
     const tb = new Date(b.created_at).getTime();
     return sortOrder === 'asc' ? ta - tb : tb - ta;
   });
+  const [visibleCount, setVisibleCount] = useState(50);
+  useEffect(() => { setVisibleCount(50); }, [statusTab, priorityFilter, sortOrder]);
+  const visibleTickets = displayedTickets.slice(0, visibleCount);
   if (loading) {
     return <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -397,7 +401,7 @@ const Support = () => {
             </Button>
           </CardContent>
         </Card> : <div className="grid gap-6">
-          {displayedTickets.map(ticket => <Collapsible key={ticket.id} defaultOpen>
+          {visibleTickets.map(ticket => <Collapsible key={ticket.id} defaultOpen>
               <Card className="group hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <CollapsibleTrigger asChild>
@@ -487,6 +491,12 @@ const Support = () => {
               </CollapsibleContent>
             </Card>
           </Collapsible>)}
+          <LoadMoreButton
+            shown={visibleTickets.length}
+            total={displayedTickets.length}
+            onLoadMore={() => setVisibleCount(c => c + 50)}
+            itemLabel="tickets"
+          />
         </div>}
       </div>
     </RoleGuard>;
