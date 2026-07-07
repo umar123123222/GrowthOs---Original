@@ -800,7 +800,12 @@ export function StudentDashboard() {
             {/* Financial goal display */}
             <div className="bg-background/80 rounded-lg p-3 sm:p-4 border border-primary/10">
               <p className="text-sm sm:text-base font-normal text-foreground leading-relaxed line-clamp-3 sm:line-clamp-none">
-                {firstOnboardingAnswer || extractFinancialGoalForDisplay(dreamGoal)}
+                {(() => {
+                  const raw = (firstOnboardingAnswer || '').trim();
+                  const lower = raw.toLowerCase();
+                  const isPlaceholder = !raw || lower.includes('questionnaire was disabled') || lower.includes('onboarding auto-completed');
+                  return isPlaceholder ? extractFinancialGoalForDisplay(dreamGoal) : firstOnboardingAnswer;
+                })()}
               </p>
             </div>
             
