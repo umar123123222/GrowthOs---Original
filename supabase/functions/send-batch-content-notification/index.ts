@@ -25,7 +25,17 @@ interface NotificationRequest {
   is_update?: boolean;
   reminder_label?: string;
   include_mentor?: boolean;
+  /**
+   * When true, the function accepts the job, returns 202 immediately, and
+   * finishes sending in the background via EdgeRuntime.waitUntil. This is what
+   * the admin UI uses so bulk sends do not block the dialog.
+   */
+  async?: boolean;
 }
+
+// Deno Deploy's background-work API. Typed loosely so this file still compiles
+// under a plain TypeScript checker.
+declare const EdgeRuntime: { waitUntil: (p: Promise<unknown>) => void } | undefined;
 
 const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
 
@@ -318,6 +328,37 @@ const handler = async (req: Request): Promise<Response> => {
       return new Response(
         JSON.stringify({ error: "Missing required fields: batch_id, item_type, item_id, title" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Fire-and-forget mode: the admin UI passes { async: true } for bulk sends
+    // so the dialog can close instantly while emails go out in the background.
+    // We re-invoke ourselves without the async flag; the outer request returns 202.
+    if (body.async === true) {
+      const forwardBody = { ...body, async: false };
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const apiKeyHeader = req.headers.get("apikey") ?? "";
+      const subInvocation = fetch(req.url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(authHeader ? { Authorization: authHeader } : {}),
+          ...(apiKeyHeader ? { apikey: apiKeyHeader } : {}),
+        },
+        body: JSON.stringify(forwardBody),
+      }).catch((err) => {
+        console.error("[send-batch-content-notification] async self-invoke failed:", err);
+      });
+      if (typeof EdgeRuntime !== "undefined") {
+        try {
+          EdgeRuntime.waitUntil(subInvocation);
+        } catch (_) {
+          // Older runtimes without waitUntil — fetch is already dispatched.
+        }
+      }
+      return new Response(
+        JSON.stringify({ accepted: true, mode: "async" }),
+        { status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

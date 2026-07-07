@@ -1,56 +1,63 @@
+
 ## Goal
+Eliminate "feels stuck" moments across bulk actions, forms, and heavy pages by adding immediate feedback, async backend processing, and a global progress indicator.
 
-In the superadmin **/recordings** page:
-- Group videos by **Course → Module** (module acts as a section header).
-- The "Order" badge shows the video's position **within its module**, restarting at **1** for each module.
-- Drag-to-reorder is scoped to a single module; you cannot drag a video from one module into another.
-- Reordering saves back to `available_lessons.sequence_order` per-module (1..N), which is the same field the student `/videos` page reads — so student playback order stays in sync automatically.
-- No changes to `/courses` content pipeline (course drip) or `/pathway` content pipeline (pathway drip). Those keep controlling drip dates for their respective enrollments exactly as today.
+## 1. Global top progress bar (foundation)
+- Add `nprogress`-style bar via a lightweight custom component (`GlobalProgressBar`) mounted in `App.tsx`.
+- Expose `startProgress()` / `stopProgress()` through a Zustand store (`useProgressStore`).
+- Auto-hook into:
+  - React Router navigation (start on `useNavigation`/route change, stop on render).
+  - `supabase.functions.invoke` wrapper (`invokeWithProgress`) so every edge-function call ticks the bar.
+- Styling: 2px bar, `bg-primary`, subtle glow, respects dark mode.
 
-## What changes
+## 2. Bulk success-session emails → fire-and-forget
+- **Edge function** `send-batch-content-notification` (and any other bulk email path used for success sessions): return `202 Accepted` immediately, wrap the actual send loop in `EdgeRuntime.waitUntil(...)`.
+- Write per-job rows into a new `background_jobs` table (`id, kind, status, total, processed, failed, error, created_by, created_at, updated_at`) with RLS scoped to creator + admins.
+- Frontend caller:
+  - Optimistic toast: "Sending 47 emails in the background…"
+  - Subscribe to `background_jobs` realtime for that `job_id`, update toast on completion ("47 sent, 0 failed").
+  - Unblock the modal/button instantly.
 
-**File: `src/components/superadmin/RecordingsManagement.tsx`** (only file touched)
+## 3. Scheduling / updating success sessions
+- Same async pattern for the schedule-and-notify path.
+- Split the write (fast) from the notify (slow): DB insert commits and closes the dialog immediately; notification dispatch runs via `EdgeRuntime.waitUntil`.
+- Add optimistic row insertion in the sessions table so the new session appears before the round trip completes.
 
-1. **Grouping**
-   - Extend the existing `groupedRecordings` memo to a two-level structure: `Course → Module → recordings[]`.
-   - Sort modules by `modules.order`, and recordings inside each module by `sequence_order` ascending.
-   - Render each course as a collapsible section (as today), and inside it render one collapsible sub-section per module with a header showing the module title and video count.
+## 4. Add/edit forms (modules, videos, students, sessions)
+- Standardize a `<SubmitButton>` that:
+  - Disables + shows spinner while pending.
+  - Uses `useMutation`-style local state (already present in some places, missing in others).
+- Replace `window.location.reload()` / full refetches with targeted invalidations where used.
+- Add toast **before** refetch resolves (success is known at edge-function 2xx).
+- For student creation, show the multi-step progress (create auth user → profile → enrollments → invoices) in the toast description.
 
-2. **Order badge**
-   - Replace `{recording.sequence_order || 0}` with the video's index within its module + 1 (i.e., `1, 2, 3…` restarting per module). The stored `sequence_order` value backs this — no display drift.
+## 5. Student `/assignments` page
+- Parallelize the 4 sequential fetches in `StudentAssignmentList.fetchData` with `Promise.all` (already close, verify).
+- Render skeleton cards immediately instead of the centered "Loading assignments..." text.
+- Show assignments as soon as `assignments` + `submissions` arrive; `recording_views` and unlocks can hydrate progressively (assignments render as "checking access…" then flip to unlocked/locked).
+- Cache with `useQuery` (React Query is already in the project) so re-entering the page is instant.
 
-3. **Drag-to-reorder scope**
-   - Wrap each module's list in its own `DndContext` + `SortableContext` (one per module, not one per course/page).
-   - `handleRecordingDragEnd` becomes module-scoped: it receives the module's recordings, runs `arrayMove`, then writes `sequence_order = index + 1` for **only that module's rows**. This fixes the current bug where drags renumber across mixed modules.
-   - Dragging outside a module's list simply does nothing (no cross-module moves in this pass).
+## 6. Perceived-perf polish
+- Add `<Skeleton />` loaders where spinners are used in list views (payment reports, students management, modules).
+- Debounced search inputs (300ms) where they trigger fetches.
+- Ensure every long-running button has `disabled={isPending}` + spinner.
 
-4. **No DB migration**
-   - `sequence_order` semantics stay per-module. We simply enforce per-module 1..N on every reorder.
-   - Optional, low-risk cleanup on load: for any module whose recordings have gaps/duplicates in `sequence_order`, silently renumber them 1..N in place. Skipped if the user prefers zero writes on load — I'll leave it OFF by default and only renumber when the user drags.
+## Technical notes
+- New table: `public.background_jobs` with `GRANT` block + RLS (creator can select their jobs, admins/superadmins can select all, service_role full).
+- Realtime enabled on `background_jobs`.
+- New client util: `src/lib/invoke-with-progress.ts` wrapping `supabase.functions.invoke`.
+- New component: `src/components/system/GlobalProgressBar.tsx`.
+- New store: `src/stores/progress-store.ts`.
+- Progressive rollout — I'll ship in this order so each layer is usable on its own:
+  1. Global progress bar + invoke wrapper
+  2. background_jobs table + bulk email async conversion
+  3. Success session scheduling async
+  4. Form standardization (SubmitButton)
+  5. `/assignments` skeletons + parallel fetch
 
-5. **Filters preserved**
-   - Search, course filter, module filter continue to work. When a module filter is active, only that module's group renders. When a course filter is active, only that course's modules render.
+## Out of scope
+- Rewriting individual edge functions for pure performance (only the bulk ones become async).
+- Changing database schema beyond `background_jobs`.
+- Replacing the toast system.
 
-## What does NOT change
-
-- Student `/videos` page ordering logic (`useVideosData`, `usePathwayGroupedRecordings`) — unchanged. It already sorts by `modules.order` then `sequence_order`, which is exactly what we're maintaining.
-- Sequential unlock, drip days, `/courses` and `/pathway` content pipelines — untouched.
-- Database schema, RLS, triggers — untouched.
-- Add/Edit recording dialog, attachments, ratings, sync-unlocks button — untouched.
-
-## Technical details
-
-- Grouped structure built in a single `useMemo` from `filteredRecordings + courses + modules`:
-  ```
-  [{ courseId, courseTitle, modules: [{ moduleId, moduleTitle, moduleOrder, recordings: [...] }] }]
-  ```
-- `SortableRecordingRow` receives `displayOrder = index + 1` (the module-local index) and renders it in the badge instead of `sequence_order`.
-- `handleRecordingDragEnd(moduleId, event)` is curried per module. Persistence loop only updates rows within that module.
-- On drag end, UI updates optimistically; failure reverts via `fetchRecordings()` (same pattern as today).
-
-## Verification
-
-- Reorder a video inside Module A → badge renumbers 1..N in Module A only; Module B untouched.
-- Reload the superadmin page → order persists.
-- Open student `/videos` as an enrolled student → same order as superadmin shows for that module.
-- Course drip in `/courses` and pathway drip in `/pathway` still gate unlock dates as before.
+Shall I proceed with step 1 (global progress bar + invoke wrapper) and step 2 (bulk email async) first? They give the biggest visible win.

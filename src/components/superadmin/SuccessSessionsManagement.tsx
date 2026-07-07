@@ -490,6 +490,7 @@ export function SuccessSessionsManagement() {
                 is_recording_update: isRecordingUpdate,
                 is_update: !isRecordingUpdate,
                 include_mentor: index === 0,
+                async: true,
               }
             });
           } catch (notifyError) {
@@ -586,6 +587,7 @@ export function SuccessSessionsManagement() {
                     mentor_id: baseSessionData.mentor_id || undefined,
                     cta_path: '/live-sessions',
                     include_mentor: index === 0,
+                    async: true,
                   }
                 });
               } catch (notifyError) {
@@ -598,8 +600,8 @@ export function SuccessSessionsManagement() {
         toast({
           title: "Success",
           description: resolvedBatchIds && resolvedBatchIds.length > 1
-            ? `Session created for ${resolvedBatchIds.length} batches`
-            : "Session created successfully",
+            ? `Session created for ${resolvedBatchIds.length} batches. Emails are being sent in the background.`
+            : "Session created. Emails are being sent in the background.",
         });
       }
 
@@ -610,7 +612,7 @@ export function SuccessSessionsManagement() {
         setDialogOpen(false);
         resetForm();
         formSubmittedRef.current = false;
-      }, 1500);
+      }, 400);
     } catch (error: any) {
       const msg = error?.message || error?.error?.message || '';
       const isDuplicate = error?.code === '23505' || /success_sessions_unique_link_start|duplicate key/i.test(msg);
@@ -655,6 +657,7 @@ export function SuccessSessionsManagement() {
                 mentor_id: session.mentor_id || undefined,
                 cta_path: '/live-sessions',
                 include_mentor: index === 0,
+                async: true,
               }
             });
           } catch (notifyError) {
@@ -663,7 +666,7 @@ export function SuccessSessionsManagement() {
         }
       }
 
-      toast({ title: "Published!", description: "Session is now visible to students and notifications have been sent." });
+      toast({ title: "Published!", description: "Session is live for students. Emails are being sent in the background." });
       fetchSessions();
     } catch (error) {
       toast({ title: "Error", description: "Failed to publish session", variant: "destructive" });
