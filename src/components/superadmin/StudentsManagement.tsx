@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { safeLogger } from '@/lib/safe-logger';
 import { ExpandableSubDetails } from '@/components/ExpandableSubDetails';
 import { ActivityLogsDialog } from '@/components/ActivityLogsDialog';
+import { TablePager } from '@/components/common/TablePager';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -179,7 +180,7 @@ export function StudentsManagement() {
   const [suspensionLoading, setSuspensionLoading] = useState(false);
   const [notesDialogOpen, setNotesDialogOpen] = useState(false);
   const [selectedStudentForNotes, setSelectedStudentForNotes] = useState<Student | null>(null);
-  const pageSize = 25;
+  const pageSize = 50;
   const {
     options: installmentOptions
   } = useInstallmentOptions();
@@ -3334,18 +3335,16 @@ export function StudentsManagement() {
               </TableBody>
             </Table>
             {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 px-2">
-                <p className="text-sm text-muted-foreground">
-                  Showing {((currentPage - 1) * pageSize) + 1}–{Math.min(currentPage * pageSize, displayStudents.length)} of {displayStudents.length} students
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}>Previous</Button>
-                  <span className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</span>
-                  <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}>Next</Button>
-                </div>
-              </div>
-            )}
+            <div className="px-2">
+              <TablePager
+                page={currentPage}
+                pageCount={totalPages}
+                totalItems={displayStudents.length}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                itemLabel="students"
+              />
+            </div>
         </CardContent>
       </Card>
 

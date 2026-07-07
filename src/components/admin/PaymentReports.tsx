@@ -17,6 +17,7 @@ import { MarkPaidDialog } from './MarkPaidDialog';
 import { logAdminAction } from '@/lib/activity-logger';
 import { useAuth } from '@/hooks/useAuth';
 import { fetchAll } from '@/lib/fetch-all';
+import { TablePager } from '@/components/common/TablePager';
 
 
 interface InvoiceRecord {
@@ -63,7 +64,7 @@ export const PaymentReports = () => {
   const [courses, setCourses] = useState<{ id: string; title: string }[]>([]);
   const [currency, setCurrency] = useState('PKR');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 50;
 
   const [extensionDate, setExtensionDate] = useState<Date | undefined>();
   const [extensionPopoverOpen, setExtensionPopoverOpen] = useState<string | null>(null);
@@ -716,19 +717,16 @@ export const PaymentReports = () => {
           </Table>
         </CardContent>
 
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between p-4 border-t">
-            <p className="text-sm text-muted-foreground">Page {currentPage} of {totalPages}</p>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                <ChevronLeft className="h-4 w-4" /> Previous
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                Next <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+        <div className="px-4 border-t">
+          <TablePager
+            page={currentPage}
+            pageCount={totalPages}
+            totalItems={sortedRecords.length}
+            pageSize={itemsPerPage}
+            onPageChange={setCurrentPage}
+            itemLabel="invoices"
+          />
+        </div>
       </Card>
 
       {refundContext && (

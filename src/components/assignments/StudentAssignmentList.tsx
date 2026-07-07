@@ -11,6 +11,7 @@ import { useRecordingUnlocks } from '@/hooks/useRecordingUnlocks';
 import { EnhancedStudentSubmissionDialog } from './EnhancedStudentSubmissionDialog';
 import { useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { LoadMoreButton } from '@/components/common/LoadMoreButton';
 interface Assignment {
   id: string;
   name: string;
@@ -226,6 +227,13 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     (a.description || '').toLowerCase().includes(q) ||
     (a.recording?.recording_title || '').toLowerCase().includes(q)
   );
+
+  // Progressive rendering: show 50 at a time; user clicks "Load more" for the rest.
+  const [visibleCount, setVisibleCount] = useState(50);
+  useEffect(() => { setVisibleCount(50); }, [filterMode, q]);
+  const visibleAssignments = filteredAssignments.slice(0, visibleCount);
+
+
   
 
   type StatusKey = 'no_submission' | 'pending' | 'declined' | 'approved';
@@ -312,7 +320,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-          {filteredAssignments.map(assignment => {
+          {visibleAssignments.map(assignment => {
             const submission = getSubmissionStatus(assignment.id);
             const hasSubmitted = !!submission;
             const statusKey = getStatusKey(submission);
@@ -433,6 +441,16 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
           })}
         </div>
       )}
+
+      {filteredAssignments.length > 0 && (
+        <LoadMoreButton
+          shown={visibleAssignments.length}
+          total={filteredAssignments.length}
+          onLoadMore={() => setVisibleCount(c => c + 50)}
+          itemLabel="assignments"
+        />
+      )}
+
 
       {selectedAssignment && (
         <EnhancedStudentSubmissionDialog

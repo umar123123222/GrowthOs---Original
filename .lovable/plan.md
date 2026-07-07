@@ -1,63 +1,54 @@
 
 ## Goal
-Eliminate "feels stuck" moments across bulk actions, forms, and heavy pages by adding immediate feedback, async backend processing, and a global progress indicator.
+Cut initial render time and memory pressure on the heaviest lists by loading only what's visible. Tables get numbered pagination (50/page); card/feed lists get a "Load more" button (50 at a time).
 
-## 1. Global top progress bar (foundation)
-- Add `nprogress`-style bar via a lightweight custom component (`GlobalProgressBar`) mounted in `App.tsx`.
-- Expose `startProgress()` / `stopProgress()` through a Zustand store (`useProgressStore`).
-- Auto-hook into:
-  - React Router navigation (start on `useNavigation`/route change, stop on render).
-  - `supabase.functions.invoke` wrapper (`invokeWithProgress`) so every edge-function call ticks the bar.
-- Styling: 2px bar, `bg-primary`, subtle glow, respects dark mode.
+## Shared primitives (build once, reuse)
 
-## 2. Bulk success-session emails → fire-and-forget
-- **Edge function** `send-batch-content-notification` (and any other bulk email path used for success sessions): return `202 Accepted` immediately, wrap the actual send loop in `EdgeRuntime.waitUntil(...)`.
-- Write per-job rows into a new `background_jobs` table (`id, kind, status, total, processed, failed, error, created_by, created_at, updated_at`) with RLS scoped to creator + admins.
-- Frontend caller:
-  - Optimistic toast: "Sending 47 emails in the background…"
-  - Subscribe to `background_jobs` realtime for that `job_id`, update toast on completion ("47 sent, 0 failed").
-  - Unblock the modal/button instantly.
+1. **`useServerPagination<T>(query, { pageSize })`** — hook that runs a Supabase `.range()` query with `count: 'exact'`, returns `{ rows, total, page, setPage, pageCount, loading, refetch }`. Handles filter/sort deps.
+2. **`<TablePagination />`** — shadcn-based pager: `‹  1 2 3 … 42  ›` + "Showing 51–100 of 2,109" + optional page-size selector. Uses existing `components/ui/pagination.tsx`.
+3. **`useLoadMore<T>(query, { pageSize })`** — same idea but appends: `{ rows, loadMore, hasMore, loading, reset }`.
+4. **`<LoadMoreButton />`** — full-width outline button with spinner + "Showing X of Y".
 
-## 3. Scheduling / updating success sessions
-- Same async pattern for the schedule-and-notify path.
-- Split the write (fast) from the notify (slow): DB insert commits and closes the dialog immediately; notification dispatch runs via `EdgeRuntime.waitUntil`.
-- Add optimistic row insertion in the sessions table so the new session appears before the round trip completes.
+All four go under `src/components/common/` and `src/hooks/`.
 
-## 4. Add/edit forms (modules, videos, students, sessions)
-- Standardize a `<SubmitButton>` that:
-  - Disables + shows spinner while pending.
-  - Uses `useMutation`-style local state (already present in some places, missing in others).
-- Replace `window.location.reload()` / full refetches with targeted invalidations where used.
-- Add toast **before** refetch resolves (success is known at edge-function 2xx).
-- For student creation, show the multi-step progress (create auth user → profile → enrollments → invoices) in the toast description.
+## Per-list changes
 
-## 5. Student `/assignments` page
-- Parallelize the 4 sequential fetches in `StudentAssignmentList.fetchData` with `Promise.all` (already close, verify).
-- Render skeleton cards immediately instead of the centered "Loading assignments..." text.
-- Show assignments as soon as `assignments` + `submissions` arrive; `recording_views` and unlocks can hydrate progressively (assignments render as "checking access…" then flip to unlocked/locked).
-- Cache with `useQuery` (React Query is already in the project) so re-entering the page is instant.
+### Tables → numbered pagination, 50/page
+- **Students Management** (`src/components/superadmin/StudentsManagement.tsx`)
+  - Server-side pagination with `count: 'exact'`, `range(from, to)`.
+  - Filters (status, batch, search) reset to page 1 and re-query.
+  - Debounce search 300ms.
+  - Bulk-select stays scoped to current page (with an explicit "Select all N matching" affordance if selection is used).
+- **Payment Reports** (`src/components/admin/PaymentReports.tsx`)
+  - Same treatment; already sorts server-side, just add `range` + count.
+- **Submissions Management** (`src/components/assignments/SubmissionsManagement.tsx`)
+  - Numbered pagination on the submissions table (admin/mentor view).
+- **Support Tickets — admin** (`src/components/superadmin/SupportManagement.tsx`)
+  - Table with numbered pagination.
 
-## 6. Perceived-perf polish
-- Add `<Skeleton />` loaders where spinners are used in list views (payment reports, students management, modules).
-- Debounced search inputs (300ms) where they trigger fetches.
-- Ensure every long-running button has `disabled={isPending}` + spinner.
+### Card lists → Load more, 50 at a time
+- **Student /assignments** (`src/components/assignments/StudentAssignmentList.tsx`)
+  - Pull assignments in pages of 50, "Load more" appends.
+  - Search stays client-side over loaded rows (or triggers server fetch if q is set — I'll keep it client-side over the loaded batch for simplicity; matches current UX).
+- **Support Tickets — student view** (`src/pages/Support.tsx`)
+  - Card list with Load more.
+
+## Not touched (out of scope this round)
+- Analytics dashboards / charts (they aggregate, not list; will address separately if needed).
+- FinancialManagement / GlobalFinancials (aggregate views — same reason).
+- Notification lists (already relatively small; will add later if you flag it).
 
 ## Technical notes
-- New table: `public.background_jobs` with `GRANT` block + RLS (creator can select their jobs, admins/superadmins can select all, service_role full).
-- Realtime enabled on `background_jobs`.
-- New client util: `src/lib/invoke-with-progress.ts` wrapping `supabase.functions.invoke`.
-- New component: `src/components/system/GlobalProgressBar.tsx`.
-- New store: `src/stores/progress-store.ts`.
-- Progressive rollout — I'll ship in this order so each layer is usable on its own:
-  1. Global progress bar + invoke wrapper
-  2. background_jobs table + bulk email async conversion
-  3. Success session scheduling async
-  4. Form standardization (SubmitButton)
-  5. `/assignments` skeletons + parallel fetch
+- Every query uses `.select('...', { count: 'exact' })` + `.range(from, to)`.
+- Progress bar (already shipped) auto-ticks on every fetch through the wrapper — good perceived feedback.
+- Preserve existing sort/filter state across page changes.
+- Reset to page 1 when any filter changes.
 
-## Out of scope
-- Rewriting individual edge functions for pure performance (only the bulk ones become async).
-- Changing database schema beyond `background_jobs`.
-- Replacing the toast system.
+## Rollout order
+1. Shared hooks + components
+2. Students Management (biggest file, biggest win)
+3. Payment Reports
+4. Submissions Management + Support admin
+5. StudentAssignmentList + Support student page
 
-Shall I proceed with step 1 (global progress bar + invoke wrapper) and step 2 (bulk email async) first? They give the biggest visible win.
+Proceeding now.

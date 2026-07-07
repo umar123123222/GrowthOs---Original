@@ -15,6 +15,7 @@ import { useCourses } from '@/hooks/useCourses';
 import { logUserActivity, logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 import { Input } from '@/components/ui/input';
 import { useDebounce } from '@/hooks/useDebounce';
+import { TablePager } from '@/components/common/TablePager';
 
 interface Submission {
   id: string;
@@ -58,6 +59,8 @@ export function SubmissionsManagement({
   const [filterCourse, setFilterCourse] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const debouncedSearch = useDebounce(searchQuery, 300);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 50;
 
   const filteredSubmissions = submissions.filter(s => {
     if (!debouncedSearch) return true;
@@ -68,6 +71,14 @@ export function SubmissionsManagement({
       s.student?.student_id?.toLowerCase().includes(q)
     );
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredSubmissions.length / pageSize));
+  const pagedSubmissions = filteredSubmissions.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Reset to page 1 whenever filters or search change.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, filterStatus, filterCourse]);
 
   useEffect(() => {
     fetchSubmissions();
@@ -513,7 +524,7 @@ export function SubmissionsManagement({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredSubmissions.map(submission => <TableRow key={submission.id} className="table-row-hover">
+                {pagedSubmissions.map(submission => <TableRow key={submission.id} className="table-row-hover">
                     <TableCell className="bg-white">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-muted rounded-full flex items-center justify-center">
@@ -658,6 +669,16 @@ export function SubmissionsManagement({
                   </TableRow>)}
               </TableBody>
             </Table>}
+          <div className="px-4">
+            <TablePager
+              page={currentPage}
+              pageCount={totalPages}
+              totalItems={filteredSubmissions.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              itemLabel="submissions"
+            />
+          </div>
         </div>
       </div>
     </div>;
