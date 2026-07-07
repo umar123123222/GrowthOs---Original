@@ -16,6 +16,7 @@ import { RefundDialog } from './RefundDialog';
 import { MarkPaidDialog } from './MarkPaidDialog';
 import { logAdminAction } from '@/lib/activity-logger';
 import { useAuth } from '@/hooks/useAuth';
+import { fetchAll } from '@/lib/fetch-all';
 
 
 interface Invoice {
@@ -71,12 +72,13 @@ export const FinancialManagement = () => {
 const fetchInvoices = async () => {
   setLoading(true);
   try {
-    const { data: invData, error: invErr } = await supabase
-      .from('invoices')
-      .select('id, student_id, course_id, pathway_id, installment_number, amount, due_date, extended_due_date, status, paid_at');
-    if (invErr) throw invErr;
+    const invoicesRaw = await fetchAll((from, to) =>
+      supabase
+        .from('invoices')
+        .select('id, student_id, course_id, pathway_id, installment_number, amount, due_date, extended_due_date, status, paid_at')
+        .range(from, to)
+    );
 
-    const invoicesRaw = invData || [];
     const studentIds = Array.from(new Set(invoicesRaw.map((i: any) => i.student_id).filter(Boolean)));
     const courseIds = Array.from(new Set(invoicesRaw.map((i: any) => i.course_id).filter(Boolean)));
     const pathwayIds = Array.from(new Set(invoicesRaw.map((i: any) => i.pathway_id).filter(Boolean)));
@@ -88,10 +90,13 @@ const fetchInvoices = async () => {
 
     // Fetch related data
     if (studentIds.length) {
-      const [{ data: students, error: sErr }, { data: users, error: uErr }] = await Promise.all([
+      const [{ data: students, error: sErr }] = await Promise.all([
         supabase.from('students').select('id, user_id').in('id', studentIds),
-        supabase.from('users').select('id, email')
       ]);
+      const userIds = (students || []).map((s: any) => s.user_id).filter(Boolean);
+      const { data: users, error: uErr } = userIds.length
+        ? await supabase.from('users').select('id, email').in('id', userIds)
+        : { data: [], error: null } as any;
       if (sErr) throw sErr;
       if (uErr) throw uErr;
       (students || []).forEach((s: any) => studentMap.set(s.id, s.user_id));
