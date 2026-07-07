@@ -76,7 +76,7 @@ interface Assignment {
 // Sortable Recording Row Component
 function SortableRecordingRow({ 
   recording, 
-  index, 
+  displayOrder,
   isExpanded, 
   onToggleExpand, 
   onEdit, 
@@ -87,7 +87,7 @@ function SortableRecordingRow({
   readOnly
 }: {
   recording: Recording;
-  index: number;
+  displayOrder: number;
   isExpanded: boolean;
   onToggleExpand: () => void;
   onEdit: (recording: Recording) => void;
@@ -97,6 +97,7 @@ function SortableRecordingRow({
   courses: Course[];
   readOnly?: boolean;
 }) {
+
   const {
     attributes,
     listeners,
