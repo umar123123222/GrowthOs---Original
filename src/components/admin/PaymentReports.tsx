@@ -219,6 +219,8 @@ export const PaymentReports = () => {
         return eff && new Date(eff) < now;
       })
       .reduce((s, r) => s + r.amount, 0);
+    const refunded = filteredRecords.filter(r => r.status === 'refunded');
+    const refundedAmount = refunded.reduce((s, r) => s + r.amount, 0);
     return {
       totalPayments: paid.length,
       totalAmount,
@@ -226,6 +228,8 @@ export const PaymentReports = () => {
       avgPaymentAmount: paid.length > 0 ? totalAmount / paid.length : 0,
       pendingAmount,
       overdueAmount,
+      refundedCount: refunded.length,
+      refundedAmount,
     };
   }, [filteredRecords]);
 
