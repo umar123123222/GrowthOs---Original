@@ -837,13 +837,26 @@ export function StudentDashboard() {
             currentLockReason ? 'from-amber-50/0 via-amber-50/50 to-amber-50/0' : 'from-green-50/0 via-green-50/50 to-green-50/0'
           }`}></div>
           <CardHeader className="pb-3 relative z-10">
+        {(() => {
+          const isLocked = !!currentLockReason && currentLockReason.reason !== 'unlocked';
+          return (
+        <Card 
+          className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
+            isLocked ? 'border-l-amber-400' : 'border-l-green-400'
+          }`}
+          onClick={() => navigate('/videos')}
+        >
+          <div className={`absolute inset-0 bg-gradient-to-r transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
+            isLocked ? 'from-amber-50/0 via-amber-50/50 to-amber-50/0' : 'from-green-50/0 via-green-50/50 to-green-50/0'
+          }`}></div>
+          <CardHeader className="pb-3 relative z-10">
             <CardTitle className={`flex items-center gap-2 text-base font-medium ${
-              currentLockReason ? 'text-amber-600' : 'text-green-600'
+              isLocked ? 'text-amber-600' : 'text-green-600'
             }`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 ${
-                currentLockReason ? 'bg-amber-50 group-hover:bg-amber-100' : 'bg-green-50 group-hover:bg-green-100'
+                isLocked ? 'bg-amber-50 group-hover:bg-amber-100' : 'bg-green-50 group-hover:bg-green-100'
               }`}>
-                {currentLockReason ? (
+                {isLocked ? (
                   <Lock className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
                 ) : (
                   <Play className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
@@ -870,7 +883,7 @@ export function StudentDashboard() {
               </div>
               
               {/* Lock reason or progress */}
-              {currentLockReason ? (
+              {isLocked && currentLockReason ? (
                 <div className={`flex items-center gap-2 p-2 rounded-md ${
                   currentLockReason.reason === 'fees_not_cleared' 
                     ? 'bg-red-50 dark:bg-red-900/20' 
@@ -934,7 +947,7 @@ export function StudentDashboard() {
                 <div className="flex items-center gap-2 p-2 rounded-md bg-green-50 dark:bg-green-900/20">
                   <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                   <span className="text-xs font-medium text-green-700 dark:text-green-400">
-                    All content unlocked!
+                    {currentLockReason?.reason === 'unlocked' ? 'Ready to watch' : 'All content unlocked!'}
                   </span>
                 </div>
               )}
