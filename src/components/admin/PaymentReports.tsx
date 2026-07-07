@@ -43,6 +43,8 @@ interface PaymentStats {
   avgPaymentAmount: number;
   pendingAmount: number;
   overdueAmount: number;
+  refundedCount: number;
+  refundedAmount: number;
 }
 
 export const PaymentReports = () => {
