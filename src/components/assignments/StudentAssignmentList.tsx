@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { BookOpen, Clock, CheckCircle, XCircle, Lock, Search, ArrowRight, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
@@ -101,40 +102,29 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
   const fetchData = async () => {
     if (!user) return;
     try {
-      // Fetch assignments
-      const {
-        data: assignmentsData,
-        error: assignmentsError
-      } = await supabase.from('assignments').select('*, submission_type').order('created_at', {
-        ascending: false
-      });
-      if (assignmentsError) throw assignmentsError;
+      // Run all four reads in parallel — they have no dependencies.
+      const [assignmentsRes, recordingsRes, submissionsRes, viewsRes] = await Promise.all([
+        supabase.from('assignments').select('*, submission_type').order('created_at', { ascending: false }),
+        supabase.from('available_lessons').select('id, recording_title, sequence_order, assignment_id'),
+        supabase
+          .from('submissions')
+          .select('*')
+          .eq('student_id', user.id)
+          .order('version', { ascending: false })
+          .order('created_at', { ascending: false }),
+        supabase.from('recording_views').select('recording_id, watched').eq('user_id', user.id),
+      ]);
 
-      // Fetch recordings separately to get assignment linked recordings
-      const {
-        data: recordingsData,
-        error: recordingsError
-      } = await supabase.from('available_lessons').select('id, recording_title, sequence_order, assignment_id');
-      if (recordingsError) throw recordingsError;
+      if (assignmentsRes.error) throw assignmentsRes.error;
+      if (recordingsRes.error) throw recordingsRes.error;
+      if (submissionsRes.error) throw submissionsRes.error;
+      if (viewsRes.error) throw viewsRes.error;
 
-      // Fetch user's submissions with proper ordering
-      const {
-        data: submissionsData,
-        error: submissionsError
-      } = await supabase
-        .from('submissions')
-        .select('*')
-        .eq('student_id', user.id)
-        .order('version', { ascending: false })
-        .order('created_at', { ascending: false });
-      if (submissionsError) throw submissionsError;
+      const assignmentsData = assignmentsRes.data;
+      const recordingsData = recordingsRes.data;
+      const submissionsData = submissionsRes.data;
+      const viewsData = viewsRes.data;
 
-      // Fetch recording views (watched status)
-      const {
-        data: viewsData,
-        error: viewsError
-      } = await supabase.from('recording_views').select('recording_id, watched').eq('user_id', user.id);
-      if (viewsError) throw viewsError;
       const watchedIds = new Set<string>((viewsData || []).filter(v => v.watched).map(v => v.recording_id));
       // Combine assignments with their recordings
       const assignmentsWithRecordings = (assignmentsData || []).map(assignment => {
@@ -149,7 +139,7 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
           } : null
         };
       });
-      
+
       setAssignments(assignmentsWithRecordings);
       setSubmissions(submissionsData || []);
       setWatchedRecordingIds(watchedIds);
