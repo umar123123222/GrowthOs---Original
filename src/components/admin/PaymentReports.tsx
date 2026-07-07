@@ -16,6 +16,7 @@ import { RefundDialog } from './RefundDialog';
 import { MarkPaidDialog } from './MarkPaidDialog';
 import { logAdminAction } from '@/lib/activity-logger';
 import { useAuth } from '@/hooks/useAuth';
+import { fetchAll } from '@/lib/fetch-all';
 
 
 interface InvoiceRecord {
