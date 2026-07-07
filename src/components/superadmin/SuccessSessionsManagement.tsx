@@ -490,6 +490,7 @@ export function SuccessSessionsManagement() {
                 is_recording_update: isRecordingUpdate,
                 is_update: !isRecordingUpdate,
                 include_mentor: index === 0,
+                async: true,
               }
             });
           } catch (notifyError) {
@@ -586,6 +587,7 @@ export function SuccessSessionsManagement() {
                     mentor_id: baseSessionData.mentor_id || undefined,
                     cta_path: '/live-sessions',
                     include_mentor: index === 0,
+                    async: true,
                   }
                 });
               } catch (notifyError) {
@@ -655,6 +657,7 @@ export function SuccessSessionsManagement() {
                 mentor_id: session.mentor_id || undefined,
                 cta_path: '/live-sessions',
                 include_mentor: index === 0,
+                async: true,
               }
             });
           } catch (notifyError) {
