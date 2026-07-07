@@ -332,13 +332,13 @@ export function StudentDashboard() {
         const completedItems = watchedRecordings + submittedAssignments;
         setCourseProgress(totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0);
         
-        // Show the first video in unlock order:
-        // 1) first unlocked-and-unwatched recording (the actual "next to play"),
+        // Show the last unlocked video (the most advanced unlocked lesson):
+        // 1) last unlocked recording (the frontier of their progress),
         // 2) else first locked recording (so student sees why they can't continue),
         // 3) else the very first recording of the course/pathway.
-        const firstUnlockedUnwatched = recordings.find(r => r.isUnlocked && !r.isWatched);
+        const lastUnlocked = [...recordings].reverse().find(r => r.isUnlocked);
         const firstLockedRecording = recordings.find(r => !r.isUnlocked);
-        const target = firstUnlockedUnwatched || firstLockedRecording || recordings[0];
+        const target = lastUnlocked || firstLockedRecording || recordings[0];
 
         if (target && !target.isUnlocked) {
           setCurrentLockReason({
