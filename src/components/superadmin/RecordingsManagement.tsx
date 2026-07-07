@@ -533,8 +533,8 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     })
   );
 
-  // Handle recording reordering
-  const handleRecordingDragEnd = async (event: DragEndEvent) => {
+  // Handle recording reordering within a single module
+  const handleModuleDragEnd = (moduleRecordings: Recording[]) => async (event: DragEndEvent) => {
     if (readOnly) return;
     const { active, over } = event;
 
@@ -542,32 +542,27 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
       return;
     }
 
-    const oldIndex = recordings.findIndex((r) => r.id === active.id);
-    const newIndex = recordings.findIndex((r) => r.id === over.id);
+    const oldIndex = moduleRecordings.findIndex((r) => r.id === active.id);
+    const newIndex = moduleRecordings.findIndex((r) => r.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
 
-    const newRecordings = arrayMove(recordings, oldIndex, newIndex);
-    
-    // Update order numbers sequentially
-    const updatedRecordings = newRecordings.map((recording, index) => ({
-      ...recording,
-      sequence_order: index + 1
+    const reordered = arrayMove(moduleRecordings, oldIndex, newIndex);
+    const updates = reordered.map((recording, index) => ({
+      id: recording.id,
+      sequence_order: index + 1,
     }));
-    
-    // Update UI immediately
-    setRecordings(updatedRecordings);
 
-    // Update order in database
+    // Optimistic UI update: patch the sequence_order on the affected recordings in state
+    const updateMap = new Map(updates.map(u => [u.id, u.sequence_order]));
+    setRecordings(prev => prev.map(r => updateMap.has(r.id) ? { ...r, sequence_order: updateMap.get(r.id)! } : r));
+
     try {
-      const updates = updatedRecordings.map((recording, index) => ({
-        id: recording.id,
-        sequence_order: index + 1
-      }));
-
       for (const update of updates) {
-        await supabase
+        const { error } = await supabase
           .from('available_lessons')
           .update({ sequence_order: update.sequence_order })
           .eq('id', update.id);
+        if (error) throw error;
       }
 
       toast({
@@ -585,6 +580,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
       fetchRecordings();
     }
   };
+
 
   const handleRecordingDeleted = (recordingId: string) => {
     setRecordings(prev => prev.filter(r => r.id !== recordingId));
