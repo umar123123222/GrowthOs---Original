@@ -82,7 +82,16 @@ export const PaymentReports = () => {
     fetchRecords();
   }, []);
 
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, courseFilter, statusFilter]);
+  // When user searches, refetch ignoring date range so all matching invoices show
+  useEffect(() => {
+    setCurrentPage(1);
+    const t = setTimeout(() => {
+      fetchRecords(undefined, searchTerm.trim());
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  useEffect(() => { setCurrentPage(1); }, [courseFilter, statusFilter]);
 
   const fetchCurrency = async () => {
     const { data } = await supabase.from('company_settings').select('currency').single();
