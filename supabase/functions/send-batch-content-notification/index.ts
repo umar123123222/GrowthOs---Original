@@ -25,7 +25,17 @@ interface NotificationRequest {
   is_update?: boolean;
   reminder_label?: string;
   include_mentor?: boolean;
+  /**
+   * When true, the function accepts the job, returns 202 immediately, and
+   * finishes sending in the background via EdgeRuntime.waitUntil. This is what
+   * the admin UI uses so bulk sends do not block the dialog.
+   */
+  async?: boolean;
 }
+
+// Deno Deploy's background-work API. Typed loosely so this file still compiles
+// under a plain TypeScript checker.
+declare const EdgeRuntime: { waitUntil: (p: Promise<unknown>) => void } | undefined;
 
 const PKT_OFFSET_MS = 5 * 60 * 60 * 1000;
 
