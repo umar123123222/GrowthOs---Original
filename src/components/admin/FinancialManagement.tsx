@@ -72,12 +72,13 @@ export const FinancialManagement = () => {
 const fetchInvoices = async () => {
   setLoading(true);
   try {
-    const { data: invData, error: invErr } = await supabase
-      .from('invoices')
-      .select('id, student_id, course_id, pathway_id, installment_number, amount, due_date, extended_due_date, status, paid_at');
-    if (invErr) throw invErr;
+    const invoicesRaw = await fetchAll((from, to) =>
+      supabase
+        .from('invoices')
+        .select('id, student_id, course_id, pathway_id, installment_number, amount, due_date, extended_due_date, status, paid_at')
+        .range(from, to)
+    );
 
-    const invoicesRaw = invData || [];
     const studentIds = Array.from(new Set(invoicesRaw.map((i: any) => i.student_id).filter(Boolean)));
     const courseIds = Array.from(new Set(invoicesRaw.map((i: any) => i.course_id).filter(Boolean)));
     const pathwayIds = Array.from(new Set(invoicesRaw.map((i: any) => i.pathway_id).filter(Boolean)));
