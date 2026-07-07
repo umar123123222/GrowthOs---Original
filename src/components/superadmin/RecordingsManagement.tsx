@@ -1038,7 +1038,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
               {groupedRecordings.map((courseGroup) => {
                 const courseTotal = courseGroup.modules.reduce((sum, m) => sum + m.recordings.length, 0);
                 return (
-                  <Collapsible key={courseGroup.courseId} defaultOpen>
+                  <Collapsible key={courseGroup.courseId}>
                     <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-muted/50 border-b hover:bg-muted/70 transition-colors">
                       <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
                       <span className="font-semibold text-base">{courseGroup.courseTitle}</span>
@@ -1046,7 +1046,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       {courseGroup.modules.map((moduleGroup) => (
-                        <Collapsible key={moduleGroup.moduleId} defaultOpen>
+                        <Collapsible key={moduleGroup.moduleId}>
                           <CollapsibleTrigger className="flex items-center gap-3 w-full py-2 px-6 bg-muted/20 border-b hover:bg-muted/40 transition-colors">
                             <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
                             <span className="font-medium text-sm">{moduleGroup.moduleTitle}</span>
