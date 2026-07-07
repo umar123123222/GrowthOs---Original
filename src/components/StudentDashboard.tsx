@@ -1093,67 +1093,64 @@ export function StudentDashboard() {
       {/* Interactive Milestones & Leaderboard Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Milestones Card */}
-        <Card className="hover:shadow-xl hover:scale-[1.02] transition-all duration-500 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '450ms' }}>
-          <div className="absolute inset-0 bg-gradient-to-r from-orange-50/0 via-orange-50/30 to-orange-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <CardHeader className="pb-3 relative z-10">
+        <Card className="hover:shadow-md transition-shadow duration-300 animate-fade-in" style={{ animationDelay: '450ms' }}>
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-yellow-100 to-orange-100 flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                <Award className="w-4 h-4 text-orange-600 group-hover:scale-110 transition-transform duration-300" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-yellow-100 to-orange-100 flex items-center justify-center">
+                <Award className="w-4 h-4 text-orange-600" />
               </div>
-              <span className="text-base font-medium text-orange-600 group-hover:translate-x-1 transition-transform duration-300">
-                Milestones
-              </span>
+              <span className="text-base font-medium text-orange-600">Milestones</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="space-y-3">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-xs font-normal text-muted-foreground">Progress</span>
-                <span className="text-xs font-medium text-orange-600 group-hover:scale-105 transition-transform duration-300">
-                  {completedMilestones} of {milestones.length} completed
-                </span>
+          <CardContent>
+            {milestones.length === 0 ? (
+              <div className="text-center py-8 space-y-2">
+                <div className="w-12 h-12 mx-auto rounded-full bg-orange-50 flex items-center justify-center">
+                  <Award className="w-6 h-6 text-orange-400" />
+                </div>
+                <p className="text-sm text-muted-foreground">Milestones will appear as you progress</p>
               </div>
-              <div className="relative group/progress">
-                <Progress value={(completedMilestones / milestones.length) * 100} className="h-1.5 group-hover/progress:h-2 transition-all duration-300" />
-                <div className="absolute inset-0 bg-gradient-to-r from-orange-300/30 to-yellow-300/30 rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
-              </div>
-              
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {milestones.map((milestone, index) => (
-                  <div 
-                    key={milestone.id} 
-                    className={`flex items-center gap-2 p-2 rounded-md transition-all duration-300 hover:scale-[1.02] cursor-pointer ${
-                      milestone.completed 
-                        ? 'bg-green-50/50 border border-green-100 hover:bg-green-50 hover:shadow-sm' 
-                        : 'bg-muted/20 hover:bg-muted/40'
-                    }`}
-                    style={{ animationDelay: `${index * 100}ms` }}
-                  >
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center transition-all duration-300 ${
-                      milestone.completed 
-                        ? 'bg-green-500 hover:scale-110 hover:rotate-12' 
-                        : 'bg-muted border border-muted-foreground/20 hover:scale-105'
-                    }`}>
-                      {milestone.completed ? (
-                        <CheckCircle className="w-3 h-3 text-white" />
-                      ) : (
-                        <span className="text-sm hover:scale-110 transition-transform duration-300">{milestone.icon}</span>
-                      )}
-                    </div>
-                    <span className={`font-normal text-sm transition-colors duration-300 hover:translate-x-1 ${
-                      milestone.completed ? 'text-green-700' : 'text-foreground'
-                    }`}>
-                      {milestone.title}
-                    </span>
-                    {milestone.completed && (
-                      <div className="ml-auto">
-                        <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse hover:scale-110 transition-transform duration-200"></div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs font-normal text-muted-foreground">Progress</span>
+                  <span className="text-xs font-medium text-orange-600">
+                    {completedMilestones} of {milestones.length} completed
+                  </span>
+                </div>
+                <Progress value={(completedMilestones / milestones.length) * 100} className="h-1.5" />
+
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  {milestones.map((milestone) => (
+                    <div
+                      key={milestone.id}
+                      className={`flex items-center gap-2 p-2 rounded-md transition-colors ${
+                        milestone.completed
+                          ? 'bg-green-50/60 dark:bg-green-900/10 border border-green-100 dark:border-green-900/30'
+                          : 'bg-muted/30 hover:bg-muted/50'
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                        milestone.completed
+                          ? 'bg-green-500'
+                          : 'bg-muted border border-muted-foreground/20'
+                      }`}>
+                        {milestone.completed ? (
+                          <CheckCircle className="w-3 h-3 text-white" />
+                        ) : (
+                          <span className="text-sm">{milestone.icon}</span>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ))}
+                      <span className={`font-normal text-sm ${
+                        milestone.completed ? 'text-green-700 dark:text-green-400' : 'text-foreground'
+                      }`}>
+                        {milestone.title}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
