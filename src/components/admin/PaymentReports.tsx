@@ -49,6 +49,7 @@ interface PaymentStats {
 
 export const PaymentReports = () => {
   const [records, setRecords] = useState<InvoiceRecord[]>([]);
+  const [refundsInRange, setRefundsInRange] = useState<{ amount: number; courseId: string | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [tableLoading, setTableLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
