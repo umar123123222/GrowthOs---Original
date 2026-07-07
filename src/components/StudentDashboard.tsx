@@ -1155,78 +1155,60 @@ export function StudentDashboard() {
         </Card>
 
         {/* Your Rank Card */}
-        <Card className="hover:shadow-xl hover:scale-[1.02] transition-all duration-500 animate-fade-in group cursor-pointer relative overflow-hidden" style={{ animationDelay: '600ms' }}>
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-50/0 via-purple-50/30 to-purple-50/0 transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
-          <CardHeader className="pb-3 relative z-10">
+        <Card className="hover:shadow-md transition-shadow duration-300 animate-fade-in" style={{ animationDelay: '600ms' }}>
+          <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-100 to-pink-100 flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                <Trophy className="w-4 h-4 text-purple-600 group-hover:scale-110 group-hover:text-yellow-500 transition-all duration-300" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center">
+                <Trophy className="w-4 h-4 text-purple-600" />
               </div>
-              <span className="text-base font-medium text-purple-600 group-hover:translate-x-1 transition-transform duration-300">
-                Your Rank
-              </span>
+              <span className="text-base font-medium text-purple-600">Your Rank</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="relative z-10">
+          <CardContent>
             {leaderboardPosition ? (
-              <div className="text-center space-y-3">
-                <div className="relative">
-                  <div className="text-4xl font-medium text-purple-600 group-hover:scale-110 group-hover:text-purple-700 transition-all duration-300">
+              <div className="text-center space-y-4">
+                <div className="relative inline-block">
+                  <div className="text-5xl font-semibold bg-gradient-to-br from-purple-600 to-pink-500 bg-clip-text text-transparent">
                     #{leaderboardPosition.rank}
                   </div>
-                  <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-200 rounded-full flex items-center justify-center group-hover:animate-bounce">
-                    <span className="text-xs group-hover:scale-110 transition-transform duration-300">⭐</span>
-                  </div>
-                  <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-300/30 rounded-full opacity-0 group-hover:opacity-100 animate-ping"></div>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-base font-medium text-foreground group-hover:text-purple-600 transition-colors duration-300">Great progress!</p>
-                  <p className="text-xs text-muted-foreground group-hover:text-purple-500 transition-colors duration-300">
-                    You're {leaderboardPosition.rank === 1 ? 'leading the pack' : `${leaderboardPosition.rank} of ${leaderboardPosition.total}`}
+                  <p className="text-sm font-medium text-foreground">
+                    {leaderboardPosition.rank === 1
+                      ? "You're leading the pack 🎉"
+                      : `Rank ${leaderboardPosition.rank} of ${leaderboardPosition.total}`}
                   </p>
+                  <p className="text-xs text-muted-foreground">Keep the momentum going</p>
                 </div>
-                <div className="flex items-center justify-center space-x-1 mb-3">
+                <div className="flex items-center justify-center gap-1">
                   {[1, 2, 3].map(pos => (
-                    <Star 
-                      key={pos} 
-                      className={`w-4 h-4 transition-all duration-300 hover:scale-125 cursor-pointer ${
-                        pos <= 3 && leaderboardPosition.rank <= 3 
-                          ? 'text-yellow-500 fill-current hover:rotate-12' 
-                          : 'text-muted hover:text-yellow-400'
-                      }`} 
+                    <Star
+                      key={pos}
+                      className={`w-4 h-4 ${
+                        leaderboardPosition.rank <= pos
+                          ? 'text-yellow-500 fill-current'
+                          : 'text-muted-foreground/30'
+                      }`}
                     />
                   ))}
                 </div>
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-3 rounded-md border border-purple-100 group-hover:border-purple-200 group-hover:shadow-sm transition-all duration-300">
-                  <div className="flex items-center justify-center gap-1 text-xs font-normal text-purple-700">
-                    <Star className="w-3 h-3 fill-current group-hover:animate-spin" />
-                    <span className="group-hover:scale-105 transition-transform duration-300">Keep up the great work!</span>
-                    <Star className="w-3 h-3 fill-current group-hover:animate-spin" />
-                  </div>
-                </div>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => navigate('/leaderboard')}
-                  className="w-full text-xs font-normal group-hover:scale-105 hover:bg-purple-50 hover:border-purple-300 transition-all duration-300 relative overflow-hidden"
+                  className="w-full text-xs font-normal hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 dark:hover:bg-purple-900/20"
                 >
-                  <span className="relative z-10">View Full Leaderboard</span>
-                  <div className="absolute inset-0 bg-purple-100/50 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+                  View Full Leaderboard
                 </Button>
               </div>
             ) : (
               <div className="text-center py-6 space-y-3">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-50 to-pink-50 rounded-full mx-auto flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300">
-                  <Target className="w-6 h-6 text-purple-500 group-hover:scale-110 transition-transform duration-300" />
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-50 to-pink-50 rounded-full mx-auto flex items-center justify-center">
+                  <Target className="w-6 h-6 text-purple-500" />
                 </div>
                 <div>
-                  <p className="font-medium text-foreground mb-1 group-hover:text-purple-600 transition-colors duration-300">Start Your Journey</p>
-                  <p className="text-xs text-muted-foreground group-hover:text-purple-500 transition-colors duration-300">
-                    Complete activities to see your ranking
-                  </p>
-                </div>
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-2 rounded-md border border-purple-100 group-hover:border-purple-200 group-hover:shadow-sm transition-all duration-300">
-                  <p className="text-xs text-purple-700 font-normal group-hover:scale-105 transition-transform duration-300">Ready to climb the leaderboard? 🚀</p>
+                  <p className="font-medium text-foreground mb-1">Start Your Journey</p>
+                  <p className="text-xs text-muted-foreground">Complete activities to see your ranking</p>
                 </div>
               </div>
             )}
