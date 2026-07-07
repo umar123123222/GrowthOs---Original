@@ -332,14 +332,26 @@ export function StudentDashboard() {
         const completedItems = watchedRecordings + submittedAssignments;
         setCourseProgress(totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0);
         
-        // Find first locked recording and its reason
+        // Show the first video in unlock order:
+        // 1) first unlocked-and-unwatched recording (the actual "next to play"),
+        // 2) else first locked recording (so student sees why they can't continue),
+        // 3) else the very first recording of the course/pathway.
+        const firstUnlockedUnwatched = recordings.find(r => r.isUnlocked && !r.isWatched);
         const firstLockedRecording = recordings.find(r => !r.isUnlocked);
-        if (firstLockedRecording) {
+        const target = firstUnlockedUnwatched || firstLockedRecording || recordings[0];
+
+        if (target && !target.isUnlocked) {
           setCurrentLockReason({
-            reason: firstLockedRecording.lockReason || 'locked',
-            unlockDate: firstLockedRecording.dripUnlockDate || undefined,
-            nextLesson: firstLockedRecording.recording_title,
-            blockingLessonTitle: firstLockedRecording.blockingLessonTitle || null,
+            reason: target.lockReason || 'locked',
+            unlockDate: target.dripUnlockDate || undefined,
+            nextLesson: target.recording_title,
+            blockingLessonTitle: target.blockingLessonTitle || null,
+          });
+        } else if (target) {
+          // Unlocked (and typically unwatched) — surface the title without a lock badge.
+          setCurrentLockReason({
+            reason: 'unlocked',
+            nextLesson: target.recording_title,
           });
         } else {
           setCurrentLockReason(null);
@@ -815,23 +827,27 @@ export function StudentDashboard() {
       {/* Interactive Three-Card Stats Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Continue Learning Card - Shows current course/lesson status with lock reason */}
+
+        {(() => {
+          const isLocked = !!currentLockReason && currentLockReason.reason !== 'unlocked';
+          return (
         <Card 
           className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
-            currentLockReason ? 'border-l-amber-400' : 'border-l-green-400'
+            isLocked ? 'border-l-amber-400' : 'border-l-green-400'
           }`}
           onClick={() => navigate('/videos')}
         >
           <div className={`absolute inset-0 bg-gradient-to-r transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ${
-            currentLockReason ? 'from-amber-50/0 via-amber-50/50 to-amber-50/0' : 'from-green-50/0 via-green-50/50 to-green-50/0'
+            isLocked ? 'from-amber-50/0 via-amber-50/50 to-amber-50/0' : 'from-green-50/0 via-green-50/50 to-green-50/0'
           }`}></div>
           <CardHeader className="pb-3 relative z-10">
             <CardTitle className={`flex items-center gap-2 text-base font-medium ${
-              currentLockReason ? 'text-amber-600' : 'text-green-600'
+              isLocked ? 'text-amber-600' : 'text-green-600'
             }`}>
               <div className={`w-8 h-8 rounded-full flex items-center justify-center group-hover:scale-110 group-hover:rotate-12 transition-all duration-300 ${
-                currentLockReason ? 'bg-amber-50 group-hover:bg-amber-100' : 'bg-green-50 group-hover:bg-green-100'
+                isLocked ? 'bg-amber-50 group-hover:bg-amber-100' : 'bg-green-50 group-hover:bg-green-100'
               }`}>
-                {currentLockReason ? (
+                {isLocked ? (
                   <Lock className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
                 ) : (
                   <Play className="w-4 h-4 group-hover:scale-110 transition-transform duration-300" />
@@ -858,7 +874,7 @@ export function StudentDashboard() {
               </div>
               
               {/* Lock reason or progress */}
-              {currentLockReason ? (
+              {isLocked && currentLockReason ? (
                 <div className={`flex items-center gap-2 p-2 rounded-md ${
                   currentLockReason.reason === 'fees_not_cleared' 
                     ? 'bg-red-50 dark:bg-red-900/20' 
@@ -922,7 +938,7 @@ export function StudentDashboard() {
                 <div className="flex items-center gap-2 p-2 rounded-md bg-green-50 dark:bg-green-900/20">
                   <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
                   <span className="text-xs font-medium text-green-700 dark:text-green-400">
-                    All content unlocked!
+                    {currentLockReason?.reason === 'unlocked' ? 'Ready to watch' : 'All content unlocked!'}
                   </span>
                 </div>
               )}
@@ -940,6 +956,10 @@ export function StudentDashboard() {
             </div>
           </CardContent>
         </Card>
+          );
+        })()}
+
+
 
         {/* Next Assignment Card */}
         <Card className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
