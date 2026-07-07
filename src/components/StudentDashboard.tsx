@@ -965,6 +965,10 @@ export function StudentDashboard() {
             </div>
           </CardContent>
         </Card>
+          );
+        })()}
+
+
 
         {/* Next Assignment Card */}
         <Card className={`hover:shadow-xl hover:scale-[1.03] transition-all duration-500 border-l-2 animate-fade-in group cursor-pointer relative overflow-hidden ${
