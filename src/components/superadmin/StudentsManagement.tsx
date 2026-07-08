@@ -3698,6 +3698,7 @@ export function StudentsManagement() {
                   <SelectItem value="suspended">Suspended</SelectItem>
                   <SelectItem value="dropout">Dropout</SelectItem>
                   <SelectItem value="complete">Complete</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
