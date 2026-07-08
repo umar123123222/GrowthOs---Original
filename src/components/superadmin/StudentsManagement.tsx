@@ -110,7 +110,7 @@ export function StudentsManagement() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
-  const [lmsStatusFilter, setLmsStatusFilter] = useState('all');
+  const [lmsStatusFilter, setLmsStatusFilter] = useState<string[]>([]);
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
   const [batchFilter, setBatchFilter] = useState('all');
