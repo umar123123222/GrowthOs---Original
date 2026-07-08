@@ -2535,7 +2535,7 @@ export function StudentsManagement() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              setLmsStatusFilter('all');
+              setLmsStatusFilter([]);
               setFeesStructureFilter('all');
               setInvoiceFilter('all');
               setBatchFilter('all');
