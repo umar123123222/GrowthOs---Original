@@ -169,10 +169,14 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     })[0];
   };
   const [search, setSearch] = useState('');
+  // Progressive rendering state — must be before any early return (Rules of Hooks)
+  const [visibleCount, setVisibleCount] = useState(50);
+  useEffect(() => { setVisibleCount(50); }, [filterMode, search]);
 
   const handleSubmissionComplete = () => {
     fetchData();
   };
+
 
   if (loading || unlocksLoading) {
     return (
@@ -228,10 +232,8 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     (a.recording?.recording_title || '').toLowerCase().includes(q)
   );
 
-  // Progressive rendering: show 50 at a time; user clicks "Load more" for the rest.
-  const [visibleCount, setVisibleCount] = useState(50);
-  useEffect(() => { setVisibleCount(50); }, [filterMode, q]);
   const visibleAssignments = filteredAssignments.slice(0, visibleCount);
+
 
 
   
