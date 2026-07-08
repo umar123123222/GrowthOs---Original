@@ -3207,7 +3207,7 @@ export function StudentsManagement() {
                                 <PopoverContent className="w-48 p-2" align="start">
                                   <div className="space-y-1">
                                     <p className="text-xs font-medium text-muted-foreground mb-2 px-2">Change LMS Status</p>
-                                    {['active', 'inactive', 'suspended', 'dropout', 'complete'].map((status) => (
+                                    {['active', 'inactive', 'suspended', 'dropout', 'complete', 'refunded'].map((status) => (
                                       <Button
                                         key={status}
                                         variant={student.lms_status === status ? "secondary" : "ghost"}
