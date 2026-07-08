@@ -110,7 +110,7 @@ export function StudentsManagement() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
-  const [lmsStatusFilter, setLmsStatusFilter] = useState('all');
+  const [lmsStatusFilter, setLmsStatusFilter] = useState<string[]>([]);
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
   const [batchFilter, setBatchFilter] = useState('all');
@@ -692,8 +692,8 @@ export function StudentsManagement() {
     }
 
     // Apply LMS status filter
-    if (lmsStatusFilter !== 'all') {
-      filtered = filtered.filter(student => student.lms_status === lmsStatusFilter);
+    if (lmsStatusFilter.length > 0) {
+      filtered = filtered.filter(student => lmsStatusFilter.includes(student.lms_status));
     }
 
     // Apply fees structure filter
@@ -2418,8 +2418,8 @@ export function StudentsManagement() {
         <span className="ml-2 text-muted-foreground">Loading students...</span>
       </div>;
   }
-  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo) || Boolean(joinDateRange.from || joinDateRange.to) || batchFilter !== 'all' || enrollmentFilter.length > 0;
-  const activeFilterCount = [lmsStatusFilter !== 'all', feesStructureFilter !== 'all', invoiceFilter !== 'all', totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo), Boolean(joinDateRange.from || joinDateRange.to), batchFilter !== 'all', enrollmentFilter.length > 0].filter(Boolean).length;
+  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter.length > 0 || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo) || Boolean(joinDateRange.from || joinDateRange.to) || batchFilter !== 'all' || enrollmentFilter.length > 0;
+  const activeFilterCount = [lmsStatusFilter.length > 0, feesStructureFilter !== 'all', invoiceFilter !== 'all', totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo), Boolean(joinDateRange.from || joinDateRange.to), batchFilter !== 'all', enrollmentFilter.length > 0].filter(Boolean).length;
   const displayStudents = hasActiveFilters ? filteredStudents : students;
   const totalPages = Math.ceil(displayStudents.length / pageSize);
   const paginatedStudents = displayStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -2535,7 +2535,7 @@ export function StudentsManagement() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              setLmsStatusFilter('all');
+              setLmsStatusFilter([]);
               setFeesStructureFilter('all');
               setInvoiceFilter('all');
               setBatchFilter('all');
@@ -2561,20 +2561,43 @@ export function StudentsManagement() {
               {/* LMS Status */}
               <div className="space-y-1.5">
                 <Label className="text-xs font-medium text-muted-foreground">LMS Status</Label>
-                <Select value={lmsStatusFilter} onValueChange={setLmsStatusFilter}>
-                  <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="LMS Status" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-background z-50">
-                    <SelectItem value="all">All LMS Status</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
-                    <SelectItem value="dropout">Dropout</SelectItem>
-                    <SelectItem value="complete">Complete</SelectItem>
-                    <SelectItem value="refunded">Refunded</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className={cn("w-full justify-between text-left font-normal h-9 text-sm", lmsStatusFilter.length === 0 && "text-muted-foreground")}>
+                      <span className="truncate">
+                        {lmsStatusFilter.length === 0
+                          ? 'All LMS Status'
+                          : lmsStatusFilter.length === 1
+                            ? getLMSStatusLabel(lmsStatusFilter[0])
+                            : `${lmsStatusFilter.length} selected`}
+                      </span>
+                      <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-56 p-2 bg-background z-50" align="start">
+                    {['active', 'inactive', 'suspended', 'dropout', 'complete', 'refunded'].map(status => (
+                      <div
+                        key={status}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-muted cursor-pointer"
+                        onClick={() =>
+                          setLmsStatusFilter(prev =>
+                            prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+                          )
+                        }
+                      >
+                        <Checkbox checked={lmsStatusFilter.includes(status)} />
+                        <span className="text-sm">{getLMSStatusLabel(status)}</span>
+                      </div>
+                    ))}
+                    {lmsStatusFilter.length > 0 && (
+                      <div className="border-t mt-2 pt-2">
+                        <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => setLmsStatusFilter([])}>
+                          Clear selection
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
               </div>
 
               {/* Fees Structure */}
