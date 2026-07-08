@@ -3229,6 +3229,7 @@ export function StudentsManagement() {
                                         {status === 'suspended' && <Ban className="w-3 h-3 mr-2 text-red-600" />}
                                         {status === 'dropout' && <XCircle className="w-3 h-3 mr-2 text-orange-600" />}
                                         {status === 'complete' && <Award className="w-3 h-3 mr-2 text-blue-600" />}
+                                        {status === 'refunded' && <RefreshCw className="w-3 h-3 mr-2 text-purple-600" />}
                                         {status.charAt(0).toUpperCase() + status.slice(1)}
                                       </Button>
                                     ))}
