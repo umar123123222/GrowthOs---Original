@@ -196,7 +196,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Suspend LMS access
     if (suspend && userId) {
       await supabase.from("users")
-        .update({ lms_status: "suspended", status: "suspended", updated_at: new Date().toISOString() })
+        .update({ lms_status: "refunded", status: "suspended", updated_at: new Date().toISOString() })
         .eq("id", userId);
       await supabase.from("students")
         .update({ fees_cleared: false, updated_at: new Date().toISOString() })
