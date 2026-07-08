@@ -1142,6 +1142,8 @@ export function StudentsManagement() {
         return 'bg-orange-100 text-orange-800';
       case 'complete':
         return 'bg-blue-100 text-blue-800';
+      case 'refunded':
+        return 'bg-purple-100 text-purple-800 hover:bg-purple-100';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -1158,6 +1160,8 @@ export function StudentsManagement() {
         return <XCircle className="w-3 h-3 mr-1" />;
       case 'complete':
         return <Award className="w-3 h-3 mr-1" />;
+      case 'refunded':
+        return <RefreshCw className="w-3 h-3 mr-1" />;
       default:
         return <Clock className="w-3 h-3 mr-1" />;
     }
@@ -1174,6 +1178,8 @@ export function StudentsManagement() {
         return 'Dropout';
       case 'complete':
         return 'Complete';
+      case 'refunded':
+        return 'Refunded';
       default:
         return 'Unknown';
     }
@@ -2566,6 +2572,7 @@ export function StudentsManagement() {
                     <SelectItem value="suspended">Suspended</SelectItem>
                     <SelectItem value="dropout">Dropout</SelectItem>
                     <SelectItem value="complete">Complete</SelectItem>
+                    <SelectItem value="refunded">Refunded</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -3200,7 +3207,7 @@ export function StudentsManagement() {
                                 <PopoverContent className="w-48 p-2" align="start">
                                   <div className="space-y-1">
                                     <p className="text-xs font-medium text-muted-foreground mb-2 px-2">Change LMS Status</p>
-                                    {['active', 'inactive', 'suspended', 'dropout', 'complete'].map((status) => (
+                                    {['active', 'inactive', 'suspended', 'dropout', 'complete', 'refunded'].map((status) => (
                                       <Button
                                         key={status}
                                         variant={student.lms_status === status ? "secondary" : "ghost"}
@@ -3222,6 +3229,7 @@ export function StudentsManagement() {
                                         {status === 'suspended' && <Ban className="w-3 h-3 mr-2 text-red-600" />}
                                         {status === 'dropout' && <XCircle className="w-3 h-3 mr-2 text-orange-600" />}
                                         {status === 'complete' && <Award className="w-3 h-3 mr-2 text-blue-600" />}
+                                        {status === 'refunded' && <RefreshCw className="w-3 h-3 mr-2 text-purple-600" />}
                                         {status.charAt(0).toUpperCase() + status.slice(1)}
                                       </Button>
                                     ))}
@@ -3690,6 +3698,7 @@ export function StudentsManagement() {
                   <SelectItem value="suspended">Suspended</SelectItem>
                   <SelectItem value="dropout">Dropout</SelectItem>
                   <SelectItem value="complete">Complete</SelectItem>
+                  <SelectItem value="refunded">Refunded</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -3758,6 +3767,7 @@ export function StudentsManagement() {
                     <SelectItem value="suspended">Suspended</SelectItem>
                     <SelectItem value="dropout">Dropout</SelectItem>
                     <SelectItem value="complete">Complete</SelectItem>
+                    <SelectItem value="refunded">Refunded</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
