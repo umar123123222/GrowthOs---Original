@@ -2418,8 +2418,8 @@ export function StudentsManagement() {
         <span className="ml-2 text-muted-foreground">Loading students...</span>
       </div>;
   }
-  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter !== 'all' || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo) || Boolean(joinDateRange.from || joinDateRange.to) || batchFilter !== 'all' || enrollmentFilter.length > 0;
-  const activeFilterCount = [lmsStatusFilter !== 'all', feesStructureFilter !== 'all', invoiceFilter !== 'all', totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo), Boolean(joinDateRange.from || joinDateRange.to), batchFilter !== 'all', enrollmentFilter.length > 0].filter(Boolean).length;
+  const hasActiveFilters = Boolean(searchTerm) || lmsStatusFilter.length > 0 || feesStructureFilter !== 'all' || invoiceFilter !== 'all' || totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo) || Boolean(joinDateRange.from || joinDateRange.to) || batchFilter !== 'all' || enrollmentFilter.length > 0;
+  const activeFilterCount = [lmsStatusFilter.length > 0, feesStructureFilter !== 'all', invoiceFilter !== 'all', totalFeeSort !== 'none' || Boolean(feeRangeFrom) || Boolean(feeRangeTo), Boolean(joinDateRange.from || joinDateRange.to), batchFilter !== 'all', enrollmentFilter.length > 0].filter(Boolean).length;
   const displayStudents = hasActiveFilters ? filteredStudents : students;
   const totalPages = Math.ceil(displayStudents.length / pageSize);
   const paginatedStudents = displayStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
