@@ -232,9 +232,8 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     (a.recording?.recording_title || '').toLowerCase().includes(q)
   );
 
-  // Progressive rendering: show 50 at a time; user clicks "Load more" for the rest.
-  const [visibleCount, setVisibleCount] = useState(50);
-  useEffect(() => { setVisibleCount(50); }, [filterMode, q]);
+  const visibleAssignments = filteredAssignments.slice(0, visibleCount);
+
   const visibleAssignments = filteredAssignments.slice(0, visibleCount);
 
 
