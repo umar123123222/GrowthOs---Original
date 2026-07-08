@@ -1160,6 +1160,8 @@ export function StudentsManagement() {
         return <XCircle className="w-3 h-3 mr-1" />;
       case 'complete':
         return <Award className="w-3 h-3 mr-1" />;
+      case 'refunded':
+        return <RefreshCw className="w-3 h-3 mr-1" />;
       default:
         return <Clock className="w-3 h-3 mr-1" />;
     }
@@ -1176,6 +1178,8 @@ export function StudentsManagement() {
         return 'Dropout';
       case 'complete':
         return 'Complete';
+      case 'refunded':
+        return 'Refunded';
       default:
         return 'Unknown';
     }
