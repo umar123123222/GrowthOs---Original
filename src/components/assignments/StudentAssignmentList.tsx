@@ -169,10 +169,14 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
     })[0];
   };
   const [search, setSearch] = useState('');
+  // Progressive rendering state — must be before any early return (Rules of Hooks)
+  const [visibleCount, setVisibleCount] = useState(50);
+  useEffect(() => { setVisibleCount(50); }, [filterMode, search]);
 
   const handleSubmissionComplete = () => {
     fetchData();
   };
+
 
   if (loading || unlocksLoading) {
     return (
