@@ -234,7 +234,6 @@ export function StudentAssignmentList({ filterMode = 'unlocked' }: { filterMode?
 
   const visibleAssignments = filteredAssignments.slice(0, visibleCount);
 
-  const visibleAssignments = filteredAssignments.slice(0, visibleCount);
 
 
   
