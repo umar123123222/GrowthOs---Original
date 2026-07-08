@@ -692,8 +692,8 @@ export function StudentsManagement() {
     }
 
     // Apply LMS status filter
-    if (lmsStatusFilter !== 'all') {
-      filtered = filtered.filter(student => student.lms_status === lmsStatusFilter);
+    if (lmsStatusFilter.length > 0) {
+      filtered = filtered.filter(student => lmsStatusFilter.includes(student.lms_status));
     }
 
     // Apply fees structure filter
