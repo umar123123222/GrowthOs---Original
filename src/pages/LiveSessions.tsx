@@ -330,14 +330,16 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         .from('students').select('id').eq('user_id', user.id).maybeSingle();
 
       let studentBatchId: string | undefined;
+      let studentCourseIds: string[] = [];
       if (studentData?.id) {
         const { data: enrollments } = await supabase
-          .from('course_enrollments').select('batch_id')
+          .from('course_enrollments').select('batch_id, course_id, enrolled_at, status')
           .eq('student_id', studentData.id).eq('status', 'active')
-          .not('batch_id', 'is', null)
-          .order('enrolled_at', { ascending: true }).limit(1);
+          .order('enrolled_at', { ascending: true });
 
-        studentBatchId = enrollments?.[0]?.batch_id || undefined;
+        const rows = enrollments || [];
+        studentBatchId = rows.find(r => r.batch_id)?.batch_id || undefined;
+        studentCourseIds = Array.from(new Set(rows.map(r => r.course_id).filter(Boolean))) as string[];
       }
 
       const { data: attendanceData, error: attendanceError } = await supabase
@@ -350,7 +352,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         setAttendance(attendanceData || []);
       }
       
-      await fetchSessions(studentBatchId);
+      await fetchSessions(studentBatchId, studentCourseIds);
     } catch (error) {
       safeLogger.error('Error fetching attendance:', error);
     } finally {
