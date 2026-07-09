@@ -499,18 +499,46 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
               </Badge>
             </div>
             <div className="grid gap-6">
-              {recordedSessions.map((session) => (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  isUpcoming={false}
-                  userLMSStatus={userLMSStatus}
-                  hasAttended={hasAttended(session.id)}
-                  onJoin={joinSession}
-                  onWatchRecording={(title, url) => setVideoPreview({ title, url })}
-                />
-              ))}
+              {recordedSessions
+                .slice((recordedPage - 1) * PAGE_SIZE, recordedPage * PAGE_SIZE)
+                .map((session) => (
+                  <SessionCard
+                    key={session.id}
+                    session={session}
+                    isUpcoming={false}
+                    userLMSStatus={userLMSStatus}
+                    hasAttended={hasAttended(session.id)}
+                    onJoin={joinSession}
+                    onWatchRecording={(title, url) => setVideoPreview({ title, url })}
+                  />
+                ))}
             </div>
+            {recordedSessions.length > PAGE_SIZE && (
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-sm text-muted-foreground">
+                  Page {recordedPage} of {Math.ceil(recordedSessions.length / PAGE_SIZE)}
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={recordedPage === 1}
+                    onClick={() => setRecordedPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={recordedPage >= Math.ceil(recordedSessions.length / PAGE_SIZE)}
+                    onClick={() => setRecordedPage((p) => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </div>
