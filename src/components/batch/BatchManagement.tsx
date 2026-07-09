@@ -780,6 +780,7 @@ export function BatchManagement() {
             </form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>
