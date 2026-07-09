@@ -202,6 +202,7 @@ export function BatchManagement() {
     }
   };
 
+  const toggleExpand = (batchId: string) => {
     setExpandedBatches(prev => {
       const next = new Set(prev);
       if (next.has(batchId)) {
@@ -213,6 +214,7 @@ export function BatchManagement() {
       return next;
     });
   };
+
 
   const [formData, setFormData] = useState<BatchFormData>({
     name: '',
