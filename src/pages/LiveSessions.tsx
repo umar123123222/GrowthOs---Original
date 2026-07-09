@@ -193,7 +193,11 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   const [loading, setLoading] = useState(true);
   const [userLMSStatus, setUserLMSStatus] = useState('active');
   const [videoPreview, setVideoPreview] = useState<{ title: string; url: string } | null>(null);
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const [recordedPage, setRecordedPage] = useState(1);
+  const PAGE_SIZE = 10;
   const { toast } = useToast();
+
 
   useEffect(() => {
     safeLogger.info('LiveSessions useEffect triggered, user:', { user });
