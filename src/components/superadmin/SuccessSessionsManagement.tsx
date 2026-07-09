@@ -602,8 +602,8 @@ export function SuccessSessionsManagement() {
         }
 
         // Notify batch students for each batch (fire-and-forget)
-        if (resolvedBatchIds && resolvedBatchIds.length > 0 && newSessions.length > 0) {
-          resolvedBatchIds.forEach((batchId, index) => {
+        if (realBatchIds.length > 0 && newSessions.length > 0) {
+          realBatchIds.forEach((batchId, index) => {
             if (!batchId) return;
             supabase.functions.invoke('send-batch-content-notification', {
               body: {
@@ -624,10 +624,36 @@ export function SuccessSessionsManagement() {
           });
         }
 
+        // Notify unbatched students of the target course (fire-and-forget)
+        if (includesUnbatched && baseSessionData.course_id && newSessions.length > 0) {
+          supabase.functions.invoke('send-batch-content-notification', {
+            body: {
+              unbatched: true,
+              course_id: baseSessionData.course_id,
+              batch_id: 'unbatched',
+              item_type: 'LIVE_SESSION',
+              item_id: newSessions[0].id,
+              title: baseSessionData.title,
+              description: baseSessionData.description,
+              meeting_link: baseSessionData.link,
+              start_datetime: baseSessionData.start_time,
+              mentor_name: baseSessionData.mentor_name,
+              mentor_id: baseSessionData.mentor_id || undefined,
+              cta_path: '/live-sessions',
+              include_mentor: realBatchIds.length === 0,
+              async: true,
+            }
+          }).catch(notifyError => console.error('Failed to notify unbatched students:', notifyError));
+        }
+
+        const targetSummary = [
+          realBatchIds.length > 0 ? `${realBatchIds.length} batch${realBatchIds.length > 1 ? 'es' : ''}` : null,
+          includesUnbatched ? 'unbatched students' : null,
+        ].filter(Boolean).join(' + ');
         toast({
           title: "Success",
-          description: resolvedBatchIds && resolvedBatchIds.length > 1
-            ? `Session created for ${resolvedBatchIds.length} batches. Emails are being sent in the background.`
+          description: targetSummary
+            ? `Session created for ${targetSummary}. Emails are being sent in the background.`
             : "Session created. Emails are being sent in the background.",
         });
       }
