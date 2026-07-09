@@ -692,31 +692,48 @@ export function SuccessSessionsManagement() {
         .eq('id', session.id);
       if (error) throw error;
 
-      // Notify batch students via email + in-app for all batch_ids
-      const sessionBatchIds: string[] = (session as any).batch_ids || (session.batch_id ? [session.batch_id] : []);
-      for (const [index, batchId] of sessionBatchIds.entries()) {
-        if (batchId) {
-          try {
-            await supabase.functions.invoke('send-batch-content-notification', {
-              body: {
-                batch_id: batchId,
-                item_type: 'LIVE_SESSION',
-                item_id: session.id,
-                title: session.title,
-                description: session.description,
-                meeting_link: session.link,
-                start_datetime: session.start_time,
-                mentor_name: session.mentor_name,
-                mentor_id: session.mentor_id || undefined,
-                cta_path: '/live-sessions',
-                include_mentor: index === 0,
-                async: true,
-              }
-            });
-          } catch (notifyError) {
-            console.error('Failed to notify batch students:', notifyError);
+      // Notify batch students via email + in-app for all batch_ids (fire-and-forget)
+      const rawSessionBatchIds: string[] = (session as any).batch_ids || (session.batch_id ? [session.batch_id] : []);
+      const pubRealBatchIds = rawSessionBatchIds.filter(b => b && b !== 'unbatched');
+      const pubIncludesUnbatched = rawSessionBatchIds.includes('unbatched');
+      pubRealBatchIds.forEach((batchId, index) => {
+        supabase.functions.invoke('send-batch-content-notification', {
+          body: {
+            batch_id: batchId,
+            item_type: 'LIVE_SESSION',
+            item_id: session.id,
+            title: session.title,
+            description: session.description,
+            meeting_link: session.link,
+            start_datetime: session.start_time,
+            mentor_name: session.mentor_name,
+            mentor_id: session.mentor_id || undefined,
+            cta_path: '/live-sessions',
+            include_mentor: index === 0,
+            async: true,
           }
-        }
+        }).catch(notifyError => console.error('Failed to notify batch students:', notifyError));
+      });
+
+      if (pubIncludesUnbatched && session.course_id) {
+        supabase.functions.invoke('send-batch-content-notification', {
+          body: {
+            unbatched: true,
+            course_id: session.course_id,
+            batch_id: 'unbatched',
+            item_type: 'LIVE_SESSION',
+            item_id: session.id,
+            title: session.title,
+            description: session.description,
+            meeting_link: session.link,
+            start_datetime: session.start_time,
+            mentor_name: session.mentor_name,
+            mentor_id: session.mentor_id || undefined,
+            cta_path: '/live-sessions',
+            include_mentor: pubRealBatchIds.length === 0,
+            async: true,
+          }
+        }).catch(notifyError => console.error('Failed to notify unbatched students:', notifyError));
       }
 
       toast({ title: "Published!", description: "Session is live for students. Emails are being sent in the background." });
