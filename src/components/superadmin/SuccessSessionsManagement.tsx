@@ -1474,7 +1474,9 @@ export function SuccessSessionsManagement() {
                               <div className="flex flex-wrap gap-0.5">
                                 {sessionBatchIds.map(bid => (
                                   <Badge key={bid} variant="outline" className="text-xs w-fit">
-                                    {batches.find(b => b.id === bid)?.name || bid}
+                                    {bid === 'unbatched'
+                                      ? 'Unbatched'
+                                      : batches.find(b => b.id === bid)?.name || bid}
                                   </Badge>
                                 ))}
                               </div>
