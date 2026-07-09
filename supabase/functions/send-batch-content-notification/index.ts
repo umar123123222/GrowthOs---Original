@@ -31,6 +31,13 @@ interface NotificationRequest {
    * the admin UI uses so bulk sends do not block the dialog.
    */
   async?: boolean;
+  /**
+   * When true, target students who are NOT in any batch but are enrolled in
+   * `course_id`. In this mode `batch_id` is a sentinel (e.g. "unbatched") and
+   * is not used to look up a real batch.
+   */
+  unbatched?: boolean;
+  course_id?: string;
 }
 
 // Deno Deploy's background-work API. Typed loosely so this file still compiles
