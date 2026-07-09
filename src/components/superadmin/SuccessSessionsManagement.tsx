@@ -1202,11 +1202,10 @@ export function SuccessSessionsManagement() {
                             {/* Unbatched option */}
                             <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
                               <Checkbox
-                                checked={formData.batch_ids.includes('unbatched') || formData.batch_ids.includes('__all__')}
+                                checked={formData.batch_ids.includes('unbatched')}
                                 onCheckedChange={(checked) => {
                                   if (formData.batch_ids.includes('__all__')) {
-                                    const allBatchIds = filteredBatches.map(b => b.id);
-                                    setFormData({ ...formData, batch_ids: checked ? ['unbatched', ...allBatchIds] : allBatchIds });
+                                    setFormData({ ...formData, batch_ids: checked ? ['unbatched'] : ['__all__'] });
                                     return;
                                   }
                                   const without = formData.batch_ids.filter(id => id !== 'unbatched');
@@ -1226,9 +1225,7 @@ export function SuccessSessionsManagement() {
                                   checked={formData.batch_ids.includes(batch.id) || formData.batch_ids.includes('__all__')}
                                   onCheckedChange={(checked) => {
                                     if (formData.batch_ids.includes('__all__')) {
-                                      const allBatchIds = filteredBatches.map(b => b.id).filter(id => id !== batch.id);
-                                      const withUnbatched = [...allBatchIds, 'unbatched'];
-                                      setFormData({ ...formData, batch_ids: checked ? [...withUnbatched, batch.id] : withUnbatched });
+                                      setFormData({ ...formData, batch_ids: checked ? [batch.id] : ['__all__'] });
                                       return;
                                     }
                                     const without = formData.batch_ids.filter(id => id !== batch.id);
