@@ -1311,6 +1311,7 @@ export function SuccessSessionsManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All Batches</SelectItem>
+                <SelectItem value="unbatched">Unbatched students</SelectItem>
                 {(filterCourse !== '__all__' ? batches.filter(b => b.course_id === filterCourse) : batches).map(b => (
                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
