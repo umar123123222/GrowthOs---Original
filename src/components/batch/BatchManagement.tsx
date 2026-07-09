@@ -822,12 +822,22 @@ export function BatchManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => downloadBatchReport(batch)}
+                          title="Download Report (CSV)"
+                          disabled={downloadingReport === batch.id}
+                        >
+                          {downloadingReport === batch.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleDelete(batch.id)}
                           title="Delete Batch"
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
+
                       </div>
                     </TableCell>
                   </TableRow>
