@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Edit, Trash2, Users, Calendar, Clock, AlertTriangle, BookOpen, Route, UserPlus, X, MessageCircle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Calendar, Clock, AlertTriangle, BookOpen, Route, UserPlus, X, MessageCircle, ChevronDown, ChevronRight, Loader2, Download } from 'lucide-react';
 import { BatchStudentAssignment } from './BatchStudentAssignment';
 import { useBatches, type Batch, type BatchFormData } from '@/hooks/useBatches';
 import { supabase } from '@/integrations/supabase/client';
@@ -83,6 +83,125 @@ export function BatchManagement() {
     }
   };
 
+  const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
+
+  const escapeCsv = (v: any) => {
+    if (v === null || v === undefined) return '';
+    const s = String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+
+  const downloadBatchReport = async (batch: Batch) => {
+    try {
+      setDownloadingReport(batch.id);
+      const { data: enrollments } = await supabase
+        .from('course_enrollments')
+        .select('student_id, enrolled_at, course_id')
+        .eq('batch_id', batch.id);
+      const studentIds = [...new Set((enrollments || []).map(e => e.student_id as string))];
+
+      let students: any[] = [];
+      let invoices: any[] = [];
+      if (studentIds.length > 0) {
+        const [u, inv] = await Promise.all([
+          supabase.from('users').select('id, full_name, email, phone, lms_status, created_at').in('id', studentIds),
+          supabase.from('invoices').select('student_id, status, amount, due_date, issue_date, installment_number').in('student_id', studentIds),
+        ]);
+        students = u.data || [];
+        invoices = inv.data || [];
+      }
+
+      const studentMap = new Map(students.map(s => [s.id, s]));
+      const invByStudent: Record<string, any[]> = {};
+      invoices.forEach(i => { (invByStudent[i.student_id] ||= []).push(i); });
+
+      // Metrics summary
+      const total = studentIds.length;
+      const refundedSet = new Set<string>();
+      invoices.forEach(i => { if (i.status === 'refunded') refundedSet.add(i.student_id); });
+      const refunded = refundedSet.size;
+      const finalEnroll = total - refunded;
+      let fullyPaid = 0;
+      studentIds.forEach(sid => {
+        if (refundedSet.has(sid)) return;
+        const list = (invByStudent[sid] || []).filter(i => i.status !== 'refunded');
+        if (list.length > 0 && list.every(i => i.status === 'paid')) fullyPaid++;
+      });
+      const dropout = Math.max(0, finalEnroll - fullyPaid);
+
+      const assoc = batchAssociations[batch.id];
+      const pathwayNames = (assoc?.pathways || []).map(id => pathways.find(p => p.id === id)?.name).filter(Boolean).join('; ');
+      const courseNames = (assoc?.courses || []).map(id => courses.find(c => c.id === id)?.title).filter(Boolean).join('; ');
+
+      const lines: string[] = [];
+      lines.push(['Batch Report'].map(escapeCsv).join(','));
+      lines.push(['Batch Name', batch.name].map(escapeCsv).join(','));
+      lines.push(['Start Date', batch.start_date].map(escapeCsv).join(','));
+      lines.push(['Status', batch.status].map(escapeCsv).join(','));
+      lines.push(['Pathways', pathwayNames].map(escapeCsv).join(','));
+      lines.push(['Courses', courseNames].map(escapeCsv).join(','));
+      lines.push(['Generated At', new Date().toISOString()].map(escapeCsv).join(','));
+      lines.push('');
+      lines.push(['Summary Metrics'].map(escapeCsv).join(','));
+      lines.push(['Total Enrollments', total].map(escapeCsv).join(','));
+      lines.push(['Total Refunds', refunded].map(escapeCsv).join(','));
+      lines.push(['Final Enrollments', finalEnroll].map(escapeCsv).join(','));
+      lines.push(['Fully Paid', fullyPaid].map(escapeCsv).join(','));
+      lines.push(['Dropout', dropout].map(escapeCsv).join(','));
+      lines.push('');
+      lines.push(['Student Roster'].map(escapeCsv).join(','));
+      lines.push(['Full Name','Email','Phone','LMS Status','Enrollment Date','Invoice Count','Paid Invoices','Refunded','Fully Paid','Total Amount'].map(escapeCsv).join(','));
+
+      const enrollmentDateByStudent = new Map<string, string>();
+      (enrollments || []).forEach(e => {
+        const prev = enrollmentDateByStudent.get(e.student_id as string);
+        if (!prev || (e.enrolled_at && e.enrolled_at < prev)) {
+          enrollmentDateByStudent.set(e.student_id as string, e.enrolled_at as string);
+        }
+      });
+
+      studentIds.forEach(sid => {
+        const s = studentMap.get(sid) || {};
+        const list = invByStudent[sid] || [];
+        const nonRefunded = list.filter(i => i.status !== 'refunded');
+        const paidCount = list.filter(i => i.status === 'paid').length;
+        const isRefunded = refundedSet.has(sid);
+        const isFullyPaid = !isRefunded && nonRefunded.length > 0 && nonRefunded.every(i => i.status === 'paid');
+        const totalAmount = list.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+        lines.push([
+          s.full_name || '',
+          s.email || '',
+          s.phone || '',
+          s.lms_status || '',
+          enrollmentDateByStudent.get(sid) || '',
+          list.length,
+          paidCount,
+          isRefunded ? 'Yes' : 'No',
+          isFullyPaid ? 'Yes' : 'No',
+          totalAmount,
+        ].map(escapeCsv).join(','));
+      });
+
+      const csv = lines.join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const safeName = batch.name.replace(/[^a-z0-9]+/gi, '_');
+      a.download = `batch_report_${safeName}_${format(new Date(), 'yyyyMMdd')}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast({ title: 'Report downloaded', description: `Report for ${batch.name} generated.` });
+    } catch (e: any) {
+      toast({ title: 'Error', description: e.message || 'Failed to generate report', variant: 'destructive' });
+    } finally {
+      setDownloadingReport(null);
+    }
+  };
+
   const toggleExpand = (batchId: string) => {
     setExpandedBatches(prev => {
       const next = new Set(prev);
@@ -95,6 +214,7 @@ export function BatchManagement() {
       return next;
     });
   };
+
 
   const [formData, setFormData] = useState<BatchFormData>({
     name: '',
@@ -702,12 +822,22 @@ export function BatchManagement() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => downloadBatchReport(batch)}
+                          title="Download Report (CSV)"
+                          disabled={downloadingReport === batch.id}
+                        >
+                          {downloadingReport === batch.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleDelete(batch.id)}
                           title="Delete Batch"
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
+
                       </div>
                     </TableCell>
                   </TableRow>
