@@ -1589,6 +1589,16 @@ export function SuccessSessionsManagement() {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDuplicate(session)}
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            title="Duplicate session"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+
                           {session.course_id && pathwayCourses.some(pc => pc.course_id === session.course_id) && (
                             <Button
                               variant="ghost"
