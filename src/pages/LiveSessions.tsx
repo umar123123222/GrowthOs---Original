@@ -432,19 +432,48 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
             )}
           </div>
           {upcomingSessions.length > 0 ? (
-            <div className="grid gap-6">
-              {upcomingSessions.map((session) => (
-                <SessionCard
-                  key={session.id}
-                  session={session}
-                  isUpcoming={true}
-                  userLMSStatus={userLMSStatus}
-                  hasAttended={hasAttended(session.id)}
-                  onJoin={joinSession}
-                  onWatchRecording={(title, url) => setVideoPreview({ title, url })}
-                />
-              ))}
-            </div>
+            <>
+              <div className="grid gap-6">
+                {upcomingSessions
+                  .slice((upcomingPage - 1) * PAGE_SIZE, upcomingPage * PAGE_SIZE)
+                  .map((session) => (
+                    <SessionCard
+                      key={session.id}
+                      session={session}
+                      isUpcoming={true}
+                      userLMSStatus={userLMSStatus}
+                      hasAttended={hasAttended(session.id)}
+                      onJoin={joinSession}
+                      onWatchRecording={(title, url) => setVideoPreview({ title, url })}
+                    />
+                  ))}
+              </div>
+              {upcomingSessions.length > PAGE_SIZE && (
+                <div className="flex items-center justify-between pt-2">
+                  <span className="text-sm text-muted-foreground">
+                    Page {upcomingPage} of {Math.ceil(upcomingSessions.length / PAGE_SIZE)}
+                  </span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={upcomingPage === 1}
+                      onClick={() => setUpcomingPage((p) => Math.max(1, p - 1))}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={upcomingPage >= Math.ceil(upcomingSessions.length / PAGE_SIZE)}
+                      onClick={() => setUpcomingPage((p) => p + 1)}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </>
           ) : (
             <Card className="border-dashed">
               <CardContent className="text-center py-12">
@@ -456,6 +485,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
               </CardContent>
             </Card>
           )}
+
         </div>
 
         {/* Recorded Sessions */}
