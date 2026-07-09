@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Edit, Trash2, Users, Calendar, Clock, AlertTriangle, BookOpen, Route, UserPlus, X, MessageCircle, ChevronDown, ChevronRight, Loader2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Calendar, Clock, AlertTriangle, BookOpen, Route, UserPlus, X, MessageCircle, ChevronDown, ChevronRight, Loader2, Download } from 'lucide-react';
 import { BatchStudentAssignment } from './BatchStudentAssignment';
 import { useBatches, type Batch, type BatchFormData } from '@/hooks/useBatches';
 import { supabase } from '@/integrations/supabase/client';
