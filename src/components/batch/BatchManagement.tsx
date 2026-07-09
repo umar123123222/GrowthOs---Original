@@ -147,7 +147,10 @@ export function BatchManagement() {
       lines.push(['Total Refunds', refunded].map(escapeCsv).join(','));
       lines.push(['Final Enrollments', finalEnroll].map(escapeCsv).join(','));
       lines.push(['Fully Paid', fullyPaid].map(escapeCsv).join(','));
-      lines.push(['Dropout', dropout].map(escapeCsv).join(','));
+      const monthAfterStartCsv = new Date(batch.start_date);
+      monthAfterStartCsv.setMonth(monthAfterStartCsv.getMonth() + 1);
+      const showDropoutCsv = new Date() >= monthAfterStartCsv;
+      lines.push(['Dropout', showDropoutCsv ? dropout : `Available after ${format(monthAfterStartCsv, 'yyyy-MM-dd')}`].map(escapeCsv).join(','));
       lines.push('');
       lines.push(['Student Roster'].map(escapeCsv).join(','));
       lines.push(['Full Name','Email','Phone','LMS Status','Enrollment Date','Invoice Count','Paid Invoices','Refunded','Fully Paid','Total Amount'].map(escapeCsv).join(','));
