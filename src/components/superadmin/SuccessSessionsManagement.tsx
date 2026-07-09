@@ -413,6 +413,20 @@ export function SuccessSessionsManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     formSubmittedRef.current = true;
+
+    // Validate: unbatched targeting requires a Target Course
+    const wantsUnbatched = formData.batch_ids.includes('unbatched') && !formData.batch_ids.includes('__all__');
+    const hasCourse = formData.course_id && formData.course_id !== '__all__';
+    if (wantsUnbatched && !hasCourse) {
+      toast({
+        title: "Target Course required",
+        description: "Select a Target Course when targeting unbatched students.",
+        variant: "destructive"
+      });
+      formSubmittedRef.current = false;
+      return;
+    }
+
     try {
       // Find the selected user to get their name
       const selectedUser = users.find(user => user.id === formData.mentor_id);
@@ -441,10 +455,13 @@ export function SuccessSessionsManagement() {
         pathway_id: null as string | null
       };
 
-      // Resolve batch_ids for JSONB column: '__all__' means null (all batches)
+      // Resolve batch_ids for JSONB column: '__all__' means null (all batches).
+      // Preserve the 'unbatched' sentinel so unbatched targeting is persisted.
       const resolvedBatchIds = formData.batch_ids.includes('__all__')
         ? null
-        : formData.batch_ids.filter(id => id !== 'unbatched');
+        : formData.batch_ids;
+      const realBatchIds = (resolvedBatchIds || []).filter(id => id !== 'unbatched');
+      const includesUnbatched = (resolvedBatchIds || []).includes('unbatched');
 
       if (editingSession) {
         const sessionData = {
