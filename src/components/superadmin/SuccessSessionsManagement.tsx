@@ -320,6 +320,19 @@ export function SuccessSessionsManagement() {
     setEditingSession(null);
   };
 
+  const normalizeBatchSelection = (batchIds: string[] | null | undefined): string[] => {
+    const uniqueIds = Array.from(new Set((batchIds || []).filter(Boolean)));
+    const targetedIds = uniqueIds.filter(id => id !== '__all__');
+    return targetedIds.length > 0 ? targetedIds : ['__all__'];
+  };
+
+  const getInitialBatchSelection = (session: SuccessSession): string[] => {
+    const sessionBatchIds = session.batch_ids && Array.isArray(session.batch_ids) && session.batch_ids.length > 0
+      ? session.batch_ids
+      : session.batch_id ? [session.batch_id] : [];
+    return normalizeBatchSelection(sessionBatchIds);
+  };
+
   const extractTimeFromTimestamp = (timestamp: string | undefined | null): string => {
     if (!timestamp) return '';
     try {
@@ -350,9 +363,7 @@ export function SuccessSessionsManagement() {
         host_login_pwd: session.host_login_pwd || '',
         status: session.status || 'upcoming',
         course_id: session.course_id || '__all__',
-        batch_ids: session.batch_ids && Array.isArray(session.batch_ids) && session.batch_ids.length > 0
-          ? session.batch_ids
-          : session.batch_id ? [session.batch_id] : ['__all__']
+        batch_ids: getInitialBatchSelection(session)
       });
     } else {
       resetForm();
@@ -378,9 +389,7 @@ export function SuccessSessionsManagement() {
       host_login_pwd: session.host_login_pwd || '',
       status: session.status || 'upcoming',
       course_id: session.course_id || '__all__',
-      batch_ids: session.batch_ids && Array.isArray(session.batch_ids) && session.batch_ids.length > 0
-        ? session.batch_ids
-        : session.batch_id ? [session.batch_id] : ['__all__']
+      batch_ids: getInitialBatchSelection(session)
     });
     setDialogOpen(true);
   };
@@ -396,6 +405,9 @@ export function SuccessSessionsManagement() {
           if (!date || !time) return null;
           return `${date}T${time}:00`;
         };
+
+        const draftBatchIds = normalizeBatchSelection(formData.batch_ids);
+        const resolvedDraftBatchIds = draftBatchIds.includes('__all__') ? null : draftBatchIds;
 
         const baseSessionData = {
           title: formData.title,
@@ -413,7 +425,7 @@ export function SuccessSessionsManagement() {
           status: 'draft',
           course_id: formData.course_id === '__all__' ? null : (formData.course_id || null),
           batch_id: null,
-          batch_ids: formData.batch_ids.includes('__all__') ? null : formData.batch_ids,
+          batch_ids: resolvedDraftBatchIds,
           pathway_id: null as string | null
         };
 
@@ -441,8 +453,10 @@ export function SuccessSessionsManagement() {
     e.preventDefault();
     formSubmittedRef.current = true;
 
+    const selectedBatchIds = normalizeBatchSelection(formData.batch_ids);
+
     // Validate: unbatched targeting requires a Target Course
-    const wantsUnbatched = formData.batch_ids.includes('unbatched') && !formData.batch_ids.includes('__all__');
+    const wantsUnbatched = selectedBatchIds.includes('unbatched');
     const hasCourse = formData.course_id && formData.course_id !== '__all__';
     if (wantsUnbatched && !hasCourse) {
       toast({
@@ -484,9 +498,9 @@ export function SuccessSessionsManagement() {
 
       // Resolve batch_ids for JSONB column: '__all__' means null (all batches).
       // Preserve the 'unbatched' sentinel so unbatched targeting is persisted.
-      const resolvedBatchIds = formData.batch_ids.includes('__all__')
+      const resolvedBatchIds = selectedBatchIds.includes('__all__')
         ? null
-        : formData.batch_ids;
+        : selectedBatchIds;
       const realBatchIds = (resolvedBatchIds || []).filter(id => id !== 'unbatched');
       const includesUnbatched = (resolvedBatchIds || []).includes('unbatched');
 
@@ -1188,11 +1202,10 @@ export function SuccessSessionsManagement() {
                             {/* Unbatched option */}
                             <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
                               <Checkbox
-                                checked={formData.batch_ids.includes('unbatched') || formData.batch_ids.includes('__all__')}
+                                checked={formData.batch_ids.includes('unbatched')}
                                 onCheckedChange={(checked) => {
                                   if (formData.batch_ids.includes('__all__')) {
-                                    const allBatchIds = filteredBatches.map(b => b.id);
-                                    setFormData({ ...formData, batch_ids: checked ? ['unbatched', ...allBatchIds] : allBatchIds });
+                                    setFormData({ ...formData, batch_ids: checked ? ['unbatched'] : ['__all__'] });
                                     return;
                                   }
                                   const without = formData.batch_ids.filter(id => id !== 'unbatched');
@@ -1209,12 +1222,10 @@ export function SuccessSessionsManagement() {
                             {filteredBatches.map((batch) => (
                               <label key={batch.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
                                 <Checkbox
-                                  checked={formData.batch_ids.includes(batch.id) || formData.batch_ids.includes('__all__')}
+                                  checked={formData.batch_ids.includes(batch.id)}
                                   onCheckedChange={(checked) => {
                                     if (formData.batch_ids.includes('__all__')) {
-                                      const allBatchIds = filteredBatches.map(b => b.id).filter(id => id !== batch.id);
-                                      const withUnbatched = [...allBatchIds, 'unbatched'];
-                                      setFormData({ ...formData, batch_ids: checked ? [...withUnbatched, batch.id] : withUnbatched });
+                                      setFormData({ ...formData, batch_ids: checked ? [batch.id] : ['__all__'] });
                                       return;
                                     }
                                     const without = formData.batch_ids.filter(id => id !== batch.id);
