@@ -209,7 +209,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
   };
 
-  const fetchSessions = async (studentBatchId?: string) => {
+  const fetchSessions = async (studentBatchId?: string, studentCourseIds: string[] = []) => {
     safeLogger.info('fetchSessions called');
     try {
       const sessionSelect = `
@@ -236,16 +236,21 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         .order('start_time', { ascending: true });
 
       if (user?.role === 'student') {
+        // Server-side filter: include global sessions, batch-targeted sessions
+        // for the student's batch, and any session flagged for unbatched targeting.
+        // The client-side filter below then enforces the course match on unbatched.
         const visibilityClauses = studentBatchId
           ? [
               `batch_id.eq.${studentBatchId}`,
               `batch_ids.cs.${JSON.stringify([studentBatchId])}`,
               'and(batch_id.is.null,batch_ids.is.null)',
               'batch_ids.eq.[]',
+              `batch_ids.cs.${JSON.stringify(['unbatched'])}`,
             ]
           : [
               'and(batch_id.is.null,batch_ids.is.null)',
               'batch_ids.eq.[]',
+              `batch_ids.cs.${JSON.stringify(['unbatched'])}`,
             ];
 
         sessionsQuery = sessionsQuery.or(visibilityClauses.join(','));
@@ -261,18 +266,29 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
 
       const now = new Date();
 
-      // Strict batch targeting: a session (upcoming OR recorded) is visible only if
-      //  - it has no batch targeting (global session), OR
-      //  - the student's active batch is explicitly included in batch_ids.
-      // Students without an active batch only see global sessions.
+      // Strict targeting: a session is visible only if
+      //  - it is global (no targeting), OR
+      //  - the student's batch is included in batch_ids, OR
+      //  - it targets 'unbatched' AND the student has no batch AND is enrolled in the session's course.
       const isVisibleToStudent = (session: LiveSession) => {
         const batchIds = normalizeBatchIds(session.batch_ids);
         const isGlobalSession = (session.batch_id == null && session.batch_ids == null) || batchIds.length === 0;
 
         if (isGlobalSession) return true;
-        if (batchIds.length === 0) return true; // global session — visible to everyone
-        if (!studentBatchId) return false; // targeted session, but student has no batch
-        return session.batch_id === studentBatchId || batchIds.includes(studentBatchId);
+
+        const targetsUnbatched = batchIds.includes('unbatched');
+        const realTargets = batchIds.filter(id => id !== 'unbatched');
+
+        // Batched student: only match on their real batch id
+        if (studentBatchId) {
+          if (session.batch_id === studentBatchId) return true;
+          return realTargets.includes(studentBatchId);
+        }
+
+        // Unbatched student: needs the 'unbatched' flag AND course enrollment
+        if (!targetsUnbatched) return false;
+        if (!session.course_id) return true; // unbatched targeting without a course — show to all unbatched
+        return studentCourseIds.includes(session.course_id);
       };
 
       const visible = (data || []).filter(session => user?.role === 'student' ? isVisibleToStudent(session as LiveSession) : true) as LiveSession[];
