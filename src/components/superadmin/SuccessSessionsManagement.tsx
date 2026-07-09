@@ -1125,13 +1125,19 @@ export function SuccessSessionsManagement() {
                         <PopoverTrigger asChild>
                           <Button variant="outline" className="w-full justify-between font-normal">
                             <span className="truncate">
-                              {formData.batch_ids.includes('__all__')
-                                ? 'All Batches'
-                                : formData.batch_ids.length === 1
-                                  ? (formData.batch_ids[0] === 'unbatched'
-                                    ? 'Unbatched students'
-                                    : filteredBatches.find(b => b.id === formData.batch_ids[0])?.name || formData.batch_ids[0])
-                                  : `${formData.batch_ids.length} batches selected`}
+                              {(() => {
+                                if (formData.batch_ids.includes('__all__')) return 'All Batches';
+                                const hasUnbatched = formData.batch_ids.includes('unbatched');
+                                const realIds = formData.batch_ids.filter(id => id !== 'unbatched');
+                                if (realIds.length === 0 && hasUnbatched) return 'Unbatched students';
+                                if (realIds.length === 1 && !hasUnbatched) {
+                                  return filteredBatches.find(b => b.id === realIds[0])?.name || realIds[0];
+                                }
+                                const parts: string[] = [];
+                                if (realIds.length > 0) parts.push(`${realIds.length} batch${realIds.length > 1 ? 'es' : ''}`);
+                                if (hasUnbatched) parts.push('Unbatched');
+                                return parts.join(' + ');
+                              })()}
                             </span>
                             <Users2 className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
