@@ -1,54 +1,50 @@
-
 ## Goal
-Cut initial render time and memory pressure on the heaviest lists by loading only what's visible. Tables get numbered pagination (50/page); card/feed lists get a "Load more" button (50 at a time).
+Make "Unbatched students" a real audience target for Success Sessions. Today the app silently strips the `unbatched` selection on save, so choosing only "Unbatched students" ends up equivalent to "All Batches". We need it to mean: **only students not in any batch, and only those enrolled in the chosen course**.
 
-## Shared primitives (build once, reuse)
+## Behavior after the change
 
-1. **`useServerPagination<T>(query, { pageSize })`** — hook that runs a Supabase `.range()` query with `count: 'exact'`, returns `{ rows, total, page, setPage, pageCount, loading, refetch }`. Handles filter/sort deps.
-2. **`<TablePagination />`** — shadcn-based pager: `‹  1 2 3 … 42  ›` + "Showing 51–100 of 2,109" + optional page-size selector. Uses existing `components/ui/pagination.tsx`.
-3. **`useLoadMore<T>(query, { pageSize })`** — same idea but appends: `{ rows, loadMore, hasMore, loading, reset }`.
-4. **`<LoadMoreButton />`** — full-width outline button with spinner + "Showing X of Y".
+- In the Schedule/Edit dialog, when "Unbatched students" is selected (with or without batches alongside it), the selection is preserved instead of stripped.
+- If "Unbatched students" is the only selection, a **Target Course is required** (form validation blocks save with a clear error). This matches the rule that unbatched targeting is meaningless without a course.
+- A saved session with `unbatched` targeting is visible to a student only if all are true:
+  - the student has no active batch (`students.batch_id IS NULL`)
+  - the student is enrolled in the session's `course_id`
+  - session status is `upcoming` / `live` / `completed` (unchanged)
+- Batched students remain unaffected: sessions with real batch IDs still show only to those batches.
+- The admin table/badge shows an "Unbatched" chip alongside batch chips so admins can see the targeting at a glance.
+- Email/in-app notifications on schedule/publish are sent to the qualifying unbatched students of the chosen course (in addition to any batches also selected).
 
-All four go under `src/components/common/` and `src/hooks/`.
+## Where the changes land
 
-## Per-list changes
+### Data (no schema change)
+- Continue using the existing `success_sessions.batch_ids` JSONB column. Store the literal string `'unbatched'` inside the array alongside real batch UUIDs.
+  - `null` / `[]` → all students (unchanged global session).
+  - `['unbatched']` → unbatched students in `course_id` only.
+  - `['unbatched', '<batchA>', ...]` → union of unbatched (in course) + those batches.
 
-### Tables → numbered pagination, 50/page
-- **Students Management** (`src/components/superadmin/StudentsManagement.tsx`)
-  - Server-side pagination with `count: 'exact'`, `range(from, to)`.
-  - Filters (status, batch, search) reset to page 1 and re-query.
-  - Debounce search 300ms.
-  - Bulk-select stays scoped to current page (with an explicit "Select all N matching" affordance if selection is used).
-- **Payment Reports** (`src/components/admin/PaymentReports.tsx`)
-  - Same treatment; already sorts server-side, just add `range` + count.
-- **Submissions Management** (`src/components/assignments/SubmissionsManagement.tsx`)
-  - Numbered pagination on the submissions table (admin/mentor view).
-- **Support Tickets — admin** (`src/components/superadmin/SupportManagement.tsx`)
-  - Table with numbered pagination.
+### Admin UI — `src/components/superadmin/SuccessSessionsManagement.tsx`
+- Stop filtering `'unbatched'` out in the save paths (draft, create, update). Persist it as-is inside `batch_ids`.
+- Add form validation: if `batch_ids` contains `'unbatched'` and `course_id` is `__all__`/empty, block submit with a toast: "Select a Target Course when targeting unbatched students".
+- Update the selected-batches summary label so `['unbatched']` shows "Unbatched students" and mixed selections show e.g. "Unbatched + 2 batches".
+- In the sessions table row, render an "Unbatched" chip when `batch_ids` contains `'unbatched'`.
+- Admin batch filter dropdown: add an "Unbatched" option that matches sessions whose `batch_ids` includes `'unbatched'`.
 
-### Card lists → Load more, 50 at a time
-- **Student /assignments** (`src/components/assignments/StudentAssignmentList.tsx`)
-  - Pull assignments in pages of 50, "Load more" appends.
-  - Search stays client-side over loaded rows (or triggers server fetch if q is set — I'll keep it client-side over the loaded batch for simplicity; matches current UX).
-- **Support Tickets — student view** (`src/pages/Support.tsx`)
-  - Card list with Load more.
+### Student visibility — `src/pages/LiveSessions.tsx`
+- Load the current student's `batch_id` and enrolled `course_id`s (via existing hooks/queries) before the sessions query.
+- Extend the visibility filter `isVisibleToStudent`:
+  - global session (no targeting) → visible (unchanged).
+  - `batch_ids` contains the student's batch → visible (unchanged).
+  - `batch_ids` contains `'unbatched'` AND student has no batch AND session's `course_id` is in the student's enrolled courses → visible.
+  - otherwise hidden.
+- Adjust the initial `.or(...)` server-side filter so unbatched students still receive candidate rows containing `'unbatched'`, then let the client-side filter enforce the course match.
 
-## Not touched (out of scope this round)
-- Analytics dashboards / charts (they aggregate, not list; will address separately if needed).
-- FinancialManagement / GlobalFinancials (aggregate views — same reason).
-- Notification lists (already relatively small; will add later if you flag it).
+### Notifications — `supabase/functions/send-batch-content-notification/index.ts` + admin call sites
+- Add a new invocation mode: when the admin's resolved audience includes `'unbatched'`, additionally invoke the function with `{ unbatched: true, course_id }` (in place of `batch_id`).
+- Inside the edge function, when `unbatched === true`:
+  - Look up students where `students.batch_id IS NULL` AND they are enrolled in `course_id` (via `course_enrollments`).
+  - Reuse the existing email + in-app notification code path against that user list.
+- Admin `handleSubmit` / `handlePublish` fires this alongside the existing per-batch invokes (still fire-and-forget so the dialog closes fast).
 
-## Technical notes
-- Every query uses `.select('...', { count: 'exact' })` + `.range(from, to)`.
-- Progress bar (already shipped) auto-ticks on every fetch through the wrapper — good perceived feedback.
-- Preserve existing sort/filter state across page changes.
-- Reset to page 1 when any filter changes.
-
-## Rollout order
-1. Shared hooks + components
-2. Students Management (biggest file, biggest win)
-3. Payment Reports
-4. Submissions Management + Support admin
-5. StudentAssignmentList + Support student page
-
-Proceeding now.
+## Out of scope
+- No schema/migration changes.
+- No changes to how batched sessions or fully-global sessions behave.
+- No changes to legacy `batch_id` scalar handling beyond what's already in place.
