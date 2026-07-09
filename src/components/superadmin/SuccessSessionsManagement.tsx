@@ -360,6 +360,33 @@ export function SuccessSessionsManagement() {
     setDialogOpen(true);
   };
 
+  const handleDuplicate = (session: SuccessSession) => {
+    formSubmittedRef.current = false;
+    setEditingSession(null);
+    setFormData({
+      title: session.title ? `${session.title} (Copy)` : '',
+      description: session.description || '',
+      mentor_name: session.mentor_name || '',
+      mentor_id: session.mentor_id || '',
+      schedule_date: session.schedule_date || '',
+      start_time: extractTimeFromTimestamp(session.start_time),
+      end_time: extractTimeFromTimestamp(session.end_time),
+      link: session.link || '',
+      zoom_meeting_id: session.zoom_meeting_id || '',
+      zoom_passcode: session.zoom_passcode || '',
+      host_login_email: session.host_login_email || '',
+      host_login_pwd: session.host_login_pwd || '',
+      status: session.status || 'upcoming',
+      course_id: session.course_id || '__all__',
+      batch_ids: session.batch_ids && Array.isArray(session.batch_ids) && session.batch_ids.length > 0
+        ? session.batch_ids
+        : session.batch_id ? [session.batch_id] : ['__all__']
+    });
+    setDialogOpen(true);
+  };
+
+
+
   const handleCloseDialog = async () => {
     // If form was not submitted and has meaningful data, save as draft
     if (!formSubmittedRef.current && !editingSession && formData.title.trim()) {
