@@ -776,6 +776,9 @@ export function BatchManagement() {
                   const paidPct = m && m.finalEnroll > 0 ? Math.round((m.fullyPaid / m.finalEnroll) * 100) : 0;
                   const dropout = m ? Math.max(0, m.finalEnroll - m.fullyPaid) : 0;
                   const dropoutPct = m && m.finalEnroll > 0 ? Math.round((dropout / m.finalEnroll) * 100) : 0;
+                  const monthAfterStart = new Date(batch.start_date);
+                  monthAfterStart.setMonth(monthAfterStart.getMonth() + 1);
+                  const showDropout = new Date() >= monthAfterStart;
                   return (
                   <React.Fragment key={batch.id}>
                   <TableRow key={batch.id}>
