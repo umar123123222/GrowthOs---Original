@@ -96,7 +96,7 @@ export function BatchManagement() {
       setDownloadingReport(batch.id);
       const { data: enrollments } = await supabase
         .from('course_enrollments')
-        .select('student_id, enrollment_date, course_id')
+        .select('student_id, enrolled_at, course_id')
         .eq('batch_id', batch.id);
       const studentIds = [...new Set((enrollments || []).map(e => e.student_id as string))];
 
@@ -155,8 +155,8 @@ export function BatchManagement() {
       const enrollmentDateByStudent = new Map<string, string>();
       (enrollments || []).forEach(e => {
         const prev = enrollmentDateByStudent.get(e.student_id as string);
-        if (!prev || (e.enrollment_date && e.enrollment_date < prev)) {
-          enrollmentDateByStudent.set(e.student_id as string, e.enrollment_date as string);
+        if (!prev || (e.enrolled_at && e.enrolled_at < prev)) {
+          enrollmentDateByStudent.set(e.student_id as string, e.enrolled_at as string);
         }
       });
 
