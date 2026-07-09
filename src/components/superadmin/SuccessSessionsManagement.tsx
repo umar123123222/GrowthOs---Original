@@ -470,33 +470,29 @@ export function SuccessSessionsManagement() {
         const isPast = sessionStart ? sessionStart.getTime() < Date.now() : false;
         const isRecordingUpdate = baseSessionData.status === 'completed' || isPast;
 
-        // Notify batch students about the schedule update (or recording availability)
+        // Notify batch students about the schedule update (fire-and-forget for speed)
         const updateBatchIds = resolvedBatchIds && resolvedBatchIds.length > 0 ? resolvedBatchIds : [];
-        for (const [index, batchId] of updateBatchIds.entries()) {
-          if (!batchId) continue;
-          try {
-            await supabase.functions.invoke('send-batch-content-notification', {
-              body: {
-                batch_id: batchId,
-                item_type: 'LIVE_SESSION',
-                item_id: editingSession.id,
-                title: baseSessionData.title,
-                description: baseSessionData.description,
-                meeting_link: baseSessionData.link,
-                start_datetime: baseSessionData.start_time,
-                mentor_name: baseSessionData.mentor_name,
-                mentor_id: baseSessionData.mentor_id || undefined,
-                cta_path: isRecordingUpdate ? '/videos' : '/live-sessions',
-                is_recording_update: isRecordingUpdate,
-                is_update: !isRecordingUpdate,
-                include_mentor: index === 0,
-                async: true,
-              }
-            });
-          } catch (notifyError) {
-            console.error('Failed to notify batch students:', notifyError);
-          }
-        }
+        updateBatchIds.forEach((batchId, index) => {
+          if (!batchId) return;
+          supabase.functions.invoke('send-batch-content-notification', {
+            body: {
+              batch_id: batchId,
+              item_type: 'LIVE_SESSION',
+              item_id: editingSession.id,
+              title: baseSessionData.title,
+              description: baseSessionData.description,
+              meeting_link: baseSessionData.link,
+              start_datetime: baseSessionData.start_time,
+              mentor_name: baseSessionData.mentor_name,
+              mentor_id: baseSessionData.mentor_id || undefined,
+              cta_path: isRecordingUpdate ? '/videos' : '/live-sessions',
+              is_recording_update: isRecordingUpdate,
+              is_update: !isRecordingUpdate,
+              include_mentor: index === 0,
+              async: true,
+            }
+          }).catch(notifyError => console.error('Failed to notify batch students:', notifyError));
+        });
 
         if (authUser?.id) {
           logUserActivity({
