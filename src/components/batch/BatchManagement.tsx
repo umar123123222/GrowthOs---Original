@@ -83,7 +83,7 @@ export function BatchManagement() {
     }
   };
 
-  const [downloadingReport, setDownloadingReport] = useState<string | null>(null);
+  const [exportingReport, setExportingReport] = useState(false);
 
   const escapeCsv = (v: any) => {
     if (v === null || v === undefined) return '';
@@ -91,98 +91,134 @@ export function BatchManagement() {
     return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
 
-  const downloadBatchReport = async (batch: Batch) => {
+  const exportAllBatchesReport = async () => {
+    if (batches.length === 0) {
+      toast({ title: 'No batches', description: 'There are no batches to export.' });
+      return;
+    }
     try {
-      setDownloadingReport(batch.id);
-      const { data: enrollments } = await supabase
+      setExportingReport(true);
+
+      // Fetch enrollments for all batches in one query
+      const batchIds = batches.map(b => b.id);
+      const { data: allEnrollments } = await supabase
         .from('course_enrollments')
-        .select('student_id, enrolled_at, course_id')
-        .eq('batch_id', batch.id);
-      const studentIds = [...new Set((enrollments || []).map(e => e.student_id as string))];
+        .select('student_id, enrolled_at, batch_id')
+        .in('batch_id', batchIds);
+
+      const enrollmentsByBatch: Record<string, any[]> = {};
+      const allStudentIds = new Set<string>();
+      (allEnrollments || []).forEach(e => {
+        (enrollmentsByBatch[e.batch_id as string] ||= []).push(e);
+        allStudentIds.add(e.student_id as string);
+      });
 
       let students: any[] = [];
       let invoices: any[] = [];
-      if (studentIds.length > 0) {
+      if (allStudentIds.size > 0) {
+        const ids = Array.from(allStudentIds);
         const [u, inv] = await Promise.all([
-          supabase.from('users').select('id, full_name, email, phone, lms_status, created_at').in('id', studentIds),
-          supabase.from('invoices').select('student_id, status, amount, due_date, issue_date, installment_number').in('student_id', studentIds),
+          supabase.from('users').select('id, full_name, email, phone, lms_status').in('id', ids),
+          supabase.from('invoices').select('student_id, status, amount').in('student_id', ids),
         ]);
         students = u.data || [];
         invoices = inv.data || [];
       }
-
       const studentMap = new Map(students.map(s => [s.id, s]));
       const invByStudent: Record<string, any[]> = {};
       invoices.forEach(i => { (invByStudent[i.student_id] ||= []).push(i); });
 
-      // Metrics summary
-      const total = studentIds.length;
-      const refundedSet = new Set<string>();
-      invoices.forEach(i => { if (i.status === 'refunded') refundedSet.add(i.student_id); });
-      const refunded = refundedSet.size;
-      const finalEnroll = total - refunded;
-      let fullyPaid = 0;
-      studentIds.forEach(sid => {
-        if (refundedSet.has(sid)) return;
-        const list = (invByStudent[sid] || []).filter(i => i.status !== 'refunded');
-        if (list.length > 0 && list.every(i => i.status === 'paid')) fullyPaid++;
-      });
-      const dropout = Math.max(0, finalEnroll - fullyPaid);
-
-      const assoc = batchAssociations[batch.id];
-      const pathwayNames = (assoc?.pathways || []).map(id => pathways.find(p => p.id === id)?.name).filter(Boolean).join('; ');
-      const courseNames = (assoc?.courses || []).map(id => courses.find(c => c.id === id)?.title).filter(Boolean).join('; ');
-
+      const now = new Date();
       const lines: string[] = [];
-      lines.push(['Batch Report'].map(escapeCsv).join(','));
-      lines.push(['Batch Name', batch.name].map(escapeCsv).join(','));
-      lines.push(['Start Date', batch.start_date].map(escapeCsv).join(','));
-      lines.push(['Status', batch.status].map(escapeCsv).join(','));
-      lines.push(['Pathways', pathwayNames].map(escapeCsv).join(','));
-      lines.push(['Courses', courseNames].map(escapeCsv).join(','));
-      lines.push(['Generated At', new Date().toISOString()].map(escapeCsv).join(','));
-      lines.push('');
-      lines.push(['Summary Metrics'].map(escapeCsv).join(','));
-      lines.push(['Total Enrollments', total].map(escapeCsv).join(','));
-      lines.push(['Total Refunds', refunded].map(escapeCsv).join(','));
-      lines.push(['Final Enrollments', finalEnroll].map(escapeCsv).join(','));
-      lines.push(['Fully Paid', fullyPaid].map(escapeCsv).join(','));
-      const monthAfterStartCsv = new Date(batch.start_date);
-      monthAfterStartCsv.setMonth(monthAfterStartCsv.getMonth() + 1);
-      const showDropoutCsv = new Date() >= monthAfterStartCsv;
-      lines.push(['Dropout', showDropoutCsv ? dropout : `Available after ${format(monthAfterStartCsv, 'yyyy-MM-dd')}`].map(escapeCsv).join(','));
-      lines.push('');
-      lines.push(['Student Roster'].map(escapeCsv).join(','));
-      lines.push(['Full Name','Email','Phone','LMS Status','Enrollment Date','Invoice Count','Paid Invoices','Refunded','Fully Paid','Total Amount'].map(escapeCsv).join(','));
 
-      const enrollmentDateByStudent = new Map<string, string>();
-      (enrollments || []).forEach(e => {
-        const prev = enrollmentDateByStudent.get(e.student_id as string);
-        if (!prev || (e.enrolled_at && e.enrolled_at < prev)) {
-          enrollmentDateByStudent.set(e.student_id as string, e.enrolled_at as string);
-        }
+      // Summary sheet section
+      lines.push(['All Batches Report'].map(escapeCsv).join(','));
+      lines.push(['Generated At', now.toISOString()].map(escapeCsv).join(','));
+      lines.push('');
+      lines.push(['Batch Summary'].map(escapeCsv).join(','));
+      lines.push(['Batch Name','Start Date','Status','Pathways','Courses','Total Enrollments','Total Refunds','Final Enrollments','Fully Paid','Dropout'].map(escapeCsv).join(','));
+
+      const perBatchComputed: Array<{ batch: Batch; studentIds: string[]; refundedSet: Set<string>; total: number; refunded: number; finalEnroll: number; fullyPaid: number; dropoutValue: string | number; }> = [];
+
+      batches.forEach(batch => {
+        const ens = enrollmentsByBatch[batch.id] || [];
+        const studentIds = [...new Set(ens.map(e => e.student_id as string))];
+        const refundedSet = new Set<string>();
+        studentIds.forEach(sid => {
+          const list = invByStudent[sid] || [];
+          if (list.some(i => i.status === 'refunded')) refundedSet.add(sid);
+        });
+        const total = studentIds.length;
+        const refunded = refundedSet.size;
+        const finalEnroll = total - refunded;
+        let fullyPaid = 0;
+        studentIds.forEach(sid => {
+          if (refundedSet.has(sid)) return;
+          const list = (invByStudent[sid] || []).filter(i => i.status !== 'refunded');
+          if (list.length > 0 && list.every(i => i.status === 'paid')) fullyPaid++;
+        });
+        const dropout = Math.max(0, finalEnroll - fullyPaid);
+        const monthAfterStart = new Date(batch.start_date);
+        monthAfterStart.setMonth(monthAfterStart.getMonth() + 1);
+        const showDropout = now >= monthAfterStart;
+        const dropoutValue: string | number = showDropout ? dropout : `Available after ${format(monthAfterStart, 'yyyy-MM-dd')}`;
+
+        const assoc = batchAssociations[batch.id];
+        const pathwayNames = (assoc?.pathways || []).map(id => pathways.find(p => p.id === id)?.name).filter(Boolean).join('; ');
+        const courseNames = (assoc?.courses || []).map(id => courses.find(c => c.id === id)?.title).filter(Boolean).join('; ');
+
+        lines.push([
+          batch.name,
+          batch.start_date,
+          batch.status,
+          pathwayNames,
+          courseNames,
+          total,
+          refunded,
+          finalEnroll,
+          fullyPaid,
+          dropoutValue,
+        ].map(escapeCsv).join(','));
+
+        perBatchComputed.push({ batch, studentIds, refundedSet, total, refunded, finalEnroll, fullyPaid, dropoutValue });
       });
 
-      studentIds.forEach(sid => {
-        const s = studentMap.get(sid) || {};
-        const list = invByStudent[sid] || [];
-        const nonRefunded = list.filter(i => i.status !== 'refunded');
-        const paidCount = list.filter(i => i.status === 'paid').length;
-        const isRefunded = refundedSet.has(sid);
-        const isFullyPaid = !isRefunded && nonRefunded.length > 0 && nonRefunded.every(i => i.status === 'paid');
-        const totalAmount = list.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
-        lines.push([
-          s.full_name || '',
-          s.email || '',
-          s.phone || '',
-          s.lms_status || '',
-          enrollmentDateByStudent.get(sid) || '',
-          list.length,
-          paidCount,
-          isRefunded ? 'Yes' : 'No',
-          isFullyPaid ? 'Yes' : 'No',
-          totalAmount,
-        ].map(escapeCsv).join(','));
+      // Detailed student roster per batch
+      lines.push('');
+      lines.push(['Student Roster (by Batch)'].map(escapeCsv).join(','));
+      lines.push(['Batch Name','Full Name','Email','Phone','LMS Status','Enrollment Date','Invoice Count','Paid Invoices','Refunded','Fully Paid','Total Amount'].map(escapeCsv).join(','));
+
+      perBatchComputed.forEach(({ batch, studentIds, refundedSet }) => {
+        const ens = enrollmentsByBatch[batch.id] || [];
+        const enrollDateByStudent = new Map<string, string>();
+        ens.forEach(e => {
+          const prev = enrollDateByStudent.get(e.student_id as string);
+          if (!prev || (e.enrolled_at && e.enrolled_at < prev)) {
+            enrollDateByStudent.set(e.student_id as string, e.enrolled_at as string);
+          }
+        });
+        studentIds.forEach(sid => {
+          const s = studentMap.get(sid) || {};
+          const list = invByStudent[sid] || [];
+          const nonRefunded = list.filter(i => i.status !== 'refunded');
+          const paidCount = list.filter(i => i.status === 'paid').length;
+          const isRefunded = refundedSet.has(sid);
+          const isFullyPaid = !isRefunded && nonRefunded.length > 0 && nonRefunded.every(i => i.status === 'paid');
+          const totalAmount = list.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+          lines.push([
+            batch.name,
+            s.full_name || '',
+            s.email || '',
+            s.phone || '',
+            s.lms_status || '',
+            enrollDateByStudent.get(sid) || '',
+            list.length,
+            paidCount,
+            isRefunded ? 'Yes' : 'No',
+            isFullyPaid ? 'Yes' : 'No',
+            totalAmount,
+          ].map(escapeCsv).join(','));
+        });
       });
 
       const csv = lines.join('\n');
@@ -190,20 +226,20 @@ export function BatchManagement() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const safeName = batch.name.replace(/[^a-z0-9]+/gi, '_');
-      a.download = `batch_report_${safeName}_${format(new Date(), 'yyyyMMdd')}.csv`;
+      a.download = `all_batches_report_${format(now, 'yyyyMMdd_HHmm')}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast({ title: 'Report downloaded', description: `Report for ${batch.name} generated.` });
+      toast({ title: 'Report exported', description: `Exported report for ${batches.length} batches.` });
     } catch (e: any) {
-      toast({ title: 'Error', description: e.message || 'Failed to generate report', variant: 'destructive' });
+      toast({ title: 'Error', description: e.message || 'Failed to export report', variant: 'destructive' });
     } finally {
-      setDownloadingReport(null);
+      setExportingReport(false);
     }
   };
+
 
   const toggleExpand = (batchId: string) => {
     setExpandedBatches(prev => {
