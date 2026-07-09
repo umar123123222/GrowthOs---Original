@@ -1222,7 +1222,7 @@ export function SuccessSessionsManagement() {
                             {filteredBatches.map((batch) => (
                               <label key={batch.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
                                 <Checkbox
-                                  checked={formData.batch_ids.includes(batch.id) || formData.batch_ids.includes('__all__')}
+                                  checked={formData.batch_ids.includes(batch.id)}
                                   onCheckedChange={(checked) => {
                                     if (formData.batch_ids.includes('__all__')) {
                                       setFormData({ ...formData, batch_ids: checked ? [batch.id] : ['__all__'] });
