@@ -147,7 +147,10 @@ export function BatchManagement() {
       lines.push(['Total Refunds', refunded].map(escapeCsv).join(','));
       lines.push(['Final Enrollments', finalEnroll].map(escapeCsv).join(','));
       lines.push(['Fully Paid', fullyPaid].map(escapeCsv).join(','));
-      lines.push(['Dropout', dropout].map(escapeCsv).join(','));
+      const monthAfterStartCsv = new Date(batch.start_date);
+      monthAfterStartCsv.setMonth(monthAfterStartCsv.getMonth() + 1);
+      const showDropoutCsv = new Date() >= monthAfterStartCsv;
+      lines.push(['Dropout', showDropoutCsv ? dropout : `Available after ${format(monthAfterStartCsv, 'yyyy-MM-dd')}`].map(escapeCsv).join(','));
       lines.push('');
       lines.push(['Student Roster'].map(escapeCsv).join(','));
       lines.push(['Full Name','Email','Phone','LMS Status','Enrollment Date','Invoice Count','Paid Invoices','Refunded','Fully Paid','Total Amount'].map(escapeCsv).join(','));
@@ -776,6 +779,9 @@ export function BatchManagement() {
                   const paidPct = m && m.finalEnroll > 0 ? Math.round((m.fullyPaid / m.finalEnroll) * 100) : 0;
                   const dropout = m ? Math.max(0, m.finalEnroll - m.fullyPaid) : 0;
                   const dropoutPct = m && m.finalEnroll > 0 ? Math.round((dropout / m.finalEnroll) * 100) : 0;
+                  const monthAfterStart = new Date(batch.start_date);
+                  monthAfterStart.setMonth(monthAfterStart.getMonth() + 1);
+                  const showDropout = new Date() >= monthAfterStart;
                   return (
                   <React.Fragment key={batch.id}>
                   <TableRow key={batch.id}>
@@ -874,10 +880,16 @@ export function BatchManagement() {
                             </div>
                             <div className="rounded-md border bg-background p-3">
                               <div className="text-xs uppercase text-muted-foreground">Dropout</div>
-                              <div className="text-2xl font-semibold mt-1 text-destructive">
-                                {dropout}
-                                <span className="text-sm text-muted-foreground font-normal ml-2">({dropoutPct}%)</span>
-                              </div>
+                              {showDropout ? (
+                                <div className="text-2xl font-semibold mt-1 text-destructive">
+                                  {dropout}
+                                  <span className="text-sm text-muted-foreground font-normal ml-2">({dropoutPct}%)</span>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-muted-foreground mt-2 italic">
+                                  Available after {format(monthAfterStart, 'MMM dd, yyyy')} (1 month after batch start)
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
