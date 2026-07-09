@@ -551,46 +551,37 @@ export function SuccessSessionsManagement() {
           });
         }
 
-        // Notify mentor
+        // Notify mentor (fire-and-forget)
         if (formData.mentor_id && newSessions.length > 0) {
-          try {
-            await notifyMentorOfSuccessSessionScheduled(
-              formData.mentor_id,
-              formData.title,
-              baseSessionData.start_time || formData.schedule_date,
-              newSessions[0].id
-            );
-          } catch (notificationError) {
-            console.error('Failed to notify mentor:', notificationError);
-          }
+          notifyMentorOfSuccessSessionScheduled(
+            formData.mentor_id,
+            formData.title,
+            baseSessionData.start_time || formData.schedule_date,
+            newSessions[0].id
+          ).catch(notificationError => console.error('Failed to notify mentor:', notificationError));
         }
 
-        // Notify batch students for each batch in batch_ids
+        // Notify batch students for each batch (fire-and-forget)
         if (resolvedBatchIds && resolvedBatchIds.length > 0 && newSessions.length > 0) {
-          for (const [index, batchId] of resolvedBatchIds.entries()) {
-            if (batchId) {
-              try {
-                await supabase.functions.invoke('send-batch-content-notification', {
-                  body: {
-                    batch_id: batchId,
-                    item_type: 'LIVE_SESSION',
-                    item_id: newSessions[0].id,
-                    title: baseSessionData.title,
-                    description: baseSessionData.description,
-                    meeting_link: baseSessionData.link,
-                    start_datetime: baseSessionData.start_time,
-                    mentor_name: baseSessionData.mentor_name,
-                    mentor_id: baseSessionData.mentor_id || undefined,
-                    cta_path: '/live-sessions',
-                    include_mentor: index === 0,
-                    async: true,
-                  }
-                });
-              } catch (notifyError) {
-                console.error('Failed to notify batch students:', notifyError);
+          resolvedBatchIds.forEach((batchId, index) => {
+            if (!batchId) return;
+            supabase.functions.invoke('send-batch-content-notification', {
+              body: {
+                batch_id: batchId,
+                item_type: 'LIVE_SESSION',
+                item_id: newSessions[0].id,
+                title: baseSessionData.title,
+                description: baseSessionData.description,
+                meeting_link: baseSessionData.link,
+                start_datetime: baseSessionData.start_time,
+                mentor_name: baseSessionData.mentor_name,
+                mentor_id: baseSessionData.mentor_id || undefined,
+                cta_path: '/live-sessions',
+                include_mentor: index === 0,
+                async: true,
               }
-            }
-          }
+            }).catch(notifyError => console.error('Failed to notify batch students:', notifyError));
+          });
         }
 
         toast({
