@@ -877,10 +877,16 @@ export function BatchManagement() {
                             </div>
                             <div className="rounded-md border bg-background p-3">
                               <div className="text-xs uppercase text-muted-foreground">Dropout</div>
-                              <div className="text-2xl font-semibold mt-1 text-destructive">
-                                {dropout}
-                                <span className="text-sm text-muted-foreground font-normal ml-2">({dropoutPct}%)</span>
-                              </div>
+                              {showDropout ? (
+                                <div className="text-2xl font-semibold mt-1 text-destructive">
+                                  {dropout}
+                                  <span className="text-sm text-muted-foreground font-normal ml-2">({dropoutPct}%)</span>
+                                </div>
+                              ) : (
+                                <div className="text-xs text-muted-foreground mt-2 italic">
+                                  Available after {format(monthAfterStart, 'MMM dd, yyyy')} (1 month after batch start)
+                                </div>
+                              )}
                             </div>
                           </div>
                         )}
