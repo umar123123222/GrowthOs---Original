@@ -386,7 +386,7 @@ export function SuccessSessionsManagement() {
           status: 'draft',
           course_id: formData.course_id === '__all__' ? null : (formData.course_id || null),
           batch_id: null,
-          batch_ids: formData.batch_ids.includes('__all__') ? null : formData.batch_ids.filter(id => id !== 'unbatched'),
+          batch_ids: formData.batch_ids.includes('__all__') ? null : formData.batch_ids,
           pathway_id: null as string | null
         };
 
