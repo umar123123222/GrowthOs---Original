@@ -545,7 +545,12 @@ export function BatchManagement() {
             Create and manage course batches with scheduled content deployment
           </p>
         </div>
-        
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={exportAllBatchesReport} disabled={exportingReport}>
+            {exportingReport ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            Export Report
+          </Button>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={() => handleOpenDialog()} className="hover-scale bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
