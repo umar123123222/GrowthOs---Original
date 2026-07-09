@@ -1,0 +1,2 @@
+ALTER TABLE public.success_sessions DROP CONSTRAINT IF EXISTS live_sessions_status_check;
+ALTER TABLE public.success_sessions ADD CONSTRAINT live_sessions_status_check CHECK (status = ANY (ARRAY['draft'::text,'upcoming'::text,'live'::text,'completed'::text,'cancelled'::text]));
