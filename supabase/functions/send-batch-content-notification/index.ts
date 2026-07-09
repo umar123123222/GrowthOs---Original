@@ -31,6 +31,13 @@ interface NotificationRequest {
    * the admin UI uses so bulk sends do not block the dialog.
    */
   async?: boolean;
+  /**
+   * When true, target students who are NOT in any batch but are enrolled in
+   * `course_id`. In this mode `batch_id` is a sentinel (e.g. "unbatched") and
+   * is not used to look up a real batch.
+   */
+  unbatched?: boolean;
+  course_id?: string;
 }
 
 // Deno Deploy's background-work API. Typed loosely so this file still compiles
@@ -321,12 +328,27 @@ const handler = async (req: Request): Promise<Response> => {
       is_update,
       reminder_label,
       include_mentor,
+      unbatched,
+      course_id,
     } = body;
 
     // Validate required fields
-    if (!batch_id || !item_type || !item_id || !title) {
+    if (!item_type || !item_id || !title) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: batch_id, item_type, item_id, title" }),
+        JSON.stringify({ error: "Missing required fields: item_type, item_id, title" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (unbatched === true) {
+      if (!course_id) {
+        return new Response(
+          JSON.stringify({ error: "unbatched mode requires course_id" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else if (!batch_id) {
+      return new Response(
+        JSON.stringify({ error: "Missing required field: batch_id" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -362,30 +384,25 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Processing notification for batch ${batch_id}, type: ${item_type}, title: ${title}`);
+    console.log(
+      unbatched
+        ? `Processing UNBATCHED notification for course ${course_id}, type: ${item_type}, title: ${title}`
+        : `Processing notification for batch ${batch_id}, type: ${item_type}, title: ${title}`
+    );
 
-    // Get batch details
-    const { data: batch, error: batchError } = await supabase
-      .from("batches")
-      .select("id, name, start_date")
-      .eq("id", batch_id)
-      .single();
+    // Build the list of enrolled student ids for either mode.
+    let enrollmentQuery = supabase
+      .from("course_enrollments")
+      .select("student_id, batch_id")
+      .eq("status", "active");
 
-    if (batchError || !batch) {
-      console.error("Batch not found:", batchError);
-      return new Response(
-        JSON.stringify({ error: "Batch not found" }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (unbatched === true) {
+      enrollmentQuery = enrollmentQuery.eq("course_id", course_id!).is("batch_id", null);
+    } else {
+      enrollmentQuery = enrollmentQuery.eq("batch_id", batch_id);
     }
 
-    // Get enrolled students for this batch without relying on PostgREST joins.
-    // course_enrollments stores students.id in student_id, then students.user_id points to users.id.
-    const { data: enrollments, error: enrollmentError } = await supabase
-      .from("course_enrollments")
-      .select("student_id")
-      .eq("batch_id", batch_id)
-      .eq("status", "active");
+    const { data: enrollments, error: enrollmentError } = await enrollmentQuery;
 
     if (enrollmentError) {
       console.error("Error fetching enrollments:", enrollmentError);
@@ -395,10 +412,27 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    const studentIds = Array.from(new Set((enrollments || []).map((e: any) => e.student_id).filter(Boolean)));
+    let studentIds = Array.from(new Set((enrollments || []).map((e: any) => e.student_id).filter(Boolean)));
     let userIds: string[] = [];
 
-    if (studentIds.length > 0) {
+    // For unbatched mode: also confirm the student has no batch on the students table
+    if (unbatched === true && studentIds.length > 0) {
+      const { data: studentRows, error: studentsError } = await supabase
+        .from("students")
+        .select("id, user_id, batch_id")
+        .in("id", studentIds);
+
+      if (studentsError) {
+        console.error("Error fetching students for unbatched:", studentsError);
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch enrolled students" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const unbatchedRows = (studentRows || []).filter((s: any) => !s.batch_id);
+      userIds = Array.from(new Set(unbatchedRows.map((s: any) => s.user_id).filter(Boolean)));
+    } else if (studentIds.length > 0) {
       const { data: studentRows, error: studentsError } = await supabase
         .from("students")
         .select("id, user_id")
@@ -432,9 +466,9 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     if (!enrollments || enrollments.length === 0) {
-      console.log("No students enrolled in this batch");
+      console.log(unbatched ? "No unbatched students for this course" : "No students enrolled in this batch");
       return new Response(
-        JSON.stringify({ message: "No students enrolled in batch", sent: 0, failed: 0 }),
+        JSON.stringify({ message: "No matching students", sent: 0, failed: 0 }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

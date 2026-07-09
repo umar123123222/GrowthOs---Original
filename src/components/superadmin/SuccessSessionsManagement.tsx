@@ -386,7 +386,7 @@ export function SuccessSessionsManagement() {
           status: 'draft',
           course_id: formData.course_id === '__all__' ? null : (formData.course_id || null),
           batch_id: null,
-          batch_ids: formData.batch_ids.includes('__all__') ? null : formData.batch_ids.filter(id => id !== 'unbatched'),
+          batch_ids: formData.batch_ids.includes('__all__') ? null : formData.batch_ids,
           pathway_id: null as string | null
         };
 
@@ -413,6 +413,20 @@ export function SuccessSessionsManagement() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     formSubmittedRef.current = true;
+
+    // Validate: unbatched targeting requires a Target Course
+    const wantsUnbatched = formData.batch_ids.includes('unbatched') && !formData.batch_ids.includes('__all__');
+    const hasCourse = formData.course_id && formData.course_id !== '__all__';
+    if (wantsUnbatched && !hasCourse) {
+      toast({
+        title: "Target Course required",
+        description: "Select a Target Course when targeting unbatched students.",
+        variant: "destructive"
+      });
+      formSubmittedRef.current = false;
+      return;
+    }
+
     try {
       // Find the selected user to get their name
       const selectedUser = users.find(user => user.id === formData.mentor_id);
@@ -441,10 +455,13 @@ export function SuccessSessionsManagement() {
         pathway_id: null as string | null
       };
 
-      // Resolve batch_ids for JSONB column: '__all__' means null (all batches)
+      // Resolve batch_ids for JSONB column: '__all__' means null (all batches).
+      // Preserve the 'unbatched' sentinel so unbatched targeting is persisted.
       const resolvedBatchIds = formData.batch_ids.includes('__all__')
         ? null
-        : formData.batch_ids.filter(id => id !== 'unbatched');
+        : formData.batch_ids;
+      const realBatchIds = (resolvedBatchIds || []).filter(id => id !== 'unbatched');
+      const includesUnbatched = (resolvedBatchIds || []).includes('unbatched');
 
       if (editingSession) {
         const sessionData = {
@@ -471,8 +488,7 @@ export function SuccessSessionsManagement() {
         const isRecordingUpdate = baseSessionData.status === 'completed' || isPast;
 
         // Notify batch students about the schedule update (fire-and-forget for speed)
-        const updateBatchIds = resolvedBatchIds && resolvedBatchIds.length > 0 ? resolvedBatchIds : [];
-        updateBatchIds.forEach((batchId, index) => {
+        realBatchIds.forEach((batchId, index) => {
           if (!batchId) return;
           supabase.functions.invoke('send-batch-content-notification', {
             body: {
@@ -493,6 +509,30 @@ export function SuccessSessionsManagement() {
             }
           }).catch(notifyError => console.error('Failed to notify batch students:', notifyError));
         });
+
+        // Notify unbatched students of the target course (fire-and-forget)
+        if (includesUnbatched && baseSessionData.course_id) {
+          supabase.functions.invoke('send-batch-content-notification', {
+            body: {
+              unbatched: true,
+              course_id: baseSessionData.course_id,
+              batch_id: 'unbatched',
+              item_type: 'LIVE_SESSION',
+              item_id: editingSession.id,
+              title: baseSessionData.title,
+              description: baseSessionData.description,
+              meeting_link: baseSessionData.link,
+              start_datetime: baseSessionData.start_time,
+              mentor_name: baseSessionData.mentor_name,
+              mentor_id: baseSessionData.mentor_id || undefined,
+              cta_path: isRecordingUpdate ? '/videos' : '/live-sessions',
+              is_recording_update: isRecordingUpdate,
+              is_update: !isRecordingUpdate,
+              include_mentor: realBatchIds.length === 0,
+              async: true,
+            }
+          }).catch(notifyError => console.error('Failed to notify unbatched students:', notifyError));
+        }
 
         if (authUser?.id) {
           logUserActivity({
@@ -562,8 +602,8 @@ export function SuccessSessionsManagement() {
         }
 
         // Notify batch students for each batch (fire-and-forget)
-        if (resolvedBatchIds && resolvedBatchIds.length > 0 && newSessions.length > 0) {
-          resolvedBatchIds.forEach((batchId, index) => {
+        if (realBatchIds.length > 0 && newSessions.length > 0) {
+          realBatchIds.forEach((batchId, index) => {
             if (!batchId) return;
             supabase.functions.invoke('send-batch-content-notification', {
               body: {
@@ -584,10 +624,36 @@ export function SuccessSessionsManagement() {
           });
         }
 
+        // Notify unbatched students of the target course (fire-and-forget)
+        if (includesUnbatched && baseSessionData.course_id && newSessions.length > 0) {
+          supabase.functions.invoke('send-batch-content-notification', {
+            body: {
+              unbatched: true,
+              course_id: baseSessionData.course_id,
+              batch_id: 'unbatched',
+              item_type: 'LIVE_SESSION',
+              item_id: newSessions[0].id,
+              title: baseSessionData.title,
+              description: baseSessionData.description,
+              meeting_link: baseSessionData.link,
+              start_datetime: baseSessionData.start_time,
+              mentor_name: baseSessionData.mentor_name,
+              mentor_id: baseSessionData.mentor_id || undefined,
+              cta_path: '/live-sessions',
+              include_mentor: realBatchIds.length === 0,
+              async: true,
+            }
+          }).catch(notifyError => console.error('Failed to notify unbatched students:', notifyError));
+        }
+
+        const targetSummary = [
+          realBatchIds.length > 0 ? `${realBatchIds.length} batch${realBatchIds.length > 1 ? 'es' : ''}` : null,
+          includesUnbatched ? 'unbatched students' : null,
+        ].filter(Boolean).join(' + ');
         toast({
           title: "Success",
-          description: resolvedBatchIds && resolvedBatchIds.length > 1
-            ? `Session created for ${resolvedBatchIds.length} batches. Emails are being sent in the background.`
+          description: targetSummary
+            ? `Session created for ${targetSummary}. Emails are being sent in the background.`
             : "Session created. Emails are being sent in the background.",
         });
       }
@@ -626,31 +692,48 @@ export function SuccessSessionsManagement() {
         .eq('id', session.id);
       if (error) throw error;
 
-      // Notify batch students via email + in-app for all batch_ids
-      const sessionBatchIds: string[] = (session as any).batch_ids || (session.batch_id ? [session.batch_id] : []);
-      for (const [index, batchId] of sessionBatchIds.entries()) {
-        if (batchId) {
-          try {
-            await supabase.functions.invoke('send-batch-content-notification', {
-              body: {
-                batch_id: batchId,
-                item_type: 'LIVE_SESSION',
-                item_id: session.id,
-                title: session.title,
-                description: session.description,
-                meeting_link: session.link,
-                start_datetime: session.start_time,
-                mentor_name: session.mentor_name,
-                mentor_id: session.mentor_id || undefined,
-                cta_path: '/live-sessions',
-                include_mentor: index === 0,
-                async: true,
-              }
-            });
-          } catch (notifyError) {
-            console.error('Failed to notify batch students:', notifyError);
+      // Notify batch students via email + in-app for all batch_ids (fire-and-forget)
+      const rawSessionBatchIds: string[] = (session as any).batch_ids || (session.batch_id ? [session.batch_id] : []);
+      const pubRealBatchIds = rawSessionBatchIds.filter(b => b && b !== 'unbatched');
+      const pubIncludesUnbatched = rawSessionBatchIds.includes('unbatched');
+      pubRealBatchIds.forEach((batchId, index) => {
+        supabase.functions.invoke('send-batch-content-notification', {
+          body: {
+            batch_id: batchId,
+            item_type: 'LIVE_SESSION',
+            item_id: session.id,
+            title: session.title,
+            description: session.description,
+            meeting_link: session.link,
+            start_datetime: session.start_time,
+            mentor_name: session.mentor_name,
+            mentor_id: session.mentor_id || undefined,
+            cta_path: '/live-sessions',
+            include_mentor: index === 0,
+            async: true,
           }
-        }
+        }).catch(notifyError => console.error('Failed to notify batch students:', notifyError));
+      });
+
+      if (pubIncludesUnbatched && session.course_id) {
+        supabase.functions.invoke('send-batch-content-notification', {
+          body: {
+            unbatched: true,
+            course_id: session.course_id,
+            batch_id: 'unbatched',
+            item_type: 'LIVE_SESSION',
+            item_id: session.id,
+            title: session.title,
+            description: session.description,
+            meeting_link: session.link,
+            start_datetime: session.start_time,
+            mentor_name: session.mentor_name,
+            mentor_id: session.mentor_id || undefined,
+            cta_path: '/live-sessions',
+            include_mentor: pubRealBatchIds.length === 0,
+            async: true,
+          }
+        }).catch(notifyError => console.error('Failed to notify unbatched students:', notifyError));
       }
 
       toast({ title: "Published!", description: "Session is live for students. Emails are being sent in the background." });
@@ -1042,13 +1125,19 @@ export function SuccessSessionsManagement() {
                         <PopoverTrigger asChild>
                           <Button variant="outline" className="w-full justify-between font-normal">
                             <span className="truncate">
-                              {formData.batch_ids.includes('__all__')
-                                ? 'All Batches'
-                                : formData.batch_ids.length === 1
-                                  ? (formData.batch_ids[0] === 'unbatched'
-                                    ? 'Unbatched students'
-                                    : filteredBatches.find(b => b.id === formData.batch_ids[0])?.name || formData.batch_ids[0])
-                                  : `${formData.batch_ids.length} batches selected`}
+                              {(() => {
+                                if (formData.batch_ids.includes('__all__')) return 'All Batches';
+                                const hasUnbatched = formData.batch_ids.includes('unbatched');
+                                const realIds = formData.batch_ids.filter(id => id !== 'unbatched');
+                                if (realIds.length === 0 && hasUnbatched) return 'Unbatched students';
+                                if (realIds.length === 1 && !hasUnbatched) {
+                                  return filteredBatches.find(b => b.id === realIds[0])?.name || realIds[0];
+                                }
+                                const parts: string[] = [];
+                                if (realIds.length > 0) parts.push(`${realIds.length} batch${realIds.length > 1 ? 'es' : ''}`);
+                                if (hasUnbatched) parts.push('Unbatched');
+                                return parts.join(' + ');
+                              })()}
                             </span>
                             <Users2 className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                           </Button>
@@ -1228,6 +1317,7 @@ export function SuccessSessionsManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">All Batches</SelectItem>
+                <SelectItem value="unbatched">Unbatched students</SelectItem>
                 {(filterCourse !== '__all__' ? batches.filter(b => b.course_id === filterCourse) : batches).map(b => (
                   <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                 ))}
@@ -1390,7 +1480,9 @@ export function SuccessSessionsManagement() {
                               <div className="flex flex-wrap gap-0.5">
                                 {sessionBatchIds.map(bid => (
                                   <Badge key={bid} variant="outline" className="text-xs w-fit">
-                                    {batches.find(b => b.id === bid)?.name || bid}
+                                    {bid === 'unbatched'
+                                      ? 'Unbatched'
+                                      : batches.find(b => b.id === bid)?.name || bid}
                                   </Badge>
                                 ))}
                               </div>
