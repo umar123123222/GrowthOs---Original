@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send, Filter, Check } from 'lucide-react';
+import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send, Filter, Check, Copy } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -359,6 +359,33 @@ export function SuccessSessionsManagement() {
     }
     setDialogOpen(true);
   };
+
+  const handleDuplicate = (session: SuccessSession) => {
+    formSubmittedRef.current = false;
+    setEditingSession(null);
+    setFormData({
+      title: session.title ? `${session.title} (Copy)` : '',
+      description: session.description || '',
+      mentor_name: session.mentor_name || '',
+      mentor_id: session.mentor_id || '',
+      schedule_date: session.schedule_date || '',
+      start_time: extractTimeFromTimestamp(session.start_time),
+      end_time: extractTimeFromTimestamp(session.end_time),
+      link: session.link || '',
+      zoom_meeting_id: session.zoom_meeting_id || '',
+      zoom_passcode: session.zoom_passcode || '',
+      host_login_email: session.host_login_email || '',
+      host_login_pwd: session.host_login_pwd || '',
+      status: session.status || 'upcoming',
+      course_id: session.course_id || '__all__',
+      batch_ids: session.batch_ids && Array.isArray(session.batch_ids) && session.batch_ids.length > 0
+        ? session.batch_ids
+        : session.batch_id ? [session.batch_id] : ['__all__']
+    });
+    setDialogOpen(true);
+  };
+
+
 
   const handleCloseDialog = async () => {
     // If form was not submitted and has meaningful data, save as draft
@@ -1562,6 +1589,16 @@ export function SuccessSessionsManagement() {
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDuplicate(session)}
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            title="Duplicate session"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+
                           {session.course_id && pathwayCourses.some(pc => pc.course_id === session.course_id) && (
                             <Button
                               variant="ghost"
