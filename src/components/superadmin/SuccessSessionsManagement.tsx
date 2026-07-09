@@ -488,8 +488,7 @@ export function SuccessSessionsManagement() {
         const isRecordingUpdate = baseSessionData.status === 'completed' || isPast;
 
         // Notify batch students about the schedule update (fire-and-forget for speed)
-        const updateBatchIds = resolvedBatchIds && resolvedBatchIds.length > 0 ? resolvedBatchIds : [];
-        updateBatchIds.forEach((batchId, index) => {
+        realBatchIds.forEach((batchId, index) => {
           if (!batchId) return;
           supabase.functions.invoke('send-batch-content-notification', {
             body: {
@@ -510,6 +509,30 @@ export function SuccessSessionsManagement() {
             }
           }).catch(notifyError => console.error('Failed to notify batch students:', notifyError));
         });
+
+        // Notify unbatched students of the target course (fire-and-forget)
+        if (includesUnbatched && baseSessionData.course_id) {
+          supabase.functions.invoke('send-batch-content-notification', {
+            body: {
+              unbatched: true,
+              course_id: baseSessionData.course_id,
+              batch_id: 'unbatched',
+              item_type: 'LIVE_SESSION',
+              item_id: editingSession.id,
+              title: baseSessionData.title,
+              description: baseSessionData.description,
+              meeting_link: baseSessionData.link,
+              start_datetime: baseSessionData.start_time,
+              mentor_name: baseSessionData.mentor_name,
+              mentor_id: baseSessionData.mentor_id || undefined,
+              cta_path: isRecordingUpdate ? '/videos' : '/live-sessions',
+              is_recording_update: isRecordingUpdate,
+              is_update: !isRecordingUpdate,
+              include_mentor: realBatchIds.length === 0,
+              async: true,
+            }
+          }).catch(notifyError => console.error('Failed to notify unbatched students:', notifyError));
+        }
 
         if (authUser?.id) {
           logUserActivity({
