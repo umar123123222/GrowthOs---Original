@@ -114,6 +114,9 @@ export function SuccessSessionsManagement() {
   const [filterBatch, setFilterBatch] = useState('__all__');
   const [filterStatus, setFilterStatus] = useState('__all__');
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
   const [formData, setFormData] = useState<SessionFormData>({
     title: '',
     description: '',
