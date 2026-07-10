@@ -46,76 +46,90 @@ const fetchAttendanceRate = async (startISO: string, endISO: string): Promise<nu
   return Math.min(100, (attendedTotal / expected) * 100);
 };
 
-// Refund Rate: refunded invoices in period / issued invoices in period
-const fetchRefundRate = async (startISO: string, endISO: string): Promise<number> => {
+// Refund Rate: students currently marked as refunded / total students
+const fetchRefundRate = async (_startISO: string, _endISO: string): Promise<number> => {
+  const { count: total } = await supabase
+    .from('users')
+    .select('id', { count: 'exact', head: true })
+    .eq('role', 'student');
+
   const { count: refunded } = await supabase
-    .from('invoices')
+    .from('users')
     .select('id', { count: 'exact', head: true })
-    .not('refunded_at', 'is', null)
-    .gte('refunded_at', startISO)
-    .lt('refunded_at', endISO);
+    .eq('role', 'student')
+    .ilike('lms_status', 'refunded');
 
-  const { count: issued } = await supabase
-    .from('invoices')
-    .select('id', { count: 'exact', head: true })
-    .gte('issue_date', startISO)
-    .lt('issue_date', endISO)
-    .in('status', ['paid', 'refunded', 'due']);
-
-  if (!issued) return 0;
-  return ((refunded || 0) / issued) * 100;
+  if (!total) return 0;
+  return ((refunded || 0) / total) * 100;
 };
 
-// Dropout Rate (excluding batches whose installments are not yet overdue):
-// Consider only students who have at least one overdue installment as of period end.
-// Dropout = those students who are currently suspended/refunded/inactive.
+// Dropout Rate: students who paid 1st installment but have remaining unpaid
+// (overdue) installments and are currently suspended, divided by students
+// who ever started paying (paid at least their 1st installment).
 const fetchDropoutRate = async (asOfISO: string): Promise<number> => {
-  // Pull overdue invoices as of `asOfISO` (invoices carry due_date & extended_due_date)
-  const { data: overdue } = await supabase
+  // 1) Students who have paid at least one invoice (started paying)
+  const { data: paidRows } = await supabase
+    .from('invoices')
+    .select('student_id')
+    .eq('status', 'paid')
+    .limit(50000);
+  const startedIds = Array.from(
+    new Set((paidRows || []).map((r: any) => r.student_id).filter(Boolean))
+  );
+  if (startedIds.length === 0) return 0;
+
+  // 2) Of those, students with an overdue unpaid invoice as of `asOfISO`
+  const { data: overdueRows } = await supabase
     .from('invoices')
     .select('student_id, due_date, extended_due_date, status')
     .neq('status', 'paid')
-    .lt('due_date', asOfISO);
-
-  const studentIds = Array.from(
-    new Set(
-      (overdue || [])
-        .filter((r: any) => {
-          const eff = r.extended_due_date || r.due_date;
-          return eff && new Date(eff).toISOString() < asOfISO;
-        })
-        .map((r: any) => r.student_id)
-        .filter(Boolean)
-    )
+    .lt('due_date', asOfISO)
+    .limit(50000);
+  const overdueIds = new Set(
+    (overdueRows || [])
+      .filter((r: any) => {
+        const eff = r.extended_due_date || r.due_date;
+        return eff && new Date(eff).toISOString() < asOfISO;
+      })
+      .map((r: any) => r.student_id)
+      .filter(Boolean)
   );
-  if (studentIds.length === 0) return 0;
+  const droppedCandidates = startedIds.filter((id) => overdueIds.has(id));
+  if (droppedCandidates.length === 0) return 0;
 
-  // invoices.student_id -> students.id ; map to users via students.user_id
-  const userIds: string[] = [];
+  // 3) Map students.id -> users.id
   const chunkSize = 200;
-  for (let i = 0; i < studentIds.length; i += chunkSize) {
-    const chunk = studentIds.slice(i, i + chunkSize);
-    const { data: studs } = await supabase
-      .from('students')
-      .select('user_id')
-      .in('id', chunk);
-    (studs || []).forEach((s: any) => s.user_id && userIds.push(s.user_id));
+  const startedUserIds: string[] = [];
+  for (let i = 0; i < startedIds.length; i += chunkSize) {
+    const chunk = startedIds.slice(i, i + chunkSize);
+    const { data } = await supabase.from('students').select('user_id').in('id', chunk);
+    (data || []).forEach((s: any) => s.user_id && startedUserIds.push(s.user_id));
   }
-  const uniqueUsers = Array.from(new Set(userIds));
-  if (uniqueUsers.length === 0) return 0;
+  const uniqStartedUsers = Array.from(new Set(startedUserIds));
+  if (uniqStartedUsers.length === 0) return 0;
 
-  let dropped = 0;
-  for (let i = 0; i < uniqueUsers.length; i += chunkSize) {
-    const chunk = uniqueUsers.slice(i, i + chunkSize);
+  const candidateUserIds: string[] = [];
+  for (let i = 0; i < droppedCandidates.length; i += chunkSize) {
+    const chunk = droppedCandidates.slice(i, i + chunkSize);
+    const { data } = await supabase.from('students').select('user_id').in('id', chunk);
+    (data || []).forEach((s: any) => s.user_id && candidateUserIds.push(s.user_id));
+  }
+  const uniqCandidateUsers = Array.from(new Set(candidateUserIds));
+  if (uniqCandidateUsers.length === 0) return 0;
+
+  // 4) Of the candidates, count those currently suspended
+  let suspended = 0;
+  for (let i = 0; i < uniqCandidateUsers.length; i += chunkSize) {
+    const chunk = uniqCandidateUsers.slice(i, i + chunkSize);
     const { count } = await supabase
       .from('users')
       .select('id', { count: 'exact', head: true })
       .in('id', chunk)
-      .or('lms_status.in.(suspended,refunded,inactive),status.ilike.suspended');
-    dropped += count || 0;
+      .ilike('lms_status', 'suspended');
+    suspended += count || 0;
   }
 
-  return (dropped / uniqueUsers.length) * 100;
+  return (suspended / uniqStartedUsers.length) * 100;
 };
 
 const TrendBadge = ({ delta, invert = false }: { delta: number; invert?: boolean }) => {
