@@ -137,6 +137,7 @@ export function SuccessSessionsManagement() {
   });
   const [batchPopoverOpen, setBatchPopoverOpen] = useState(false);
   const [publishing, setPublishing] = useState<string | null>(null);
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const formSubmittedRef = useRef(false);
   const { toast } = useToast();
   const { user: authUser } = useAuth();
