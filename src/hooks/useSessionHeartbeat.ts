@@ -123,6 +123,9 @@ export function useSessionHeartbeat(userId?: string | null) {
   const ping = useCallback(async (extra?: { end?: boolean }) => {
     if (!userId) return;
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) return;
       const ua = navigator.userAgent;
       const coords = extra?.end ? null : await ensureCoords();
       await supabase.functions.invoke('session-heartbeat', {
