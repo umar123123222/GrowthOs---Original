@@ -9,7 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { CalendarIcon, Search, DollarSign, Users, TrendingUp, Download, ChevronLeft, ChevronRight, Clock, Undo2, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, Search, DollarSign, Users, TrendingUp, Download, ChevronLeft, ChevronRight, Clock, Undo2, AlertTriangle, ChevronDown, Mail, BookOpen, Hash, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { RefundDialog } from './RefundDialog';
