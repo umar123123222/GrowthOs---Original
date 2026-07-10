@@ -52,7 +52,20 @@ export function SessionAttendanceDetails({ sessionId, sessionTitle, courseId, ba
               return realBatchIds.includes(r.batch_id);
             });
           }
-          userIds = Array.from(new Set(rows.map((r: any) => r.student_id).filter(Boolean)));
+          const studentIds = Array.from(new Set(rows.map((r: any) => r.student_id).filter(Boolean)));
+          // Map students.id -> users.id
+          if (studentIds.length > 0) {
+            const chunkSize = 200;
+            for (let i = 0; i < studentIds.length; i += chunkSize) {
+              const chunk = studentIds.slice(i, i + chunkSize);
+              const { data: studs } = await supabase
+                .from('students')
+                .select('user_id')
+                .in('id', chunk);
+              userIds = userIds.concat((studs || []).map((s: any) => s.user_id).filter(Boolean));
+            }
+            userIds = Array.from(new Set(userIds));
+          }
         } else {
           // All active students
           const { data: allStudents } = await supabase
