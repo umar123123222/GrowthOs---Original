@@ -477,6 +477,17 @@ export function SuccessSessionsManagement() {
       return;
     }
 
+    // Validate: end time must be after start time
+    if (formData.start_time && formData.end_time && formData.end_time <= formData.start_time) {
+      toast({
+        title: "Invalid time range",
+        description: "End time must be after the start time.",
+        variant: "destructive"
+      });
+      formSubmittedRef.current = false;
+      return;
+    }
+
     try {
       // Find the selected user to get their name
       const selectedUser = users.find(user => user.id === formData.mentor_id);
@@ -485,14 +496,6 @@ export function SuccessSessionsManagement() {
       const combineDateTime = (date: string, time: string) => {
         if (!date || !time) return null;
         return `${date}T${time}:00`;
-      };
-      // If end is on/before start (e.g. 8:30 PM start with 9:30 AM end), roll it to the next day.
-      const normalizeEnd = (startIso: string | null, endIso: string | null): string | null => {
-        if (!startIso || !endIso) return endIso;
-        const s = new Date(startIso).getTime();
-        const e = new Date(endIso).getTime();
-        if (isNaN(s) || isNaN(e) || e > s) return endIso;
-        return new Date(e + 24 * 60 * 60 * 1000).toISOString();
       };
 
       const _startTime = combineDateTime(formData.schedule_date, formData.start_time);
@@ -504,7 +507,7 @@ export function SuccessSessionsManagement() {
         mentor_id: formData.mentor_id || null,
         schedule_date: formData.schedule_date,
         start_time: _startTime,
-        end_time: normalizeEnd(_startTime, _endTime),
+        end_time: _endTime,
         link: formData.link,
         zoom_meeting_id: formData.zoom_meeting_id,
         zoom_passcode: formData.zoom_passcode,
