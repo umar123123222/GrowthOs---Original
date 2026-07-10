@@ -1494,7 +1494,7 @@ export function SuccessSessionsManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((session, index) => (
+                  {paginatedSessions.map((session, index) => (
                     <TableRow
                       key={session.id}
                       className="hover:bg-muted/40 transition-colors animate-fade-in"
