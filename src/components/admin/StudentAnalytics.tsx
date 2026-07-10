@@ -458,21 +458,26 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
         <TabsContent value="engagement" className="space-y-8">
           {/* Overview Stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-            {statCards.map(({ label, value, hint, icon: Icon, tone, bg }) => (
-              <Card key={label} className="group relative overflow-hidden border-border/60 bg-card hover:border-border transition-all duration-200 hover:shadow-md">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`p-2 rounded-lg ${bg}`}>
-                      <Icon className={`w-4 h-4 ${tone}`} />
+            {statCards.map(({ label, value, hint, icon: Icon, tone }) => {
+              const t = toneMap[tone];
+              return (
+                <Card key={label} className={`group relative overflow-hidden border-border/60 bg-gradient-to-br ${t.gradient} to-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}>
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${t.accent}`} />
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={`p-2.5 rounded-xl ${t.bg} ring-1 ${t.ring}`}>
+                        <Icon className={`w-4 h-4 ${t.text}`} />
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">{value}</div>
-                  <div className="mt-1 text-xs font-medium text-muted-foreground">{label}</div>
-                  <div className="mt-2 text-[11px] text-muted-foreground/70">{hint}</div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className={`text-3xl font-semibold tracking-tight tabular-nums ${t.text}`}>{value}</div>
+                    <div className="mt-1 text-xs font-semibold text-foreground/80">{label}</div>
+                    <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
+
 
           {/* Search Filter */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
