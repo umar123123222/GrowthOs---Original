@@ -39,7 +39,7 @@ const fetchAttendanceRate = async (startISO: string, endISO: string): Promise<nu
     .from('users')
     .select('id', { count: 'exact', head: true })
     .eq('role', 'student')
-    .eq('status', 'Active');
+    .ilike('status', 'active');
 
   const expected = sessionIds.length * (activeStudents || 0);
   if (expected === 0) return 0;
@@ -70,9 +70,9 @@ const fetchRefundRate = async (startISO: string, endISO: string): Promise<number
 // Consider only students who have at least one overdue installment as of period end.
 // Dropout = those students who are currently suspended/refunded/inactive.
 const fetchDropoutRate = async (asOfISO: string): Promise<number> => {
-  // Pull overdue installments as of `asOfISO`
+  // Pull overdue invoices as of `asOfISO` (invoices carry due_date & extended_due_date)
   const { data: overdue } = await supabase
-    .from('installment_payments')
+    .from('invoices')
     .select('student_id, due_date, extended_due_date, status')
     .neq('status', 'paid')
     .lt('due_date', asOfISO);
@@ -90,9 +90,7 @@ const fetchDropoutRate = async (asOfISO: string): Promise<number> => {
   );
   if (studentIds.length === 0) return 0;
 
-  // students.student_id references users.id via students.user_id
-  // Some schemas: installment_payments.student_id -> students.id.
-  // Fetch students and their user_ids.
+  // invoices.student_id -> students.id ; map to users via students.user_id
   const userIds: string[] = [];
   const chunkSize = 200;
   for (let i = 0; i < studentIds.length; i += chunkSize) {
@@ -113,7 +111,7 @@ const fetchDropoutRate = async (asOfISO: string): Promise<number> => {
       .from('users')
       .select('id', { count: 'exact', head: true })
       .in('id', chunk)
-      .or('lms_status.in.(suspended,refunded,inactive),status.eq.suspended');
+      .or('lms_status.in.(suspended,refunded,inactive),status.ilike.suspended');
     dropped += count || 0;
   }
 

@@ -1,30 +1,25 @@
-## Plan
+## Why the cards show 0
 
-Fix the Success Session audience picker so selecting **Unbatched students** means exactly that, not all batches.
+Both metrics live in `src/components/admin/PerformanceMetrics.tsx` and both silently return 0 because of a **status string casing mismatch** against the database.
 
-### What I will change
+### Live Session Attendance → 0.0%
+- The query filters active students with `.eq('status', 'Active')` (capital A).
+- In the DB, `users.status` values are lowercase: `active`, `suspended`.
+- Result: `activeStudents = 0` → `expected = sessions × 0 = 0` → the function early‑returns `0`.
+- Confirmed: there are 363 `session_attendance` rows and 27 completed/live sessions in the last 30 days, so the data exists — only the divisor is broken.
 
-1. **Target Batch picker behavior**
-   - Make the `Unbatched students` checkbox checked only when `batch_ids` contains `unbatched`.
-   - Remove the current behavior where `All Batches` makes `Unbatched students` appear selected.
-   - When selecting `Unbatched students` while `All Batches` is active, set `batch_ids` to only `['unbatched']`.
-   - When selecting a normal batch while `All Batches` is active, set `batch_ids` to only that selected batch, not all batches plus unbatched.
-   - If every specific option is unchecked, fall back to `All Batches` as the default.
+### Dropout Rate → 0.0%
+- Uses `.or('lms_status.in.(suspended,refunded,inactive),status.eq.suspended')`. Those values are already lowercase and match the DB, so the filter itself is fine.
+- However, the denominator (`uniqueUsers` — students with an overdue installment mapped through `students.user_id`) is coming back empty in this project, so the function early‑returns `0`. This needs a second look at the mapping (installment_payments → students → users) once the attendance fix is in.
 
-2. **Save safety normalization**
-   - Before saving, normalize `batch_ids` so `__all__` is never mixed with `unbatched` or batch IDs.
-   - Preserve `['unbatched']` as a targeted audience, requiring a Target Course as already intended.
+## Fix
 
-3. **Edit/Duplicate consistency**
-   - Keep existing session audiences intact when editing or duplicating.
-   - Ensure sessions saved as only unbatched reopen as only `Unbatched students`, not `All Batches`.
+1. In `fetchAttendanceRate`, change the active‑student query from `.eq('status', 'Active')` to a case‑insensitive match: `.ilike('status', 'active')` (or `.eq('status', 'active')`).
+2. In `fetchDropoutRate`, apply the same case‑insensitive treatment on `status` and additionally check whether `installment_payments.student_id` in this project points to `users.id` directly (skip the `students` lookup and fall back to it only if needed). Also treat effective due date comparison in UTC ISO consistently.
+3. No UI/visual changes — the cards stay as they are; only the numbers will populate.
 
-4. **Verify**
-   - Confirm the picker label changes to `Unbatched students` after selecting only unbatched.
-   - Confirm the saved session displays an `Unbatched` badge instead of `All Batches` or all batch badges.
-
-### Technical scope
-
-- Edit only `src/components/superadmin/SuccessSessionsManagement.tsx`.
-- No database schema changes.
-- No changes to student visibility logic unless this UI fix reveals a separate issue.
+## Verification
+- After the change, reload `/superadmin?tab=analytics` (Overview tab) and confirm:
+  - Live Session Attendance shows a non‑zero % with a real "prev 30d" comparison.
+  - Dropout Rate reflects currently suspended/refunded students among those with overdue installments.
+- Spot‑check with a SQL count of `session_attendance` in the last 30 days vs. `sessions × active students`.
