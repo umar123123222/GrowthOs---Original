@@ -39,7 +39,7 @@ const fetchAttendanceRate = async (startISO: string, endISO: string): Promise<nu
     .from('users')
     .select('id', { count: 'exact', head: true })
     .eq('role', 'student')
-    .eq('status', 'Active');
+    .ilike('status', 'active');
 
   const expected = sessionIds.length * (activeStudents || 0);
   if (expected === 0) return 0;
