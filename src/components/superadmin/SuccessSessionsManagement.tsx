@@ -1660,9 +1660,38 @@ export function SuccessSessionsManagement() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setExpandedSessionId(prev => prev === session.id ? null : session.id)}
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            title={expandedSessionId === session.id ? 'Hide attendance' : 'View attendance'}
+                          >
+                            {expandedSessionId === session.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
+                    {expandedSessionId === session.id && (
+                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                        <TableCell colSpan={8} className="p-0">
+                          <SessionAttendanceDetails
+                            sessionId={session.id}
+                            sessionTitle={session.title}
+                            courseId={session.course_id}
+                            batchIds={(() => {
+                              const raw = (session as any).batch_ids;
+                              if (Array.isArray(raw)) return raw.map(String);
+                              if (typeof raw === 'string') {
+                                try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(String) : []; } catch { return []; }
+                              }
+                              return session.batch_id ? [session.batch_id] : [];
+                            })()}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
