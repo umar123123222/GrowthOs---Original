@@ -420,12 +420,43 @@ export const PaymentReports = () => {
     );
   }
 
+  const primaryStats = [
+    { label: 'Total Received', value: formatCurrency(stats.totalAmount), hint: `${stats.totalPayments} payments`, icon: DollarSign, tone: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { label: 'New Enrollments', value: stats.newEnrollments, hint: 'First-time payments', icon: Users, tone: 'text-sky-600', bg: 'bg-sky-500/10' },
+    { label: 'Avg. Payment', value: formatCurrency(stats.avgPaymentAmount), hint: 'Per transaction', icon: TrendingUp, tone: 'text-violet-600', bg: 'bg-violet-500/10' },
+    { label: 'Date Range', value: `${format(dateRange.from, 'MMM d')} – ${format(dateRange.to, 'MMM d')}`, hint: format(dateRange.to, 'yyyy'), icon: CalendarIcon, tone: 'text-amber-600', bg: 'bg-amber-500/10' },
+  ];
+  const secondaryStats = [
+    { label: 'Pending Amount', value: formatCurrency(stats.pendingAmount), hint: 'Awaiting payment in range', icon: Clock, tone: 'text-yellow-600', bg: 'bg-yellow-500/10' },
+    { label: 'Overdue Amount', value: formatCurrency(stats.overdueAmount), hint: 'Past due in range', icon: AlertTriangle, tone: 'text-red-600', bg: 'bg-red-500/10' },
+    { label: 'Refunds', value: formatCurrency(stats.refundedAmount), hint: `${stats.refundedCount} refunded ${stats.refundedCount === 1 ? 'invoice' : 'invoices'}`, icon: Undo2, tone: 'text-fuchsia-600', bg: 'bg-fuchsia-500/10' },
+  ];
+
+  const renderStat = ({ label, value, hint, icon: Icon, tone, bg }: any) => (
+    <Card key={label} className="border-border/60 bg-card hover:border-border transition-all duration-200 hover:shadow-md">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between mb-4">
+          <div className={`p-2 rounded-lg ${bg}`}>
+            <Icon className={`w-4 h-4 ${tone}`} />
+          </div>
+        </div>
+        <div className="text-2xl font-semibold tracking-tight text-foreground tabular-nums truncate">{value}</div>
+        <div className="mt-1 text-xs font-medium text-muted-foreground">{label}</div>
+        <div className="mt-2 text-[11px] text-muted-foreground/70">{hint}</div>
+      </CardContent>
+    </Card>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-1">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Payment Reports & Invoice Management</h2>
-          <p className="text-muted-foreground">Track student payments and manage invoices in one place</p>
+        <div className="flex flex-col gap-1">
+          <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+            Analytics · Payments
+          </div>
+          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Payment Reports</h1>
+          <p className="text-muted-foreground">Track student payments and manage invoices in one place.</p>
         </div>
         <Button onClick={handleExport} variant="outline" className="gap-2">
           <Download className="h-4 w-4" /> Export CSV
@@ -433,109 +464,26 @@ export const PaymentReports = () => {
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-emerald-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <DollarSign className="h-4 w-4" /> Total Received
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-600">{formatCurrency(stats.totalAmount)}</div>
-            <p className="text-xs text-muted-foreground">{stats.totalPayments} payments</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-blue-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Users className="h-4 w-4" /> New Enrollments
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.newEnrollments}</div>
-            <p className="text-xs text-muted-foreground">First-time payments</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" /> Avg. Payment
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{formatCurrency(stats.avgPaymentAmount)}</div>
-            <p className="text-xs text-muted-foreground">Per transaction</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-orange-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4" /> Date Range
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm font-bold text-orange-600">
-              {format(dateRange.from, 'MMM d')} - {format(dateRange.to, 'MMM d, yyyy')}
-            </div>
-            <p className="text-xs text-muted-foreground">Selected period</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {primaryStats.map(renderStat)}
       </div>
 
-      {/* Secondary Stat Row: Pending / Overdue / Refunds */}
+      {/* Secondary Stat Row */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-l-4 border-l-yellow-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" /> Pending Amount
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{formatCurrency(stats.pendingAmount)}</div>
-            <p className="text-xs text-muted-foreground">Awaiting payment in range</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-red-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" /> Overdue Amount
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(stats.overdueAmount)}</div>
-            <p className="text-xs text-muted-foreground">Past due in range</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-purple-500">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Undo2 className="h-4 w-4" /> Refunds
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">{formatCurrency(stats.refundedAmount)}</div>
-            <p className="text-xs text-muted-foreground">{stats.refundedCount} refunded {stats.refundedCount === 1 ? 'invoice' : 'invoices'}</p>
-          </CardContent>
-        </Card>
+        {secondaryStats.map(renderStat)}
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-lg">Filters</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col lg:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+      <Card className="border-border/60 bg-card">
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row gap-3">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
-                placeholder="Search by name, email, or student ID..."
+                placeholder="Search by name, email, or student ID…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-9 bg-background"
               />
             </div>
 
@@ -544,9 +492,9 @@ export const PaymentReports = () => {
               if (open) setTempDateRange({ from: dateRange.from, to: dateRange.to });
             }}>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full lg:w-[280px] justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {format(dateRange.from, 'MMM d, yyyy')} - {format(dateRange.to, 'MMM d, yyyy')}
+                <Button variant="outline" className="w-full lg:w-[260px] justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {format(dateRange.from, 'MMM d, yyyy')} – {format(dateRange.to, 'MMM d, yyyy')}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -593,6 +541,7 @@ export const PaymentReports = () => {
           </div>
         </CardContent>
       </Card>
+
 
       {/* Master Table */}
       <Card className="relative">
