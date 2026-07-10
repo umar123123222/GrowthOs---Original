@@ -541,8 +541,10 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
 
                 {Object.entries(courseData.modules)
                   .map(([moduleId, moduleData]) => {
+                    // Use persisted drip_days only (not edited values) so sorting doesn't
+                    // reshuffle while the user is typing in a drip-days input.
                     const minDrip = moduleData.recordings.reduce((min, r) => {
-                      const d = (r.id in editedDripDays ? editedDripDays[r.id] : r.drip_days) ?? Number.POSITIVE_INFINITY;
+                      const d = r.drip_days ?? Number.POSITIVE_INFINITY;
                       return d < min ? d : min;
                     }, Number.POSITIVE_INFINITY);
                     return { moduleId, moduleData, minDrip };
