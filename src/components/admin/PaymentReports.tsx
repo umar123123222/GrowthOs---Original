@@ -618,18 +618,19 @@ export const PaymentReports = () => {
                 </TableRow>
               ) : (
                 paginated.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-mono text-sm">{r.studentId}</TableCell>
-                    <TableCell className="font-medium">{r.studentName}</TableCell>
-                    <TableCell className="text-muted-foreground">{r.email}</TableCell>
-                    <TableCell>
+                  <TableRow key={r.id} className="hover:bg-muted/30">
+                    <TableCell className="font-mono text-sm whitespace-nowrap">{r.studentId}</TableCell>
+                    <TableCell className="font-medium whitespace-nowrap">{r.studentName}</TableCell>
+                    <TableCell className="text-muted-foreground max-w-[220px] truncate" title={r.email}>{r.email}</TableCell>
+                    <TableCell className="max-w-[220px]">
                       <div className="flex flex-col">
-                        <span>{r.courseName}</span>
-                        {r.pathwayName && <span className="text-xs text-muted-foreground">{r.pathwayName}</span>}
+                        <span className="truncate" title={r.courseName}>{r.courseName}</span>
+                        {r.pathwayName && <span className="text-xs text-muted-foreground truncate" title={r.pathwayName}>{r.pathwayName}</span>}
                       </div>
                     </TableCell>
-                    <TableCell><Badge variant="outline">#{r.installmentNumber}</Badge></TableCell>
-                    <TableCell className="text-right font-semibold">{formatCurrency(r.amount)}</TableCell>
+                    <TableCell className="whitespace-nowrap"><Badge variant="outline">#{r.installmentNumber}</Badge></TableCell>
+                    <TableCell className="text-right font-semibold whitespace-nowrap">{formatCurrency(r.amount)}</TableCell>
+
                     <TableCell>
                       <div className="flex flex-col gap-1">
                         <span className={r.extendedDueDate ? 'line-through text-muted-foreground text-xs' : ''}>
