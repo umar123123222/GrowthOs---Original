@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
-import { CalendarIcon, Search, DollarSign, Users, TrendingUp, Download, ChevronLeft, ChevronRight, Clock, Undo2, AlertTriangle } from 'lucide-react';
+import { CalendarIcon, Search, DollarSign, Users, TrendingUp, Download, ChevronLeft, ChevronRight, Clock, Undo2, AlertTriangle, ChevronDown, Mail, BookOpen, Hash, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { RefundDialog } from './RefundDialog';
@@ -75,6 +75,13 @@ export const PaymentReports = () => {
   const [refundContext, setRefundContext] = useState<{ studentId: string; email?: string; invoiceId?: string } | null>(null);
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [markPaidContext, setMarkPaidContext] = useState<{ invoiceId: string; email?: string } | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const toggleRow = (id: string) => setExpandedRows(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
 
   const { toast } = useToast();
   const { user } = useAuth();
@@ -593,157 +600,215 @@ export const PaymentReports = () => {
             </div>
           )}
           <div className="w-full overflow-x-auto">
-          <Table className="min-w-[1400px]">
+          <Table>
             <TableHeader>
-              <TableRow className="bg-muted/40">
-                <TableHead className="whitespace-nowrap">Student ID</TableHead>
-                <TableHead className="whitespace-nowrap">Name</TableHead>
-                <TableHead className="whitespace-nowrap">Email</TableHead>
-                <TableHead className="whitespace-nowrap">Course/Pathway</TableHead>
-                <TableHead className="whitespace-nowrap">Installment</TableHead>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableHead className="w-10"></TableHead>
+                <TableHead className="whitespace-nowrap">Student</TableHead>
+                <TableHead className="whitespace-nowrap">Course</TableHead>
                 <TableHead className="text-right whitespace-nowrap">Amount</TableHead>
-                <TableHead className="whitespace-nowrap">Due Date</TableHead>
+                <TableHead className="whitespace-nowrap">Due</TableHead>
                 <TableHead className="whitespace-nowrap">Status</TableHead>
-                <TableHead className="whitespace-nowrap">Payment Date</TableHead>
-                <TableHead className="whitespace-nowrap sticky right-0 bg-muted/40 backdrop-blur border-l border-border/60 shadow-[-8px_0_16px_-8px_rgba(0,0,0,0.08)]">Actions</TableHead>
+                <TableHead className="whitespace-nowrap text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
 
             <TableBody>
               {paginated.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No records found for the selected criteria
                   </TableCell>
                 </TableRow>
               ) : (
-                paginated.map((r) => (
-                  <TableRow key={r.id} className="hover:bg-muted/30">
-                    <TableCell className="font-mono text-sm whitespace-nowrap">{r.studentId}</TableCell>
-                    <TableCell className="font-medium whitespace-nowrap">{r.studentName}</TableCell>
-                    <TableCell className="text-muted-foreground max-w-[220px] truncate" title={r.email}>{r.email}</TableCell>
-                    <TableCell className="max-w-[220px]">
-                      <div className="flex flex-col">
-                        <span className="truncate" title={r.courseName}>{r.courseName}</span>
-                        {r.pathwayName && <span className="text-xs text-muted-foreground truncate" title={r.pathwayName}>{r.pathwayName}</span>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap"><Badge variant="outline">#{r.installmentNumber}</Badge></TableCell>
-                    <TableCell className="text-right font-semibold whitespace-nowrap">{formatCurrency(r.amount)}</TableCell>
+                paginated.map((r) => {
+                  const isOpen = expandedRows.has(r.id);
+                  return (
+                    <React.Fragment key={r.id}>
+                    <TableRow
+                      className={cn("cursor-pointer hover:bg-muted/40 transition-colors", isOpen && "bg-muted/30")}
+                      onClick={() => toggleRow(r.id)}
+                    >
 
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <span className={r.extendedDueDate ? 'line-through text-muted-foreground text-xs' : ''}>
-                          {new Date(r.dueDate).toLocaleDateString()}
-                        </span>
-                        {r.extendedDueDate && (
-                          <span className="flex items-center gap-1 text-amber-600 font-medium text-xs">
-                            <Clock className="w-3 h-3" />
-                            {new Date(r.extendedDueDate).toLocaleDateString()}
+                      <TableCell className="w-10">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={(e) => { e.stopPropagation(); toggleRow(r.id); }}
+                          aria-label={isOpen ? 'Collapse' : 'Expand'}
+                        >
+                          <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+                        </Button>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <div className="flex flex-col leading-tight">
+                          <span className="font-medium text-foreground">{r.studentName}</span>
+                          <span className="font-mono text-[11px] text-muted-foreground">{r.studentId}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="max-w-[240px]">
+                        <div className="flex flex-col leading-tight">
+                          <span className="truncate text-sm" title={r.courseName}>{r.courseName}</span>
+                          {r.pathwayName && <span className="text-[11px] text-muted-foreground truncate" title={r.pathwayName}>{r.pathwayName}</span>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-semibold whitespace-nowrap tabular-nums">
+                        {formatCurrency(r.amount)}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <div className="flex flex-col leading-tight">
+                          <span className={cn("text-sm", r.extendedDueDate && "line-through text-muted-foreground text-xs")}>
+                            {new Date(r.dueDate).toLocaleDateString()}
                           </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getStatusBadge(r.status)}
-                        {r.extendedDueDate && (
-                          <Badge variant="outline" className="text-amber-600 border-amber-600">Extended</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">{r.paymentDate ? format(new Date(r.paymentDate), 'MMM d, yyyy') : 'N/A'}</TableCell>
-                    <TableCell className="sticky right-0 bg-background group-hover:bg-muted/30 border-l border-border/60 shadow-[-8px_0_16px_-8px_rgba(0,0,0,0.08)]">
-
-                      <div className="flex flex-col gap-1.5 min-w-[140px]">
-                        <Select value={r.status} onValueChange={(v) => {
-                          if (v === 'refunded') {
-                            if (r.status === 'refunded' || !r.studentDbId) return;
-                            setRefundContext({ studentId: r.studentDbId, email: r.email, invoiceId: r.id });
-                            setRefundOpen(true);
-                            return;
-                          }
-                          if (v === 'paid') {
-                            if (r.status === 'paid') return;
-                            setMarkPaidContext({ invoiceId: r.id, email: r.email });
-                            setMarkPaidOpen(true);
-                            return;
-                          }
-                          updateInvoiceStatus(r.id, v);
-                        }}>
-                          <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="issued">Issued</SelectItem>
-                            <SelectItem value="paid">Paid</SelectItem>
-                            <SelectItem value="due">Due</SelectItem>
-                            <SelectItem value="overdue">Overdue</SelectItem>
-                            <SelectItem value="failed">Failed</SelectItem>
-                            <SelectItem value="refunded">Refunded</SelectItem>
-                          </SelectContent>
-                        </Select>
-
-                        {r.status !== 'paid' && (
-                          <Popover
-                            open={extensionPopoverOpen === r.id}
-                            onOpenChange={(open) => {
-                              setExtensionPopoverOpen(open ? r.id : null);
-                              if (!open) setExtensionDate(undefined);
-                            }}
-                          >
-                            <PopoverTrigger asChild>
-                              <Button variant="outline" size="sm" className="gap-1">
-                                <CalendarIcon className="w-3 h-3" /> Extend
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="end">
-                              <div className="p-3 border-b">
-                                <p className="text-sm font-medium">Extend Due Date</p>
-                                <p className="text-xs text-muted-foreground">
-                                  Current: {new Date(r.extendedDueDate || r.dueDate).toLocaleDateString()}
-                                </p>
-                              </div>
-                              <Calendar
-                                mode="single"
-                                selected={extensionDate}
-                                onSelect={setExtensionDate}
-                                disabled={(date) => date < new Date()}
-                                initialFocus
-                                className={cn("p-3 pointer-events-auto")}
-                              />
-                              <div className="p-3 border-t flex gap-2">
-                                <Button size="sm" className="flex-1" disabled={!extensionDate}
-                                  onClick={() => extensionDate && grantExtension(r.id, extensionDate)}>
-                                  Grant Extension
-                                </Button>
-                                {r.extendedDueDate && (
-                                  <Button size="sm" variant="destructive" onClick={() => clearExtension(r.id)}>Clear</Button>
-                                )}
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                        )}
-
-                        {r.status === 'paid' && r.studentDbId && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1 border-destructive/40 text-destructive hover:bg-destructive/10"
-                            onClick={() => {
-                              setRefundContext({ studentId: r.studentDbId!, email: r.email, invoiceId: r.id });
+                          {r.extendedDueDate && (
+                            <span className="flex items-center gap-1 text-amber-600 font-medium text-xs">
+                              <Clock className="w-3 h-3" />
+                              {new Date(r.extendedDueDate).toLocaleDateString()}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        <div className="flex items-center gap-1.5">
+                          {getStatusBadge(r.status)}
+                          {r.extendedDueDate && (
+                            <Badge variant="outline" className="text-amber-600 border-amber-600 text-[10px]">Extended</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-2">
+                          <Select value={r.status} onValueChange={(v) => {
+                            if (v === 'refunded') {
+                              if (r.status === 'refunded' || !r.studentDbId) return;
+                              setRefundContext({ studentId: r.studentDbId, email: r.email, invoiceId: r.id });
                               setRefundOpen(true);
-                            }}
-                          >
-                            <Undo2 className="w-3 h-3" /> Refund
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                              return;
+                            }
+                            if (v === 'paid') {
+                              if (r.status === 'paid') return;
+                              setMarkPaidContext({ invoiceId: r.id, email: r.email });
+                              setMarkPaidOpen(true);
+                              return;
+                            }
+                            updateInvoiceStatus(r.id, v);
+                          }}>
+                            <SelectTrigger className="h-8 w-[110px] text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="issued">Issued</SelectItem>
+                              <SelectItem value="paid">Paid</SelectItem>
+                              <SelectItem value="due">Due</SelectItem>
+                              <SelectItem value="overdue">Overdue</SelectItem>
+                              <SelectItem value="failed">Failed</SelectItem>
+                              <SelectItem value="refunded">Refunded</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+
+                    {isOpen && (
+                      <TableRow key={`${r.id}-detail`} className="bg-muted/20 hover:bg-muted/20">
+                        <TableCell colSpan={7} className="p-0">
+                          <div className="p-5 border-l-2 border-primary/40 mx-2 my-2 rounded-md bg-background/50">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                              <div>
+                                <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
+                                  <Mail className="w-3 h-3" /> Email
+                                </div>
+                                <div className="text-sm text-foreground break-all">{r.email}</div>
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
+                                  <BookOpen className="w-3 h-3" /> Pathway
+                                </div>
+                                <div className="text-sm text-foreground">{r.pathwayName || '—'}</div>
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
+                                  <Hash className="w-3 h-3" /> Installment
+                                </div>
+                                <div className="text-sm text-foreground">#{r.installmentNumber}</div>
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-muted-foreground mb-1">
+                                  <CalendarDays className="w-3 h-3" /> Payment Date
+                                </div>
+                                <div className="text-sm text-foreground">
+                                  {r.paymentDate ? format(new Date(r.paymentDate), 'MMM d, yyyy') : 'N/A'}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 pt-3 border-t border-border/60">
+                              {r.status !== 'paid' && (
+                                <Popover
+                                  open={extensionPopoverOpen === r.id}
+                                  onOpenChange={(open) => {
+                                    setExtensionPopoverOpen(open ? r.id : null);
+                                    if (!open) setExtensionDate(undefined);
+                                  }}
+                                >
+                                  <PopoverTrigger asChild>
+                                    <Button variant="outline" size="sm" className="gap-1.5">
+                                      <CalendarIcon className="w-3.5 h-3.5" /> Extend Due Date
+                                    </Button>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                    <div className="p-3 border-b">
+                                      <p className="text-sm font-medium">Extend Due Date</p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Current: {new Date(r.extendedDueDate || r.dueDate).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                    <Calendar
+                                      mode="single"
+                                      selected={extensionDate}
+                                      onSelect={setExtensionDate}
+                                      disabled={(date) => date < new Date()}
+                                      initialFocus
+                                      className={cn("p-3 pointer-events-auto")}
+                                    />
+                                    <div className="p-3 border-t flex gap-2">
+                                      <Button size="sm" className="flex-1" disabled={!extensionDate}
+                                        onClick={() => extensionDate && grantExtension(r.id, extensionDate)}>
+                                        Grant Extension
+                                      </Button>
+                                      {r.extendedDueDate && (
+                                        <Button size="sm" variant="destructive" onClick={() => clearExtension(r.id)}>Clear</Button>
+                                      )}
+                                    </div>
+                                  </PopoverContent>
+                                </Popover>
+                              )}
+
+                              {r.status === 'paid' && r.studentDbId && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10"
+                                  onClick={() => {
+                                    setRefundContext({ studentId: r.studentDbId!, email: r.email, invoiceId: r.id });
+                                    setRefundOpen(true);
+                                  }}
+                                >
+                                  <Undo2 className="w-3.5 h-3.5" /> Refund
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </React.Fragment>
+                  );
+                })
               )}
             </TableBody>
           </Table>
+
           </div>
         </CardContent>
 
