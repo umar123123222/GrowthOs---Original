@@ -1491,8 +1491,8 @@ export function SuccessSessionsManagement() {
                 </TableHeader>
                 <TableBody>
                   {paginatedSessions.map((session, index) => (
+                    <React.Fragment key={session.id}>
                     <TableRow
-                      key={session.id}
                       className="hover:bg-muted/40 transition-colors animate-fade-in"
                       style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
                     >
