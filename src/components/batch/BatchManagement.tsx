@@ -136,9 +136,9 @@ export function BatchManagement() {
       lines.push(['Generated At', now.toISOString()].map(escapeCsv).join(','));
       lines.push('');
       lines.push(['Batch Summary'].map(escapeCsv).join(','));
-      lines.push(['Batch Name','Start Date','Status','Pathways','Courses','Total Enrollments','Total Refunds','Final Enrollments','Fully Paid','Dropout'].map(escapeCsv).join(','));
+      lines.push(['Batch Name','Start Date','Status','Pathways','Courses','Total Enrollments','Total Refunds','Refund %','Final Enrollments','Fully Paid','Dropout','Dropout %'].map(escapeCsv).join(','));
 
-      const perBatchComputed: Array<{ batch: Batch; studentIds: string[]; refundedSet: Set<string>; total: number; refunded: number; finalEnroll: number; fullyPaid: number; dropoutValue: string | number; }> = [];
+      const perBatchComputed: Array<{ batch: Batch; studentIds: string[]; refundedSet: Set<string>; total: number; refunded: number; finalEnroll: number; fullyPaid: number; dropoutValue: string | number; refundPct: string; dropoutPct: string; }> = [];
 
       batches.forEach(batch => {
         const ens = enrollmentsByBatch[batch.id] || [];
@@ -162,6 +162,8 @@ export function BatchManagement() {
         monthAfterStart.setMonth(monthAfterStart.getMonth() + 1);
         const showDropout = now >= monthAfterStart;
         const dropoutValue: string | number = showDropout ? dropout : `Available after ${format(monthAfterStart, 'yyyy-MM-dd')}`;
+        const refundPct = total > 0 ? `${Math.round((refunded / total) * 100)}%` : '0%';
+        const dropoutPct = finalEnroll > 0 ? `${Math.round((dropout / finalEnroll) * 100)}%` : '0%';
 
         const assoc = batchAssociations[batch.id];
         const pathwayNames = (assoc?.pathways || []).map(id => pathways.find(p => p.id === id)?.name).filter(Boolean).join('; ');
@@ -175,12 +177,14 @@ export function BatchManagement() {
           courseNames,
           total,
           refunded,
+          refundPct,
           finalEnroll,
           fullyPaid,
           dropoutValue,
+          dropoutPct,
         ].map(escapeCsv).join(','));
 
-        perBatchComputed.push({ batch, studentIds, refundedSet, total, refunded, finalEnroll, fullyPaid, dropoutValue });
+        perBatchComputed.push({ batch, studentIds, refundedSet, total, refunded, finalEnroll, fullyPaid, dropoutValue, refundPct, dropoutPct });
       });
 
       // Detailed student roster per batch
