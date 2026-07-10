@@ -486,15 +486,25 @@ export function SuccessSessionsManagement() {
         if (!date || !time) return null;
         return `${date}T${time}:00`;
       };
+      // If end is on/before start (e.g. 8:30 PM start with 9:30 AM end), roll it to the next day.
+      const normalizeEnd = (startIso: string | null, endIso: string | null): string | null => {
+        if (!startIso || !endIso) return endIso;
+        const s = new Date(startIso).getTime();
+        const e = new Date(endIso).getTime();
+        if (isNaN(s) || isNaN(e) || e > s) return endIso;
+        return new Date(e + 24 * 60 * 60 * 1000).toISOString();
+      };
 
+      const _startTime = combineDateTime(formData.schedule_date, formData.start_time);
+      const _endTime = formData.end_time ? combineDateTime(formData.schedule_date, formData.end_time) : null;
       const baseSessionData = {
         title: formData.title,
         description: formData.description,
         mentor_name: selectedUser ? selectedUser.full_name : formData.mentor_name,
         mentor_id: formData.mentor_id || null,
         schedule_date: formData.schedule_date,
-        start_time: combineDateTime(formData.schedule_date, formData.start_time),
-        end_time: formData.end_time ? combineDateTime(formData.schedule_date, formData.end_time) : null,
+        start_time: _startTime,
+        end_time: normalizeEnd(_startTime, _endTime),
         link: formData.link,
         zoom_meeting_id: formData.zoom_meeting_id,
         zoom_passcode: formData.zoom_passcode,
