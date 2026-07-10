@@ -324,31 +324,36 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
                     <div>
                       <div className="flex justify-between items-baseline mb-1.5">
                         <span className="text-xs font-medium text-muted-foreground">Overall Progress</span>
-                        <span className="text-sm font-semibold text-foreground tabular-nums">{student.progress_percentage}%</span>
+                        <span className={`text-sm font-semibold tabular-nums ${
+                          student.progress_percentage >= 75 ? 'text-emerald-600'
+                          : student.progress_percentage >= 40 ? 'text-amber-600'
+                          : 'text-rose-600'
+                        }`}>{student.progress_percentage}%</span>
                       </div>
                       <Progress value={student.progress_percentage} className="h-1.5" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                      <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-3">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <Play className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Videos</span>
+                          <Play className="w-3 h-3 text-sky-600" />
+                          <span className="text-[11px] font-medium text-sky-700 dark:text-sky-400 uppercase tracking-wide">Videos</span>
                         </div>
                         <div className="text-sm font-semibold text-foreground tabular-nums">
                           {student.videos_watched}<span className="text-muted-foreground font-normal">/{student.videos_total}</span>
                         </div>
                       </div>
-                      <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                      <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <FileText className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Assignments</span>
+                          <FileText className="w-3 h-3 text-violet-600" />
+                          <span className="text-[11px] font-medium text-violet-700 dark:text-violet-400 uppercase tracking-wide">Assignments</span>
                         </div>
                         <div className="text-sm font-semibold text-foreground tabular-nums">
                           {student.assignments_completed}<span className="text-muted-foreground font-normal">/{student.assignments_total}</span>
                         </div>
                       </div>
                     </div>
+
 
                     <div className="flex items-center justify-between pt-3 border-t border-border/60">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
