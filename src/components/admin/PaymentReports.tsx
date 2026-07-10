@@ -802,7 +802,7 @@ export const PaymentReports = () => {
                         </TableCell>
                       </TableRow>
                     )}
-                    </>
+                    </React.Fragment>
                   );
                 })
               )}
