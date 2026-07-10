@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -20,6 +20,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AlertTriangle } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { TablePager } from '@/components/common/TablePager';
 
 interface SuccessSession {
   id: string;
@@ -113,6 +114,9 @@ export function SuccessSessionsManagement() {
   const [filterBatch, setFilterBatch] = useState('__all__');
   const [filterStatus, setFilterStatus] = useState('__all__');
   const [filterDate, setFilterDate] = useState<Date | undefined>(undefined);
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
   const [formData, setFormData] = useState<SessionFormData>({
     title: '',
     description: '',
@@ -259,6 +263,11 @@ export function SuccessSessionsManagement() {
       setFilteredBatches(batches);
     }
   }, [formData.course_id, batches]);
+
+  // Reset pagination when any session filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [filterSearch, filterHost, filterCourse, filterBatch, filterStatus, filterDate]);
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -866,6 +875,31 @@ export function SuccessSessionsManagement() {
     }
   };
 
+  // Compute filtered sessions once for stats, preview and paginated table.
+  const filteredSessions = useMemo(() => {
+    return sessions.filter(s => {
+      if (filterSearch && !s.title.toLowerCase().includes(filterSearch.toLowerCase())) return false;
+      if (filterHost !== '__all__' && s.mentor_id !== filterHost) return false;
+      if (filterCourse !== '__all__' && s.course_id !== filterCourse) return false;
+      if (filterBatch !== '__all__') {
+        const sBatchIds: string[] = (s as any).batch_ids || (s.batch_id ? [s.batch_id] : []);
+        if (sBatchIds.length === 0 || !sBatchIds.includes(filterBatch)) return false;
+      }
+      if (filterStatus !== '__all__' && s.status !== filterStatus) return false;
+      if (filterDate) {
+        try {
+          const sessionDate = new Date(s.schedule_date || s.start_time);
+          if (!isSameDay(sessionDate, filterDate)) return false;
+        } catch { return false; }
+      }
+      return true;
+    });
+  }, [sessions, filterSearch, filterHost, filterCourse, filterBatch, filterStatus, filterDate]);
+
+  const pageCount = Math.ceil(filteredSessions.length / pageSize) || 1;
+  const safePage = Math.min(page, pageCount);
+  const paginatedSessions = filteredSessions.slice((safePage - 1) * pageSize, safePage * pageSize);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -1409,42 +1443,23 @@ export function SuccessSessionsManagement() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {(() => {
-            const filtered = sessions.filter(s => {
-              if (filterSearch && !s.title.toLowerCase().includes(filterSearch.toLowerCase())) return false;
-              if (filterHost !== '__all__' && s.mentor_id !== filterHost) return false;
-              if (filterCourse !== '__all__' && s.course_id !== filterCourse) return false;
-              if (filterBatch !== '__all__') {
-                const sBatchIds: string[] = (s as any).batch_ids || (s.batch_id ? [s.batch_id] : []);
-                if (sBatchIds.length === 0 || !sBatchIds.includes(filterBatch)) return false;
-              }
-              if (filterStatus !== '__all__' && s.status !== filterStatus) return false;
-              if (filterDate) {
-                try {
-                  const sessionDate = new Date(s.schedule_date || s.start_time);
-                  if (!isSameDay(sessionDate, filterDate)) return false;
-                } catch { return false; }
-              }
-              return true;
-            });
-            if (filtered.length === 0) return (
-              <div className="text-center py-16 px-6 animate-fade-in">
-                <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                  <Video className="w-7 h-7 text-muted-foreground" />
-                </div>
-                <h3 className="text-base font-semibold text-foreground mb-1">No sessions found</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {sessions.length > 0 ? 'Try adjusting your filters to see more results.' : 'Schedule your first success session to get started.'}
-                </p>
-                {sessions.length === 0 && (
-                  <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Schedule Session
-                  </Button>
-                )}
+          {filteredSessions.length === 0 ? (
+            <div className="text-center py-16 px-6 animate-fade-in">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                <Video className="w-7 h-7 text-muted-foreground" />
               </div>
-            );
-            return (
+              <h3 className="text-base font-semibold text-foreground mb-1">No sessions found</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {sessions.length > 0 ? 'Try adjusting your filters to see more results.' : 'Schedule your first success session to get started.'}
+              </p>
+              {sessions.length === 0 && (
+                <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Schedule Session
+                </Button>
+              )}
+            </div>
+          ) : (<>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -1460,7 +1475,7 @@ export function SuccessSessionsManagement() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((session, index) => (
+                  {paginatedSessions.map((session, index) => (
                     <TableRow
                       key={session.id}
                       className="hover:bg-muted/40 transition-colors animate-fade-in"
@@ -1637,8 +1652,16 @@ export function SuccessSessionsManagement() {
                 </TableBody>
               </Table>
             </div>
-            );
-          })()}
+            <TablePager
+              page={safePage}
+              pageCount={pageCount}
+              totalItems={filteredSessions.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              itemLabel="sessions"
+              className="px-6"
+            />
+          </>)}
         </CardContent>
       </Card>
     </div>
