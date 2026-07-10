@@ -373,30 +373,46 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
   const joinSession = async (sessionId: string, sessionLink: string) => {
     try {
       if (!user?.id) throw new Error('No authenticated user');
-      const { error } = await supabase
-        .from('session_attendance').insert({ user_id: user.id, session_id: sessionId });
-      if (error && error.code !== '23505') throw error;
-
-      // Log to admin_logs so it shows in the activity log dialog
       const session = [...upcomingSessions, ...recordedSessions].find(s => s.id === sessionId);
-      await logToAdminLogs({
-        performed_by: user.id,
-        target_user_id: user.id,
-        entity_type: 'live_session',
-        entity_id: sessionId,
-        action: 'live_session_joined',
-        description: `Joined live session: ${session?.title || 'Unknown'}`,
-        data: {
-          session_id: sessionId,
-          session_title: session?.title || null,
-          session_date: session?.start_time || session?.schedule_date || null,
-          host_name: session?.mentor_name || null,
-        }
-      });
+
+      // Only mark attendance if within the attendance window:
+      // from 5 minutes before start_time onwards (through end of session).
+      const now = new Date();
+      const startTime = session?.start_time ? new Date(session.start_time) : null;
+      const attendanceOpensAt = startTime ? new Date(startTime.getTime() - 5 * 60 * 1000) : null;
+      const withinAttendanceWindow = !!attendanceOpensAt && now >= attendanceOpensAt;
+
+      if (withinAttendanceWindow) {
+        const { error } = await supabase
+          .from('session_attendance').insert({ user_id: user.id, session_id: sessionId });
+        if (error && error.code !== '23505') throw error;
+
+        await logToAdminLogs({
+          performed_by: user.id,
+          target_user_id: user.id,
+          entity_type: 'live_session',
+          entity_id: sessionId,
+          action: 'live_session_joined',
+          description: `Joined live session: ${session?.title || 'Unknown'}`,
+          data: {
+            session_id: sessionId,
+            session_title: session?.title || null,
+            session_date: session?.start_time || session?.schedule_date || null,
+            host_name: session?.mentor_name || null,
+          }
+        });
+      }
 
       window.open(sessionLink, '_blank');
-      await fetchAttendance();
-      toast({ title: "Joined Session", description: "Attendance recorded successfully" });
+      if (withinAttendanceWindow) {
+        await fetchAttendance();
+        toast({ title: "Joined Session", description: "Attendance recorded successfully" });
+      } else {
+        toast({
+          title: "Joined Early",
+          description: "Attendance will be recorded when you join within 5 minutes of the start time.",
+        });
+      }
     } catch (error) {
       safeLogger.error('Error joining session:', error);
       toast({ title: "Error", description: "Failed to join session", variant: "destructive" });
