@@ -652,8 +652,9 @@ export const PaymentReports = () => {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>{r.paymentDate ? format(new Date(r.paymentDate), 'MMM d, yyyy') : 'N/A'}</TableCell>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">{r.paymentDate ? format(new Date(r.paymentDate), 'MMM d, yyyy') : 'N/A'}</TableCell>
+                    <TableCell className="sticky right-0 bg-background group-hover:bg-muted/30 border-l border-border/60 shadow-[-8px_0_16px_-8px_rgba(0,0,0,0.08)]">
+
                       <div className="flex flex-col gap-1.5 min-w-[140px]">
                         <Select value={r.status} onValueChange={(v) => {
                           if (v === 'refunded') {
