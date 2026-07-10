@@ -1443,42 +1443,23 @@ export function SuccessSessionsManagement() {
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          {(() => {
-            const filtered = sessions.filter(s => {
-              if (filterSearch && !s.title.toLowerCase().includes(filterSearch.toLowerCase())) return false;
-              if (filterHost !== '__all__' && s.mentor_id !== filterHost) return false;
-              if (filterCourse !== '__all__' && s.course_id !== filterCourse) return false;
-              if (filterBatch !== '__all__') {
-                const sBatchIds: string[] = (s as any).batch_ids || (s.batch_id ? [s.batch_id] : []);
-                if (sBatchIds.length === 0 || !sBatchIds.includes(filterBatch)) return false;
-              }
-              if (filterStatus !== '__all__' && s.status !== filterStatus) return false;
-              if (filterDate) {
-                try {
-                  const sessionDate = new Date(s.schedule_date || s.start_time);
-                  if (!isSameDay(sessionDate, filterDate)) return false;
-                } catch { return false; }
-              }
-              return true;
-            });
-            if (filtered.length === 0) return (
-              <div className="text-center py-16 px-6 animate-fade-in">
-                <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
-                  <Video className="w-7 h-7 text-muted-foreground" />
-                </div>
-                <h3 className="text-base font-semibold text-foreground mb-1">No sessions found</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {sessions.length > 0 ? 'Try adjusting your filters to see more results.' : 'Schedule your first success session to get started.'}
-                </p>
-                {sessions.length === 0 && (
-                  <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Schedule Session
-                  </Button>
-                )}
+          {filteredSessions.length === 0 ? (
+            <div className="text-center py-16 px-6 animate-fade-in">
+              <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                <Video className="w-7 h-7 text-muted-foreground" />
               </div>
-            );
-            return (
+              <h3 className="text-base font-semibold text-foreground mb-1">No sessions found</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {sessions.length > 0 ? 'Try adjusting your filters to see more results.' : 'Schedule your first success session to get started.'}
+              </p>
+              {sessions.length === 0 && (
+                <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Schedule Session
+                </Button>
+              )}
+            </div>
+          ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
