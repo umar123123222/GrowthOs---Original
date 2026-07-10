@@ -407,171 +407,136 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
           </Card>
         </TabsContent>
 
-        <TabsContent value="engagement" className="space-y-4">
+        <TabsContent value="engagement" className="space-y-8">
           {/* Overview Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 via-blue-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-blue-700 flex items-center gap-2">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Users className="w-4 h-4 text-blue-600" />
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+            {statCards.map(({ label, value, hint, icon: Icon, tone, bg }) => (
+              <Card key={label} className="group relative overflow-hidden border-border/60 bg-card hover:border-border transition-all duration-200 hover:shadow-md">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`p-2 rounded-lg ${bg}`}>
+                      <Icon className={`w-4 h-4 ${tone}`} />
+                    </div>
                   </div>
-                  Total Students
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-blue-600 mb-1">{overviewStats.total_students}</div>
-                <p className="text-sm text-blue-500 font-medium">All enrolled</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 via-green-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-green-700 flex items-center gap-2">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <TrendingUp className="w-4 h-4 text-green-600" />
-                  </div>
-                  Active Students
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-green-600 mb-1">{overviewStats.active_students}</div>
-                <p className="text-sm text-green-500 font-medium">Last 30 days</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 via-purple-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-purple-700 flex items-center gap-2">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Target className="w-4 h-4 text-purple-600" />
-                  </div>
-                  Avg Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-purple-600 mb-1">{overviewStats.avg_progress}%</div>
-                <p className="text-sm text-purple-500 font-medium">Overall completion</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 via-emerald-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-emerald-700 flex items-center gap-2">
-                  <div className="p-2 bg-emerald-100 rounded-lg">
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  Completions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-emerald-600 mb-1">{overviewStats.total_completions}</div>
-                <p className="text-sm text-emerald-500 font-medium">Finished courses</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 via-orange-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-orange-700 flex items-center gap-2">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <Video className="w-4 h-4 text-orange-600" />
-                  </div>
-                  Videos Today
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-orange-600 mb-1">{overviewStats.videos_watched_today}</div>
-                <p className="text-sm text-orange-500 font-medium">Views today</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-br from-indigo-50 via-indigo-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
-                  <div className="p-2 bg-indigo-100 rounded-lg">
-                    <FileText className="w-4 h-4 text-indigo-600" />
-                  </div>
-                  Submissions Today
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-indigo-600 mb-1">{overviewStats.assignments_submitted_today}</div>
-                <p className="text-sm text-indigo-500 font-medium">New submissions</p>
-              </CardContent>
-            </Card>
+                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">{value}</div>
+                  <div className="mt-1 text-xs font-medium text-muted-foreground">{label}</div>
+                  <div className="mt-2 text-[11px] text-muted-foreground/70">{hint}</div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {/* Search Filter */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search students by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Engagement leaderboards</h2>
+              <p className="text-sm text-muted-foreground">Top students by recent activity and course completion.</p>
+            </div>
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input
+                placeholder="Search by name or email…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 bg-background"
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Most Active Students</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {filteredStudents.sort((a, b) => {
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {[
+              {
+                title: 'Most Active Students',
+                subtitle: 'Ranked by most recent activity',
+                icon: TrendingUp,
+                accent: 'text-sky-600',
+                accentBg: 'bg-sky-500/10',
+                items: [...filteredStudents]
+                  .sort((a, b) => {
                     const dateA = a.last_activity ? new Date(a.last_activity).getTime() : 0;
                     const dateB = b.last_activity ? new Date(b.last_activity).getTime() : 0;
                     return dateB - dateA;
-                  }).slice(0, 5).map((student, index) => <div key={student.id} className="flex items-center space-x-3">
-                        <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-bold">
-                          {index + 1}
-                        </div>
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback>{student.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{student.full_name}</div>
-                          <div className="text-xs text-gray-500">
-                            {student.last_activity && !isNaN(new Date(student.last_activity).getTime())
-                              ? new Date(student.last_activity).toLocaleDateString()
-                              : 'Never'}
+                  })
+                  .slice(0, 5),
+                meta: (s: StudentAnalytics) =>
+                  s.last_activity && !isNaN(new Date(s.last_activity).getTime())
+                    ? new Date(s.last_activity).toLocaleDateString()
+                    : 'Never',
+              },
+              {
+                title: 'Completion Leaders',
+                subtitle: 'Ranked by overall course progress',
+                icon: CheckCircle,
+                accent: 'text-emerald-600',
+                accentBg: 'bg-emerald-500/10',
+                items: [...filteredStudents]
+                  .sort((a, b) => b.progress_percentage - a.progress_percentage)
+                  .slice(0, 5),
+                meta: (s: StudentAnalytics) =>
+                  `${s.videos_watched} videos · ${s.assignments_completed} assignments`,
+              },
+            ].map(({ title, subtitle, icon: Icon, accent, accentBg, items, meta }) => (
+              <Card key={title} className="border-border/60 bg-card">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2 rounded-lg ${accentBg}`}>
+                      <Icon className={`w-4 h-4 ${accent}`} />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
+                      <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {items.length === 0 ? (
+                    <div className="py-8 text-center text-sm text-muted-foreground">No matching students</div>
+                  ) : (
+                    <ul className="divide-y divide-border/60">
+                      {items.map((student, index) => (
+                        <li
+                          key={student.id}
+                          onClick={() => setDetailStudent(student)}
+                          className="flex items-center gap-3 py-3 cursor-pointer group hover:bg-muted/40 -mx-2 px-2 rounded-md transition-colors"
+                        >
+                          <div className={`w-6 h-6 rounded-md flex items-center justify-center text-xs font-semibold tabular-nums ${
+                            index === 0
+                              ? 'bg-amber-500/15 text-amber-600'
+                              : index === 1
+                              ? 'bg-slate-400/20 text-slate-600'
+                              : index === 2
+                              ? 'bg-orange-500/15 text-orange-700'
+                              : 'bg-muted text-muted-foreground'
+                          }`}>
+                            {index + 1}
                           </div>
-                        </div>
-                        <Badge variant="outline">{student.progress_percentage}%</Badge>
-                      </div>)}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Completion Leaders</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {filteredStudents.sort((a, b) => b.progress_percentage - a.progress_percentage).slice(0, 5).map((student, index) => <div key={student.id} className="flex items-center space-x-3">
-                        <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-bold">
-                          {index + 1}
-                        </div>
-                        <Avatar className="w-8 h-8">
-                          <AvatarFallback>{student.full_name.slice(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{student.full_name}</div>
-                          <div className="text-xs text-gray-500">
-                            {student.videos_watched} videos, {student.assignments_completed} assignments
+                          <Avatar className="w-9 h-9">
+                            <AvatarFallback className="bg-primary/10 text-primary text-xs font-semibold">
+                              {student.full_name.slice(0, 2).toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                              {student.full_name}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate">{meta(student)}</div>
                           </div>
-                        </div>
-                        <Badge variant={student.progress_percentage >= 100 ? "default" : "secondary"}>
-                          {student.progress_percentage}%
-                        </Badge>
-                      </div>)}
-                </div>
-              </CardContent>
-            </Card>
+                          <div className="flex flex-col items-end gap-1 min-w-[64px]">
+                            <span className="text-xs font-semibold text-foreground tabular-nums">
+                              {student.progress_percentage}%
+                            </span>
+                            <Progress value={student.progress_percentage} className="h-1 w-14" />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </TabsContent>
+
 
         <TabsContent value="payments" className="space-y-4">
           <PaymentReports />
