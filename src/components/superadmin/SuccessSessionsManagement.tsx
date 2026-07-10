@@ -264,6 +264,11 @@ export function SuccessSessionsManagement() {
     }
   }, [formData.course_id, batches]);
 
+  // Reset pagination when any session filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [filterSearch, filterHost, filterCourse, filterBatch, filterStatus, filterDate]);
+
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'draft':
