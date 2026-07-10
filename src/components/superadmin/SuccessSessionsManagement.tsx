@@ -156,7 +156,7 @@ export function SuccessSessionsManagement() {
       const { data, error } = await supabase
         .from('success_sessions')
         .select('*')
-        .order('start_time', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setSessions((data as any as SuccessSession[]) || []);
