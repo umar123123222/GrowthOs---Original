@@ -11,6 +11,7 @@ import { Play, CheckCircle, Clock, FileText, Target, TrendingUp, Users, Video, C
 import { useToast } from '@/hooks/use-toast';
 import { PaymentReports } from './PaymentReports';
 import { StudentEngagementDetail } from './StudentEngagementDetail';
+import { PerformanceMetrics } from './PerformanceMetrics';
 interface StudentAnalytics {
   id: string;
   full_name: string;
@@ -275,6 +276,9 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
               </CardContent>
             </Card>
           </div>
+
+          <PerformanceMetrics />
+
 
           {/* Search Filter */}
           <div className="relative max-w-md">
