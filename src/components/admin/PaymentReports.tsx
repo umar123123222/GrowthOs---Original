@@ -75,6 +75,13 @@ export const PaymentReports = () => {
   const [refundContext, setRefundContext] = useState<{ studentId: string; email?: string; invoiceId?: string } | null>(null);
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [markPaidContext, setMarkPaidContext] = useState<{ invoiceId: string; email?: string } | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const toggleRow = (id: string) => setExpandedRows(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
 
   const { toast } = useToast();
   const { user } = useAuth();
