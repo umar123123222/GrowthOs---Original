@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send, Filter, Check, Copy } from 'lucide-react';
+import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send, Filter, Check, Copy, ChevronDown, ChevronUp } from 'lucide-react';
+import { SessionAttendanceDetails } from './SessionAttendanceDetails';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -136,6 +137,7 @@ export function SuccessSessionsManagement() {
   });
   const [batchPopoverOpen, setBatchPopoverOpen] = useState(false);
   const [publishing, setPublishing] = useState<string | null>(null);
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const formSubmittedRef = useRef(false);
   const { toast } = useToast();
   const { user: authUser } = useAuth();
@@ -1489,8 +1491,8 @@ export function SuccessSessionsManagement() {
                 </TableHeader>
                 <TableBody>
                   {paginatedSessions.map((session, index) => (
+                    <React.Fragment key={session.id}>
                     <TableRow
-                      key={session.id}
                       className="hover:bg-muted/40 transition-colors animate-fade-in"
                       style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
                     >
@@ -1658,9 +1660,38 @@ export function SuccessSessionsManagement() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setExpandedSessionId(prev => prev === session.id ? null : session.id)}
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            title={expandedSessionId === session.id ? 'Hide attendance' : 'View attendance'}
+                          >
+                            {expandedSessionId === session.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
+                    {expandedSessionId === session.id && (
+                      <TableRow className="bg-muted/20 hover:bg-muted/20">
+                        <TableCell colSpan={8} className="p-0">
+                          <SessionAttendanceDetails
+                            sessionId={session.id}
+                            sessionTitle={session.title}
+                            courseId={session.course_id}
+                            batchIds={(() => {
+                              const raw = (session as any).batch_ids;
+                              if (Array.isArray(raw)) return raw.map(String);
+                              if (typeof raw === 'string') {
+                                try { const p = JSON.parse(raw); return Array.isArray(p) ? p.map(String) : []; } catch { return []; }
+                              }
+                              return session.batch_id ? [session.batch_id] : [];
+                            })()}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    )}
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
