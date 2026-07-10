@@ -742,7 +742,9 @@ export const PaymentReports = () => {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
+
 
         <div className="px-4 border-t">
           <TablePager
