@@ -297,19 +297,25 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
 
       const visible = (data || []).filter(session => user?.role === 'student' ? isVisibleToStudent(session as LiveSession) : true) as LiveSession[];
 
-      // Upcoming & live: session hasn't ended yet (use end_time or fallback start+1hr)
-      const upcoming = visible.filter(session => {
+      // Compute effective end: if end_time is missing or <= start (bad data
+      // where an AM end was entered against a PM start, e.g. 8:30 PM–9:30 AM),
+      // treat it as start + 1 hour so the session still shows as upcoming.
+      const effectiveEnd = (session: LiveSession) => {
         const start = new Date(session.start_time);
-        const end = session.end_time ? new Date(session.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
-        return end > now;
-      });
+        const rawEnd = session.end_time ? new Date(session.end_time) : null;
+        if (!rawEnd || rawEnd.getTime() <= start.getTime()) {
+          return new Date(start.getTime() + 60 * 60 * 1000);
+        }
+        return rawEnd;
+      };
+
+      // Upcoming & live: session hasn't ended yet
+      const upcoming = visible.filter(session => effectiveEnd(session) > now);
       // Past recordings: session has ended. No enrollment-date cutoff —
       // recordings are evergreen learning content for all enrolled students.
       const pastSessions = visible.filter(session => {
-        const start = new Date(session.start_time);
-        const end = session.end_time ? new Date(session.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
         const hasRecordingLink = typeof session.link === 'string' && session.link.trim().length > 0;
-        return end < now && hasRecordingLink;
+        return effectiveEnd(session) < now && hasRecordingLink;
       });
 
       setUpcomingSessions(upcoming);
