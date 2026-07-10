@@ -1652,8 +1652,16 @@ export function SuccessSessionsManagement() {
                 </TableBody>
               </Table>
             </div>
-            );
-          })()}
+            <TablePager
+              page={safePage}
+              pageCount={pageCount}
+              totalItems={filteredSessions.length}
+              pageSize={pageSize}
+              onPageChange={setPage}
+              itemLabel="sessions"
+              className="px-6"
+            />
+          )}
         </CardContent>
       </Card>
     </div>
