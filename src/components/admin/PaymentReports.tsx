@@ -575,34 +575,40 @@ export const PaymentReports = () => {
 
 
       {/* Master Table */}
-      <Card className="relative">
-        <CardHeader>
-          <CardTitle className="text-lg">Invoice & Payment Records</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Showing {paginated.length} of {filteredRecords.length} records
-          </p>
+      <Card className="relative border-border/60 overflow-hidden">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <div>
+              <CardTitle className="text-lg">Invoice & Payment Records</CardTitle>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Showing {paginated.length} of {filteredRecords.length} records · scroll horizontally to see all columns
+              </p>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className={cn("p-0 overflow-x-auto", tableLoading && "opacity-50 pointer-events-none")}>
+        <CardContent className={cn("p-0", tableLoading && "opacity-50 pointer-events-none")}>
           {tableLoading && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/50 z-10">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
           )}
+          <div className="w-full overflow-x-auto">
           <Table className="min-w-[1400px]">
             <TableHeader>
-              <TableRow>
-                <TableHead>Student ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Course/Pathway</TableHead>
-                <TableHead>Installment</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Due Date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment Date</TableHead>
-                <TableHead>Actions</TableHead>
+              <TableRow className="bg-muted/40">
+                <TableHead className="whitespace-nowrap">Student ID</TableHead>
+                <TableHead className="whitespace-nowrap">Name</TableHead>
+                <TableHead className="whitespace-nowrap">Email</TableHead>
+                <TableHead className="whitespace-nowrap">Course/Pathway</TableHead>
+                <TableHead className="whitespace-nowrap">Installment</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Amount</TableHead>
+                <TableHead className="whitespace-nowrap">Due Date</TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
+                <TableHead className="whitespace-nowrap">Payment Date</TableHead>
+                <TableHead className="whitespace-nowrap sticky right-0 bg-muted/40 backdrop-blur border-l border-border/60 shadow-[-8px_0_16px_-8px_rgba(0,0,0,0.08)]">Actions</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
               {paginated.length === 0 ? (
                 <TableRow>
