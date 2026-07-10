@@ -167,23 +167,60 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
       </div>;
   }
   const statCards = [
-    { label: 'Total Students', value: overviewStats.total_students, hint: 'All enrolled', icon: Users, tone: 'text-sky-600', bg: 'bg-sky-500/10' },
-    { label: 'Active Students', value: overviewStats.active_students, hint: 'Last 30 days', icon: TrendingUp, tone: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-    { label: 'Avg Progress', value: `${overviewStats.avg_progress}%`, hint: 'Overall completion', icon: Target, tone: 'text-violet-600', bg: 'bg-violet-500/10' },
-    { label: 'Completions', value: overviewStats.total_completions, hint: 'Finished courses', icon: CheckCircle, tone: 'text-teal-600', bg: 'bg-teal-500/10' },
-    { label: 'Videos Today', value: overviewStats.videos_watched_today, hint: 'Views today', icon: Video, tone: 'text-amber-600', bg: 'bg-amber-500/10' },
-    { label: 'Submissions Today', value: overviewStats.assignments_submitted_today, hint: 'New submissions', icon: FileText, tone: 'text-indigo-600', bg: 'bg-indigo-500/10' },
-  ];
+    { label: 'Total Students', value: overviewStats.total_students, hint: 'All enrolled', icon: Users, tone: 'sky' },
+    { label: 'Active Students', value: overviewStats.active_students, hint: 'Last 30 days', icon: TrendingUp, tone: 'emerald' },
+    { label: 'Avg Progress', value: `${overviewStats.avg_progress}%`, hint: 'Overall completion', icon: Target, tone: 'violet' },
+    { label: 'Completions', value: overviewStats.total_completions, hint: 'Finished courses', icon: CheckCircle, tone: 'teal' },
+    { label: 'Videos Today', value: overviewStats.videos_watched_today, hint: 'Views today', icon: Video, tone: 'amber' },
+    { label: 'Submissions Today', value: overviewStats.assignments_submitted_today, hint: 'New submissions', icon: FileText, tone: 'indigo' },
+  ] as const;
+
+  const toneMap: Record<string, { text: string; bg: string; ring: string; accent: string; gradient: string }> = {
+    sky:     { text: 'text-sky-600',     bg: 'bg-sky-500/10',     ring: 'ring-sky-500/20',     accent: 'bg-sky-500',     gradient: 'from-sky-50/80' },
+    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-500/10', ring: 'ring-emerald-500/20', accent: 'bg-emerald-500', gradient: 'from-emerald-50/80' },
+    violet:  { text: 'text-violet-600',  bg: 'bg-violet-500/10',  ring: 'ring-violet-500/20',  accent: 'bg-violet-500',  gradient: 'from-violet-50/80' },
+    teal:    { text: 'text-teal-600',    bg: 'bg-teal-500/10',    ring: 'ring-teal-500/20',    accent: 'bg-teal-500',    gradient: 'from-teal-50/80' },
+    amber:   { text: 'text-amber-600',   bg: 'bg-amber-500/10',   ring: 'ring-amber-500/20',   accent: 'bg-amber-500',   gradient: 'from-amber-50/80' },
+    indigo:  { text: 'text-indigo-600',  bg: 'bg-indigo-500/10',  ring: 'ring-indigo-500/20',  accent: 'bg-indigo-500',  gradient: 'from-indigo-50/80' },
+    rose:    { text: 'text-rose-600',    bg: 'bg-rose-500/10',    ring: 'ring-rose-500/20',    accent: 'bg-rose-500',    gradient: 'from-rose-50/80' },
+    fuchsia: { text: 'text-fuchsia-600', bg: 'bg-fuchsia-500/10', ring: 'ring-fuchsia-500/20', accent: 'bg-fuchsia-500', gradient: 'from-fuchsia-50/80' },
+  };
+
+  const activePct = overviewStats.total_students > 0
+    ? Math.round((overviewStats.active_students / overviewStats.total_students) * 100)
+    : 0;
 
   return <div className="p-6 space-y-8">
-      <div className="flex flex-col gap-1">
-        <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
-          Analytics Overview
+      {/* Hero header */}
+      <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-primary/10 via-sky-500/5 to-violet-500/10">
+        <div className="absolute -top-20 -right-16 h-64 w-64 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-10 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
+        <div className="relative p-6 md:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          <div className="flex flex-col gap-2 max-w-xl">
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-primary uppercase tracking-wider">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              Analytics Overview
+            </div>
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground">Student Analytics</h1>
+            <p className="text-muted-foreground">A live snapshot of student progress, engagement and activity across your platform.</p>
+          </div>
+          <div className="grid grid-cols-3 gap-4 lg:min-w-[420px]">
+            <div className="rounded-xl bg-background/60 backdrop-blur border border-border/60 p-4">
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Enrolled</div>
+              <div className="text-2xl font-semibold text-foreground tabular-nums mt-1">{overviewStats.total_students}</div>
+            </div>
+            <div className="rounded-xl bg-background/60 backdrop-blur border border-border/60 p-4">
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Active</div>
+              <div className="text-2xl font-semibold text-emerald-600 tabular-nums mt-1">{activePct}%</div>
+            </div>
+            <div className="rounded-xl bg-background/60 backdrop-blur border border-border/60 p-4">
+              <div className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Avg Progress</div>
+              <div className="text-2xl font-semibold text-violet-600 tabular-nums mt-1">{overviewStats.avg_progress}%</div>
+            </div>
+          </div>
         </div>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Student Analytics</h1>
-        <p className="text-muted-foreground">A snapshot of student progress, engagement, and activity across the platform.</p>
       </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -198,24 +235,35 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
 
         <TabsContent value="overview" className="space-y-8">
           {/* Overview Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-            {statCards.map(({ label, value, hint, icon: Icon, tone, bg }) => (
-              <Card key={label} className="group relative overflow-hidden border-border/60 bg-card hover:border-border transition-all duration-200 hover:shadow-md">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`p-2 rounded-lg ${bg}`}>
-                      <Icon className={`w-4 h-4 ${tone}`} />
-                    </div>
-                  </div>
-                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
-                    {value}
-                  </div>
-                  <div className="mt-1 text-xs font-medium text-muted-foreground">{label}</div>
-                  <div className="mt-2 text-[11px] text-muted-foreground/70">{hint}</div>
-                </CardContent>
-              </Card>
-            ))}
+          <div>
+            <div className="flex items-baseline justify-between mb-3">
+              <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Key Metrics</h2>
+              <span className="text-xs text-muted-foreground">Updated just now</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+              {statCards.map(({ label, value, hint, icon: Icon, tone }) => {
+                const t = toneMap[tone];
+                return (
+                  <Card key={label} className={`group relative overflow-hidden border-border/60 bg-gradient-to-br ${t.gradient} to-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}>
+                    <div className={`absolute top-0 left-0 right-0 h-1 ${t.accent}`} />
+                    <CardContent className="p-5">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className={`p-2.5 rounded-xl ${t.bg} ring-1 ${t.ring}`}>
+                          <Icon className={`w-4 h-4 ${t.text}`} />
+                        </div>
+                      </div>
+                      <div className={`text-3xl font-semibold tracking-tight tabular-nums ${t.text}`}>
+                        {value}
+                      </div>
+                      <div className="mt-1 text-xs font-semibold text-foreground/80">{label}</div>
+                      <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           </div>
+
 
           <PerformanceMetrics />
 
@@ -276,31 +324,36 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
                     <div>
                       <div className="flex justify-between items-baseline mb-1.5">
                         <span className="text-xs font-medium text-muted-foreground">Overall Progress</span>
-                        <span className="text-sm font-semibold text-foreground tabular-nums">{student.progress_percentage}%</span>
+                        <span className={`text-sm font-semibold tabular-nums ${
+                          student.progress_percentage >= 75 ? 'text-emerald-600'
+                          : student.progress_percentage >= 40 ? 'text-amber-600'
+                          : 'text-rose-600'
+                        }`}>{student.progress_percentage}%</span>
                       </div>
                       <Progress value={student.progress_percentage} className="h-1.5" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                      <div className="rounded-lg border border-sky-500/20 bg-sky-500/5 p-3">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <Play className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Videos</span>
+                          <Play className="w-3 h-3 text-sky-600" />
+                          <span className="text-[11px] font-medium text-sky-700 dark:text-sky-400 uppercase tracking-wide">Videos</span>
                         </div>
                         <div className="text-sm font-semibold text-foreground tabular-nums">
                           {student.videos_watched}<span className="text-muted-foreground font-normal">/{student.videos_total}</span>
                         </div>
                       </div>
-                      <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                      <div className="rounded-lg border border-violet-500/20 bg-violet-500/5 p-3">
                         <div className="flex items-center gap-1.5 mb-1">
-                          <FileText className="w-3 h-3 text-muted-foreground" />
-                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Assignments</span>
+                          <FileText className="w-3 h-3 text-violet-600" />
+                          <span className="text-[11px] font-medium text-violet-700 dark:text-violet-400 uppercase tracking-wide">Assignments</span>
                         </div>
                         <div className="text-sm font-semibold text-foreground tabular-nums">
                           {student.assignments_completed}<span className="text-muted-foreground font-normal">/{student.assignments_total}</span>
                         </div>
                       </div>
                     </div>
+
 
                     <div className="flex items-center justify-between pt-3 border-t border-border/60">
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -410,21 +463,26 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
         <TabsContent value="engagement" className="space-y-8">
           {/* Overview Stats */}
           <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
-            {statCards.map(({ label, value, hint, icon: Icon, tone, bg }) => (
-              <Card key={label} className="group relative overflow-hidden border-border/60 bg-card hover:border-border transition-all duration-200 hover:shadow-md">
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`p-2 rounded-lg ${bg}`}>
-                      <Icon className={`w-4 h-4 ${tone}`} />
+            {statCards.map(({ label, value, hint, icon: Icon, tone }) => {
+              const t = toneMap[tone];
+              return (
+                <Card key={label} className={`group relative overflow-hidden border-border/60 bg-gradient-to-br ${t.gradient} to-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}>
+                  <div className={`absolute top-0 left-0 right-0 h-1 ${t.accent}`} />
+                  <CardContent className="p-5">
+                    <div className="flex items-start justify-between mb-4">
+                      <div className={`p-2.5 rounded-xl ${t.bg} ring-1 ${t.ring}`}>
+                        <Icon className={`w-4 h-4 ${t.text}`} />
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">{value}</div>
-                  <div className="mt-1 text-xs font-medium text-muted-foreground">{label}</div>
-                  <div className="mt-2 text-[11px] text-muted-foreground/70">{hint}</div>
-                </CardContent>
-              </Card>
-            ))}
+                    <div className={`text-3xl font-semibold tracking-tight tabular-nums ${t.text}`}>{value}</div>
+                    <div className="mt-1 text-xs font-semibold text-foreground/80">{label}</div>
+                    <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
+
 
           {/* Search Filter */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

@@ -420,58 +420,89 @@ export const PaymentReports = () => {
     );
   }
 
+  const toneMap: Record<string, { text: string; bg: string; ring: string; accent: string; gradient: string }> = {
+    emerald: { text: 'text-emerald-600', bg: 'bg-emerald-500/10', ring: 'ring-emerald-500/20', accent: 'bg-emerald-500', gradient: 'from-emerald-50/80' },
+    sky:     { text: 'text-sky-600',     bg: 'bg-sky-500/10',     ring: 'ring-sky-500/20',     accent: 'bg-sky-500',     gradient: 'from-sky-50/80' },
+    violet:  { text: 'text-violet-600',  bg: 'bg-violet-500/10',  ring: 'ring-violet-500/20',  accent: 'bg-violet-500',  gradient: 'from-violet-50/80' },
+    amber:   { text: 'text-amber-600',   bg: 'bg-amber-500/10',   ring: 'ring-amber-500/20',   accent: 'bg-amber-500',   gradient: 'from-amber-50/80' },
+    yellow:  { text: 'text-yellow-600',  bg: 'bg-yellow-500/10',  ring: 'ring-yellow-500/20',  accent: 'bg-yellow-500',  gradient: 'from-yellow-50/80' },
+    red:     { text: 'text-red-600',     bg: 'bg-red-500/10',     ring: 'ring-red-500/20',     accent: 'bg-red-500',     gradient: 'from-red-50/80' },
+    fuchsia: { text: 'text-fuchsia-600', bg: 'bg-fuchsia-500/10', ring: 'ring-fuchsia-500/20', accent: 'bg-fuchsia-500', gradient: 'from-fuchsia-50/80' },
+  };
+
   const primaryStats = [
-    { label: 'Total Received', value: formatCurrency(stats.totalAmount), hint: `${stats.totalPayments} payments`, icon: DollarSign, tone: 'text-emerald-600', bg: 'bg-emerald-500/10' },
-    { label: 'New Enrollments', value: stats.newEnrollments, hint: 'First-time payments', icon: Users, tone: 'text-sky-600', bg: 'bg-sky-500/10' },
-    { label: 'Avg. Payment', value: formatCurrency(stats.avgPaymentAmount), hint: 'Per transaction', icon: TrendingUp, tone: 'text-violet-600', bg: 'bg-violet-500/10' },
-    { label: 'Date Range', value: `${format(dateRange.from, 'MMM d')} – ${format(dateRange.to, 'MMM d')}`, hint: format(dateRange.to, 'yyyy'), icon: CalendarIcon, tone: 'text-amber-600', bg: 'bg-amber-500/10' },
+    { label: 'Total Received', value: formatCurrency(stats.totalAmount), hint: `${stats.totalPayments} payments`, icon: DollarSign, tone: 'emerald' },
+    { label: 'New Enrollments', value: stats.newEnrollments, hint: 'First-time payments', icon: Users, tone: 'sky' },
+    { label: 'Avg. Payment', value: formatCurrency(stats.avgPaymentAmount), hint: 'Per transaction', icon: TrendingUp, tone: 'violet' },
+    { label: 'Date Range', value: `${format(dateRange.from, 'MMM d')} – ${format(dateRange.to, 'MMM d')}`, hint: format(dateRange.to, 'yyyy'), icon: CalendarIcon, tone: 'amber' },
   ];
   const secondaryStats = [
-    { label: 'Pending Amount', value: formatCurrency(stats.pendingAmount), hint: 'Awaiting payment in range', icon: Clock, tone: 'text-yellow-600', bg: 'bg-yellow-500/10' },
-    { label: 'Overdue Amount', value: formatCurrency(stats.overdueAmount), hint: 'Past due in range', icon: AlertTriangle, tone: 'text-red-600', bg: 'bg-red-500/10' },
-    { label: 'Refunds', value: formatCurrency(stats.refundedAmount), hint: `${stats.refundedCount} refunded ${stats.refundedCount === 1 ? 'invoice' : 'invoices'}`, icon: Undo2, tone: 'text-fuchsia-600', bg: 'bg-fuchsia-500/10' },
+    { label: 'Pending Amount', value: formatCurrency(stats.pendingAmount), hint: 'Awaiting payment in range', icon: Clock, tone: 'yellow' },
+    { label: 'Overdue Amount', value: formatCurrency(stats.overdueAmount), hint: 'Past due in range', icon: AlertTriangle, tone: 'red' },
+    { label: 'Refunds', value: formatCurrency(stats.refundedAmount), hint: `${stats.refundedCount} refunded ${stats.refundedCount === 1 ? 'invoice' : 'invoices'}`, icon: Undo2, tone: 'fuchsia' },
   ];
 
-  const renderStat = ({ label, value, hint, icon: Icon, tone, bg }: any) => (
-    <Card key={label} className="border-border/60 bg-card hover:border-border transition-all duration-200 hover:shadow-md">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between mb-4">
-          <div className={`p-2 rounded-lg ${bg}`}>
-            <Icon className={`w-4 h-4 ${tone}`} />
+  const renderStat = ({ label, value, hint, icon: Icon, tone }: any) => {
+    const t = toneMap[tone];
+    return (
+      <Card key={label} className={`group relative overflow-hidden border-border/60 bg-gradient-to-br ${t.gradient} to-card hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200`}>
+        <div className={`absolute top-0 left-0 right-0 h-1 ${t.accent}`} />
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between mb-4">
+            <div className={`p-2.5 rounded-xl ${t.bg} ring-1 ${t.ring}`}>
+              <Icon className={`w-4 h-4 ${t.text}`} />
+            </div>
           </div>
-        </div>
-        <div className="text-2xl font-semibold tracking-tight text-foreground tabular-nums truncate">{value}</div>
-        <div className="mt-1 text-xs font-medium text-muted-foreground">{label}</div>
-        <div className="mt-2 text-[11px] text-muted-foreground/70">{hint}</div>
-      </CardContent>
-    </Card>
-  );
+          <div className={`text-2xl font-semibold tracking-tight tabular-nums truncate ${t.text}`}>{value}</div>
+          <div className="mt-1 text-xs font-semibold text-foreground/80">{label}</div>
+          <div className="mt-1 text-[11px] text-muted-foreground">{hint}</div>
+        </CardContent>
+      </Card>
+    );
+  };
 
   return (
     <div className="space-y-8 p-1">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex flex-col gap-1">
-          <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
-            Analytics · Payments
+      {/* Hero header */}
+      <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-emerald-500/10 via-primary/5 to-violet-500/10">
+        <div className="absolute -top-16 -right-10 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-violet-500/10 blur-3xl pointer-events-none" />
+        <div className="relative p-6 md:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="flex flex-col gap-2">
+            <div className="inline-flex items-center gap-2 text-xs font-medium text-primary uppercase tracking-wider">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              Analytics · Payments
+            </div>
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-foreground">Payment Reports</h1>
+            <p className="text-muted-foreground">Track student payments and manage invoices in one place.</p>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">Payment Reports</h1>
-          <p className="text-muted-foreground">Track student payments and manage invoices in one place.</p>
+          <Button onClick={handleExport} variant="outline" className="gap-2 bg-background/60 backdrop-blur">
+            <Download className="h-4 w-4" /> Export CSV
+          </Button>
         </div>
-        <Button onClick={handleExport} variant="outline" className="gap-2">
-          <Download className="h-4 w-4" /> Export CSV
-        </Button>
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {primaryStats.map(renderStat)}
+      <div>
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Revenue Overview</h2>
+          <span className="text-xs text-muted-foreground">{format(dateRange.from, 'MMM d')} – {format(dateRange.to, 'MMM d, yyyy')}</span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {primaryStats.map(renderStat)}
+        </div>
       </div>
 
       {/* Secondary Stat Row */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {secondaryStats.map(renderStat)}
+      <div>
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Attention Required</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {secondaryStats.map(renderStat)}
+        </div>
       </div>
+
 
       {/* Filters */}
       <Card className="border-border/60 bg-card">
