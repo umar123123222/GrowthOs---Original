@@ -624,8 +624,8 @@ export const PaymentReports = () => {
                 paginated.map((r) => {
                   const isOpen = expandedRows.has(r.id);
                   return (
-                    <>
-                    <TableRow
+                    <React.Fragment key={r.id}>
+
                       key={r.id}
                       className={cn("cursor-pointer hover:bg-muted/40 transition-colors", isOpen && "bg-muted/30")}
                       onClick={() => toggleRow(r.id)}
