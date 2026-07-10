@@ -1459,7 +1459,7 @@ export function SuccessSessionsManagement() {
                 </Button>
               )}
             </div>
-          ) : (
+          ) : (<>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
