@@ -166,12 +166,25 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
         </div>
       </div>;
   }
-  return <div className="p-6 space-y-6 px-[5px]">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Student Analytics</h1>
-        <p className="text-gray-600 mt-2">Comprehensive overview of student progress and engagement</p>
+  const statCards = [
+    { label: 'Total Students', value: overviewStats.total_students, hint: 'All enrolled', icon: Users, tone: 'text-sky-600', bg: 'bg-sky-500/10' },
+    { label: 'Active Students', value: overviewStats.active_students, hint: 'Last 30 days', icon: TrendingUp, tone: 'text-emerald-600', bg: 'bg-emerald-500/10' },
+    { label: 'Avg Progress', value: `${overviewStats.avg_progress}%`, hint: 'Overall completion', icon: Target, tone: 'text-violet-600', bg: 'bg-violet-500/10' },
+    { label: 'Completions', value: overviewStats.total_completions, hint: 'Finished courses', icon: CheckCircle, tone: 'text-teal-600', bg: 'bg-teal-500/10' },
+    { label: 'Videos Today', value: overviewStats.videos_watched_today, hint: 'Views today', icon: Video, tone: 'text-amber-600', bg: 'bg-amber-500/10' },
+    { label: 'Submissions Today', value: overviewStats.assignments_submitted_today, hint: 'New submissions', icon: FileText, tone: 'text-indigo-600', bg: 'bg-indigo-500/10' },
+  ];
+
+  return <div className="p-6 space-y-8">
+      <div className="flex flex-col gap-1">
+        <div className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary" />
+          Analytics Overview
+        </div>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Student Analytics</h1>
+        <p className="text-muted-foreground">A snapshot of student progress, engagement, and activity across the platform.</p>
       </div>
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="engagement">Engagement</TabsTrigger>
@@ -183,189 +196,129 @@ export const StudentAnalytics = ({ hidePayments = false }: StudentAnalyticsProps
           )}
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="overview" className="space-y-8">
           {/* Overview Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
-            <Card className="border-l-4 border-l-blue-500 bg-gradient-to-br from-blue-50 via-blue-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-blue-700 flex items-center gap-2">
-                  <div className="p-2 bg-blue-100 rounded-lg">
-                    <Users className="w-4 h-4 text-blue-600" />
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+            {statCards.map(({ label, value, hint, icon: Icon, tone, bg }) => (
+              <Card key={label} className="group relative overflow-hidden border-border/60 bg-card hover:border-border transition-all duration-200 hover:shadow-md">
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className={`p-2 rounded-lg ${bg}`}>
+                      <Icon className={`w-4 h-4 ${tone}`} />
+                    </div>
                   </div>
-                  Total Students
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-blue-600 mb-1">{overviewStats.total_students}</div>
-                <p className="text-sm text-blue-500 font-medium">All enrolled</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-green-500 bg-gradient-to-br from-green-50 via-green-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-green-700 flex items-center gap-2">
-                  <div className="p-2 bg-green-100 rounded-lg">
-                    <TrendingUp className="w-4 h-4 text-green-600" />
+                  <div className="text-3xl font-semibold tracking-tight text-foreground tabular-nums">
+                    {value}
                   </div>
-                  Active Students
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-green-600 mb-1">{overviewStats.active_students}</div>
-                <p className="text-sm text-green-500 font-medium">Last 30 days</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-purple-500 bg-gradient-to-br from-purple-50 via-purple-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-purple-700 flex items-center gap-2">
-                  <div className="p-2 bg-purple-100 rounded-lg">
-                    <Target className="w-4 h-4 text-purple-600" />
-                  </div>
-                  Avg Progress
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-purple-600 mb-1">{overviewStats.avg_progress}%</div>
-                <p className="text-sm text-purple-500 font-medium">Overall completion</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-emerald-500 bg-gradient-to-br from-emerald-50 via-emerald-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-emerald-700 flex items-center gap-2">
-                  <div className="p-2 bg-emerald-100 rounded-lg">
-                    <CheckCircle className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  Completions
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-emerald-600 mb-1">{overviewStats.total_completions}</div>
-                <p className="text-sm text-emerald-500 font-medium">Finished courses</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-orange-500 bg-gradient-to-br from-orange-50 via-orange-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-orange-700 flex items-center gap-2">
-                  <div className="p-2 bg-orange-100 rounded-lg">
-                    <Video className="w-4 h-4 text-orange-600" />
-                  </div>
-                  Videos Today
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-orange-600 mb-1">{overviewStats.videos_watched_today}</div>
-                <p className="text-sm text-orange-500 font-medium">Views today</p>
-              </CardContent>
-            </Card>
-
-            <Card className="border-l-4 border-l-indigo-500 bg-gradient-to-br from-indigo-50 via-indigo-25 to-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
-                  <div className="p-2 bg-indigo-100 rounded-lg">
-                    <FileText className="w-4 h-4 text-indigo-600" />
-                  </div>
-                  Submissions Today
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="text-4xl font-bold text-indigo-600 mb-1">{overviewStats.assignments_submitted_today}</div>
-                <p className="text-sm text-indigo-500 font-medium">New submissions</p>
-              </CardContent>
-            </Card>
+                  <div className="mt-1 text-xs font-medium text-muted-foreground">{label}</div>
+                  <div className="mt-2 text-[11px] text-muted-foreground/70">{hint}</div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           <PerformanceMetrics />
 
+          {/* Students section */}
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">Students</h2>
+                <p className="text-sm text-muted-foreground">
+                  Showing {filteredCount === 0 ? 0 : startIndex + 1}–{Math.min(startIndex + students.length, filteredCount)} of {filteredCount}
+                  {debouncedSearch && ` (filtered from ${overviewStats.total_students})`}
+                </p>
+              </div>
+              <div className="relative w-full sm:max-w-xs">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search by name or email…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 bg-background"
+                />
+              </div>
+            </div>
 
-          {/* Search Filter */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <Input
-              placeholder="Search students by name or email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {currentStudents.map(student => (
+                <Card
+                  key={student.id}
+                  onClick={() => setDetailStudent(student)}
+                  className="group cursor-pointer border-border/60 bg-card hover:border-primary/40 hover:shadow-md transition-all duration-200"
+                >
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-11 h-11">
+                        <AvatarFallback className="bg-primary/10 text-primary font-semibold text-sm">
+                          {student.full_name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base font-semibold text-foreground truncate">
+                          {student.full_name}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground truncate">{student.email}</p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={
+                          student.status === 'active'
+                            ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-[10px] uppercase tracking-wide'
+                            : 'border-border bg-muted text-muted-foreground text-[10px] uppercase tracking-wide'
+                        }
+                      >
+                        {student.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <div className="flex justify-between items-baseline mb-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">Overall Progress</span>
+                        <span className="text-sm font-semibold text-foreground tabular-nums">{student.progress_percentage}%</span>
+                      </div>
+                      <Progress value={student.progress_percentage} className="h-1.5" />
+                    </div>
 
-          <div className="flex justify-between items-center">
-            <p className="text-sm text-gray-600">
-              Showing {filteredCount === 0 ? 0 : startIndex + 1} to {Math.min(startIndex + students.length, filteredCount)} of {filteredCount} students
-              {debouncedSearch && ` (filtered from ${overviewStats.total_students} total)`}
-            </p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <Play className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Videos</span>
+                        </div>
+                        <div className="text-sm font-semibold text-foreground tabular-nums">
+                          {student.videos_watched}<span className="text-muted-foreground font-normal">/{student.videos_total}</span>
+                        </div>
+                      </div>
+                      <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <FileText className="w-3 h-3 text-muted-foreground" />
+                          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">Assignments</span>
+                        </div>
+                        <div className="text-sm font-semibold text-foreground tabular-nums">
+                          {student.assignments_completed}<span className="text-muted-foreground font-normal">/{student.assignments_total}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-border/60">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Clock className="w-3 h-3" />
+                        Last active
+                      </div>
+                      <span className="text-xs font-medium text-foreground">
+                        {student.last_activity && !isNaN(new Date(student.last_activity).getTime())
+                          ? new Date(student.last_activity).toLocaleDateString()
+                          : 'Never'}
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {currentStudents.map(student => <Card key={student.id} onClick={() => setDetailStudent(student)} className="shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border-0 bg-gradient-to-br from-white to-gray-50 cursor-pointer">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-4">
-                    <Avatar className="w-12 h-12 ring-2 ring-blue-100">
-                      <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
-                        {student.full_name.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg font-semibold text-gray-900 truncate">
-                        {student.full_name}
-                      </CardTitle>
-                      <p className="text-sm text-gray-500 truncate">{student.email}</p>
-                    </div>
-                    <Badge variant={student.status === 'active' ? 'default' : 'secondary'} className={student.status === 'active' ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-600'}>
-                      {student.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm font-medium text-gray-700">Overall Progress</span>
-                      <span className="text-sm font-bold text-gray-900">{student.progress_percentage}%</span>
-                    </div>
-                    <Progress value={student.progress_percentage} className="h-3 bg-gray-200" />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-blue-50 rounded-lg p-3 border border-blue-100">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <div className="p-1 bg-blue-200 rounded">
-                          <Play className="w-3 h-3 text-blue-600" />
-                        </div>
-                        <span className="text-xs font-medium text-blue-700">Videos</span>
-                      </div>
-                      <div className="text-sm font-bold text-blue-800">
-                        {student.videos_watched}/{student.videos_total}
-                      </div>
-                    </div>
-                    <div className="bg-green-50 rounded-lg p-3 border border-green-100">
-                      <div className="flex items-center space-x-2 mb-1">
-                        <div className="p-1 bg-green-200 rounded">
-                          <FileText className="w-3 h-3 text-green-600" />
-                        </div>
-                        <span className="text-xs font-medium text-green-700">Assignments</span>
-                      </div>
-                      <div className="text-sm font-bold text-green-800">
-                        {student.assignments_completed}/{student.assignments_total}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-200">
-                    <div className="flex items-center space-x-2">
-                      <Clock className="w-3 h-3 text-gray-400" />
-                      <span className="text-xs text-gray-500">Last active</span>
-                    </div>
-                    <span className="text-xs font-medium text-gray-700">
-                      {student.last_activity && !isNaN(new Date(student.last_activity).getTime())
-                        ? new Date(student.last_activity).toLocaleDateString()
-                        : 'Never'}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>)}
-          </div>
           
           {/* Pagination Controls */}
           {totalPages > 1 && (
