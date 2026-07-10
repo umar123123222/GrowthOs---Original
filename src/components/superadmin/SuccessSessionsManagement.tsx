@@ -1661,7 +1661,7 @@ export function SuccessSessionsManagement() {
               itemLabel="sessions"
               className="px-6"
             />
-          )}
+          </>)}
         </CardContent>
       </Card>
     </div>
