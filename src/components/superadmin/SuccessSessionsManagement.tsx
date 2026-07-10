@@ -875,6 +875,31 @@ export function SuccessSessionsManagement() {
     }
   };
 
+  // Compute filtered sessions once for stats, preview and paginated table.
+  const filteredSessions = useMemo(() => {
+    return sessions.filter(s => {
+      if (filterSearch && !s.title.toLowerCase().includes(filterSearch.toLowerCase())) return false;
+      if (filterHost !== '__all__' && s.mentor_id !== filterHost) return false;
+      if (filterCourse !== '__all__' && s.course_id !== filterCourse) return false;
+      if (filterBatch !== '__all__') {
+        const sBatchIds: string[] = (s as any).batch_ids || (s.batch_id ? [s.batch_id] : []);
+        if (sBatchIds.length === 0 || !sBatchIds.includes(filterBatch)) return false;
+      }
+      if (filterStatus !== '__all__' && s.status !== filterStatus) return false;
+      if (filterDate) {
+        try {
+          const sessionDate = new Date(s.schedule_date || s.start_time);
+          if (!isSameDay(sessionDate, filterDate)) return false;
+        } catch { return false; }
+      }
+      return true;
+    });
+  }, [sessions, filterSearch, filterHost, filterCourse, filterBatch, filterStatus, filterDate]);
+
+  const pageCount = Math.ceil(filteredSessions.length / pageSize) || 1;
+  const safePage = Math.min(page, pageCount);
+  const paginatedSessions = filteredSessions.slice((safePage - 1) * pageSize, safePage * pageSize);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
