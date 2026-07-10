@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send, Filter, Check, Copy } from 'lucide-react';
+import { Calendar as CalendarIcon, CalendarDays, Clock, Video, User, Link as LinkIcon, Plus, Edit, Trash2, BookOpen, Users2, Search, Send, Filter, Check, Copy, ChevronDown, ChevronUp } from 'lucide-react';
+import { SessionAttendanceDetails } from './SessionAttendanceDetails';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
