@@ -20,6 +20,19 @@ import { Play, BookOpen, ChevronDown, ChevronRight, Lock, Search, X } from "luci
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Star } from "lucide-react";
+
+const PendingFeedbackChip = () => {
+  const { count } = usePendingFeedback();
+  if (count === 0) return null;
+  return (
+    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
+      <Star className="w-3 h-3 mr-1" />
+      {count} awaiting your feedback
+    </Badge>
+  );
+};
 
 const Videos = () => {
   const navigate = useNavigate();
