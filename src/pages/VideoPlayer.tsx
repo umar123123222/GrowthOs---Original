@@ -307,6 +307,17 @@ const VideoPlayer = () => {
     autoMarkWatched();
   }, [user?.id, currentVideo?.id]);
 
+  // Auto-open the rating card when navigated with ?rate=1 (from "Rate to unlock" badges/tags)
+  useEffect(() => {
+    if (searchParams.get('rate') === '1' && currentVideo?.id) {
+      setShowRating(true);
+      // Scroll rating into view once the DOM has settled
+      setTimeout(() => {
+        document.getElementById('lecture-rating-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  }, [searchParams, currentVideo?.id]);
+
 
   // Load attachments for current video
   useEffect(() => {
