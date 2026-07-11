@@ -15,11 +15,24 @@ import { CourseSelector } from "@/components/courses/CourseSelector";
 import { PathwayProgressCard } from "@/components/courses/PathwayProgressCard";
 import { BatchPathwayView } from "@/components/videos/BatchPathwayView";
 import { RecordingRow } from "@/components/videos/RecordingRow";
-import { PendingFeedbackPrompt } from "@/components/PendingFeedbackPrompt";
+import { usePendingFeedback } from "@/hooks/usePendingFeedback";
 import { Play, BookOpen, ChevronDown, ChevronRight, Lock, Search, X } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Star } from "lucide-react";
+
+const PendingFeedbackChip = () => {
+  const { count } = usePendingFeedback();
+  if (count === 0) return null;
+  return (
+    <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-300">
+      <Star className="w-3 h-3 mr-1" />
+      {count} awaiting your feedback
+    </Badge>
+  );
+};
 
 const Videos = () => {
   const navigate = useNavigate();
@@ -230,13 +243,15 @@ const Videos = () => {
   return (
     <RoleGuard allowedRoles={["student", "admin", "mentor", "superadmin"]}>
       <div className="space-y-6 animate-fade-in">
-        <PendingFeedbackPrompt />
         <InactiveLMSBanner show={user?.role === "student" && userLMSStatus === "inactive"} />
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground">Available Lessons</h1>
+            <div className="flex items-center gap-3 flex-wrap mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Available Lessons</h1>
+              <PendingFeedbackChip />
+            </div>
             <p className="text-muted-foreground text-sm sm:text-base">
               Watch lessons and complete assignments to track your progress
             </p>
