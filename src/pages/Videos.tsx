@@ -230,7 +230,6 @@ const Videos = () => {
   return (
     <RoleGuard allowedRoles={["student", "admin", "mentor", "superadmin"]}>
       <div className="space-y-6 animate-fade-in">
-        <PendingFeedbackPrompt />
         <InactiveLMSBanner show={user?.role === "student" && userLMSStatus === "inactive"} />
 
         {/* Header */}
