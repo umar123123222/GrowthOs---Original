@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
 import { getStudentVideoAccessState } from '@/lib/student-video-access';
+import { isWatchInGateWindow } from '@/config/feedback-gate';
 import type { CourseRecording, CourseModule } from '@/hooks/useCourseRecordings';
 
 export interface CourseGroup {
@@ -108,18 +109,22 @@ export function usePathwayGroupedRecordings(
         { data: viewsData },
         { data: submissionsData },
         { data: studentData },
+        { data: ratingsData },
         videoAccessState,
       ] = await Promise.all([
         supabase.from('courses').select('id, title').in('id', courseIds),
         supabase.from('modules').select('id, title, order, course_id').in('course_id', courseIds).order('order', { ascending: true }),
-        supabase.from('recording_views').select('recording_id, watched').eq('user_id', user.id),
+        supabase.from('recording_views').select('recording_id, watched, watched_at').eq('user_id', user.id),
         supabase
           .from('submissions')
           .select('assignment_id, status, version, created_at')
           .eq('student_id', user.id),
         supabase.from('users').select('lms_status').eq('id', user.id).maybeSingle(),
+        supabase.from('recording_ratings').select('recording_id').eq('student_id', user.id),
         getStudentVideoAccessState(user.id),
       ]);
+
+      const ratedRecordingIds = new Set<string>((ratingsData || []).map((r: any) => r.recording_id));
 
       const studentLMSStatus = studentData?.lms_status || 'active';
 
