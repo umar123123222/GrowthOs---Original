@@ -148,6 +148,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       });
 
       const watchedMap = new Map((viewsResult.data || []).map(v => [v.recording_id, v.watched]));
+      const watchedAtMap = new Map((viewsResult.data || []).map((v: any) => [v.recording_id, v.watched_at as string | null]));
 
       const latestSubmissionByAssignment = new Map<string, { status: string; version: number; createdAt: number }>();
       ((submissionsResult.data || []) as SubmissionRow[]).forEach((submission) => {
@@ -186,6 +187,10 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       const processedRecordings: CourseRecording[] = lessonsData.map(lesson => {
         const module = modulesData?.find(m => m.id === lesson.module);
         const unlockStatus = unlockStatusMap.get(lesson.id);
+        const isWatched = watchedMap.get(lesson.id) || false;
+        const watchedAt = watchedAtMap.get(lesson.id) || null;
+        const isRated = ratedRecordingIds.has(lesson.id);
+        const awaitingRating = isWatched && !isRated && isWatchInGateWindow(watchedAt);
         return {
           id: lesson.id,
           recording_title: lesson.recording_title || 'Untitled',
@@ -196,7 +201,9 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           module_title: module?.title || 'Unknown Module',
           module_order: module?.order || 0,
           isUnlocked: hasVideoBypass ? true : unlockStatus?.isUnlocked || false,
-          isWatched: watchedMap.get(lesson.id) || false,
+          isWatched,
+          watchedAt,
+          awaitingRating,
           hasAssignment: !!lesson.assignment_id,
           assignmentId: lesson.assignment_id,
           assignmentSubmitted: lesson.assignment_id ? submittedAssignments.has(lesson.assignment_id) : false,
@@ -207,6 +214,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           blockingAssignmentDeclined: false,
         };
       });
+
 
       // Consistency fix + identify the precise predecessor blocking each locked lesson
       const sortedRecordings = [...processedRecordings].sort((a, b) => {
