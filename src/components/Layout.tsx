@@ -1340,6 +1340,8 @@ const Layout = memo(({
       
       {/* Motivational Notifications for Students */}
       {user?.role === 'student' && <MotivationalNotifications />}
+      {user?.role === 'student' && <PendingFeedbackPrompt />}
+      
       
       {/* Live Chat Widget for Students */}
       <LiveChatWidget userRole={user?.role} />
