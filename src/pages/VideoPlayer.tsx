@@ -311,12 +311,15 @@ const VideoPlayer = () => {
   useEffect(() => {
     if (searchParams.get('rate') === '1' && currentVideo?.id) {
       setShowRating(true);
-      // Scroll rating into view once the DOM has settled
       setTimeout(() => {
         document.getElementById('lecture-rating-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }, 300);
+      // Strip ?rate=1 so back/forward navigation doesn't re-trigger it
+      const next = new URLSearchParams(searchParams);
+      next.delete('rate');
+      navigate({ search: next.toString() ? `?${next.toString()}` : '' }, { replace: true });
     }
-  }, [searchParams, currentVideo?.id]);
+  }, [searchParams, currentVideo?.id, navigate]);
 
 
   // Load attachments for current video
