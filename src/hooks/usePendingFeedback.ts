@@ -80,7 +80,7 @@ export function usePendingFeedback(): UsePendingFeedbackResult {
       const { data: enrollments } = await supabase
         .from('course_enrollments')
         .select('course_id')
-        .eq('user_id', user.id);
+        .eq('student_id', user.id);
       const accessibleCourseIds = new Set(
         (enrollments || []).map(e => e.course_id).filter(Boolean)
       );
