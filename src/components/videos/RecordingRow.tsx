@@ -70,9 +70,11 @@ export const RecordingRow: React.FC<RecordingRowProps> = ({
             </span>
           )}
           {userLMSStatus === 'active' && !recording.isUnlocked && (
-            <span className="text-orange-600 font-medium text-xs mt-1 block">
-              {(() => {
-                const blocker = recording.blockingLessonTitle;
+            (() => {
+              const blocker = recording.blockingLessonTitle;
+              const blockerId = recording.blockingLessonId;
+              const isRatingLock = recording.lockReason === 'previous_lesson_not_rated' && !!blockerId;
+              const message = (() => {
                 switch (recording.lockReason) {
                   case 'previous_lesson_not_rated':
                     return blocker
@@ -106,8 +108,28 @@ export const RecordingRow: React.FC<RecordingRowProps> = ({
                   default:
                     return 'Complete the previous lesson to unlock this one';
                 }
-              })()}
-            </span>
+              })();
+
+              if (isRatingLock) {
+                return (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(`/video-player?id=${blockerId}&title=${encodeURIComponent(blocker || '')}&rate=1`)
+                    }
+                    className="text-orange-600 font-medium text-xs mt-1 block underline underline-offset-2 hover:text-orange-700 text-left"
+                  >
+                    {message}
+                  </button>
+                );
+              }
+
+              return (
+                <span className="text-orange-600 font-medium text-xs mt-1 block">
+                  {message}
+                </span>
+              );
+            })()
           )}
         </div>
       </div>
