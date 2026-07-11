@@ -24,6 +24,8 @@ export interface CourseRecording {
   dripUnlockDate?: string | null;
   /** Title of the specific predecessor lesson that is currently blocking this one */
   blockingLessonTitle?: string | null;
+  /** ID of the specific predecessor lesson that is currently blocking this one */
+  blockingLessonId?: string | null;
   /** True when the predecessor blocking this lesson has a declined submission */
   blockingAssignmentDeclined?: boolean;
   /** True if the student has watched this lesson but hasn't rated it yet (only for post-rollout watches) */
@@ -211,6 +213,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           lockReason: hasVideoBypass ? null : unlockStatus?.lockReason || null,
           dripUnlockDate: hasVideoBypass ? null : unlockStatus?.dripUnlockDate || null,
           blockingLessonTitle: null,
+          blockingLessonId: null,
           blockingAssignmentDeclined: false,
         };
       });
@@ -317,6 +320,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
             current.isUnlocked = false;
             current.lockReason = 'previous_lesson_not_rated';
             current.blockingLessonTitle = pred.recording_title;
+            current.blockingLessonId = pred.id;
             break;
           }
         }

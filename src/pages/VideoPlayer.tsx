@@ -307,6 +307,17 @@ const VideoPlayer = () => {
     autoMarkWatched();
   }, [user?.id, currentVideo?.id]);
 
+  // Auto-open the rating card when navigated with ?rate=1 (from "Rate to unlock" badges/tags)
+  useEffect(() => {
+    if (searchParams.get('rate') === '1' && currentVideo?.id) {
+      setShowRating(true);
+      // Scroll rating into view once the DOM has settled
+      setTimeout(() => {
+        document.getElementById('lecture-rating-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    }
+  }, [searchParams, currentVideo?.id]);
+
 
   // Load attachments for current video
   useEffect(() => {
@@ -503,7 +514,7 @@ const VideoPlayer = () => {
                 {/* Lecture Rating - Shows after video is marked complete */}
                 {showRating && currentVideo && (
                   <>
-                    <div className="mt-6 flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4">
+                    <div id="lecture-rating-anchor" className="mt-6 flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4">
                       <Star className="w-5 h-5 text-orange-600 shrink-0" />
                       <div className="flex-1 text-sm">
                         <p className="font-medium text-orange-900">Please rate this lesson to unlock the next one</p>

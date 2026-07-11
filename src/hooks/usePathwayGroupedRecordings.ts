@@ -277,6 +277,7 @@ export function usePathwayGroupedRecordings(
               lockReason,
               dripUnlockDate,
               blockingLessonTitle: null,
+              blockingLessonId: null,
               blockingAssignmentDeclined: false,
             };
           });
@@ -422,6 +423,7 @@ export function usePathwayGroupedRecordings(
                 current.isUnlocked = false;
                 current.lockReason = 'previous_lesson_not_rated';
                 current.blockingLessonTitle = pred.recording_title;
+                current.blockingLessonId = pred.id;
                 break;
               }
             }
