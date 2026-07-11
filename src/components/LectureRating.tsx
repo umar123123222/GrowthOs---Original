@@ -8,7 +8,7 @@ import { Star } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
-import { safeQuery } from '@/lib/database-safety';
+import { safeMaybeSingle } from '@/lib/database-safety';
 import type { RecordingRatingResult } from '@/types/database';
 
 interface LectureRatingProps {
@@ -42,13 +42,13 @@ export function LectureRating({
     if (!user?.id) return;
 
     try {
-      const result = await safeQuery<RecordingRatingResult>(
+      const result = await safeMaybeSingle<RecordingRatingResult>(
         supabase
           .from('recording_ratings')
           .select('*')
           .eq('student_id', user.id)
           .eq('recording_id', recordingId)
-          .single(),
+          .maybeSingle(),
         `check existing rating for recording ${recordingId}`
       );
 
@@ -56,6 +56,8 @@ export function LectureRating({
         setHasRated(true);
         setRating(result.data.rating);
         setFeedback(result.data.feedback || '');
+      } else if (result.success) {
+        setHasRated(false);
       }
     } catch (error) {
       // No existing rating found, which is fine
@@ -67,6 +69,11 @@ export function LectureRating({
 
     setLoading(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session?.access_token) {
+        throw new Error('No active session found while submitting recording rating');
+      }
+
       const { error } = await supabase
         .from('recording_ratings')
         .upsert({
@@ -75,6 +82,8 @@ export function LectureRating({
           lesson_title: lessonTitle,
           rating,
           feedback: feedback.trim() || null
+        }, {
+          onConflict: 'recording_id,student_id'
         });
 
       if (error) throw error;
@@ -92,7 +101,11 @@ export function LectureRating({
 
       if (onClose) onClose();
     } catch (error) {
-      logger.error('Error submitting rating:', error);
+      logger.error('Error submitting rating:', {
+        error,
+        recordingId,
+        userId: user.id,
+      });
       toast({
         title: 'Error',
         description: 'Failed to submit rating. Please try again.',
