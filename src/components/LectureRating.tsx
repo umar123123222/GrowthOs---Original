@@ -139,11 +139,11 @@ export function LectureRating({
     <div className="space-y-4">
       <div className="text-center">
         <p className="text-sm text-muted-foreground mb-3">
-          {hasRated 
-            ? `You rated "${lessonTitle}"` 
-            : mandatory 
+          {hasRated
+            ? `You rated "${lessonTitle}"`
+            : mandatory
             ? `Please rate "${lessonTitle}" to continue`
-            : "Please rate your experience to help us improve"
+            : `Please rate "${lessonTitle}" to help us improve`
           }
         </p>
         
