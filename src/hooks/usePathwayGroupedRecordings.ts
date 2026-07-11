@@ -180,6 +180,7 @@ export function usePathwayGroupedRecordings(
       const courseMap = new Map((coursesData || []).map(c => [c.id, c.title]));
       const pathwayAccessMap = new Map(pathwayCoursesAccess.map(course => [course.courseId, course]));
       const watchedMap = new Map((viewsData || []).map(v => [v.recording_id, v.watched]));
+      const watchedAtMap = new Map((viewsData || []).map((v: any) => [v.recording_id, v.watched_at as string | null]));
       const latestSubmissionByAssignment = new Map<string, { status: string; version: number; createdAt: number }>();
       ((submissionsData || []) as SubmissionRow[]).forEach((submission) => {
         const version = Number(submission.version || 0);
@@ -233,6 +234,9 @@ export function usePathwayGroupedRecordings(
 
           const recordings: CourseRecording[] = moduleLessons.map(lesson => {
             const isWatched = watchedMap.get(lesson.id) || false;
+            const watchedAt = watchedAtMap.get(lesson.id) || null;
+            const isRated = ratedRecordingIds.has(lesson.id);
+            const awaitingRating = isWatched && !isRated && isWatchInGateWindow(watchedAt);
             let isUnlocked = false;
             let lockReason: string | null = null;
             let dripUnlockDate: string | null = null;
@@ -264,6 +268,8 @@ export function usePathwayGroupedRecordings(
               module_order: mod.order || 0,
               isUnlocked,
               isWatched,
+              watchedAt,
+              awaitingRating,
               hasAssignment: !!lesson.assignment_id,
               assignmentId: lesson.assignment_id,
               assignmentSubmitted: lesson.assignment_id ? submittedAssignments.has(lesson.assignment_id) : false,
@@ -274,6 +280,7 @@ export function usePathwayGroupedRecordings(
               blockingAssignmentDeclined: false,
             };
           });
+
 
           const watchedCount = recordings.filter(r => r.isWatched).length;
           const isLocked = recordings.length > 0 && recordings.every(r => !r.isUnlocked);
