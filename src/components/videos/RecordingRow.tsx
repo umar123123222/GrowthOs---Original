@@ -120,6 +120,13 @@ export const RecordingRow: React.FC<RecordingRowProps> = ({
           </Badge>
         )}
 
+        {recording.awaitingRating && (
+          <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300 text-xs">
+            <Star className="w-3 h-3 mr-1" />
+            Rate to continue
+          </Badge>
+        )}
+
         {recording.hasAssignment && recording.assignmentSubmitted && (
           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
             <Clock className="w-3 h-3 mr-1" />
