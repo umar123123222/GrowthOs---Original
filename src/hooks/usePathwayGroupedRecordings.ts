@@ -403,6 +403,31 @@ export function usePathwayGroupedRecordings(
           }
         }
 
+        // FEEDBACK GATE: lock the next lesson when a prior lesson was watched
+        // post-rollout but hasn't been rated yet. Grandfathered watches are skipped.
+        const gateSkip = fullBypassCourseIds.has(group.courseId);
+        if (!gateSkip) {
+          const allCourseRecordings = group.modules
+            .slice()
+            .sort((a, b) => a.order - b.order)
+            .flatMap(mod => mod.recordings.slice().sort((a, b) => a.sequence_order - b.sequence_order));
+
+          for (let i = 1; i < allCourseRecordings.length; i++) {
+            const current = allCourseRecordings[i];
+            if (!current.isUnlocked) continue;
+            for (let j = i - 1; j >= 0; j--) {
+              const pred = allCourseRecordings[j];
+              if (!pred.isWatched) break;
+              if (pred.awaitingRating) {
+                current.isUnlocked = false;
+                current.lockReason = 'previous_lesson_not_rated';
+                current.blockingLessonTitle = pred.recording_title;
+                break;
+              }
+            }
+          }
+        }
+
         for (const mod of group.modules) {
           mod.isLocked = mod.recordings.length > 0 && mod.recordings.every(r => !r.isUnlocked);
           mod.watchedLessons = mod.recordings.filter(r => r.isWatched).length;
