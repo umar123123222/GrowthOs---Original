@@ -122,6 +122,16 @@ const Videos = () => {
     };
   }, [user?.id, isInPathwayMode]);
 
+  // Refresh unlocks after a rating is submitted (feedback gate)
+  useEffect(() => {
+    const onRated = () => {
+      refreshData();
+      if (isInPathwayMode) refreshPathwayRecordings();
+    };
+    window.addEventListener('lovable:recording-rated', onRated);
+    return () => window.removeEventListener('lovable:recording-rated', onRated);
+  }, [isInPathwayMode]);
+
   const handleWatchRecording = async (recording: any) => {
     if (userLMSStatus !== "active") return;
     if (!recording.isUnlocked || !recording.recording_url) return;

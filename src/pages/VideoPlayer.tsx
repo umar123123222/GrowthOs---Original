@@ -66,6 +66,12 @@ const VideoPlayer = () => {
   const [currentVideo, setCurrentVideo] = useState<any>(null);
   const { recordings, refreshData: refreshRecordings } = useCourseRecordings(currentVideo?.courseId || null);
   const [showRating, setShowRating] = useState(false);
+
+  useEffect(() => {
+    const onRated = () => refreshRecordings();
+    window.addEventListener('lovable:recording-rated', onRated);
+    return () => window.removeEventListener('lovable:recording-rated', onRated);
+  }, [refreshRecordings]);
   const [videoUrlError, setVideoUrlError] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
