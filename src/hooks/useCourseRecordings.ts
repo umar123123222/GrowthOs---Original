@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
 import { getStudentVideoAccessState } from '@/lib/student-video-access';
+import { FEEDBACK_GATE_ROLLOUT_AT, FEEDBACK_RATED_EVENT, isWatchInGateWindow } from '@/config/feedback-gate';
 
 export interface CourseRecording {
   id: string;
@@ -25,6 +26,10 @@ export interface CourseRecording {
   blockingLessonTitle?: string | null;
   /** True when the predecessor blocking this lesson has a declined submission */
   blockingAssignmentDeclined?: boolean;
+  /** True if the student has watched this lesson but hasn't rated it yet (only for post-rollout watches) */
+  awaitingRating?: boolean;
+  /** ISO timestamp of when the student watched this lesson */
+  watchedAt?: string | null;
 }
 
 export interface CourseModule {
