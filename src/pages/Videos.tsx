@@ -15,7 +15,7 @@ import { CourseSelector } from "@/components/courses/CourseSelector";
 import { PathwayProgressCard } from "@/components/courses/PathwayProgressCard";
 import { BatchPathwayView } from "@/components/videos/BatchPathwayView";
 import { RecordingRow } from "@/components/videos/RecordingRow";
-import { PendingFeedbackPrompt } from "@/components/PendingFeedbackPrompt";
+import { usePendingFeedback } from "@/hooks/usePendingFeedback";
 import { Play, BookOpen, ChevronDown, ChevronRight, Lock, Search, X } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
