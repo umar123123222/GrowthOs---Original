@@ -76,14 +76,23 @@ export function usePendingFeedback(): UsePendingFeedbackResult {
         return;
       }
 
-      // Accessible courses via active enrollment
-      const { data: enrollments } = await supabase
-        .from('course_enrollments')
-        .select('course_id')
-        .eq('student_id', user.id);
-      const accessibleCourseIds = new Set(
-        (enrollments || []).map(e => e.course_id).filter(Boolean)
-      );
+      // course_enrollments.student_id refs students.id → resolve first
+      const { data: studentRow } = await supabase
+        .from('students')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      let accessibleCourseIds = new Set<string>();
+      if (studentRow?.id) {
+        const { data: enrollments } = await supabase
+          .from('course_enrollments')
+          .select('course_id')
+          .eq('student_id', studentRow.id);
+        accessibleCourseIds = new Set(
+          (enrollments || []).map(e => e.course_id).filter(Boolean) as string[]
+        );
+      }
 
       const lessonById = new Map(
         (lessons as any[]).map(l => [l.id, {
