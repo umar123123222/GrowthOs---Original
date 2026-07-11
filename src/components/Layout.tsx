@@ -21,6 +21,7 @@ import { throttle } from "@/utils/performance";
 import { safeLogger } from '@/lib/safe-logger';
 import { AnnouncementBanner } from "./AnnouncementBanner";
 import { LiveChatWidget } from "./LiveChatWidget";
+import { PendingFeedbackPrompt } from "./PendingFeedbackPrompt";
 
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
