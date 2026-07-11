@@ -213,6 +213,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           lockReason: hasVideoBypass ? null : unlockStatus?.lockReason || null,
           dripUnlockDate: hasVideoBypass ? null : unlockStatus?.dripUnlockDate || null,
           blockingLessonTitle: null,
+          blockingLessonId: null,
           blockingAssignmentDeclined: false,
         };
       });
