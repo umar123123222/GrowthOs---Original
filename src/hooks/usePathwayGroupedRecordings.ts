@@ -277,6 +277,7 @@ export function usePathwayGroupedRecordings(
               lockReason,
               dripUnlockDate,
               blockingLessonTitle: null,
+              blockingLessonId: null,
               blockingAssignmentDeclined: false,
             };
           });
