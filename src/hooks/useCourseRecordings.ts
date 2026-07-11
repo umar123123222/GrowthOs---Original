@@ -117,24 +117,26 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         lessonsData = (data || []) as LessonRow[];
       }
 
-      // Fetch unlock status, student LMS status, views, submissions, and access overrides in parallel
-      const [unlockResult, studentResult, viewsResult, submissionsResult, videoAccessState] = await Promise.all([
+      // Fetch unlock status, student LMS status, views, submissions, ratings, and access overrides in parallel
+      const [unlockResult, studentResult, viewsResult, submissionsResult, ratingsResult, videoAccessState] = await Promise.all([
         supabase.rpc('get_course_sequential_unlock_status', {
           p_user_id: user.id,
           p_course_id: courseId
         }),
         supabase.from('users').select('lms_status').eq('id', user.id).maybeSingle(),
-        supabase.from('recording_views').select('recording_id, watched').eq('user_id', user.id),
+        supabase.from('recording_views').select('recording_id, watched, watched_at').eq('user_id', user.id),
         supabase
           .from('submissions')
           .select('assignment_id, status, version, created_at')
           .eq('student_id', user.id),
+        supabase.from('recording_ratings').select('recording_id').eq('student_id', user.id),
         getStudentVideoAccessState(user.id),
       ]);
 
       const unlockData = unlockResult.data;
       const studentLMSStatus = studentResult.data?.lms_status || 'active';
       const hasVideoBypass = videoAccessState.hasVideoBypass;
+      const ratedRecordingIds = new Set<string>((ratingsResult.data || []).map((r: any) => r.recording_id));
 
       const unlockStatusMap = new Map<string, { isUnlocked: boolean; lockReason?: string; dripUnlockDate?: string }>();
       ((unlockData || []) as UnlockStatusRow[]).forEach((u) => {
