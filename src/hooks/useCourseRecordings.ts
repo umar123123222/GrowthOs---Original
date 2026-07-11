@@ -303,6 +303,27 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         }
       }
 
+      // FEEDBACK GATE: Lock the next lesson when its predecessor was watched
+      // on/after the rollout date but has not been rated yet. Only applies to
+      // post-rollout watches — historical unrated watches are grandfathered.
+      for (let i = 1; i < sortedRecordings.length && !hasVideoBypass; i++) {
+        const current = sortedRecordings[i];
+        if (!current.isUnlocked) continue;
+
+        for (let j = i - 1; j >= 0; j--) {
+          const pred = sortedRecordings[j];
+          if (!pred.isWatched) break; // earlier safety net already handled this
+          if (pred.awaitingRating) {
+            current.isUnlocked = false;
+            current.lockReason = 'previous_lesson_not_rated';
+            current.blockingLessonTitle = pred.recording_title;
+            break;
+          }
+        }
+      }
+
+
+
 
       if (studentLMSStatus === 'active' && !hasVideoBypass) {
         const sortedBySequence = [...processedRecordings].sort((a, b) => {
