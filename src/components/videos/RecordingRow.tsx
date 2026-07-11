@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Lock, CheckCircle, Clock, BookOpen } from "lucide-react";
+import { Play, Lock, CheckCircle, Clock, BookOpen, Star } from "lucide-react";
 import type { CourseRecording } from "@/hooks/useCourseRecordings";
 
 interface RecordingRowProps {
@@ -74,6 +74,10 @@ export const RecordingRow: React.FC<RecordingRowProps> = ({
               {(() => {
                 const blocker = recording.blockingLessonTitle;
                 switch (recording.lockReason) {
+                  case 'previous_lesson_not_rated':
+                    return blocker
+                      ? `Rate "${blocker}" to unlock this lesson`
+                      : 'Rate the previous lesson to unlock this one';
                   case 'previous_lesson_not_watched':
                     return blocker
                       ? `Watch "${blocker}" to unlock this lesson`
@@ -113,6 +117,13 @@ export const RecordingRow: React.FC<RecordingRowProps> = ({
           <Badge variant="outline" className="bg-green-100 text-green-700 border-green-300 text-xs">
             <CheckCircle className="w-3 h-3 mr-1" />
             Completed
+          </Badge>
+        )}
+
+        {recording.awaitingRating && (
+          <Badge variant="outline" className="bg-orange-100 text-orange-700 border-orange-300 text-xs">
+            <Star className="w-3 h-3 mr-1" />
+            Rate to continue
           </Badge>
         )}
 

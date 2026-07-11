@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
 import { getStudentVideoAccessState } from '@/lib/student-video-access';
+import { isWatchInGateWindow } from '@/config/feedback-gate';
 import type { CourseRecording, CourseModule } from '@/hooks/useCourseRecordings';
 
 export interface CourseGroup {
@@ -108,18 +109,22 @@ export function usePathwayGroupedRecordings(
         { data: viewsData },
         { data: submissionsData },
         { data: studentData },
+        { data: ratingsData },
         videoAccessState,
       ] = await Promise.all([
         supabase.from('courses').select('id, title').in('id', courseIds),
         supabase.from('modules').select('id, title, order, course_id').in('course_id', courseIds).order('order', { ascending: true }),
-        supabase.from('recording_views').select('recording_id, watched').eq('user_id', user.id),
+        supabase.from('recording_views').select('recording_id, watched, watched_at').eq('user_id', user.id),
         supabase
           .from('submissions')
           .select('assignment_id, status, version, created_at')
           .eq('student_id', user.id),
         supabase.from('users').select('lms_status').eq('id', user.id).maybeSingle(),
+        supabase.from('recording_ratings').select('recording_id').eq('student_id', user.id),
         getStudentVideoAccessState(user.id),
       ]);
+
+      const ratedRecordingIds = new Set<string>((ratingsData || []).map((r: any) => r.recording_id));
 
       const studentLMSStatus = studentData?.lms_status || 'active';
 
@@ -175,6 +180,7 @@ export function usePathwayGroupedRecordings(
       const courseMap = new Map((coursesData || []).map(c => [c.id, c.title]));
       const pathwayAccessMap = new Map(pathwayCoursesAccess.map(course => [course.courseId, course]));
       const watchedMap = new Map((viewsData || []).map(v => [v.recording_id, v.watched]));
+      const watchedAtMap = new Map((viewsData || []).map((v: any) => [v.recording_id, v.watched_at as string | null]));
       const latestSubmissionByAssignment = new Map<string, { status: string; version: number; createdAt: number }>();
       ((submissionsData || []) as SubmissionRow[]).forEach((submission) => {
         const version = Number(submission.version || 0);
@@ -228,6 +234,9 @@ export function usePathwayGroupedRecordings(
 
           const recordings: CourseRecording[] = moduleLessons.map(lesson => {
             const isWatched = watchedMap.get(lesson.id) || false;
+            const watchedAt = watchedAtMap.get(lesson.id) || null;
+            const isRated = ratedRecordingIds.has(lesson.id);
+            const awaitingRating = isWatched && !isRated && isWatchInGateWindow(watchedAt);
             let isUnlocked = false;
             let lockReason: string | null = null;
             let dripUnlockDate: string | null = null;
@@ -259,6 +268,8 @@ export function usePathwayGroupedRecordings(
               module_order: mod.order || 0,
               isUnlocked,
               isWatched,
+              watchedAt,
+              awaitingRating,
               hasAssignment: !!lesson.assignment_id,
               assignmentId: lesson.assignment_id,
               assignmentSubmitted: lesson.assignment_id ? submittedAssignments.has(lesson.assignment_id) : false,
@@ -269,6 +280,7 @@ export function usePathwayGroupedRecordings(
               blockingAssignmentDeclined: false,
             };
           });
+
 
           const watchedCount = recordings.filter(r => r.isWatched).length;
           const isLocked = recordings.length > 0 && recordings.every(r => !r.isUnlocked);
@@ -388,6 +400,31 @@ export function usePathwayGroupedRecordings(
             current.blockingLessonTitle = blocker.recording_title;
             current.lockReason = reason;
             current.blockingAssignmentDeclined = reason === 'previous_assignment_declined';
+          }
+        }
+
+        // FEEDBACK GATE: lock the next lesson when a prior lesson was watched
+        // post-rollout but hasn't been rated yet. Grandfathered watches are skipped.
+        const gateSkip = fullBypassCourseIds.has(group.courseId);
+        if (!gateSkip) {
+          const allCourseRecordings = group.modules
+            .slice()
+            .sort((a, b) => a.order - b.order)
+            .flatMap(mod => mod.recordings.slice().sort((a, b) => a.sequence_order - b.sequence_order));
+
+          for (let i = 1; i < allCourseRecordings.length; i++) {
+            const current = allCourseRecordings[i];
+            if (!current.isUnlocked) continue;
+            for (let j = i - 1; j >= 0; j--) {
+              const pred = allCourseRecordings[j];
+              if (!pred.isWatched) break;
+              if (pred.awaitingRating) {
+                current.isUnlocked = false;
+                current.lockReason = 'previous_lesson_not_rated';
+                current.blockingLessonTitle = pred.recording_title;
+                break;
+              }
+            }
           }
         }
 

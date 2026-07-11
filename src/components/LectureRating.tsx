@@ -81,9 +81,14 @@ export function LectureRating({
 
       setHasRated(true);
       toast({
-        title: 'Rating Submitted',
-        description: 'Thank you for your feedback!'
+        title: 'Thanks for your feedback! +2 XP',
+        description: 'The next lesson is now unlocked.'
       });
+
+      // Let listing hooks (Videos, VideoPlayer) know to refresh unlocks
+      try {
+        window.dispatchEvent(new CustomEvent('lovable:recording-rated', { detail: { recordingId } }));
+      } catch { /* ignore */ }
 
       if (onClose) onClose();
     } catch (error) {

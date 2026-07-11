@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger';
 import { getStudentVideoAccessState } from '@/lib/student-video-access';
+import { FEEDBACK_GATE_ROLLOUT_AT, FEEDBACK_RATED_EVENT, isWatchInGateWindow } from '@/config/feedback-gate';
 
 export interface CourseRecording {
   id: string;
@@ -25,6 +26,10 @@ export interface CourseRecording {
   blockingLessonTitle?: string | null;
   /** True when the predecessor blocking this lesson has a declined submission */
   blockingAssignmentDeclined?: boolean;
+  /** True if the student has watched this lesson but hasn't rated it yet (only for post-rollout watches) */
+  awaitingRating?: boolean;
+  /** ISO timestamp of when the student watched this lesson */
+  watchedAt?: string | null;
 }
 
 export interface CourseModule {
@@ -112,24 +117,26 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
         lessonsData = (data || []) as LessonRow[];
       }
 
-      // Fetch unlock status, student LMS status, views, submissions, and access overrides in parallel
-      const [unlockResult, studentResult, viewsResult, submissionsResult, videoAccessState] = await Promise.all([
+      // Fetch unlock status, student LMS status, views, submissions, ratings, and access overrides in parallel
+      const [unlockResult, studentResult, viewsResult, submissionsResult, ratingsResult, videoAccessState] = await Promise.all([
         supabase.rpc('get_course_sequential_unlock_status', {
           p_user_id: user.id,
           p_course_id: courseId
         }),
         supabase.from('users').select('lms_status').eq('id', user.id).maybeSingle(),
-        supabase.from('recording_views').select('recording_id, watched').eq('user_id', user.id),
+        supabase.from('recording_views').select('recording_id, watched, watched_at').eq('user_id', user.id),
         supabase
           .from('submissions')
           .select('assignment_id, status, version, created_at')
           .eq('student_id', user.id),
+        supabase.from('recording_ratings').select('recording_id').eq('student_id', user.id),
         getStudentVideoAccessState(user.id),
       ]);
 
       const unlockData = unlockResult.data;
       const studentLMSStatus = studentResult.data?.lms_status || 'active';
       const hasVideoBypass = videoAccessState.hasVideoBypass;
+      const ratedRecordingIds = new Set<string>((ratingsResult.data || []).map((r: any) => r.recording_id));
 
       const unlockStatusMap = new Map<string, { isUnlocked: boolean; lockReason?: string; dripUnlockDate?: string }>();
       ((unlockData || []) as UnlockStatusRow[]).forEach((u) => {
@@ -141,6 +148,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       });
 
       const watchedMap = new Map((viewsResult.data || []).map(v => [v.recording_id, v.watched]));
+      const watchedAtMap = new Map((viewsResult.data || []).map((v: any) => [v.recording_id, v.watched_at as string | null]));
 
       const latestSubmissionByAssignment = new Map<string, { status: string; version: number; createdAt: number }>();
       ((submissionsResult.data || []) as SubmissionRow[]).forEach((submission) => {
@@ -179,6 +187,10 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
       const processedRecordings: CourseRecording[] = lessonsData.map(lesson => {
         const module = modulesData?.find(m => m.id === lesson.module);
         const unlockStatus = unlockStatusMap.get(lesson.id);
+        const isWatched = watchedMap.get(lesson.id) || false;
+        const watchedAt = watchedAtMap.get(lesson.id) || null;
+        const isRated = ratedRecordingIds.has(lesson.id);
+        const awaitingRating = isWatched && !isRated && isWatchInGateWindow(watchedAt);
         return {
           id: lesson.id,
           recording_title: lesson.recording_title || 'Untitled',
@@ -189,7 +201,9 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           module_title: module?.title || 'Unknown Module',
           module_order: module?.order || 0,
           isUnlocked: hasVideoBypass ? true : unlockStatus?.isUnlocked || false,
-          isWatched: watchedMap.get(lesson.id) || false,
+          isWatched,
+          watchedAt,
+          awaitingRating,
           hasAssignment: !!lesson.assignment_id,
           assignmentId: lesson.assignment_id,
           assignmentSubmitted: lesson.assignment_id ? submittedAssignments.has(lesson.assignment_id) : false,
@@ -200,6 +214,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           blockingAssignmentDeclined: false,
         };
       });
+
 
       // Consistency fix + identify the precise predecessor blocking each locked lesson
       const sortedRecordings = [...processedRecordings].sort((a, b) => {
@@ -287,6 +302,27 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
           current.blockingAssignmentDeclined = reason === 'previous_assignment_declined';
         }
       }
+
+      // FEEDBACK GATE: Lock the next lesson when its predecessor was watched
+      // on/after the rollout date but has not been rated yet. Only applies to
+      // post-rollout watches — historical unrated watches are grandfathered.
+      for (let i = 1; i < sortedRecordings.length && !hasVideoBypass; i++) {
+        const current = sortedRecordings[i];
+        if (!current.isUnlocked) continue;
+
+        for (let j = i - 1; j >= 0; j--) {
+          const pred = sortedRecordings[j];
+          if (!pred.isWatched) break; // earlier safety net already handled this
+          if (pred.awaitingRating) {
+            current.isUnlocked = false;
+            current.lockReason = 'previous_lesson_not_rated';
+            current.blockingLessonTitle = pred.recording_title;
+            break;
+          }
+        }
+      }
+
+
 
 
       if (studentLMSStatus === 'active' && !hasVideoBypass) {

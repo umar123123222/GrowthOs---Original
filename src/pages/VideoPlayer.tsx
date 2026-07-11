@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, RefreshCw, ArrowRight } from "lucide-react";
+import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, RefreshCw, ArrowRight, Star } from "lucide-react";
 import { useCourseRecordings } from "@/hooks/useCourseRecordings";
 import SuccessPartner from "@/components/SuccessPartner";
 import { LectureRating } from "@/components/LectureRating";
@@ -66,6 +66,12 @@ const VideoPlayer = () => {
   const [currentVideo, setCurrentVideo] = useState<any>(null);
   const { recordings, refreshData: refreshRecordings } = useCourseRecordings(currentVideo?.courseId || null);
   const [showRating, setShowRating] = useState(false);
+
+  useEffect(() => {
+    const onRated = () => refreshRecordings();
+    window.addEventListener('lovable:recording-rated', onRated);
+    return () => window.removeEventListener('lovable:recording-rated', onRated);
+  }, [refreshRecordings]);
   const [videoUrlError, setVideoUrlError] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
   const [iframeKey, setIframeKey] = useState(0);
@@ -495,7 +501,18 @@ const VideoPlayer = () => {
                 
 
                 {/* Lecture Rating - Shows after video is marked complete */}
-                {showRating && currentVideo && <LectureRating recordingId={currentVideo.id} lessonTitle={currentVideo.title} />}
+                {showRating && currentVideo && (
+                  <>
+                    <div className="mt-6 flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4">
+                      <Star className="w-5 h-5 text-orange-600 shrink-0" />
+                      <div className="flex-1 text-sm">
+                        <p className="font-medium text-orange-900">Please rate this lesson to unlock the next one</p>
+                        <p className="text-orange-700 text-xs">Your feedback helps us improve — earn +2 XP for rating.</p>
+                      </div>
+                    </div>
+                    <LectureRating recordingId={currentVideo.id} lessonTitle={currentVideo.title} />
+                  </>
+                )}
 
                 {(() => {
                   const current = recordings.find(r => r.id === currentVideo?.id);
