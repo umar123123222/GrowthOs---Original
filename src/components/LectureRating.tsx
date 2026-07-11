@@ -177,25 +177,44 @@ export function LectureRating({
         </div>
       )}
 
-      <Button
-        onClick={hasRated ? onClose : submitRating}
-        disabled={!hasRated && (rating === 0 || loading)}
-        className="w-full"
-      >
-        {loading ? 'Submitting...' : hasRated ? 'Close' : 'Submit Rating'}
-      </Button>
+      <div className="flex flex-col gap-2">
+        <Button
+          onClick={hasRated ? onClose : submitRating}
+          disabled={!hasRated && (rating === 0 || loading)}
+          className="w-full"
+        >
+          {loading ? 'Submitting...' : hasRated ? 'Close' : 'Submit Rating'}
+        </Button>
+        {isModalOpen && !mandatory && !hasRated && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            disabled={loading}
+            className="w-full text-muted-foreground"
+          >
+            Later
+          </Button>
+        )}
+      </div>
     </div>
   );
 
-  // Modal mode for mandatory ratings
+  // Modal mode
   if (isModalOpen) {
+    const canDismiss = !mandatory || hasRated;
     return (
-      <Dialog open={isModalOpen} onOpenChange={() => {}}>
-        <DialogContent 
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(open) => {
+          if (!open && canDismiss && onClose) onClose();
+        }}
+      >
+        <DialogContent
           className="sm:max-w-md"
           onKeyDown={handleKeyPress}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => { if (!canDismiss) e.preventDefault(); }}
+          onInteractOutside={(e) => { if (!canDismiss) e.preventDefault(); }}
         >
           <DialogHeader>
             <DialogTitle className="text-center text-xl font-semibold">
