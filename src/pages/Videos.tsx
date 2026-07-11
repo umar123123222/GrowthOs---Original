@@ -235,7 +235,10 @@ const Videos = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold mb-2 text-foreground">Available Lessons</h1>
+            <div className="flex items-center gap-3 flex-wrap mb-2">
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Available Lessons</h1>
+              <PendingFeedbackChip />
+            </div>
             <p className="text-muted-foreground text-sm sm:text-base">
               Watch lessons and complete assignments to track your progress
             </p>
