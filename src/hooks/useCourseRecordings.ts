@@ -320,6 +320,7 @@ export function useCourseRecordings(courseId: string | null): UseCourseRecording
             current.isUnlocked = false;
             current.lockReason = 'previous_lesson_not_rated';
             current.blockingLessonTitle = pred.recording_title;
+            current.blockingLessonId = pred.id;
             break;
           }
         }
