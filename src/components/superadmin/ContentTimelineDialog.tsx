@@ -577,10 +577,20 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl w-[95vw] max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             <Clock className="w-5 h-5" />
             Content Timeline - {entityName}
+            <Badge variant={type === 'pathway' ? 'default' : 'secondary'} className="text-[10px] uppercase tracking-wide">
+              {type === 'pathway'
+                ? `Editing: Pathway drip (${entityName})`
+                : `Editing: Course-only drip (${entityName})`}
+            </Badge>
           </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            {type === 'pathway'
+              ? 'Changes apply only to students enrolled through this pathway. Other pathways and standalone course enrollments are unaffected.'
+              : 'Changes apply only to students enrolled directly in this course (no pathway). Pathway-scoped drip values are unaffected.'}
+          </p>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
