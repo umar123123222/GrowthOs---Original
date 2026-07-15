@@ -302,6 +302,14 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         return `Student suspended${data.student_name ? `: ${data.student_name}` : ''}`;
       case 'scheduled_suspension_created':
         return `Suspension scheduled${data.schedule_suspend_date ? ` for ${new Date(data.schedule_suspend_date).toLocaleDateString()}` : ''}`;
+      case 'drip_override_updated': {
+        const n = data.next || {};
+        if (!n.drip_override) return 'Drip override removed (uses default)';
+        return n.drip_enabled
+          ? 'Drip override: ENABLED (content unlocks over time)'
+          : 'Drip override: DISABLED (all content available immediately)';
+      }
+
       case 'page_visit': {
         const page: string = data.page || '/';
         if (page.startsWith('/video-player')) {
