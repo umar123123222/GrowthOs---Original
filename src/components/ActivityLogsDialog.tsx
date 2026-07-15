@@ -45,14 +45,18 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   const [activityFilter, setActivityFilter] = useState('all');
   const [dateRange, setDateRange] = useState('7days');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [pageSize, setPageSize] = useState(500);
+  const [hasMore, setHasMore] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
     if (isOpen) {
-      fetchLogs();
+      setPageSize(500);
+      fetchLogs(500);
     }
   }, [isOpen, dateRange, roleFilter, activityFilter]);
+
 
   const fetchLogs = async () => {
     if (!user) return;
