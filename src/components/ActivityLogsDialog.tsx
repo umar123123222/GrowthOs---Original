@@ -58,7 +58,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   }, [isOpen, dateRange, roleFilter, activityFilter]);
 
 
-  const fetchLogs = async () => {
+  const fetchLogs = async (limit: number = pageSize) => {
     if (!user) return;
 
     // Only superadmins, admins, and enrollment managers can access activity logs
@@ -73,7 +73,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         .from('admin_logs')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(500);
+        .limit(limit);
+
 
       // Filter by specific user if userId is provided
       if (userId) {
