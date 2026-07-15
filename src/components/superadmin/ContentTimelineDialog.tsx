@@ -860,16 +860,22 @@ interface SortableRecordingRowProps {
   currentValue: number | null;
   isEdited: boolean;
   isReordered: boolean;
+  scope: 'course' | 'pathway';
   onDripDaysChange: (id: string, value: string) => void;
+  onReset: (rec: RecordingItem) => void;
 }
 
-function SortableRecordingRow({ rec, displayOrder, currentValue, isEdited, isReordered, onDripDaysChange }: SortableRecordingRowProps) {
+function SortableRecordingRow({ rec, displayOrder, currentValue, isEdited, isReordered, scope, onDripDaysChange, onReset }: SortableRecordingRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: rec.id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+  const tierLabel = rec.has_override
+    ? (scope === 'pathway' ? 'Pathway override' : 'Course override')
+    : 'Default';
+  const tierVariant: 'default' | 'secondary' | 'outline' = rec.has_override ? 'default' : 'outline';
   return (
     <div
       ref={setNodeRef}
@@ -889,6 +895,9 @@ function SortableRecordingRow({ rec, displayOrder, currentValue, isEdited, isReo
         {displayOrder}
       </span>
       <span className="text-sm flex-1 truncate">{rec.recording_title || 'Untitled'}</span>
+      <Badge variant={tierVariant} className="text-[10px] shrink-0" title={rec.has_override ? `Default is ${rec.default_drip_days ?? 0} days` : undefined}>
+        {tierLabel}
+      </Badge>
       {rec.duration_min != null && (
         <span className="text-xs text-muted-foreground shrink-0">
           {rec.duration_min}m
@@ -905,6 +914,17 @@ function SortableRecordingRow({ rec, displayOrder, currentValue, isEdited, isReo
         />
         <span className="text-xs text-muted-foreground">days</span>
       </div>
+      {rec.has_override && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={() => onReset(rec)}
+          title={`Reset to default (${rec.default_drip_days ?? 0} days)`}
+        >
+          Reset
+        </Button>
+      )}
     </div>
   );
 }
