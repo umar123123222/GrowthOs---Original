@@ -206,6 +206,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         });
 
       setLogs(logsWithUsers);
+      setHasMore((data || []).length >= limit);
+
     } catch (error) {
       logger.error('Error fetching activity logs:', error);
       toast({
