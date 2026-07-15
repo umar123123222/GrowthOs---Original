@@ -1941,17 +1941,16 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
                 </PopoverContent>
               </Popover>
             )}
-            <Select value={selectedBatch} onValueChange={setSelectedBatch}>
-              <SelectTrigger className="w-[200px] h-8 text-xs">
-                <SelectValue placeholder="Filter by batch" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All Batches</SelectItem>
-                {batchesForDropdown.map(b => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <BatchPicker
+              mode="single"
+              batches={batches}
+              courses={courses}
+              value={selectedBatch}
+              onChange={setSelectedBatch}
+              placeholder="Filter by batch"
+              includeAll
+              width="w-[220px]"
+            />
           </div>
         </div>
       </CardHeader>
