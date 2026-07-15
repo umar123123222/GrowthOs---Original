@@ -23,6 +23,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { TablePager } from '@/components/common/TablePager';
 import { HostMentorPicker } from './HostMentorPicker';
+import { BatchPicker } from './BatchPicker';
 
 interface SuccessSession {
   id: string;
