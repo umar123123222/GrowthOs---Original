@@ -408,8 +408,25 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       );
     }
 
+    if (log.action === 'drip_override_updated') {
+      const prev = data.previous || {};
+      const next = data.next || {};
+      const describe = (o: any) => {
+        if (!o?.drip_override) return 'Default (no override)';
+        return o.drip_enabled ? 'Override → Drip enabled' : 'Override → Drip disabled';
+      };
+      return (
+        <div className="space-y-0.5 text-xs">
+          <div>From: <span className="line-through opacity-70">{describe(prev)}</span></div>
+          <div>To: <span className="font-medium text-violet-700">{describe(next)}</span></div>
+          {performerName && <div>By: <span className="font-medium">{performerName}</span></div>}
+        </div>
+      );
+    }
+
     return null;
   };
+
 
 
 
