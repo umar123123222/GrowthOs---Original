@@ -793,9 +793,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                 size="sm"
                 disabled={loading}
                 onClick={() => {
-                  const next = pageSize + 500;
-                  setPageSize(next);
-                  fetchLogs(next);
+                  fetchLogs({ append: true });
                 }}
               >
                 {loading ? 'Loading…' : 'Load 500 more'}
