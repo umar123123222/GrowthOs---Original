@@ -108,14 +108,36 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
       .in('module', moduleIds)
       .order('sequence_order', { ascending: true });
 
-    return (lessons || []).map(l => {
+    if (!lessons?.length) return [];
+
+    // Per-context drip resolution:
+    //  - pathway view: read (pathway_id, course_id, lesson_id) overrides
+    //  - course view:  read (pathway_id IS NULL, course_id, lesson_id) overrides
+    const lessonIds = lessons.map(l => l.id);
+    let overrideMap = new Map<string, number>();
+    const overrideQuery = supabase
+      .from('lesson_drip_overrides' as any)
+      .select('lesson_id, drip_days, pathway_id, course_id')
+      .in('lesson_id', lessonIds)
+      .eq('course_id', courseId);
+
+    const { data: overrides } = type === 'pathway'
+      ? await overrideQuery.eq('pathway_id', entityId)
+      : await overrideQuery.is('pathway_id', null);
+
+    for (const o of (overrides as any[] | null) || []) {
+      overrideMap.set(o.lesson_id, o.drip_days);
+    }
+
+    return lessons.map(l => {
       const mod = modules.find(m => m.id === l.module);
+      const effectiveDrip = overrideMap.has(l.id) ? overrideMap.get(l.id)! : l.drip_days;
       return {
         id: l.id,
         recording_title: l.recording_title,
         sequence_order: l.sequence_order,
         duration_min: l.duration_min,
-        drip_days: l.drip_days,
+        drip_days: effectiveDrip,
         module_id: l.module,
         module_title: mod?.title || 'Unknown Module',
         course_id: courseId,
@@ -285,13 +307,52 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     if (!hasChanges) return;
     setSaving(true);
     try {
-      // Save recording drip days
+      // Save recording drip days as per-context OVERRIDES.
+      // We never touch available_lessons.drip_days from this dialog —
+      // that column stays as the global fallback so existing students
+      // resolving to the default remain unaffected.
       for (const [id, drip_days] of Object.entries(editedDripDays)) {
-        const { error } = await supabase
-          .from('available_lessons')
-          .update({ drip_days })
-          .eq('id', id);
-        if (error) throw error;
+        const rec = recordings.find(r => r.id === id);
+        const courseIdForLesson = rec?.course_id;
+        if (!courseIdForLesson) continue;
+
+        const pathwayIdForOverride = type === 'pathway' ? entityId : null;
+
+        if (drip_days === null) {
+          // Clearing the value = remove the override so the fallback applies.
+          const del = supabase
+            .from('lesson_drip_overrides' as any)
+            .delete()
+            .eq('lesson_id', id)
+            .eq('course_id', courseIdForLesson);
+          const { error } = pathwayIdForOverride
+            ? await del.eq('pathway_id', pathwayIdForOverride)
+            : await del.is('pathway_id', null);
+          if (error) throw error;
+        } else {
+          // Upsert. Two partial unique indexes back this: one for pathway
+          // rows and one for course-only rows. We do a manual
+          // delete-then-insert to keep it simple across both cases.
+          const del = supabase
+            .from('lesson_drip_overrides' as any)
+            .delete()
+            .eq('lesson_id', id)
+            .eq('course_id', courseIdForLesson);
+          const delRes = pathwayIdForOverride
+            ? await del.eq('pathway_id', pathwayIdForOverride)
+            : await del.is('pathway_id', null);
+          if (delRes.error) throw delRes.error;
+
+          const { error: insErr } = await supabase
+            .from('lesson_drip_overrides' as any)
+            .insert({
+              lesson_id: id,
+              course_id: courseIdForLesson,
+              pathway_id: pathwayIdForOverride,
+              drip_days,
+            } as any);
+          if (insErr) throw insErr;
+        }
       }
       // Save session drip days, titles, and auto-calculate schedule_date
       for (const [id, drip_days] of Object.entries(editedSessionDripDays)) {
