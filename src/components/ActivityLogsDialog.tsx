@@ -69,33 +69,50 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
 
     setLoading(true);
     try {
-      let query = supabase
-        .from('admin_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(limit);
+      const applyFilters = (q: any) => {
+        if (dateRange !== 'all') {
+          const days = parseInt(dateRange.replace('days', ''));
+          const startDate = new Date();
+          startDate.setDate(startDate.getDate() - days);
+          q = q.gte('created_at', startDate.toISOString());
+        }
+        if (activityFilter !== 'all') {
+          q = q.eq('action', activityFilter);
+        }
+        return q;
+      };
 
-
-      // Filter by specific user if userId is provided
+      let data: any[] = [];
       if (userId) {
-        query = query.or(`performed_by.eq.${userId},data->>target_user_id.eq.${userId}`);
+        // Split into two indexed queries and merge — a single `.or()` with a
+        // JSON path filter (data->>target_user_id) causes statement timeouts
+        // on large admin_logs tables because it can't use an index.
+        const [byPerformer, byTarget] = await Promise.all([
+          applyFilters(
+            supabase.from('admin_logs').select('*').eq('performed_by', userId)
+          ).order('created_at', { ascending: false }).limit(limit),
+          applyFilters(
+            supabase.from('admin_logs').select('*').eq('data->>target_user_id', userId)
+          ).order('created_at', { ascending: false }).limit(limit),
+        ]);
+        if (byPerformer.error) throw byPerformer.error;
+        if (byTarget.error) throw byTarget.error;
+        const merged = new Map<string, any>();
+        [...(byPerformer.data || []), ...(byTarget.data || [])].forEach(row => {
+          merged.set(row.id, row);
+        });
+        data = Array.from(merged.values())
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, limit);
+      } else {
+        const { data: rows, error } = await applyFilters(
+          supabase.from('admin_logs').select('*')
+        ).order('created_at', { ascending: false }).limit(limit);
+        if (error) throw error;
+        data = rows || [];
       }
 
-      // Apply date filter
-      if (dateRange !== 'all') {
-        const days = parseInt(dateRange.replace('days', ''));
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - days);
-        query = query.gte('created_at', startDate.toISOString());
-      }
 
-      // Apply activity filter
-      if (activityFilter !== 'all') {
-        query = query.eq('action', activityFilter);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
 
       // Collect all unique user IDs (performers + targets)
       const performerIds = (data || []).map(l => l.performed_by).filter(Boolean) as string[];
