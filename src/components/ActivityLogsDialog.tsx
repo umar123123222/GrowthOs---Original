@@ -556,6 +556,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                   <SelectItem value="invoice_updated">Invoice Updated</SelectItem>
                   <SelectItem value="invoice_resent">Invoice Resent</SelectItem>
                   <SelectItem value="drip_override_updated">Drip Override Updated</SelectItem>
+                  <SelectItem value="success_session_scheduled">Success Session Created/Updated</SelectItem>
+                  <SelectItem value="success_session_deleted">Success Session Deleted</SelectItem>
 
                 </SelectContent>
               </Select>
