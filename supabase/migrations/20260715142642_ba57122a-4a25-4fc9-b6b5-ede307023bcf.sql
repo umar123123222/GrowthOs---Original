@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS idx_admin_logs_data_gin ON public.admin_logs USING gin (data jsonb_path_ops);
