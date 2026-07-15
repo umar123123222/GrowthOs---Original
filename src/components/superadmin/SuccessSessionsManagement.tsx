@@ -1200,86 +1200,17 @@ export function SuccessSessionsManagement() {
                         <Users2 className="w-3.5 h-3.5 text-muted-foreground" />
                         Target Batch
                       </label>
-                      <Popover open={batchPopoverOpen} onOpenChange={setBatchPopoverOpen}>
-                        <PopoverTrigger asChild>
-                          <Button variant="outline" className="w-full justify-between font-normal">
-                            <span className="truncate">
-                              {(() => {
-                                if (formData.batch_ids.includes('__all__')) return 'All Batches';
-                                const hasUnbatched = formData.batch_ids.includes('unbatched');
-                                const realIds = formData.batch_ids.filter(id => id !== 'unbatched');
-                                if (realIds.length === 0 && hasUnbatched) return 'Unbatched students';
-                                if (realIds.length === 1 && !hasUnbatched) {
-                                  return filteredBatches.find(b => b.id === realIds[0])?.name || realIds[0];
-                                }
-                                const parts: string[] = [];
-                                if (realIds.length > 0) parts.push(`${realIds.length} batch${realIds.length > 1 ? 'es' : ''}`);
-                                if (hasUnbatched) parts.push('Unbatched');
-                                return parts.join(' + ');
-                              })()}
-                            </span>
-                            <Users2 className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[260px] p-2 max-h-[240px] overflow-y-auto" align="start">
-                          <div className="space-y-1">
-                            {/* All Batches option */}
-                            <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
-                              <Checkbox
-                                checked={formData.batch_ids.includes('__all__')}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setFormData({ ...formData, batch_ids: ['__all__'] });
-                                  } else {
-                                    setFormData({ ...formData, batch_ids: [] });
-                                  }
-                                }}
-                              />
-                              <span className="font-medium">All Batches</span>
-                            </label>
-                            {/* Unbatched option */}
-                            <label className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
-                              <Checkbox
-                                checked={formData.batch_ids.includes('unbatched')}
-                                onCheckedChange={(checked) => {
-                                  if (formData.batch_ids.includes('__all__')) {
-                                    setFormData({ ...formData, batch_ids: checked ? ['unbatched'] : ['__all__'] });
-                                    return;
-                                  }
-                                  const without = formData.batch_ids.filter(id => id !== 'unbatched');
-                                  if (checked) {
-                                    setFormData({ ...formData, batch_ids: [...without, 'unbatched'] });
-                                  } else {
-                                    setFormData({ ...formData, batch_ids: without.length ? without : ['__all__'] });
-                                  }
-                                }}
-                              />
-                              <span>Unbatched students</span>
-                            </label>
-                            <div className="border-t my-1" />
-                            {filteredBatches.map((batch) => (
-                              <label key={batch.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer text-sm">
-                                <Checkbox
-                                  checked={formData.batch_ids.includes(batch.id)}
-                                  onCheckedChange={(checked) => {
-                                    if (formData.batch_ids.includes('__all__')) {
-                                      setFormData({ ...formData, batch_ids: checked ? [batch.id] : ['__all__'] });
-                                      return;
-                                    }
-                                    const without = formData.batch_ids.filter(id => id !== batch.id);
-                                    if (checked) {
-                                      setFormData({ ...formData, batch_ids: [...without, batch.id] });
-                                    } else {
-                                      setFormData({ ...formData, batch_ids: without.length ? without : ['__all__'] });
-                                    }
-                                  }}
-                                />
-                                <span>{batch.name}</span>
-                              </label>
-                            ))}
-                          </div>
-                        </PopoverContent>
-                      </Popover>
+                      <BatchPicker
+                        mode="multi"
+                        batches={filteredBatches}
+                        courses={courses}
+                        value={formData.batch_ids}
+                        onChange={(v) => setFormData({ ...formData, batch_ids: v as string[] })}
+                        placeholder="All Batches"
+                        includeAll
+                        includeUnbatched
+                        width="w-full"
+                      />
                     </div>
                   </div>
                   <div className="space-y-1.5">
