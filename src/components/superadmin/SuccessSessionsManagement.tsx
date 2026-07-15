@@ -1026,25 +1026,11 @@ export function SuccessSessionsManagement() {
                     </div>
                     <div className="space-y-1.5">
                       <label className="block text-xs font-medium text-foreground">Host / Mentor <span className="text-rose-500">*</span></label>
-                      <Select
+                      <HostMentorPicker
+                        users={users as any}
                         value={formData.mentor_id}
-                        onValueChange={(value) => setFormData({...formData, mentor_id: value})}
-                        required
-                      >
-                        <SelectTrigger className="bg-background">
-                          <SelectValue placeholder="Select a mentor, admin, or superadmin" />
-                        </SelectTrigger>
-                        <SelectContent className="bg-background border z-50 max-h-60">
-                          {users.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              <div className="flex flex-col">
-                                <span className="font-medium">{user.full_name}</span>
-                                <span className="text-xs text-muted-foreground">{user.email} • {user.role}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        onChange={(id) => setFormData({ ...formData, mentor_id: id })}
+                      />
                     </div>
                   </div>
                   <div className="space-y-1.5">
