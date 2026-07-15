@@ -208,6 +208,31 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     setEditedDripDays(prev => ({ ...prev, [recordingId]: numValue }));
   };
 
+  const handleResetToDefault = async (rec: RecordingItem) => {
+    if (!rec.course_id) return;
+    try {
+      const del = supabase
+        .from('lesson_drip_overrides' as any)
+        .delete()
+        .eq('lesson_id', rec.id)
+        .eq('course_id', rec.course_id);
+      const { error } = type === 'pathway'
+        ? await del.eq('pathway_id', entityId)
+        : await del.is('pathway_id', null);
+      if (error) throw error;
+      toast({ title: 'Reset', description: 'Reverted to default drip days.' });
+      setEditedDripDays(prev => {
+        const next = { ...prev };
+        delete next[rec.id];
+        return next;
+      });
+      await fetchAll();
+    } catch (error) {
+      logger.error('Error resetting override:', error);
+      toast({ title: 'Error', description: 'Failed to reset override', variant: 'destructive' });
+    }
+  };
+
   const handleSessionDripDaysChange = (sessionId: string, value: string) => {
     const numValue = value === '' ? null : parseInt(value);
     setEditedSessionDripDays(prev => ({ ...prev, [sessionId]: numValue }));
