@@ -311,6 +311,17 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
           ? 'Drip override: ENABLED (content unlocks over time)'
           : 'Drip override: DISABLED (all content available immediately)';
       }
+      case 'success_session_scheduled': {
+        const title = data.session_title || 'Untitled session';
+        const when = data.session_date ? ` on ${new Date(data.session_date).toLocaleString()}` : '';
+        if (data.action === 'updated') return `Success session updated: ${title}${when}`;
+        return `Success session created: ${title}${when}`;
+      }
+      case 'success_session_deleted': {
+        const title = data.session_title || 'Untitled session';
+        const when = data.session_date ? ` (was scheduled ${new Date(data.session_date).toLocaleString()})` : '';
+        return `Success session deleted: ${title}${when}`;
+      }
 
       case 'page_visit': {
         const page: string = data.page || '/';
