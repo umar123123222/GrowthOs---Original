@@ -1449,6 +1449,58 @@ export type Database = {
           },
         ]
       }
+      lesson_drip_overrides: {
+        Row: {
+          course_id: string
+          created_at: string
+          drip_days: number
+          id: string
+          lesson_id: string
+          pathway_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          drip_days: number
+          id?: string
+          lesson_id: string
+          pathway_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          drip_days?: number
+          id?: string
+          lesson_id?: string
+          pathway_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_drip_overrides_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_drip_overrides_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "available_lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_drip_overrides_pathway_id_fkey"
+            columns: ["pathway_id"]
+            isOneToOne: false
+            referencedRelation: "learning_pathways"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mentor_course_assignments: {
         Row: {
           course_id: string | null
@@ -3521,6 +3573,10 @@ export type Database = {
       }
       get_current_user_role: { Args: never; Returns: string }
       get_default_course_id: { Args: never; Returns: string }
+      get_effective_drip_days: {
+        Args: { p_course_id: string; p_lesson_id: string; p_pathway_id: string }
+        Returns: number
+      }
       get_inactive_students: {
         Args: { days_threshold?: number }
         Returns: {
