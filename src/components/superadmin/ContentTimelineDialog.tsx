@@ -31,6 +31,8 @@ interface RecordingItem {
   course_id: string | null;
   course_title: string;
   step_number: number | null;
+  has_override: boolean;
+  default_drip_days: number | null;
 }
 
 interface SessionItem {
@@ -131,7 +133,8 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
 
     return lessons.map(l => {
       const mod = modules.find(m => m.id === l.module);
-      const effectiveDrip = overrideMap.has(l.id) ? overrideMap.get(l.id)! : l.drip_days;
+      const hasOverride = overrideMap.has(l.id);
+      const effectiveDrip = hasOverride ? overrideMap.get(l.id)! : l.drip_days;
       return {
         id: l.id,
         recording_title: l.recording_title,
@@ -143,6 +146,8 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
         course_id: courseId,
         course_title: courseTitle || entityName,
         step_number: stepNumber ?? null,
+        has_override: hasOverride,
+        default_drip_days: l.drip_days,
       };
     });
   };
@@ -201,6 +206,31 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
   const handleDripDaysChange = (recordingId: string, value: string) => {
     const numValue = value === '' ? null : parseInt(value);
     setEditedDripDays(prev => ({ ...prev, [recordingId]: numValue }));
+  };
+
+  const handleResetToDefault = async (rec: RecordingItem) => {
+    if (!rec.course_id) return;
+    try {
+      const del = supabase
+        .from('lesson_drip_overrides' as any)
+        .delete()
+        .eq('lesson_id', rec.id)
+        .eq('course_id', rec.course_id);
+      const { error } = type === 'pathway'
+        ? await del.eq('pathway_id', entityId)
+        : await del.is('pathway_id', null);
+      if (error) throw error;
+      toast({ title: 'Reset', description: 'Reverted to default drip days.' });
+      setEditedDripDays(prev => {
+        const next = { ...prev };
+        delete next[rec.id];
+        return next;
+      });
+      await fetchAll();
+    } catch (error) {
+      logger.error('Error resetting override:', error);
+      toast({ title: 'Error', description: 'Failed to reset override', variant: 'destructive' });
+    }
   };
 
   const handleSessionDripDaysChange = (sessionId: string, value: string) => {
@@ -572,10 +602,20 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl w-[95vw] max-h-[85vh] flex flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
             <Clock className="w-5 h-5" />
             Content Timeline - {entityName}
+            <Badge variant={type === 'pathway' ? 'default' : 'secondary'} className="text-[10px] uppercase tracking-wide">
+              {type === 'pathway'
+                ? `Editing: Pathway drip (${entityName})`
+                : `Editing: Course-only drip (${entityName})`}
+            </Badge>
           </DialogTitle>
+          <p className="text-xs text-muted-foreground mt-1">
+            {type === 'pathway'
+              ? 'Changes apply only to students enrolled through this pathway. Other pathways and standalone course enrollments are unaffected.'
+              : 'Changes apply only to students enrolled directly in this course (no pathway). Pathway-scoped drip values are unaffected.'}
+          </p>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -658,7 +698,9 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                                 currentValue={currentValue}
                                 isEdited={isEdited}
                                 isReordered={isReordered}
+                                scope={type}
                                 onDripDaysChange={handleDripDaysChange}
+                                onReset={handleResetToDefault}
                               />
                             );
                           })}
@@ -818,16 +860,22 @@ interface SortableRecordingRowProps {
   currentValue: number | null;
   isEdited: boolean;
   isReordered: boolean;
+  scope: 'course' | 'pathway';
   onDripDaysChange: (id: string, value: string) => void;
+  onReset: (rec: RecordingItem) => void;
 }
 
-function SortableRecordingRow({ rec, displayOrder, currentValue, isEdited, isReordered, onDripDaysChange }: SortableRecordingRowProps) {
+function SortableRecordingRow({ rec, displayOrder, currentValue, isEdited, isReordered, scope, onDripDaysChange, onReset }: SortableRecordingRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: rec.id });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+  const tierLabel = rec.has_override
+    ? (scope === 'pathway' ? 'Pathway override' : 'Course override')
+    : 'Default';
+  const tierVariant: 'default' | 'secondary' | 'outline' = rec.has_override ? 'default' : 'outline';
   return (
     <div
       ref={setNodeRef}
@@ -847,6 +895,9 @@ function SortableRecordingRow({ rec, displayOrder, currentValue, isEdited, isReo
         {displayOrder}
       </span>
       <span className="text-sm flex-1 truncate">{rec.recording_title || 'Untitled'}</span>
+      <Badge variant={tierVariant} className="text-[10px] shrink-0" title={rec.has_override ? `Default is ${rec.default_drip_days ?? 0} days` : undefined}>
+        {tierLabel}
+      </Badge>
       {rec.duration_min != null && (
         <span className="text-xs text-muted-foreground shrink-0">
           {rec.duration_min}m
@@ -863,6 +914,17 @@ function SortableRecordingRow({ rec, displayOrder, currentValue, isEdited, isReo
         />
         <span className="text-xs text-muted-foreground">days</span>
       </div>
+      {rec.has_override && (
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-7 px-2 text-xs shrink-0 text-muted-foreground hover:text-foreground"
+          onClick={() => onReset(rec)}
+          title={`Reset to default (${rec.default_drip_days ?? 0} days)`}
+        >
+          Reset
+        </Button>
+      )}
     </div>
   );
 }
