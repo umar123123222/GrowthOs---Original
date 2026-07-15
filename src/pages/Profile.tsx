@@ -49,17 +49,26 @@ const Profile = () => {
   // Fetch active batch for the student
   useEffect(() => {
     let cancelled = false;
-    const fetchBatch = async () => {
+    const fetchStudentAndBatch = async () => {
       if (!user?.id) return;
       try {
+        const { data: stu } = await supabase
+          .from('students')
+          .select('id, student_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (cancelled) return;
+        setStudentCode(stu?.student_id || null);
+        if (!stu?.id) { setBatchName(null); return; }
+
+        // course_enrollments.student_id references public.students.id (not auth user id)
         const { data: enr } = await supabase
           .from('course_enrollments')
-          .select('batch_id')
-          .eq('student_id', user.id)
-          .eq('status', 'active')
-          .not('batch_id', 'is', null)
-          .limit(1);
-        const batchId = enr?.[0]?.batch_id;
+          .select('batch_id, status')
+          .eq('student_id', stu.id)
+          .not('batch_id', 'is', null);
+        const active = enr?.find(e => e.status === 'active') || enr?.[0];
+        const batchId = active?.batch_id;
         if (!batchId) { if (!cancelled) setBatchName(null); return; }
         const { data: batch } = await supabase
           .from('batches')
@@ -68,26 +77,13 @@ const Profile = () => {
           .maybeSingle();
         if (!cancelled) setBatchName(batch?.name || null);
       } catch {
-        if (!cancelled) setBatchName(null);
+        if (!cancelled) { setBatchName(null); }
       }
     };
-    fetchBatch();
-    const fetchStudentCode = async () => {
-      if (!user?.id) return;
-      try {
-        const { data } = await supabase
-          .from('students')
-          .select('student_id')
-          .eq('user_id', user.id)
-          .maybeSingle();
-        if (!cancelled) setStudentCode(data?.student_id || null);
-      } catch {
-        if (!cancelled) setStudentCode(null);
-      }
-    };
-    fetchStudentCode();
+    fetchStudentAndBatch();
     return () => { cancelled = true; };
   }, [user?.id]);
+
 
   const updateProfile = async () => {
     if (!user?.id) {
