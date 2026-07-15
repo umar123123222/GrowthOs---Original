@@ -816,12 +816,29 @@ export function SuccessSessionsManagement() {
     if (!confirm('Are you sure you want to delete this session?')) return;
 
     try {
+      // Snapshot session details for the activity log before deletion
+      const sessionSnapshot = sessions.find(s => s.id === sessionId);
+
       const { error } = await supabase
         .from('success_sessions')
         .delete()
         .eq('id', sessionId);
 
       if (error) throw error;
+
+      if (authUser?.id) {
+        logUserActivity({
+          user_id: authUser.id,
+          activity_type: 'success_session_deleted',
+          reference_id: sessionId,
+          metadata: {
+            session_title: sessionSnapshot?.title,
+            session_date: sessionSnapshot?.start_time || sessionSnapshot?.schedule_date,
+            mentor_name: sessionSnapshot?.mentor_name,
+            deleted_by: authUser.full_name || 'Admin',
+          }
+        });
+      }
 
       toast({
         title: "Success",
