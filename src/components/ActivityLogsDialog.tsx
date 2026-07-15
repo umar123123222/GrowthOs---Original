@@ -757,11 +757,27 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
           </ScrollArea>
 
           {/* Footer */}
-          <div className="flex-shrink-0 px-6 py-3 bg-muted/40 border-t border-border flex items-center justify-between">
+          <div className="flex-shrink-0 px-6 py-3 bg-muted/40 border-t border-border flex items-center justify-between gap-3">
             <div className="text-xs text-muted-foreground">
               Showing <span className="font-semibold text-foreground">{filteredLogs.length}</span> of <span className="font-semibold text-foreground">{logs.length}</span> entries
+              {hasMore && <span className="ml-1">(more available)</span>}
             </div>
+            {hasMore && (
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading}
+                onClick={() => {
+                  const next = pageSize + 500;
+                  setPageSize(next);
+                  fetchLogs(next);
+                }}
+              >
+                {loading ? 'Loading…' : 'Load 500 more'}
+              </Button>
+            )}
           </div>
+
         </DialogContent>
       </Dialog>
     </RoleGuard>
