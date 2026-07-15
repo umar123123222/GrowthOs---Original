@@ -31,6 +31,8 @@ interface RecordingItem {
   course_id: string | null;
   course_title: string;
   step_number: number | null;
+  has_override: boolean;
+  default_drip_days: number | null;
 }
 
 interface SessionItem {
