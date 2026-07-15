@@ -1946,7 +1946,7 @@ function UpcomingSessionsPreview({ sessions, courses, batches, batchCourseMap, p
               batches={batches}
               courses={courses}
               value={selectedBatch}
-              onChange={setSelectedBatch}
+              onChange={(v) => setSelectedBatch(v as string)}
               placeholder="Filter by batch"
               includeAll
               width="w-[220px]"
