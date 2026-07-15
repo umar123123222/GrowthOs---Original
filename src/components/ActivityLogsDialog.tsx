@@ -270,6 +270,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       invoice_created: 'bg-blue-100 text-blue-800',
       invoice_updated: 'bg-sky-100 text-sky-800',
       invoice_resent: 'bg-orange-100 text-orange-800',
+      drip_override_updated: 'bg-violet-100 text-violet-800',
+
     };
     return activityColors[activity] || 'bg-gray-100 text-gray-800';
   };
