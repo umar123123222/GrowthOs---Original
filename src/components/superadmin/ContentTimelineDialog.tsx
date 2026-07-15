@@ -698,7 +698,9 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                                 currentValue={currentValue}
                                 isEdited={isEdited}
                                 isReordered={isReordered}
+                                scope={type}
                                 onDripDaysChange={handleDripDaysChange}
+                                onReset={handleResetToDefault}
                               />
                             );
                           })}
