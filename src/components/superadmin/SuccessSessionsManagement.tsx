@@ -137,7 +137,6 @@ export function SuccessSessionsManagement() {
     course_id: '__all__',
     batch_ids: ['__all__']
   });
-  const [batchPopoverOpen, setBatchPopoverOpen] = useState(false);
   const [publishing, setPublishing] = useState<string | null>(null);
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
   const formSubmittedRef = useRef(false);
