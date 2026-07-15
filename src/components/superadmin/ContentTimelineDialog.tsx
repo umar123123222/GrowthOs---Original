@@ -108,14 +108,36 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
       .in('module', moduleIds)
       .order('sequence_order', { ascending: true });
 
-    return (lessons || []).map(l => {
+    if (!lessons?.length) return [];
+
+    // Per-context drip resolution:
+    //  - pathway view: read (pathway_id, course_id, lesson_id) overrides
+    //  - course view:  read (pathway_id IS NULL, course_id, lesson_id) overrides
+    const lessonIds = lessons.map(l => l.id);
+    let overrideMap = new Map<string, number>();
+    const overrideQuery = supabase
+      .from('lesson_drip_overrides' as any)
+      .select('lesson_id, drip_days, pathway_id, course_id')
+      .in('lesson_id', lessonIds)
+      .eq('course_id', courseId);
+
+    const { data: overrides } = type === 'pathway'
+      ? await overrideQuery.eq('pathway_id', entityId)
+      : await overrideQuery.is('pathway_id', null);
+
+    for (const o of (overrides as any[] | null) || []) {
+      overrideMap.set(o.lesson_id, o.drip_days);
+    }
+
+    return lessons.map(l => {
       const mod = modules.find(m => m.id === l.module);
+      const effectiveDrip = overrideMap.has(l.id) ? overrideMap.get(l.id)! : l.drip_days;
       return {
         id: l.id,
         recording_title: l.recording_title,
         sequence_order: l.sequence_order,
         duration_min: l.duration_min,
-        drip_days: l.drip_days,
+        drip_days: effectiveDrip,
         module_id: l.module,
         module_title: mod?.title || 'Unknown Module',
         course_id: courseId,
