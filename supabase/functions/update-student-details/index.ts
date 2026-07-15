@@ -175,6 +175,13 @@ serve(async (req) => {
 
     // Update enrollment access settings and discount if provided
     if (enrollment_id) {
+      // Fetch existing enrollment values so we can detect drip/sequential changes
+      const { data: existingEnrollment } = await supabaseAdmin
+        .from('course_enrollments')
+        .select('drip_override, drip_enabled, sequential_override, sequential_enabled, course_id, pathway_id')
+        .eq('id', enrollment_id)
+        .single();
+
       const enrollmentUpdate: Record<string, any> = {
         updated_at: new Date().toISOString()
       };
@@ -221,6 +228,56 @@ serve(async (req) => {
         // Don't throw - this is non-critical
       } else {
         console.log('✅ Successfully updated enrollment settings');
+
+        // Log drip override change to admin_logs so it appears in Activity Logs
+        try {
+          if (drip_override !== undefined && existingEnrollment) {
+            const prevOverride = !!existingEnrollment.drip_override;
+            const prevEnabled = existingEnrollment.drip_enabled;
+            const nextOverride = !!drip_override;
+            const nextEnabled = nextOverride ? !!drip_enabled : null;
+
+            const changed =
+              prevOverride !== nextOverride ||
+              (nextOverride && prevEnabled !== nextEnabled);
+
+            if (changed) {
+              const stateLabel = !nextOverride
+                ? 'Reverted to default (uses course/global drip settings)'
+                : nextEnabled
+                  ? 'Drip ENABLED (content unlocks over time)'
+                  : 'Drip DISABLED (all content available immediately)';
+
+              await supabaseAdmin.from('admin_logs').insert({
+                entity_type: 'user',
+                entity_id: user_id,
+                action: 'drip_override_updated',
+                description: `Content drip override updated: ${stateLabel}`,
+                performed_by: user.id,
+                data: {
+                  target_user_id: user_id,
+                  enrollment_id,
+                  course_id: existingEnrollment.course_id,
+                  pathway_id: existingEnrollment.pathway_id,
+                  previous: {
+                    drip_override: prevOverride,
+                    drip_enabled: prevEnabled,
+                  },
+                  next: {
+                    drip_override: nextOverride,
+                    drip_enabled: nextEnabled,
+                  },
+                  state_label: stateLabel,
+                },
+              });
+              console.log('📝 Logged drip override change to admin_logs');
+            }
+          }
+        } catch (logErr) {
+          console.error('Failed to log drip override change:', logErr);
+          // non-critical
+        }
+
 
         // If batch was assigned, notify student about missed session recordings
         if (batch_id) {
