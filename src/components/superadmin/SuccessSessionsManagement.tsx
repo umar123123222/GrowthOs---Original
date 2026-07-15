@@ -1387,18 +1387,17 @@ export function SuccessSessionsManagement() {
                 ))}
               </SelectContent>
             </Select>
-            <Select value={filterBatch} onValueChange={setFilterBatch}>
-              <SelectTrigger className="w-[150px] h-9 text-sm">
-                <SelectValue placeholder="All Batches" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All Batches</SelectItem>
-                <SelectItem value="unbatched">Unbatched students</SelectItem>
-                {(filterCourse !== '__all__' ? batches.filter(b => b.course_id === filterCourse) : batches).map(b => (
-                  <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <BatchPicker
+              mode="single"
+              batches={filterCourse !== '__all__' ? batches.filter(b => b.course_id === filterCourse) : batches}
+              courses={courses}
+              value={filterBatch}
+              onChange={(v) => setFilterBatch(v as string)}
+              placeholder="All Batches"
+              includeAll
+              includeUnbatched
+              width="w-[180px]"
+            />
             <Select value={filterStatus} onValueChange={setFilterStatus}>
               <SelectTrigger className="w-[140px] h-9 text-sm">
                 <SelectValue placeholder="All Statuses" />
