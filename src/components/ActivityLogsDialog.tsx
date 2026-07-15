@@ -14,6 +14,8 @@ import { RoleGuard } from '@/components/RoleGuard';
 import { logger } from '@/lib/logger';
 import { cn } from '@/lib/utils';
 
+const ACTIVITY_LOG_PAGE_SIZE = 500;
+
 interface ActivityLog {
   id: string;
   entity_id: string;
@@ -45,20 +47,20 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   const [activityFilter, setActivityFilter] = useState('all');
   const [dateRange, setDateRange] = useState('7days');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [pageSize, setPageSize] = useState(500);
+  const [cursorCreatedAt, setCursorCreatedAt] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
 
   useEffect(() => {
     if (isOpen) {
-      setPageSize(500);
-      fetchLogs(500);
+      setCursorCreatedAt(null);
+      fetchLogs({ append: false });
     }
   }, [isOpen, dateRange, roleFilter, activityFilter]);
 
 
-  const fetchLogs = async (limit: number = pageSize) => {
+  const fetchLogs = async ({ append = false }: { append?: boolean } = {}) => {
     if (!user) return;
 
     // Only superadmins, admins, and enrollment managers can access activity logs
@@ -79,21 +81,25 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         if (activityFilter !== 'all') {
           q = q.eq('action', activityFilter);
         }
+        if (append && cursorCreatedAt) {
+          q = q.lt('created_at', cursorCreatedAt);
+        }
         return q;
       };
 
       let data: any[] = [];
+      const queryLimit = ACTIVITY_LOG_PAGE_SIZE + 1;
       if (userId) {
         // Split into two indexed queries and merge — a single `.or()` with a
-        // JSON path filter (data->>target_user_id) causes statement timeouts
-        // on large admin_logs tables because it can't use an index.
+        // JSON path filter causes statement timeouts on large admin_logs
+        // tables. JSON containment can use the admin_logs.data GIN index.
         const [byPerformer, byTarget] = await Promise.all([
           applyFilters(
             supabase.from('admin_logs').select('*').eq('performed_by', userId)
-          ).order('created_at', { ascending: false }).limit(limit),
+          ).order('created_at', { ascending: false }).limit(queryLimit),
           applyFilters(
-            supabase.from('admin_logs').select('*').eq('data->>target_user_id', userId)
-          ).order('created_at', { ascending: false }).limit(limit),
+            supabase.from('admin_logs').select('*').contains('data', { target_user_id: userId })
+          ).order('created_at', { ascending: false }).limit(queryLimit),
         ]);
         if (byPerformer.error) throw byPerformer.error;
         if (byTarget.error) throw byTarget.error;
@@ -103,26 +109,27 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         });
         data = Array.from(merged.values())
           .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, limit);
+          .slice(0, queryLimit);
       } else {
         const { data: rows, error } = await applyFilters(
           supabase.from('admin_logs').select('*')
-        ).order('created_at', { ascending: false }).limit(limit);
+        ).order('created_at', { ascending: false }).limit(queryLimit);
         if (error) throw error;
         data = rows || [];
       }
 
+      const pageRows = data.slice(0, ACTIVITY_LOG_PAGE_SIZE);
 
 
       // Collect all unique user IDs (performers + targets)
-      const performerIds = (data || []).map(l => l.performed_by).filter(Boolean) as string[];
-      const targetIds = (data || []).map(l => (l.data as any)?.target_user_id).filter(Boolean) as string[];
+      const performerIds = pageRows.map(l => l.performed_by).filter(Boolean) as string[];
+      const targetIds = pageRows.map(l => (l.data as any)?.target_user_id).filter(Boolean) as string[];
       const allUserIds = [...new Set([...performerIds, ...targetIds])];
 
       // Collect recording/session IDs to enrich legacy logs without titles
       const recordingIds = new Set<string>();
       const sessionIds = new Set<string>();
-      (data || []).forEach((l: any) => {
+      pageRows.forEach((l: any) => {
         const d = l.data || {};
         const isVideoAction = ['video_watched', 'video_opened'].includes(l.action);
         const isVideoPage = l.action === 'page_visit' && typeof d.page === 'string' && d.page.startsWith('/video-player');
@@ -183,7 +190,7 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
 
       const restrictSuperadmin = user.role === 'admin' || user.role === 'enrollment_manager';
 
-      const logsWithUsers = (data || [])
+      const logsWithUsers = pageRows
         .filter(log => {
           if (!restrictSuperadmin) return true;
           const performer = log.performed_by ? userMap.get(log.performed_by) : null;
@@ -222,8 +229,9 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
           };
         });
 
-      setLogs(logsWithUsers);
-      setHasMore((data || []).length >= limit);
+      setLogs(prev => append ? [...prev, ...logsWithUsers] : logsWithUsers);
+      setCursorCreatedAt(pageRows[pageRows.length - 1]?.created_at ?? null);
+      setHasMore(data.length > ACTIVITY_LOG_PAGE_SIZE);
 
     } catch (error) {
       logger.error('Error fetching activity logs:', error);
