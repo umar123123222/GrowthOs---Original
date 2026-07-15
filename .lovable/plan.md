@@ -1,63 +1,38 @@
-# How To Set Different Drip Days Per Context
+# Setting Drip Days for Client Acquisition Mastery (Course-Only Context)
 
-After the migration + UI changes ship, here's exactly how you'll set separate drip timings for the same lesson across different contexts.
+Since you opened the Content Timeline dialog from **Superadmin → Content → Courses tab → clock icon on Client Acquisition Mastery**, you're editing the **course-only** drip context.
 
-## Where you do it
+## What this means
 
-`ContentTimelineDialog` (the "Content Timeline" dialog opened from a Pathway, a Course, or the standalone Recordings admin view). It's the same dialog — behavior changes based on **where you opened it from**.
+- Any drip day you set here is saved to `lesson_drip_overrides` with `pathway_id = NULL`, `course_id = <Client Acquisition Mastery>`, `lesson_id = <lesson>`.
+- These values apply **only** to students who are enrolled directly in Client Acquisition Mastery (not through a pathway).
+- Students already in Pathway A or Pathway B who reach this course through their pathway are **not affected** — they use the pathway-scoped override row instead.
 
-## The 3 contexts
+## How to set the values
 
-| Opened from | What you're editing | Written to |
-|---|---|---|
-| Pathway → Course → Lesson | Drip days for that lesson **only when accessed via this pathway** | `lesson_drip_overrides(pathway_id, course_id, lesson_id)` |
-| Course → Lesson (no pathway) | Drip days for that lesson **when the course is enrolled standalone** | `lesson_drip_overrides(pathway_id=NULL, course_id, lesson_id)` |
-| Recordings admin (global default) | Global fallback for the lesson | `available_lessons.drip_days` |
+1. In the open dialog, locate each lesson row.
+2. Change the "Drip days" number to the desired value (e.g., Lesson 1 = 1, Lesson 2 = 3, Lesson 3 = 7).
+3. Click **Save**. Each row upserts into `lesson_drip_overrides` with `pathway_id = NULL`.
+4. To revert a lesson to the global `available_lessons.drip_days` default, click **Reset to default** on that row — this deletes the course-only override.
 
-## Example — your original scenario
+## Confirming the context in the UI
 
-Lesson: **Course A · Lesson 1**
+Right now the dialog title doesn't explicitly say "Course-only" vs "Pathway X". Proposed small UI addition (to be built in the same change):
 
-1. Open Pathway A → Course A → Timeline. Set Lesson 1 drip = **3 days**. Save.
-   → Row inserted: `(pathway_a, course_a, lesson_1, 3)`
-2. Open Pathway B → Course A → Timeline. Set Lesson 1 drip = **12 days**. Save.
-   → Row inserted: `(pathway_b, course_a, lesson_1, 12)`
-3. Open Course A (standalone) → Timeline. Set Lesson 1 drip = **1 day**. Save.
-   → Row inserted: `(NULL, course_a, lesson_1, 1)`
-
-Result at unlock time, per student:
-- Student in Pathway A → unlocks on day 3
-- Student in Pathway B → unlocks on day 12
-- Student with direct Course A enrollment → unlocks on day 1
-
-## Visual cues in the dialog
-
-Each lesson row shows:
-- The current effective value (number input)
-- A badge: **Pathway override** / **Course override** / **Default**
-- A **"Reset to default"** button — deletes the override row, falls back to the next tier
-
-## Resolution order (backend)
-
-When `get_sequential_unlock_status` computes an unlock date it does:
-
-```
-COALESCE(
-  pathway+course override,   -- most specific
-  course-only override,      -- standalone / cross-pathway
-  available_lessons.drip_days, -- global default
-  0
-)
-```
+- Add a **context badge** in the dialog header:
+  - "Editing: Course-only drip (Client Acquisition Mastery)" when opened from the Courses tab
+  - "Editing: Pathway A drip → Client Acquisition Mastery" when opened from a pathway
+- Add a per-row badge already planned: **Course override** / **Pathway override** / **Default** so you can see at a glance which tier the current value comes from.
 
 ## Existing students
 
-Backfill seeds `lesson_drip_overrides` with today's effective value for every active `(pathway, course, lesson)` enrollment, so **no student's unlock dates shift**. New overrides you set afterwards only apply going forward to that context.
+- Backfill (already in the shipped migration) seeded rows for every active enrollment, so today's unlock schedule is frozen.
+- New values you set now only change unlock dates for **future** direct enrollments in Client Acquisition Mastery. No existing student's dates shift.
 
-## What stays unchanged
+## What stays untouched
 
-- `available_lessons.drip_days` — still the global fallback
-- `success_sessions` — sessions still use fixed calendar dates, not drip
-- `course_enrollments`, `user_unlocks`, `batches` — untouched
+- Pathway A / Pathway B rows for the same lessons
+- `available_lessons.drip_days` global defaults
+- `success_sessions`, `course_enrollments`, `user_unlocks`, `batches`
 
-Approve to keep executing the already-proposed migration + UI wiring.
+Approve to add the context badge + per-row tier badges to `ContentTimelineDialog` so you always know which scope you're editing.
