@@ -133,7 +133,8 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
 
     return lessons.map(l => {
       const mod = modules.find(m => m.id === l.module);
-      const effectiveDrip = overrideMap.has(l.id) ? overrideMap.get(l.id)! : l.drip_days;
+      const hasOverride = overrideMap.has(l.id);
+      const effectiveDrip = hasOverride ? overrideMap.get(l.id)! : l.drip_days;
       return {
         id: l.id,
         recording_title: l.recording_title,
@@ -145,6 +146,8 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
         course_id: courseId,
         course_title: courseTitle || entityName,
         step_number: stepNumber ?? null,
+        has_override: hasOverride,
+        default_drip_days: l.drip_days,
       };
     });
   };
