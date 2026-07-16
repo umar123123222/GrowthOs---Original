@@ -332,7 +332,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         .from('students').select('id').eq('user_id', user.id).maybeSingle();
 
       let studentBatchId: string | undefined;
-      let studentCourseIds: string[] = [];
+      const courseEnrollments = new Map<string, Date>();
       if (studentData?.id) {
         const { data: enrollments } = await supabase
           .from('course_enrollments').select('batch_id, course_id, enrolled_at, status')
@@ -341,7 +341,13 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
 
         const rows = enrollments || [];
         studentBatchId = rows.find(r => r.batch_id)?.batch_id || undefined;
-        studentCourseIds = Array.from(new Set(rows.map(r => r.course_id).filter(Boolean))) as string[];
+        // Earliest enrolled_at per course (rows are asc by enrolled_at, so first wins).
+        for (const r of rows) {
+          if (!r.course_id || !r.enrolled_at) continue;
+          if (!courseEnrollments.has(r.course_id)) {
+            courseEnrollments.set(r.course_id, new Date(r.enrolled_at));
+          }
+        }
       }
 
       const { data: attendanceData, error: attendanceError } = await supabase
@@ -354,7 +360,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         setAttendance(attendanceData || []);
       }
       
-      await fetchSessions(studentBatchId, studentCourseIds);
+      await fetchSessions(studentBatchId, courseEnrollments);
     } catch (error) {
       safeLogger.error('Error fetching attendance:', error);
     } finally {
