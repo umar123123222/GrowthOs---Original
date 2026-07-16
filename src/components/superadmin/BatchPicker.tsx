@@ -67,7 +67,7 @@ export function BatchPicker({
   const realSelectedIds = selectedIds.filter(id => id !== ALL_VALUE && id !== UNBATCHED_VALUE);
 
   const sortedBatches = useMemo(() => {
-    return [...batches].sort((a, b) => a.name.localeCompare(b.name));
+    return [...batches].sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
   }, [batches]);
 
   const filteredBatches = useMemo(() => {
