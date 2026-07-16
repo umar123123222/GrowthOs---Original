@@ -213,7 +213,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
     return value.filter((item): item is string => typeof item === 'string' && item.length > 0);
   };
 
-  const fetchSessions = async (studentBatchId?: string, studentCourseIds: string[] = []) => {
+  const fetchSessions = async (studentBatchId?: string, courseEnrollments: Map<string, Date> = new Map()) => {
     safeLogger.info('fetchSessions called');
     try {
       const sessionSelect = `
@@ -240,24 +240,19 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         .order('start_time', { ascending: true });
 
       if (user?.role === 'student') {
-        // Server-side filter: include global sessions, batch-targeted sessions
-        // for the student's batch, and any session flagged for unbatched targeting.
-        // The client-side filter below then enforces the course match on unbatched.
-        const visibilityClauses = studentBatchId
-          ? [
-              `batch_id.eq.${studentBatchId}`,
-              `batch_ids.cs.${JSON.stringify([studentBatchId])}`,
-              'and(batch_id.is.null,batch_ids.is.null)',
-              'batch_ids.eq.[]',
-              `batch_ids.cs.${JSON.stringify(['unbatched'])}`,
-            ]
-          : [
-              'and(batch_id.is.null,batch_ids.is.null)',
-              'batch_ids.eq.[]',
-              `batch_ids.cs.${JSON.stringify(['unbatched'])}`,
-            ];
-
-        sessionsQuery = sessionsQuery.or(visibilityClauses.join(','));
+        if (studentBatchId) {
+          // Batched students: unchanged behavior — global + batch-targeted sessions.
+          const visibilityClauses = [
+            `batch_id.eq.${studentBatchId}`,
+            `batch_ids.cs.${JSON.stringify([studentBatchId])}`,
+            'and(batch_id.is.null,batch_ids.is.null)',
+            'batch_ids.eq.[]',
+          ];
+          sessionsQuery = sessionsQuery.or(visibilityClauses.join(','));
+        } else {
+          // Unbatched students: only sessions explicitly targeted at 'unbatched'.
+          sessionsQuery = sessionsQuery.filter('batch_ids', 'cs', JSON.stringify(['unbatched']));
+        }
       }
 
       const { data, error } = await sessionsQuery;
@@ -270,29 +265,26 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
 
       const now = new Date();
 
-      // Strict targeting: a session is visible only if
-      //  - it is global (no targeting), OR
-      //  - the student's batch is included in batch_ids, OR
-      //  - it targets 'unbatched' AND the student has no batch AND is enrolled in the session's course.
       const isVisibleToStudent = (session: LiveSession) => {
         const batchIds = normalizeBatchIds(session.batch_ids);
-        const isGlobalSession = (session.batch_id == null && session.batch_ids == null) || batchIds.length === 0;
 
-        if (isGlobalSession) return true;
-
-        const targetsUnbatched = batchIds.includes('unbatched');
-        const realTargets = batchIds.filter(id => id !== 'unbatched');
-
-        // Batched student: only match on their real batch id
+        // Batched student: unchanged logic (global sessions + batch match).
         if (studentBatchId) {
+          const isGlobalSession = (session.batch_id == null && session.batch_ids == null) || batchIds.length === 0;
+          if (isGlobalSession) return true;
           if (session.batch_id === studentBatchId) return true;
-          return realTargets.includes(studentBatchId);
+          return batchIds.filter(id => id !== 'unbatched').includes(studentBatchId);
         }
 
-        // Unbatched student: needs the 'unbatched' flag AND course enrollment
-        if (!targetsUnbatched) return false;
-        if (!session.course_id) return true; // unbatched targeting without a course — show to all unbatched
-        return studentCourseIds.includes(session.course_id);
+        // Unbatched student: strict rules.
+        // 1) Session must explicitly target 'unbatched'.
+        if (!batchIds.includes('unbatched')) return false;
+        // 2) Session must have a course, and student must be enrolled in it.
+        if (!session.course_id) return false;
+        const enrolledAt = courseEnrollments.get(session.course_id);
+        if (!enrolledAt) return false;
+        // 3) Session start must be strictly after enrollment date.
+        return new Date(session.start_time).getTime() > enrolledAt.getTime();
       };
 
       const visible = (data || []).filter(session => user?.role === 'student' ? isVisibleToStudent(session as LiveSession) : true) as LiveSession[];

@@ -1,38 +1,43 @@
-# Setting Drip Days for Client Acquisition Mastery (Course-Only Context)
+## Goal
 
-Since you opened the Content Timeline dialog from **Superadmin → Content → Courses tab → clock icon on Client Acquisition Mastery**, you're editing the **course-only** drip context.
+For unbatched students only, restrict Success Session visibility (upcoming, live, and recordings) to sessions that are:
+1. Explicitly targeted at unbatched students, AND
+2. In a course the student is enrolled in, AND
+3. Scheduled strictly after the student's enrollment date in that course.
 
-## What this means
+Batched students: no changes.
 
-- Any drip day you set here is saved to `lesson_drip_overrides` with `pathway_id = NULL`, `course_id = <Client Acquisition Mastery>`, `lesson_id = <lesson>`.
-- These values apply **only** to students who are enrolled directly in Client Acquisition Mastery (not through a pathway).
-- Students already in Pathway A or Pathway B who reach this course through their pathway are **not affected** — they use the pathway-scoped override row instead.
+## Targeting field (verified against schema)
 
-## How to set the values
+`success_sessions.batch_ids` (jsonb array) is the audience field. When the admin selects the "unbatched" audience, this array contains the sentinel string `'unbatched'` (confirmed via DB — rows exist with `batch_ids = ["unbatched"]`). `batch_id` (singular) and non-sentinel UUIDs in `batch_ids` are batch targets and must be hidden from unbatched students.
 
-1. In the open dialog, locate each lesson row.
-2. Change the "Drip days" number to the desired value (e.g., Lesson 1 = 1, Lesson 2 = 3, Lesson 3 = 7).
-3. Click **Save**. Each row upserts into `lesson_drip_overrides` with `pathway_id = NULL`.
-4. To revert a lesson to the global `available_lessons.drip_days` default, click **Reset to default** on that row — this deletes the course-only override.
+## Changes — `src/pages/LiveSessions.tsx` only
 
-## Confirming the context in the UI
+### 1. `fetchAttendance` — build per-course enrollment date map
+Replace the `studentCourseIds: string[]` derivation with a `Map<string, Date>` of `course_id → earliest enrolled_at` (from active `course_enrollments` rows for this student). Pass this map into `fetchSessions` in place of `studentCourseIds`.
 
-Right now the dialog title doesn't explicitly say "Course-only" vs "Pathway X". Proposed small UI addition (to be built in the same change):
+### 2. `fetchSessions` — server query for unbatched students
+For unbatched students (no `studentBatchId`), simplify the server `.or(...)` to fetch only sessions that could possibly match: rows where `batch_ids` contains `'unbatched'`. Drop the "global session" and "batch-targeting" clauses for this path — unbatched students should never see globally-untargeted or batch-targeted sessions per the new rule. Batched students keep the existing `.or(...)` shape unchanged.
 
-- Add a **context badge** in the dialog header:
-  - "Editing: Course-only drip (Client Acquisition Mastery)" when opened from the Courses tab
-  - "Editing: Pathway A drip → Client Acquisition Mastery" when opened from a pathway
-- Add a per-row badge already planned: **Course override** / **Pathway override** / **Default** so you can see at a glance which tier the current value comes from.
+### 3. `isVisibleToStudent` — new unbatched branch
+- Batched student branch: unchanged (global sessions + batch match on `batch_id`/`batch_ids`).
+- Unbatched student branch (strict, replaces current logic):
+  - `batch_ids` must include `'unbatched'` (explicit targeting required).
+  - `session.course_id` must be present AND exist as a key in the enrollment-date map.
+  - `new Date(session.start_time) > enrolledAt` for that course (strictly after — same-day excluded).
+  - If any check fails, hide.
 
-## Existing students
+### 4. Recordings filter
+Keep the existing `effectiveEnd(session) < now && hasRecordingLink` filter for the recorded list. Visibility rule above applies uniformly to upcoming, live, and recorded sessions (the visibility filter runs before the upcoming/past split), which matches the requirement.
 
-- Backfill (already in the shipped migration) seeded rows for every active enrollment, so today's unlock schedule is frozen.
-- New values you set now only change unlock dates for **future** direct enrollments in Client Acquisition Mastery. No existing student's dates shift.
+## Verification
 
-## What stays untouched
+- Unbatched student enrolled in Course A on Jan 4:
+  - Session in Course A on Jan 5 targeted at `unbatched` → visible.
+  - Session in Course A on Jan 4 (same day) targeted at `unbatched` → hidden.
+  - Session in Course B targeted at `unbatched` → hidden.
+  - Session in Course A on Jan 5 targeted at a specific batch (no `'unbatched'` in `batch_ids`) → hidden.
+  - Session with empty/global `batch_ids` → hidden.
+- Batched student: identical output to current behavior.
 
-- Pathway A / Pathway B rows for the same lessons
-- `available_lessons.drip_days` global defaults
-- `success_sessions`, `course_enrollments`, `user_unlocks`, `batches`
-
-Approve to add the context badge + per-row tier badges to `ContentTimelineDialog` so you always know which scope you're editing.
+No database, RLS, or edge function changes.
