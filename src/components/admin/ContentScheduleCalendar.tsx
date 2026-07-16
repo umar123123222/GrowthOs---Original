@@ -37,6 +37,9 @@ interface BatchInfo {
   pathway_id: string | null;
 }
 
+const sortBatchesAscending = (a: BatchInfo, b: BatchInfo) =>
+  a.name.trim().localeCompare(b.name.trim(), undefined, { numeric: true, sensitivity: 'base' });
+
 // Draggable event pill
 function DraggableEvent({ event, getStatusBg, readOnly }: { event: CalendarEvent; getStatusBg: (s: string) => string; readOnly?: boolean }) {
   const canDrag = !readOnly && (event.type === 'recording' || event.type === 'session');
@@ -175,7 +178,9 @@ export function ContentScheduleCalendar({ readOnly = false }: { readOnly?: boole
         .select('id, name, start_date, course_id, pathway_id')
         .eq('status', 'active');
 
-      const activeBatches: BatchInfo[] = (batchData || []).filter(b => b.start_date);
+      const activeBatches: BatchInfo[] = (batchData || [])
+        .filter(b => b.start_date)
+        .sort(sortBatchesAscending);
       setBatches(activeBatches);
 
       if (!activeBatches.length) {
