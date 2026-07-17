@@ -29,6 +29,12 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Live session reminder emails are disabled.
+  return new Response(
+    JSON.stringify({ success: true, disabled: true, reminders_sent: 0 }),
+    { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
+  );
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
