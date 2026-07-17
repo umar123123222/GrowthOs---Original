@@ -25,6 +25,13 @@ import { TablePager } from '@/components/common/TablePager';
 import { HostMentorPicker } from './HostMentorPicker';
 import { BatchPicker } from './BatchPicker';
 
+// Feature flag: disable all live-session related student emails
+// (scheduled / update / publish notifications). In-app notifications
+// and mentor notifications continue as normal.
+const LIVE_SESSION_EMAILS_ENABLED = false as boolean;
+
+
+
 interface SuccessSession {
   id: string;
   title: string;
