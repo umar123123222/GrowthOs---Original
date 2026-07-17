@@ -565,7 +565,7 @@ export function SuccessSessionsManagement() {
         realBatchIds.forEach((batchId, index) => {
           if (!batchId) return;
           if (!LIVE_SESSION_EMAILS_ENABLED) return;
-          supabase.functions.invoke('send-batch-content-notification', {
+          if (LIVE_SESSION_EMAILS_ENABLED) supabase.functions.invoke('send-batch-content-notification', {
 
             body: {
               batch_id: batchId,
@@ -588,7 +588,7 @@ export function SuccessSessionsManagement() {
 
         // Notify unbatched students of the target course (fire-and-forget)
         if (includesUnbatched && baseSessionData.course_id) {
-          supabase.functions.invoke('send-batch-content-notification', {
+          if (LIVE_SESSION_EMAILS_ENABLED) supabase.functions.invoke('send-batch-content-notification', {
             body: {
               unbatched: true,
               course_id: baseSessionData.course_id,
@@ -681,7 +681,7 @@ export function SuccessSessionsManagement() {
         if (realBatchIds.length > 0 && newSessions.length > 0) {
           realBatchIds.forEach((batchId, index) => {
             if (!batchId) return;
-            supabase.functions.invoke('send-batch-content-notification', {
+            if (LIVE_SESSION_EMAILS_ENABLED) supabase.functions.invoke('send-batch-content-notification', {
               body: {
                 batch_id: batchId,
                 item_type: 'LIVE_SESSION',
@@ -702,7 +702,7 @@ export function SuccessSessionsManagement() {
 
         // Notify unbatched students of the target course (fire-and-forget)
         if (includesUnbatched && baseSessionData.course_id && newSessions.length > 0) {
-          supabase.functions.invoke('send-batch-content-notification', {
+          if (LIVE_SESSION_EMAILS_ENABLED) supabase.functions.invoke('send-batch-content-notification', {
             body: {
               unbatched: true,
               course_id: baseSessionData.course_id,
@@ -773,7 +773,7 @@ export function SuccessSessionsManagement() {
       const pubRealBatchIds = rawSessionBatchIds.filter(b => b && b !== 'unbatched');
       const pubIncludesUnbatched = rawSessionBatchIds.includes('unbatched');
       pubRealBatchIds.forEach((batchId, index) => {
-        supabase.functions.invoke('send-batch-content-notification', {
+        if (LIVE_SESSION_EMAILS_ENABLED) supabase.functions.invoke('send-batch-content-notification', {
           body: {
             batch_id: batchId,
             item_type: 'LIVE_SESSION',
@@ -792,7 +792,7 @@ export function SuccessSessionsManagement() {
       });
 
       if (pubIncludesUnbatched && session.course_id) {
-        supabase.functions.invoke('send-batch-content-notification', {
+        if (LIVE_SESSION_EMAILS_ENABLED) supabase.functions.invoke('send-batch-content-notification', {
           body: {
             unbatched: true,
             course_id: session.course_id,
