@@ -564,7 +564,9 @@ export function SuccessSessionsManagement() {
         // Notify batch students about the schedule update (fire-and-forget for speed)
         realBatchIds.forEach((batchId, index) => {
           if (!batchId) return;
+          if (!LIVE_SESSION_EMAILS_ENABLED) return;
           supabase.functions.invoke('send-batch-content-notification', {
+
             body: {
               batch_id: batchId,
               item_type: 'LIVE_SESSION',
