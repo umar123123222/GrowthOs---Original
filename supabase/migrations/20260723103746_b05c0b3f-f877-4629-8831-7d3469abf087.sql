@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.success_sessions_unique_link_start;

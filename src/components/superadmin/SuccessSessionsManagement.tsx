@@ -499,6 +499,48 @@ export function SuccessSessionsManagement() {
       return;
     }
 
+    // Duplicate check: block only when link + course + batch overlap
+    const normalizedLink = (formData.link || '').trim();
+    if (normalizedLink && normalizedLink.toUpperCase() !== 'TBD') {
+      try {
+        const courseIdForCheck = formData.course_id === '__all__' ? null : (formData.course_id || null);
+        let dupQuery = supabase
+          .from('success_sessions')
+          .select('id, batch_ids, course_id, link')
+          .eq('link', normalizedLink);
+        dupQuery = courseIdForCheck
+          ? dupQuery.eq('course_id', courseIdForCheck)
+          : dupQuery.is('course_id', null);
+        if (editingSession?.id) dupQuery = dupQuery.neq('id', editingSession.id);
+        const { data: candidates, error: dupErr } = await dupQuery;
+        if (dupErr) throw dupErr;
+
+        const selectedAll = selectedBatchIds.includes('__all__');
+        const selectedSet = new Set(selectedBatchIds.filter(id => id !== '__all__'));
+
+        const collision = (candidates || []).some((row: any) => {
+          const rowIds: string[] = Array.isArray(row.batch_ids) ? row.batch_ids : [];
+          const rowAll = rowIds.length === 0 || rowIds.includes('__all__');
+          if (selectedAll || rowAll) return true;
+          return rowIds.some(id => selectedSet.has(id));
+        });
+
+        if (collision) {
+          toast({
+            title: "Duplicate Session",
+            description: "A session with this Zoom link already exists for the same course and batch. Change the link, course, or batch to create a new one.",
+            variant: "destructive"
+          });
+          formSubmittedRef.current = false;
+          return;
+        }
+      } catch (checkError) {
+        console.error('Duplicate session check failed:', checkError);
+      }
+    }
+
+
+
     try {
       // Find the selected user to get their name
       const selectedUser = users.find(user => user.id === formData.mentor_id);
