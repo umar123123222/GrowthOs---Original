@@ -1,37 +1,48 @@
 ## Goal
 
-In the Content Timeline dialog (individual course view), display modules and videos in the exact same order as the `/superadmin?tab=recordings` page — grouped by module, with modules sorted by their `order` column and videos within each module sorted by `sequence_order`. Drip-day values become display-only for sorting; they no longer reshuffle the list.
+Loosen the "duplicate Zoom link" block so a link can be reused across different (course, batch) targets. Only block when link + course + batch all match an existing session.
 
-## Current behavior (verified in `src/components/superadmin/ContentTimelineDialog.tsx`)
+## Current behavior
 
-- Modules are fetched with `.order('order', ascending)` and recordings with `.order('sequence_order', ascending)` (lines 98–111) — the correct order arrives from the DB.
-- But the render layer re-sorts:
-  - Modules are re-sorted by `minDrip` (lowest `drip_days` in the module) — lines 643–653.
-  - Recordings inside a module are re-sorted by `drip_days` first, then `sequence_order` — lines 656–661.
-  - A dedupe-by-title step then drops any recording whose title repeats — lines 663–669.
-
-Result: modules and videos appear in drip-days order, not the order shown on `/recordings`.
+- DB has a unique index `success_sessions_unique_link_start` on `(link, start_time)` — any second session with the same Zoom link at the same start time is rejected, regardless of course/batch (migration `20260616190206_...sql`).
+- `SuccessSessionsManagement.tsx` (~line 747) catches `23505` and shows "A session with this Zoom link already exists at the same start time."
+- Sessions target audience via `course_id` (single) and `batch_ids` (jsonb array; may contain batch UUIDs or the sentinel `'unbatched'` / `'__all__'`).
 
 ## Change
 
-Edit `src/components/superadmin/ContentTimelineDialog.tsx` only:
+### 1. Drop the DB-level uniqueness
 
-1. **Module order** (lines 643–654): drop the `minDrip` sort. Iterate modules in the order they arrive from `groupedByCourse` (which already reflects the DB `order` column because `fetchTimeline` inserts them in that order). Preserve insertion order by using `Object.entries(courseData.modules)` directly with no `.sort(...)`.
+Drop `success_sessions_unique_link_start`. Multi-value `batch_ids` (jsonb) cannot be expressed cleanly in a partial unique index that means "any overlapping batch", so we move the check into the app where the semantics are clear.
 
-2. **Recording order within a module** (lines 656–661): replace the `drip_days`-first sort with `sequence_order` ascending (nulls last), matching `/recordings`.
+### 2. Application-level duplicate check (create + edit)
 
-3. **Remove the title-dedupe** (lines 663–669): `/recordings` shows every row, so the timeline should too. If two lessons legitimately share a title, both must appear (drip inputs are keyed by recording id, so this is safe).
+Before insert/update in `SuccessSessionsManagement.tsx` `handleCreateSession` / update path:
 
-4. **Keep everything else intact**: drip inputs, Course-override badges, Reset buttons, drag-to-reorder, save logic, Live Sessions block, pathway-scoped view. Drag-reorder still writes `sequence_order` (already implemented in `handleReorderRecordings`), so reordering here will now also match `/recordings` after save.
+- Skip check if `link` is empty or `'TBD'`.
+- Query `success_sessions` for rows where:
+  - `link = formData.link`
+  - `course_id = formData.course_id`
+  - `id <> editingSession?.id` (so editing a session doesn't collide with itself)
+- For each candidate row, compare `batch_ids` arrays:
+  - Normalize both sides to a `Set<string>` of ids.
+  - Treat `'__all__'` in either side as "matches every batch of the other" (an all-batches session collides with any batch selection on the same course + link).
+  - Otherwise, collision = the two sets share at least one id (including the `'unbatched'` sentinel).
+- If any candidate collides, block with a toast:
+  > "A session with this Zoom link already exists for the same course and batch. Change the link, course, or batch to create a new one."
+- If no collision, proceed with insert/update.
+
+Same check runs in both the create branch and the edit branch of the submit handler.
+
+### 3. Error-handling cleanup
+
+Remove the `23505 / success_sessions_unique_link_start` branch in the catch block — the DB constraint is gone, so the branch is dead. Keep generic error toast.
 
 ## Out of scope
 
-- No DB migration, no RLS change, no edge function change.
-- Pathway-scoped view (`type === 'pathway'`) uses the same render path, so it inherits the same corrected ordering — no separate work needed.
-- `/recordings` page itself is not touched.
+- No changes to visibility logic, RLS, reminder emails, or the batch/host pickers.
+- `start_time` is no longer part of the uniqueness key at all (per the request: link + course + batch is the full rule).
 
-## Verification
+## Files touched
 
-- Open Superadmin → Content → Courses → clock icon on "Client Acquisition Mastery". Confirm chapters appear in the same order as `/recordings` (Chapter 1, 2, 3, …) and videos inside each chapter match the `/recordings` sequence (e.g. Chapter 5: "Lead Generation System" → "Meta Setup Done Right" → "Running Ads").
-- Confirm drip-day inputs, Course-override badges, Reset, and Save still work.
-- Confirm the pathway-scoped timeline (opened from Pathways → clock icon) also renders in `/recordings` order.
+- New migration: drop `success_sessions_unique_link_start`.
+- `src/components/superadmin/SuccessSessionsManagement.tsx`: add pre-submit duplicate check for create + edit; remove obsolete 23505 branch.
