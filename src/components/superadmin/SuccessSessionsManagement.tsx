@@ -785,16 +785,13 @@ export function SuccessSessionsManagement() {
         formSubmittedRef.current = false;
       }, 400);
     } catch (error: any) {
-      const msg = error?.message || error?.error?.message || '';
-      const isDuplicate = error?.code === '23505' || /success_sessions_unique_link_start|duplicate key/i.test(msg);
       toast({
-        title: isDuplicate ? "Duplicate Session" : "Error",
-        description: isDuplicate
-          ? "A session with this Zoom link already exists at the same start time."
-          : (editingSession ? "Failed to update session" : "Failed to create session"),
+        title: "Error",
+        description: editingSession ? "Failed to update session" : "Failed to create session",
         variant: "destructive"
       });
     }
+
   };
 
   const handlePublish = async (session: SuccessSession) => {
