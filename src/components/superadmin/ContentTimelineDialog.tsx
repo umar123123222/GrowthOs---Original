@@ -640,14 +640,27 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                   </div>
                 )}
 
-                {Object.entries(courseData.modules).map(([moduleId, moduleData]) => {
-                  // Match /recordings ordering: sequence_order asc (nulls last)
+                {Object.entries(courseData.modules)
+                  .map(([moduleId, moduleData]) => {
+                    const minDrip = Math.min(
+                      ...moduleData.recordings.map(r => getDripDaysValue(r) ?? Number.POSITIVE_INFINITY),
+                      Number.POSITIVE_INFINITY
+                    );
+                    return { moduleId, moduleData, minDrip };
+                  })
+                  .sort((a, b) => a.minDrip - b.minDrip)
+                  .map(({ moduleId, moduleData }) => {
+                  // Sort by drip days ascending (nulls last), then sequence_order as tiebreaker
                   const sortedRecs = [...moduleData.recordings].sort((a, b) => {
+                    const aDrip = getDripDaysValue(a) ?? Number.POSITIVE_INFINITY;
+                    const bDrip = getDripDaysValue(b) ?? Number.POSITIVE_INFINITY;
+                    if (aDrip !== bDrip) return aDrip - bDrip;
                     const aSeq = a.sequence_order ?? Number.POSITIVE_INFINITY;
                     const bSeq = b.sequence_order ?? Number.POSITIVE_INFINITY;
                     return aSeq - bSeq;
                   });
                   const dedupedRecs = sortedRecs;
+
 
                   return (
                   <div key={moduleId} className="space-y-1">
