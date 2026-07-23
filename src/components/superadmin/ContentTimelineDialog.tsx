@@ -640,33 +640,15 @@ export function ContentTimelineDialog({ type, entityId, entityName, open, onOpen
                   </div>
                 )}
 
-                {Object.entries(courseData.modules)
-                  .map(([moduleId, moduleData]) => {
-                    // Use persisted drip_days only (not edited values) so sorting doesn't
-                    // reshuffle while the user is typing in a drip-days input.
-                    const minDrip = moduleData.recordings.reduce((min, r) => {
-                      const d = r.drip_days ?? Number.POSITIVE_INFINITY;
-                      return d < min ? d : min;
-                    }, Number.POSITIVE_INFINITY);
-                    return { moduleId, moduleData, minDrip };
-                  })
-                  .sort((a, b) => a.minDrip - b.minDrip)
-                  .map(({ moduleId, moduleData }) => {
-                  // Sort by drip_days asc (nulls last), then by sequence_order
+                {Object.entries(courseData.modules).map(([moduleId, moduleData]) => {
+                  // Match /recordings ordering: sequence_order asc (nulls last)
                   const sortedRecs = [...moduleData.recordings].sort((a, b) => {
-                    const aDrip = a.drip_days ?? Number.POSITIVE_INFINITY;
-                    const bDrip = b.drip_days ?? Number.POSITIVE_INFINITY;
-                    if (aDrip !== bDrip) return aDrip - bDrip;
-                    return (a.sequence_order ?? 0) - (b.sequence_order ?? 0);
+                    const aSeq = a.sequence_order ?? Number.POSITIVE_INFINITY;
+                    const bSeq = b.sequence_order ?? Number.POSITIVE_INFINITY;
+                    return aSeq - bSeq;
                   });
-                  // Dedupe by recording_title (case-insensitive, trimmed) — keep first occurrence (lowest drip)
-                  const seenTitles = new Set<string>();
-                  const dedupedRecs = sortedRecs.filter(r => {
-                    const key = (r.recording_title || r.id).trim().toLowerCase();
-                    if (seenTitles.has(key)) return false;
-                    seenTitles.add(key);
-                    return true;
-                  });
+                  const dedupedRecs = sortedRecs;
+
                   return (
                   <div key={moduleId} className="space-y-1">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide pl-1">

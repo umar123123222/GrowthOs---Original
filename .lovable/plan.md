@@ -1,43 +1,37 @@
 ## Goal
 
-For unbatched students only, restrict Success Session visibility (upcoming, live, and recordings) to sessions that are:
-1. Explicitly targeted at unbatched students, AND
-2. In a course the student is enrolled in, AND
-3. Scheduled strictly after the student's enrollment date in that course.
+In the Content Timeline dialog (individual course view), display modules and videos in the exact same order as the `/superadmin?tab=recordings` page — grouped by module, with modules sorted by their `order` column and videos within each module sorted by `sequence_order`. Drip-day values become display-only for sorting; they no longer reshuffle the list.
 
-Batched students: no changes.
+## Current behavior (verified in `src/components/superadmin/ContentTimelineDialog.tsx`)
 
-## Targeting field (verified against schema)
+- Modules are fetched with `.order('order', ascending)` and recordings with `.order('sequence_order', ascending)` (lines 98–111) — the correct order arrives from the DB.
+- But the render layer re-sorts:
+  - Modules are re-sorted by `minDrip` (lowest `drip_days` in the module) — lines 643–653.
+  - Recordings inside a module are re-sorted by `drip_days` first, then `sequence_order` — lines 656–661.
+  - A dedupe-by-title step then drops any recording whose title repeats — lines 663–669.
 
-`success_sessions.batch_ids` (jsonb array) is the audience field. When the admin selects the "unbatched" audience, this array contains the sentinel string `'unbatched'` (confirmed via DB — rows exist with `batch_ids = ["unbatched"]`). `batch_id` (singular) and non-sentinel UUIDs in `batch_ids` are batch targets and must be hidden from unbatched students.
+Result: modules and videos appear in drip-days order, not the order shown on `/recordings`.
 
-## Changes — `src/pages/LiveSessions.tsx` only
+## Change
 
-### 1. `fetchAttendance` — build per-course enrollment date map
-Replace the `studentCourseIds: string[]` derivation with a `Map<string, Date>` of `course_id → earliest enrolled_at` (from active `course_enrollments` rows for this student). Pass this map into `fetchSessions` in place of `studentCourseIds`.
+Edit `src/components/superadmin/ContentTimelineDialog.tsx` only:
 
-### 2. `fetchSessions` — server query for unbatched students
-For unbatched students (no `studentBatchId`), simplify the server `.or(...)` to fetch only sessions that could possibly match: rows where `batch_ids` contains `'unbatched'`. Drop the "global session" and "batch-targeting" clauses for this path — unbatched students should never see globally-untargeted or batch-targeted sessions per the new rule. Batched students keep the existing `.or(...)` shape unchanged.
+1. **Module order** (lines 643–654): drop the `minDrip` sort. Iterate modules in the order they arrive from `groupedByCourse` (which already reflects the DB `order` column because `fetchTimeline` inserts them in that order). Preserve insertion order by using `Object.entries(courseData.modules)` directly with no `.sort(...)`.
 
-### 3. `isVisibleToStudent` — new unbatched branch
-- Batched student branch: unchanged (global sessions + batch match on `batch_id`/`batch_ids`).
-- Unbatched student branch (strict, replaces current logic):
-  - `batch_ids` must include `'unbatched'` (explicit targeting required).
-  - `session.course_id` must be present AND exist as a key in the enrollment-date map.
-  - `new Date(session.start_time) > enrolledAt` for that course (strictly after — same-day excluded).
-  - If any check fails, hide.
+2. **Recording order within a module** (lines 656–661): replace the `drip_days`-first sort with `sequence_order` ascending (nulls last), matching `/recordings`.
 
-### 4. Recordings filter
-Keep the existing `effectiveEnd(session) < now && hasRecordingLink` filter for the recorded list. Visibility rule above applies uniformly to upcoming, live, and recorded sessions (the visibility filter runs before the upcoming/past split), which matches the requirement.
+3. **Remove the title-dedupe** (lines 663–669): `/recordings` shows every row, so the timeline should too. If two lessons legitimately share a title, both must appear (drip inputs are keyed by recording id, so this is safe).
+
+4. **Keep everything else intact**: drip inputs, Course-override badges, Reset buttons, drag-to-reorder, save logic, Live Sessions block, pathway-scoped view. Drag-reorder still writes `sequence_order` (already implemented in `handleReorderRecordings`), so reordering here will now also match `/recordings` after save.
+
+## Out of scope
+
+- No DB migration, no RLS change, no edge function change.
+- Pathway-scoped view (`type === 'pathway'`) uses the same render path, so it inherits the same corrected ordering — no separate work needed.
+- `/recordings` page itself is not touched.
 
 ## Verification
 
-- Unbatched student enrolled in Course A on Jan 4:
-  - Session in Course A on Jan 5 targeted at `unbatched` → visible.
-  - Session in Course A on Jan 4 (same day) targeted at `unbatched` → hidden.
-  - Session in Course B targeted at `unbatched` → hidden.
-  - Session in Course A on Jan 5 targeted at a specific batch (no `'unbatched'` in `batch_ids`) → hidden.
-  - Session with empty/global `batch_ids` → hidden.
-- Batched student: identical output to current behavior.
-
-No database, RLS, or edge function changes.
+- Open Superadmin → Content → Courses → clock icon on "Client Acquisition Mastery". Confirm chapters appear in the same order as `/recordings` (Chapter 1, 2, 3, …) and videos inside each chapter match the `/recordings` sequence (e.g. Chapter 5: "Lead Generation System" → "Meta Setup Done Right" → "Running Ads").
+- Confirm drip-day inputs, Course-override badges, Reset, and Save still work.
+- Confirm the pathway-scoped timeline (opened from Pathways → clock icon) also renders in `/recordings` order.
