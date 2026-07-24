@@ -604,6 +604,8 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
       });
       // Revert on error
       fetchRecordings();
+    } finally {
+      isReorderingRef.current = false;
     }
   };
 
