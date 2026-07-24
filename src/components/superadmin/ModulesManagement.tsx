@@ -531,33 +531,39 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
       return;
     }
 
-    const oldIndex = modules.findIndex((m) => m.id === active.id);
-    const newIndex = modules.findIndex((m) => m.id === over.id);
+    // Scope the reorder to the affected course group so we don't
+    // renumber modules of unrelated courses in the "All Courses" view.
+    const activeModule = modules.find((m) => m.id === active.id);
+    if (!activeModule) return;
+    const scopeCourseId = activeModule.course_id ?? null;
 
-    const newModules = arrayMove(modules, oldIndex, newIndex);
-    
-    // Update order numbers sequentially
-    const updatedModules = newModules.map((module, index) => ({
-      ...module,
-      order: index + 1
+    const groupModules = modules
+      .filter((m) => (m.course_id ?? null) === scopeCourseId)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+    const oldIndex = groupModules.findIndex((m) => m.id === active.id);
+    const newIndex = groupModules.findIndex((m) => m.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const reordered = arrayMove(groupModules, oldIndex, newIndex).map((m, index) => ({
+      ...m,
+      order: index + 1,
     }));
-    
-    // Update UI immediately
-    setModules(updatedModules);
 
-    // Update order in database
+    // Optimistic UI: patch only the affected group's rows in flat state.
+    const orderMap = new Map(reordered.map((m) => [m.id, m.order]));
+    setModules((prev) =>
+      prev.map((m) => (orderMap.has(m.id) ? { ...m, order: orderMap.get(m.id)! } : m))
+    );
+
     try {
-      const updates = newModules.map((module, index) => ({
-        id: module.id,
-        order: index + 1
-      }));
-
-      for (const update of updates) {
-        await supabase
-          .from('modules')
-          .update({ order: update.order })
-          .eq('id', update.id);
-      }
+      const results = await Promise.all(
+        reordered.map((m) =>
+          supabase.from('modules').update({ order: m.order }).eq('id', m.id)
+        )
+      );
+      const firstError = results.find((r) => r.error)?.error;
+      if (firstError) throw firstError;
 
       toast({
         title: "Success",
@@ -574,6 +580,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
       fetchModules();
     }
   };
+
 
   // Handle recording reordering in dialog
   const handleRecordingDragEnd = (event: DragEndEvent) => {
