@@ -371,7 +371,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
             .insert({
               title: formData.title.trim(),
               description: formData.description.trim(),
-              order: formData.order,
+              order: effectiveOrder,
               course_id: formData.course_id || null
             })
             .select()
