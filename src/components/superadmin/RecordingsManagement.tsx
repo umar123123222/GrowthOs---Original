@@ -430,11 +430,20 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     safeLogger.info('Form submission started with data:', { formData });
     
     try {
+      // If creating and sequence_order was left at 0/blank, assign max+1 within the target module
+      let effectiveSeq: number | null = formData.sequence_order || null;
+      if (!editingRecording && (!formData.sequence_order || formData.sequence_order <= 0) && formData.module_id) {
+        const maxInModule = recordings
+          .filter(r => r.module?.id === formData.module_id)
+          .reduce((mx, r) => Math.max(mx, r.sequence_order || 0), 0);
+        effectiveSeq = maxInModule + 1;
+      }
+
       const recordingData = {
         recording_title: formData.recording_title,
         recording_url: formData.recording_url,
         duration_min: formData.duration_min || null,
-        sequence_order: formData.sequence_order || null,
+        sequence_order: effectiveSeq,
         notes: formData.notes || null,
         description: formData.description || null,
         module: formData.module_id || null,
