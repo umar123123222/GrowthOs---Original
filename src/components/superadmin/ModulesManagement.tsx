@@ -325,6 +325,16 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
     }
 
     try {
+      // If order is 0/blank, place at end of the target course to avoid position collisions
+      let effectiveOrder = formData.order;
+      if (!effectiveOrder || effectiveOrder <= 0) {
+        const targetCourse = formData.course_id || null;
+        const maxInCourse = modules
+          .filter(m => (m.course_id || null) === targetCourse && (!editingModule || m.id !== editingModule.id))
+          .reduce((mx, m) => Math.max(mx, m.order || 0), 0);
+        effectiveOrder = maxInCourse + 1;
+      }
+
       if (editingModule) {
         // Update existing module
         const { error: updateError } = await supabase
@@ -332,7 +342,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
           .update({
             title: formData.title.trim(),
             description: formData.description.trim(),
-            order: formData.order,
+            order: effectiveOrder,
             course_id: formData.course_id || null
           })
           .eq('id', editingModule.id);
