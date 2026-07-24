@@ -534,9 +534,13 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
     })
   );
 
+  // Prevents rapid consecutive drags from racing overlapping writes
+  const isReorderingRef = useRef(false);
+
   // Handle module reordering
   const handleModuleDragEnd = async (event: DragEndEvent) => {
     if (readOnly) return;
+    if (isReorderingRef.current) return;
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
@@ -556,6 +560,8 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
     const oldIndex = groupModules.findIndex((m) => m.id === active.id);
     const newIndex = groupModules.findIndex((m) => m.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
+
+    isReorderingRef.current = true;
 
     const reordered = arrayMove(groupModules, oldIndex, newIndex).map((m, index) => ({
       ...m,
