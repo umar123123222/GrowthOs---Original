@@ -596,6 +596,8 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
       });
       // Revert on error
       fetchModules();
+    } finally {
+      isReorderingRef.current = false;
     }
   };
 
