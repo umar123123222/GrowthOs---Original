@@ -550,9 +550,13 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     })
   );
 
+  // Prevents rapid consecutive drags from racing overlapping writes
+  const isReorderingRef = useRef(false);
+
   // Handle recording reordering within a single module
   const handleModuleDragEnd = (moduleRecordings: Recording[]) => async (event: DragEndEvent) => {
     if (readOnly) return;
+    if (isReorderingRef.current) return;
     const { active, over } = event;
 
     if (!over || active.id === over.id) {
@@ -562,6 +566,8 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     const oldIndex = moduleRecordings.findIndex((r) => r.id === active.id);
     const newIndex = moduleRecordings.findIndex((r) => r.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
+
+    isReorderingRef.current = true;
 
     const reordered = arrayMove(moduleRecordings, oldIndex, newIndex);
     const updates = reordered.map((recording, index) => ({
