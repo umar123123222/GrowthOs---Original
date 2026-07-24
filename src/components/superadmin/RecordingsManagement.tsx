@@ -557,13 +557,16 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     setRecordings(prev => prev.map(r => updateMap.has(r.id) ? { ...r, sequence_order: updateMap.get(r.id)! } : r));
 
     try {
-      for (const update of updates) {
-        const { error } = await supabase
-          .from('available_lessons')
-          .update({ sequence_order: update.sequence_order })
-          .eq('id', update.id);
-        if (error) throw error;
-      }
+      const results = await Promise.all(
+        updates.map((u) =>
+          supabase
+            .from('available_lessons')
+            .update({ sequence_order: u.sequence_order })
+            .eq('id', u.id)
+        )
+      );
+      const firstError = results.find((r) => r.error)?.error;
+      if (firstError) throw firstError;
 
       toast({
         title: "Success",
