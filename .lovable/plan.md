@@ -1,48 +1,32 @@
-## Goal
+## Problem
 
-Loosen the "duplicate Zoom link" block so a link can be reused across different (course, batch) targets. Only block when link + course + batch all match an existing session.
+Drag-reorder in `/superadmin?tab=modules` (ModulesManagement) and `/superadmin?tab=recordings` (RecordingsManagement) feels like the change isn't saved. Two real causes in the code:
 
-## Current behavior
+1. **Sequential per-row writes.** Both handlers loop and `await supabase.update()` one row at a time (N round-trips). For a chapter with 10+ items this takes seconds; if the user refreshes or drags again during that window, only some rows are persisted, so the order appears to "revert."
+2. **Module reorder in the grouped ("All Courses") view is scoped wrong.** `handleModuleDragEnd` runs `arrayMove` on the **flat** `modules` state and reassigns `order = 1..N` across every course. Dragging Chapter 3 above Chapter 2 inside "Client Acquisition Mastery" also renumbers modules of every other course, and the reindexing doesn't correspond to the visible group — the row can appear to snap back after the next fetch.
 
-- DB has a unique index `success_sessions_unique_link_start` on `(link, start_time)` — any second session with the same Zoom link at the same start time is rejected, regardless of course/batch (migration `20260616190206_...sql`).
-- `SuccessSessionsManagement.tsx` (~line 747) catches `23505` and shows "A session with this Zoom link already exists at the same start time."
-- Sessions target audience via `course_id` (single) and `batch_ids` (jsonb array; may contain batch UUIDs or the sentinel `'unbatched'` / `'__all__'`).
+## Fix
 
-## Change
+Change only the two drag handlers. No schema changes, no UI/table restructuring.
 
-### 1. Drop the DB-level uniqueness
+### 1. `src/components/superadmin/RecordingsManagement.tsx` — `handleModuleDragEnd`
+- Keep the optimistic `setRecordings` patch.
+- Replace the `for (const update of updates) { await supabase.from('available_lessons').update(...) }` loop with a **single batched write**: `supabase.from('available_lessons').upsert(updates, { onConflict: 'id' })` (or `Promise.all` of updates — pick upsert for one round-trip).
+- On error, revert via `fetchRecordings()` (already there).
 
-Drop `success_sessions_unique_link_start`. Multi-value `batch_ids` (jsonb) cannot be expressed cleanly in a partial unique index that means "any overlapping batch", so we move the check into the app where the semantics are clear.
+### 2. `src/components/superadmin/ModulesManagement.tsx` — `handleModuleDragEnd`
+- Detect the affected course group from `active.id` (look up `modules.find(m => m.id === active.id).course_id`).
+- Build the reorder against **only that group's modules** (filter `modules` by that `course_id`, `arrayMove` within it, reindex 1..N inside the group).
+- Merge the group's new order back into the flat `modules` state (other courses untouched) and `setModules` for the optimistic update.
+- Persist with a single `supabase.from('modules').upsert(updates, { onConflict: 'id' })` containing just the touched rows.
+- On error, `fetchModules()` to revert.
+- The "specific course filtered" path already operates on one course, so it gets the same batched upsert but no scoping change.
 
-### 2. Application-level duplicate check (create + edit)
-
-Before insert/update in `SuccessSessionsManagement.tsx` `handleCreateSession` / update path:
-
-- Skip check if `link` is empty or `'TBD'`.
-- Query `success_sessions` for rows where:
-  - `link = formData.link`
-  - `course_id = formData.course_id`
-  - `id <> editingSession?.id` (so editing a session doesn't collide with itself)
-- For each candidate row, compare `batch_ids` arrays:
-  - Normalize both sides to a `Set<string>` of ids.
-  - Treat `'__all__'` in either side as "matches every batch of the other" (an all-batches session collides with any batch selection on the same course + link).
-  - Otherwise, collision = the two sets share at least one id (including the `'unbatched'` sentinel).
-- If any candidate collides, block with a toast:
-  > "A session with this Zoom link already exists for the same course and batch. Change the link, course, or batch to create a new one."
-- If no collision, proceed with insert/update.
-
-Same check runs in both the create branch and the edit branch of the submit handler.
-
-### 3. Error-handling cleanup
-
-Remove the `23505 / success_sessions_unique_link_start` branch in the catch block — the DB constraint is gone, so the branch is dead. Keep generic error toast.
+### Why this makes it feel "instant"
+- One network round-trip instead of N — save completes in ~1 request.
+- Group-scoped reindex means the persisted `order` values match what the user sees, so a refresh shows the same arrangement.
+- Optimistic UI stays; failure still reverts.
 
 ## Out of scope
-
-- No changes to visibility logic, RLS, reminder emails, or the batch/host pickers.
-- `start_time` is no longer part of the uniqueness key at all (per the request: link + course + batch is the full rule).
-
-## Files touched
-
-- New migration: drop `success_sessions_unique_link_start`.
-- `src/components/superadmin/SuccessSessionsManagement.tsx`: add pre-submit duplicate check for create + edit; remove obsolete 23505 branch.
+- Recording ordering already scopes per module correctly — only the write is batched.
+- No changes to fetching, RLS, or the table markup fixed earlier.
