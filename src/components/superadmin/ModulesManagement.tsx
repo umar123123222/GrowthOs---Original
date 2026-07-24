@@ -103,11 +103,6 @@ function SortableModuleRow({ module, index, onEdit, onDelete, courses, readOnly 
         </div>
       </TableCell>
       <TableCell>
-        <Badge variant={module.course_id ? "default" : "outline"}>
-          {courseName}
-        </Badge>
-      </TableCell>
-      <TableCell>
         <Badge variant="outline">{module.order}</Badge>
       </TableCell>
       <TableCell>
