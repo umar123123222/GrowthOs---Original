@@ -387,11 +387,17 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
       moduleGroup.recordings.push(recording);
     }
 
-    // Sort modules within each course by module.order, and recordings within each module by sequence_order
+    // Sort modules within each course by module.order (stable tiebreaker on id),
+    // and recordings within each module by sequence_order (nulls last), then by id.
     for (const course of courseMap.values()) {
-      course.modules.sort((a, b) => a.moduleOrder - b.moduleOrder);
+      course.modules.sort((a, b) => (a.moduleOrder - b.moduleOrder) || a.moduleId.localeCompare(b.moduleId));
       for (const m of course.modules) {
-        m.recordings.sort((a, b) => (a.sequence_order || 0) - (b.sequence_order || 0));
+        m.recordings.sort((a, b) => {
+          const av = a.sequence_order ?? Number.POSITIVE_INFINITY;
+          const bv = b.sequence_order ?? Number.POSITIVE_INFINITY;
+          if (av !== bv) return av - bv;
+          return a.id.localeCompare(b.id);
+        });
       }
     }
 
