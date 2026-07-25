@@ -3117,60 +3117,7 @@ export function StudentsManagement() {
                                 <p className="text-sm text-foreground">{getLastInvoiceSentDate(student)}</p>
                               </div>
 
-                              {/* Payment Summary */}
-                              <div>
-                                <Label className="text-sm font-medium text-muted-foreground">Total Fee Amount</Label>
-                                <p className="text-sm text-foreground font-semibold">
-                                  {(() => {
-                                    const key = student.student_record_id || '';
-                                    const payments = installmentPayments.get(key) || [];
-                                    const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                                    return payments.length > 0 ? formatCurrency(totalAmount, companyCurrency) : 'N/A';
-                                  })()}
-                                </p>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-muted-foreground">Amount Paid</Label>
-                                <p className="text-sm text-green-600 font-semibold">
-                                  {(() => {
-                                    const key = student.student_record_id || '';
-                                    const payments = installmentPayments.get(key) || [];
-                                    const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
-                                    return formatCurrency(paidAmount, companyCurrency);
-                                  })()}
-                                </p>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-muted-foreground">Outstanding Balance</Label>
-                                <p className={`text-sm font-semibold ${(() => {
-                                  const key = student.student_record_id || '';
-                                  const payments = installmentPayments.get(key) || [];
-                                  const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                                  const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
-                                  return (totalAmount - paidAmount) > 0 ? 'text-red-600' : 'text-green-600';
-                                })()}`}>
-                                  {(() => {
-                                    const key = student.student_record_id || '';
-                                    const payments = installmentPayments.get(key) || [];
-                                    const totalAmount = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
-                                    const paidAmount = payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + (p.amount || 0), 0);
-                                    const outstanding = totalAmount - paidAmount;
-                                    return payments.length > 0 ? formatCurrency(outstanding, companyCurrency) : 'N/A';
-                                  })()}
-                                </p>
-                              </div>
-
-                              {/* Row 2: Invoice Due Date, Invoice Status, LMS User ID */}
-                              <div>
-                                <Label className="text-sm font-medium text-muted-foreground">Invoice Due Date</Label>
-                                <p className={`text-sm ${isInvoiceOverdue(student) ? 'text-destructive font-medium' : 'text-foreground'}`}>
-                                  {getInvoiceDueDate(student)}
-                                </p>
-                              </div>
-                              <div>
-                                <Label className="text-sm font-medium text-muted-foreground">Invoice Status</Label>
-                                <p className="text-sm text-foreground">{getInvoiceStatus(student)}</p>
-                              </div>
+                              {/* LMS User ID */}
                               <div>
                                 <Label className="text-sm font-medium text-muted-foreground">LMS User ID</Label>
                                 <div className="flex items-center space-x-2">
@@ -3181,7 +3128,7 @@ export function StudentsManagement() {
                                 </div>
                               </div>
 
-                              {/* Row 3: LMS Password */}
+                              {/* LMS Password */}
                               <div>
                                 <Label className="text-sm font-medium text-muted-foreground">LMS Password</Label>
                                 <div className="flex items-center space-x-2">
@@ -3200,24 +3147,121 @@ export function StudentsManagement() {
                                   <p className="text-sm text-destructive">{formatDate(student.last_suspended_date)}</p>
                                 </div>}
                             </div>
-                            
-                            {/* Installment Payment Buttons */}
-                            {(student.fees_structure === '1_installment' || student.fees_structure === '2_installments' || student.fees_structure === '3_installments') && <div className="pt-3 border-t border-blue-200">
-                                <Label className="text-sm font-medium text-gray-700 mb-2 block">Installment Payments</Label>
-                                <div className="flex flex-wrap gap-2">
-                                  {Array.from({
-                              length: student.fees_structure === '1_installment' ? 1 : student.fees_structure === '2_installments' ? 2 : 3
-                            }, (_, index) => {
-                              const installmentNumber = index + 1;
-                              const payments = installmentPayments.get(student.student_record_id || '') || installmentPayments.get(student.id) || [];
-                              const isPaid = payments.some(p => p.installment_number === installmentNumber && p.status === 'paid');
-                              return <Button key={installmentNumber} variant={isPaid ? "default" : "outline"} size="sm" disabled={isPaid} onClick={() => handleMarkInstallmentPaid(student.id, installmentNumber)} className={`hover-scale ${isPaid ? "bg-green-500 hover:bg-green-600" : "hover:border-green-300 hover:text-green-600"}`}>
-                                        {isPaid ? <CheckCircle className="w-4 h-4 mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
-                                        {isPaid ? `${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid` : `Mark ${installmentNumber}${installmentNumber === 1 ? 'st' : installmentNumber === 2 ? 'nd' : 'rd'} Paid`}
-                                      </Button>;
-                            })}
+
+                            {/* Per-Enrollment Billing Breakdown */}
+                            {(() => {
+                              const groups = getEnrollmentGroups(student);
+                              if (groups.length === 0) {
+                                return (
+                                  <div className="pt-3 border-t border-blue-200 text-sm text-muted-foreground">
+                                    No invoices on record for this student.
+                                  </div>
+                                );
+                              }
+                              const combinedTotal = groups.reduce((s, g) => s + g.payments.reduce((x, p) => x + (p.amount || 0), 0), 0);
+                              const combinedPaid = groups.reduce((s, g) => s + g.payments.filter(p => p.status === 'paid').reduce((x, p) => x + (p.amount || 0), 0), 0);
+                              const combinedOutstanding = combinedTotal - combinedPaid;
+                              return (
+                                <div className="pt-3 border-t border-blue-200 space-y-3">
+                                  <div className="flex items-center justify-between">
+                                    <Label className="text-sm font-semibold text-foreground">
+                                      Billing {groups.length > 1 ? `(${groups.length} enrollments)` : ''}
+                                    </Label>
+                                    {groups.length > 1 && (
+                                      <div className="text-xs text-muted-foreground">
+                                        Combined: <span className="font-semibold text-foreground">{formatCurrency(combinedTotal, companyCurrency)}</span>
+                                        {' · '}Paid: <span className="text-green-600 font-semibold">{formatCurrency(combinedPaid, companyCurrency)}</span>
+                                        {' · '}Outstanding: <span className={`${combinedOutstanding > 0 ? 'text-red-600' : 'text-green-600'} font-semibold`}>{formatCurrency(combinedOutstanding, companyCurrency)}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  {groups.map(group => {
+                                    const totalAmount = group.payments.reduce((s, p) => s + (p.amount || 0), 0);
+                                    const paidAmount = group.payments.filter(p => p.status === 'paid').reduce((s, p) => s + (p.amount || 0), 0);
+                                    const outstanding = totalAmount - paidAmount;
+                                    const openWithDue = group.payments.filter(p => p.status !== 'paid' && p.due_date);
+                                    const nowTs = Date.now();
+                                    const upcoming = openWithDue.filter(p => new Date(p.due_date as string).getTime() >= nowTs).sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime());
+                                    const nextDue = upcoming[0] || openWithDue.sort((a, b) => new Date(a.due_date as string).getTime() - new Date(b.due_date as string).getTime())[0];
+                                    const isOverdue = openWithDue.some(p => new Date(p.due_date as string).getTime() < nowTs);
+                                    const allPaid = group.payments.length > 0 && group.payments.every(p => p.status === 'paid');
+                                    return (
+                                      <div key={group.key} className="rounded-lg border border-blue-100 bg-white/50 p-3 space-y-3">
+                                        <div className="flex items-center justify-between flex-wrap gap-2">
+                                          <div>
+                                            <div className="text-sm font-semibold text-foreground">{group.label}</div>
+                                            <div className="text-xs text-muted-foreground">
+                                              {group.pathwayId ? 'Pathway enrollment' : group.courseId ? 'Course enrollment' : 'General'}
+                                              {' · '}{group.payments.length} installment{group.payments.length === 1 ? '' : 's'}
+                                            </div>
+                                          </div>
+                                          <div>
+                                            {allPaid ? (
+                                              <Badge className="bg-green-100 text-green-800 border-green-200">Fully Paid</Badge>
+                                            ) : isOverdue ? (
+                                              <Badge className="bg-red-100 text-red-800 border-red-200">Overdue</Badge>
+                                            ) : (
+                                              <Badge className="bg-amber-100 text-amber-800 border-amber-200">Pending</Badge>
+                                            )}
+                                          </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                          <div>
+                                            <Label className="text-xs text-muted-foreground">Total Fee Amount</Label>
+                                            <p className="text-sm font-semibold text-foreground">{formatCurrency(totalAmount, companyCurrency)}</p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs text-muted-foreground">Amount Paid</Label>
+                                            <p className="text-sm font-semibold text-green-600">{formatCurrency(paidAmount, companyCurrency)}</p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs text-muted-foreground">Outstanding</Label>
+                                            <p className={`text-sm font-semibold ${outstanding > 0 ? 'text-red-600' : 'text-green-600'}`}>{formatCurrency(outstanding, companyCurrency)}</p>
+                                          </div>
+                                          <div>
+                                            <Label className="text-xs text-muted-foreground">Next Due Date</Label>
+                                            <p className={`text-sm ${isOverdue ? 'text-destructive font-medium' : 'text-foreground'}`}>
+                                              {nextDue?.due_date ? formatDate(nextDue.due_date) : 'N/A'}
+                                            </p>
+                                          </div>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                          {group.payments.map(p => {
+                                            const n = p.installment_number;
+                                            const suffix = n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? 'rd' : 'th';
+                                            const isPaid = p.status === 'paid';
+                                            return (
+                                              <Button
+                                                key={p.id}
+                                                variant={isPaid ? 'default' : 'outline'}
+                                                size="sm"
+                                                disabled={isPaid}
+                                                onClick={() => {
+                                                  if (!student.student_record_id) return;
+                                                  setMarkPaidCtx({
+                                                    studentRecordId: student.student_record_id,
+                                                    installmentNumber: n,
+                                                    email: student.email,
+                                                    invoiceId: p.id,
+                                                  });
+                                                  setMarkPaidOpen(true);
+                                                }}
+                                                className={`hover-scale ${isPaid ? 'bg-green-500 hover:bg-green-600' : 'hover:border-green-300 hover:text-green-600'}`}
+                                              >
+                                                {isPaid ? <CheckCircle className="w-4 h-4 mr-2" /> : <DollarSign className="w-4 h-4 mr-2" />}
+                                                {isPaid ? `${n}${suffix} Paid` : `Mark ${n}${suffix} Paid`}
+                                                <span className="ml-2 text-xs opacity-75">{formatCurrency(p.amount || 0, companyCurrency)}</span>
+                                              </Button>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                              </div>}
+                              );
+                            })()}
+
                             
                             <div className="flex flex-wrap gap-2 pt-3 border-t border-blue-200">
                               <ActivityLogsDialog userId={student.id} userName={student.full_name}>
