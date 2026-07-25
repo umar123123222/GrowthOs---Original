@@ -451,6 +451,17 @@ export function StudentAccessManagement({
           .eq('id', enrollment.id);
         if (error) throw error;
 
+        // Cleanup: remove any unpaid/scheduled invoices for this pathway so
+        // Total Fee / Outstanding aren't inflated by leftover invoice rows.
+        const { error: invDelErr } = await supabase
+          .from('invoices')
+          .delete()
+          .eq('student_id', studentId)
+          .eq('pathway_id', pathwayId)
+          .is('paid_at', null)
+          .in('status', ['pending', 'scheduled', 'overdue']);
+        if (invDelErr) console.error('Failed to cleanup pathway invoices on unenroll:', invDelErr);
+
         setSelectedPathways(prev => {
           const next = new Set(prev);
           next.delete(pathwayId);
