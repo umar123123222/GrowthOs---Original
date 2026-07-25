@@ -334,6 +334,17 @@ export function StudentAccessManagement({
           .eq('id', enrollment.id);
         if (error) throw error;
 
+        // Cleanup: remove any unpaid/scheduled invoices for this course so
+        // Total Fee / Outstanding aren't inflated by leftover invoice rows.
+        const { error: invDelErr } = await supabase
+          .from('invoices')
+          .delete()
+          .eq('student_id', studentId)
+          .eq('course_id', courseId)
+          .is('paid_at', null)
+          .in('status', ['pending', 'scheduled', 'overdue']);
+        if (invDelErr) console.error('Failed to cleanup course invoices on unenroll:', invDelErr);
+
         setSelectedCourses(prev => {
           const next = new Set(prev);
           next.delete(courseId);
