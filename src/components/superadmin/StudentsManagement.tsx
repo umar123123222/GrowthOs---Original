@@ -4040,6 +4040,7 @@ export function StudentsManagement() {
         <MarkPaidDialog
           open={markPaidOpen}
           onOpenChange={(o) => { setMarkPaidOpen(o); if (!o) setMarkPaidCtx(null); }}
+          invoiceId={markPaidCtx.invoiceId}
           studentRecordId={markPaidCtx.studentRecordId}
           installmentNumber={markPaidCtx.installmentNumber}
           studentEmail={markPaidCtx.email}
