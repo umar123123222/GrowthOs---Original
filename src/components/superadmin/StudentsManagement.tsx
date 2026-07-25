@@ -68,6 +68,8 @@ interface InstallmentPayment {
   created_at?: string;
   due_date?: string;
   paid_at?: string | null;
+  course_id?: string | null;
+  pathway_id?: string | null;
 }
 interface ActivityLog {
   id: string;
