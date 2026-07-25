@@ -461,7 +461,9 @@ export function StudentsManagement() {
           status: invoice.status,
           created_at: invoice.created_at,
           due_date: invoice.extended_due_date || invoice.due_date,
-          paid_at: invoice.paid_at
+          paid_at: invoice.paid_at,
+          course_id: invoice.course_id || null,
+          pathway_id: invoice.pathway_id || null,
         };
         const key = String(invoice.student_id || '');
         const userPayments = paymentsMap.get(key) || [];
