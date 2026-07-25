@@ -1,36 +1,71 @@
-## Diagnosis
+# Fix "wrong invoice details" on student rows
 
-I checked the DB and the frontend sort/save code. There are **no duplicate `sequence_order` values per module and no duplicate `order` values per course** right now, so the "switching" isn't stale data — it's caused by four real weaknesses in the code that combine to make the order look unstable:
+## What the user sees
+Random students show inflated **Total Fee Amount**, wrong **Amount Paid / Outstanding**, and misleading **Invoice Due Date** and **Invoice Status**. Example from the screenshot: STU000638 shows Rs 120,000 total / Rs 65,000 outstanding / due Sep 28 — but that student is really enrolled in a single 55k program.
 
-1. **No tiebreaker on any sort.** Both fetches use `.order('sequence_order')` / `.order('order')` with nothing after it, and the client-side sorts do `(a.sequence_order || 0) - (b.sequence_order || 0)` / `a.moduleOrder - b.moduleOrder`. Any time two rows share a value (or are `NULL`/`0`), Postgres and JS `sort` are free to return them in different orders on different fetches. That is exactly the "it flipped by itself" feeling.
-2. **Create/edit forms default `order` and `sequence_order` to `0`.** `ModulesManagement` `formData` starts `order: 0` and `RecordingsManagement` `formData` starts `sequence_order: 0`. If an admin creates a new module/recording without typing a number, the row lands at position 0 and shoves everything else visually. Editing an existing row and clearing the field does the same.
-3. **Drag saves aren't serialized.** `handleModuleDragEnd` / `handleModuleDragEnd(moduleRecordings)` fire `Promise.all` writes but there's no guard against a second drag starting while the first is still in-flight. Two overlapping drags can interleave writes and produce a final DB state that doesn't match the last on-screen arrangement — then the next fetch "reverts" the order.
-4. **New rows are inserted with `sequence_order = 0` / `order = 0` instead of `max+1`.** So every new item collides with the smallest existing value and re-triggers issue 1.
+## Root cause (confirmed from code + prior DB investigation)
 
-## Fix (frontend + one small backfill migration, no schema breakage)
+`src/components/superadmin/StudentsManagement.tsx` computes every billing field by summing **all rows in `invoices` for that `student_record_id`**, with no filter on `course_id` / `pathway_id`:
 
-### `src/components/superadmin/RecordingsManagement.tsx`
-- `fetchRecordings`: chain `.order('sequence_order', { ascending: true, nullsFirst: false }).order('created_at', { ascending: true }).order('id', { ascending: true })` so ties always resolve the same way.
-- `groupedRecordings` memo: change the within-module sort to a stable comparator — first `sequence_order` (nulls last), then `created_at`, then `id`.
-- New-recording default: when opening the create dialog, compute `sequence_order = (max sequence_order in that module) + 1` instead of `0`. On save, if the field is blank/0, fall back to that computed value.
-- `handleModuleDragEnd`: add an `isReorderingRef` (useRef boolean). Ignore drag-end events while a save is in flight; re-enable in `finally`. Keeps rapid drags from racing.
+- `fetchInstallmentPayments` (lines ~433–472) loads every invoice row for the student into a single flat array keyed only by `student_id`.
+- `getPaymentSummary` (lines ~1640–1661), the Total Fee / Amount Paid / Outstanding panel (lines ~3074–3115), `getInvoiceDueDate` (~1620), `getLastInvoiceSentDate` (~1609), `getInvoiceStatus`, and the "Mark 1st/2nd/3rd Paid" buttons (~3159) all read from that flat array.
 
-### `src/components/superadmin/ModulesManagement.tsx`
-- `fetchModules`: chain `.order('order', { ascending: true, nullsFirst: false }).order('created_at').order('id')`.
-- `groupedByCourse` memo (lines ~218-240): same stable tiebreaker on the module list per course.
-- Create/edit form: default `order` to `(max order in that course) + 1` instead of `0`; on submit, if left at 0 fall back to that value. Show it as a hint in the input.
-- `handleModuleDragEnd`: same `isReorderingRef` guard as recordings.
+So the moment a student has **more than one enrollment** (or leftover invoices from a previous enrollment), the row shows the **sum across enrollments**:
 
-### Small one-time backfill migration
-- For any `modules` rows still at `order = 0` or `NULL` per course: renumber them to `max(order)+1, +2, ...` in `created_at` order so no course has duplicates or zeros going forward.
-- Same for `available_lessons.sequence_order` per `module`.
-- No table/column/RLS changes.
+- Batch 301 case: students were unenrolled from Master Pathway 1 and re-enrolled into Master Pathway 2, but MP1's unpaid/scheduled invoices were never cleaned up. UI sums MP1 (55k) + MP2 (65k) = 120k.
+- Any student with a real second enrollment (individual course + pathway) hits the same bug even without orphans.
+- "Invoice Due Date" picks the earliest open invoice across *any* enrollment, so a fresh MP2 installment can masquerade as a late LMS installment (matches the earlier "reminder with wrong amount/due date" report).
+- The 1st/2nd/3rd Paid buttons match by `installment_number` only, so installment #2 of MP2 collides with installment #2 of MP1.
 
-### Why this stops the "auto-switching"
-- Stable tiebreakers mean the same list always renders in the same order, even when values tie.
-- New rows get a real position instead of `0`, so they don't push older rows around.
-- The drag-in-flight guard removes the interleaved-write race that made a fresh page load show a different order than what the admin just dropped.
+Two independent things are broken:
 
-## Out of scope
-- No changes to unlock logic, drip days, batch/pathway assignment, or the timeline dialog.
-- No unique index on `(module, sequence_order)` yet — we can add one later if you want the DB to enforce it, but with the backfill + max+1 defaults it isn't necessary.
+1. **UI aggregation bug** — billing panel doesn't group by enrollment. This is what makes the numbers *look* wrong for correctly-enrolled students.
+2. **Data hygiene bug** — unenroll flow leaves orphan invoices behind, which amplifies #1 into obviously wrong totals like 120k.
+
+## Fix
+
+### Part A — UI: show billing per enrollment (no business-logic changes)
+
+In `src/components/superadmin/StudentsManagement.tsx`:
+
+1. Change `fetchInstallmentPayments` to also select `course_id, pathway_id` from `invoices` and store them on each `InstallmentPayment` entry.
+2. Add a helper `groupPaymentsByEnrollment(payments)` that returns `Array<{ key, label, courseId?, pathwayId?, payments[] }>` where `label` comes from the student's `course_enrollments` (course/pathway name already loaded elsewhere on the row).
+3. In the expanded student panel (lines ~3060–3170), replace the single Total/Paid/Outstanding/Due block with one block **per enrollment group**. Each group renders:
+   - Program name header (e.g. "Master Pathway 2" or "Client Acquisition Mastery")
+   - Total Fee Amount, Amount Paid, Outstanding, Invoice Due Date, Invoice Status — all computed from that group's payments only
+   - "Mark Nth Paid" buttons scoped to that group (pass `course_id`/`pathway_id` into `handleMarkInstallmentPaid` so the correct invoice row is targeted).
+4. Keep a small **"All enrollments" summary line** at the top of the panel (sum across groups) so admins still see the combined figure, but clearly labeled as a sum.
+5. Update `getInvoiceStatus`, `getInvoiceDueDate`, `getLastInvoiceSentDate`, `isInvoiceOverdue`, `getPaymentSummary` to accept an optional `enrollmentFilter` and use it in the per-group renders. The collapsed row (one line per student) keeps using the aggregate — but we'll switch its badge to say "Multiple enrollments" when >1 group exists so it's never mistaken for a single-program total.
+6. CSV export (line ~2403) gets one row per enrollment instead of one row per student, so exported totals also stop being summed.
+
+No changes to invoice creation, reminders, or edge functions in Part A.
+
+### Part B — Data hygiene: stop leaving orphan invoices behind
+
+In `src/components/admin/StudentAccessManagement.tsx` (the unenroll path referenced in earlier turns), when an enrollment is removed:
+
+- Delete `invoices` rows for that `(student_id, course_id|pathway_id)` where `status IN ('pending','scheduled','overdue')` and `paid_at IS NULL`.
+- Keep paid invoices (historical record) but tag them so Part A's grouping still labels them under the old program.
+- If no invoices were ever paid for that enrollment, delete the enrollment row entirely (already discussed in the earlier Batch-301 plan — reconfirming it here so orphans stop being created going forward).
+
+### Part C — One-time cleanup for existing orphans
+
+A single migration that, for every student, deletes unpaid/scheduled invoices whose `course_id`/`pathway_id` no longer matches any row in `course_enrollments` for that student. This clears the current 120k-style rows without touching anyone's paid history. Runs once; safe to re-run (idempotent).
+
+## Files to change
+
+- `src/components/superadmin/StudentsManagement.tsx` — Part A (grouping, per-enrollment panel, scoped mark-paid, CSV).
+- `src/components/admin/StudentAccessManagement.tsx` — Part B (delete orphan invoices on unenroll).
+- New migration under `supabase/migrations/` via the migration tool — Part C (cleanup existing orphans).
+
+## Verification
+
+- STU000638 and other batch-301 students should show a single "Master Pathway 2 — Rs 65,000" group after Part C, and the aggregate line should match.
+- Students with legitimate multi-enrollment (e.g. Raheel with LMS 55k + Ecom360 65k) should show two separate groups with correct per-program totals and per-program due dates.
+- Mark-Paid buttons should update only the targeted enrollment's invoice.
+
+## Safety
+
+- No changes to invoice amounts, statuses, or schedules for paid invoices.
+- Part C only deletes `status IN ('pending','scheduled','overdue') AND paid_at IS NULL` rows whose enrollment no longer exists — no paid history is touched.
+- Part B mirrors the deletion rule so this class of bug can't reappear.
