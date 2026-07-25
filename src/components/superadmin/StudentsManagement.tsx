@@ -1663,8 +1663,50 @@ export function StudentsManagement() {
       outstandingRaw: outstanding
     };
   };
+  // Group a student's invoice rows by enrollment (course/pathway/general).
+  // Returns [] when the student has no invoices.
+  const getEnrollmentGroups = (student: Student) => {
+    const key = student.student_record_id || '';
+    const payments = installmentPayments.get(key) || [];
+    if (payments.length === 0) return [] as Array<{
+      key: string; label: string; courseId: string | null; pathwayId: string | null; payments: InstallmentPayment[];
+    }>;
+    const buckets = new Map<string, {
+      key: string; label: string; courseId: string | null; pathwayId: string | null; payments: InstallmentPayment[];
+    }>();
+    for (const p of payments) {
+      let bkey: string;
+      let label: string;
+      let courseId: string | null = null;
+      let pathwayId: string | null = null;
+      if (p.pathway_id) {
+        bkey = `pathway:${p.pathway_id}`;
+        pathwayId = p.pathway_id;
+        label = allPathways.find(pw => pw.id === p.pathway_id)?.name || 'Pathway';
+      } else if (p.course_id) {
+        bkey = `course:${p.course_id}`;
+        courseId = p.course_id;
+        label = allCourses.find(c => c.id === p.course_id)?.title || 'Course';
+      } else {
+        bkey = 'general';
+        label = 'General';
+      }
+      let bucket = buckets.get(bkey);
+      if (!bucket) {
+        bucket = { key: bkey, label, courseId, pathwayId, payments: [] };
+        buckets.set(bkey, bucket);
+      }
+      bucket.payments.push(p);
+    }
+    // Sort installments within each bucket
+    for (const b of buckets.values()) {
+      b.payments.sort((a, b) => (a.installment_number || 0) - (b.installment_number || 0));
+    }
+    return Array.from(buckets.values()).sort((a, b) => a.label.localeCompare(b.label));
+  };
+
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
-  const [markPaidCtx, setMarkPaidCtx] = useState<{ studentRecordId: string; installmentNumber: number; email?: string } | null>(null);
+  const [markPaidCtx, setMarkPaidCtx] = useState<{ studentRecordId: string; installmentNumber: number; email?: string; invoiceId?: string } | null>(null);
 
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
