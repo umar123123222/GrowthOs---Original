@@ -372,9 +372,6 @@ const Videos = () => {
                           <div className="flex items-center justify-between">
                             <div>
                               <CardTitle className="text-xl font-semibold flex items-center gap-3">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                  {module.order}
-                                </div>
                                 {module.title}
                                 {module.isLocked && <Lock className="w-4 h-4 text-muted-foreground" />}
                               </CardTitle>
