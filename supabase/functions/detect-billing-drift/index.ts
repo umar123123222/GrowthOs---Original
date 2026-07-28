@@ -179,6 +179,51 @@ Deno.serve(async (req) => {
       duplicatesByStudent.set(s, arr);
     }
 
+    // Detect phantom course enrollments: student is enrolled in a pathway AND
+    // separately enrolled as 'direct' in a course that belongs to that same
+    // pathway. These are the extra invoices that were causing the 55k -> 120k
+    // inflation. Read-only detection here — reconcile step deletes them.
+    const { data: pathwayCourseRows } = await supabase
+      .from("pathway_courses")
+      .select("pathway_id, course_id");
+    const coursesByPathway = new Map<string, Set<string>>();
+    for (const r of pathwayCourseRows ?? []) {
+      const set = coursesByPathway.get(r.pathway_id as string) ?? new Set<string>();
+      set.add(r.course_id as string);
+      coursesByPathway.set(r.pathway_id as string, set);
+    }
+
+    const enrollmentsByStudent = new Map<string, any[]>();
+    for (const e of enrollments ?? []) {
+      const arr = enrollmentsByStudent.get(e.student_id as string) ?? [];
+      arr.push(e);
+      enrollmentsByStudent.set(e.student_id as string, arr);
+    }
+    const phantomByStudent = new Map<string, any[]>();
+    for (const [s, list] of enrollmentsByStudent) {
+      const pathwayIds = list
+        .filter((e) => e.pathway_id)
+        .map((e) => e.pathway_id as string);
+      if (pathwayIds.length === 0) continue;
+      const coveredCourses = new Set<string>();
+      for (const pid of pathwayIds) {
+        for (const cid of coursesByPathway.get(pid) ?? []) coveredCourses.add(cid);
+      }
+      const phantoms = list.filter(
+        (e) => !e.pathway_id && e.course_id && coveredCourses.has(e.course_id as string),
+      );
+      if (phantoms.length > 0) {
+        phantomByStudent.set(
+          s,
+          phantoms.map((e) => ({
+            enrollment_id: e.id,
+            course_id: e.course_id,
+            total_amount: Number(e.total_amount ?? 0),
+          })),
+        );
+      }
+    }
+
 
     // Close previously-open findings that no longer drift (auto-resolve as "cleared")
     const { data: openFindings } = await supabase
@@ -191,6 +236,7 @@ Deno.serve(async (req) => {
       ...expectedByStudent.keys(),
       ...orphanByStudent.keys(),
       ...duplicatesByStudent.keys(),
+      ...phantomByStudent.keys(),
     ]);
 
     for (const s of studentIds) {
@@ -202,18 +248,22 @@ Deno.serve(async (req) => {
       const hasSnapshotMismatch = perEnr.some((d: any) => d.snapshot_mismatch);
       const dupes = duplicatesByStudent.get(s) ?? [];
       const hasDuplicates = dupes.length > 0;
+      const phantoms = phantomByStudent.get(s) ?? [];
+      const hasPhantoms = phantoms.length > 0;
       const unpaid = unpaidByStudent.get(s) ?? 0;
       const paid = paidByStudent.get(s) ?? 0;
       // Skip students who are fully cleared: no unpaid invoices AND paid amount covers expected.
+      // Exception: phantom enrollments are always flagged so admins can clean them up.
       const fullyCleared =
         unpaid <= TOLERANCE && paid + TOLERANCE >= expected && expected > 0;
-      if (fullyCleared) continue;
+      if (fullyCleared && !hasPhantoms) continue;
 
       if (
         Math.abs(diff) <= TOLERANCE &&
         orphan <= TOLERANCE &&
         !hasSnapshotMismatch &&
-        !hasDuplicates
+        !hasDuplicates &&
+        !hasPhantoms
       ) continue;
 
       findingsToInsert.push({
@@ -229,6 +279,8 @@ Deno.serve(async (req) => {
           snapshot_mismatch: hasSnapshotMismatch,
           duplicate_enrollments: dupes,
           has_duplicate_enrollments: hasDuplicates,
+          phantom_course_enrollments: phantoms,
+          has_phantom_course_enrollments: hasPhantoms,
         },
         status: "open",
       });
