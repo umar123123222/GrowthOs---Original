@@ -549,6 +549,56 @@ export type Database = {
         }
         Relationships: []
       }
+      billing_reconciliation_actions: {
+        Row: {
+          action_type: string
+          after_state: Json
+          before_state: Json
+          finding_id: string | null
+          id: string
+          notes: string | null
+          performed_at: string
+          performed_by: string | null
+          student_id: string
+          undone_at: string | null
+          undone_by: string | null
+        }
+        Insert: {
+          action_type: string
+          after_state?: Json
+          before_state?: Json
+          finding_id?: string | null
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          student_id: string
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Update: {
+          action_type?: string
+          after_state?: Json
+          before_state?: Json
+          finding_id?: string | null
+          id?: string
+          notes?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          student_id?: string
+          undone_at?: string | null
+          undone_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_reconciliation_actions_finding_id_fkey"
+            columns: ["finding_id"]
+            isOneToOne: false
+            referencedRelation: "billing_drift_findings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bundle_courses: {
         Row: {
           bundle_id: string
