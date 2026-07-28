@@ -456,57 +456,18 @@ const handler = async (req: Request): Promise<Response> => {
     try {
       const hasFee = finalFeeAmount > 0;
       
-      if (selectedCourseId) {
-        const { error: enrollError } = await supabaseAdmin
-          .from('course_enrollments')
-          .insert({
-            student_id: studentRecord.id,
-            course_id: selectedCourseId,
-            pathway_id: null,
-            batch_id: batch_id || null,
-            enrollment_source: 'direct',
-            status: 'active',
-            progress_percentage: 0,
-            total_amount: hasFee ? finalFeeAmount : 0,
-            amount_paid: 0,
-            payment_status: hasFee ? 'pending' : 'waived',
-            // Access control overrides
-            drip_override: drip_override || false,
-            drip_enabled: drip_override ? (drip_enabled ?? null) : null,
-            sequential_override: sequential_override || false,
-            sequential_enabled: sequential_override ? (sequential_enabled ?? null) : null,
-            discount_amount: discount_amount || null,
-            discount_percentage: discount_percentage || null
-          });
-
-        if (enrollError) {
-          console.error('Course enrollment error (non-fatal):', enrollError);
-        } else {
-          console.log('Student enrolled in course:', selectedCourseId, 'with batch:', batch_id || 'none');
-          try {
-            const { data: courseInfo } = await supabaseAdmin
-              .from('courses').select('title').eq('id', selectedCourseId).maybeSingle();
-            await supabaseAdmin.from('admin_logs').insert({
-              entity_type: 'user',
-              entity_id: userId,
-              action: 'course_enrolled',
-              description: `Enrolled in course "${courseInfo?.title || 'Unknown'}"`,
-              performed_by: createdBy,
-              data: { target_user_id: userId, course_id: selectedCourseId, course_title: courseInfo?.title || null }
-            });
-          } catch (e) { console.error('Enrollment log failed:', e); }
-        }
-      } else if (selectedPathwayId) {
-        // For pathway, get the first course and enroll with pathway_id
+      if (selectedPathwayId) {
+        // Pathway wins over course_id when both are present — a pathway student
+        // must be enrolled with pathway_id set (course_id is only an anchor).
         const { data: pathwayCourses } = await supabaseAdmin
           .from('pathway_courses')
           .select('course_id')
           .eq('pathway_id', selectedPathwayId)
           .order('step_number')
           .limit(1);
-        
+
         const firstCourseId = pathwayCourses?.[0]?.course_id || null;
-        
+
         const { error: enrollError } = await supabaseAdmin
           .from('course_enrollments')
           .insert({
@@ -520,7 +481,6 @@ const handler = async (req: Request): Promise<Response> => {
             total_amount: hasFee ? finalFeeAmount : 0,
             amount_paid: 0,
             payment_status: hasFee ? 'pending' : 'waived',
-            // Access control overrides
             drip_override: drip_override || false,
             drip_enabled: drip_override ? (drip_enabled ?? null) : null,
             sequential_override: sequential_override || false,
@@ -546,47 +506,68 @@ const handler = async (req: Request): Promise<Response> => {
             });
           } catch (e) { console.error('Enrollment log failed:', e); }
         }
-      } else {
-        // Fallback: Auto-enroll in default course
-        const { data: defaultCourse } = await supabaseAdmin
-          .from('courses')
-          .select('id, price, title')
-          .eq('is_active', true)
-          .order('sequence_order', { ascending: true })
-          .limit(1)
-          .maybeSingle();
+      } else if (selectedCourseId) {
+        const { error: enrollError } = await supabaseAdmin
+          .from('course_enrollments')
+          .insert({
+            student_id: studentRecord.id,
+            course_id: selectedCourseId,
+            pathway_id: null,
+            batch_id: batch_id || null,
+            enrollment_source: 'direct',
+            status: 'active',
+            progress_percentage: 0,
+            total_amount: hasFee ? finalFeeAmount : 0,
+            amount_paid: 0,
+            payment_status: hasFee ? 'pending' : 'waived',
+            drip_override: drip_override || false,
+            drip_enabled: drip_override ? (drip_enabled ?? null) : null,
+            sequential_override: sequential_override || false,
+            sequential_enabled: sequential_override ? (sequential_enabled ?? null) : null,
+            discount_amount: discount_amount || null,
+            discount_percentage: discount_percentage || null
+          });
 
-        if (defaultCourse) {
-          selectedCourseId = defaultCourse.id;
-          
-          const { error: enrollError } = await supabaseAdmin
-            .from('course_enrollments')
-            .insert({
-              student_id: studentRecord.id,
-              course_id: defaultCourse.id,
-              status: 'active',
-              progress_percentage: 0,
-              total_amount: hasFee ? finalFeeAmount : 0,
-              amount_paid: 0,
-              payment_status: hasFee ? 'pending' : 'waived'
+        if (enrollError) {
+          console.error('Course enrollment error (non-fatal):', enrollError);
+        } else {
+          console.log('Student enrolled in course:', selectedCourseId, 'with batch:', batch_id || 'none');
+          try {
+            const { data: courseInfo } = await supabaseAdmin
+              .from('courses').select('title').eq('id', selectedCourseId).maybeSingle();
+            await supabaseAdmin.from('admin_logs').insert({
+              entity_type: 'user',
+              entity_id: userId,
+              action: 'course_enrolled',
+              description: `Enrolled in course "${courseInfo?.title || 'Unknown'}"`,
+              performed_by: createdBy,
+              data: { target_user_id: userId, course_id: selectedCourseId, course_title: courseInfo?.title || null }
             });
-
-          if (enrollError) {
-            console.error('Default course enrollment error (non-fatal):', enrollError);
-          } else {
-            console.log('Student auto-enrolled in default course:', defaultCourse.id);
-            try {
-              await supabaseAdmin.from('admin_logs').insert({
-                entity_type: 'user',
-                entity_id: userId,
-                action: 'course_enrolled',
-                description: `Enrolled in course "${(defaultCourse as any).title || 'Unknown'}"`,
-                performed_by: createdBy,
-                data: { target_user_id: userId, course_id: defaultCourse.id, course_title: (defaultCourse as any).title || null }
-              });
-            } catch (e) { console.error('Enrollment log failed:', e); }
-          }
+          } catch (e) { console.error('Enrollment log failed:', e); }
         }
+      } else {
+        // No target: refuse to silently auto-enroll in a "default" course.
+        // Log the incident and return a clear error so the caller can retry with
+        // an explicit selection instead of creating a phantom enrollment/invoice.
+        console.error('No enrollment target provided (no course_id, no pathway_id, no batch derivation).');
+        try {
+          await supabaseAdmin.from('admin_logs').insert({
+            entity_type: 'user',
+            entity_id: userId,
+            action: 'enrollment_missing_target',
+            description: `Student created without a course or pathway selection — no enrollment written`,
+            performed_by: createdBy,
+            data: { target_user_id: userId, batch_id: batch_id || null }
+          });
+        } catch (_) { /* non-fatal */ }
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error_code: 'NO_ENROLLMENT_TARGET',
+            error: 'No course or pathway was selected. Please pick a course or pathway before creating the student.'
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
       }
     } catch (enrollError) {
       console.error('Enrollment failed (non-fatal):', enrollError);
