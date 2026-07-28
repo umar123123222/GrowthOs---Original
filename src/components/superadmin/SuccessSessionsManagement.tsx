@@ -24,6 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { TablePager } from '@/components/common/TablePager';
 import { HostMentorPicker } from './HostMentorPicker';
 import { BatchPicker } from './BatchPicker';
+import { SessionVisibilityPreview } from './SessionVisibilityPreview';
 
 // Feature flag: disable all live-session related student emails
 // (scheduled / update / publish notifications). In-app notifications
@@ -1277,6 +1278,15 @@ export function SuccessSessionsManagement() {
                       />
                     </div>
                   </div>
+                  <SessionVisibilityPreview
+                    courseId={formData.course_id}
+                    batchIds={formData.batch_ids}
+                    startTime={(() => {
+                      if (!formData.schedule_date || !formData.start_time) return null;
+                      const iso = new Date(`${formData.schedule_date}T${formData.start_time}`);
+                      return isNaN(iso.getTime()) ? null : iso.toISOString();
+                    })()}
+                  />
                   <div className="space-y-1.5">
                     <label className="block text-xs font-medium text-foreground">Status <span className="text-rose-500">*</span></label>
                     <Select value={formData.status} onValueChange={(value) => setFormData({...formData, status: value})} required>
