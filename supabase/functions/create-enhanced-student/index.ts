@@ -329,16 +329,20 @@ const handler = async (req: Request): Promise<Response> => {
     let selectedPathwayId: string | null = pathway_id || null;
 
     // Safety net: if admin chose a batch but didn't pick a pathway/course explicitly,
-    // derive them from the batch row so the student isn't left "unassigned".
-    if (batch_id && (!selectedPathwayId || !selectedCourseId)) {
+    // derive from the batch row. IMPORTANT: never derive course_id when a pathway is
+    // already selected — the batch's course_id is only an anchor for course-only
+    // batches, and letting it override would enroll the student as a direct course
+    // (with a phantom invoice) instead of the pathway they were assigned to.
+    if (batch_id && !selectedPathwayId && !selectedCourseId) {
       const { data: batchRow } = await supabaseAdmin
         .from('batches')
         .select('pathway_id, course_id')
         .eq('id', batch_id)
         .maybeSingle();
       if (batchRow) {
-        if (!selectedPathwayId && batchRow.pathway_id) selectedPathwayId = batchRow.pathway_id;
-        if (!selectedCourseId && batchRow.course_id) selectedCourseId = batchRow.course_id;
+        if (batchRow.pathway_id) selectedPathwayId = batchRow.pathway_id;
+        // Only fall back to the batch's course when the batch has no pathway
+        if (!selectedPathwayId && batchRow.course_id) selectedCourseId = batchRow.course_id;
         console.log('Derived from batch:', { selectedPathwayId, selectedCourseId });
       }
     }
