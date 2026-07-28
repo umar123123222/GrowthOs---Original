@@ -365,6 +365,15 @@ export default function DataAudit() {
                                   </Button>
                                 ))
                               )}
+                              {phantoms.map((p) => (
+                                <Button
+                                  key={`ph-${p.enrollment_id}`} size="sm" variant="destructive"
+                                  onClick={() => removePhantom(f, p.enrollment_id)}
+                                  disabled={busyId === `phantom-${p.enrollment_id}`}
+                                >
+                                  <Wrench className="h-3 w-3 mr-1" /> Remove phantom course ({f.currency} {Number(p.total_amount ?? 0).toLocaleString()})
+                                </Button>
+                              ))}
                             </div>
                           )}
                         </CardContent>
