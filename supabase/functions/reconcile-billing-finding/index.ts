@@ -340,6 +340,20 @@ async function undoAction(admin: any, uid: string, action_id: string) {
         .eq("id", enr.id);
       if (updErr) throw updErr;
     }
+  } else if (action.action_type === "remove_phantom_enrollment") {
+    const enr = action.before_state?.enrollment;
+    const invoices = action.before_state?.invoices ?? [];
+    if (enr?.id) {
+      const { error: insEnrErr } = await admin
+        .from("course_enrollments")
+        .insert({ ...enr });
+      if (insEnrErr) throw insEnrErr;
+    }
+    if (invoices.length > 0) {
+      const rows = invoices.map((i: any) => ({ ...i }));
+      const { error: insInvErr } = await admin.from("invoices").insert(rows);
+      if (insInvErr) throw insInvErr;
+    }
   }
 
   const { error: markErr } = await admin
