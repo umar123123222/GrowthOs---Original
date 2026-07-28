@@ -471,39 +471,57 @@ function Metric({ label, value, highlight }: { label: string; value: string; hig
   );
 }
 
-function LogsTable({ rows, loading, emptyLabel }: { rows: LogRow[]; loading: boolean; emptyLabel: string }) {
+function EmptyState({ label }: { label: string }) {
   return (
-    <Card>
-      <CardContent className="pt-6">
-        {loading ? (
-          <div className="py-12 text-center text-muted-foreground">Loading…</div>
-        ) : rows.length === 0 ? (
-          <div className="py-12 text-center text-muted-foreground">{emptyLabel}</div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>When</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Entity</TableHead>
-                <TableHead>Description</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
-                    {new Date(r.created_at).toLocaleString()}
-                  </TableCell>
-                  <TableCell><Badge variant="outline">{r.action}</Badge></TableCell>
-                  <TableCell className="text-xs">{r.entity_type}</TableCell>
-                  <TableCell className="max-w-md truncate">{r.description ?? '—'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+    <div className="relative overflow-hidden bg-card border border-border rounded-2xl min-h-[280px] flex items-center justify-center">
+      <div
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '24px 24px' }}
+      />
+      <div className="relative flex flex-col items-center text-center px-6 max-w-sm">
+        <div className="w-16 h-16 mb-6 rounded-full bg-muted flex items-center justify-center">
+          <AlertTriangle className="w-7 h-7 text-muted-foreground/50" />
+        </div>
+        <h3 className="text-lg font-semibold text-foreground">Nothing here yet</h3>
+        <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function LogsTable({ rows, loading, emptyLabel }: { rows: LogRow[]; loading: boolean; emptyLabel: string }) {
+  if (loading) {
+    return (
+      <div className="bg-card border border-border rounded-2xl min-h-[280px] flex items-center justify-center text-muted-foreground text-sm">
+        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Loading…
+      </div>
+    );
+  }
+  if (rows.length === 0) return <EmptyState label={emptyLabel} />;
+  return (
+    <div className="bg-card border border-border rounded-2xl overflow-hidden">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>When</TableHead>
+            <TableHead>Action</TableHead>
+            <TableHead>Entity</TableHead>
+            <TableHead>Description</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {rows.map((r) => (
+            <TableRow key={r.id}>
+              <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                {new Date(r.created_at).toLocaleString()}
+              </TableCell>
+              <TableCell><Badge variant="outline">{r.action}</Badge></TableCell>
+              <TableCell className="text-xs">{r.entity_type}</TableCell>
+              <TableCell className="max-w-md truncate">{r.description ?? '—'}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
