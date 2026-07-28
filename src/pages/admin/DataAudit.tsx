@@ -311,6 +311,7 @@ export default function DataAudit() {
                     const orphan = Number(f.details?.orphan_invoice_total ?? 0);
                     const perEnr: any[] = f.details?.per_enrollment ?? [];
                     const dupes: any[] = f.details?.duplicate_enrollments ?? [];
+                    const phantoms: any[] = f.details?.phantom_course_enrollments ?? [];
                     return (
                       <Card key={f.id} className="border-l-4 border-l-yellow-500">
                         <CardContent className="pt-4 space-y-3">
