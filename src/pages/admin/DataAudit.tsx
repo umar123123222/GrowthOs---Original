@@ -443,12 +443,22 @@ export default function DataAudit() {
   );
 }
 
-function StatCard({ title, value }: { title: string; value: number }) {
+type Tone = 'success' | 'warning' | 'muted';
+function StatCard({ title, value, badge }: { title: string; value: number; badge?: { label: string; tone: Tone } }) {
+  const toneClass =
+    badge?.tone === 'success' ? 'text-emerald-600 bg-emerald-500/10' :
+    badge?.tone === 'warning' ? 'text-amber-600 bg-amber-500/10' :
+    'text-muted-foreground bg-muted';
   return (
-    <Card>
-      <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">{title}</CardTitle></CardHeader>
-      <CardContent><div className="text-3xl font-bold text-foreground">{value}</div></CardContent>
-    </Card>
+    <div className="bg-card border border-border rounded-2xl p-6 transition-all hover:border-primary/20">
+      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">{title}</p>
+      <div className="flex items-baseline gap-2">
+        <span className="text-4xl font-bold text-foreground tracking-tighter">{value}</span>
+        {badge && (
+          <span className={`text-xs font-medium px-1.5 py-0.5 rounded ${toneClass}`}>{badge.label}</span>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -456,7 +466,7 @@ function Metric({ label, value, highlight }: { label: string; value: string; hig
   return (
     <div>
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={`font-semibold ${highlight ? 'text-yellow-600' : 'text-foreground'}`}>{value}</div>
+      <div className={`font-semibold ${highlight ? 'text-amber-600' : 'text-foreground'}`}>{value}</div>
     </div>
   );
 }
