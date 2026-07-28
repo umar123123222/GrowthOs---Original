@@ -1,71 +1,127 @@
-# Fix "wrong invoice details" on student rows
+# Safe Rollout Plan — Improvements Without Breaking Existing Students
 
-## What the user sees
-Random students show inflated **Total Fee Amount**, wrong **Amount Paid / Outstanding**, and misleading **Invoice Due Date** and **Invoice Status**. Example from the screenshot: STU000638 shows Rs 120,000 total / Rs 65,000 outstanding / due Sep 28 — but that student is really enrolled in a single 55k program.
+Guiding principle for every phase: **additive first, backfill from current truth, no destructive change without a dry-run report and a reversible migration.** Nothing in this plan modifies existing invoices, enrollments, sequence orders, or student access unless a preview clearly shows the change is a no-op or a strict correction.
 
-## Root cause (confirmed from code + prior DB investigation)
+---
 
-`src/components/superadmin/StudentsManagement.tsx` computes every billing field by summing **all rows in `invoices` for that `student_record_id`**, with no filter on `course_id` / `pathway_id`:
+## Global Safety Rules (apply to every phase)
 
-- `fetchInstallmentPayments` (lines ~433–472) loads every invoice row for the student into a single flat array keyed only by `student_id`.
-- `getPaymentSummary` (lines ~1640–1661), the Total Fee / Amount Paid / Outstanding panel (lines ~3074–3115), `getInvoiceDueDate` (~1620), `getLastInvoiceSentDate` (~1609), `getInvoiceStatus`, and the "Mark 1st/2nd/3rd Paid" buttons (~3159) all read from that flat array.
+1. **Additive schema only.** New columns are nullable with defaults; no `DROP`, no `NOT NULL` on existing rows until backfill is verified.
+2. **Backfill = snapshot of current reality.** Every new field is seeded from the value the app is *already* computing today, so day-1 behavior is identical.
+3. **Feature-flagged reads.** New logic is gated behind a flag in `feature_flags` / `env-config`. Old code path stays as the default until we flip per-role.
+4. **Dry-run reports before any data mutation.** Cleanup/reconciliation jobs first write to an `audit_findings` table; a human approves before any `UPDATE`/`DELETE`.
+5. **Scoped to new records first.** New rules (duplicate-enrollment guard, snapshot pricing, etc.) apply to *new* writes. Existing rows are grandfathered.
+6. **Reversible migrations.** Each migration ships with a documented rollback in `docs/supabase-migration-guide.md`.
+7. **No touching Batch 301 / existing enrollments in Phase 1–3.** Data corrections are Phase 4 only, after audit tooling exists.
 
-So the moment a student has **more than one enrollment** (or leftover invoices from a previous enrollment), the row shows the **sum across enrollments**:
+---
 
-- Batch 301 case: students were unenrolled from Master Pathway 1 and re-enrolled into Master Pathway 2, but MP1's unpaid/scheduled invoices were never cleaned up. UI sums MP1 (55k) + MP2 (65k) = 120k.
-- Any student with a real second enrollment (individual course + pathway) hits the same bug even without orphans.
-- "Invoice Due Date" picks the earliest open invoice across *any* enrollment, so a fresh MP2 installment can masquerade as a late LMS installment (matches the earlier "reminder with wrong amount/due date" report).
-- The 1st/2nd/3rd Paid buttons match by `installment_number` only, so installment #2 of MP2 collides with installment #2 of MP1.
+## Phase 1 — Observability (read-only, zero risk)
 
-Two independent things are broken:
+Ship first so we can *see* the impact of later phases.
 
-1. **UI aggregation bug** — billing panel doesn't group by enrollment. This is what makes the numbers *look* wrong for correctly-enrolled students.
-2. **Data hygiene bug** — unenroll flow leaves orphan invoices behind, which amplifies #1 into obviously wrong totals like 120k.
+- New page `src/pages/admin/DataAudit.tsx` (superadmin only) with tabs:
+  - Invoice changes (last 30d) — pulled from `admin_logs` + a new read-only view.
+  - Enrollment changes — course/pathway add/remove events.
+  - Content order changes — module/recording `sequence_order` diffs.
+- New edge function `detect-billing-drift` (cron, read-only): compares each student's invoice sum vs. their active enrollments and writes rows into a new `billing_drift_findings` table. **No writes to invoices.**
+- Admin notification when drift is detected (uses existing notifications table).
 
-## Fix
+Guarantee: pure reads. Cannot break anything.
 
-### Part A — UI: show billing per enrollment (no business-logic changes)
+---
 
-In `src/components/superadmin/StudentsManagement.tsx`:
+## Phase 2 — Enrollment Snapshots (additive, grandfathered)
 
-1. Change `fetchInstallmentPayments` to also select `course_id, pathway_id` from `invoices` and store them on each `InstallmentPayment` entry.
-2. Add a helper `groupPaymentsByEnrollment(payments)` that returns `Array<{ key, label, courseId?, pathwayId?, payments[] }>` where `label` comes from the student's `course_enrollments` (course/pathway name already loaded elsewhere on the row).
-3. In the expanded student panel (lines ~3060–3170), replace the single Total/Paid/Outstanding/Due block with one block **per enrollment group**. Each group renders:
-   - Program name header (e.g. "Master Pathway 2" or "Client Acquisition Mastery")
-   - Total Fee Amount, Amount Paid, Outstanding, Invoice Due Date, Invoice Status — all computed from that group's payments only
-   - "Mark Nth Paid" buttons scoped to that group (pass `course_id`/`pathway_id` into `handleMarkInstallmentPaid` so the correct invoice row is targeted).
-4. Keep a small **"All enrollments" summary line** at the top of the panel (sum across groups) so admins still see the combined figure, but clearly labeled as a sum.
-5. Update `getInvoiceStatus`, `getInvoiceDueDate`, `getLastInvoiceSentDate`, `isInvoiceOverdue`, `getPaymentSummary` to accept an optional `enrollmentFilter` and use it in the per-group renders. The collapsed row (one line per student) keeps using the aggregate — but we'll switch its badge to say "Multiple enrollments" when >1 group exists so it's never mistaken for a single-program total.
-6. CSV export (line ~2403) gets one row per enrollment instead of one row per student, so exported totals also stop being summed.
+Problem being solved: global price changes retroactively altering old students' totals.
 
-No changes to invoice creation, reminders, or edge functions in Part A.
+- Migration adds nullable columns to the enrollment tables:
+  - `enrolled_price numeric`, `enrolled_currency text`, `snapshot_at timestamptz`.
+- **Backfill** = copy today's computed price for each existing enrollment into `enrolled_price`. Because we snapshot the *current* value, no student's total changes.
+- New enrollments (via `create-enhanced-student`, admin Manage Access, etc.) write the snapshot at creation time.
+- Reads: invoice/total calculators prefer `enrolled_price` when present, else fall back to the current live price lookup (identical to today).
+- Flag: `USE_ENROLLMENT_SNAPSHOTS` — default ON only for enrollments created after the migration timestamp; existing rows unaffected either way because their snapshot equals today's live price.
 
-### Part B — Data hygiene: stop leaving orphan invoices behind
+Guarantee: no student sees a different number on day 1.
 
-In `src/components/admin/StudentAccessManagement.tsx` (the unenroll path referenced in earlier turns), when an enrollment is removed:
+---
 
-- Delete `invoices` rows for that `(student_id, course_id|pathway_id)` where `status IN ('pending','scheduled','overdue')` and `paid_at IS NULL`.
-- Keep paid invoices (historical record) but tag them so Part A's grouping still labels them under the old program.
-- If no invoices were ever paid for that enrollment, delete the enrollment row entirely (already discussed in the earlier Batch-301 plan — reconfirming it here so orphans stop being created going forward).
+## Phase 3 — Duplicate-Enrollment Guard (new writes only)
 
-### Part C — One-time cleanup for existing orphans
+- Add a **partial unique index** on active enrollments `(student_id, course_id)` and `(student_id, pathway_id)` where `status = 'active'`.
+- Before creating the index, run a dry-run query and surface any existing duplicates in the Data Audit page. **Do not** auto-clean; admin resolves them manually via existing per-enrollment delete UI.
+- Admin UI (`StudentAccessManagement.tsx`) shows a clear "already enrolled" state instead of allowing a second enrollment.
 
-A single migration that, for every student, deletes unpaid/scheduled invoices whose `course_id`/`pathway_id` no longer matches any row in `course_enrollments` for that student. This clears the current 120k-style rows without touching anyone's paid history. Runs once; safe to re-run (idempotent).
+Guarantee: existing duplicates are visible but preserved; only new duplicates are blocked.
 
-## Files to change
+---
 
-- `src/components/superadmin/StudentsManagement.tsx` — Part A (grouping, per-enrollment panel, scoped mark-paid, CSV).
-- `src/components/admin/StudentAccessManagement.tsx` — Part B (delete orphan invoices on unenroll).
-- New migration under `supabase/migrations/` via the migration tool — Part C (cleanup existing orphans).
+## Phase 4 — Data Reconciliation Tooling (opt-in fixes)
 
-## Verification
+- The `detect-billing-drift` findings page gets per-row actions: "Recompute invoices from snapshot" / "Mark as intentional".
+- Each action is scoped to *one* student, requires confirmation, logs to `admin_logs`, and is reversible from the same UI within 7 days (soft-delete pattern already in use).
+- No bulk auto-fix. No cron mutation.
 
-- STU000638 and other batch-301 students should show a single "Master Pathway 2 — Rs 65,000" group after Part C, and the aggregate line should match.
-- Students with legitimate multi-enrollment (e.g. Raheel with LMS 55k + Ecom360 65k) should show two separate groups with correct per-program totals and per-program due dates.
-- Mark-Paid buttons should update only the targeted enrollment's invoice.
+Guarantee: no mass update ever runs without an admin click per student.
 
-## Safety
+---
 
-- No changes to invoice amounts, statuses, or schedules for paid invoices.
-- Part C only deletes `status IN ('pending','scheduled','overdue') AND paid_at IS NULL` rows whose enrollment no longer exists — no paid history is touched.
-- Part B mirrors the deletion rule so this class of bug can't reappear.
+## Phase 5 — Success Session Preview + Session Safety
+
+- Add a "Preview visibility" panel to the schedule dialog: shows the exact list of students who will see this session, using the same RLS function students use. Purely a read; no schema change.
+- Retain existing duplicate-detection (link + course + batch overlap).
+- No change to visibility rules — just makes them observable.
+
+---
+
+## Phase 6 — Content Ordering: Single Source of Truth
+
+- Extract the ordering used by `/recordings` and `/course/modules` into one hook `useOrderedCourseContent` and switch the student `Videos.tsx` page to use it.
+- Ship behind flag `STUDENT_USES_UNIFIED_ORDERING`. Rollout: enable for one test student first via a per-user override, then broaden.
+- Includes an automated diff test: for each course, compare admin order vs. student order; CI fails if they diverge.
+
+Guarantee: same query = same order, forever. Rollout is per-user so any regression is contained.
+
+---
+
+## Phase 7 — Content Order Change Alerts
+
+- Trigger on `available_lessons` / `modules` writes: if `sequence_order` changes on a course that has active enrollments, log to `admin_logs` and notify superadmin. No blocking, just visibility.
+
+---
+
+## What is explicitly NOT in this plan (to avoid regressions)
+
+- No changes to Batch 301, Master Pathway 2, or any historical invoice.
+- No changes to existing `sequence_order` values.
+- No changes to `has_role`, RLS recursion prevention, or the auth flow.
+- No removal of the current billing UI cards until Phase 4 audit tools are live for 2 weeks.
+- No changes to email sending toggles (`LIVE_SESSION_EMAILS_ENABLED` stays off as you set it).
+
+---
+
+## Rollout Order & Verification Checkpoints
+
+```text
+Phase 1  →  ship, watch drift dashboard for 3–7 days
+Phase 2  →  ship snapshot migration, verify totals unchanged for 20 sample students
+Phase 3  →  publish duplicates report, admins clean up, then enable index
+Phase 4  →  enable per-row reconciliation actions (manual only)
+Phase 5  →  ship visibility preview
+Phase 6  →  unified ordering behind flag, per-user rollout
+Phase 7  →  order-change alerts
+```
+
+At each checkpoint I'll pause and show you: migration SQL, a sample of before/after data, and the rollback command — you approve before it goes live.
+
+---
+
+## Technical Details (for reference)
+
+- Feature flags land in `src/lib/feature-flags.ts` + `feature_flags` table (already present).
+- New tables: `billing_drift_findings`, `audit_findings` — both with `GRANT` to `authenticated`/`service_role` and superadmin-only RLS via `public.get_my_role()`.
+- Cron jobs registered in `supabase/config.toml` with `verify_jwt=false` and internal role checks.
+- New edge functions follow existing PDF-reliability pattern (catch `Deno.lstatSync`).
+- Rollback docs appended per migration; each phase has a single revert migration prepared before ship.
+
+Approve and I'll start with Phase 1 (pure observability, cannot break anything).
