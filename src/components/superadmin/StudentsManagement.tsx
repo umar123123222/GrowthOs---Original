@@ -1707,6 +1707,72 @@ export function StudentsManagement() {
 
   const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [markPaidCtx, setMarkPaidCtx] = useState<{ studentRecordId: string; installmentNumber: number; email?: string; invoiceId?: string } | null>(null);
+  const [deleteEnrollmentCtx, setDeleteEnrollmentCtx] = useState<{
+    student: Student;
+    courseId: string | null;
+    pathwayId: string | null;
+    label: string;
+  } | null>(null);
+  const [deletingEnrollment, setDeletingEnrollment] = useState(false);
+
+  const handleDeleteEnrollment = async () => {
+    if (!deleteEnrollmentCtx) return;
+    const { student, courseId, pathwayId, label } = deleteEnrollmentCtx;
+    if (!student.student_record_id) {
+      toast({ title: 'Error', description: 'Student record not found.', variant: 'destructive' });
+      return;
+    }
+    setDeletingEnrollment(true);
+    try {
+      // 1) Delete ALL invoices scoped to this enrollment (paid + unpaid)
+      let invQuery = supabase.from('invoices').delete().eq('student_id', student.student_record_id);
+      invQuery = pathwayId
+        ? invQuery.eq('pathway_id', pathwayId)
+        : courseId
+          ? invQuery.eq('course_id', courseId).is('pathway_id', null)
+          : invQuery.is('course_id', null).is('pathway_id', null);
+      const { error: invErr } = await invQuery;
+      if (invErr) throw invErr;
+
+      // 2) Cleanup installment_payments rows for this scope (if used)
+      let ipQuery = supabase.from('installment_payments').delete().eq('user_id', student.id);
+      if (pathwayId) {
+        ipQuery = ipQuery.eq('pathway_id', pathwayId);
+      } else if (courseId) {
+        ipQuery = ipQuery.eq('course_id', courseId).is('pathway_id', null);
+      }
+      const { error: ipErr } = await ipQuery;
+      if (ipErr) console.warn('installment_payments cleanup:', ipErr);
+
+      // 3) Delete the enrollment row itself
+      if (courseId || pathwayId) {
+        let enrQuery = supabase.from('course_enrollments').delete().eq('student_id', student.student_record_id);
+        enrQuery = pathwayId ? enrQuery.eq('pathway_id', pathwayId) : enrQuery.eq('course_id', courseId!).is('pathway_id', null);
+        const { error: enrErr } = await enrQuery;
+        if (enrErr) throw enrErr;
+      }
+
+      await logAdminAction({
+        performedBy: user?.id || null,
+        targetUserId: student.id,
+        entityType: pathwayId ? 'pathway_enrollment' : 'course_enrollment',
+        entityId: pathwayId || courseId || 'general',
+        action: pathwayId ? ACTIVITY_TYPES.PATHWAY_UNENROLLED : ACTIVITY_TYPES.COURSE_UNENROLLED,
+        description: `Deleted enrollment "${label}" and all its invoices`,
+        data: { course_id: courseId, pathway_id: pathwayId, label, hard_delete: true },
+      });
+
+      toast({ title: 'Enrollment Deleted', description: `${label} and its invoices have been removed.` });
+      setDeleteEnrollmentCtx(null);
+      await fetchInstallmentPayments();
+      await fetchStudents();
+    } catch (error: any) {
+      console.error('Delete enrollment failed:', error);
+      toast({ title: 'Error', description: error?.message || 'Failed to delete enrollment', variant: 'destructive' });
+    } finally {
+      setDeletingEnrollment(false);
+    }
+  };
 
   const handleMarkInstallmentPaid = async (studentId: string, installmentNumber: number) => {
     try {
