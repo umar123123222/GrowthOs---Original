@@ -4164,5 +4164,31 @@ export function StudentsManagement() {
           onSuccess={() => { fetchInstallmentPayments(); fetchStudents(); }}
         />
       )}
+
+      <AlertDialog open={!!deleteEnrollmentCtx} onOpenChange={(open) => { if (!open && !deletingEnrollment) setDeleteEnrollmentCtx(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this enrollment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteEnrollmentCtx && (
+                <>
+                  This will permanently remove <span className="font-semibold text-foreground">{deleteEnrollmentCtx.label}</span> for{' '}
+                  <span className="font-semibold text-foreground">{deleteEnrollmentCtx.student.full_name}</span> and delete all invoices (paid and unpaid) tied to this enrollment. Other enrollments for this student will not be affected. This cannot be undone.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingEnrollment}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleDeleteEnrollment(); }}
+              disabled={deletingEnrollment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deletingEnrollment ? 'Deleting…' : 'Delete Enrollment'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>;
 }
