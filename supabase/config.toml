@@ -2,3 +2,6 @@ project_id = "majqoqagohicjigmsilu"
 
 [functions.detect-billing-drift]
 verify_jwt = false
+
+[functions.reconcile-billing-finding]
+verify_jwt = true
