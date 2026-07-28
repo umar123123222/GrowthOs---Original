@@ -3253,7 +3253,7 @@ export function StudentsManagement() {
                                               {' · '}{group.payments.length} installment{group.payments.length === 1 ? '' : 's'}
                                             </div>
                                           </div>
-                                          <div>
+                                          <div className="flex items-center gap-2">
                                             {allPaid ? (
                                               <Badge className="bg-green-100 text-green-800 border-green-200">Fully Paid</Badge>
                                             ) : isOverdue ? (
@@ -3261,6 +3261,21 @@ export function StudentsManagement() {
                                             ) : (
                                               <Badge className="bg-amber-100 text-amber-800 border-amber-200">Pending</Badge>
                                             )}
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              className="text-destructive hover:text-destructive hover:bg-red-50"
+                                              onClick={() => setDeleteEnrollmentCtx({
+                                                student,
+                                                courseId: group.courseId,
+                                                pathwayId: group.pathwayId,
+                                                label: group.label,
+                                              })}
+                                              title="Delete this enrollment and its invoices"
+                                            >
+                                              <Trash2 className="w-4 h-4 mr-1" />
+                                              Delete
+                                            </Button>
                                           </div>
                                         </div>
                                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
