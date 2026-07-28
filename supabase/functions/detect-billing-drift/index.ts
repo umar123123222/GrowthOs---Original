@@ -94,6 +94,17 @@ Deno.serve(async (req) => {
       expectedByStudent.set(s, (expectedByStudent.get(s) ?? 0) + expected);
       actualByStudent.set(s, (actualByStudent.get(s) ?? 0) + actual);
 
+      const snap = e.snapshot_price != null ? Number(e.snapshot_price) : null;
+      const catalog = e.pathway_id
+        ? pathwayPrice.get(e.pathway_id as string) ?? null
+        : e.course_id
+          ? coursePrice.get(e.course_id as string) ?? null
+          : null;
+      const snapshot_mismatch =
+        snap != null &&
+        ((Math.abs(snap - expected) > TOLERANCE) ||
+          (catalog != null && Math.abs(snap - catalog) > TOLERANCE));
+
       const arr = detailsByStudent.get(s) ?? [];
       arr.push({
         enrollment_id: e.id,
@@ -102,9 +113,14 @@ Deno.serve(async (req) => {
         expected,
         actual,
         difference: +(actual - expected).toFixed(2),
+        snapshot_price: snap,
+        catalog_price: catalog,
+        snapshot_source: e.snapshot_source ?? null,
+        snapshot_mismatch,
       });
       detailsByStudent.set(s, arr);
     }
+
 
     // Also detect orphan invoices: invoices whose (student, course, pathway) has no active enrollment.
     // These are informational — do not delete anything.
