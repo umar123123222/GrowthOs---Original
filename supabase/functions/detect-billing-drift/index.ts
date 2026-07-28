@@ -40,15 +40,26 @@ Deno.serve(async (req) => {
       if (!roleRow) return json({ error: "Forbidden" }, 403);
     }
 
-    // Pull all active enrollments
+    // Pull all active enrollments (incl. snapshot fields for mismatch check)
     const { data: enrollments, error: enrErr } = await supabase
       .from("course_enrollments")
       .select(
-        "id, student_id, course_id, pathway_id, total_amount, status",
+        "id, student_id, course_id, pathway_id, total_amount, status, snapshot_price, snapshot_currency, snapshot_source",
       )
       .eq("status", "active");
 
     if (enrErr) throw enrErr;
+
+    // Pull catalog prices for snapshot-vs-current comparison
+    const [{ data: courses }, { data: pathways }] = await Promise.all([
+      supabase.from("courses").select("id, price, currency"),
+      supabase.from("learning_pathways").select("id, price, currency"),
+    ]);
+    const coursePrice = new Map<string, number>();
+    for (const c of courses ?? []) if (c.price != null) coursePrice.set(c.id as string, Number(c.price));
+    const pathwayPrice = new Map<string, number>();
+    for (const p of pathways ?? []) if (p.price != null) pathwayPrice.set(p.id as string, Number(p.price));
+
 
     // Pull all invoices in one shot (chunked defensively)
     const { data: invoices, error: invErr } = await supabase
