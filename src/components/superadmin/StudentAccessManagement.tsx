@@ -445,7 +445,7 @@ export function StudentAccessManagement({
       onAccessUpdated?.();
     } catch (error) {
       console.error('Error updating course access:', error);
-      toast({ title: 'Error', description: 'Failed to update course access', variant: 'destructive' });
+      toast(friendlyEnrollmentError(error, 'Failed to update course access'));
     } finally {
       setSaving(false);
     }
@@ -575,7 +575,7 @@ export function StudentAccessManagement({
       onAccessUpdated?.();
     } catch (error) {
       console.error('Error updating pathway access:', error);
-      toast({ title: 'Error', description: 'Failed to update pathway access', variant: 'destructive' });
+      toast(friendlyEnrollmentError(error, 'Failed to update pathway access'));
     } finally {
       setSaving(false);
     }
@@ -616,7 +616,7 @@ export function StudentAccessManagement({
       toast({ title: 'Success', description: `Assigned ${unassignedCourses.length} courses` });
     } catch (error) {
       console.error('Error bulk assigning courses:', error);
-      toast({ title: 'Error', description: 'Failed to assign courses', variant: 'destructive' });
+      toast(friendlyEnrollmentError(error, 'Failed to assign courses'));
     } finally {
       setSaving(false);
     }
@@ -697,7 +697,7 @@ export function StudentAccessManagement({
       toast({ title: 'Success', description: `Assigned ${unassignedPathways.length} pathways` });
     } catch (error) {
       console.error('Error bulk assigning pathways:', error);
-      toast({ title: 'Error', description: 'Failed to assign pathways', variant: 'destructive' });
+      toast(friendlyEnrollmentError(error, 'Failed to assign pathways'));
     } finally {
       setSaving(false);
     }
@@ -796,7 +796,7 @@ export function StudentAccessManagement({
       toast({ title: 'Success', description: 'All access granted' });
     } catch (error) {
       console.error('Error assigning all:', error);
-      toast({ title: 'Error', description: 'Failed to grant access', variant: 'destructive' });
+      toast(friendlyEnrollmentError(error, 'Failed to grant access'));
     } finally {
       setSaving(false);
     }
