@@ -13,6 +13,21 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 
+// Detects the DB duplicate-enrollment guard (BEFORE INSERT trigger on course_enrollments)
+// and returns a friendly toast payload. Falls back to the original error message.
+function friendlyEnrollmentError(error: any, fallback: string): { title: string; description: string; variant: 'destructive' } {
+  const msg = String(error?.message ?? error ?? '');
+  if (msg.includes('DUPLICATE_ENROLLMENT')) {
+    return {
+      title: 'Already enrolled',
+      description: 'This student is already enrolled in that course or pathway. Remove the existing enrollment first.',
+      variant: 'destructive',
+    };
+  }
+  return { title: 'Error', description: fallback, variant: 'destructive' };
+}
+
+
 interface Course {
   id: string;
   title: string;
