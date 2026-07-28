@@ -181,6 +181,7 @@ Deno.serve(async (req) => {
     const studentIds = new Set<string>([
       ...expectedByStudent.keys(),
       ...orphanByStudent.keys(),
+      ...duplicatesByStudent.keys(),
     ]);
 
     for (const s of studentIds) {
@@ -190,10 +191,13 @@ Deno.serve(async (req) => {
       const diff = +(actual + orphan - expected).toFixed(2);
       const perEnr = detailsByStudent.get(s) ?? [];
       const hasSnapshotMismatch = perEnr.some((d: any) => d.snapshot_mismatch);
+      const dupes = duplicatesByStudent.get(s) ?? [];
+      const hasDuplicates = dupes.length > 0;
       if (
         Math.abs(diff) <= TOLERANCE &&
         orphan <= TOLERANCE &&
-        !hasSnapshotMismatch
+        !hasSnapshotMismatch &&
+        !hasDuplicates
       ) continue;
 
       findingsToInsert.push({
@@ -205,10 +209,13 @@ Deno.serve(async (req) => {
           per_enrollment: perEnr,
           orphan_invoice_total: orphan,
           snapshot_mismatch: hasSnapshotMismatch,
+          duplicate_enrollments: dupes,
+          has_duplicate_enrollments: hasDuplicates,
         },
         status: "open",
       });
     }
+
 
 
     // Insert new findings (do not duplicate existing open ones for the same student — dedupe by upsert-like check)
