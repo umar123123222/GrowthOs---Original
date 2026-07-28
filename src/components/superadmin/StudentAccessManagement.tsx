@@ -890,7 +890,7 @@ export function StudentAccessManagement({
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="courses" className="flex-1 overflow-hidden mt-4">
+              <TabsContent value="courses" className="flex-1 min-h-0 overflow-hidden mt-4 flex flex-col">
                 <div className="flex gap-2 mb-3">
                   <Button
                     variant="ghost"
@@ -991,7 +991,7 @@ export function StudentAccessManagement({
                 </ScrollArea>
               </TabsContent>
 
-              <TabsContent value="pathways" className="flex-1 overflow-hidden mt-4">
+              <TabsContent value="pathways" className="flex-1 min-h-0 overflow-hidden mt-4 flex flex-col">
                 <div className="flex gap-2 mb-3">
                   <Button
                     variant="ghost"
