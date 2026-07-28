@@ -202,6 +202,13 @@ Deno.serve(async (req) => {
       const hasSnapshotMismatch = perEnr.some((d: any) => d.snapshot_mismatch);
       const dupes = duplicatesByStudent.get(s) ?? [];
       const hasDuplicates = dupes.length > 0;
+      const unpaid = unpaidByStudent.get(s) ?? 0;
+      const paid = paidByStudent.get(s) ?? 0;
+      // Skip students who are fully cleared: no unpaid invoices AND paid amount covers expected.
+      const fullyCleared =
+        unpaid <= TOLERANCE && paid + TOLERANCE >= expected && expected > 0;
+      if (fullyCleared) continue;
+
       if (
         Math.abs(diff) <= TOLERANCE &&
         orphan <= TOLERANCE &&
@@ -217,6 +224,8 @@ Deno.serve(async (req) => {
         details: {
           per_enrollment: perEnr,
           orphan_invoice_total: orphan,
+          paid_total: paid,
+          unpaid_total: unpaid,
           snapshot_mismatch: hasSnapshotMismatch,
           duplicate_enrollments: dupes,
           has_duplicate_enrollments: hasDuplicates,
