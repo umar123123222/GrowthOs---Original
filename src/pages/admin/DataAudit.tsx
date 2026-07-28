@@ -224,6 +224,17 @@ export default function DataAudit() {
     });
   };
 
+  const removePhantom = (f: DriftFinding, enrollment_id: string) => {
+    setPendingAction({
+      label: 'Remove phantom course enrollment',
+      description: `This student has a pathway enrollment that already covers this course, so this extra direct-course enrollment is a duplicate. It will be removed along with its unpaid invoices. Paid invoices are never touched. Undoable within 7 days.`,
+      run: () => invokeReconcile(
+        { action_type: 'remove_phantom_enrollment', finding_id: f.id, student_id: f.student_id, enrollment_id },
+        'Phantom enrollment removed',
+        `phantom-${enrollment_id}`,
+      ),
+    });
+
   const undoAction = (a: ReconAction) => {
     setPendingAction({
       label: 'Undo action',
