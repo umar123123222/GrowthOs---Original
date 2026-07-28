@@ -210,6 +210,91 @@ async function markDuplicate(
   return json({ ok: true, enrollment_id, action_id: action.id });
 }
 
+async function removePhantomEnrollment(
+  admin: any,
+  uid: string,
+  { finding_id, student_id, enrollment_id }: any,
+) {
+  // Safety: only remove a course_enrollment when
+  //   (a) enrollment_source = 'direct' AND pathway_id IS NULL, AND
+  //   (b) the student has ANOTHER active pathway enrollment whose pathway
+  //       contains this course (i.e. it truly is a phantom duplicate).
+  // Also delete only UNPAID invoices for that (student, course, no pathway) key.
+  const { data: before, error: readErr } = await admin
+    .from("course_enrollments")
+    .select("*")
+    .eq("id", enrollment_id)
+    .eq("student_id", student_id)
+    .maybeSingle();
+  if (readErr) throw readErr;
+  if (!before) return json({ error: "Enrollment not found" }, 404);
+  if (before.pathway_id || before.enrollment_source !== "direct" || !before.course_id) {
+    return json({ error: "Enrollment is not a phantom direct-course row" }, 400);
+  }
+
+  const { data: siblingPathways } = await admin
+    .from("course_enrollments")
+    .select("pathway_id")
+    .eq("student_id", student_id)
+    .eq("status", "active")
+    .not("pathway_id", "is", null);
+  const pathwayIds = (siblingPathways ?? []).map((r: any) => r.pathway_id);
+  if (pathwayIds.length === 0) {
+    return json({ error: "Student has no pathway enrollment — refuse to remove" }, 400);
+  }
+  const { data: pathwayCourses } = await admin
+    .from("pathway_courses")
+    .select("course_id")
+    .in("pathway_id", pathwayIds);
+  const covered = new Set((pathwayCourses ?? []).map((r: any) => r.course_id));
+  if (!covered.has(before.course_id)) {
+    return json({ error: "Course is not covered by any active pathway — refuse to remove" }, 400);
+  }
+
+  // Snapshot unpaid invoices for this exact (student, course, no pathway) slot
+  const { data: invs } = await admin
+    .from("invoices")
+    .select("*")
+    .eq("student_id", student_id)
+    .eq("course_id", before.course_id)
+    .is("pathway_id", null);
+  const unpaidInvoices = (invs ?? []).filter(
+    (i: any) => String(i.status ?? "").toLowerCase() !== "paid",
+  );
+
+  // Delete unpaid invoices, then the phantom enrollment
+  const invoiceIds = unpaidInvoices.map((i: any) => i.id);
+  if (invoiceIds.length > 0) {
+    const { error: delInvErr } = await admin.from("invoices").delete().in("id", invoiceIds);
+    if (delInvErr) throw delInvErr;
+  }
+  const { error: delEnrErr } = await admin
+    .from("course_enrollments")
+    .delete()
+    .eq("id", enrollment_id);
+  if (delEnrErr) throw delEnrErr;
+
+  const { data: action, error: logErr } = await admin
+    .from("billing_reconciliation_actions")
+    .insert({
+      finding_id,
+      student_id,
+      action_type: "remove_phantom_enrollment",
+      performed_by: uid,
+      before_state: { enrollment: before, invoices: unpaidInvoices },
+      after_state: { deleted_enrollment_id: enrollment_id, deleted_invoice_ids: invoiceIds },
+    })
+    .select("id")
+    .single();
+  if (logErr) throw logErr;
+
+  return json({
+    ok: true,
+    enrollment_id,
+    deleted_invoices: invoiceIds.length,
+    action_id: action.id,
+  });
+
 async function undoAction(admin: any, uid: string, action_id: string) {
   if (!action_id) return json({ error: "action_id required" }, 400);
   const { data: action, error: readErr } = await admin
