@@ -140,6 +140,37 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Detect duplicate enrollments per (student, pathway) and per (student, course, no pathway)
+    const dupGroups = new Map<string, { kind: "pathway" | "course"; target_id: string; ids: string[] }>();
+    for (const e of enrollments ?? []) {
+      const s = e.student_id as string;
+      let dk: string | null = null;
+      let kind: "pathway" | "course" | null = null;
+      let target: string | null = null;
+      if (e.pathway_id) {
+        dk = `p::${s}::${e.pathway_id}`;
+        kind = "pathway";
+        target = e.pathway_id as string;
+      } else if (e.course_id) {
+        dk = `c::${s}::${e.course_id}`;
+        kind = "course";
+        target = e.course_id as string;
+      }
+      if (!dk || !kind || !target) continue;
+      const g = dupGroups.get(dk) ?? { kind, target_id: target, ids: [] };
+      g.ids.push(e.id as string);
+      dupGroups.set(dk, g);
+    }
+    const duplicatesByStudent = new Map<string, any[]>();
+    for (const [k, g] of dupGroups) {
+      if (g.ids.length < 2) continue;
+      const s = k.split("::")[1];
+      const arr = duplicatesByStudent.get(s) ?? [];
+      arr.push({ kind: g.kind, target_id: g.target_id, count: g.ids.length, enrollment_ids: g.ids });
+      duplicatesByStudent.set(s, arr);
+    }
+
+
     // Close previously-open findings that no longer drift (auto-resolve as "cleared")
     const { data: openFindings } = await supabase
       .from("billing_drift_findings")
