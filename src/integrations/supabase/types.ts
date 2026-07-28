@@ -498,6 +498,57 @@ export type Database = {
           },
         ]
       }
+      billing_drift_findings: {
+        Row: {
+          actual_total: number
+          created_at: string
+          currency: string
+          details: Json
+          detected_at: string
+          difference: number
+          expected_total: number
+          id: string
+          notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          actual_total?: number
+          created_at?: string
+          currency?: string
+          details?: Json
+          detected_at?: string
+          difference?: number
+          expected_total?: number
+          id?: string
+          notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          actual_total?: number
+          created_at?: string
+          currency?: string
+          details?: Json
+          detected_at?: string
+          difference?: number
+          expected_total?: number
+          id?: string
+          notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       bundle_courses: {
         Row: {
           bundle_id: string
