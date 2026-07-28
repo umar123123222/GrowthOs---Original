@@ -242,37 +242,43 @@ export default function DataAudit() {
   const openFindings = findings.filter((f) => f.status === 'open');
 
   return (
-    <div className="w-full p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-2">
-            <AlertTriangle className="h-7 w-7 text-yellow-500" />
-            Data Audit
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Read scans + manual reconciliation. Every fix is logged and undoable within 7 days.
+    <div className="w-full p-6 md:p-8 space-y-10">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-primary/10">
+              <AlertTriangle className="h-6 w-6 text-primary" />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Data Audit</h1>
+          </div>
+          <p className="text-muted-foreground text-sm max-w-xl leading-relaxed">
+            Read scans and perform manual reconciliation. Every corrective action is logged and can be reverted within a 7-day window.
           </p>
         </div>
-        <Button onClick={runScan} disabled={scanning} variant="outline">
+        <Button onClick={runScan} disabled={scanning} className="whitespace-nowrap shadow-sm">
           {scanning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
           Run drift scan
         </Button>
+      </header>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="Open drift findings"
+          value={openFindings.length}
+          badge={openFindings.length === 0 ? { label: 'Clean', tone: 'success' } : { label: 'Attention', tone: 'warning' }}
+        />
+        <StatCard title="Invoice activity (recent)" value={invoiceLogs.length} badge={{ label: 'Events', tone: 'muted' }} />
+        <StatCard title="Content-order events" value={contentLogs.length} badge={{ label: 'Pending', tone: 'muted' }} />
+        <StatCard title="Reconciliation actions" value={actions.length} badge={{ label: 'Completed', tone: 'muted' }} />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <StatCard title="Open drift findings" value={openFindings.length} />
-        <StatCard title="Invoice activity (recent)" value={invoiceLogs.length} />
-        <StatCard title="Content-order events (recent)" value={contentLogs.length} />
-        <StatCard title="Reconciliation actions" value={actions.length} />
-      </div>
-
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList>
-          <TabsTrigger value="drift">Billing drift</TabsTrigger>
-          <TabsTrigger value="invoices">Invoice changes</TabsTrigger>
-          <TabsTrigger value="enrollments">Enrollment changes</TabsTrigger>
-          <TabsTrigger value="content">Content order changes</TabsTrigger>
-          <TabsTrigger value="history">Reconciliation history</TabsTrigger>
+      <Tabs value={tab} onValueChange={setTab} className="space-y-6">
+        <TabsList className="flex flex-wrap h-auto w-fit gap-1 p-1 bg-muted/50 border border-border rounded-xl">
+          <TabsTrigger value="drift" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border">Billing drift</TabsTrigger>
+          <TabsTrigger value="invoices" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border">Invoice changes</TabsTrigger>
+          <TabsTrigger value="enrollments" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border">Enrollment changes</TabsTrigger>
+          <TabsTrigger value="content" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border">Content order changes</TabsTrigger>
+          <TabsTrigger value="history" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border">Reconciliation history</TabsTrigger>
         </TabsList>
 
         <TabsContent value="drift">
