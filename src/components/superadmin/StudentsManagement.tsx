@@ -1734,15 +1734,7 @@ export function StudentsManagement() {
       const { error: invErr } = await invQuery;
       if (invErr) throw invErr;
 
-      // 2) Cleanup installment_payments rows for this scope (if used)
-      let ipQuery = supabase.from('installment_payments').delete().eq('user_id', student.id);
-      if (pathwayId) {
-        ipQuery = ipQuery.eq('pathway_id', pathwayId);
-      } else if (courseId) {
-        ipQuery = ipQuery.eq('course_id', courseId).is('pathway_id', null);
-      }
-      const { error: ipErr } = await ipQuery;
-      if (ipErr) console.warn('installment_payments cleanup:', ipErr);
+      // 2) installment_payments table is not scoped by course/pathway — skip.
 
       // 3) Delete the enrollment row itself
       if (courseId || pathwayId) {
