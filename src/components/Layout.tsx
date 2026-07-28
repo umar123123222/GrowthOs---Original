@@ -519,6 +519,10 @@ const Layout = memo(({
         href: "/superadmin?tab=support",
         icon: MessageSquare
       }, {
+        name: "Data Audit",
+        href: "/superadmin?tab=data-audit",
+        icon: ShieldCheck
+      }, {
         name: "Teams",
         href: "/teams",
         icon: UserCheck
