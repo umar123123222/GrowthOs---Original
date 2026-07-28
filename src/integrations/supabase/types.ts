@@ -795,6 +795,10 @@ export type Database = {
           progress_percentage: number | null
           sequential_enabled: boolean | null
           sequential_override: boolean | null
+          snapshot_currency: string | null
+          snapshot_price: number | null
+          snapshot_source: string | null
+          snapshot_taken_at: string | null
           status: string | null
           student_id: string
           total_amount: number | null
@@ -819,6 +823,10 @@ export type Database = {
           progress_percentage?: number | null
           sequential_enabled?: boolean | null
           sequential_override?: boolean | null
+          snapshot_currency?: string | null
+          snapshot_price?: number | null
+          snapshot_source?: string | null
+          snapshot_taken_at?: string | null
           status?: string | null
           student_id: string
           total_amount?: number | null
@@ -843,6 +851,10 @@ export type Database = {
           progress_percentage?: number | null
           sequential_enabled?: boolean | null
           sequential_override?: boolean | null
+          snapshot_currency?: string | null
+          snapshot_price?: number | null
+          snapshot_source?: string | null
+          snapshot_taken_at?: string | null
           status?: string | null
           student_id?: string
           total_amount?: number | null
