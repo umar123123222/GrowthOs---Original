@@ -913,8 +913,8 @@ export function StudentAccessManagement({
                     Terminate All Courses
                   </Button>
                 </div>
-                <ScrollArea className="h-[min(300px,45vh)] border rounded-lg">
-                  <div className="p-3 space-y-2">
+                <ScrollArea className="flex-1 min-h-0 h-[min(400px,55vh)] border rounded-lg">
+                  <div className="p-3 space-y-2 pb-6">
                     {courses.length === 0 ? (
                       <p className="text-center text-muted-foreground py-8">No courses available</p>
                     ) : (
