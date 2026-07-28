@@ -27,6 +27,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ENV_CONFIG } from '@/lib/env-config';
 import { ContentScheduleCalendar } from '@/components/admin/ContentScheduleCalendar';
 import ResourcesManagement from '@/pages/admin/ResourcesManagement';
+import DataAudit from '@/pages/admin/DataAudit';
 interface DashboardStats {
   totalAdmins: number;
   totalSuperadmins: number;
@@ -88,6 +89,8 @@ export default function SuperadminDashboard() {
         return <BatchManagement />;
       case 'resources':
         return <ResourcesManagement />;
+      case 'data-audit':
+        return <DataAudit />;
       default:
         return <DashboardContent />;
     }
