@@ -74,6 +74,8 @@ export default function AdminDashboard() {
         return <BatchManagement />;
       case 'resources':
         return <ResourcesManagement />;
+      case 'data-audit':
+        return <DataAudit />;
       default:
         return <DashboardContent />;
     }
