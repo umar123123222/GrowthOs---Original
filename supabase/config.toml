@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.reconcile-billing-finding]
 verify_jwt = true
+
+[functions.preview-session-visibility]
+verify_jwt = true
