@@ -1,81 +1,55 @@
 
-# Phase 2: Enrollment Price Snapshots
+# Phase 3: Duplicate-Enrollment Guard
 
-Goal: prevent the "total fee drifted from 55k → 120k" class of bug by locking each enrollment to the price it was created with. Nothing about existing student data, invoices, LMS access, or UI totals changes on rollout — the snapshot is added and used only going forward.
+Prevent the "same student enrolled twice into the same pathway/course" class of bug that caused the 55k → 120k drift on Batch 301. Existing students — including the 3 pathway-duplicated ones already in the DB — are not touched or blocked.
 
-## Why this is safe for existing students
+## Existing state (checked)
 
-- The snapshot column is **added, not enforced**. Existing rows get a backfill equal to their current effective price, so their displayed totals stay identical.
-- No invoice amounts are recalculated. No enrollment is re-priced. No RLS or access rule changes.
-- Reads keep working exactly as today. New reads that want the snapshot can opt in; nothing is forced to migrate.
-- Every write path stays backward compatible: if a caller doesn't pass a snapshot, we auto-fill from the current course/pathway price (same behavior as today).
+Live scan found 3 students with duplicate enrollments in the same pathway (`a16b8328-…` = Master Pathway 2):
+- `21f8c871-…` (3 rows)
+- `5bf46d46-…` (3 rows)
+- `e30af719-…` (2 rows)
+
+A strict `UNIQUE` index would reject these on migration → not acceptable. We use a **trigger-based guard** instead: blocks only NEW duplicates, tolerates existing ones.
 
 ## What gets built
 
-### 1. Schema (single migration, additive only)
+### 1. Migration — BEFORE INSERT trigger on `course_enrollments`
 
-Add to `public.course_enrollments`:
-- `snapshot_price numeric` — the locked price at enrollment time
-- `snapshot_currency text` — currency at enrollment time
-- `snapshot_source text` — `'course' | 'pathway' | 'manual_override'`
-- `snapshot_taken_at timestamptz`
+- Function `public.prevent_duplicate_enrollment()`:
+  - For pathway inserts (`pathway_id IS NOT NULL`): raise if a row already exists with same `student_id + pathway_id`.
+  - For standalone course inserts (`course_id IS NOT NULL AND pathway_id IS NULL`): raise if a row already exists with same `student_id + course_id AND pathway_id IS NULL`.
+  - Error message includes the existing enrollment id so admins can see which record is the conflict.
+- No `UNIQUE` constraint, no backfill, no updates to existing rows.
+- Trigger is `BEFORE INSERT` only — updates/deletes unaffected, so all current admin flows (Mark Paid, Delete, Reprice, etc.) keep working.
 
-No `NOT NULL`, no defaults that would touch existing rows, no unique constraints. All nullable so nothing breaks if a legacy row lacks a snapshot.
+### 2. Drift scanner — new `DUPLICATE_ENROLLMENT` finding
 
-### 2. Backfill (idempotent, read-only against source data)
+Extend `detect-billing-drift` to also report duplicate enrollments (read-only). Shows up in the existing Data Audit page under Billing Drift with:
+- Student id + name
+- Kind: `pathway` or `course`
+- Target id + name
+- Number of duplicate rows and their ids
 
-For every existing enrollment where `snapshot_price IS NULL`:
-- If `pathway_id` set → copy `pathways.price` / `pathways.currency`
-- Else if `course_id` set → copy `courses.price` / `courses.currency`
-- Fallback: use `total_amount` from the enrollment itself so the number matches what admins already see
+This surfaces the 3 known duplicates so a superadmin can review and manually clean them via the existing per-enrollment Delete button — no auto-fix.
 
-The backfill only writes the four new snapshot columns. `total_amount`, `amount_paid`, invoices — untouched.
+### 3. Friendly error in `StudentAccessManagement.tsx`
 
-### 3. Write path updates (enrollment creation)
+Wrap the 4 enrollment insert calls (pathway + course tabs) to detect the trigger error and show a clear toast: "This student is already enrolled in {name}. Remove the existing enrollment first." Falls back to the raw error otherwise.
 
-In `StudentAccessManagement.tsx` (and any other place that inserts into `course_enrollments`), when creating a new enrollment:
-- Read the current `courses.price` or `pathways.price`
-- Store it in `snapshot_price` on the insert
-- Also keep passing `total_amount` as today (so invoicing logic is unchanged)
+## Explicitly NOT in this phase
 
-If a superadmin changes the pathway/course price later, the enrollment keeps its snapshot. New enrollments after that use the new price. Old students are unaffected.
+- No `UNIQUE` constraints
+- No automatic cleanup of the 3 existing duplicates
+- No changes to invoices, totals, LMS access, or drip logic
+- No changes to update/delete paths
 
-### 4. Data Audit page — new "Price Drift" check
+## Rollback
 
-Extend the `detect-billing-drift` edge function with a new finding type: `SNAPSHOT_MISMATCH` — flags enrollments where `snapshot_price` differs from `total_amount` or from the current course/pathway price. Read-only, surfaced in the existing `/superadmin?tab=data-audit` UI. No auto-fix.
+- Drop the trigger + function (1 statement) → behavior reverts exactly to today
+- Revert the toast wrapper (cosmetic only)
+- Remove the `DUPLICATE_ENROLLMENT` finding from the scanner (Data Audit still works)
 
-### 5. Optional per-enrollment "Repricing" tool (manual, gated)
+## Approval
 
-On each enrollment card in `StudentsManagement.tsx`, add a small "Reprice" action visible to superadmin only. It:
-- Shows: snapshot price vs current catalog price
-- Requires explicit confirmation to update `snapshot_price` + `total_amount`
-- Logs the change to `admin_logs`
-
-Not run automatically anywhere. Purely a manual reconciliation tool for edge cases.
-
-## What is explicitly NOT in this phase
-
-- No changes to how invoices are generated
-- No changes to how totals are summed in the UI (Phase 1 grouping already handles the 120k bug visually)
-- No new constraints that could reject existing rows
-- No changes to unenrollment, LMS access, drip, or sequential logic
-- No cron jobs that mutate data
-
-## Rollout order
-
-1. Migration: add columns + backfill in one transaction
-2. Update insert code paths to write snapshot on new enrollments
-3. Add `SNAPSHOT_MISMATCH` check to drift scanner
-4. Ship "Reprice" manual tool (superadmin-only)
-5. Watch Data Audit for a few days; if clean, propose Phase 3 (duplicate-enrollment guard)
-
-## Rollback plan
-
-Every step is reversible:
-- Drop the 4 columns (no dependency on them anywhere critical)
-- Revert the insert code (snapshot becomes NULL, existing reads unaffected)
-- Remove the drift check (Data Audit still works)
-
-## Approval needed
-
-Confirm you want me to proceed with steps 1–4 in this order. I will not touch any existing student's invoices, totals, or access at any point.
+Confirm and I'll ship steps 1–3 in order. No existing student's data changes.
