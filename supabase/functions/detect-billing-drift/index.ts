@@ -73,9 +73,18 @@ Deno.serve(async (req) => {
       `${s}::${c ?? ""}::${p ?? ""}`;
 
     const invTotals = new Map<string, number>();
+    const paidByStudent = new Map<string, number>();
+    const unpaidByStudent = new Map<string, number>();
     for (const inv of invoices ?? []) {
       const k = key(inv.student_id as string, inv.course_id as any, inv.pathway_id as any);
-      invTotals.set(k, (invTotals.get(k) ?? 0) + Number(inv.amount ?? 0));
+      const amt = Number(inv.amount ?? 0);
+      invTotals.set(k, (invTotals.get(k) ?? 0) + amt);
+      const sid = inv.student_id as string;
+      if ((inv.status as string) === "paid") {
+        paidByStudent.set(sid, (paidByStudent.get(sid) ?? 0) + amt);
+      } else {
+        unpaidByStudent.set(sid, (unpaidByStudent.get(sid) ?? 0) + amt);
+      }
     }
 
     // Aggregate expected by student (sum of enrollment.total_amount for active ones)
