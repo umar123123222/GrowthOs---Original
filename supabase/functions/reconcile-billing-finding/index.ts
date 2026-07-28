@@ -69,6 +69,11 @@ Deno.serve(async (req) => {
       if (!enrollment_id) return json({ error: "enrollment_id required" }, 400);
       return await markDuplicate(admin, uid, { finding_id, student_id, enrollment_id });
     }
+    if (action_type === "remove_phantom_enrollment") {
+      const enrollment_id = String(body.enrollment_id ?? "");
+      if (!enrollment_id) return json({ error: "enrollment_id required" }, 400);
+      return await removePhantomEnrollment(admin, uid, { finding_id, student_id, enrollment_id });
+    }
 
     return json({ error: "Unknown action_type" }, 400);
   } catch (err) {
