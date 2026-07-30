@@ -348,17 +348,22 @@ Deno.serve(async (req) => {
     );
     let resolved = 0;
     if (toResolve.length > 0) {
-      const { error: updErr } = await supabase
-        .from("billing_drift_findings")
-        .update({
-          status: "auto_cleared",
-          resolved_at: new Date().toISOString(),
-          notes: "Auto-resolved: drift no longer detected",
-        })
-        .in("id", toResolve.map((f: any) => f.id));
-      if (updErr) throw updErr;
-      resolved = toResolve.length;
+      const ids = toResolve.map((f: any) => f.id);
+      for (let i = 0; i < ids.length; i += 100) {
+        const chunk = ids.slice(i, i + 100);
+        const { error: updErr } = await supabase
+          .from("billing_drift_findings")
+          .update({
+            status: "auto_cleared",
+            resolved_at: new Date().toISOString(),
+            notes: "Auto-resolved: drift no longer detected",
+          })
+          .in("id", chunk);
+        if (updErr) throw updErr;
+        resolved += chunk.length;
+      }
     }
+
 
     return json({
       ok: true,
