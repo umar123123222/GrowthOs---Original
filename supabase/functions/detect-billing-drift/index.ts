@@ -60,12 +60,20 @@ Deno.serve(async (req) => {
       return out;
     };
 
-    // Pull all active enrollments (incl. snapshot fields for mismatch check)
-    const enrollments = await fetchAll(
+    // Pull ALL enrollments (any status). Completed enrollments still own their
+    // invoices — filtering to 'active' made every paid+completed student look
+    // like they had orphan invoices and zero expected total.
+    const allEnrollments = await fetchAll(
       "course_enrollments",
       "id, student_id, course_id, pathway_id, total_amount, status, snapshot_price, snapshot_currency, snapshot_source",
-      (q) => q.eq("status", "active"),
     );
+    // Counted toward "expected": active + completed.
+    const enrollments = allEnrollments.filter((e) =>
+      ["active", "completed"].includes(String(e.status)),
+    );
+    // Duplicate / phantom checks only look at live (active) enrollments.
+    const activeEnrollments = allEnrollments.filter((e) => String(e.status) === "active");
+
 
     // Pull catalog prices for snapshot-vs-current comparison
     const [courses, pathways] = await Promise.all([
