@@ -370,7 +370,9 @@ Deno.serve(async (req) => {
       scanned_students: studentIds.size,
       drifting_students: findingsToInsert.length,
       inserted_findings: inserted,
+      refreshed_findings: refreshed,
       auto_resolved: resolved,
+
     });
   } catch (err) {
     console.error("detect-billing-drift error", err);
