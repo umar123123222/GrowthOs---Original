@@ -242,7 +242,8 @@ Deno.serve(async (req) => {
     }
 
     const enrollmentsByStudent = new Map<string, any[]>();
-    for (const e of enrollments ?? []) {
+    for (const e of activeEnrollments ?? []) {
+
       const arr = enrollmentsByStudent.get(e.student_id as string) ?? [];
       arr.push(e);
       enrollmentsByStudent.set(e.student_id as string, arr);
