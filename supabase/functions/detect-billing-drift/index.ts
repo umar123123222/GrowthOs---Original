@@ -217,9 +217,11 @@ Deno.serve(async (req) => {
     // separately enrolled as 'direct' in a course that belongs to that same
     // pathway. These are the extra invoices that were causing the 55k -> 120k
     // inflation. Read-only detection here — reconcile step deletes them.
-    const { data: pathwayCourseRows } = await supabase
-      .from("pathway_courses")
-      .select("pathway_id, course_id");
+    const pathwayCourseRows = await fetchAll(
+      "pathway_courses",
+      "pathway_id, course_id",
+    );
+
     const coursesByPathway = new Map<string, Set<string>>();
     for (const r of pathwayCourseRows ?? []) {
       const set = coursesByPathway.get(r.pathway_id as string) ?? new Set<string>();
