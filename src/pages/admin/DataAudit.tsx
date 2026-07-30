@@ -165,9 +165,11 @@ export default function DataAudit() {
       if (error) throw error;
       toast({
         title: 'Scan complete',
-        description: `${data?.drifting_students ?? 0} students flagged, ${data?.inserted_findings ?? 0} new findings.`,
+        description: `${data?.drifting_students ?? 0} students flagged, ${data?.inserted_findings ?? 0} new, ${data?.auto_resolved ?? 0} auto-cleared.`,
       });
+      setLastScanned(new Date());
       await fetchFindings();
+
     } catch (e: any) {
       toast({ title: 'Scan failed', description: e?.message ?? String(e), variant: 'destructive' });
     } finally {
