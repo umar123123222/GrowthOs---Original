@@ -1,32 +1,40 @@
-## What I verified for Makhdoom (STU000887)
+## Why Afnan is flagged
 
-- Student record `59a362f6…`, one active enrollment: pathway `a16b8328…` **and** `course_id 425c1782…` both set, `total_amount = 55,000`, `snapshot_price = 65,000` (catalog price).
-- Two invoices, both **paid**, 27,500 each = 55,000, with `pathway_id` set and **`course_id = NULL`**.
-- His open finding was created on **2026-07-28** with `expected 55,000 / actual 0 / difference -55,000`, `paid_total 55,000`, `unpaid_total 0`, `snapshot_mismatch: true`.
+Verified in the database:
 
-## Why he still shows up (three separate causes)
+- Afnan (STU000999) has **one invoice**: Rs 5,000, `status = paid`, `course_id = c71696eb…`.
+- His matching enrollment (`dc0f6262…`, same course, `total_amount = 5000`) has **`status = 'completed'`**, not `'active'`.
 
-1. **Invoice matching key mismatch.** The scanner groups invoices by `student::course::pathway`. His enrollment key is `student::425c1782::a16b8328` but his invoices key is `student::(empty)::a16b8328`. Nothing matches, so "Actual (invoices)" reads 0 and the difference reads -55,000 even though he paid in full.
-2. **The finding is stale.** The "skip fully cleared students" rule was added after 2026-07-28. Old rows are only auto-cleared on the next scan run, and no scan has run since — so the row survives with its old numbers.
-3. **Snapshot mismatch is a false positive.** `snapshot_price` 65,000 vs agreed fee 55,000 is a legitimate negotiated discount, but the scanner treats any snapshot ≠ total as drift, which would keep flagging him even after a rescan.
+The scanner pulls only `status = 'active'` enrollments. So for Afnan:
+- expected = 0 (no active enrollment counted)
+- his paid invoice matches no active enrollment key → counted as an **orphan invoice** of 5,000
+- difference = +5,000 → flagged "open"
 
-## Plan
+Same shape across the current open findings: 24 of 30 have `expected_total = 0`, 23 carry an orphan total, and 24 have zero unpaid amount. Raja abdullah (+55,000 orphan, expected 0) is the same case. So the remaining backlog is mostly completed/cancelled enrollments whose fully-paid invoices look orphaned.
 
-### 1. Fix invoice matching in `detect-billing-drift`
-Match invoices to an enrollment by **pathway first, then course**, instead of the strict triple key:
-- If the enrollment has a `pathway_id`, sum invoices for that student with the same `pathway_id` (ignore `course_id`).
-- Else match on `course_id` (ignore `pathway_id`).
-- Apply the same relaxed rule to the orphan-invoice detection, so pathway invoices are no longer counted as orphans.
+## The fix
 
-### 2. Stop treating negotiated discounts as drift
-Only flag `snapshot_mismatch` when the snapshot differs from the **current catalog price** (indicating a catalog price change after enrollment). Drop the `snapshot vs total_amount` comparison — a discounted total is expected and admin-set.
+Change `supabase/functions/detect-billing-drift/index.ts`:
 
-### 3. Clear stale findings
-Re-run the scanner once after the fixes; the existing auto-resolve path will mark every no-longer-drifting student (including Makhdoom) as `auto_cleared`. Additionally, mark pre-fix open findings that are fully paid as auto-cleared in the same pass so the 499/693 open count drops to real cases only.
+1. **Load all enrollments, not just active.**
+   Fetch `status in ('active','completed')` (paged as now).
+   - `active` + `completed` both count toward *expected* and both make their invoices legitimately "owned" (not orphans).
+   - `cancelled` / other statuses: not counted in expected, but their keys still register as "known" so paid invoices from a cancelled enrollment aren't reported as orphans — they get a separate, softer signal only when **unpaid** amounts remain.
 
-### 4. UI touch in Data Audit
-Add a "Re-scan now" button on the Billing drift tab (superadmin only) that invokes `detect-billing-drift` and refetches, plus show a "last scanned" timestamp, so stale findings are obvious and fixable without waiting for cron.
+2. **Never treat a paid invoice as drift.**
+   Orphan detection only accumulates invoices with `status != 'paid'`. A paid invoice is money actually collected — it can never be "extra billing" to clean up. This alone removes Afnan, Raja, and the other 22 zero-unpaid findings.
 
-## Safety
+3. **Keep the fully-cleared skip, and make it work with zero expected.**
+   Current skip requires `expected > 0`. Change to: skip when `unpaid <= tolerance` **and** `paid + tolerance >= expected` (allowing `expected = 0`), unless phantom enrollments exist.
 
-- The scanner and the rescan are read-only against `course_enrollments` and `invoices`; only `billing_drift_findings` rows are written. No student, enrollment, invoice, or access record is modified, so no existing student can be affected.
+4. **Report status in the finding details** — add `enrollment_statuses` and per-enrollment `status` to `details.per_enrollment`, so a genuine future finding shows whether it came from a completed or active enrollment.
+
+## Verification (after the change)
+
+- Redeploy, run the scan, and confirm Afnan (`11e9962d…`) and Raja move to `auto_cleared`.
+- Report the new open-finding count and manually re-check that each remaining open finding has a real unpaid amount, a duplicate, or a phantom enrollment.
+
+## Notes
+
+- Read-only detection logic only — no invoice, enrollment, or student data is written or deleted by this change.
+- No UI change needed; the Data Audit page already shows only open findings and refreshes on rescan.
