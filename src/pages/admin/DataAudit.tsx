@@ -303,7 +303,19 @@ export default function DataAudit() {
 
         <TabsContent value="drift">
           <Card>
-            <CardHeader><CardTitle>Billing drift findings</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0">
+              <CardTitle>Billing drift findings</CardTitle>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-muted-foreground">
+                  {lastScanned ? `Last scanned ${lastScanned.toLocaleTimeString()}` : 'Only unresolved findings are shown'}
+                </span>
+                <Button size="sm" variant="outline" onClick={runScan} disabled={scanning}>
+                  {scanning ? <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5 mr-2" />}
+                  Re-scan
+                </Button>
+              </div>
+            </CardHeader>
+
             <CardContent>
               {loadingFindings ? (
                 <div className="py-12 text-center text-muted-foreground">Loading…</div>
