@@ -260,10 +260,12 @@ Deno.serve(async (req) => {
 
 
     // Close previously-open findings that no longer drift (auto-resolve as "cleared")
-    const { data: openFindings } = await supabase
-      .from("billing_drift_findings")
-      .select("id, student_id")
-      .eq("status", "open");
+    const openFindings = await fetchAll(
+      "billing_drift_findings",
+      "id, student_id",
+      (q) => q.eq("status", "open"),
+    );
+
 
     const findingsToInsert: any[] = [];
     const studentIds = new Set<string>([
