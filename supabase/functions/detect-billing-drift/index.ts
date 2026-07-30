@@ -68,18 +68,27 @@ Deno.serve(async (req) => {
 
     if (invErr) throw invErr;
 
-    // Group invoices by student|course|pathway key
-    const key = (s: string, c: string | null, p: string | null) =>
-      `${s}::${c ?? ""}::${p ?? ""}`;
+    // Relaxed matching: an enrollment's invoices are matched by pathway when the
+    // enrollment has a pathway (invoices for pathways often carry course_id = NULL),
+    // otherwise by course. The old strict student::course::pathway key produced
+    // false "actual = 0" drift for fully-paid pathway students.
+    const pKey = (s: string, p: string) => `p::${s}::${p}`;
+    const cKey = (s: string, c: string) => `c::${s}::${c}`;
 
-    const invTotals = new Map<string, number>();
+    const invByPathway = new Map<string, number>();
+    const invByCourse = new Map<string, number>();
     const paidByStudent = new Map<string, number>();
     const unpaidByStudent = new Map<string, number>();
     for (const inv of invoices ?? []) {
-      const k = key(inv.student_id as string, inv.course_id as any, inv.pathway_id as any);
-      const amt = Number(inv.amount ?? 0);
-      invTotals.set(k, (invTotals.get(k) ?? 0) + amt);
       const sid = inv.student_id as string;
+      const amt = Number(inv.amount ?? 0);
+      if (inv.pathway_id) {
+        const k = pKey(sid, inv.pathway_id as string);
+        invByPathway.set(k, (invByPathway.get(k) ?? 0) + amt);
+      } else if (inv.course_id) {
+        const k = cKey(sid, inv.course_id as string);
+        invByCourse.set(k, (invByCourse.get(k) ?? 0) + amt);
+      }
       if ((inv.status as string) === "paid") {
         paidByStudent.set(sid, (paidByStudent.get(sid) ?? 0) + amt);
       } else {
@@ -96,9 +105,11 @@ Deno.serve(async (req) => {
     for (const e of enrollments ?? []) {
       const s = e.student_id as string;
       const expected = Number(e.total_amount ?? 0);
-      const actual = invTotals.get(
-        key(s, e.course_id as any, e.pathway_id as any),
-      ) ?? 0;
+      const actual = e.pathway_id
+        ? invByPathway.get(pKey(s, e.pathway_id as string)) ?? 0
+        : e.course_id
+          ? invByCourse.get(cKey(s, e.course_id as string)) ?? 0
+          : 0;
 
       expectedByStudent.set(s, (expectedByStudent.get(s) ?? 0) + expected);
       actualByStudent.set(s, (actualByStudent.get(s) ?? 0) + actual);
@@ -109,10 +120,11 @@ Deno.serve(async (req) => {
         : e.course_id
           ? coursePrice.get(e.course_id as string) ?? null
           : null;
+      // Only flag when the snapshot no longer matches the CURRENT catalog price
+      // (i.e. the catalog changed after enrollment). A total_amount below the
+      // snapshot is a legitimate negotiated discount, not drift.
       const snapshot_mismatch =
-        snap != null &&
-        ((Math.abs(snap - expected) > TOLERANCE) ||
-          (catalog != null && Math.abs(snap - catalog) > TOLERANCE));
+        snap != null && catalog != null && Math.abs(snap - catalog) > TOLERANCE;
 
       const arr = detailsByStudent.get(s) ?? [];
       arr.push({
@@ -129,6 +141,7 @@ Deno.serve(async (req) => {
       });
       detailsByStudent.set(s, arr);
     }
+
 
 
     // Also detect orphan invoices: invoices whose (student, course, pathway) has no active enrollment.
