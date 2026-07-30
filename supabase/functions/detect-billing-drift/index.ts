@@ -322,21 +322,29 @@ Deno.serve(async (req) => {
       inserted = fresh.length;
     }
 
-    // Refresh numbers on existing open findings so stale snapshots are never shown
+    // Refresh numbers on existing open findings so stale snapshots are never shown.
+    // Batched upsert (one request per 200 rows) — a per-row loop was too slow and
+    // caused the function to be shut down mid-scan.
     let refreshed = 0;
-    for (const f of stale) {
-      const id = openByStudent.get(f.student_id)!;
-      const { error: refErr } = await supabase
-        .from("billing_drift_findings")
-        .update({
-          expected_total: f.expected_total,
-          actual_total: f.actual_total,
-          difference: f.difference,
-          details: f.details,
-        })
-        .eq("id", id);
-      if (!refErr) refreshed++;
+    if (stale.length > 0) {
+      const rows = stale.map((f) => ({
+        id: openByStudent.get(f.student_id)!,
+        student_id: f.student_id,
+        expected_total: f.expected_total,
+        actual_total: f.actual_total,
+        difference: f.difference,
+        details: f.details,
+        status: "open",
+      }));
+      for (let i = 0; i < rows.length; i += 200) {
+        const chunk = rows.slice(i, i + 200);
+        const { error: refErr } = await supabase
+          .from("billing_drift_findings")
+          .upsert(chunk, { onConflict: "id" });
+        if (!refErr) refreshed += chunk.length;
+      }
     }
+
 
 
     // Auto-resolve findings for students that no longer drift
