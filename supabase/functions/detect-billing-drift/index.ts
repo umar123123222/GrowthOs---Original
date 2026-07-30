@@ -306,13 +306,12 @@ Deno.serve(async (req) => {
 
 
 
-    // Insert new findings (do not duplicate existing open ones for the same student — dedupe by upsert-like check)
-    const existingOpenStudents = new Set(
-      (openFindings ?? []).map((f: any) => f.student_id),
-    );
-    const fresh = findingsToInsert.filter(
-      (f) => !existingOpenStudents.has(f.student_id),
-    );
+    // Insert new findings (dedupe against existing open ones for the same student)
+    const openByStudent = new Map<string, string>();
+    for (const f of openFindings ?? []) openByStudent.set(f.student_id, f.id);
+
+    const fresh = findingsToInsert.filter((f) => !openByStudent.has(f.student_id));
+    const stale = findingsToInsert.filter((f) => openByStudent.has(f.student_id));
 
     let inserted = 0;
     if (fresh.length > 0) {
@@ -322,6 +321,23 @@ Deno.serve(async (req) => {
       if (insErr) throw insErr;
       inserted = fresh.length;
     }
+
+    // Refresh numbers on existing open findings so stale snapshots are never shown
+    let refreshed = 0;
+    for (const f of stale) {
+      const id = openByStudent.get(f.student_id)!;
+      const { error: refErr } = await supabase
+        .from("billing_drift_findings")
+        .update({
+          expected_total: f.expected_total,
+          actual_total: f.actual_total,
+          difference: f.difference,
+          details: f.details,
+        })
+        .eq("id", id);
+      if (!refErr) refreshed++;
+    }
+
 
     // Auto-resolve findings for students that no longer drift
     const stillDriftingStudents = new Set(
