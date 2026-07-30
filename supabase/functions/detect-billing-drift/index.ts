@@ -155,6 +155,7 @@ Deno.serve(async (req) => {
         enrollment_id: e.id,
         course_id: e.course_id,
         pathway_id: e.pathway_id,
+        enrollment_status: e.status ?? null,
         expected,
         actual,
         difference: +(actual - expected).toFixed(2),
@@ -168,22 +169,24 @@ Deno.serve(async (req) => {
 
 
 
-    // Orphan invoices: invoices that match no active enrollment under the relaxed
-    // (pathway-first, else course) rule. Informational — nothing is deleted here.
-    const activePathwayKeys = new Set<string>();
-    const activeCourseKeys = new Set<string>();
-    for (const e of enrollments ?? []) {
+    // Orphan invoices: UNPAID invoices that match no enrollment of any status
+    // under the relaxed (pathway-first, else course) rule. A paid invoice is
+    // money already collected — it is never "extra billing" to clean up.
+    const knownPathwayKeys = new Set<string>();
+    const knownCourseKeys = new Set<string>();
+    for (const e of allEnrollments ?? []) {
       const s = e.student_id as string;
-      if (e.pathway_id) activePathwayKeys.add(pKey(s, e.pathway_id as string));
-      if (e.course_id) activeCourseKeys.add(cKey(s, e.course_id as string));
+      if (e.pathway_id) knownPathwayKeys.add(pKey(s, e.pathway_id as string));
+      if (e.course_id) knownCourseKeys.add(cKey(s, e.course_id as string));
     }
     const orphanByStudent = new Map<string, number>();
     for (const inv of invoices ?? []) {
+      if ((inv.status as string) === "paid") continue;
       const sid = inv.student_id as string;
       const matched = inv.pathway_id
-        ? activePathwayKeys.has(pKey(sid, inv.pathway_id as string))
+        ? knownPathwayKeys.has(pKey(sid, inv.pathway_id as string))
         : inv.course_id
-          ? activeCourseKeys.has(cKey(sid, inv.course_id as string))
+          ? knownCourseKeys.has(cKey(sid, inv.course_id as string))
           : false;
       if (!matched) {
         orphanByStudent.set(sid, (orphanByStudent.get(sid) ?? 0) + Number(inv.amount ?? 0));
@@ -193,7 +196,8 @@ Deno.serve(async (req) => {
 
     // Detect duplicate enrollments per (student, pathway) and per (student, course, no pathway)
     const dupGroups = new Map<string, { kind: "pathway" | "course"; target_id: string; ids: string[] }>();
-    for (const e of enrollments ?? []) {
+    for (const e of activeEnrollments ?? []) {
+
       const s = e.student_id as string;
       let dk: string | null = null;
       let kind: "pathway" | "course" | null = null;
