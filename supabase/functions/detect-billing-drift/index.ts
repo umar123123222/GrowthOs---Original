@@ -40,33 +40,49 @@ Deno.serve(async (req) => {
       if (!roleRow) return json({ error: "Forbidden" }, 403);
     }
 
-    // Pull all active enrollments (incl. snapshot fields for mismatch check)
-    const { data: enrollments, error: enrErr } = await supabase
-      .from("course_enrollments")
-      .select(
-        "id, student_id, course_id, pathway_id, total_amount, status, snapshot_price, snapshot_currency, snapshot_source",
-      )
-      .eq("status", "active");
+    // PostgREST caps a plain select at 1000 rows — page through everything,
+    // otherwise students beyond the first page look like they have no invoices.
+    const fetchAll = async (
+      table: string,
+      columns: string,
+      apply?: (q: any) => any,
+    ) => {
+      const out: any[] = [];
+      const PAGE = 1000;
+      for (let from = 0; ; from += PAGE) {
+        let q = supabase.from(table).select(columns).range(from, from + PAGE - 1);
+        if (apply) q = apply(q);
+        const { data, error } = await q;
+        if (error) throw error;
+        out.push(...(data ?? []));
+        if (!data || data.length < PAGE) break;
+      }
+      return out;
+    };
 
-    if (enrErr) throw enrErr;
+    // Pull all active enrollments (incl. snapshot fields for mismatch check)
+    const enrollments = await fetchAll(
+      "course_enrollments",
+      "id, student_id, course_id, pathway_id, total_amount, status, snapshot_price, snapshot_currency, snapshot_source",
+      (q) => q.eq("status", "active"),
+    );
 
     // Pull catalog prices for snapshot-vs-current comparison
-    const [{ data: courses }, { data: pathways }] = await Promise.all([
-      supabase.from("courses").select("id, price, currency"),
-      supabase.from("learning_pathways").select("id, price, currency"),
+    const [courses, pathways] = await Promise.all([
+      fetchAll("courses", "id, price, currency"),
+      fetchAll("learning_pathways", "id, price, currency"),
     ]);
     const coursePrice = new Map<string, number>();
     for (const c of courses ?? []) if (c.price != null) coursePrice.set(c.id as string, Number(c.price));
     const pathwayPrice = new Map<string, number>();
     for (const p of pathways ?? []) if (p.price != null) pathwayPrice.set(p.id as string, Number(p.price));
 
+    // Pull all invoices (paged)
+    const invoices = await fetchAll(
+      "invoices",
+      "student_id, course_id, pathway_id, amount, status",
+    );
 
-    // Pull all invoices in one shot (chunked defensively)
-    const { data: invoices, error: invErr } = await supabase
-      .from("invoices")
-      .select("student_id, course_id, pathway_id, amount, status");
-
-    if (invErr) throw invErr;
 
     // Relaxed matching: an enrollment's invoices are matched by pathway when the
     // enrollment has a pathway (invoices for pathways often carry course_id = NULL),
