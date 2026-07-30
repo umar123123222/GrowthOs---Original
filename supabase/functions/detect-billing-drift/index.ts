@@ -144,23 +144,28 @@ Deno.serve(async (req) => {
 
 
 
-    // Also detect orphan invoices: invoices whose (student, course, pathway) has no active enrollment.
-    // These are informational — do not delete anything.
-    const activeKeys = new Set(
-      (enrollments ?? []).map((e) =>
-        key(e.student_id as string, e.course_id as any, e.pathway_id as any),
-      ),
-    );
+    // Orphan invoices: invoices that match no active enrollment under the relaxed
+    // (pathway-first, else course) rule. Informational — nothing is deleted here.
+    const activePathwayKeys = new Set<string>();
+    const activeCourseKeys = new Set<string>();
+    for (const e of enrollments ?? []) {
+      const s = e.student_id as string;
+      if (e.pathway_id) activePathwayKeys.add(pKey(s, e.pathway_id as string));
+      if (e.course_id) activeCourseKeys.add(cKey(s, e.course_id as string));
+    }
     const orphanByStudent = new Map<string, number>();
     for (const inv of invoices ?? []) {
-      const k = key(inv.student_id as string, inv.course_id as any, inv.pathway_id as any);
-      if (!activeKeys.has(k)) {
-        orphanByStudent.set(
-          inv.student_id as string,
-          (orphanByStudent.get(inv.student_id as string) ?? 0) + Number(inv.amount ?? 0),
-        );
+      const sid = inv.student_id as string;
+      const matched = inv.pathway_id
+        ? activePathwayKeys.has(pKey(sid, inv.pathway_id as string))
+        : inv.course_id
+          ? activeCourseKeys.has(cKey(sid, inv.course_id as string))
+          : false;
+      if (!matched) {
+        orphanByStudent.set(sid, (orphanByStudent.get(sid) ?? 0) + Number(inv.amount ?? 0));
       }
     }
+
 
     // Detect duplicate enrollments per (student, pathway) and per (student, course, no pathway)
     const dupGroups = new Map<string, { kind: "pathway" | "course"; target_id: string; ids: string[] }>();
