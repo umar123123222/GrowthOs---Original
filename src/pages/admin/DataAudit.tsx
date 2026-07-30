@@ -86,9 +86,11 @@ export default function DataAudit() {
       const { data, error } = await supabase
         .from('billing_drift_findings')
         .select('*')
+        .eq('status', 'open')
         .order('detected_at', { ascending: false })
         .limit(500);
       if (error) throw error;
+
 
       const studentIds = Array.from(new Set((data ?? []).map((f: any) => f.student_id)));
       const studentMap: Record<string, { name?: string; email?: string }> = {};
