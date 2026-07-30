@@ -304,9 +304,9 @@ Deno.serve(async (req) => {
       const unpaid = unpaidByStudent.get(s) ?? 0;
       const paid = paidByStudent.get(s) ?? 0;
       // Skip students who are fully cleared: no unpaid invoices AND paid amount covers expected.
+      // (expected may legitimately be 0 for completed enrollments already paid off.)
       // Exception: phantom enrollments are always flagged so admins can clean them up.
-      const fullyCleared =
-        unpaid <= TOLERANCE && paid + TOLERANCE >= expected && expected > 0;
+      const fullyCleared = unpaid <= TOLERANCE && paid + TOLERANCE >= expected;
       if (fullyCleared && !hasPhantoms) continue;
 
       if (
@@ -324,6 +324,9 @@ Deno.serve(async (req) => {
         difference: diff,
         details: {
           per_enrollment: perEnr,
+          enrollment_statuses: Array.from(
+            new Set(perEnr.map((d: any) => d.enrollment_status).filter(Boolean)),
+          ),
           orphan_invoice_total: orphan,
           paid_total: paid,
           unpaid_total: unpaid,
@@ -333,6 +336,7 @@ Deno.serve(async (req) => {
           phantom_course_enrollments: phantoms,
           has_phantom_course_enrollments: hasPhantoms,
         },
+
         status: "open",
       });
     }
