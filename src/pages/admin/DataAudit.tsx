@@ -58,6 +58,8 @@ export default function DataAudit() {
   const [findings, setFindings] = useState<DriftFinding[]>([]);
   const [loadingFindings, setLoadingFindings] = useState(true);
   const [scanning, setScanning] = useState(false);
+  const [lastScanned, setLastScanned] = useState<Date | null>(null);
+
 
   const [invoiceLogs, setInvoiceLogs] = useState<LogRow[]>([]);
   const [enrollmentLogs, setEnrollmentLogs] = useState<LogRow[]>([]);
