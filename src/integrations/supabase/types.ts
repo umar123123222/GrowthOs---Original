@@ -2373,6 +2373,51 @@ export type Database = {
         }
         Relationships: []
       }
+      security_incidents: {
+        Row: {
+          action_taken: string
+          created_at: string
+          device_label: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json
+          page_url: string | null
+          severity: string
+          signal: string
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action_taken?: string
+          created_at?: string
+          device_label?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json
+          page_url?: string | null
+          severity?: string
+          signal: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action_taken?: string
+          created_at?: string
+          device_label?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json
+          page_url?: string | null
+          severity?: string
+          signal?: string
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       session_attendance: {
         Row: {
           attended_at: string | null
