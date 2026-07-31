@@ -216,7 +216,7 @@ Deno.serve(async (req) => {
         await resend.emails.send({
           from: `${fromName} <${fromEmail}>`,
           to,
-          subject: `${shouldSuspend ? "[SUSPENDED]" : "[EVIDENCE]"} ${signalLabel} — ${user?.full_name || user?.email || userId}`,
+          subject: `${shouldSuspend ? "[SUSPENDED]" : "[EVIDENCE]"} ${signalLabel} — ${user?.full_name || user?.email || userId}${studentId !== "-" ? ` (${studentId})` : ""}`,
           html,
         });
       }
