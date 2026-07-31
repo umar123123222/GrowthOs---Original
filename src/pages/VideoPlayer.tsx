@@ -251,6 +251,64 @@ const VideoPlayer = () => {
     return () => setSessionActivity(null);
   }, [currentVideo?.id, currentVideo?.title]);
 
+  // Access-pattern telemetry: one "open" event per lesson + heartbeats while the
+  // page stays active. Used server-side to identify bulk downloading / recording.
+  useEffect(() => {
+    if (!user?.id || !currentVideo?.id) return;
+    let cancelled = false;
+
+    const deviceLabel = (() => {
+      const ua = navigator.userAgent;
+      const os = /Windows/i.test(ua) ? 'Windows'
+        : /Mac OS X|Macintosh/i.test(ua) ? 'macOS'
+        : /Android/i.test(ua) ? 'Android'
+        : /iPhone|iPad|iOS/i.test(ua) ? 'iOS'
+        : /Linux/i.test(ua) ? 'Linux' : 'Unknown OS';
+      const browser = /Edg\//i.test(ua) ? 'Edge'
+        : /Chrome\//i.test(ua) ? 'Chrome'
+        : /Firefox\//i.test(ua) ? 'Firefox'
+        : /Safari\//i.test(ua) ? 'Safari' : 'Browser';
+      return `${browser} on ${os}`;
+    })();
+
+    const logEvent = async (eventType: 'open' | 'heartbeat') => {
+      try {
+        await supabase.from('video_access_events').insert({
+          user_id: user.id,
+          recording_id: currentVideo.id,
+          event_type: eventType,
+          user_agent: navigator.userAgent,
+          device_label: deviceLabel,
+          page_url: window.location.href,
+        });
+      } catch {
+        /* telemetry must never break playback */
+      }
+    };
+
+    (async () => {
+      await logEvent('open');
+      if (cancelled) return;
+      // Evaluate this user's recent pattern right after the open event.
+      try {
+        await supabase.functions.invoke('detect-capture-patterns', { body: { mode: 'self' } });
+      } catch {
+        /* noop */
+      }
+    })();
+
+    const heartbeat = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void logEvent('heartbeat');
+    }, 60_000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(heartbeat);
+    };
+  }, [user?.id, currentVideo?.id]);
+
+
+
   // Auto-mark video as watched when the player page loads
   useEffect(() => {
     const autoMarkWatched = async () => {
