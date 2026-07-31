@@ -9,6 +9,7 @@ import { RefreshCw, AlertTriangle, Loader2, Wrench, Undo2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
 import { SecurityIncidentsPanel } from '@/components/admin/SecurityIncidentsPanel';
+import { SecuritySignalsPanel } from '@/components/admin/SecuritySignalsPanel';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -474,6 +475,10 @@ export default function DataAudit() {
 
         <TabsContent value="security">
           <SecurityIncidentsPanel />
+        </TabsContent>
+
+        <TabsContent value="signals">
+          <SecuritySignalsPanel />
         </TabsContent>
       </Tabs>
 
