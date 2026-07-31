@@ -82,8 +82,10 @@ const VideoPlayer = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Keep the identity watermark visible in fullscreen: Bunny's player puts the
-  // iframe itself fullscreen, which would hide sibling overlays. We redirect
-  // fullscreen to the wrapper container so the overlay stays on top.
+  // iframe itself fullscreen, which would hide sibling overlays. We expose our
+  // own fullscreen button that puts the *wrapper* fullscreen (direct user
+  // gesture = always allowed), and keep a best-effort redirect if the user uses
+  // the player's built-in button instead.
   useEffect(() => {
     const onFsChange = () => {
       const fsEl = document.fullscreenElement;
@@ -99,6 +101,17 @@ const VideoPlayer = () => {
     document.addEventListener('fullscreenchange', onFsChange);
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const container = playerContainerRef.current;
+    if (!container) return;
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => {});
+    } else {
+      void container.requestFullscreen().catch(() => {});
+    }
+  }, []);
+
 
 
   
