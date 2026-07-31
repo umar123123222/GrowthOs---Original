@@ -326,8 +326,10 @@ export function SecuritySignalsPanel() {
               <TableRow>
                 <TableHead>When</TableHead>
                 <TableHead>Signal</TableHead>
+                <TableHead>Reason</TableHead>
                 <TableHead>Session</TableHead>
                 <TableHead>Video</TableHead>
+                <TableHead>Page</TableHead>
                 <TableHead>Device</TableHead>
               </TableRow>
             </TableHeader>
@@ -338,13 +340,18 @@ export function SecuritySignalsPanel() {
                     {new Date(r.created_at).toLocaleString()}
                   </TableCell>
                   <TableCell className="text-xs">{SIGNAL_LABELS[r.signal_type] || r.signal_type}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground max-w-[320px]">
+                    {SIGNAL_REASONS[r.signal_type] || 'Heuristic signal recorded during playback.'}
+                  </TableCell>
                   <TableCell className="text-xs font-mono">{r.session_id.slice(0, 8)}…</TableCell>
                   <TableCell className="text-xs font-mono">{r.video_id ? `${r.video_id.slice(0, 8)}…` : '—'}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground break-all max-w-[220px]">{r.page_url || '—'}</TableCell>
                   <TableCell className="text-xs text-muted-foreground">{r.device_label || '—'}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+
         </DialogContent>
       </Dialog>
     </>
