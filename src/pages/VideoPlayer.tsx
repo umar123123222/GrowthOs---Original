@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, RefreshCw, ArrowRight, Star, Maximize, Minimize } from "lucide-react";
 import { useCourseRecordings } from "@/hooks/useCourseRecordings";
 import SuccessPartner from "@/components/SuccessPartner";
@@ -18,6 +19,8 @@ import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { setSessionActivity } from "@/hooks/useSessionHeartbeat";
 import { getResourceFileSignedUrl } from "@/hooks/useResources";
 import { VideoWatermark } from "@/components/security/VideoWatermark";
+import { useSecuritySignals } from "@/hooks/useSecuritySignals";
+import { AlertTriangle } from "lucide-react";
 
 // Sanitize video URLs by removing garbage prefixes
 const sanitizeVideoUrl = (url: string): string => {
@@ -79,6 +82,14 @@ const VideoPlayer = () => {
   const [obfuscatedUrl, setObfuscatedUrl] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
+
+  // Heuristic playback-signal logging. Advisory only: it never blocks playback,
+  // never signs anyone out, and its signals include expected false positives.
+  const { showSoftWarning } = useSecuritySignals({
+    userId: user?.id,
+    videoId: currentVideo?.id ?? null,
+    enabled: !!currentVideo?.id,
+  });
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Keep the identity watermark visible in fullscreen: Bunny's player puts the
@@ -528,6 +539,15 @@ const VideoPlayer = () => {
           Back to Videos
         </Button>
       </div>
+
+      {showSoftWarning && (
+        <Alert className="mb-4 border-amber-300 bg-amber-50">
+          <AlertTriangle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-900">
+            We noticed unusual activity during this session. Recording or downloading course content violates our terms.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Video Player Section */}
