@@ -155,22 +155,9 @@ export function SecuritySignalsPanel() {
     return result.sort((a, b) => b.flaggedSessions - a.flaggedSessions);
   }, [rows]);
 
-  const sendWarning = async (s: StudentSummary) => {
-    setBusy(`mail-${s.studentId}`);
-    try {
-      const summary = s.recentSignals.map((t) => SIGNAL_LABELS[t] || t).join(', ');
-      const { error } = await supabase.functions.invoke('send-capture-warning-email', {
-        body: { student_id: s.studentId, signal_summary: summary },
-      });
-      if (error) throw error;
-      toast({ title: 'Warning email sent' });
-    } catch (e) {
-      logger.error('Failed to send warning email', e);
-      toast({ title: 'Failed to send warning email', variant: 'destructive' });
-    } finally {
-      setBusy(null);
-    }
-  };
+  // No email is ever sent from this panel — it is a review/reporting surface only.
+
+
 
   const suspend = async (s: StudentSummary) => {
     setBusy(`suspend-${s.studentId}`);
