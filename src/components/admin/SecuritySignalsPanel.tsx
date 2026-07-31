@@ -27,7 +27,8 @@ const SIGNAL_LABELS: Record<string, string> = {
 };
 
 // A "flagged session" = a playback session with at least this many distinct signals.
-const FLAG_THRESHOLD = 3;
+// Set to 1 so admins can review every student with any signal at all.
+const FLAG_THRESHOLD = 1;
 const WINDOW_DAYS = 30;
 
 interface SignalRow {
