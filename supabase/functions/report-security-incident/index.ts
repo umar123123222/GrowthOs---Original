@@ -1,16 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2.55.0";
-import { Resend } from "npm:resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-function sanitizeEmail(value: string): string {
-  const trimmed = value.trim();
-  const match = trimmed.match(/<([^>]+)>/);
-  return match ? match[1].trim() : trimmed;
-}
 
 function parseIp(req: Request): string | null {
   const fwd = req.headers.get("x-forwarded-for");
