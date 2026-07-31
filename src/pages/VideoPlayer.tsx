@@ -536,7 +536,7 @@ const VideoPlayer = () => {
             <CardContent className="p-0">
               <div
                 ref={playerContainerRef}
-                className={`bg-gray-900 relative ${isFullscreen ? 'w-full h-full' : 'aspect-video rounded-t-lg'}`}
+                className={`bg-gray-900 relative ${isFullscreen ? 'w-screen h-screen flex items-center justify-center' : 'aspect-video rounded-t-lg'}`}
               >
                 {videoUrlError ? (
                   <div className="w-full h-full flex items-center justify-center bg-muted rounded-t-lg">
@@ -550,22 +550,33 @@ const VideoPlayer = () => {
                     <iframe 
                       key={`video-${currentVideo.id}-${iframeKey}`}
                       ref={iframeRef}
-                      className="w-full h-full rounded-t-lg" 
+                      className={`w-full h-full ${isFullscreen ? '' : 'rounded-t-lg'}`}
                       allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture" 
                       allowFullScreen 
                       title={currentVideo.title}
                       frameBorder="0"
                     />
                     <VideoWatermark />
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="absolute top-2 right-2 opacity-70 hover:opacity-100"
-                      onClick={() => setIframeKey(prev => prev + 1)}
-                      title="Reload video if not playing"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                    </Button>
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="opacity-70 hover:opacity-100"
+                        onClick={toggleFullscreen}
+                        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                      >
+                        {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="opacity-70 hover:opacity-100"
+                        onClick={() => setIframeKey(prev => prev + 1)}
+                        title="Reload video if not playing"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </>
                 )}
               </div>
