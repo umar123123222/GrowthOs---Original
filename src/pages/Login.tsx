@@ -57,6 +57,15 @@ const Login = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
+  // Show a message when the account was auto-suspended for screen capture
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('suspended') === 'capture') {
+      setLoginError('Your account has been suspended: screen recording or downloader activity was detected. Please contact support to restore access.');
+    }
+  }, []);
+
+
   // Check for suspension error on mount (persisted from previous login attempt)
   useEffect(() => {
     const suspensionError = sessionStorage.getItem('suspension_error');
