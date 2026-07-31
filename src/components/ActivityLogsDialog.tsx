@@ -246,21 +246,96 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   };
 
 
+  const [exporting, setExporting] = useState(false);
+
+  // Exports every log matching the current filters (date / activity / role / search),
+  // not just the rows currently loaded in the table.
   const exportLogs = async () => {
+    if (!user) return;
+    setExporting(true);
     try {
+      const PAGE = 1000;
+      const MAX_ROWS = 50000;
+      const applyFilters = (q: any, cursor: string | null) => {
+        if (dateRange !== 'all') {
+          const days = parseInt(dateRange.replace('days', ''));
+          const startDate = new Date();
+          startDate.setDate(startDate.getDate() - days);
+          q = q.gte('created_at', startDate.toISOString());
+        }
+        if (activityFilter !== 'all') q = q.eq('action', activityFilter);
+        if (cursor) q = q.lt('created_at', cursor);
+        return q.order('created_at', { ascending: false }).limit(PAGE);
+      };
+
+      const all: any[] = [];
+      let cursor: string | null = null;
+      while (all.length < MAX_ROWS) {
+        let rows: any[] = [];
+        if (userId) {
+          const [byPerformer, byTarget] = await Promise.all([
+            applyFilters(supabase.from('admin_logs').select('*').eq('performed_by', userId), cursor),
+            applyFilters(supabase.from('admin_logs').select('*').contains('data', { target_user_id: userId }), cursor),
+          ]);
+          if (byPerformer.error) throw byPerformer.error;
+          if (byTarget.error) throw byTarget.error;
+          const merged = new Map<string, any>();
+          [...(byPerformer.data || []), ...(byTarget.data || [])].forEach(r => merged.set(r.id, r));
+          rows = Array.from(merged.values())
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, PAGE);
+        } else {
+          const { data, error } = await applyFilters(supabase.from('admin_logs').select('*'), cursor);
+          if (error) throw error;
+          rows = data || [];
+        }
+        all.push(...rows);
+        if (rows.length < PAGE) break;
+        cursor = rows[rows.length - 1].created_at;
+      }
+
+      // Resolve performer/target users in batches
+      const ids = [...new Set(all.flatMap(l => [l.performed_by, (l.data as any)?.target_user_id]).filter(Boolean))] as string[];
+      const userMap = new Map<string, { email: string; role: string; full_name: string }>();
+      for (let i = 0; i < ids.length; i += 100) {
+        const { data: us } = await supabase.from('users').select('id, email, role, full_name').in('id', ids.slice(i, i + 100));
+        (us || []).forEach((u: any) => userMap.set(u.id, { email: u.email, role: u.role, full_name: u.full_name }));
+      }
+
+      const restrictSuperadmin = user.role === 'admin' || user.role === 'enrollment_manager';
+      const term = searchTerm.toLowerCase();
+
+      const rowsOut = all
+        .map(log => {
+          const performer = log.performed_by ? userMap.get(log.performed_by) : null;
+          const target = (log.data as any)?.target_user_id ? userMap.get((log.data as any).target_user_id) : null;
+          return { log, u: performer || target || null, performerRole: performer?.role };
+        })
+        .filter(({ u, performerRole }) => !(restrictSuperadmin && performerRole === 'superadmin'))
+        .filter(({ log, u }) => {
+          const matchesSearch = !term ||
+            u?.email?.toLowerCase().includes(term) ||
+            u?.full_name?.toLowerCase().includes(term) ||
+            log.action.toLowerCase().includes(term);
+          const matchesRole = roleFilter === 'all' || u?.role === roleFilter;
+          return matchesSearch && matchesRole;
+        });
+
+      const esc = (v: any) => `"${String(v ?? '').replace(/"/g, '""')}"`;
       const csvContent = [
-        ['Date', 'User', 'Name', 'Role', 'Activity', 'Details'].join(','),
-        ...filteredLogs.map(log => [
+        ['Date', 'User', 'Name', 'Role', 'Activity', 'Description', 'Details'].map(esc).join(','),
+        ...rowsOut.map(({ log, u }) => [
           new Date(log.created_at).toISOString(),
-          log.users?.email || 'Unknown',
-          log.users?.full_name || 'Unknown',
-          log.users?.role || 'Unknown',
+          u?.email || 'Unknown',
+          u?.full_name || 'Unknown',
+          u?.role || 'Unknown',
           log.action,
-          JSON.stringify(log.data || {})
-        ].join(','))
+          log.description || '',
+          JSON.stringify(log.data || {}),
+        ].map(esc).join(','))
       ].join('\n');
 
-      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -269,8 +344,8 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       window.URL.revokeObjectURL(url);
 
       toast({
-        title: 'Success',
-        description: 'Activity logs exported successfully'
+        title: 'Export complete',
+        description: `${rowsOut.length} activity logs exported`
       });
     } catch (error) {
       logger.error('Error exporting logs:', error);
@@ -279,8 +354,11 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         description: 'Failed to export logs',
         variant: 'destructive'
       });
+    } finally {
+      setExporting(false);
     }
   };
+
 
   const getActivityBadge = (activity: string) => {
     const activityColors: Record<string, string> = {
