@@ -301,6 +301,8 @@ export default function DataAudit() {
           <TabsTrigger value="content" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border">Content order changes</TabsTrigger>
           <TabsTrigger value="history" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border">Reconciliation history</TabsTrigger>
           <TabsTrigger value="security" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border">Security incidents</TabsTrigger>
+          <TabsTrigger value="signals" className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:ring-1 data-[state=active]:ring-border">Playback signals</TabsTrigger>
+
         </TabsList>
 
         <TabsContent value="drift">
