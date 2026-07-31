@@ -14,3 +14,6 @@ verify_jwt = true
 
 [functions.detect-capture-patterns]
 verify_jwt = true
+
+[functions.send-capture-warning-email]
+verify_jwt = true
