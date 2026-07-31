@@ -237,7 +237,9 @@ const App = () => {
             <Toaster />
             <Sonner />
             <DynamicFavicon />
+            <CaptureWarningOverlay userId={user?.id} />
             <GlobalProgressBar />
+
             <BrowserRouter>
               <RouteProgressListener />
               <Suspense fallback={<PageLoader />}>
