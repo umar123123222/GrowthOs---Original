@@ -709,9 +709,9 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
               </Select>
             </div>
 
-            <Button onClick={exportLogs} size="sm" className="h-9">
+            <Button onClick={exportLogs} size="sm" className="h-9" disabled={exporting}>
               <Download className="w-4 h-4 mr-2" />
-              Export CSV
+              {exporting ? 'Exporting…' : 'Export CSV'}
             </Button>
           </div>
 
