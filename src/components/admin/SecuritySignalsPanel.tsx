@@ -266,6 +266,14 @@ export function SecuritySignalsPanel() {
                             ))}
                           </div>
                         </TableCell>
+                        <TableCell className="max-w-[340px]">
+                          <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-1">
+                            {s.recentSignals.map((t) => (
+                              <li key={t}>{SIGNAL_REASONS[t] || 'Heuristic signal recorded during playback.'}</li>
+                            ))}
+                          </ul>
+                        </TableCell>
+
                         <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                           {s.lastFlaggedAt ? new Date(s.lastFlaggedAt).toLocaleString() : '—'}
                         </TableCell>
