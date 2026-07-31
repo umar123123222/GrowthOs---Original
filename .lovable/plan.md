@@ -1,40 +1,39 @@
-## Why Afnan is flagged
+# Screen-Recording / Extension Detection with Auto-Suspend
 
-Verified in the database:
+Detect likely screen recording or downloader tooling while a user is signed in, show a 5-second countdown warning, and auto-suspend the account if the warning is ignored or a second detection occurs.
 
-- Afnan (STU000999) has **one invoice**: Rs 5,000, `status = paid`, `course_id = c71696eb…`.
-- His matching enrollment (`dc0f6262…`, same course, `total_amount = 5000`) has **`status = 'completed'`**, not `'active'`.
+## Behaviour
 
-The scanner pulls only `status = 'active'` enrollments. So for Afnan:
-- expected = 0 (no active enrollment counted)
-- his paid invoice matches no active enrollment key → counted as an **orphan invoice** of 5,000
-- difference = +5,000 → flagged "open"
+1. A detection fires while any user is logged in (students and staff alike).
+2. A full-screen blocking overlay appears: "Screen recording / capture tool detected. Stop it now." with a 5-second countdown.
+3. If the offending condition clears within 5 seconds, the overlay closes and a warning is logged (first offence only).
+4. If the countdown reaches zero, or a second detection happens at any point, the account is suspended immediately.
+5. Suspension = `lms_status` set to `suspended` **and** all sessions revoked, so every device is signed out. The user is redirected to the login screen with an explanatory message.
+6. Every detection (warning and suspension) is written to the activity log, appears in the student's Notes/Activity dialog, and triggers an alert email.
 
-Same shape across the current open findings: 24 of 30 have `expected_total = 0`, 23 carry an orphan total, and 24 have zero unpaid amount. Raja abdullah (+55,000 orphan, expected 0) is the same case. So the remaining backlog is mostly completed/cancelled enrollments whose fully-paid invoices look orphaned.
+## Detection signals
 
-## The fix
+All of the following, evaluated client-side:
 
-Change `supabase/functions/detect-billing-drift/index.ts`:
+- Screen capture: patch `navigator.mediaDevices.getDisplayMedia` to flag any call; also flag active display-surface tracks and Picture-in-Picture entry.
+- Known downloader/recorder extensions: probe for their injected DOM nodes, known element IDs/classes, and injected script attributes on a short interval.
+- Devtools open (window outer/inner size delta plus debugger timing check) and capture keystrokes: PrintScreen, Win+Shift+S, Cmd+Shift+3/4/5.
 
-1. **Load all enrollments, not just active.**
-   Fetch `status in ('active','completed')` (paged as now).
-   - `active` + `completed` both count toward *expected* and both make their invoices legitimately "owned" (not orphans).
-   - `cancelled` / other statuses: not counted in expected, but their keys still register as "known" so paid invoices from a cancelled enrollment aren't reported as orphans — they get a separate, softer signal only when **unpaid** amounts remain.
+Signals are heuristic. To limit false positives, devtools and keystroke signals fire the warning only; screen-capture and extension signals count as full offences. The offence counter is stored server-side per user so it survives reloads and device switches.
 
-2. **Never treat a paid invoice as drift.**
-   Orphan detection only accumulates invoices with `status != 'paid'`. A paid invoice is money actually collected — it can never be "extra billing" to clean up. This alone removes Afnan, Raja, and the other 22 zero-unpaid findings.
+## Alerting and records
 
-3. **Keep the fully-cleared skip, and make it work with zero expected.**
-   Current skip requires `expected > 0`. Change to: skip when `unpaid <= tolerance` **and** `paid + tolerance >= expected` (allowing `expected = 0`), unless phantom enrollments exist.
+- Log entry in `admin_logs` (the unified activity log) with the signal type, device label, IP, and page URL, so it shows in the existing Activity Logs and Notes views for that user.
+- Email to the address in Company Settings → `notification_email_cc`, containing user name, email, student ID (if any), role, signal detected, timestamp, device, and the action taken.
 
-4. **Report status in the finding details** — add `enrollment_statuses` and per-enrollment `status` to `details.per_enrollment`, so a genuine future finding shows whether it came from a completed or active enrollment.
+## Technical details
 
-## Verification (after the change)
+- New table `security_incidents` (user_id, signal, severity, action_taken, user_agent, ip, page_url, metadata, created_at) with grants, RLS: insert via edge function only; read for admin/superadmin via `public.get_my_role()`.
+- New edge function `report-security-incident` (JWT-verified): records the incident, counts prior incidents for the user, decides warn vs suspend, on suspend sets `users.lms_status = 'suspended'` and `users.sessions_revoked_at = now()`, writes to `admin_logs`, and sends the alert email through the existing dual-provider email path (Resend first, SMTP fallback). Registered in `supabase/config.toml`.
+- New client hook `src/hooks/useCaptureGuard.ts` holding the detectors, and `src/components/security/CaptureWarningOverlay.tsx` for the countdown UI, mounted once in the authenticated layout so it covers every route.
+- On suspend response, the client calls `supabase.auth.signOut()` and routes to login. The existing heartbeat already honours `sessions_revoked_at`, so other open devices drop on their next ping.
+- Overlay uses semantic tokens (`bg-background`, `text-destructive`) — no hardcoded colors.
 
-- Redeploy, run the scan, and confirm Afnan (`11e9962d…`) and Raja move to `auto_cleared`.
-- Report the new open-finding count and manually re-check that each remaining open finding has a real unpaid amount, a duplicate, or a phantom enrollment.
+## Not changed
 
-## Notes
-
-- Read-only detection logic only — no invoice, enrollment, or student data is written or deleted by this change.
-- No UI change needed; the Data Audit page already shows only open findings and refreshes on rescan.
+Existing suspension tooling, billing, and drip logic are untouched; admins restore access with the current unsuspend flow.
