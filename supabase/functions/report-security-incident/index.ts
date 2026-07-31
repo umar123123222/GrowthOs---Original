@@ -21,13 +21,19 @@ function parseIp(req: Request): string | null {
 const SIGNAL_LABELS: Record<string, string> = {
   screen_capture: "Screen capture / recording API active",
   extension: "Known downloader / recorder extension detected",
+  picture_in_picture: "Picture-in-Picture capture",
+  bulk_download_pattern: "Bulk download / harvesting pattern detected",
   devtools: "Developer tools opened",
   screenshot_key: "Screenshot / capture keyboard shortcut used",
-  picture_in_picture: "Picture-in-Picture capture",
 };
 
-// Signals that count as a real offence (2 offences => suspend).
-const HARD_SIGNALS = new Set(["screen_capture", "extension", "picture_in_picture"]);
+// Signals that identify a real offender -> immediate suspension (no warning).
+const HARD_SIGNALS = new Set([
+  "screen_capture",
+  "extension",
+  "picture_in_picture",
+  "bulk_download_pattern",
+]);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -58,7 +64,6 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const signal = String(body?.signal || "unknown");
-    const phase = body?.phase === "expired" ? "expired" : "detected"; // 'detected' = countdown started, 'expired' = timer ran out
     const pageUrl = body?.page_url ? String(body.page_url) : null;
     const deviceLabel = body?.device_label ? String(body.device_label) : null;
     const metadata = (body?.metadata && typeof body.metadata === "object") ? body.metadata : {};
@@ -74,7 +79,6 @@ Deno.serve(async (req) => {
       .eq("id", userId)
       .maybeSingle();
 
-    // Count prior hard offences for this user (screen capture / extension).
     const { count: priorHard } = await admin
       .from("security_incidents")
       .select("id", { count: "exact", head: true })
@@ -82,24 +86,46 @@ Deno.serve(async (req) => {
       .in("signal", Array.from(HARD_SIGNALS));
 
     const isHard = HARD_SIGNALS.has(signal);
-    // Suspend when: the 5s countdown expired, or this is a repeat hard offence.
-    const shouldSuspend = phase === "expired" || (isHard && (priorHard ?? 0) >= 1);
-    const action = shouldSuspend ? "suspended" : "warned";
+    // Detection-first policy: any hard signal suspends immediately, first time.
+    const shouldSuspend = isHard;
+    const action = shouldSuspend ? "suspended" : "logged";
     const ip = parseIp(req);
     const nowIso = new Date().toISOString();
+
+    // Recent access pattern summary attached as evidence.
+    const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+    const { data: recentEvents } = await admin
+      .from("video_access_events")
+      .select("recording_id, event_type, ip_address, created_at")
+      .eq("user_id", userId)
+      .gte("created_at", since)
+      .order("created_at", { ascending: false })
+      .limit(200);
+
+    const evidence = {
+      recent_window_minutes: 30,
+      recent_opens: (recentEvents || []).filter((e) => e.event_type === "open").length,
+      distinct_recordings: new Set((recentEvents || []).map((e) => e.recording_id)).size,
+      distinct_ips: new Set((recentEvents || []).map((e) => e.ip_address).filter(Boolean)).size,
+      last_recording_id: recentEvents?.[0]?.recording_id ?? null,
+    };
 
     const { data: incident } = await admin
       .from("security_incidents")
       .insert({
         user_id: userId,
         signal,
-        severity: shouldSuspend ? "critical" : (isHard ? "high" : "warning"),
+        severity: shouldSuspend ? "critical" : "warning",
         action_taken: action,
         user_agent: req.headers.get("user-agent"),
         device_label: deviceLabel,
         ip_address: ip,
         page_url: pageUrl,
-        metadata: { ...metadata, phase, prior_hard_offences: priorHard ?? 0 },
+        metadata: {
+          ...metadata,
+          prior_hard_offences: priorHard ?? 0,
+          access_pattern: evidence,
+        },
       })
       .select("id")
       .maybeSingle();
@@ -119,7 +145,7 @@ Deno.serve(async (req) => {
     const signalLabel = SIGNAL_LABELS[signal] || signal;
     const description = shouldSuspend
       ? `Account auto-suspended — ${signalLabel}`
-      : `Security warning — ${signalLabel}`;
+      : `Security evidence logged — ${signalLabel}`;
 
     await admin.from("admin_logs").insert([{
       performed_by: null,
@@ -131,11 +157,11 @@ Deno.serve(async (req) => {
         target_user_id: userId,
         signal,
         signal_label: signalLabel,
-        phase,
         action_taken: action,
         device_label: deviceLabel,
         ip_address: ip,
         page_url: pageUrl,
+        evidence,
         incident_id: incident?.id ?? null,
         timestamp: nowIso,
       },
@@ -162,7 +188,7 @@ Deno.serve(async (req) => {
         const resend = new Resend(resendApiKey);
         const html = `
           <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111">
-            <h2 style="margin:0 0 12px">${shouldSuspend ? "Account auto-suspended" : "Screen capture warning"}</h2>
+            <h2 style="margin:0 0 12px">${shouldSuspend ? "Account auto-suspended" : "Security evidence logged"}</h2>
             <p>${signalLabel} was detected on an active LMS session.</p>
             <table cellpadding="6" style="border-collapse:collapse;margin-top:12px">
               <tr><td><b>User</b></td><td>${user?.full_name || "Unknown"}</td></tr>
@@ -170,17 +196,18 @@ Deno.serve(async (req) => {
               <tr><td><b>Student ID</b></td><td>${user?.student_id || "-"}</td></tr>
               <tr><td><b>Role</b></td><td>${user?.role || "-"}</td></tr>
               <tr><td><b>Signal</b></td><td>${signalLabel}</td></tr>
-              <tr><td><b>Action taken</b></td><td>${shouldSuspend ? "Suspended + signed out on all devices" : "5-second warning shown"}</td></tr>
+              <tr><td><b>Action taken</b></td><td>${shouldSuspend ? "Suspended + signed out on all devices" : "Logged as evidence only"}</td></tr>
               <tr><td><b>Device</b></td><td>${deviceLabel || "-"}</td></tr>
               <tr><td><b>IP</b></td><td>${ip || "-"}</td></tr>
               <tr><td><b>Page</b></td><td>${pageUrl || "-"}</td></tr>
+              <tr><td><b>Recent opens (30m)</b></td><td>${evidence.recent_opens} across ${evidence.distinct_recordings} lessons, ${evidence.distinct_ips} IP(s)</td></tr>
               <tr><td><b>Time</b></td><td>${nowIso}</td></tr>
             </table>
           </div>`;
         await resend.emails.send({
           from: `${fromName} <${fromEmail}>`,
           to,
-          subject: `${shouldSuspend ? "[SUSPENDED]" : "[WARNING]"} ${signalLabel} — ${user?.full_name || user?.email || userId}`,
+          subject: `${shouldSuspend ? "[SUSPENDED]" : "[EVIDENCE]"} ${signalLabel} — ${user?.full_name || user?.email || userId}`,
           html,
         });
       }
