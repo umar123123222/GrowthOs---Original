@@ -26,10 +26,25 @@ const SIGNAL_LABELS: Record<string, string> = {
   downloader_extension_fingerprint: 'Downloader extension fingerprint',
 };
 
+// Why each signal was recorded — shown to admins so the evidence is self-explanatory.
+const SIGNAL_REASONS: Record<string, string> = {
+  devtools_open:
+    'Browser developer tools were detected as open during playback (timing/window-size heuristic). Can also be a curious or technical student.',
+  focus_loss_repeated:
+    'The student left or blurred the video tab 3+ times in one playback session. Can also be note-taking or multitasking.',
+  display_capture_api:
+    'The page called the screen-capture API (getDisplayMedia) — typical of in-browser screen recording.',
+  user_media_api:
+    'The page called the camera/mic capture API (getUserMedia) during playback.',
+  downloader_extension_fingerprint:
+    'DOM/script artefacts matching a known video-downloader extension (IDM, FDM, Video DownloadHelper, Loom, etc.) were found on the page.',
+};
+
 // A "flagged session" = a playback session with at least this many distinct signals.
 // Set to 1 so admins can review every student with any signal at all.
 const FLAG_THRESHOLD = 1;
 const WINDOW_DAYS = 30;
+
 
 interface SignalRow {
   id: string;
