@@ -468,6 +468,10 @@ export default function DataAudit() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="security">
+          <SecurityIncidentsPanel />
+        </TabsContent>
       </Tabs>
 
       <AlertDialog open={!!pendingAction} onOpenChange={(o) => !o && setPendingAction(null)}>
