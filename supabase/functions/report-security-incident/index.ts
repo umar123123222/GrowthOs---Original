@@ -75,9 +75,17 @@ Deno.serve(async (req) => {
 
     const { data: user } = await admin
       .from("users")
-      .select("id, full_name, email, role, student_id, lms_status")
+      .select("id, full_name, email, role, lms_status")
       .eq("id", userId)
       .maybeSingle();
+
+    const { data: studentRow } = await admin
+      .from("students")
+      .select("student_id, lms_username")
+      .eq("user_id", userId)
+      .maybeSingle();
+    const studentId = studentRow?.student_id || "-";
+
 
     const { count: priorHard } = await admin
       .from("security_incidents")
