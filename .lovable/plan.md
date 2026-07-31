@@ -1,82 +1,62 @@
-# Video protection: per-library Bunny token auth, watermarking, hardened detection
+# Detection-first anti-piracy: identify and suspend, don't block
 
-You have 5 separate Bunny Stream libraries, each with its own Token Authentication key. All 175 recordings live in these libraries:
+Switch the current "warn and try to stop recording" behaviour to pure **identification**: detect who is recording or downloading, log the evidence, suspend them immediately, and notify admins. No countdown, no warning UI, no attempt to prevent the capture.
 
-| Library ID | Recordings |
-| --- | --- |
-| 610762 | 50 |
-| 634938 | 42 |
-| 494424 | 36 |
-| 698163 | 28 |
-| 665732 | 19 |
+## What changes for the student
 
-Every recording URL is a Bunny embed (`iframe.mediadelivery.net/embed/<libraryId>/<videoGuid>`), so the library ID is already readable from each URL. No database change is needed to know which key to use.
+- The 5-second countdown overlay is removed entirely. Nothing warns the offender.
+- On the first hard signal (screen-capture API, downloader/recorder extension, PiP capture), the account is silently suspended, all sessions revoked, and the user is signed out. They only learn about it at the login screen ("Your account was suspended for attempting to record or download protected content").
+- Soft signals (devtools open, screenshot shortcut) are logged as evidence only — never suspend on those, they are too false-positive prone.
 
-## 1. One secret holding all five keys
+## Two detection layers
 
-Instead of asking for a single key, we store one secret named `BUNNY_TOKEN_AUTH_KEYS` containing a JSON map of library ID to that library's token key:
+### 1. In-page detection (existing hook, hardened)
 
-```json
-{
-  "610762": "<key for that library>",
-  "634938": "<key for that library>",
-  "494424": "<key for that library>",
-  "698163": "<key for that library>",
-  "665732": "<key for that library>"
-}
-```
+`src/hooks/useCaptureGuard.ts` stays but loses the countdown state machine. On detection it fires one report and suspends. Hardening:
 
-Advantages over five separate secrets: adding a sixth library later means editing one value, not redeploying with a new secret name. The keys never touch the database or the browser.
+- Expanded extension fingerprint list (IDM/IDMcc, FDM, Video DownloadHelper, SaveFrom, CocoCut, Vimeo/Bunny grabbers, Loom, Screencastify, Awesome Screenshot, Nimbus, Scrnli, Bandicam helper).
+- Watch for injected `chrome-extension://` resources on the page and for extra `<video>`/`<a download>` nodes injected next to the player.
+- Keep `getDisplayMedia` / `MediaRecorder` hooks and Picture-in-Picture events.
 
-Where to find each key: Bunny dashboard, Stream, pick the library, Security tab. Copy the "Token Authentication Key" and switch on Token Authentication for that library.
+### 2. Server-side behavioural detection (new)
 
-Important: enabling Token Authentication on a library immediately breaks any plain embed URL for that library. So the rollout below is staged, and the player keeps a fallback so nothing goes dark for students mid-course.
+Downloaders like IDM and external recorders like OBS never touch the page, so in-page detection cannot see them. Instead we attribute them from access patterns.
 
-## 2. New edge function: `sign-video-embed`
+New table `video_access_events`: user_id, recording_id, event type (`open`, `heartbeat`), session id, user agent, IP, created_at.
 
-- Verifies the caller's JWT and confirms the student actually has access to that recording (same unlock and LMS-status rules the player already relies on).
-- Parses the library ID and video GUID out of the stored recording URL.
-- Looks up that library's key in the secret map.
-- Builds Bunny's signed embed URL: `SHA256(key + videoGuid + expiry)` plus `token`, `expires`, and the existing playback params. Expiry set short (about 10 minutes), refreshed by the player before it lapses.
-- If the library ID has no key in the map, it returns the plain embed URL unchanged. This is what makes the rollout safe: libraries you have not enabled token auth on yet keep working exactly as they do today.
-- Logs an entry when a student requests a signature, giving you a real per-student playback audit trail.
+`src/pages/VideoPlayer.tsx` writes an `open` event when a lesson loads and a heartbeat every ~60s while playing (alongside the existing `recording_views` upsert).
 
-## 3. Player changes (`src/pages/VideoPlayer.tsx`)
+New edge function `detect-capture-patterns` (invoked right after each `open` event, and available as a manual admin rescan) flags a user when, inside a rolling window:
 
-- Replaces the direct `iframe.src = embedUrl` assignment with a call to `sign-video-embed`, so the raw permanent URL never reaches the browser at all.
-- Re-signs on an interval so long videos do not cut out when the token expires.
-- On signing failure, shows a retry state rather than a blank player.
+- many distinct recordings opened in a short time with no matching watch progress (classic bulk-download sweep),
+- the same recording is re-opened repeatedly in minutes,
+- the same account is active from multiple IPs / devices at once,
+- opens with no heartbeats at all (page opened only to harvest the stream URL).
 
-Result for the screenshot you sent: IDM can still see an HLS request, but the manifest URL it captures is dead within minutes and is bound to that one viewer's token, so the download fails or produces nothing reusable.
+A flag creates a `security_incidents` row with `signal = 'bulk_download_pattern'` and the evidence attached, then runs the same suspend + notify path.
 
-## 4. Dynamic student watermark
+## Suspension and evidence trail
 
-A new overlay component draws the student's name, email, and user ID over the player at low opacity, repositioning every 20-30 seconds so it cannot be cropped out. Rendered outside the iframe in a `pointer-events: none` layer, so it does not interfere with playback controls.
+`supabase/functions/report-security-incident/index.ts` is updated to:
 
-This does not block OBS. It makes any OBS recording traceable to the student who made it, which is the practical deterrent. Students see it, which is most of the effect.
+- Drop the `phase` / countdown logic — any hard signal suspends on first occurrence.
+- Record richer evidence in `security_incidents.metadata`: matched fingerprint, page URL, device, IP, recording being watched, recent access pattern summary.
+- Keep writing to `admin_logs` so the incident appears in the student's Notes / Activity Logs tab.
+- Keep the email alert to the notification address from Company Settings, retitled to "Account auto-suspended".
 
-## 5. Hardened in-page detection
+## Admin view
 
-Extends the existing `useCaptureGuard`:
-- More downloader/recorder extension fingerprints (Video DownloadHelper, FVD, Free Download Manager, CocoCut, Stream Recorder, IDM's newer injections).
-- Detection of injected download buttons that attach themselves near the player element.
-- A check for the `mediaSession` and remote-playback APIs being probed by extensions.
-- Rate limiting so a single noisy page cannot spam incidents.
+A **Security Incidents** tab is added to the existing Data Audit page: who was flagged, which signal, device, IP, page, timestamp, current suspension state, plus an "Unsuspend / mark false positive" action (which restores `lms_status` and records the reversal in `admin_logs`).
 
-Honest limit, unchanged: this still cannot see OBS, cannot see a phone camera pointed at the screen, and cannot see an extension that only watches network traffic without injecting DOM. Token auth in step 2 is what covers the network-sniffing downloaders; the watermark in step 4 is what covers OBS.
+## Nothing existing breaks
 
-## Rollout order (nothing breaks for current students)
-
-1. Deploy the signing function and the player change while the secret map is empty or partial. Behaviour is identical to today because unknown libraries fall through to the plain URL.
-2. Add one library's key to the secret and enable Token Authentication for that library in Bunny. Verify a video from that library plays.
-3. Repeat for the remaining four libraries, one at a time.
-
-If any step misbehaves, removing that library's entry from the secret restores the old behaviour immediately, with no code change.
+- No change to video delivery, drip logic, enrollments, or billing.
+- `recording_views` behaviour is untouched; the new events table is additive and write-only from the player.
+- Behavioural thresholds start deliberately conservative and are stored in one constants block so they can be tuned after watching real data.
 
 ## Technical notes
 
-- Secret: `BUNNY_TOKEN_AUTH_KEYS`, JSON object keyed by library ID string.
-- New edge function: `supabase/functions/sign-video-embed/index.ts`, registered in `supabase/config.toml`.
-- Token formula: Bunny embed token auth uses `SHA256_HEX(tokenKey + videoId + expirationUnix)` appended as `?token=...&expires=...`.
-- Files touched: `src/pages/VideoPlayer.tsx`, `src/components/VideoPreviewDialog.tsx`, `src/components/OnboardingVideoModal.tsx` (same signing path), `src/hooks/useCaptureGuard.ts`, plus a new watermark component.
-- No database migration required.
+- New table `video_access_events` with GRANTs, RLS (student inserts own rows; admin/superadmin read), and an index on `(user_id, created_at desc)`.
+- `detect-capture-patterns` runs with the service role; thresholds live at the top of the function.
+- `CaptureWarningOverlay.tsx` is reduced to a no-render component (or removed from `App.tsx`) since there is no longer anything to show.
+- `Login.tsx` keeps the `?suspended=capture` message.
