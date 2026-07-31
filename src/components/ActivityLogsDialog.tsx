@@ -443,6 +443,27 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       );
     }
 
+    if (log.action === 'security_auto_suspended' || log.action === 'security_warning') {
+      return (
+        <div className="space-y-0.5 text-xs">
+          <div className={log.action === 'security_auto_suspended' ? 'text-destructive font-medium' : 'font-medium'}>
+            {data.signal_label || data.signal || 'Capture activity detected'}
+          </div>
+          <div>
+            Action: {log.action === 'security_auto_suspended'
+              ? 'Account suspended + signed out on all devices'
+              : '5-second warning shown'}
+          </div>
+          {data.device_label && <div>Device: {data.device_label}</div>}
+          {data.ip_address && <div>IP: {data.ip_address}</div>}
+          {data.page_url && <div className="truncate">Page: {data.page_url}</div>}
+          <div className="text-muted-foreground italic">By: System (auto)</div>
+        </div>
+      );
+    }
+
+
+
     if (log.action === 'admin_note') {
       const note = data.note || data.suspension_note;
       return (
