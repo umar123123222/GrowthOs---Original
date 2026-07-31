@@ -611,6 +611,9 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
                   <SelectItem value="drip_override_updated">Drip Override Updated</SelectItem>
                   <SelectItem value="success_session_scheduled">Success Session Created/Updated</SelectItem>
                   <SelectItem value="success_session_deleted">Success Session Deleted</SelectItem>
+                  <SelectItem value="security_warning">Security Warning (Capture)</SelectItem>
+                  <SelectItem value="security_auto_suspended">Security Auto-Suspend</SelectItem>
+
 
                 </SelectContent>
               </Select>
