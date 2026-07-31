@@ -516,6 +516,7 @@ const VideoPlayer = () => {
                       title={currentVideo.title}
                       frameBorder="0"
                     />
+                    <VideoWatermark />
                     <Button
                       variant="secondary"
                       size="sm"
