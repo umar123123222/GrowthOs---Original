@@ -2418,6 +2418,45 @@ export type Database = {
         }
         Relationships: []
       }
+      security_signals: {
+        Row: {
+          created_at: string
+          details: Json
+          device_label: string | null
+          dismissed: boolean
+          id: string
+          page_url: string | null
+          session_id: string
+          signal_type: string
+          student_id: string
+          video_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          device_label?: string | null
+          dismissed?: boolean
+          id?: string
+          page_url?: string | null
+          session_id: string
+          signal_type: string
+          student_id: string
+          video_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          device_label?: string | null
+          dismissed?: boolean
+          id?: string
+          page_url?: string | null
+          session_id?: string
+          signal_type?: string
+          student_id?: string
+          video_id?: string | null
+        }
+        Relationships: []
+      }
       session_attendance: {
         Row: {
           attended_at: string | null
