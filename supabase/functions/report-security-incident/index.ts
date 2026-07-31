@@ -125,9 +125,13 @@ Deno.serve(async (req) => {
         page_url: pageUrl,
         metadata: {
           ...metadata,
+          student_id: studentId,
+          user_full_name: user?.full_name ?? null,
+          user_email: user?.email ?? null,
           prior_hard_offences: priorHard ?? 0,
           access_pattern: evidence,
         },
+
       })
       .select("id")
       .maybeSingle();
