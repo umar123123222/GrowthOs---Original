@@ -226,7 +226,7 @@ export function SecuritySignalsPanel() {
             <div className="py-12 text-center text-muted-foreground">Loading…</div>
           ) : summaries.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
-              No students with {FLAG_THRESHOLD}+ signals in a single session.
+              No students with any playback signals in the last {WINDOW_DAYS} days.
             </div>
           ) : (
             <div className="overflow-x-auto">
