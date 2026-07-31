@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.report-security-incident]
 verify_jwt = true
+
+[functions.detect-capture-patterns]
+verify_jwt = true
