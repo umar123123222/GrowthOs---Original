@@ -238,6 +238,8 @@ export function SecuritySignalsPanel() {
                     <TableHead>Student</TableHead>
                     <TableHead>Flagged sessions</TableHead>
                     <TableHead>Most recent signals</TableHead>
+                    <TableHead>Why flagged</TableHead>
+
                     <TableHead>Last flagged</TableHead>
                     <TableHead>Account</TableHead>
                     <TableHead className="text-right">Manual actions</TableHead>
