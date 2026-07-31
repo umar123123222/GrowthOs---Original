@@ -17,6 +17,7 @@ import { obfuscateUrl, deobfuscateUrl } from "@/lib/utils";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { setSessionActivity } from "@/hooks/useSessionHeartbeat";
 import { getResourceFileSignedUrl } from "@/hooks/useResources";
+import { VideoWatermark } from "@/components/security/VideoWatermark";
 
 // Sanitize video URLs by removing garbage prefixes
 const sanitizeVideoUrl = (url: string): string => {
