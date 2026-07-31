@@ -3464,6 +3464,48 @@ export type Database = {
           },
         ]
       }
+      video_access_events: {
+        Row: {
+          created_at: string
+          device_label: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json
+          page_url: string | null
+          recording_id: string | null
+          session_id: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_label?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json
+          page_url?: string | null
+          recording_id?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_label?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json
+          page_url?: string | null
+          recording_id?: string | null
+          session_id?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       student_concurrent_sessions_v: {
