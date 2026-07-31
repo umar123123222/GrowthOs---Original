@@ -199,9 +199,10 @@ Deno.serve(async (req) => {
             <h2 style="margin:0 0 12px">${shouldSuspend ? "Account auto-suspended" : "Security evidence logged"}</h2>
             <p>${signalLabel} was detected on an active LMS session.</p>
             <table cellpadding="6" style="border-collapse:collapse;margin-top:12px">
-              <tr><td><b>User</b></td><td>${user?.full_name || "Unknown"}</td></tr>
+              <tr><td><b>User</b></td><td>${user?.full_name || studentRow?.lms_username || "Unknown"}</td></tr>
               <tr><td><b>Email</b></td><td>${user?.email || "-"}</td></tr>
-              <tr><td><b>Student ID</b></td><td>${user?.student_id || "-"}</td></tr>
+              <tr><td><b>Student ID</b></td><td>${studentId}</td></tr>
+
               <tr><td><b>Role</b></td><td>${user?.role || "-"}</td></tr>
               <tr><td><b>Signal</b></td><td>${signalLabel}</td></tr>
               <tr><td><b>Action taken</b></td><td>${shouldSuspend ? "Suspended + signed out on all devices" : "Logged as evidence only"}</td></tr>
