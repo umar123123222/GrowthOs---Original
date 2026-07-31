@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export type CaptureSignal =
@@ -8,6 +8,7 @@ export type CaptureSignal =
   | 'screenshot_key'
   | 'picture_in_picture';
 
+// Hard signals => immediate silent suspension. Soft signals => evidence only.
 const HARD_SIGNALS: CaptureSignal[] = ['screen_capture', 'extension', 'picture_in_picture'];
 const COOLDOWN_MS = 30_000;
 
@@ -30,6 +31,16 @@ function getDeviceLabel(ua: string): string {
 
 // DOM footprints commonly injected by video downloader / recorder extensions.
 const EXTENSION_SELECTORS = [
+  // Download managers
+  '[id*="idmmzcc" i]',
+  '[class*="idm-download" i]',
+  '[id*="idm_download" i]',
+  '[class*="idmbtn" i]',
+  '[id*="flashgot" i]',
+  '[id*="fdm-" i]',
+  '[class*="freedownloadmanager" i]',
+  '[id*="jdownloader" i]',
+  // Video grabbers
   '[id*="video-downloader" i]',
   '[class*="video-downloader" i]',
   '[id*="videodownloader" i]',
@@ -37,18 +48,28 @@ const EXTENSION_SELECTORS = [
   '[class*="downloadhelper" i]',
   '[id*="savefrom" i]',
   '[class*="savefrom" i]',
-  '[id*="flashgot" i]',
-  '[id*="idmmzcc" i]',
-  '[class*="idm-download" i]',
+  '[id*="cococut" i]',
+  '[class*="cococut" i]',
+  '[id*="getthemall" i]',
+  '[id*="vget" i]',
+  '[class*="vidown" i]',
+  '[id*="m3u8" i]',
+  '[class*="hls-downloader" i]',
+  '[id*="streamrecorder" i]',
+  '[id*="vidiq" i]',
+  // Screen recorders / screenshotters
   '[id*="screen-recorder" i]',
   '[class*="screen-recorder" i]',
   '[id*="screenrecorder" i]',
+  '[id*="screencastify" i]',
+  '[class*="screencastify" i]',
   '[id*="loom-companion" i]',
   '[class*="loom-record" i]',
   '[id*="awesome-screenshot" i]',
   '[id*="nimbus-screenshot" i]',
   '[class*="scrnli" i]',
-  '[id*="vidiq" i]',
+  '[id*="bandicam" i]',
+  '[id*="vidyard-record" i]',
   '[data-extension-id]',
 ];
 
@@ -60,6 +81,26 @@ function detectExtensionArtifacts(): string | null {
       /* invalid selector, skip */
     }
   }
+
+  // Extension-injected assets embedded straight into the page.
+  try {
+    const injected = document.querySelector(
+      'img[src^="chrome-extension://"], iframe[src^="chrome-extension://"], link[href^="chrome-extension://"], img[src^="moz-extension://"], iframe[src^="moz-extension://"]',
+    );
+    if (injected) return 'chrome-extension-resource';
+  } catch {
+    /* noop */
+  }
+
+  // A forced download anchor pointing at a media file next to the player.
+  try {
+    const anchors = Array.from(document.querySelectorAll('a[download]')) as HTMLAnchorElement[];
+    const media = anchors.find((a) => /\.(mp4|m3u8|ts|webm|mkv)(\?|$)/i.test(a.href || ''));
+    if (media) return 'injected-download-anchor';
+  } catch {
+    /* noop */
+  }
+
   return null;
 }
 
@@ -69,27 +110,22 @@ function detectDevtools(): boolean {
   return wThreshold || hThreshold;
 }
 
-type GuardState = {
-  active: boolean;
-  signal: CaptureSignal | null;
-  secondsLeft: number;
-};
-
+/**
+ * Detection-only capture guard.
+ * Nothing is blocked and nothing is shown to the user: hard signals silently
+ * report the incident (which suspends the account server-side) and sign out.
+ */
 export function useCaptureGuard(userId?: string | null) {
-  const [state, setState] = useState<GuardState>({ active: false, signal: null, secondsLeft: 5 });
-  const [suspended, setSuspended] = useState(false);
   const lastReportRef = useRef<Record<string, number>>({});
-  const countdownRef = useRef<number | null>(null);
-  const activeSignalRef = useRef<CaptureSignal | null>(null);
+  const suspendedRef = useRef(false);
 
   const report = useCallback(
-    async (signal: CaptureSignal, phase: 'detected' | 'expired', metadata?: Record<string, unknown>) => {
+    async (signal: CaptureSignal, metadata?: Record<string, unknown>) => {
       if (!userId) return null;
       try {
         const { data } = await supabase.functions.invoke('report-security-incident', {
           body: {
             signal,
-            phase,
             page_url: window.location.href,
             device_label: getDeviceLabel(navigator.userAgent),
             metadata: metadata ?? {},
@@ -103,154 +139,99 @@ export function useCaptureGuard(userId?: string | null) {
     [userId],
   );
 
-  const enforceSuspend = useCallback(async (signal: CaptureSignal) => {
-    setSuspended(true);
-    await report(signal, 'expired');
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      /* noop */
-    }
-    window.location.replace('/login?suspended=capture');
-  }, [report]);
-
   const trigger = useCallback(
     async (signal: CaptureSignal, metadata?: Record<string, unknown>) => {
-      if (!userId || suspended) return;
+      if (!userId || suspendedRef.current) return;
+
       const now = Date.now();
-      if (now - (lastReportRef.current[signal] ?? 0) < COOLDOWN_MS) return;
+      const last = lastReportRef.current[signal] ?? 0;
+      if (now - last < COOLDOWN_MS) return;
       lastReportRef.current[signal] = now;
 
-      const res = await report(signal, 'detected', metadata);
-      if (res?.suspended) {
-        // Repeat offence — server already suspended the account.
-        setSuspended(true);
+      const isHard = HARD_SIGNALS.includes(signal);
+      const result = await report(signal, metadata);
+
+      // Soft signals are evidence only — never sign the user out.
+      if (!isHard) return;
+
+      if (result?.suspended || isHard) {
+        suspendedRef.current = true;
         try {
           await supabase.auth.signOut();
         } catch {
           /* noop */
         }
         window.location.replace('/login?suspended=capture');
-        return;
       }
-
-      // Only hard signals escalate to auto-suspend after the countdown.
-      activeSignalRef.current = signal;
-      setState({ active: true, signal, secondsLeft: 5 });
     },
-    [userId, suspended, report],
+    [userId, report],
   );
 
-  // Countdown handling
-  useEffect(() => {
-    if (!state.active) {
-      if (countdownRef.current) window.clearInterval(countdownRef.current);
-      countdownRef.current = null;
-      return;
-    }
-    countdownRef.current = window.setInterval(() => {
-      setState((prev) => {
-        if (!prev.active) return prev;
-        const next = prev.secondsLeft - 1;
-        if (next <= 0) {
-          const sig = prev.signal;
-          const isHard = sig ? HARD_SIGNALS.includes(sig) : false;
-          if (sig && isHard) {
-            void enforceSuspend(sig);
-            return { active: true, signal: sig, secondsLeft: 0 };
-          }
-          return { active: false, signal: null, secondsLeft: 5 };
-        }
-        return { ...prev, secondsLeft: next };
-      });
-    }, 1000);
-    return () => {
-      if (countdownRef.current) window.clearInterval(countdownRef.current);
-      countdownRef.current = null;
-    };
-  }, [state.active, enforceSuspend]);
-
-  // Detectors
   useEffect(() => {
     if (!userId) return;
 
-    // 1) Screen capture API
-    const md = navigator.mediaDevices as MediaDevices | undefined;
-    let originalGDM: typeof navigator.mediaDevices.getDisplayMedia | null = null;
-    if (md && typeof md.getDisplayMedia === 'function') {
-      originalGDM = md.getDisplayMedia.bind(md);
-      (md as any).getDisplayMedia = async (constraints?: DisplayMediaStreamOptions) => {
-        void trigger('screen_capture', { via: 'getDisplayMedia' });
-        return originalGDM!(constraints as any);
+    // 1. Screen capture / recording APIs
+    const md = navigator.mediaDevices as (MediaDevices & {
+      getDisplayMedia?: (c?: DisplayMediaStreamOptions) => Promise<MediaStream>;
+    }) | undefined;
+    const originalGDM = md?.getDisplayMedia?.bind(md);
+    if (md && originalGDM) {
+      md.getDisplayMedia = async (constraints?: DisplayMediaStreamOptions) => {
+        void trigger('screen_capture', { api: 'getDisplayMedia' });
+        return originalGDM(constraints);
       };
     }
 
-    // Also catch already-running display captures
-    const captureScan = window.setInterval(() => {
-      try {
-        const anyDoc = document as any;
-        if (anyDoc.pictureInPictureElement) {
-          void trigger('picture_in_picture', { via: 'pip' });
-        }
-      } catch {
-        /* noop */
-      }
-    }, 4000);
-
-    const onEnterPip = () => void trigger('picture_in_picture', { via: 'enterpictureinpicture' });
-    document.addEventListener('enterpictureinpicture', onEnterPip, true);
-
-    // 2) Extension artifacts
-    const extScan = window.setInterval(() => {
-      const hit = detectExtensionArtifacts();
-      if (hit) void trigger('extension', { selector: hit });
-    }, 5000);
-
-    const observer = new MutationObserver(() => {
-      const hit = detectExtensionArtifacts();
-      if (hit) void trigger('extension', { selector: hit, via: 'mutation' });
-    });
-    try {
-      observer.observe(document.documentElement, { childList: true, subtree: true });
-    } catch {
-      /* noop */
+    const OriginalRecorder = window.MediaRecorder;
+    if (OriginalRecorder) {
+      const Patched = function (this: unknown, stream: MediaStream, options?: MediaRecorderOptions) {
+        void trigger('screen_capture', { api: 'MediaRecorder' });
+        return new OriginalRecorder(stream, options);
+      } as unknown as typeof MediaRecorder;
+      Patched.isTypeSupported = OriginalRecorder.isTypeSupported?.bind(OriginalRecorder);
+      window.MediaRecorder = Patched;
     }
 
-    // 3) Devtools + screenshot shortcuts (warning only)
-    const devScan = window.setInterval(() => {
-      if (detectDevtools()) void trigger('devtools', { via: 'window-size' });
-    }, 5000);
+    // 2. Extension artifacts — initial sweep + live DOM mutations
+    const sweep = () => {
+      const hit = detectExtensionArtifacts();
+      if (hit) void trigger('extension', { fingerprint: hit });
+    };
+    sweep();
+    const observer = new MutationObserver(() => sweep());
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    const sweepInterval = window.setInterval(sweep, 5000);
+
+    // 3. Picture-in-Picture capture
+    const onPip = () => void trigger('picture_in_picture', { api: 'enterpictureinpicture' });
+    document.addEventListener('enterpictureinpicture', onPip, true);
+
+    // 4. Soft evidence: devtools + screenshot shortcuts
+    const devtoolsInterval = window.setInterval(() => {
+      if (detectDevtools()) void trigger('devtools', {});
+    }, 4000);
 
     const onKey = (e: KeyboardEvent) => {
-      const key = e.key;
-      const isPrintScreen = key === 'PrintScreen';
-      const isWinSnip = e.shiftKey && (e.metaKey || e.getModifierState?.('Meta')) && key.toLowerCase() === 's';
+      const key = e.key?.toLowerCase();
+      const isPrint = key === 'printscreen';
+      const isWinSnip = e.shiftKey && (e.metaKey || e.ctrlKey) && key === 's';
       const isMacShot = e.metaKey && e.shiftKey && ['3', '4', '5'].includes(key);
-      if (isPrintScreen || isWinSnip || isMacShot) {
-        void trigger('screenshot_key', { key });
+      if (isPrint || isWinSnip || isMacShot) {
+        void trigger('screenshot_key', { key: e.key });
       }
     };
     window.addEventListener('keydown', onKey, true);
 
     return () => {
-      if (originalGDM && navigator.mediaDevices) {
-        (navigator.mediaDevices as any).getDisplayMedia = originalGDM;
-      }
-      window.clearInterval(captureScan);
-      window.clearInterval(extScan);
-      window.clearInterval(devScan);
-      document.removeEventListener('enterpictureinpicture', onEnterPip, true);
-      window.removeEventListener('keydown', onKey, true);
+      if (md && originalGDM) md.getDisplayMedia = originalGDM;
+      if (OriginalRecorder) window.MediaRecorder = OriginalRecorder;
       observer.disconnect();
+      window.clearInterval(sweepInterval);
+      window.clearInterval(devtoolsInterval);
+      document.removeEventListener('enterpictureinpicture', onPip, true);
+      window.removeEventListener('keydown', onKey, true);
     };
   }, [userId, trigger]);
-
-  const dismiss = useCallback(() => {
-    const sig = activeSignalRef.current;
-    // Soft signals can be dismissed immediately; hard signals must wait out the timer.
-    if (sig && HARD_SIGNALS.includes(sig)) return;
-    setState({ active: false, signal: null, secondsLeft: 5 });
-  }, []);
-
-  return { ...state, suspended, dismiss };
 }
+
+export default useCaptureGuard;
