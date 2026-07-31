@@ -29,6 +29,7 @@ import { CourseManagement } from '@/components/superadmin/CourseManagement';
 import { ContentScheduleCalendar } from '@/components/admin/ContentScheduleCalendar';
 import ResourcesManagement from '@/pages/admin/ResourcesManagement';
 import DataAudit from '@/pages/admin/DataAudit';
+import { SecuritySignalsPanel } from '@/components/admin/SecuritySignalsPanel';
 export default function AdminDashboard() {
   const [searchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'dashboard';
@@ -76,6 +77,8 @@ export default function AdminDashboard() {
         return <ResourcesManagement />;
       case 'data-audit':
         return <DataAudit />;
+      case 'playback-signals':
+        return <SecuritySignalsPanel />;
       default:
         return <DashboardContent />;
     }

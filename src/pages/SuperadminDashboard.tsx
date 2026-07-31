@@ -28,6 +28,7 @@ import { ENV_CONFIG } from '@/lib/env-config';
 import { ContentScheduleCalendar } from '@/components/admin/ContentScheduleCalendar';
 import ResourcesManagement from '@/pages/admin/ResourcesManagement';
 import DataAudit from '@/pages/admin/DataAudit';
+import { SecuritySignalsPanel } from '@/components/admin/SecuritySignalsPanel';
 interface DashboardStats {
   totalAdmins: number;
   totalSuperadmins: number;
@@ -91,6 +92,8 @@ export default function SuperadminDashboard() {
         return <ResourcesManagement />;
       case 'data-audit':
         return <DataAudit />;
+      case 'playback-signals':
+        return <SecuritySignalsPanel />;
       default:
         return <DashboardContent />;
     }

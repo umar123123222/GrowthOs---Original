@@ -5,7 +5,8 @@ import SuccessPartner from "@/components/SuccessPartner";
 import { logUserActivity, ACTIVITY_TYPES } from "@/lib/activity-logger";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route, LayoutGrid, Lock, Layers, Sun, Moon, FolderOpen, LifeBuoy, DollarSign, ShieldCheck } from "lucide-react";
+import { Monitor, BookOpen, FileText, MessageSquare, Bell, Video, ChevronDown, ChevronRight, LogOut, Users, UserCheck, User, Calendar, Menu, X, Activity, Building2, ShoppingBag, Target, MessageCircle, Trophy, BarChart3, AlertTriangle, Facebook, GraduationCap, Route, LayoutGrid, Lock, Layers, Sun, Moon, FolderOpen, LifeBuoy, DollarSign, ShieldCheck,
+  Radar } from "lucide-react";
 const MetaIcon = Facebook;
 import { useTheme } from "next-themes";
 import NotificationDropdown from "./NotificationDropdown";
@@ -523,6 +524,10 @@ const Layout = memo(({
         href: "/superadmin?tab=data-audit",
         icon: ShieldCheck
       }, {
+        name: "Playback Signals",
+        href: "/superadmin?tab=playback-signals",
+        icon: Radar
+      }, {
         name: "Teams",
         href: "/teams",
         icon: UserCheck
@@ -619,6 +624,10 @@ const Layout = memo(({
         name: "Data Audit",
         href: "/admin?tab=data-audit",
         icon: ShieldCheck
+      }, {
+        name: "Playback Signals",
+        href: "/admin?tab=playback-signals",
+        icon: Radar
       }, {
         name: "Teams",
         href: "/teams",
