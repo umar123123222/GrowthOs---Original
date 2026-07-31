@@ -498,7 +498,10 @@ const VideoPlayer = () => {
         <div className="lg:col-span-3 space-y-6">
           <Card>
             <CardContent className="p-0">
-              <div className="aspect-video bg-gray-900 rounded-t-lg relative">
+              <div
+                ref={playerContainerRef}
+                className={`bg-gray-900 relative ${isFullscreen ? 'w-full h-full' : 'aspect-video rounded-t-lg'}`}
+              >
                 {videoUrlError ? (
                   <div className="w-full h-full flex items-center justify-center bg-muted rounded-t-lg">
                     <div className="text-center p-6">
