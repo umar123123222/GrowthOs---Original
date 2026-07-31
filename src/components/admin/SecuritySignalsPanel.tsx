@@ -276,9 +276,6 @@ export function SecuritySignalsPanel() {
                         </TableCell>
                         <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1">
-                            <Button size="sm" variant="ghost" disabled={busy === `mail-${s.studentId}`} onClick={() => sendWarning(s)}>
-                              <Mail className="h-3 w-3 mr-1" /> Warn
-                            </Button>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -293,6 +290,7 @@ export function SecuritySignalsPanel() {
                             </Button>
                           </div>
                         </TableCell>
+
                       </TableRow>
                     );
                   })}
