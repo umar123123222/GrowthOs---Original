@@ -136,6 +136,8 @@ Deno.serve(async (req) => {
       .select("id")
       .maybeSingle();
 
+    const signalLabel = SIGNAL_LABELS[signal] || signal;
+
     if (shouldSuspend) {
       await admin
         .from("users")
@@ -146,9 +148,43 @@ Deno.serve(async (req) => {
         .update({ ended_at: nowIso })
         .eq("user_id", userId)
         .is("ended_at", null);
-    }
 
-    const signalLabel = SIGNAL_LABELS[signal] || signal;
+      // Student profile note + suspension entry (shown in the Notes dialog).
+      const reasonText =
+        `Auto-suspended by security monitoring — ${signalLabel}.` +
+        (deviceLabel ? ` Device: ${deviceLabel}.` : "") +
+        (ip ? ` IP: ${ip}.` : "") +
+        (pageUrl ? ` Page: ${pageUrl}` : "");
+
+      await admin.from("user_activity_logs").insert([
+        {
+          user_id: userId,
+          activity_type: "lms_suspended",
+          occurred_at: nowIso,
+          metadata: {
+            suspension_note: reasonText,
+            reason: reasonText,
+            signal,
+            signal_label: signalLabel,
+            device_label: deviceLabel,
+            ip_address: ip,
+            page_url: pageUrl,
+            source: "security_auto_suspension",
+          },
+        },
+        {
+          user_id: userId,
+          activity_type: "admin_note",
+          occurred_at: nowIso,
+          metadata: {
+            note: reasonText,
+            created_by: null,
+            source: "security_auto_suspension",
+            signal,
+          },
+        },
+      ]);
+    }
     const description = shouldSuspend
       ? `Account auto-suspended — ${signalLabel}`
       : `Security evidence logged — ${signalLabel}`;
