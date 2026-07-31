@@ -175,54 +175,9 @@ Deno.serve(async (req) => {
       },
     }]);
 
-    // Alert email to the general notification address in company settings.
-    try {
-      const { data: settings } = await admin
-        .from("company_settings")
-        .select("notification_email_cc, company_name")
-        .maybeSingle();
+    // Email alerts are intentionally disabled — incidents are review-only in the
+    // admin Playback Signals / Security Incidents panels.
 
-      const to = (settings?.notification_email_cc || Deno.env.get("NOTIFICATION_EMAIL_CC") || "")
-        .split(",")
-        .map((e: string) => sanitizeEmail(e))
-        .filter(Boolean);
-
-      const resendApiKey = Deno.env.get("RESEND_API_KEY");
-      const rawFrom = Deno.env.get("SMTP_FROM_EMAIL");
-      const fromEmail = rawFrom ? sanitizeEmail(rawFrom) : "";
-      const fromName = Deno.env.get("SMTP_FROM_NAME") || settings?.company_name || "LMS Security";
-
-      if (to.length && resendApiKey && fromEmail) {
-        const resend = new Resend(resendApiKey);
-        const html = `
-          <div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#111">
-            <h2 style="margin:0 0 12px">${shouldSuspend ? "Account auto-suspended" : "Security evidence logged"}</h2>
-            <p>${signalLabel} was detected on an active LMS session.</p>
-            <table cellpadding="6" style="border-collapse:collapse;margin-top:12px">
-              <tr><td><b>User</b></td><td>${user?.full_name || studentRow?.lms_username || "Unknown"}</td></tr>
-              <tr><td><b>Email</b></td><td>${user?.email || "-"}</td></tr>
-              <tr><td><b>Student ID</b></td><td>${studentId}</td></tr>
-
-              <tr><td><b>Role</b></td><td>${user?.role || "-"}</td></tr>
-              <tr><td><b>Signal</b></td><td>${signalLabel}</td></tr>
-              <tr><td><b>Action taken</b></td><td>${shouldSuspend ? "Suspended + signed out on all devices" : "Logged as evidence only"}</td></tr>
-              <tr><td><b>Device</b></td><td>${deviceLabel || "-"}</td></tr>
-              <tr><td><b>IP</b></td><td>${ip || "-"}</td></tr>
-              <tr><td><b>Page</b></td><td>${pageUrl || "-"}</td></tr>
-              <tr><td><b>Recent opens (30m)</b></td><td>${evidence.recent_opens} across ${evidence.distinct_recordings} lessons, ${evidence.distinct_ips} IP(s)</td></tr>
-              <tr><td><b>Time</b></td><td>${nowIso}</td></tr>
-            </table>
-          </div>`;
-        await resend.emails.send({
-          from: `${fromName} <${fromEmail}>`,
-          to,
-          subject: `${shouldSuspend ? "[SUSPENDED]" : "[EVIDENCE]"} ${signalLabel} — ${user?.full_name || user?.email || userId}${studentId !== "-" ? ` (${studentId})` : ""}`,
-          html,
-        });
-      }
-    } catch (mailErr) {
-      console.error("security alert email failed", mailErr);
-    }
 
     return new Response(
       JSON.stringify({ ok: true, action, suspended: shouldSuspend, offences: (priorHard ?? 0) + (isHard ? 1 : 0) }),
