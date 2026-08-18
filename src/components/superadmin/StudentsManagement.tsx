@@ -277,19 +277,19 @@ export function StudentsManagement() {
 
   const fetchCoursesAndPathways = async () => {
     try {
-      const [coursesRes, pathwaysRes, enrollmentsRes, studentsTableRes] = await Promise.all([
-        supabase.from('courses').select('id, title').order('title'),
-        supabase.from('learning_pathways').select('id, name').order('name'),
-        supabase.from('course_enrollments').select('student_id, course_id, pathway_id').eq('status', 'active'),
-        supabase.from('students').select('id, user_id')
+      const [coursesRows, pathwayRows, enrollmentRows, studentTableRows] = await Promise.all([
+        fetchAll<any>((from, to) => supabase.from('courses').select('id, title').order('title').range(from, to)),
+        fetchAll<any>((from, to) => supabase.from('learning_pathways').select('id, name').order('name').range(from, to)),
+        fetchAll<any>((from, to) => supabase.from('course_enrollments').select('student_id, course_id, pathway_id').eq('status', 'active').range(from, to)),
+        fetchAll<any>((from, to) => supabase.from('students').select('id, user_id').range(from, to))
       ]);
-      if (coursesRes.data) setAllCourses(coursesRes.data as any);
-      if (pathwaysRes.data) setAllPathways(pathwaysRes.data as any);
-      if (enrollmentsRes.data && studentsTableRes.data) {
+      if (coursesRows) setAllCourses(coursesRows as any);
+      if (pathwayRows) setAllPathways(pathwayRows as any);
+      if (enrollmentRows && studentTableRows) {
         const recordToUser = new Map<string, string>();
-        studentsTableRes.data.forEach((s: any) => recordToUser.set(s.id, s.user_id));
+        studentTableRows.forEach((s: any) => recordToUser.set(s.id, s.user_id));
         const map = new Map<string, Set<string>>();
-        enrollmentsRes.data.forEach((e: any) => {
+        enrollmentRows.forEach((e: any) => {
           const userId = recordToUser.get(e.student_id);
           if (!userId) return;
           const set = map.get(userId) || new Set<string>();
