@@ -241,16 +241,15 @@ export const StudentManagement = () => {
   };
   const fetchStudents = async () => {
     try {
-      // Fetch student user_ids from user_roles table, then fetch their data
-      const { data: studentRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'student');
-      
-      if (rolesError) throw rolesError;
-      
-      const studentUserIds = studentRoles?.map(r => r.user_id) || [];
-      
+      // Fetch student user_ids from user_roles table, then fetch their data.
+      // Paginated: a plain select is capped at 1000 rows, which previously hid
+      // every student past that cap (they were unsearchable in the directory).
+      const studentRoles = await fetchAll<any>((from, to) =>
+        supabase.from('user_roles').select('user_id').eq('role', 'student').range(from, to)
+      );
+
+      const studentUserIds = Array.from(new Set((studentRoles || []).map((r: any) => r.user_id).filter(Boolean)));
+
       if (studentUserIds.length === 0) {
         setStudents([]);
         return;
@@ -274,15 +273,18 @@ export const StudentManagement = () => {
         return { data: all, error: null as any };
       };
 
-      const [usersRes, studentsRes, invoicesRes] = await Promise.all([
-        supabase.from('users').select('*').in('id', studentUserIds).order('created_at', {
-          ascending: false
-        }), 
-        supabase.from('students').select('id, user_id, student_id, installment_count, fees_cleared'),
+      // Chunk the .in() call so long ID lists don't blow the URL length limit.
+      const userIdChunks: string[][] = [];
+      for (let i = 0; i < studentUserIds.length; i += 100) userIdChunks.push(studentUserIds.slice(i, i + 100) as string[]);
+
+      const [usersChunkResults, studentsRes, invoicesRes] = await Promise.all([
+        Promise.all(userIdChunks.map(chunk => supabase.from('users').select('*').in('id', chunk))),
+        fetchAll<any>((from, to) => supabase.from('students').select('id, user_id, student_id, installment_count, fees_cleared').range(from, to)).then(data => ({ data, error: null as any })).catch(error => ({ data: [] as any[], error })),
         invoicesPaginated()
       ]);
-      
-      if (usersRes.error) throw usersRes.error;
+
+      const usersErr = usersChunkResults.find(r => r.error)?.error;
+      if (usersErr) throw usersErr;
       if (studentsRes.error) {
         console.warn('Warning fetching students table:', studentsRes.error);
       }
@@ -290,7 +292,13 @@ export const StudentManagement = () => {
         console.warn('Warning fetching invoices:', invoicesRes.error);
       }
 
-      const usersData = usersRes.data || [];
+      const usersData = usersChunkResults.flatMap(r => r.data || []);
+      // Newest-first, matching the previous .order('created_at', desc)
+      usersData.sort((a: any, b: any) => {
+        const at = a?.created_at ? new Date(a.created_at).getTime() : 0;
+        const bt = b?.created_at ? new Date(b.created_at).getTime() : 0;
+        return bt - at;
+      });
       const studentsTable = studentsRes.data || [];
       const invoicesData = invoicesRes.data || [];
 
