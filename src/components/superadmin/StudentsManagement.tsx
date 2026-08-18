@@ -247,19 +247,21 @@ export function StudentsManagement() {
   }, []);
   const fetchBatchOptions = async () => {
     try {
-      const [batchesRes, enrollmentsRes, studentsTableRes] = await Promise.all([
-        supabase.from('batches').select('id, name').order('start_date', { ascending: false }),
-        supabase.from('course_enrollments').select('student_id, batch_id').not('batch_id', 'is', null),
-        supabase.from('students').select('id, user_id')
+      // All list queries are paginated: PostgREST caps a plain select at 1000
+      // rows, which previously truncated batch/enrollment maps.
+      const [batchesRes, enrollmentRows, studentTableRows] = await Promise.all([
+        fetchAll<any>((from, to) => supabase.from('batches').select('id, name').order('start_date', { ascending: false }).range(from, to)),
+        fetchAll<any>((from, to) => supabase.from('course_enrollments').select('student_id, batch_id').not('batch_id', 'is', null).range(from, to)),
+        fetchAll<any>((from, to) => supabase.from('students').select('id, user_id').range(from, to))
       ]);
-      if (batchesRes.data) setBatchOptions(batchesRes.data);
-      if (enrollmentsRes.data && studentsTableRes.data) {
+      if (batchesRes) setBatchOptions(batchesRes);
+      if (enrollmentRows && studentTableRows) {
         // Build student_record_id -> user_id map
         const recordToUser = new Map<string, string>();
-        studentsTableRes.data.forEach((s: any) => recordToUser.set(s.id, s.user_id));
-        
+        studentTableRows.forEach((s: any) => recordToUser.set(s.id, s.user_id));
+
         const map = new Map<string, string[]>();
-        enrollmentsRes.data.forEach((e: any) => {
+        enrollmentRows.forEach((e: any) => {
           const userId = recordToUser.get(e.student_id);
           if (!userId) return;
           const batches = map.get(userId) || [];
