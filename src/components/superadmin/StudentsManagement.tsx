@@ -591,7 +591,7 @@ export function StudentsManagement() {
             supabase.from('users').select('*').in('id', chunk)
           )
         ),
-        supabase.from('students').select('id, user_id, student_id, installment_count')
+        safeAll<any>((from, to) => supabase.from('students').select('id, user_id, student_id, installment_count').range(from, to))
       ]);
       const usersErrEntry = usersChunkResults.find(r => r.error);
       const usersData = usersChunkResults.flatMap(r => r.data || []);
