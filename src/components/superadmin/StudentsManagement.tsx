@@ -489,12 +489,22 @@ export function StudentsManagement() {
       // the `user_roles` junction table OR have role='student' on the users
       // table. We union both sources to avoid invisibility from legacy rows
       // that never got an explicit user_roles entry.
+      // IMPORTANT: every list query below is paginated with fetchAll. A plain
+      // select is capped at 1000 rows by PostgREST, which silently dropped the
+      // students beyond that cap — they became unsearchable in the directory.
+      const safeAll = async <T,>(build: (from: number, to: number) => any): Promise<{ data: T[] | null; error: any }> => {
+        try {
+          return { data: await fetchAll<T>(build), error: null };
+        } catch (error) {
+          return { data: null, error };
+        }
+      };
       const [rolesRes, legacyRes, allUsersRes] = await Promise.all([
-        supabase.from('user_roles').select('user_id, role').eq('role', 'student'),
-        supabase.from('users').select('id, role').eq('role', 'student'),
+        safeAll<any>((from, to) => supabase.from('user_roles').select('user_id, role').eq('role', 'student').range(from, to)),
+        safeAll<any>((from, to) => supabase.from('users').select('id, role').eq('role', 'student').range(from, to)),
         // Diagnostic: count all users visible to this caller, broken down by role.
         // If this returns 0 rows we know RLS is blocking everything.
-        supabase.from('users').select('id, role'),
+        safeAll<any>((from, to) => supabase.from('users').select('id, role').range(from, to)),
       ]);
       if (rolesRes.error) {
         console.error('[StudentsManagement] user_roles query error:', rolesRes.error);
