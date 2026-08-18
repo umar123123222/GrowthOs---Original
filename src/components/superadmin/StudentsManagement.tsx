@@ -30,6 +30,7 @@ import { useUserManagement } from '@/hooks/useUserManagement';
 import { useAuth } from '@/hooks/useAuth';
 import { formatCurrency } from '@/utils/currencyFormatter';
 import { cn } from '@/lib/utils';
+import { fetchAll } from '@/lib/fetch-all';
 import { logAdminAction, ACTIVITY_TYPES } from '@/lib/activity-logger';
 import { useScheduledSuspensions } from '@/hooks/useScheduledSuspensions';
 import type { SuspensionConfirmData } from '@/components/SuspensionDialog';
