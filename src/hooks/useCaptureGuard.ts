@@ -148,21 +148,9 @@ export function useCaptureGuard(userId?: string | null) {
       if (now - last < COOLDOWN_MS) return;
       lastReportRef.current[signal] = now;
 
-      const isHard = HARD_SIGNALS.includes(signal);
-      const result = await report(signal, metadata);
-
-      // Soft signals are evidence only — never sign the user out.
-      if (!isHard) return;
-
-      if (result?.suspended || isHard) {
-        suspendedRef.current = true;
-        try {
-          await supabase.auth.signOut();
-        } catch {
-          /* noop */
-        }
-        window.location.replace('/login?suspended=capture');
-      }
+      // Auto-suspension is disabled: every signal is logged as evidence only,
+      // no sign-out and no account action.
+      await report(signal, metadata);
     },
     [userId, report],
   );

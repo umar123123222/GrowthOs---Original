@@ -88,8 +88,8 @@ Deno.serve(async (req) => {
       .in("signal", Array.from(HARD_SIGNALS));
 
     const isHard = HARD_SIGNALS.has(signal);
-    // Detection-first policy: any hard signal suspends immediately, first time.
-    const shouldSuspend = isHard;
+    // Auto-suspension disabled by request: incidents are logged for review only.
+    const shouldSuspend = false;
     const action = shouldSuspend ? "suspended" : "logged";
     const ip = parseIp(req);
     const nowIso = new Date().toISOString();
