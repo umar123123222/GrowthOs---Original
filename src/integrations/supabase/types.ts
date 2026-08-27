@@ -3682,6 +3682,7 @@ export type Database = {
         Args: { p_context?: Json; p_milestone_type: string; p_user_id: string }
         Returns: boolean
       }
+      cleanup_old_data: { Args: never; Returns: undefined }
       create_notification: {
         Args: {
           p_message: string
