@@ -417,13 +417,15 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
       // Refresh data
       await fetchModules();
       await fetchRecordings();
-    } catch (error) {
+    } catch (error: any) {
       safeLogger.error('Error saving module:', error);
       toast({
         title: "Error",
-        description: "Failed to save module. Please try again.",
+        description: error?.message || "Failed to save module. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
