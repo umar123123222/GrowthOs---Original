@@ -1090,8 +1090,6 @@ export function StudentsManagement() {
     }
 
     try {
-      console.log('Resetting auth password for:', studentId);
-
       // Attempt 1: dedicated admin-reset-password function
       let result = await supabase.functions.invoke('admin-reset-password', {
         body: { user_id: studentId, password: storedPassword }
@@ -1099,7 +1097,6 @@ export function StudentsManagement() {
 
       // Attempt 2: if first failed, try reset-student-password
       if (result.error || result.data?.error) {
-        console.log('admin-reset-password failed, trying reset-student-password...');
         result = await supabase.functions.invoke('reset-student-password', {
           body: { user_id: studentId, password: storedPassword }
         });
@@ -1107,7 +1104,6 @@ export function StudentsManagement() {
 
       // Attempt 3: if still failed, try update-student-details
       if (result.error || result.data?.error) {
-        console.log('reset-student-password failed, trying update-student-details...');
         result = await supabase.functions.invoke('update-student-details', {
           body: {
             user_id: studentId,
@@ -1117,8 +1113,6 @@ export function StudentsManagement() {
           }
         });
       }
-
-      console.log('Final reset response:', JSON.stringify(result.data));
 
       if (result.error) throw result.error;
       if (result.data?.error) throw new Error(result.data.error);
