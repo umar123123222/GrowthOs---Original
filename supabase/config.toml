@@ -17,3 +17,135 @@ verify_jwt = true
 
 [functions.send-capture-warning-email]
 verify_jwt = true
+
+# Explicit auth requirement for every remaining function.
+# true = caller must present a valid JWT (same as Supabase's default).
+# Sensitive functions additionally enforce role checks in code.
+[functions.admin-reset-password]
+verify_jwt = true
+
+[functions.admin-reset-sp-credits]
+verify_jwt = true
+
+[functions.batch-content-drip-processor]
+verify_jwt = true
+
+[functions.build-leaderboard]
+verify_jwt = true
+
+[functions.check-access-expiry]
+verify_jwt = true
+
+[functions.cleanup-inactive-students]
+verify_jwt = true
+
+[functions.create-enhanced-student]
+verify_jwt = true
+
+[functions.create-enhanced-team-member]
+verify_jwt = true
+
+[functions.create-student-v2]
+verify_jwt = true
+
+[functions.create-team-member]
+verify_jwt = true
+
+[functions.create-user-with-role]
+verify_jwt = true
+
+[functions.daily-recovery-check]
+verify_jwt = true
+
+[functions.delete-user-with-role]
+verify_jwt = true
+
+[functions.encrypt-token]
+verify_jwt = true
+
+[functions.get-livechat-code]
+verify_jwt = true
+
+[functions.get-user-details]
+verify_jwt = true
+
+[functions.installment-reminder-scheduler]
+verify_jwt = true
+
+[functions.live-session-reminders]
+verify_jwt = true
+
+[functions.mark-invoice-paid]
+verify_jwt = true
+
+[functions.meta-ads-metrics]
+verify_jwt = true
+
+[functions.motivational-notifications]
+verify_jwt = true
+
+[functions.notification-scheduler]
+verify_jwt = true
+
+[functions.notify-content-unlocked]
+verify_jwt = true
+
+[functions.process-email-queue]
+verify_jwt = true
+
+[functions.process-onboarding-jobs]
+verify_jwt = true
+
+[functions.process-refund]
+verify_jwt = true
+
+[functions.process-scheduled-suspensions]
+verify_jwt = true
+
+[functions.process-success-partner-message]
+verify_jwt = true
+
+[functions.resend-invoice]
+verify_jwt = true
+
+[functions.reset-student-password]
+verify_jwt = true
+
+[functions.secure-encrypt-token]
+verify_jwt = true
+
+[functions.secure-user-creation]
+verify_jwt = true
+
+[functions.send-batch-content-notification]
+verify_jwt = true
+
+[functions.send-extension-email]
+verify_jwt = true
+
+[functions.session-heartbeat]
+verify_jwt = true
+
+[functions.shopify-metrics]
+verify_jwt = true
+
+[functions.success-partner-credits]
+verify_jwt = true
+
+[functions.success-session-reminder]
+verify_jwt = true
+
+[functions.sync-shopify-metrics]
+verify_jwt = true
+
+[functions.update-recovery-status]
+verify_jwt = true
+
+[functions.update-student-details]
+verify_jwt = true
+
+[functions.validate-shopify]
+verify_jwt = true
+
+[functions.whoami]
+verify_jwt = true
