@@ -269,23 +269,21 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
   const fetchRecordings = async () => {
     try {
       safeLogger.info('Fetching recordings...');
-      const { data, error } = await supabase
-        .from('available_lessons')
-        .select(`
-          *,
-          module:modules(id, title, course_id)
-        `)
-        .order('sequence_order', { ascending: true, nullsFirst: false })
-        .order('uploaded_at', { ascending: true, nullsFirst: false })
-        .order('id', { ascending: true });
+      // Paginated — PostgREST caps at 1000 rows per query
+      const data = await fetchAll<any>((from, to) =>
+        supabase
+          .from('available_lessons')
+          .select(`
+            *,
+            module:modules(id, title, course_id)
+          `)
+          .order('sequence_order', { ascending: true, nullsFirst: false })
+          .order('uploaded_at', { ascending: true, nullsFirst: false })
+          .order('id', { ascending: true })
+          .range(from, to)
+      );
 
-      if (error) {
-        safeLogger.error('Error fetching recordings:', error);
-        throw error;
-      }
-      
-      safeLogger.info('Recordings fetched:', { data });
-      setRecordings((data || []).map(r => {
+      setRecordings(data.map(r => {
         const mod = r.module as { id: string; title: string; course_id: string | null } | null;
         return { 
           ...r, 
@@ -309,13 +307,10 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
 
   const fetchCourses = async () => {
     try {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('id, title, is_published')
-        .order('sequence_order');
-
-      if (error) throw error;
-      setCourses(data || []);
+      const data = await fetchAll<any>((from, to) =>
+        supabase.from('courses').select('id, title, is_published').order('sequence_order').range(from, to)
+      );
+      setCourses(data);
     } catch (error) {
       safeLogger.error('Error fetching courses:', error);
     }
@@ -323,13 +318,10 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
 
   const fetchModules = async () => {
     try {
-      const { data, error } = await supabase
-        .from('modules')
-        .select('id, title, course_id, order')
-        .order('order');
-
-      if (error) throw error;
-      setModules(data || []);
+      const data = await fetchAll<any>((from, to) =>
+        supabase.from('modules').select('id, title, course_id, order').order('order').range(from, to)
+      );
+      setModules(data);
     } catch (error) {
       safeLogger.error('Error fetching modules:', error);
     }
