@@ -44,7 +44,6 @@ const ResetPassword = () => {
     const markResolved = (mode: boolean, error?: string) => {
       if (resolved) return;
       resolved = true;
-      console.log('[ResetPassword] markResolved called:', { mode, error });
       if (error) setLinkError(error);
       if (mode) setIsResetMode(true);
       setIsCheckingToken(false);
@@ -53,8 +52,7 @@ const ResetPassword = () => {
     // Listen for PASSWORD_RECOVERY event from Supabase auto-exchange
     const {
       data: { subscription }
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('[ResetPassword] Auth event:', event);
+    } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         window.history.replaceState({}, document.title, window.location.pathname);
         markResolved(true);
@@ -65,8 +63,6 @@ const ResetPassword = () => {
       try {
         const hashStr = capturedParams.hash.substring(1);
         const hashParams = new URLSearchParams(hashStr);
-
-        console.log('[ResetPassword] Using captured params:', capturedParams);
 
         // Check for error parameters
         const error = capturedParams.error || hashParams.get('error');
