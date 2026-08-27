@@ -233,6 +233,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
   const [loading, setLoading] = useState(true);
   const [syncingUnlocks, setSyncingUnlocks] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingRecording, setEditingRecording] = useState<Recording | null>(null);
   const [expandedRecordings, setExpandedRecordings] = useState<Set<string>>(new Set());
   const [showUrlExamples, setShowUrlExamples] = useState(false);
@@ -428,7 +429,9 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
     e.preventDefault();
     
     safeLogger.info('Form submission started with data:', { formData });
-    
+
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       // If creating and sequence_order was left at 0/blank, assign max+1 within the target module
       let effectiveSeq: number | null = formData.sequence_order || null;
@@ -503,13 +506,15 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
       
       // Refresh recordings
       await fetchRecordings();
-    } catch (error) {
+    } catch (error: any) {
       safeLogger.error('Error saving recording:', error);
       toast({
         title: "Error",
-        description: "Failed to save recording",
+        description: error?.message || "Failed to save recording",
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -959,9 +964,10 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                 </Button>
                 <Button 
                   type="submit"
+                  disabled={isSubmitting}
                   className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
                 >
-                  {editingRecording ? 'Update' : 'Create'} Recording
+                  {isSubmitting ? 'Saving...' : `${editingRecording ? 'Update' : 'Create'} Recording`}
                 </Button>
               </div>
             </form>
