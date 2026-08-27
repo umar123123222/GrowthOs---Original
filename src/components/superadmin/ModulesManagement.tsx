@@ -254,9 +254,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
           *,
           available_lessons(count)
         `)
-        .order('order', { ascending: true, nullsFirst: false })
-        
-        .order('id', { ascending: true });
+        .order('order', { ascending: true, nullsFirst: false });
 
       if (error) {
         safeLogger.error('Error fetching modules:', error);
