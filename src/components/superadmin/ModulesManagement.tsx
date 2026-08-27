@@ -320,7 +320,9 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    if (isSubmitting) return;
+
     if (!formData.title.trim()) {
       toast({
         title: "Validation Error",
@@ -330,6 +332,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
       return;
     }
 
+    setIsSubmitting(true);
     try {
       // If order is 0/blank, place at end of the target course to avoid position collisions
       let effectiveOrder = formData.order;
