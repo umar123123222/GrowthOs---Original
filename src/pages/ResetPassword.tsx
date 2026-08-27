@@ -78,7 +78,7 @@ const ResetPassword = () => {
 
         // Handle token_hash flow (link goes directly to our app, not Supabase /verify)
         if (capturedParams.tokenHash && capturedParams.type === 'recovery') {
-          console.log('[ResetPassword] token_hash found, verifying OTP...');
+
           window.history.replaceState({}, document.title, window.location.pathname);
           const { error: otpError } = await supabase.auth.verifyOtp({
             token_hash: capturedParams.tokenHash,
@@ -88,7 +88,7 @@ const ResetPassword = () => {
             console.error('[ResetPassword] OTP verification error:', otpError);
             markResolved(false, "This password reset link has expired or is invalid. Please request a new one.");
           } else {
-            console.log('[ResetPassword] OTP verification successful!');
+
             markResolved(true);
           }
           return;
@@ -105,7 +105,7 @@ const ResetPassword = () => {
         // Legacy: code-based PKCE flow
         const code = capturedParams.code;
         if (code) {
-          console.log('[ResetPassword] Code found, exchanging...');
+
           const { data, error: exchangeErr } = await supabase.auth.exchangeCodeForSession(code);
           window.history.replaceState({}, document.title, window.location.pathname);
           if (exchangeErr) {
