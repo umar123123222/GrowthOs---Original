@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { RecordingRatingDetails } from './RecordingRatingDetails';
 import { RecordingAttachmentsManager } from './RecordingAttachmentsManager';
 import { safeLogger } from '@/lib/safe-logger';
+import { fetchAll } from '@/lib/supabase-paging';
 import { VideoPreviewDialog } from '@/components/VideoPreviewDialog';
 import {
   DndContext,

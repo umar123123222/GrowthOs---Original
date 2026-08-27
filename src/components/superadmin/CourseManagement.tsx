@@ -15,6 +15,7 @@ import { Plus, Edit, Trash2, BookOpen, Eye, EyeOff, UserCheck, Users, Clock } fr
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { logger } from '@/lib/logger';
+import { fetchAll } from '@/lib/supabase-paging';
 
 interface Mentor {
   id: string;
