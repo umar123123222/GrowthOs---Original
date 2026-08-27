@@ -406,13 +406,10 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
 
   const fetchAssignments = async () => {
     try {
-      const { data, error } = await supabase
-        .from('assignments')
-        .select('id, name')
-        .order('name');
-
-      if (error) throw error;
-      setAssignments(data || []);
+      const data = await fetchAll<any>((from, to) =>
+        supabase.from('assignments').select('id, name').order('name').range(from, to)
+      );
+      setAssignments(data);
     } catch (error) {
       safeLogger.error('Error fetching assignments:', error);
     }
