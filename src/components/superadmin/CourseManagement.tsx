@@ -103,20 +103,20 @@ export function CourseManagement({ readOnly = false }: { readOnly?: boolean } = 
 
       if (coursesError) throw coursesError;
 
-      // Get module counts per course
-      const { data: modulesData } = await supabase
-        .from('modules')
-        .select('course_id');
+      // Get module counts per course (paginated — PostgREST caps at 1000 rows)
+      const modulesData = await fetchAll<{ course_id: string | null }>((from, to) =>
+        supabase.from('modules').select('course_id').range(from, to)
+      );
 
       // Get enrollment counts per course
-      const { data: enrollmentsData } = await supabase
-        .from('course_enrollments')
-        .select('course_id');
+      const enrollmentsData = await fetchAll<{ course_id: string | null }>((from, to) =>
+        supabase.from('course_enrollments').select('course_id').range(from, to)
+      );
 
       // Get mentor assignments per course
-      const { data: mentorAssignmentsData } = await supabase
-        .from('mentor_course_assignments')
-        .select('course_id, mentor_id, is_primary');
+      const mentorAssignmentsData = await fetchAll<{ course_id: string | null; mentor_id: string; is_primary: boolean | null }>((from, to) =>
+        supabase.from('mentor_course_assignments').select('course_id, mentor_id, is_primary').range(from, to)
+      );
 
       const moduleCountMap = new Map<string, number>();
       const enrollmentCountMap = new Map<string, number>();
