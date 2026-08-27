@@ -274,7 +274,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
           module:modules(id, title, course_id)
         `)
         .order('sequence_order', { ascending: true, nullsFirst: false })
-        .order('created_at', { ascending: true })
+        .order('uploaded_at', { ascending: true, nullsFirst: false })
         .order('id', { ascending: true });
 
       if (error) {
