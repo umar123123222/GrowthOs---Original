@@ -263,17 +263,24 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
 
       safeLogger.info('Modules fetched:', { data });
 
-      const modulesWithCount = data?.map(module => ({
-        ...module,
-        recording_count: module.available_lessons?.[0]?.count || 0
-      })) || [];
+      const modulesWithCount = (data || [])
+        .map(module => ({
+          ...module,
+          recording_count: module.available_lessons?.[0]?.count || 0
+        }))
+        .sort((a: any, b: any) => {
+          const ao = a.order ?? Number.MAX_SAFE_INTEGER;
+          const bo = b.order ?? Number.MAX_SAFE_INTEGER;
+          if (ao !== bo) return ao - bo;
+          return String(a.id).localeCompare(String(b.id));
+        });
 
       setModules(modulesWithCount);
-    } catch (error) {
+    } catch (error: any) {
       safeLogger.error('Error fetching modules:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch modules",
+        description: error?.message || "Failed to fetch modules",
         variant: "destructive"
       });
     } finally {
