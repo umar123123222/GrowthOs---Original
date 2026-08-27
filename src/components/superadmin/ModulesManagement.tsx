@@ -195,6 +195,7 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
   const [filterCourseId, setFilterCourseId] = useState<string>('all');
 
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingModule, setEditingModule] = useState<Module | null>(null);
   const [formData, setFormData] = useState({
     title: '',
