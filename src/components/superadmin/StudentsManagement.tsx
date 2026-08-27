@@ -201,17 +201,6 @@ export function StudentsManagement() {
     fetchCompanyCurrency();
     fetchBatchOptions();
     fetchCoursesAndPathways();
-    // Safety watchdog: if loading hasn't cleared after 15s, release the spinner
-    // so the user is never stuck on "Loading students..." forever.
-    const watchdog = setTimeout(() => {
-      setLoading(prev => {
-        if (prev) {
-          console.warn('[StudentsManagement] Watchdog: forcing loading=false after 15s');
-        }
-        return false;
-      });
-    }, 15000);
-    return () => clearTimeout(watchdog);
   }, []);
   useEffect(() => {
     if (students.length > 0) {

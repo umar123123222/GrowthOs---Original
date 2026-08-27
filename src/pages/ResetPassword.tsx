@@ -19,7 +19,6 @@ const capturedParams = {
   errorDescription: new URLSearchParams(window.location.search).get('error_description'),
   hash: window.location.hash,
 };
-console.log('[ResetPassword] Captured params at module level:', capturedParams);
 
 const ResetPassword = () => {
   const [email, setEmail] = useState("");
