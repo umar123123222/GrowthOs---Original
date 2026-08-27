@@ -805,9 +805,10 @@ export function ModulesManagement({ readOnly = false }: { readOnly?: boolean } =
                 </Button>
                 <Button 
                   type="submit"
+                  disabled={isSubmitting}
                   className="hover-scale bg-gradient-to-r from-green-500 to-blue-500 hover:from-green-600 hover:to-blue-600"
                 >
-                  {editingModule ? 'Update' : 'Create'} Module
+                  {isSubmitting ? 'Saving...' : `${editingModule ? 'Update' : 'Create'} Module`}
                 </Button>
               </div>
             </form>
