@@ -325,17 +325,40 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
       while (all.length < MAX_ROWS) {
         let rows: any[] = [];
         if (userId) {
-          const [byPerformer, byTarget] = await Promise.all([
+          const activityQuery = (() => {
+            let q: any = supabase
+              .from('user_activity_logs')
+              .select('id, user_id, activity_type, metadata, reference_id, occurred_at')
+              .eq('user_id', userId);
+            if (dateRange !== 'all') {
+              const days = parseInt(dateRange.replace('days', ''));
+              const startDate = new Date();
+              startDate.setDate(startDate.getDate() - days);
+              q = q.gte('occurred_at', startDate.toISOString());
+            }
+            if (activityFilter !== 'all') q = q.eq('activity_type', activityFilter);
+            if (cursor) q = q.lt('occurred_at', cursor);
+            return q.order('occurred_at', { ascending: false }).limit(PAGE);
+          })();
+
+          const [byPerformer, byTarget, byActivity] = await Promise.all([
             applyFilters(supabase.from('admin_logs').select('*').eq('performed_by', userId), cursor),
             applyFilters(supabase.from('admin_logs').select('*').contains('data', { target_user_id: userId }), cursor),
+            activityQuery,
           ]);
           if (byPerformer.error) throw byPerformer.error;
           if (byTarget.error) throw byTarget.error;
+          if (byActivity.error) throw byActivity.error;
           const merged = new Map<string, any>();
           [...(byPerformer.data || []), ...(byTarget.data || [])].forEach(r => merged.set(r.id, r));
-          rows = Array.from(merged.values())
-            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-            .slice(0, PAGE);
+          (byActivity.data || []).map(normalizeActivityRow).forEach((r: any) => {
+            if (r.created_at) merged.set(r.id, r);
+          });
+          rows = dedupeRows(
+            Array.from(merged.values())
+              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          ).slice(0, PAGE);
+
         } else {
           const { data, error } = await applyFilters(supabase.from('admin_logs').select('*'), cursor);
           if (error) throw error;
