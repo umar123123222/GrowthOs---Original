@@ -122,23 +122,46 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
         // Split into two indexed queries and merge — a single `.or()` with a
         // JSON path filter causes statement timeouts on large admin_logs
         // tables. JSON containment can use the admin_logs.data GIN index.
-        const [byPerformer, byTarget] = await Promise.all([
+        const activityQuery = (() => {
+          let q: any = supabase
+            .from('user_activity_logs')
+            .select('id, user_id, activity_type, metadata, reference_id, occurred_at')
+            .eq('user_id', userId);
+          if (dateRange !== 'all') {
+            const days = parseInt(dateRange.replace('days', ''));
+            const startDate = new Date();
+            startDate.setDate(startDate.getDate() - days);
+            q = q.gte('occurred_at', startDate.toISOString());
+          }
+          if (activityFilter !== 'all') q = q.eq('activity_type', activityFilter);
+          if (append && cursorCreatedAt) q = q.lt('occurred_at', cursorCreatedAt);
+          return q.order('occurred_at', { ascending: false }).limit(queryLimit);
+        })();
+
+        const [byPerformer, byTarget, byActivity] = await Promise.all([
           applyFilters(
             supabase.from('admin_logs').select('*').eq('performed_by', userId)
           ).order('created_at', { ascending: false }).limit(queryLimit),
           applyFilters(
             supabase.from('admin_logs').select('*').contains('data', { target_user_id: userId })
           ).order('created_at', { ascending: false }).limit(queryLimit),
+          activityQuery,
         ]);
         if (byPerformer.error) throw byPerformer.error;
         if (byTarget.error) throw byTarget.error;
+        if (byActivity.error) throw byActivity.error;
         const merged = new Map<string, any>();
         [...(byPerformer.data || []), ...(byTarget.data || [])].forEach(row => {
           merged.set(row.id, row);
         });
-        data = Array.from(merged.values())
-          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-          .slice(0, queryLimit);
+        (byActivity.data || []).map(normalizeActivityRow).forEach((row: any) => {
+          if (row.created_at) merged.set(row.id, row);
+        });
+        data = dedupeRows(
+          Array.from(merged.values())
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        ).slice(0, queryLimit);
+
       } else {
         const { data: rows, error } = await applyFilters(
           supabase.from('admin_logs').select('*')
