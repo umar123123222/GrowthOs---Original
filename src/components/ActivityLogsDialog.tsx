@@ -60,7 +60,36 @@ export function ActivityLogsDialog({ children, userId, userName }: ActivityLogsD
   }, [isOpen, dateRange, roleFilter, activityFilter]);
 
 
+  // Older / student-side activity only exists in user_activity_logs (the
+  // mirror into admin_logs was added later). Normalise those rows so they can
+  // be merged into the same list.
+  const normalizeActivityRow = (r: any) => ({
+    id: `ual_${r.id}`,
+    entity_id: r.reference_id || r.user_id,
+    entity_type: 'user',
+    action: r.activity_type,
+    description: String(r.activity_type || '').replace(/_/g, ' '),
+    created_at: r.occurred_at || r.created_at,
+    data: { ...(r.metadata || {}), target_user_id: r.user_id, reference_id: r.reference_id },
+    performed_by: r.user_id,
+  });
+
+  // Drop user_activity_logs rows that already exist as an admin_logs mirror
+  // (same user + action within the same second).
+  const dedupeRows = (rows: any[]) => {
+    const seen = new Set<string>();
+    const out: any[] = [];
+    for (const r of rows) {
+      const key = `${r.performed_by}|${r.action}|${new Date(r.created_at).toISOString().slice(0, 19)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(r);
+    }
+    return out;
+  };
+
   const fetchLogs = async ({ append = false }: { append?: boolean } = {}) => {
+
     if (!user) return;
 
     // Only superadmins, admins, and enrollment managers can access activity logs
