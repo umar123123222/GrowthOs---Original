@@ -124,6 +124,8 @@ export function StudentDashboard() {
     id: string;
     title: string;
     start_time: string;
+    end_time?: string;
+    status: string;
     mentor_name: string;
     link?: string;
     description?: string;
