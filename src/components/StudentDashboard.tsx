@@ -543,13 +543,13 @@ export function StudentDashboard() {
       // Fetch upcoming live session for this student's batch/course
       const currentBatchId = fetchedBatchId;
       try {
-        // Show sessions that are upcoming OR currently live (until their end_time, fallback start+1hr)
+        // Show sessions that are upcoming OR currently live (until their end_time, fallback start+1hr).
+        // Cancelled sessions are intentionally included so students see the cancelled status.
         const nowDate = new Date();
         const windowStart = new Date(nowDate.getTime() - 24 * 60 * 60 * 1000).toISOString();
         let sessionQuery = supabase
           .from('success_sessions')
           .select('id, title, start_time, end_time, mentor_name, link, description, status')
-          .neq('status', 'cancelled')
           .gte('start_time', windowStart)
           .not('link', 'is', null)
           .neq('link', '')
@@ -570,19 +570,26 @@ export function StudentDashboard() {
 
         const { data: sessionData } = await sessionQuery;
         if (sessionData && sessionData.length > 0) {
-          // Filter client-side: only show sessions that haven't ended yet
-          const validSessions = sessionData.filter((s: any) => {
+          // Filter client-side: only show sessions that haven't ended yet, but keep cancelled ones visible
+          const activeSessions = sessionData.filter((s: any) => {
+            if (s.status === 'cancelled') return true;
             const start = new Date(s.start_time);
             const end = s.end_time ? new Date(s.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
             return nowDate < end; // still ongoing or upcoming
           });
-          // Prefer currently-live session, then next upcoming
-          const liveSession = validSessions.find((s: any) => {
+          // Prefer currently-live session, then next upcoming, then any visible cancelled session
+          const liveSession = activeSessions.find((s: any) => {
+            if (s.status === 'cancelled') return false;
             const start = new Date(s.start_time);
-            return start <= nowDate;
+            const end = s.end_time ? new Date(s.end_time) : new Date(start.getTime() + 60 * 60 * 1000);
+            return start <= nowDate && nowDate < end;
           });
-          const upcomingSes = validSessions.find((s: any) => new Date(s.start_time) > nowDate);
-          setUpcomingSession(liveSession || upcomingSes || null);
+          const upcomingSes = activeSessions.find((s: any) => {
+            if (s.status === 'cancelled') return false;
+            return new Date(s.start_time) > nowDate;
+          });
+          const cancelledSession = activeSessions.find((s: any) => s.status === 'cancelled');
+          setUpcomingSession(liveSession || upcomingSes || cancelledSession || null);
         } else {
           setUpcomingSession(null);
         }
