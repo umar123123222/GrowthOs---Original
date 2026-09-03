@@ -543,14 +543,16 @@ export function StudentDashboard() {
       try {
         // Show sessions that are upcoming OR currently live (until their end_time, fallback start+1hr)
         const nowDate = new Date();
+        const windowStart = new Date(nowDate.getTime() - 24 * 60 * 60 * 1000).toISOString();
         let sessionQuery = supabase
           .from('success_sessions')
           .select('id, title, start_time, end_time, mentor_name, link, description, status')
-          .in('status', ['upcoming', 'live'])
+          .neq('status', 'cancelled')
+          .gte('start_time', windowStart)
           .not('link', 'is', null)
           .neq('link', '')
           .order('start_time', { ascending: true })
-          .limit(5);
+          .limit(20);
 
         // Filter by batch if enrolled, otherwise by course
         if (currentBatchId) {
