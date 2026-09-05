@@ -451,21 +451,21 @@ serve(async (req) => {
 
             await sendBillingEmail({
               to: studentEmail,
-              subject: `URGENT - Payment Overdue for Installment #${invoice.installment_number} - LMS Access Suspended`,
+              subject: `URGENT - Payment Overdue for Installment #${invoice.installment_number}`,
               html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                  <h2 style="color: #dc2626;">Payment Overdue - LMS Access Suspended</h2>
+                  <h2 style="color: #dc2626;">Payment Overdue</h2>
                   <p>Dear ${studentName},</p>
-                  <p><strong>Your payment is now overdue and your LMS access has been suspended.</strong> Immediate action is required to restore your access:</p>
+                  <p><strong>Your payment is now overdue.</strong> Immediate action is required:</p>
                   <div style="background-color: #fecaca; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #dc2626;">
                     <h3 style="margin-top: 0; color: #dc2626;">Overdue Payment</h3>
                     <p><strong>Installment Number:</strong> #${invoice.installment_number}</p>
                     <p><strong>Amount:</strong> ${currencySymbol}${invoice.amount}</p>
-                    <p><strong>Status:</strong> OVERDUE - LMS SUSPENDED</p>
+                    <p><strong>Status:</strong> OVERDUE</p>
                     ${penaltyHtml}
                   </div>
                   ${suspensionNoteHtml}
-                  <p><strong>Action Required:</strong> Your learning platform access has been suspended until payment is received. Please make payment immediately to restore full access. ${pdfBuffer ? 'The detailed invoice with payment instructions is attached to this email.' : ''}</p>
+                  <p><strong>Action Required:</strong> Please make payment immediately. ${pdfBuffer ? 'The detailed invoice with payment instructions is attached to this email.' : ''}</p>
                   <p>If you need assistance or wish to discuss payment arrangements, please contact our support team immediately.</p>
                   <p>Best regards,<br>The Learning Team</p>
                 </div>
