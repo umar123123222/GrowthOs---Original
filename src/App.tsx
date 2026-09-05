@@ -239,7 +239,7 @@ const App = () => {
             <Toaster />
             <Sonner />
             <DynamicFavicon />
-            <CaptureWarningOverlay userId={user?.id} />
+            {/* Auto-suspend / capture detection disabled by request — incidents are admin-reviewed only. */}
             <GlobalProgressBar />
 
             <BrowserRouter>

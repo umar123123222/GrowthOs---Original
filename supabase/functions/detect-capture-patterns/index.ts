@@ -183,13 +183,14 @@ Deno.serve(async (req) => {
       const isStaff = ["admin", "superadmin", "mentor", "enrollment_manager", "support_member"]
         .includes(String(user?.role));
 
+      // Auto-suspension disabled by request: incidents are logged for review only.
       const { data: incident } = await admin
         .from("security_incidents")
         .insert({
           user_id: userId,
           signal: "bulk_download_pattern",
-          severity: isStaff ? "high" : "critical",
-          action_taken: isStaff ? "logged" : "suspended",
+          severity: isStaff ? "high" : "warning",
+          action_taken: "logged",
           user_agent: req.headers.get("user-agent"),
           device_label: (events || [])[0]?.device_label ?? null,
           ip_address: ip,
@@ -204,31 +205,17 @@ Deno.serve(async (req) => {
         .select("id")
         .maybeSingle();
 
-      if (!isStaff) {
-        await admin
-          .from("users")
-          .update({ lms_status: "suspended", sessions_revoked_at: nowIso })
-          .eq("id", userId);
-        await admin
-          .from("student_sessions")
-          .update({ ended_at: nowIso })
-          .eq("user_id", userId)
-          .is("ended_at", null);
-      }
-
       await admin.from("admin_logs").insert([{
         performed_by: null,
         entity_type: "security",
         entity_id: userId,
-        action: isStaff ? "security_warning" : "security_auto_suspended",
-        description: isStaff
-          ? "Security evidence logged — Bulk download / harvesting pattern detected"
-          : "Account auto-suspended — Bulk download / harvesting pattern detected",
+        action: "security_warning",
+        description: "Security evidence logged — Bulk download / harvesting pattern detected",
         data: {
           target_user_id: userId,
           signal: "bulk_download_pattern",
           signal_label: "Bulk download / harvesting pattern detected",
-          action_taken: isStaff ? "logged" : "suspended",
+          action_taken: "logged",
           reasons: result.reasons,
           stats: result.stats,
           incident_id: incident?.id ?? null,
