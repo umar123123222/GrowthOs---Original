@@ -18,7 +18,7 @@ import { PendingInvoice } from "@/types/common";
 import { logger } from "@/lib/logger";
 import { RoleGuard } from "@/components/RoleGuard";
 import { useSessionHeartbeat } from "@/hooks/useSessionHeartbeat";
-import { CaptureWarningOverlay } from "@/components/security/CaptureWarningOverlay";
+
 
 import { GlobalProgressBar } from "@/components/system/GlobalProgressBar";
 import { RouteProgressListener } from "@/components/system/RouteProgressListener";
