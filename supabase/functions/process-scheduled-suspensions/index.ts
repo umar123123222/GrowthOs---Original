@@ -2,6 +2,14 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 Deno.serve(async (_req) => {
   try {
+    // Auto-suspension disabled (policy change): scheduled suspensions are no
+    // longer executed automatically. Return immediately.
+    console.log("process-scheduled-suspensions: auto-suspend disabled, exiting without changes.");
+    return new Response(
+      JSON.stringify({ success: true, message: "Auto-suspend disabled. No scheduled suspensions were executed.", suspended: 0 }),
+      { headers: { "Content-Type": "application/json" } }
+    );
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
