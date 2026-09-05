@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Suspended LMS for ${affectedUserIds.length} users with ${expiredEnrollments.length} expired enrollments (enrollments preserved)`,
+        message: `Logged ${affectedUserIds.length} users with ${expiredEnrollments.length} expired enrollments (auto-suspend disabled, enrollments preserved)`,
         processed: expiredEnrollments.length,
         usersSuspended: affectedUserIds.length
       }),

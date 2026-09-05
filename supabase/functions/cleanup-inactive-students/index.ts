@@ -18,7 +18,14 @@ serve(async (req: Request) => {
   }
 
   try {
-    console.log('Starting cleanup of inactive students...');
+    // Auto-suspension disabled (policy change): this function no longer suspends
+    // anyone. It returns immediately for admin safety.
+    console.log('cleanup-inactive-students: auto-suspend disabled, exiting without changes.');
+    return new Response(
+      JSON.stringify({ success: true, message: 'Auto-suspend disabled. No students were suspended.', suspendedCount: 0 }),
+      { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+    );
+  } catch (error: any) {
 
     // Calculate the date 2 weeks ago
     const twoWeeksAgo = new Date();
