@@ -46,30 +46,20 @@ Deno.serve(async (req) => {
       );
     }
 
-    // IMPORTANT: Do NOT change enrollment status automatically.
-    // Only suspend LMS access so the student can't access content,
-    // but keep the enrollment record intact for admin to manage manually.
+    // IMPORTANT: Auto-suspension disabled (policy change). Expired access is
+    // logged for admin review only — no lms_status changes are made here.
     const affectedUserIds = [...new Set(expiredEnrollments.map(e => (e.students as any).user_id))];
 
     for (const userId of affectedUserIds) {
-      const { error: suspendError } = await supabase
-        .from('users')
-        .update({ lms_status: 'suspended', updated_at: now })
-        .eq('id', userId);
+      console.log(`[check-access-expiry] AUTO-SUSPEND DISABLED: would have suspended user ${userId}`);
 
-      if (suspendError) {
-        console.error(`[check-access-expiry] Error suspending LMS for user ${userId}:`, suspendError);
-      } else {
-        console.log(`[check-access-expiry] Suspended LMS access for user ${userId}`);
-      }
-
-      // Log the suspension
+      // Log for admin visibility
       await supabase.from('admin_logs').insert({
         entity_type: 'user',
         entity_id: userId,
-        action: 'lms_suspended',
-        description: 'LMS suspended due to expired access duration (enrollment preserved)',
-        data: { reason: 'access_expiry', checked_at: now }
+        action: 'lms_suspension_skipped',
+        description: 'Auto-suspension skipped (disabled) for expired access duration (enrollment preserved)',
+        data: { reason: 'auto_suspend_disabled', checked_at: now }
       });
     }
 
