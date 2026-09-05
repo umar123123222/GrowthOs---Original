@@ -58,14 +58,27 @@ const Videos = () => {
     isMultiCourseEnabled,
   } = useCourses();
 
+  // Optional context from the catalog: a specific course or pathway
+  const [searchParams] = useSearchParams();
+  const forcedCourseId = searchParams.get("courseId");
+  const forcedPathwayId = searchParams.get("pathwayId");
+
+  // Show the pathway (multi-course) view only when no single course is requested
+  const usePathwayView =
+    !forcedCourseId &&
+    isInPathwayMode &&
+    !!pathwayState &&
+    (!forcedPathwayId || forcedPathwayId === pathwayState.pathwayId);
+
   // In pathway mode, force active course to current pathway course
   const activeCourseId =
-    isInPathwayMode && pathwayState
+    forcedCourseId ||
+    (usePathwayView && pathwayState
       ? pathwayState.currentCourseId
-      : defaultActiveCourse?.id || null;
+      : defaultActiveCourse?.id || null);
 
   const activeCourse =
-    enrolledCourses.find((c) => c.id === activeCourseId) || defaultActiveCourse;
+    enrolledCourses.find((c) => c.id === activeCourseId) || (forcedCourseId ? null : defaultActiveCourse);
 
   const {
     modules,
