@@ -25,8 +25,8 @@ serve(async (req: Request) => {
       JSON.stringify({ success: true, message: 'Auto-suspend disabled. No students were suspended.', suspendedCount: 0 }),
       { status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
-  } catch (error: any) {
 
+    // --- Legacy logic below is unreachable and kept for reference only ---
     // Calculate the date 2 weeks ago
     const twoWeeksAgo = new Date();
     twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
