@@ -163,13 +163,13 @@ const Catalog = () => {
 
   const handleCourseClick = (course: Course) => {
     if (isUnlocked(course.id)) {
-      navigate('/videos');
+      navigate(`/videos?courseId=${course.id}`);
     }
   };
 
   const handlePathwayClick = (pathway: Pathway) => {
     if (isPathwayUnlocked(pathway.id)) {
-      navigate('/videos');
+      navigate(`/videos?pathwayId=${pathway.id}`);
     }
   };
 
