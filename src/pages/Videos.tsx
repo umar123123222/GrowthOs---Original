@@ -290,8 +290,19 @@ const Videos = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
           <div>
+            {(forcedCourseId || forcedPathwayId) && (
+              <Link
+                to="/catalog"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-2"
+              >
+                <ChevronRight className="h-4 w-4 rotate-180" />
+                Back to catalog
+              </Link>
+            )}
             <div className="flex items-center gap-3 flex-wrap mb-2">
-              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Available Lessons</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+                {contextTitle || activeCourse?.title || "Available Lessons"}
+              </h1>
               <PendingFeedbackChip />
             </div>
             <p className="text-muted-foreground text-sm sm:text-base">
