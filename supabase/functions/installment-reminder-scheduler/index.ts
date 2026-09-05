@@ -489,57 +489,26 @@ serve(async (req) => {
             studentDisplayId
           );
 
-          // Suspend LMS access
-          const { error: suspendError } = await supabaseAdmin
-            .from('users')
-            .update({ lms_status: 'suspended' })
-            .eq('id', invoice.students.user_id);
+          // Auto-suspension disabled (policy change): overdue invoices only trigger
+          // reminder emails/notifications. Log for admin visibility instead.
+          console.log(`[AUTO-SUSPEND DISABLED] Would have suspended user ${invoice.students.user_id} for overdue installment #${invoice.installment_number}`);
 
-          if (suspendError) {
-            console.error(`Error suspending LMS for user ${invoice.students.user_id}:`, suspendError);
-          } else {
-            console.log(`LMS suspended for user ${invoice.students.user_id} due to overdue payment`);
-            
-            await supabaseAdmin.from('admin_logs').insert({
-              entity_type: 'user',
-              entity_id: invoice.students.user_id,
-              action: 'lms_suspended',
-              description: `LMS suspended due to overdue installment #${invoice.installment_number}`,
-              data: { 
-                target_user_id: invoice.students.user_id,
-                invoice_id: invoice.id, 
-                installment_number: invoice.installment_number,
-                amount: invoice.amount,
-                reason: 'Auto-suspended due to non-payment of fees'
-              }
-            });
-
-            await supabaseAdmin.from('user_activity_logs').insert({
-              user_id: invoice.students.user_id,
-              activity_type: 'lms_suspended',
-              metadata: {
-                reason: 'Auto-suspended due to non-payment of fees',
-                invoice_id: invoice.id,
-                installment_number: invoice.installment_number,
-                amount: invoice.amount,
-                due_date: invoice.due_date
-              },
-              occurred_at: new Date().toISOString()
-            });
-
-            await createInstallmentNotification(
-              supabaseAdmin,
-              invoice.students.user_id,
-              'lms_suspended',
-              'LMS Access Suspended',
-              `Your learning platform access has been suspended due to overdue payment for Installment #${invoice.installment_number}. Please make payment to restore access.`,
-              { invoice_id: invoice.id, installment_number: invoice.installment_number },
-              studentDisplayId
-            );
-          }
-
-          console.log(`Marked installment ${invoice.installment_number} as due for student ${studentName}`);
+          await supabaseAdmin.from('admin_logs').insert({
+            entity_type: 'user',
+            entity_id: invoice.students.user_id,
+            action: 'lms_suspension_skipped',
+            description: `Auto-suspension skipped (disabled) for overdue installment #${invoice.installment_number}`,
+            data: {
+              target_user_id: invoice.students.user_id,
+              invoice_id: invoice.id,
+              installment_number: invoice.installment_number,
+              amount: invoice.amount,
+              reason: 'Auto-suspend disabled by policy'
+            }
+          });
         }
+
+        // First reminder — send email BEFORE marking flag (retry-safe)
         // First reminder — send email BEFORE marking flag (retry-safe)
         else if (today >= firstReminderDate && !invoice.first_reminder_sent) {
           let emailSent = false;
