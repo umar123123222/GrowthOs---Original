@@ -166,13 +166,9 @@ export function useSessionHeartbeat(userId?: string | null) {
     document.addEventListener('visibilitychange', onVisibility);
 
     const onUnload = () => {
+      // Fire-and-forget end ping (authenticated); unauthenticated beacons get rejected.
       try {
-        const url = `${(import.meta as any).env.VITE_SUPABASE_URL}/functions/v1/session-heartbeat`;
-        const blob = new Blob(
-          [JSON.stringify({ session_token: tokenRef.current, end: true })],
-          { type: 'application/json' }
-        );
-        navigator.sendBeacon?.(url, blob);
+        void ping({ end: true });
       } catch {
         /* noop */
       }
