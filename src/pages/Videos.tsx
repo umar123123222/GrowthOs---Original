@@ -93,6 +93,35 @@ const Videos = () => {
   const [userLMSStatus, setUserLMSStatus] = useState<string>("active");
   const [isAdvancing, setIsAdvancing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [contextTitle, setContextTitle] = useState<string | null>(null);
+
+  // Title of the course / pathway opened from the catalog
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      if (forcedCourseId) {
+        const { data } = await supabase
+          .from("courses")
+          .select("title")
+          .eq("id", forcedCourseId)
+          .maybeSingle();
+        if (!cancelled) setContextTitle(data?.title || null);
+      } else if (forcedPathwayId) {
+        const { data } = await supabase
+          .from("learning_pathways")
+          .select("name")
+          .eq("id", forcedPathwayId)
+          .maybeSingle();
+        if (!cancelled) setContextTitle(data?.name || null);
+      } else {
+        setContextTitle(null);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [forcedCourseId, forcedPathwayId]);
 
   // Pathway-grouped recordings for pathway students
   const {
