@@ -103,7 +103,7 @@ const Videos = () => {
     loading: pathwayRecordingsLoading,
     refreshData: refreshPathwayRecordings,
   } = usePathwayGroupedRecordings(
-    isInPathwayMode && pathwayState ? pathwayState.pathwayId : null,
+    usePathwayView && pathwayState ? pathwayState.pathwayId : null,
     pathwayCourses
   );
 
@@ -213,7 +213,7 @@ const Videos = () => {
     }
   };
 
-  const loading = coursesLoading || recordingsLoading || pathwayLoading || (isInPathwayMode && pathwayRecordingsLoading);
+  const loading = coursesLoading || recordingsLoading || pathwayLoading || (usePathwayView && pathwayRecordingsLoading);
 
   const totalRecordings = modules.reduce((sum, module) => sum + module.recordings.length, 0);
   const watchedRecordings = modules.reduce((sum, module) => sum + module.watchedLessons, 0);
@@ -242,8 +242,8 @@ const Videos = () => {
     return expandedModules;
   }, [query, filteredModules, expandedModules]);
 
-  const showCourseSelector = !isInPathwayMode && isMultiCourseEnabled && enrolledCourses.length > 1;
-  const showCourseGroupedView = isInPathwayMode && pathwayCourseGroups.length > 0;
+  const showCourseSelector = !forcedCourseId && !usePathwayView && isMultiCourseEnabled && enrolledCourses.length > 1;
+  const showCourseGroupedView = usePathwayView && pathwayCourseGroups.length > 0;
 
   if (loading) {
     return (
@@ -305,7 +305,7 @@ const Videos = () => {
         {showCourseGroupedView ? (
           <>
             {/* Pathway Progress Card */}
-            {isInPathwayMode && pathwayState && (
+            {usePathwayView && pathwayState && (
               <PathwayProgressCard
                 pathwayState={pathwayState}
                 pathwayCourses={pathwayCourses}
@@ -324,7 +324,7 @@ const Videos = () => {
               onWatch={handleWatchRecording}
             />
           </>
-        ) : isInPathwayMode ? (
+        ) : usePathwayView ? (
           /* Pathway mode but no grouped data — show empty state instead of fallback courses */
           <Card className="shadow-medium border-border/50">
             <CardContent className="p-8 text-center">
