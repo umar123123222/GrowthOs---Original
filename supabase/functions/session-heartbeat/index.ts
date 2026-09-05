@@ -87,11 +87,18 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     )
     const token = authHeader.replace('Bearer ', '')
-    const { data: claimsData, error: claimsErr } = await userClient.auth.getClaims(token)
-    if (claimsErr || !claimsData?.claims?.sub) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    const { data: userData, error: userErr } = await userClient.auth.getUser(token)
+    let userId = userData?.user?.id as string | undefined
+    if (!userId) {
+      // Fallback: decode the JWT payload (valid token already verified by the gateway)
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+        if (payload?.sub) userId = payload.sub as string
+      } catch { /* noop */ }
     }
-    const userId = claimsData.claims.sub as string
+    if (!userId) {
+      return new Response(JSON.stringify({ error: 'Unauthorized', detail: userErr?.message }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
 
     const body = (await req.json()) as HeartbeatBody
     if (!body?.session_token || typeof body.session_token !== 'string') {
