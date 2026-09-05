@@ -506,9 +506,10 @@ serve(async (req) => {
               reason: 'Auto-suspend disabled by policy'
             }
           });
+
+          console.log(`Marked installment ${invoice.installment_number} as due for student ${studentName}`);
         }
 
-        // First reminder — send email BEFORE marking flag (retry-safe)
         // First reminder — send email BEFORE marking flag (retry-safe)
         else if (today >= firstReminderDate && !invoice.first_reminder_sent) {
           let emailSent = false;
