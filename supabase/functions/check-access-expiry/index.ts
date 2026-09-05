@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       status: 'sent',
       payload: {
         title: 'Course Access Expired',
-        message: 'Your course access period has ended. Your LMS access has been suspended. Please contact support to renew.',
+        message: 'Your course access period has ended. Please contact support to renew.',
         metadata: {
           course_id: enrollment.course_id,
           expired_at: enrollment.access_expires_at
