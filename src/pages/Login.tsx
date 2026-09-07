@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -250,9 +250,9 @@ const Login = () => {
       <Card className="w-full max-w-md overflow-hidden border-border bg-card shadow-elevated animate-fade-in">
         <div className="h-1 bg-primary" />
         <CardHeader className="text-center pb-6 pt-8">
-          <CardTitle className="text-3xl font-semibold text-foreground mb-2">
+          <h1 className="font-sans text-3xl font-semibold text-foreground mb-2">
             {TEXT_CONTENT.WELCOME_MESSAGE}
-          </CardTitle>
+          </h1>
           <p className="text-sm text-muted-foreground">AI-powered learning for your success</p>
         </CardHeader>
         
