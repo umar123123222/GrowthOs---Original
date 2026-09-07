@@ -229,7 +229,7 @@ const Layout = memo(({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
-  const [showSuccessPartner, setShowSuccessPartner] = useState(false);
+  
   const [connectionStatus, setConnectionStatus] = useState({
     shopify: false,
     meta: false
@@ -1351,12 +1351,6 @@ const Layout = memo(({
       {/* Live Chat Widget for Students */}
       <LiveChatWidget userRole={user?.role} />
       
-      {/* Success Partner Dialog */}
-      {showSuccessPartner && user?.id && user?.email && <SuccessPartner onClose={() => setShowSuccessPartner(false)} user={{
-      id: user.id,
-      full_name: user.full_name || user.email.split('@')[0] || 'Student',
-      email: user.email
-    }} />}
       
       {/* Watermark */}
       <a href="https://core47.ai" target="_blank" rel="noopener noreferrer" className="fixed bottom-4 right-4 text-xs text-muted-foreground/40 hover:text-muted-foreground/60 transition-colors z-50">
