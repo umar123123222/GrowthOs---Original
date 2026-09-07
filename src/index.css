@@ -9,8 +9,8 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 210 25% 98%;
-    --foreground: 215 28% 17%;
+    --background: 210 29% 97%;
+    --foreground: 216 32% 14%;
 
     --card: 0 0% 100%;
     --card-foreground: 215 28% 17%;
@@ -21,31 +21,31 @@ All colors MUST be HSL.
     --primary: 215 78% 48%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 22% 95%;
+    --secondary: 210 24% 96%;
     --secondary-foreground: 215 28% 17%;
 
-    --muted: 210 22% 95%;
+    --muted: 210 24% 96%;
     --muted-foreground: 215 13% 43%;
 
-    --accent: 210 28% 94%;
+    --accent: 214 36% 95%;
     --accent-foreground: 215 28% 17%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214 22% 88%;
-    --input: 214 22% 84%;
+    --border: 214 25% 90%;
+    --input: 214 24% 86%;
     --ring: 215 78% 48%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 210 25% 98%;
+    --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 215 20% 31%;
     --sidebar-primary: 215 78% 48%;
     --sidebar-primary-foreground: 0 0% 98%;
     --sidebar-accent: 210 28% 94%;
     --sidebar-accent-foreground: 215 28% 17%;
-    --sidebar-border: 214 22% 88%;
+    --sidebar-border: 214 25% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
     /* Extended semantic tokens */
@@ -153,9 +153,9 @@ All colors MUST be HSL.
   --metric-fill-pink: linear-gradient(180deg, hsl(330 81% 60% / 0.08), transparent);
   
   /* Enhanced shadow tokens */
-  --shadow-soft: 0 1px 2px hsl(var(--foreground) / 0.04);
-  --shadow-medium: 0 8px 24px -16px hsl(var(--foreground) / 0.22);
-  --shadow-elevated: 0 20px 48px -24px hsl(var(--foreground) / 0.3);
+  --shadow-soft: 0 1px 2px hsl(var(--foreground) / 0.035);
+  --shadow-medium: 0 10px 28px -20px hsl(var(--foreground) / 0.2);
+  --shadow-elevated: 0 24px 56px -30px hsl(var(--foreground) / 0.28);
   
   /* Focus ring tokens */
   --focus-ring: 0 0 0 2px hsl(var(--ring));
@@ -223,13 +223,13 @@ All colors MUST be HSL.
 }
 
 .app-header {
-  background: hsl(var(--card) / 0.96);
+  background: hsl(var(--card) / 0.92);
   box-shadow: 0 1px 0 hsl(var(--border));
   backdrop-filter: blur(14px);
 }
 
 .app-sidebar {
-  background: hsl(var(--sidebar-background) / 0.96);
+  background: hsl(var(--sidebar-background));
   border-right: 1px solid hsl(var(--sidebar-border));
   box-shadow: none;
 }
@@ -237,20 +237,116 @@ All colors MUST be HSL.
 .app-navigation a,
 .app-navigation button {
   letter-spacing: 0;
+  min-height: 2.5rem;
 }
 
 .app-content {
   isolation: isolate;
 }
 
+.app-content > div {
+  min-height: calc(100vh - 7rem);
+}
+
+.app-content :where(.container) {
+  max-width: none;
+}
+
+.app-content :where(.space-y-8) {
+  row-gap: 1.5rem;
+}
+
+.app-content :where(.gap-6) {
+  gap: 1rem;
+}
+
 .app-content :where(h1) {
-  font-size: clamp(1.5rem, 2vw, 2rem);
-  font-weight: 650;
+  font-size: clamp(1.5rem, 2vw, 1.875rem);
+  font-weight: 600;
+  color: hsl(var(--foreground));
 }
 
 .app-content :where(h2) {
-  font-size: clamp(1.25rem, 1.5vw, 1.5rem);
+  font-size: clamp(1.125rem, 1.5vw, 1.375rem);
   font-weight: 600;
+}
+
+.app-content :where(h1 + p) {
+  margin-top: 0.375rem;
+  color: hsl(var(--muted-foreground));
+  font-size: 0.9375rem;
+}
+
+.app-content :where([class*="border-l-4"]) {
+  border-left-width: 1px !important;
+  border-left-color: hsl(var(--border)) !important;
+}
+
+.app-content :where(.hover\:shadow-lg:hover, .hover\:shadow-md:hover) {
+  box-shadow: var(--shadow-medium) !important;
+}
+
+.app-content :where([class*="bg-gradient-to-br"]) {
+  background-image: none !important;
+  background-color: hsl(var(--card)) !important;
+}
+
+.app-content :where([class*="bg-gradient-to-r"][class*="bg-clip-text"]) {
+  background-image: none !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.dashboard-page {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.page-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid hsl(var(--border));
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1rem;
+}
+
+.dashboard-metric {
+  cursor: pointer;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.dashboard-metric:hover {
+  border-color: hsl(var(--primary) / 0.3);
+  box-shadow: var(--shadow-medium);
+  transform: translateY(-1px);
+}
+
+.dashboard-metric :where(h3) {
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.dashboard-metric :where(.text-3xl, .text-2xl) {
+  color: hsl(var(--foreground)) !important;
+}
+
+@media (max-width: 640px) {
+  .page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .app-content :where(.gap-6) {
+    gap: 0.875rem;
+  }
 }
 
 .app-content :where(.rounded-xl, .rounded-2xl, .rounded-3xl) {

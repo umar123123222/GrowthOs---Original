@@ -1,8 +1,7 @@
 # Interface redesign roadmap
 
-- [x] Establish calm black, white, blue, and green visual tokens with Outfit/Figtree typography
-- [x] Simplify the shared desktop and mobile navigation shell for every role
-- [x] Refine shared cards, buttons, forms, tabs, tables, badges, dialogs, and sheets
-- [x] Normalize spacing and visual density across authenticated pages
-- [x] Verify representative desktop and mobile views, interactions, and build health
-- [x] Remove the extra fullscreen and reload buttons above the video
+- [ ] Apply the selected calm dashboard foundation across all roles
+- [ ] Simplify shared desktop and mobile navigation
+- [ ] Normalize page headings, metrics, filters, tables, and content sections
+- [ ] Refine representative superadmin, admin, mentor, support, and student pages
+- [ ] Verify desktop and mobile views and build health
