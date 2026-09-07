@@ -551,3 +551,38 @@ All colors MUST be HSL.
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ---------- Dialog readability & scrolling (global) ---------- */
+[role="dialog"] {
+  scrollbar-width: thin !important;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+[role="dialog"] *,
+[role="dialog"] {
+  -ms-overflow-style: auto !important;
+}
+[role="dialog"] ::-webkit-scrollbar,
+[role="dialog"]::-webkit-scrollbar {
+  display: block !important;
+  width: 8px;
+  height: 8px;
+}
+[role="dialog"] ::-webkit-scrollbar-thumb,
+[role="dialog"]::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 9999px;
+}
+[role="dialog"] ::-webkit-scrollbar-track,
+[role="dialog"]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Breathing room inside dense dialogs */
+[role="dialog"] .space-y-1 > * + * { margin-top: 0.375rem; }
+[role="dialog"] .space-y-2 > * + * { margin-top: 0.625rem; }
+[role="dialog"] .space-y-3 > * + * { margin-top: 0.875rem; }
+[role="dialog"] .space-y-4 > * + * { margin-top: 1.125rem; }
+[role="dialog"] .gap-2 { gap: 0.625rem; }
+[role="dialog"] .gap-3 { gap: 0.875rem; }
+[role="dialog"] label { line-height: 1.35; }
+[role="dialog"] .grid.grid-cols-2 { column-gap: 1rem; }
