@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, AlertCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 interface VideoPreviewDialogProps {
@@ -103,10 +103,6 @@ export function VideoPreviewDialog({
     }
   }, [open, recordingUrl]);
 
-  const handleReload = () => {
-    setIframeKey(prev => prev + 1);
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl w-[95vw]">
@@ -142,17 +138,6 @@ export function VideoPreviewDialog({
             )}
           </div>
           
-          {!isInvalidUrl && !videoError && (
-            <Button
-              variant="secondary"
-              size="sm"
-              className="absolute top-2 right-2 opacity-70 hover:opacity-100"
-              onClick={handleReload}
-              title="Reload video"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </Button>
-          )}
         </div>
         
         {canSeeUrl && (
