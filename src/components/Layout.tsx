@@ -898,12 +898,12 @@ const Layout = memo(({
       });
     }
   };
-  return <div className="min-h-screen bg-background">
+  return <div className="app-shell min-h-screen bg-background">
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-card border-b border-border shadow-sm">
+      <header className="app-header fixed top-0 left-0 right-0 z-40 border-b border-border">
         <div className="w-full px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 sm:h-16">
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               {/* Mobile hamburger menu */}
               {isMobile ? (
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
@@ -919,7 +919,7 @@ const Layout = memo(({
                         <span className="text-lg font-bold text-gray-900">GrowthOS</span>
                       </Link>
                     </div>
-                    <nav className="p-4">
+                    <nav className="app-navigation p-3">
                       <div className="space-y-2">
                         {navigation.map(item => {
                           // Handle Catalog expandable menu for students
@@ -1115,7 +1115,7 @@ const Layout = memo(({
               </Link>
             </div>
             
-            <div className="flex items-center space-x-1 sm:space-x-4">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <NotificationDropdown />
               
               {/* Dark mode toggle */}
@@ -1158,9 +1158,9 @@ const Layout = memo(({
       <div className="flex">
         {/* Sidebar - Desktop only, hidden on mobile */}
         {!isMobile && (
-          <aside className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-card shadow-lg transition-all duration-300 fixed left-0 z-30 overflow-y-auto scrollbar-none`} style={{ top: isBannerVisible ? '112px' : '64px', height: isBannerVisible ? 'calc(100vh - 112px)' : 'calc(100vh - 64px)' }}>
-            <nav className={`mt-8 ${sidebarCollapsed ? 'px-2' : 'px-4'}`}>
-              <div className="space-y-2">
+          <aside className={`app-sidebar ${sidebarCollapsed ? 'w-20' : 'w-64'} transition-[width] duration-200 fixed left-0 z-30 overflow-y-auto scrollbar-none`} style={{ top: isBannerVisible ? '112px' : '64px', height: isBannerVisible ? 'calc(100vh - 112px)' : 'calc(100vh - 64px)' }}>
+            <nav className={`app-navigation mt-5 ${sidebarCollapsed ? 'px-3' : 'px-4'}`}>
+              <div className="space-y-1">
               {navigation.map(item => {
               // Handle Catalog expandable menu for students
               if (item.isCatalogMenu) {
@@ -1173,8 +1173,8 @@ const Layout = memo(({
                           to={item.href || '/catalog'} 
                           className={`flex-1 flex items-center px-4 py-3 text-sm font-medium rounded-l-lg transition-all duration-200 ${
                             isCatalogActive 
-                              ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" 
-                              : "text-gray-600 hover:bg-gray-50"
+                              ? "bg-primary/10 text-primary" 
+                              : "text-muted-foreground hover:bg-accent hover:text-foreground"
                           }`}
                           title={sidebarCollapsed ? item.name : undefined}
                         >
@@ -1259,7 +1259,7 @@ const Layout = memo(({
                 const isExpanded = expandedMenus.has(item.name) && !sidebarCollapsed;
                 const Icon = item.icon;
                 return <div key={item.name}>
-                      <button onClick={() => !sidebarCollapsed && toggleMenu(item.name)} className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:bg-gray-50 hover-scale" title={sidebarCollapsed ? item.name : undefined}>
+                      <button onClick={() => !sidebarCollapsed && toggleMenu(item.name)} className="flex items-center justify-between w-full px-3 py-2.5 text-sm font-medium rounded-md transition-colors duration-150 text-muted-foreground hover:bg-accent hover:text-foreground" title={sidebarCollapsed ? item.name : undefined}>
                         <div className="flex items-center">
                           <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 text-gray-400`} />
                           {!sidebarCollapsed && item.name}
@@ -1279,7 +1279,7 @@ const Layout = memo(({
                               <Link
                                 to={subItem.href}
                                 onMouseEnter={() => prefetchByHref(subItem.href)}
-                                className={`flex-1 flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isAnyNestedActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`}
+                                className={`flex-1 flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${isAnyNestedActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
                               >
                                 <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isAnyNestedActive ? "text-gray-900" : "text-gray-400"}`} />
                                 {subItem.name}
@@ -1299,7 +1299,7 @@ const Layout = memo(({
                                   key={nestedItem.name}
                                   to={nestedItem.href}
                                   onMouseEnter={() => prefetchByHref(nestedItem.href)}
-                                  className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isNestedActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`}
+                                  className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${isNestedActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
                                 >
                                   <NestedIcon className={`mr-3 h-4 w-4 transition-colors ${isNestedActive ? "text-gray-900" : "text-gray-400"}`} />
                                   {nestedItem.name}
@@ -1310,7 +1310,7 @@ const Layout = memo(({
                         );
                       }
                       const isActive = location.search.includes(`tab=${subItem.href.split('=')[1]}`);
-                      return <Link key={subItem.name} to={subItem.href} onMouseEnter={() => prefetchByHref(subItem.href)} className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`}>
+                      return <Link key={subItem.name} to={subItem.href} onMouseEnter={() => prefetchByHref(subItem.href)} className={`flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}>
                                 <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
                                 {subItem.name}
                               </Link>;
@@ -1327,7 +1327,7 @@ const Layout = memo(({
               // - OR base path matches and no tab is selected (or tab=dashboard)
               const isActive = isTabLink && currentTab === itemTab || !isTabLink && location.pathname === item.href && (!currentTab || currentTab === 'dashboard');
               const Icon = item.icon;
-              return <Link key={item.name} to={item.href || '/'} onMouseEnter={() => prefetchByHref(item.href || '')} className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 story-link ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600 shadow-lg scale-105" : "text-gray-600 hover:bg-gray-100 hover-scale"}`} title={sidebarCollapsed ? item.name : undefined}>
+              return <Link key={item.name} to={item.href || '/'} onMouseEnter={() => prefetchByHref(item.href || '')} className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-colors duration-150 ${isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`} title={sidebarCollapsed ? item.name : undefined}>
                     <Icon className={`${sidebarCollapsed ? 'mr-0' : 'mr-3'} h-5 w-5 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
                     {!sidebarCollapsed && item.name}
                   </Link>;
@@ -1339,12 +1339,12 @@ const Layout = memo(({
 
         {/* Main Content - adjust padding based on sidebar state and mobile */}
         <main 
-          className={`flex-1 w-full max-w-full overflow-x-hidden animate-fade-in transition-all duration-300 ${
-            isMobile ? 'pl-0' : (sidebarCollapsed ? 'pl-16' : 'pl-80')
+          className={`app-content flex-1 w-full max-w-full overflow-x-hidden animate-fade-in transition-[padding] duration-200 ${
+            isMobile ? 'pl-0' : (sidebarCollapsed ? 'pl-20' : 'pl-64')
           }`} 
           style={{ paddingTop: isBannerVisible ? (isMobile ? '104px' : '144px') : (isMobile ? '72px' : '96px') }}
         >
-          <div className="mx-auto w-full max-w-[1800px] px-3 sm:px-6 py-0 lg:px-4">
+          <div className="mx-auto w-full max-w-[1600px] px-4 pb-8 sm:px-6 lg:px-8">
             <Suspense fallback={<RouteContentLoader path={location.pathname} />}>
               <Outlet />
             </Suspense>
