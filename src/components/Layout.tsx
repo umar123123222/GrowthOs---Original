@@ -1121,18 +1121,6 @@ const Layout = memo(({
               {/* Dark mode toggle */}
               <ThemeToggle />
               
-              {/* Success Partner Button - Only for students */}
-              {user?.role === 'student' && (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="text-muted-foreground hover:text-primary hover:border-primary/30 p-2 sm:px-3" 
-                  onClick={() => setShowSuccessPartner(true)}
-                >
-                  <MessageCircle className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Success Partner</span>
-                </Button>
-              )}
               
               {/* Activity Logs Button for authorized users - Only admins and superadmins */}
               {(isUserSuperadmin || isUserAdmin) && !isMobile && (
