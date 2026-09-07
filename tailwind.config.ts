@@ -20,8 +20,8 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				'sans': ['Inter', 'system-ui', 'sans-serif'],
-				'body': ['Poppins', 'system-ui', 'sans-serif'],
+				'sans': ['Outfit Variable', 'system-ui', 'sans-serif'],
+				'body': ['Figtree Variable', 'system-ui', 'sans-serif'],
 			},
 			colors: {
 				border: 'hsl(var(--border))',

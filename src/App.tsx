@@ -111,10 +111,10 @@ const Resources = lazy(() => import("./pages/Resources"));
 
 // Loading component
 const PageLoader = () => (
-  <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+  <div className="flex items-center justify-center min-h-screen bg-background">
     <div className="text-center">
-      <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-      <p className="text-gray-600">Loading...</p>
+      <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-sm text-muted-foreground">Loading...</p>
     </div>
   </div>
 );
@@ -222,10 +222,10 @@ const App = () => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
+          <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-sm text-muted-foreground">Loading your dashboard...</p>
         </div>
       </div>
     );

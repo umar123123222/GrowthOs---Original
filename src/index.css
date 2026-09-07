@@ -9,47 +9,47 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 210 25% 98%;
+    --foreground: 215 28% 17%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 215 28% 17%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 217 91% 60%;
+    --primary: 215 78% 48%;
     --primary-foreground: 0 0% 98%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 210 22% 95%;
+    --secondary-foreground: 215 28% 17%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 22% 95%;
+    --muted-foreground: 215 13% 43%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 28% 94%;
+    --accent-foreground: 215 28% 17%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 217 91% 60%;
+    --border: 214 22% 88%;
+    --input: 214 22% 84%;
+    --ring: 215 78% 48%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-background: 210 25% 98%;
+    --sidebar-foreground: 215 20% 31%;
+    --sidebar-primary: 215 78% 48%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-accent: 210 28% 94%;
+    --sidebar-accent-foreground: 215 28% 17%;
+    --sidebar-border: 214 22% 88%;
     --sidebar-ring: 217.2 91.2% 59.8%;
 
     /* Extended semantic tokens */
-    --success: 142 76% 36%;
+    --success: 160 84% 32%;
     --success-foreground: 0 0% 98%;
     --warning: 45 93% 47%;
     --warning-foreground: 0 0% 10%;
@@ -109,11 +109,14 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground font-body;
     font-feature-settings: 'rlig' 1, 'calt' 1;
+    letter-spacing: 0;
+    min-width: 320px;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-sans;
     line-height: 1.2;
+    letter-spacing: 0;
   }
 
   /* Enhanced focus styles for accessibility */
@@ -150,9 +153,9 @@ All colors MUST be HSL.
   --metric-fill-pink: linear-gradient(180deg, hsl(330 81% 60% / 0.08), transparent);
   
   /* Enhanced shadow tokens */
-  --shadow-soft: 0 2px 10px -3px hsl(var(--foreground) / 0.1);
-  --shadow-medium: 0 4px 20px -6px hsl(var(--foreground) / 0.15);
-  --shadow-elevated: 0 10px 40px -15px hsl(var(--foreground) / 0.2);
+  --shadow-soft: 0 1px 2px hsl(var(--foreground) / 0.04);
+  --shadow-medium: 0 8px 24px -16px hsl(var(--foreground) / 0.22);
+  --shadow-elevated: 0 20px 48px -24px hsl(var(--foreground) / 0.3);
   
   /* Focus ring tokens */
   --focus-ring: 0 0 0 2px hsl(var(--ring));
@@ -202,7 +205,7 @@ All colors MUST be HSL.
 }
 
 .hover-scale:hover {
-  transform: scale(1.02);
+  transform: translateY(-1px);
 }
 
 .hover-lift {
@@ -210,8 +213,52 @@ All colors MUST be HSL.
 }
 
 .hover-lift:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow: var(--shadow-elevated);
+}
+
+/* Calm workspace rhythm shared by every authenticated view */
+.app-shell {
+  background: hsl(var(--background));
+}
+
+.app-header {
+  background: hsl(var(--card) / 0.96);
+  box-shadow: 0 1px 0 hsl(var(--border));
+  backdrop-filter: blur(14px);
+}
+
+.app-sidebar {
+  background: hsl(var(--sidebar-background) / 0.96);
+  border-right: 1px solid hsl(var(--sidebar-border));
+  box-shadow: none;
+}
+
+.app-navigation a,
+.app-navigation button {
+  letter-spacing: 0;
+}
+
+.app-content {
+  isolation: isolate;
+}
+
+.app-content :where(h1) {
+  font-size: clamp(1.5rem, 2vw, 2rem);
+  font-weight: 650;
+}
+
+.app-content :where(h2) {
+  font-size: clamp(1.25rem, 1.5vw, 1.5rem);
+  font-weight: 600;
+}
+
+.app-content :where(.rounded-xl, .rounded-2xl, .rounded-3xl) {
+  border-radius: var(--radius);
+}
+
+.app-content :where(.shadow-xl, .shadow-2xl) {
+  box-shadow: var(--shadow-medium);
 }
 
 /* Enhanced animations */
