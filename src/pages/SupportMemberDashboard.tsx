@@ -136,10 +136,8 @@ function SupportMemberDashboardContent() {
     <div className="dashboard-page">
       <div className="page-heading">
         <div className="animate-fade-in">
-          <h1 >
-            Support Dashboard
-          </h1>
-          <p >Student support and platform oversight</p>
+          <h1>Support Dashboard</h1>
+          <p>Student support and platform oversight</p>
         </div>
       </div>
 

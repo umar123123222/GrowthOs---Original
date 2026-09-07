@@ -683,15 +683,15 @@ export function StudentDashboard() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-6">
+    <div className="dashboard-page pb-6">
       <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
 
       {/* Upcoming Live Session Banner */}
       {upcomingSession && (
-        <Card className={`border-primary/30 shadow-md animate-fade-in ${
+        <Card className={`border-primary/20 animate-fade-in ${
           upcomingSession.status === 'cancelled'
-            ? 'bg-gradient-to-r from-muted/60 via-muted/40 to-background border-muted'
-            : 'bg-gradient-to-r from-violet-500/10 via-primary/5 to-background'
+            ? 'bg-muted/40 border-muted'
+            : 'bg-card'
         }`}>
           <CardContent className="p-4 sm:p-5">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -699,7 +699,7 @@ export function StudentDashboard() {
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
                   upcomingSession.status === 'cancelled'
                     ? 'bg-muted text-muted-foreground'
-                    : 'bg-violet-500/15 text-violet-600'
+                    : 'bg-primary/10 text-primary'
                 }`}>
                   <Video className="w-5 h-5" />
                 </div>
@@ -708,7 +708,7 @@ export function StudentDashboard() {
                     <p className={`text-xs font-medium uppercase tracking-wide ${
                       upcomingSession.status === 'cancelled'
                         ? 'text-muted-foreground'
-                        : 'text-violet-600'
+                        : 'text-primary'
                     }`}>
                       {upcomingSession.status === 'cancelled'
                         ? 'Cancelled'
@@ -745,7 +745,7 @@ export function StudentDashboard() {
               {upcomingSession.link && upcomingSession.status !== 'cancelled' && (
                 <Button
                   size="sm"
-                  className="bg-violet-600 hover:bg-violet-700 text-white flex-shrink-0"
+                  className="flex-shrink-0"
                   onClick={() => window.open(upcomingSession.link, '_blank')}
                 >
                   <Video className="w-4 h-4 mr-1.5" />
@@ -775,7 +775,7 @@ export function StudentDashboard() {
       )}
       
       {/* Your Learning Journey Card - Unified for pathway and course mode */}
-      <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20 shadow-sm hover:shadow-md transition-all duration-300 animate-fade-in">
+      <Card className="border-primary/20 animate-fade-in">
         <CardContent className="p-4 sm:p-6">
           <div className="space-y-4 sm:space-y-5">
             {/* Header with pathway/course info */}
@@ -785,7 +785,7 @@ export function StudentDashboard() {
                   {isInPathwayMode ? (
                     <Route className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   ) : (
-                    <span className="text-lg sm:text-xl">🎯</span>
+                    <Target className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                   )}
                 </div>
                 <div className="min-w-0">
@@ -882,16 +882,14 @@ export function StudentDashboard() {
 
 
       {/* Interactive Three-Card Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Continue Learning Card - Shows current course/lesson status with lock reason */}
 
         {(() => {
           const isLocked = !!currentLockReason && currentLockReason.reason !== 'unlocked';
           return (
         <Card
-          className={`hover:shadow-md transition-shadow duration-300 border-l-4 animate-fade-in cursor-pointer ${
-            isLocked ? 'border-l-amber-400' : 'border-l-green-400'
-          }`}
+          className="dashboard-metric animate-fade-in"
           onClick={() => navigate('/videos')}
         >
           <CardHeader className="pb-3">
@@ -1010,9 +1008,7 @@ export function StudentDashboard() {
         })()}
 
         {/* Next Assignment Card */}
-        <Card className={`hover:shadow-md transition-shadow duration-300 border-l-4 animate-fade-in ${
-          assignmentDueStatus === 'overdue' ? 'border-l-red-400' : 'border-l-orange-400'
-        }`} style={{ animationDelay: '150ms' }}>
+        <Card className="dashboard-metric animate-fade-in" style={{ animationDelay: '150ms' }}>
           <CardHeader className="pb-3">
             <CardTitle className={`flex items-center gap-2 text-base font-medium ${
               assignmentDueStatus === 'overdue' ? 'text-red-600' : 'text-orange-600'
@@ -1068,7 +1064,7 @@ export function StudentDashboard() {
         </Card>
 
         {/* Integrations Card */}
-        <Card className="hover:shadow-md transition-shadow duration-300 border-l-4 border-l-purple-400 animate-fade-in" style={{ animationDelay: '300ms' }}>
+        <Card className="dashboard-metric animate-fade-in" style={{ animationDelay: '300ms' }}>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-purple-600 text-base font-medium">
               <div className="w-8 h-8 rounded-full bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">

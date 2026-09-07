@@ -205,10 +205,8 @@ function DashboardContent() {
   return <div className="dashboard-page">
       <div className="page-heading">
         <div className="animate-fade-in">
-          <h1 >
-            Superadmin Dashboard
-          </h1>
-          <p >Platform control and operational oversight</p>
+          <h1>Superadmin Dashboard</h1>
+          <p>Platform control and operational oversight</p>
         </div>
       </div>
 
