@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, RefreshCw, ArrowRight, Star, Maximize, Minimize } from "lucide-react";
+import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, ArrowRight, Star } from "lucide-react";
 import { useCourseRecordings } from "@/hooks/useCourseRecordings";
 import SuccessPartner from "@/components/SuccessPartner";
 import { LectureRating } from "@/components/LectureRating";
@@ -78,7 +78,6 @@ const VideoPlayer = () => {
   }, [refreshRecordings]);
   const [videoUrlError, setVideoUrlError] = useState(false);
   const [videoWatched, setVideoWatched] = useState(false);
-  const [iframeKey, setIframeKey] = useState(0);
   const [obfuscatedUrl, setObfuscatedUrl] = useState<string>("");
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
@@ -113,19 +112,6 @@ const VideoPlayer = () => {
     return () => document.removeEventListener('fullscreenchange', onFsChange);
   }, []);
 
-  const toggleFullscreen = useCallback(() => {
-    const container = playerContainerRef.current;
-    if (!container) return;
-    if (document.fullscreenElement) {
-      void document.exitFullscreen().catch(() => {});
-    } else {
-      void container.requestFullscreen().catch(() => {});
-    }
-  }, []);
-
-
-
-  
   interface Attachment {
     id: string;
     file_name: string;
@@ -468,7 +454,7 @@ const VideoPlayer = () => {
       iframeRef.current.src = embedUrl;
     }
     // Removed cleanup that was causing blank video issues
-  }, [currentVideo?.videoUrl, iframeKey]);
+  }, [currentVideo?.videoUrl]);
   
   // modules list moved to CurrentModuleCard via useVideosData
 
@@ -568,7 +554,7 @@ const VideoPlayer = () => {
                 ) : currentVideo && (
                   <>
                     <iframe 
-                      key={`video-${currentVideo.id}-${iframeKey}`}
+                      key={`video-${currentVideo.id}`}
                       ref={iframeRef}
                       className={`w-full h-full ${isFullscreen ? '' : 'rounded-t-lg'}`}
                       allow="accelerometer; gyroscope; autoplay; encrypted-media; picture-in-picture" 
@@ -577,26 +563,6 @@ const VideoPlayer = () => {
                       frameBorder="0"
                     />
                     <VideoWatermark />
-                    <div className="absolute top-2 right-2 flex gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="opacity-70 hover:opacity-100"
-                        onClick={toggleFullscreen}
-                        title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
-                      >
-                        {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="opacity-70 hover:opacity-100"
-                        onClick={() => setIframeKey(prev => prev + 1)}
-                        title="Reload video if not playing"
-                      >
-                        <RefreshCw className="w-4 h-4" />
-                      </Button>
-                    </div>
                   </>
                 )}
               </div>
