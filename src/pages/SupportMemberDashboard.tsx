@@ -58,7 +58,7 @@ export default function SupportMemberDashboard() {
 
   return (
     <RoleGuard allowedRoles={['support_member']}>
-      <div className="w-full max-w-none p-6 animate-fade-in px-0 py-0">
+      <div className="w-full animate-fade-in">
         {renderContent()}
       </div>
     </RoleGuard>
@@ -133,19 +133,19 @@ function SupportMemberDashboardContent() {
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-center">
+    <div className="dashboard-page">
+      <div className="page-heading">
         <div className="animate-fade-in">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-            🛟 Support Dashboard
+          <h1 >
+            Support Dashboard
           </h1>
-          <p className="text-muted-foreground mt-2 text-lg">Student support and platform oversight</p>
+          <p >Student support and platform oversight</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="metric-grid">
         <Card
-          className="border-l-4 border-l-red-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-red-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/support-member?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -159,7 +159,7 @@ function SupportMemberDashboardContent() {
         </Card>
 
         <Card
-          className="border-l-4 border-l-purple-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-purple-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/support-member?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -173,7 +173,7 @@ function SupportMemberDashboardContent() {
         </Card>
 
         <Card
-          className="border-l-4 border-l-orange-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-orange-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/support-member?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -187,7 +187,7 @@ function SupportMemberDashboardContent() {
         </Card>
 
         <Card
-          className="border-l-4 border-l-blue-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-blue-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/support-member?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -201,9 +201,9 @@ function SupportMemberDashboardContent() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="metric-grid">
         <Card
-          className="border-l-4 border-l-green-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-green-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-green-800">Total Courses</CardTitle>
@@ -216,7 +216,7 @@ function SupportMemberDashboardContent() {
         </Card>
 
         <Card
-          className="border-l-4 border-l-indigo-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-indigo-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/support-member?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -230,7 +230,7 @@ function SupportMemberDashboardContent() {
         </Card>
 
         <Card
-          className="border-l-4 border-l-cyan-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-cyan-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/support-member?tab=analytics')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -244,7 +244,7 @@ function SupportMemberDashboardContent() {
         </Card>
 
         <Card
-          className="border-l-4 border-l-yellow-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-yellow-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/support-member?tab=analytics')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

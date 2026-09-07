@@ -99,7 +99,7 @@ export default function SuperadminDashboard() {
     }
   };
   return <RoleGuard allowedRoles={['superadmin']}>
-      <div className="w-full max-w-none p-6 animate-fade-in px-0 py-0">
+      <div className="w-full animate-fade-in">
         {renderContent()}
       </div>
     </RoleGuard>;
@@ -202,19 +202,19 @@ function DashboardContent() {
         <div className="text-lg">Loading dashboard...</div>
       </div>;
   }
-  return <div className="space-y-8">
-      <div className="flex justify-between items-center">
+  return <div className="dashboard-page">
+      <div className="page-heading">
         <div className="animate-fade-in">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-            🔧 System Command Center
+          <h1 >
+            Superadmin Dashboard
           </h1>
-          <p className="text-muted-foreground mt-2 text-lg">Ultimate platform control and global oversight</p>
+          <p >Platform control and operational oversight</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="metric-grid">
         <Card 
-          className="border-l-4 border-l-red-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-red-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/superadmin?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -228,7 +228,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-purple-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-purple-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/superadmin?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -242,7 +242,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-orange-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-orange-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/superadmin?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -256,7 +256,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-blue-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-blue-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/superadmin?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -270,9 +270,9 @@ function DashboardContent() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="metric-grid">
         <Card 
-          className="border-l-4 border-l-green-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-green-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/superadmin?tab=courses')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -286,7 +286,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-indigo-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-indigo-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/superadmin?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -300,7 +300,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-cyan-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-cyan-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/superadmin?tab=analytics')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -314,7 +314,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-yellow-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-yellow-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/superadmin?tab=analytics')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -339,7 +339,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-emerald-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-emerald-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/superadmin?tab=analytics')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
