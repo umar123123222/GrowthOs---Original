@@ -110,46 +110,46 @@ export default function MentorDashboard() {
 
   return (
     <RoleGuard allowedRoles={['mentor']}>
-      <div className="container mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
+      <div className="dashboard-page">
+        <div className="page-heading">
           <div>
-            <h1 className="text-3xl font-bold text-purple-900">🧑‍🏫 Mentor Hub</h1>
+            <h1>Mentor Dashboard</h1>
             <p className="text-muted-foreground">Guide, support, and nurture your students' growth</p>
           </div>
         </div>
 
         <div className="space-y-6">
           {/* Metric Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Card className="border-l-4 border-l-orange-500">
+          <div className="metric-grid">
+            <Card className="dashboard-metric">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Assignments Pending Reviews</CardTitle>
-                <Clock className="h-4 w-4 text-orange-600" />
+                <Clock className="h-4 w-4 text-warning" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-900">{stats.pendingReviews}</div>
+                <div className="text-2xl font-bold">{stats.pendingReviews}</div>
                 <p className="text-xs text-muted-foreground">Awaiting your feedback</p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-green-500">
+            <Card className="dashboard-metric">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Assignments Checked</CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-600" />
+                <CheckCircle className="h-4 w-4 text-success" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-green-900">{stats.checkedAssignments}</div>
+                <div className="text-2xl font-bold">{stats.checkedAssignments}</div>
                 <p className="text-xs text-muted-foreground">Feedback provided</p>
               </CardContent>
             </Card>
 
-            <Card className="border-l-4 border-l-blue-500">
+            <Card className="dashboard-metric">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Sessions Mentored</CardTitle>
-                <MessageSquare className="h-4 w-4 text-blue-600" />
+                <MessageSquare className="h-4 w-4 text-primary" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-900">{stats.sessionsMentored}</div>
+                <div className="text-2xl font-bold">{stats.sessionsMentored}</div>
                 <p className="text-xs text-muted-foreground">This month</p>
               </CardContent>
             </Card>

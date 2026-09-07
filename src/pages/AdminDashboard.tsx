@@ -84,7 +84,7 @@ export default function AdminDashboard() {
     }
   };
   return <RoleGuard allowedRoles={['admin', 'superadmin']}>
-      <div className="container mx-auto p-6 animate-fade-in px-0">
+      <div className="w-full animate-fade-in">
         {renderContent()}
       </div>
     </RoleGuard>;
@@ -163,19 +163,17 @@ function DashboardContent() {
         <div className="text-lg">Loading dashboard...</div>
       </div>;
   }
-  return <div className="space-y-8">
-      <div className="flex justify-between items-center">
+  return <div className="dashboard-page">
+      <div className="page-heading">
         <div className="animate-fade-in">
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-            ⚙️ Administrative Control
-          </h1>
-          <p className="text-muted-foreground mt-2 text-lg">Manage platform operations and user oversight</p>
+          <h1>Admin Dashboard</h1>
+          <p>Manage platform operations and user oversight</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="metric-grid">
         <Card 
-          className="border-l-4 border-l-blue-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-blue-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/admin?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -189,7 +187,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-green-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-green-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/admin?tab=courses')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -203,7 +201,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-yellow-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-yellow-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/admin?tab=analytics')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -219,9 +217,9 @@ function DashboardContent() {
         
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="metric-grid">
         <Card 
-          className="border-l-4 border-l-cyan-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-cyan-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/admin?tab=students')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -235,7 +233,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-indigo-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-indigo-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/admin?tab=analytics')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -249,7 +247,7 @@ function DashboardContent() {
         </Card>
 
         <Card 
-          className="border-l-4 border-l-pink-500 hover-scale transition-all duration-300 hover:shadow-lg bg-gradient-to-br from-pink-50 to-white animate-fade-in cursor-pointer"
+          className="dashboard-metric"
           onClick={() => navigate('/admin?tab=support')}
         >
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

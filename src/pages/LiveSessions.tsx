@@ -68,11 +68,11 @@ const SessionCard = ({ session, isUpcoming, userLMSStatus, hasAttended, onJoin, 
   const hasLink = !!session.link;
   
   return (
-    <Card className="group hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border-l-4 border-l-primary/20 hover:border-l-primary/60">
+    <Card className="group hover:border-primary/30 hover:shadow-medium">
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <CardTitle className="text-xl group-hover:text-primary transition-colors">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0 space-y-1.5">
+            <CardTitle className="text-lg">
               {session.title}
             </CardTitle>
             <p className="text-muted-foreground leading-relaxed">{session.description}</p>
@@ -88,8 +88,8 @@ const SessionCard = ({ session, isUpcoming, userLMSStatus, hasAttended, onJoin, 
       </CardHeader>
       
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-md">
             <Calendar className="w-5 h-5 text-primary" />
             <div>
               <div className="font-medium text-sm">Date</div>
@@ -101,7 +101,7 @@ const SessionCard = ({ session, isUpcoming, userLMSStatus, hasAttended, onJoin, 
             </div>
           </div>
           
-          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+          <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-md">
             <Clock className="w-5 h-5 text-primary" />
             <div>
               <div className="font-medium text-sm">Time</div>
@@ -115,7 +115,7 @@ const SessionCard = ({ session, isUpcoming, userLMSStatus, hasAttended, onJoin, 
             </div>
           </div>
           
-          <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg">
+          <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-md">
             <Users className="w-5 h-5 text-primary" />
             <div>
               <div className="font-medium text-sm">Mentor</div>
@@ -127,7 +127,7 @@ const SessionCard = ({ session, isUpcoming, userLMSStatus, hasAttended, onJoin, 
         <div className="flex items-center justify-between pt-4 border-t">
           <div className="flex items-center gap-2">
             {hasAttended && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-full text-sm">
+              <div className="flex items-center gap-2 px-3 py-1 bg-success/10 text-success rounded-md text-sm">
                 <CheckCircle className="w-4 h-4" />
                 <span>Attended</span>
               </div>
@@ -430,12 +430,14 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
 
   return (
     <RoleGuard allowedRoles={['student', 'admin', 'mentor', 'superadmin']}>
-      <div className="space-y-8 animate-fade-in">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Success Sessions</h1>
-          <p className="text-muted-foreground text-lg">
+      <div className="dashboard-page animate-fade-in">
+        <div className="page-heading">
+          <div>
+          <h1>Success Sessions</h1>
+          <p>
             Connect with mentors and fellow students in our success sessions
           </p>
+          </div>
         </div>
 
         <InactiveLMSBanner show={userLMSStatus !== 'active'} />
@@ -443,7 +445,6 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         {/* Upcoming Sessions */}
         <div className="space-y-4">
           <div className="flex items-center gap-2">
-            <div className="w-1 h-6 bg-primary rounded-full"></div>
             <h2 className="text-xl font-semibold">Upcoming Sessions</h2>
             {upcomingSessions.length > 0 && (
               <Badge variant="default" className="ml-auto">
@@ -453,7 +454,7 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
           </div>
           {upcomingSessions.length > 0 ? (
             <>
-              <div className="grid gap-6">
+              <div className="grid gap-4">
                 {upcomingSessions
                   .slice((upcomingPage - 1) * PAGE_SIZE, upcomingPage * PAGE_SIZE)
                   .map((session) => (
@@ -512,13 +513,12 @@ const LiveSessions = ({ user }: LiveSessionsProps = {}) => {
         {recordedSessions.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="w-1 h-6 bg-secondary rounded-full"></div>
               <h2 className="text-xl font-semibold">Recorded Sessions</h2>
               <Badge variant="secondary" className="ml-auto">
                 {recordedSessions.length} recording{recordedSessions.length !== 1 ? 's' : ''} available
               </Badge>
             </div>
-            <div className="grid gap-6">
+            <div className="grid gap-4">
               {recordedSessions
                 .slice((recordedPage - 1) * PAGE_SIZE, recordedPage * PAGE_SIZE)
                 .map((session) => (
