@@ -933,8 +933,8 @@ const Layout = memo(({
                                   to={item.href || '/catalog'} 
                                   className={`flex-1 flex items-center px-4 py-3 text-sm font-medium rounded-l-lg transition-all duration-200 ${
                                     isCatalogActive 
-                                      ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" 
-                                      : "text-gray-600 hover:bg-gray-50"
+                                      ? "bg-primary/10 text-primary" 
+                                      : "text-muted-foreground hover:bg-accent hover:text-foreground"
                                   }`}
                                   onClick={() => setMobileMenuOpen(false)}
                                 >
@@ -1038,7 +1038,7 @@ const Layout = memo(({
                                         <div className="flex items-center">
                                           <Link
                                             to={subItem.href}
-                                            className={`flex-1 flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isAnyNestedActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" : "text-gray-600 hover:bg-gray-100"}`}
+                                            className={`flex-1 flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${isAnyNestedActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
                                             onClick={() => setMobileMenuOpen(false)}
                                           >
                                             <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isAnyNestedActive ? "text-gray-900" : "text-gray-400"}`} />
@@ -1058,7 +1058,7 @@ const Layout = memo(({
                                             return <Link
                                               key={nestedItem.name}
                                               to={nestedItem.href}
-                                              className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isNestedActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" : "text-gray-600 hover:bg-gray-100"}`}
+                                              className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${isNestedActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
                                               onClick={() => setMobileMenuOpen(false)}
                                             >
                                               <NestedIcon className={`mr-3 h-4 w-4 transition-colors ${isNestedActive ? "text-gray-900" : "text-gray-400"}`} />
@@ -1073,7 +1073,7 @@ const Layout = memo(({
                                   return <Link
                                     key={subItem.name}
                                     to={subItem.href}
-                                    className={`flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" : "text-gray-600 hover:bg-gray-100"}`}
+                                    className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
                                     onClick={() => setMobileMenuOpen(false)}
                                   >
                                     <SubIcon className={`mr-3 h-4 w-4 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />
@@ -1093,7 +1093,7 @@ const Layout = memo(({
                           return <Link 
                             key={item.name} 
                             to={item.href || '/'} 
-                            className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-all duration-200 ${isActive ? "bg-gray-200 text-gray-900 border-l-4 border-blue-600" : "text-gray-600 hover:bg-gray-100"}`}
+                            className={`flex items-center px-4 py-3 text-sm font-medium rounded-md transition-colors duration-150 ${isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground"}`}
                             onClick={() => setMobileMenuOpen(false)}
                           >
                             <Icon className={`mr-3 h-5 w-5 transition-colors ${isActive ? "text-gray-900" : "text-gray-400"}`} />

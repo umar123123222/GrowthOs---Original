@@ -1,21 +1,18 @@
 /* Friendly UI polish utilities (theme-aware) */
 .section-surface {
-  background: linear-gradient(180deg, hsl(var(--card)), hsl(var(--muted) / 0.5));
+  background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
-  border-radius: 0.75rem; /* ~rounded-xl */
+  border-radius: var(--radius);
   box-shadow: var(--shadow-soft);
 }
 
 .section-header {
-  background: linear-gradient(90deg, hsl(var(--primary) / 0.06), transparent);
+  background: hsl(var(--muted) / 0.45);
   border-bottom: 1px solid hsl(var(--border));
 }
 
 .header-accent {
-  background: linear-gradient(90deg, hsl(var(--primary)), hsl(224 71% 52%));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: hsl(var(--foreground));
 }
 
 .icon-chip {
@@ -38,7 +35,7 @@
 
 /* Soft badge utilities (theme tokens) */
 .badge-pill {
-  border-radius: 9999px;
+  border-radius: calc(var(--radius) - 2px);
   padding: 0.25rem 0.625rem; /* py-1 px-2.5 */
   font-size: 0.75rem; /* text-xs */
   font-weight: 600;

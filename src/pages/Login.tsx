@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Eye, EyeOff, Loader2, ArrowRight, Shield, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Loader2, ArrowRight, Shield } from "lucide-react";
 import { safeLogger } from '@/lib/safe-logger';
 import { ErrorMessage, FieldError } from "@/components/ui/error-message";
 import { errorHandler, handleApiError } from "@/lib/error-handler";
@@ -246,35 +246,17 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-  return <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-700 to-emerald-600 flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-20 left-20 w-72 h-72 bg-blue-400/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-20 right-20 w-96 h-96 bg-emerald-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-white/10 rounded-full blur-3xl animate-pulse delay-500"></div>
-      </div>
-      
-      {/* Grid pattern overlay */}
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjYwIiBoZWlnaHQ9IjYwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJtIDEwIDAgbCAwIDEwIG0gMCAwIGwgMTAgMCBtIDAgMTAgbCAxMCAwIG0gMTAgMCBsIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIwLjUiIG9wYWNpdHk9IjAuMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-30"></div>
-      
-      <Card className="w-full max-w-lg relative z-10 shadow-2xl border-0 bg-white/95 backdrop-blur-xl overflow-hidden animate-fade-in">
-        {/* Decorative header gradient */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-emerald-500"></div>
-        
-        <CardHeader className="text-center pb-8 pt-8">
-          
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-emerald-600 bg-clip-text text-transparent mb-2">
+  return <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-8">
+      <Card className="w-full max-w-md overflow-hidden border-border bg-card shadow-elevated animate-fade-in">
+        <div className="h-1 bg-primary" />
+        <CardHeader className="text-center pb-6 pt-8">
+          <CardTitle className="text-3xl font-semibold text-foreground mb-2">
             {TEXT_CONTENT.WELCOME_MESSAGE}
           </CardTitle>
-          
-          <div className="flex items-center justify-center gap-2 text-muted-foreground">
-            <Sparkles className="w-4 h-4 text-blue-500" />
-            <span className="text-sm">AI-powered learning for your success</span>
-            <Sparkles className="w-4 h-4 text-emerald-500" />
-          </div>
+          <p className="text-sm text-muted-foreground">AI-powered learning for your success</p>
         </CardHeader>
         
-        <CardContent className="px-8 pb-8">
+        <CardContent className="px-6 pb-8 sm:px-8">
           {loginError && (() => {
           const [title, message] = loginError.includes('|') ? loginError.split('|') : ['Error', loginError];
           return <div className={`mb-6 p-4 rounded-lg border-2 ${loginError.includes('suspended') || loginError.includes('Suspended') ? 'bg-amber-50 border-amber-300 text-amber-900' : 'bg-red-50 border-red-300 text-red-900'}`}>
@@ -290,7 +272,7 @@ const Login = () => {
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="email" className="text-sm font-medium text-foreground">
                 Email Address
               </Label>
               <div className="relative">
@@ -302,20 +284,20 @@ const Login = () => {
                   setLoginError("");
                   sessionStorage.removeItem('suspension_error');
                 }
-              }} className={`h-12 pl-4 pr-4 border-2 transition-all duration-200 rounded-lg ${emailError ? 'border-destructive focus:border-destructive' : 'border-gray-200 focus:border-blue-500'}`} placeholder="your@email.com" required />
+              }} className={`h-11 px-4 ${emailError ? 'border-destructive focus:border-destructive' : ''}`} placeholder="your@email.com" required />
               </div>
               <FieldError error={emailError} />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+              <Label htmlFor="password" className="text-sm font-medium text-foreground">
                 Password
               </Label>
               <div className="relative">
                 <Input id="password" type={showPassword ? "text" : "password"} value={password} onChange={e => {
                 setPassword(e.target.value);
                 if (passwordError) setPasswordError("");
-              }} className={`h-12 pl-4 pr-12 border-2 transition-all duration-200 rounded-lg ${passwordError ? 'border-destructive focus:border-destructive' : 'border-gray-200 focus:border-blue-500'}`} placeholder="••••••••" required />
+              }} className={`h-11 pl-4 pr-12 ${passwordError ? 'border-destructive focus:border-destructive' : ''}`} placeholder="••••••••" required />
                 <Button type="button" variant="ghost" size="sm" className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100" onClick={() => setShowPassword(!showPassword)}>
                   {showPassword ? <EyeOff className="h-4 w-4 text-gray-500" /> : <Eye className="h-4 w-4 text-gray-500" />}
                 </Button>
@@ -323,19 +305,19 @@ const Login = () => {
               <FieldError error={passwordError} />
             </div>
             
-            <Button type="submit" className="w-full h-12 bg-gradient-to-r from-blue-600 to-emerald-600 hover:from-blue-700 hover:to-emerald-700 text-white font-semibold transition-all duration-300 transform hover:scale-[1.02] hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg group" disabled={isLoading}>
+            <Button type="submit" className="w-full h-11 group" disabled={isLoading}>
               {isLoading ? <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Signing In...</span>
-                </div> : <div className="flex items-center gap-2 group-hover:gap-3 transition-all duration-200">
+                </div> : <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4" />
                   <span>{TEXT_CONTENT.SIGN_IN_BUTTON}</span>
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
+                   <ArrowRight className="w-4 h-4" />
                 </div>}
             </Button>
             
             <div className="text-center mt-4 my-[6px]">
-              <Link to="/reset-password" className="text-sm text-blue-600 hover:text-blue-700 hover:underline transition-colors">
+              <Link to="/reset-password" className="text-sm text-primary hover:underline transition-colors">
                 Forgot Password?
               </Link>
             </div>
