@@ -18,7 +18,6 @@ import { useToast } from '@/hooks/use-toast';
 import { extractFinancialGoalForDisplay } from '@/utils/dreamGoalUtils';
 import { safeQuery, safeMaybeSingle } from '@/lib/database-safety';
 import { logger } from '@/lib/logger';
-import { CourseSelector } from '@/components/courses/CourseSelector';
 import type { UserDataResult, StudentDataResult } from '@/types/database';
 import { format } from 'date-fns';
 import { 
@@ -71,9 +70,7 @@ export function StudentDashboard() {
   const { 
     enrolledCourses, 
     activeCourse, 
-    setActiveCourse, 
-    loading: coursesLoading,
-    isMultiCourseEnabled 
+    loading: coursesLoading
   } = useCourses();
   
   const { 
@@ -682,6 +679,26 @@ export function StudentDashboard() {
     safeLogger.debug('StudentDashboard: Rendering main dashboard content');
   }
 
+  const lastWatchedVideo = recordings
+    .filter(recording => recording.isWatched)
+    .sort((a, b) => {
+      const aTime = a.watchedAt ? new Date(a.watchedAt).getTime() : 0;
+      const bTime = b.watchedAt ? new Date(b.watchedAt).getTime() : 0;
+      return bTime - aTime;
+    })[0] ?? null;
+  const lastWatchedIndex = lastWatchedVideo
+    ? recordings.findIndex(recording => recording.id === lastWatchedVideo.id)
+    : -1;
+  const nextVideo = (
+    lastWatchedIndex >= 0
+      ? recordings.slice(lastWatchedIndex + 1).find(recording => !recording.isWatched)
+      : recordings.find(recording => !recording.isWatched)
+  ) ?? null;
+  const continueVideo = nextVideo || lastWatchedVideo;
+  const videosUrl = continueVideo
+    ? `/videos?courseId=${encodeURIComponent(activeCourse?.id || '')}&recordingId=${encodeURIComponent(continueVideo.id)}`
+    : `/videos?courseId=${encodeURIComponent(activeCourse?.id || '')}`;
+
   return (
     <div className="dashboard-page pb-6">
       <InactiveLMSBanner show={user?.role === 'student' && userLMSStatus === 'inactive'} />
@@ -761,19 +778,6 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       )}
-      {/* Course Selector for multi-course users (non-pathway mode only) */}
-      {!isInPathwayMode && isMultiCourseEnabled && enrolledCourses.length > 1 && (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <h2 className="text-base sm:text-lg font-medium">Your Courses</h2>
-          <CourseSelector
-            courses={enrolledCourses}
-            activeCourseId={activeCourse?.id || null}
-            onCourseChange={setActiveCourse}
-            loading={coursesLoading}
-          />
-        </div>
-      )}
-      
       {/* Your Learning Journey Card - Unified for pathway and course mode */}
       <Card className="border-primary/20 animate-fade-in">
         <CardContent className="p-4 sm:p-6">
@@ -890,7 +894,7 @@ export function StudentDashboard() {
           return (
         <Card
           className="dashboard-metric animate-fade-in"
-          onClick={() => navigate('/videos')}
+          onClick={() => navigate(videosUrl)}
         >
           <CardHeader className="pb-3">
             <CardTitle className={`flex items-center gap-2 text-base font-medium ${
@@ -906,19 +910,30 @@ export function StudentDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {/* Current course/lesson info */}
-              <div>
-                <p className="text-sm font-medium text-foreground line-clamp-1">
-                  {isInPathwayMode && pathwayState 
-                    ? pathwayState.currentCourseTitle 
-                    : activeCourse?.title || 'Your Course'
-                  }
-                </p>
-                {currentLockReason?.nextLesson && (
-                  <p className="text-xs text-muted-foreground line-clamp-1 mt-1">
-                    Next: {currentLockReason.nextLesson}
+              {/* Last watched and next lesson in the active course */}
+              <div className="space-y-2">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">Last watched</p>
+                  <p className="text-sm font-medium text-foreground line-clamp-1">
+                    {lastWatchedVideo?.recording_title || 'No video watched yet'}
                   </p>
-                )}
+                  {lastWatchedVideo && (
+                    <p className="text-xs text-muted-foreground line-clamp-1">
+                      {lastWatchedVideo.module_title} · {activeCourse?.title || pathwayState?.currentCourseTitle || 'Course'}
+                    </p>
+                  )}
+                </div>
+                <div className="border-t border-border pt-2">
+                  <p className="text-xs font-medium text-primary">Up next</p>
+                  <p className="text-sm font-medium text-foreground line-clamp-1">
+                    {nextVideo?.recording_title || (lastWatchedVideo ? 'Course completed' : currentLockReason?.nextLesson || 'No video available')}
+                  </p>
+                  {nextVideo && (
+                    <p className="text-xs text-muted-foreground line-clamp-1">
+                      {nextVideo.module_title} · {activeCourse?.title || pathwayState?.currentCourseTitle || 'Course'}
+                    </p>
+                  )}
+                </div>
               </div>
               
               {/* Lock reason or progress */}
