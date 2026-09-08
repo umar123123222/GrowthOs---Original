@@ -71,6 +71,7 @@ const SupportMemberDashboard = lazy(() => import("./pages/SupportMemberDashboard
 const EnrollmentManagerDashboard = lazy(() => import("./pages/EnrollmentManagerDashboard"));
 const Videos = lazy(() => import("./pages/Videos"));
 const VideoPlayer = lazy(() => import("./pages/VideoPlayer"));
+const Watch = lazy(() => import("./pages/Watch"));
 const Assignments = lazy(() => import("./pages/Assignments"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const Profile = lazy(() => import("./pages/Profile"));
