@@ -254,7 +254,7 @@ const Catalog = () => {
                 return (
                   <Card 
                     key={pathway.id} 
-                    className={`overflow-hidden transition-all duration-300 ${
+                    className={`h-full overflow-hidden transition-all duration-300 ${
                       unlocked 
                         ? 'hover:shadow-lg cursor-pointer border-primary/20' 
                         : 'opacity-75 cursor-not-allowed'
@@ -303,8 +303,8 @@ const Catalog = () => {
                       </Badge>
                     </div>
 
-                    <CardContent className="p-4 space-y-3">
-                      <div>
+                    <CardContent className="flex min-h-28 flex-col gap-4 p-5">
+                      <div className="min-w-0">
                         <h3 className="font-semibold text-foreground line-clamp-1">
                           {pathway.name}
                         </h3>
@@ -315,7 +315,7 @@ const Catalog = () => {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-border">
+                      <div className="mt-auto flex min-h-10 items-center justify-between gap-3 border-t border-border pt-3">
                         {unlocked ? (
                           <div className="flex flex-col">
                             <div className="flex items-center text-green-600 text-sm font-medium">
@@ -381,7 +381,7 @@ const Catalog = () => {
                 return (
                   <Card 
                     key={course.id} 
-                    className={`overflow-hidden transition-all duration-300 ${
+                    className={`h-full overflow-hidden transition-all duration-300 ${
                       unlocked 
                         ? 'hover:shadow-lg cursor-pointer border-primary/20' 
                         : 'opacity-75 cursor-not-allowed'
@@ -423,8 +423,8 @@ const Catalog = () => {
                       )}
                     </div>
 
-                    <CardContent className="p-4 space-y-3">
-                      <div>
+                    <CardContent className="flex min-h-28 flex-col gap-4 p-5">
+                      <div className="min-w-0">
                         <h3 className="font-semibold text-foreground line-clamp-1">
                           {course.title}
                         </h3>
@@ -435,7 +435,7 @@ const Catalog = () => {
                         )}
                       </div>
 
-                      <div className="flex items-center justify-between pt-2 border-t border-border">
+                      <div className="mt-auto flex min-h-10 items-center justify-between gap-3 border-t border-border pt-3">
                         {unlocked ? (
                           <div className="flex flex-col">
                             <div className="flex items-center text-green-600 text-sm font-medium">
