@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, ArrowLeft, Play, Lock, ArrowRight, Star } from "lucide-react";
+import { CheckCircle, ArrowLeft, Play, Lock, ArrowRight, Star, Maximize, Minimize } from "lucide-react";
 import { useCourseRecordings } from "@/hooks/useCourseRecordings";
 import { LectureRating } from "@/components/LectureRating";
 import { supabase } from "@/integrations/supabase/client";
@@ -561,6 +561,22 @@ const VideoPlayer = () => {
                       frameBorder="0"
                     />
                     <VideoWatermark />
+                    <button
+                      type="button"
+                      aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                      onClick={() => {
+                        const container = playerContainerRef.current;
+                        if (!container) return;
+                        if (document.fullscreenElement) {
+                          document.exitFullscreen().catch(() => {});
+                        } else {
+                          container.requestFullscreen().catch(() => {});
+                        }
+                      }}
+                      className="absolute bottom-3 right-3 z-20 flex h-9 w-9 items-center justify-center rounded-md bg-black/60 text-white transition hover:bg-black/80"
+                    >
+                      {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                    </button>
                   </>
                 )}
               </div>
