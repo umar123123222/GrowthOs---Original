@@ -407,6 +407,10 @@ All colors MUST be HSL.
   box-shadow: none;
 }
 
+.admin-workspace .data-table table {
+  table-layout: fixed;
+}
+
 .admin-workspace .data-table thead th {
   background: hsl(var(--muted) / 0.72);
   color: hsl(var(--muted-foreground));
