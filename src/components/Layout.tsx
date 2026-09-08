@@ -898,7 +898,7 @@ const Layout = memo(({
       });
     }
   };
-  return <div className="app-shell min-h-screen bg-background">
+  return <div className={`app-shell min-h-screen bg-background ${isUserAdminOrSuperadmin ? 'admin-workspace' : ''}`}>
       {/* Header */}
       <header className="app-header fixed top-0 left-0 right-0 z-40 border-b border-border">
         <div className="w-full px-3 sm:px-6 lg:px-8">

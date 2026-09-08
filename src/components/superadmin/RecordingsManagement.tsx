@@ -966,11 +966,13 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
         </div>}
       </div>
 
-      <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-gray-50 animate-fade-in">
-        <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b">
+      <Card className="management-panel overflow-hidden animate-fade-in">
+        <CardHeader className="management-toolbar border-b">
           <div className="flex flex-col gap-4">
             <CardTitle className="flex items-center text-xl">
-              <Video className="w-6 h-6 mr-3 text-purple-600" />
+              <span className="mr-3 inline-flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <Video className="w-5 h-5" />
+              </span>
               All Recordings
             </CardTitle>
             
@@ -983,7 +985,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                   placeholder="Search by title..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 bg-white"
+                  className="pl-9 bg-card"
                 />
               </div>
               
@@ -995,11 +997,11 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                   setFilterModuleId('all'); // Reset module filter when course changes
                 }}
               >
-                <SelectTrigger className="w-[200px] bg-white">
+                <SelectTrigger className="w-[200px] bg-card">
                   <Filter className="w-4 h-4 mr-2" />
                   <SelectValue placeholder="Filter by course" />
                 </SelectTrigger>
-                <SelectContent className="bg-white z-50">
+                <SelectContent className="bg-popover z-50">
                   <SelectItem value="all">All Courses</SelectItem>
                   {courses.map((course) => (
                     <SelectItem key={course.id} value={course.id}>
@@ -1015,10 +1017,10 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                 onValueChange={setFilterModuleId}
                 disabled={filterCourseId === 'all'}
               >
-                <SelectTrigger className="w-[200px] bg-white">
+                <SelectTrigger className="w-[200px] bg-card">
                   <SelectValue placeholder="Filter by module" />
                 </SelectTrigger>
-                <SelectContent className="bg-white z-50">
+                <SelectContent className="bg-popover z-50">
                   <SelectItem value="all">All Modules</SelectItem>
                   {filterModulesForCourse.map((module) => (
                     <SelectItem key={module.id} value={module.id}>
@@ -1063,7 +1065,7 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                 const courseTotal = courseGroup.modules.reduce((sum, m) => sum + m.recordings.length, 0);
                 return (
                   <Collapsible key={courseGroup.courseId}>
-                    <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-muted/50 border-b hover:bg-muted/70 transition-colors">
+                    <CollapsibleTrigger className="flex min-h-14 items-center gap-3 w-full px-5 py-3 bg-muted/45 border-b text-left hover:bg-primary/5 transition-colors">
                       <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
                       <span className="font-semibold text-base">{courseGroup.courseTitle}</span>
                       <Badge variant="secondary" className="ml-auto">{courseTotal} recordings</Badge>
@@ -1071,14 +1073,14 @@ export function RecordingsManagement({ readOnly = false }: { readOnly?: boolean 
                     <CollapsibleContent>
                       {courseGroup.modules.map((moduleGroup) => (
                         <Collapsible key={moduleGroup.moduleId}>
-                          <CollapsibleTrigger className="flex items-center gap-3 w-full py-2 px-6 bg-muted/20 border-b hover:bg-muted/40 transition-colors">
+                          <CollapsibleTrigger className="flex min-h-12 items-center gap-3 w-full py-2.5 px-7 bg-card border-b text-left hover:bg-muted/45 transition-colors">
                             <ChevronDown className="w-4 h-4 transition-transform [&[data-state=open]]:rotate-180" />
                             <span className="font-medium text-sm">{moduleGroup.moduleTitle}</span>
                             <Badge variant="outline" className="ml-auto text-xs">{moduleGroup.recordings.length} videos</Badge>
                           </CollapsibleTrigger>
                           <CollapsibleContent>
                             {/* Header */}
-                            <div className="grid grid-cols-[24px_24px_1fr_100px_80px_160px] items-center gap-4 p-4 bg-muted/30 border-b font-semibold text-sm">
+                            <div className="grid grid-cols-[24px_24px_minmax(260px,1fr)_100px_80px_160px] items-center gap-4 px-7 py-3 bg-muted/30 border-b text-xs font-semibold uppercase text-muted-foreground">
                               <div></div>
                               <div></div>
                               <div>Title {!readOnly && <span className="text-xs font-normal text-muted-foreground ml-2">Drag to reorder</span>}</div>

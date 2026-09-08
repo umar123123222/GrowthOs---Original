@@ -466,10 +466,10 @@ export function PathwayManagement({ readOnly = false }: { readOnly?: boolean } =
   const existingChoiceGroups = [...new Set(pathwayCourses.filter(pc => pc.is_choice_point && pc.choice_group).map(pc => pc.choice_group!))];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="management-page space-y-6">
+      <div className="management-heading flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Learning Pathways</h2>
+          <h2 className="text-2xl font-semibold">Learning Pathways</h2>
           <p className="text-muted-foreground">Create structured learning paths with multiple courses</p>
         </div>
         {!readOnly && <Dialog open={dialogOpen} onOpenChange={(open) => {
@@ -639,15 +639,15 @@ export function PathwayManagement({ readOnly = false }: { readOnly?: boolean } =
         </Dialog>}
       </div>
 
-      <Card>
+      <Card className="management-panel overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Courses</TableHead>
-                <TableHead>Status</TableHead>
-                {!readOnly && <TableHead className="text-right">Actions</TableHead>}
+                <TableHead className="w-[42%]">Name</TableHead>
+                <TableHead className="w-[16%]">Courses</TableHead>
+                <TableHead className="w-[24%]">Status</TableHead>
+                {!readOnly && <TableHead className="w-[18%] text-right">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -661,7 +661,7 @@ export function PathwayManagement({ readOnly = false }: { readOnly?: boolean } =
               ) : (
                 pathways.map((pathway) => (
                   <TableRow key={pathway.id}>
-                    <TableCell>
+                    <TableCell className="font-medium">
                       <div>
                         <p className="font-medium">{pathway.name}</p>
                         {pathway.description && (
@@ -671,11 +671,11 @@ export function PathwayManagement({ readOnly = false }: { readOnly?: boolean } =
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="tabular-nums">
                       <Badge variant="secondary">{pathway.course_count || 0} courses</Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         {pathway.is_active ? (
                           <Badge className="bg-green-100 text-green-800">Active</Badge>
                         ) : (
@@ -688,8 +688,8 @@ export function PathwayManagement({ readOnly = false }: { readOnly?: boolean } =
                         )}
                       </div>
                     </TableCell>
-                    {!readOnly && <TableCell>
-                      <div className="flex items-center justify-end gap-2">
+                    {!readOnly && <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="sm"

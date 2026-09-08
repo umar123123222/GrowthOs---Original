@@ -338,6 +338,127 @@ All colors MUST be HSL.
   color: hsl(var(--foreground)) !important;
 }
 
+/* Structured IDM workspace for admin and superadmin roles */
+.admin-workspace {
+  --background: 213 54% 98%;
+  --foreground: 218 40% 14%;
+  --primary: 214 80% 48%;
+  --success: 148 79% 37%;
+  --accent: 214 70% 95%;
+  --border: 214 28% 89%;
+  --sidebar-background: 218 40% 14%;
+  --sidebar-foreground: 214 25% 78%;
+  --sidebar-accent: 218 32% 20%;
+  --sidebar-accent-foreground: 0 0% 100%;
+  --sidebar-border: 218 25% 24%;
+}
+
+.admin-workspace .app-header {
+  background: hsl(var(--card) / 0.97);
+  backdrop-filter: blur(10px);
+}
+
+.admin-workspace .app-sidebar {
+  background: hsl(var(--sidebar-background));
+  border-right-color: hsl(var(--sidebar-border));
+}
+
+.admin-workspace .app-sidebar .app-navigation :where(a, button) {
+  color: hsl(var(--sidebar-foreground));
+}
+
+.admin-workspace .app-sidebar .app-navigation :where(a, button):hover {
+  background: hsl(var(--sidebar-accent));
+  color: hsl(var(--sidebar-accent-foreground));
+}
+
+.admin-workspace .app-sidebar .app-navigation :where(a.bg-primary\/10, a.text-primary) {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.admin-workspace .app-sidebar .app-navigation :where(a.bg-primary\/10, a.text-primary) svg {
+  color: hsl(var(--primary-foreground));
+}
+
+.admin-workspace .app-content > div {
+  max-width: none;
+}
+
+.admin-workspace .page-heading,
+.admin-workspace .management-heading {
+  align-items: center;
+  min-height: 4rem;
+  padding: 0 0 1rem;
+}
+
+.admin-workspace .management-panel {
+  border-color: hsl(var(--border));
+  box-shadow: var(--shadow-soft);
+}
+
+.admin-workspace .management-toolbar {
+  background: hsl(var(--muted) / 0.52);
+}
+
+.admin-workspace .data-table {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.admin-workspace .data-table thead th {
+  background: hsl(var(--muted) / 0.72);
+  color: hsl(var(--muted-foreground));
+  white-space: nowrap;
+}
+
+.admin-workspace .data-table tbody tr {
+  min-height: 3.5rem;
+}
+
+.admin-workspace .data-table tbody tr:hover {
+  background: hsl(var(--primary) / 0.035);
+}
+
+.admin-workspace .data-table td:last-child,
+.admin-workspace .data-table th:last-child {
+  padding-right: 1.5rem;
+}
+
+.admin-workspace .dashboard-metric {
+  position: relative;
+  overflow: hidden;
+  min-height: 7.5rem;
+}
+
+.admin-workspace .dashboard-metric::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: hsl(var(--primary));
+  content: "";
+}
+
+.admin-workspace .dashboard-metric:nth-child(even)::before {
+  background: hsl(var(--success));
+}
+
+.admin-workspace .dashboard-metric :where(.text-red-600, .text-purple-600, .text-orange-600, .text-blue-600, .text-indigo-600, .text-cyan-600, .text-yellow-600, .text-emerald-600) {
+  color: hsl(var(--primary)) !important;
+}
+
+@media (max-width: 768px) {
+  .admin-workspace .management-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-workspace .management-heading > *:last-child {
+    width: 100%;
+  }
+}
+
 @media (max-width: 640px) {
   .page-heading {
     align-items: flex-start;
