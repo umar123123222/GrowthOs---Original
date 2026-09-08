@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, ArrowRight, Star } from "lucide-react";
+import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, ArrowRight, Star, ExternalLink } from "lucide-react";
 import { useCourseRecordings } from "@/hooks/useCourseRecordings";
 import SuccessPartner from "@/components/SuccessPartner";
 import { LectureRating } from "@/components/LectureRating";
@@ -524,6 +524,23 @@ const VideoPlayer = () => {
           <ArrowLeft className="w-4 h-4" />
           Back to Videos
         </Button>
+        {currentVideo?.id && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() =>
+              window.open(
+                `/watch?id=${currentVideo.id}&title=${encodeURIComponent(currentVideo.title || '')}`,
+                '_blank',
+                'noopener,noreferrer'
+              )
+            }
+          >
+            <ExternalLink className="w-4 h-4" />
+            Open in full tab
+          </Button>
+        )}
       </div>
 
       {showSoftWarning && (
