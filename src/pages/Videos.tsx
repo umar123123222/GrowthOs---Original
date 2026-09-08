@@ -489,6 +489,7 @@ const Videos = () => {
                                 index={index}
                                 userLMSStatus={userLMSStatus}
                                 onWatch={handleWatchRecording}
+                                highlighted={recording.id === highlightedRecordingId}
                               />
                             ))}
                           </div>
