@@ -62,6 +62,8 @@ const Videos = () => {
   const [searchParams] = useSearchParams();
   const forcedCourseId = searchParams.get("courseId");
   const forcedPathwayId = searchParams.get("pathwayId");
+  const focusRecordingId = searchParams.get("recordingId");
+  const [highlightedRecordingId, setHighlightedRecordingId] = useState<string | null>(null);
 
   // Show the pathway (multi-course) view only when no single course is requested
   const usePathwayView =

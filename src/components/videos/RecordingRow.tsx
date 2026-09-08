@@ -10,6 +10,7 @@ interface RecordingRowProps {
   index: number;
   userLMSStatus: string;
   onWatch: (recording: CourseRecording) => void;
+  highlighted?: boolean;
 }
 
 export const RecordingRow: React.FC<RecordingRowProps> = ({
@@ -17,14 +18,18 @@ export const RecordingRow: React.FC<RecordingRowProps> = ({
   index,
   userLMSStatus,
   onWatch,
+  highlighted = false,
 }) => {
   const navigate = useNavigate();
   const isActive = recording.isUnlocked && userLMSStatus === 'active';
 
   return (
     <div
+      id={`recording-row-${recording.id}`}
       className={`flex items-center gap-2 sm:gap-4 p-3 sm:p-4 rounded-lg border transition-all ${
-        isActive
+        highlighted
+          ? 'bg-primary/5 border-primary ring-2 ring-primary/40 shadow-sm'
+          : isActive
           ? 'bg-card border-border hover:border-primary/30 hover:shadow-sm'
           : 'bg-muted/30 border-muted'
       }`}
