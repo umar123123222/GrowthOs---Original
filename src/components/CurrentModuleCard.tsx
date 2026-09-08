@@ -27,11 +27,10 @@ const CurrentModuleCard: React.FC<CurrentModuleCardProps> = ({
     }
     return modules[0];
   }, [modules, currentVideoId]);
-  if (loading || !currentModule) return null;
-  const lessons: any[] = Array.isArray(currentModule.lessons) ? currentModule.lessons : [];
-  const watchedCount = lessons.filter((l: any) => l?.watched || l?.completed).length;
-  const total = lessons.length || 1;
-  const progress = Math.round(watchedCount / total * 100);
+  const lessons: any[] = React.useMemo(
+    () => (Array.isArray(currentModule?.lessons) ? currentModule.lessons : []),
+    [currentModule]
+  );
 
   // Show only the next 5 recordings, starting from the current lesson
   // (or the first unwatched lesson if the current one is not in this module).
@@ -44,6 +43,11 @@ const CurrentModuleCard: React.FC<CurrentModuleCardProps> = ({
     return firstUnwatched !== -1 ? firstUnwatched : 0;
   }, [lessons, currentVideoId]);
   const nextLessons = lessons.slice(startIndex, startIndex + 5);
+
+  if (loading || !currentModule) return null;
+  const watchedCount = lessons.filter((l: any) => l?.watched || l?.completed).length;
+  const total = lessons.length || 1;
+  const progress = Math.round(watchedCount / total * 100);
   const handleLessonClick = (lesson: any) => {
     if (lesson?.locked) return;
     navigate(`/video-player?id=${lesson.id}&title=${encodeURIComponent(lesson.title || '')}`);
