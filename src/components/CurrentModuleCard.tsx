@@ -50,7 +50,7 @@ const CurrentModuleCard: React.FC<CurrentModuleCardProps> = ({
   };
   return <Card key={currentModule.id}>
       <CardHeader className="bg-white">
-        <CardTitle className="text-lg">{currentModule.title || "Current Module"}</CardTitle>
+        <CardTitle className="text-lg">Next recordings</CardTitle>
         <Progress value={progress} className="h-2" />
       </CardHeader>
       <CardContent>
