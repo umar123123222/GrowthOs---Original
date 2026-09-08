@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, ArrowRight, Star, ExternalLink } from "lucide-react";
+import { CheckCircle, ArrowLeft, Play, Lock, ArrowRight, Star, ExternalLink } from "lucide-react";
 import { useCourseRecordings } from "@/hooks/useCourseRecordings";
 import { LectureRating } from "@/components/LectureRating";
 import { supabase } from "@/integrations/supabase/client";
