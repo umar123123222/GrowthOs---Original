@@ -303,7 +303,7 @@ const Catalog = () => {
                       </Badge>
                     </div>
 
-                    <CardContent className="flex min-h-28 flex-col gap-4 px-5 pb-5 pt-7">
+                    <CardContent className="flex min-h-28 flex-col gap-4 px-5 pb-5 pt-7 lg:pt-[38px]">
                       <div className="min-w-0">
                         <h3 className="font-semibold text-foreground line-clamp-1">
                           {pathway.name}
@@ -423,7 +423,7 @@ const Catalog = () => {
                       )}
                     </div>
 
-                    <CardContent className="flex min-h-28 flex-col gap-4 px-5 pb-5 pt-7">
+                    <CardContent className="flex min-h-28 flex-col gap-4 px-5 pb-5 pt-7 lg:pt-[38px]">
                       <div className="min-w-0">
                         <h3 className="font-semibold text-foreground line-clamp-1">
                           {course.title}
