@@ -18,6 +18,7 @@ import { ENV_CONFIG } from '@/lib/env-config';
 import { TEXT_CONTENT } from '@/config/text-content';
 import { logUserActivity, ACTIVITY_TYPES } from '@/lib/activity-logger';
 import { LiveChatWidget } from '@/components/LiveChatWidget';
+import idmLogo from '@/assets/idm-logo-transparent.png';
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -252,9 +253,9 @@ const Login = () => {
         <div className="h-1 bg-[var(--gradient-success)]" />
         <CardHeader className="text-center pb-6 pt-8">
           <img
-            src="/lovable-uploads/27419a93-c883-4326-ad0d-da831b3cc534.png"
+            src={idmLogo}
             alt="IDM Pakistan"
-            className="mx-auto mb-5 h-20 w-auto max-w-[240px] object-contain mix-blend-multiply"
+            className="mx-auto mb-5 h-20 w-auto max-w-[240px] object-contain"
           />
           <h1 className="font-sans text-3xl font-semibold text-foreground mb-2">
             {TEXT_CONTENT.WELCOME_MESSAGE}
