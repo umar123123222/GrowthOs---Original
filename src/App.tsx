@@ -257,7 +257,10 @@ const App = () => {
                       <OnboardingWrapper user={user} />
                     } />
                   ) : (
-                    <Route path="/" element={<Layout user={user} />}>
+                    <>
+                      {/* Standalone full-tab viewing page (no sidebar/header) */}
+                      <Route path="/watch" element={<Watch />} />
+                      <Route path="/" element={<Layout user={user} />}>
                       {/* Role-based dashboard routing */}
                       <Route index element={
                         user.role === 'admin' ? <AdminDashboard /> :
