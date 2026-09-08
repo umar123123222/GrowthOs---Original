@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, Shield, Banknote, Activity, AlertTriangle, BookOpen, Video, FileText, GraduationCap } from 'lucide-react';
 import { RoleGuard } from '@/components/RoleGuard';
-import { useRecoveryRate } from '@/hooks/useRecoveryRate';
 import { ModulesManagement } from '@/components/superadmin/ModulesManagement';
 import { RecordingsManagement } from '@/components/superadmin/RecordingsManagement';
 import { AssignmentManagement } from '@/components/assignments/AssignmentManagement';
@@ -24,7 +23,6 @@ import { PathwayManagement } from '@/components/superadmin/PathwayManagement';
 import { BatchManagement } from '@/components/batch';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ENV_CONFIG } from '@/lib/env-config';
 import { ContentScheduleCalendar } from '@/components/admin/ContentScheduleCalendar';
 import ResourcesManagement from '@/pages/admin/ResourcesManagement';
 import DataAudit from '@/pages/admin/DataAudit';
@@ -37,7 +35,6 @@ interface DashboardStats {
   activeStudents: number;
   studentsUsingLMS: number;
   courseCompletionRate: number;
-  recoveryRate: number;
   totalRevenue: number;
   totalPaidInvoices: number;
 }
@@ -106,7 +103,6 @@ export default function SuperadminDashboard() {
 }
 function DashboardContent() {
   const navigate = useNavigate();
-  const { data: recoveryStats, isLoading: recoveryLoading } = useRecoveryRate();
   const [stats, setStats] = useState<DashboardStats & { totalCourses: number }>({
     totalAdmins: 0,
     totalSuperadmins: 0,
@@ -115,7 +111,6 @@ function DashboardContent() {
     activeStudents: 0,
     studentsUsingLMS: 0,
     courseCompletionRate: 0,
-    recoveryRate: 0,
     totalRevenue: 0,
     totalPaidInvoices: 0,
     totalCourses: 0
@@ -162,9 +157,6 @@ function DashboardContent() {
         ? Math.round((completedStudents / activeStudents) * 100)
         : 0;
 
-      // Use configurable recovery rate since performance_record table doesn't exist
-      let recoveryRate = ENV_CONFIG.DEFAULT_RECOVERY_RATE;
-
       // Fetch revenue data from paid invoices
       const { data: invoiceData, error: invoiceError } = await supabase
         .from('invoices')
@@ -186,7 +178,6 @@ function DashboardContent() {
         activeStudents,
         studentsUsingLMS,
         courseCompletionRate,
-        recoveryRate,
         totalRevenue,
         totalPaidInvoices,
         totalCourses: courses?.length || 0
@@ -308,31 +299,6 @@ function DashboardContent() {
           <CardContent>
             <div className="text-3xl font-bold text-cyan-900">{stats.courseCompletionRate}%</div>
             <p className="text-xs text-muted-foreground">Active students who completed the course</p>
-          </CardContent>
-        </Card>
-
-        <Card 
-          className="dashboard-metric"
-          onClick={() => navigate('/superadmin?tab=analytics')}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-yellow-800">Recovery Rate</CardTitle>
-            <Activity className="h-5 w-5 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            {recoveryLoading ? (
-              <div className="animate-pulse">
-                <div className="h-8 bg-muted rounded w-16 mb-2"></div>
-                <div className="h-3 bg-muted rounded w-32"></div>
-              </div>
-            ) : (
-              <>
-                <div className="text-3xl font-bold text-yellow-900">{recoveryStats?.recovery_rate || 0}%</div>
-                <p className="text-xs text-muted-foreground">
-                  {recoveryStats?.successful_recoveries || 0} of {recoveryStats?.total_messages_sent || 0} messages
-                </p>
-              </>
-            )}
           </CardContent>
         </Card>
 
