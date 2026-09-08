@@ -267,6 +267,42 @@ const Videos = () => {
       .filter(Boolean) as typeof modules;
   }, [modules, query]);
 
+  // When opened from "Go to Videos": expand the module containing the target
+  // recording and scroll it (and the next one) into view.
+  useEffect(() => {
+    if (!focusRecordingId || recordingsLoading || modules.length === 0) return;
+    const targetModule = modules.find((m) =>
+      m.recordings.some((r: any) => r.id === focusRecordingId)
+    );
+    if (!targetModule) return;
+
+    setExpandedModules((prev) => new Set(prev).add(targetModule.id));
+    setHighlightedRecordingId(focusRecordingId);
+
+    // Find the last watched recording just before the target so the user sees
+    // both the last-watched and next lesson; fall back to the target itself.
+    const flat = targetModule.recordings as any[];
+    const targetIndex = flat.findIndex((r) => r.id === focusRecordingId);
+    let scrollToId = focusRecordingId;
+    for (let i = targetIndex - 1; i >= 0; i--) {
+      if (flat[i]?.isWatched) {
+        scrollToId = flat[i].id;
+        break;
+      }
+    }
+
+    const timer = setTimeout(() => {
+      document
+        .getElementById(`recording-row-${scrollToId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 350);
+    const clearTimer = setTimeout(() => setHighlightedRecordingId(null), 5000);
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(clearTimer);
+    };
+  }, [focusRecordingId, recordingsLoading, modules]);
+
   // Auto-expand modules when searching
   const effectiveExpanded = useMemo(() => {
     if (query) return new Set(filteredModules.map((m) => m.id));
