@@ -7,7 +7,6 @@ import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, ArrowLeft, Play, Lock, MessageCircle, ArrowRight, Star, ExternalLink } from "lucide-react";
 import { useCourseRecordings } from "@/hooks/useCourseRecordings";
-import SuccessPartner from "@/components/SuccessPartner";
 import { LectureRating } from "@/components/LectureRating";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -63,7 +62,6 @@ const VideoPlayer = () => {
     user,
     loading: authLoading
   } = useAuth();
-  const [showSuccessPartner, setShowSuccessPartner] = useState(false);
   const [checkedItems, setCheckedItems] = useState<{
     [key: number]: boolean;
   }>({});
@@ -683,47 +681,11 @@ const VideoPlayer = () => {
 
         {/* Sidebar */}
         <div className="space-y-6">
-          {/* Success Partner Assistant - Hidden on mobile */}
-          <Card className="hidden sm:block bg-gradient-to-r from-blue-50 to-green-50 border-blue-200">
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-green-600 rounded-full mr-2 flex items-center justify-center">
-                  <MessageCircle className="w-4 h-4 text-white" />
-                </div>
-                Success Partner
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-3">
-                I'm here to help! Ask me anything about this video or your learning journey.
-              </p>
-              <Button 
-                size="sm" 
-                className="w-full" 
-                onClick={() => setShowSuccessPartner(true)}
-                disabled={authLoading || !user?.id || !user?.email}
-              >
-                {authLoading ? 'Loading...' : 'Ask Partner'}
-              </Button>
-            </CardContent>
-          </Card>
-
           {/* Module Progress - current module only */}
           <CurrentModuleCard currentVideoId={currentVideo?.id} />
 
         </div>
       </div>
-
-      {showSuccessPartner && !authLoading && user?.id && user?.email && (
-        <SuccessPartner 
-          onClose={() => setShowSuccessPartner(false)}
-          user={{
-            id: user.id,
-            full_name: user.full_name || user.email.split('@')[0] || 'Student',
-            email: user.email
-          }}
-        />
-      )}
     </div>;
   };
 export default VideoPlayer;
