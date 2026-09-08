@@ -346,11 +346,11 @@ All colors MUST be HSL.
   --success: 148 79% 37%;
   --accent: 214 70% 95%;
   --border: 214 28% 89%;
-  --sidebar-background: 218 40% 14%;
-  --sidebar-foreground: 214 25% 78%;
-  --sidebar-accent: 218 32% 20%;
-  --sidebar-accent-foreground: 0 0% 100%;
-  --sidebar-border: 218 25% 24%;
+  --sidebar-background: 0 0% 100%;
+  --sidebar-foreground: 218 24% 28%;
+  --sidebar-accent: 214 70% 96%;
+  --sidebar-accent-foreground: 214 80% 42%;
+  --sidebar-border: 214 28% 89%;
 }
 
 .admin-workspace .app-header {
@@ -373,12 +373,12 @@ All colors MUST be HSL.
 }
 
 .admin-workspace .app-sidebar .app-navigation :where(a.bg-primary\/10, a.text-primary) {
-  background: hsl(var(--primary));
-  color: hsl(var(--primary-foreground));
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
 }
 
 .admin-workspace .app-sidebar .app-navigation :where(a.bg-primary\/10, a.text-primary) svg {
-  color: hsl(var(--primary-foreground));
+  color: hsl(var(--primary));
 }
 
 .admin-workspace .app-content > div {
