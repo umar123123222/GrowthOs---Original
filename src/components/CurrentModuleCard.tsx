@@ -55,7 +55,7 @@ const CurrentModuleCard: React.FC<CurrentModuleCardProps> = ({
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {lessons.map((lesson: any) => {
+          {nextLessons.map((lesson: any) => {
           const isCurrent = currentVideoId && String(lesson.id) === String(currentVideoId);
           const isWatched = !!(lesson?.watched || lesson?.completed);
           const rowClass = lesson?.locked ? "opacity-50 cursor-not-allowed" : isCurrent ? "bg-blue-50 border border-blue-200" : "hover:bg-gray-50";
