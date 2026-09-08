@@ -18,6 +18,7 @@ import { ENV_CONFIG } from '@/lib/env-config';
 import { TEXT_CONTENT } from '@/config/text-content';
 import { logUserActivity, ACTIVITY_TYPES } from '@/lib/activity-logger';
 import { LiveChatWidget } from '@/components/LiveChatWidget';
+import idmLogo from '@/assets/idm-pakistan-logo.jpg.asset.json';
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -246,10 +247,16 @@ const Login = () => {
       setIsLoading(false);
     }
   };
-  return <div className="min-h-screen bg-background flex items-center justify-center p-4 sm:p-8">
-      <Card className="w-full max-w-md overflow-hidden border-border bg-card shadow-elevated animate-fade-in">
-        <div className="h-1 bg-primary" />
+  return <div className="relative min-h-screen overflow-hidden bg-[var(--gradient-hero)] flex items-center justify-center p-4 sm:p-8">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary-foreground)/0.14),transparent_42%)]" aria-hidden="true" />
+      <Card className="relative z-10 w-full max-w-md overflow-hidden border-primary-foreground/20 bg-card/95 shadow-elevated backdrop-blur animate-fade-in">
+        <div className="h-1 bg-[var(--gradient-success)]" />
         <CardHeader className="text-center pb-6 pt-8">
+          <img
+            src={idmLogo.url}
+            alt="IDM Pakistan"
+            className="mx-auto mb-5 h-20 w-auto max-w-[240px] object-contain mix-blend-multiply"
+          />
           <h1 className="font-sans text-3xl font-semibold text-foreground mb-2">
             {TEXT_CONTENT.WELCOME_MESSAGE}
           </h1>
@@ -305,7 +312,7 @@ const Login = () => {
               <FieldError error={passwordError} />
             </div>
             
-            <Button type="submit" className="w-full h-11 group" disabled={isLoading}>
+            <Button type="submit" className="w-full h-11 group border-0 bg-[var(--gradient-success)] text-primary-foreground hover:opacity-90" disabled={isLoading}>
               {isLoading ? <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Signing In...</span>
