@@ -888,7 +888,7 @@ export function StudentDashboard() {
 
 
       {/* Interactive Three-Card Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className={isSharedAccount ? "grid grid-cols-1 gap-4" : "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"}>
         {/* Continue Learning Card - Shows current course/lesson status with lock reason */}
 
         {(() => {
