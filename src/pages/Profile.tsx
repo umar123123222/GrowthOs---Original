@@ -292,7 +292,7 @@ const Profile = () => {
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             {isSharedAccount && (
-              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+              <div className="mt-[10px] rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                 This is a shared account. Contact support to update these details.
               </div>
             )}
