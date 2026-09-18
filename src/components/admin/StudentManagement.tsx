@@ -86,6 +86,7 @@ export const StudentManagement = () => {
   const [feesStructureFilter, setFeesStructureFilter] = useState('all');
   const [invoiceFilter, setInvoiceFilter] = useState('all');
   const [batchFilter, setBatchFilter] = useState('all');
+  const [sharedFilter, setSharedFilter] = useState('all');
   const [batchOptions, setBatchOptions] = useState<{id: string; name: string}[]>([]);
   const [studentBatchMap, setStudentBatchMap] = useState<Map<string, string[]>>(new Map());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -142,7 +143,7 @@ export const StudentManagement = () => {
   useEffect(() => {
     filterStudents();
     setCurrentPage(1); // Reset page when filters change
-  }, [searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, batchFilter]);
+  }, [searchTerm, lmsStatusFilter, feesStructureFilter, invoiceFilter, batchFilter, sharedFilter]);
 
   useEffect(() => {
     filterStudents();
@@ -439,6 +440,14 @@ export const StudentManagement = () => {
           return batches.includes(batchFilter);
         });
       }
+    }
+
+    // Apply shared-account filter
+    if (sharedFilter !== 'all') {
+      filtered = filtered.filter(student => {
+        const isShared = Boolean((student as any).is_shared_account);
+        return sharedFilter === 'shared' ? isShared : !isShared;
+      });
     }
 
     setFilteredStudents(filtered);
@@ -1643,6 +1652,17 @@ export const StudentManagement = () => {
             {batchOptions.map(batch => (
               <SelectItem key={batch.id} value={batch.id}>{batch.name}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={sharedFilter} onValueChange={setSharedFilter}>
+          <SelectTrigger className="w-32 sm:w-40">
+            <SelectValue placeholder="Account Type" />
+          </SelectTrigger>
+          <SelectContent className="bg-white z-50">
+            <SelectItem value="all">All Accounts</SelectItem>
+            <SelectItem value="shared">Shared Only</SelectItem>
+            <SelectItem value="regular">Regular Only</SelectItem>
           </SelectContent>
         </Select>
       </div>
