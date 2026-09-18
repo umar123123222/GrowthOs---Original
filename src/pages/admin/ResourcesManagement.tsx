@@ -486,8 +486,10 @@ function ResourceDialog({
   const [audiences, setAudiences] = useState(
     (resource?.resource_audiences ?? []).map((a) => ({ audience_type: a.audience_type, target_id: a.target_id }))
   );
+  const showToAll = audiences.some((a) => a.audience_type === "all");
   const upsert = useUpsertResource();
   const { toast } = useToast();
+
 
   const save = async () => {
     if (!title.trim() || !sectionId) {
