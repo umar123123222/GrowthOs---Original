@@ -418,7 +418,7 @@ const Videos = () => {
             {/* Course progress card - show when NOT in pathway mode */}
             {activeCourse && totalRecordings > 0 && (
               <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20">
-                <CardContent className="p-4">
+                <CardContent className="px-4 pb-4 pt-[26px]">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <BookOpen className="h-5 w-5 text-primary" />
