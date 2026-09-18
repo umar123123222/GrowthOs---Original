@@ -56,15 +56,25 @@ interface CompanyDetails {
 }
 
 function generateSecurePassword(): string {
-  const length = 12;
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
-  let password = '';
-  
-  for (let i = 0; i < length; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const digits = '0123456789';
+  const symbols = '!@#$%^&*()_+-=';
+  const all = upper + lower + digits + symbols;
+
+  const pick = (set: string) => set.charAt(Math.floor(Math.random() * set.length));
+
+  // Guarantee at least one character from each required class
+  const chars = [pick(upper), pick(lower), pick(digits), pick(symbols)];
+  while (chars.length < 12) chars.push(pick(all));
+
+  // Shuffle so the guaranteed characters aren't always in the same positions
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]];
   }
-  
-  return password;
+
+  return chars.join('');
 }
 
 async function hashPassword(password: string): Promise<string> {
