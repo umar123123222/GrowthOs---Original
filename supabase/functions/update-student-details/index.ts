@@ -26,6 +26,7 @@ interface UpdateStudentRequest {
   phone?: string;
   resend_credentials?: boolean;
   reset_password?: string;
+  is_shared_account?: boolean;
   // Access control settings
   enrollment_id?: string;
   batch_id?: string | null;
@@ -92,6 +93,7 @@ serve(async (req) => {
       phone, 
       resend_credentials,
       reset_password,
+      is_shared_account,
       enrollment_id,
       batch_id,
       drip_override,

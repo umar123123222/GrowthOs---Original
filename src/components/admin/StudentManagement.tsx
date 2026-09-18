@@ -1718,7 +1718,14 @@ export const StudentManagement = () => {
                         <Checkbox checked={selectedStudents.has(student.id)} onCheckedChange={checked => handleSelectStudent(student.id, checked as boolean)} />
                       </TableCell>
                       <TableCell className="font-medium">{student.student_id}</TableCell>
-                      <TableCell>{student.full_name}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span>{student.full_name}</span>
+                          {(student as any).is_shared_account && (
+                            <Badge variant="outline" className="text-xs">Shared</Badge>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell>{student.email}</TableCell>
                       <TableCell>{student.phone || 'N/A'}</TableCell>
                        <TableCell>{getDisplayFeesStructureLabel(student)}</TableCell>
