@@ -284,18 +284,18 @@ const App = () => {
                       
                       {/* Shared routes */}
                       <Route path="catalog" element={<Catalog />} />
-                      <Route path="certificates" element={<Certificates />} />
+                      <Route path="certificates" element={<SharedAccountRouteGuard><Certificates /></SharedAccountRouteGuard>} />
                       <Route path="videos" element={<Videos />} />
                       <Route path="videos/:moduleId/:lessonId" element={<VideoPlayer />} />
                       <Route path="video-player" element={<VideoPlayer />} />
-                      <Route path="assignments" element={<Assignments user={user} />} />
-                      <Route path="leaderboard" element={<Leaderboard />} />
+                      <Route path="assignments" element={<SharedAccountRouteGuard><Assignments user={user} /></SharedAccountRouteGuard>} />
+                      <Route path="leaderboard" element={<SharedAccountRouteGuard><Leaderboard /></SharedAccountRouteGuard>} />
                       <Route path="live-sessions" element={<LiveSessions user={user} />} />
                       
                       <Route path="messages" element={<Messages />} />
-                      <Route path="support" element={<Support />} />
+                      <Route path="support" element={<SharedAccountRouteGuard><Support /></SharedAccountRouteGuard>} />
                       <Route path="support-details" element={<SupportDetails />} />
-                      <Route path="connect" element={<Connect />} />
+                      <Route path="connect" element={<SharedAccountRouteGuard><Connect /></SharedAccountRouteGuard>} />
                       <Route path="profile" element={<Profile />} />
                       <Route path="notifications" element={<Notifications />} />
                       <Route path="resources" element={<Resources />} />
@@ -314,8 +314,8 @@ const App = () => {
                           <AtRiskStudents />
                         </RoleGuard>
                       } />
-                      <Route path="shopify-dashboard" element={<ShopifyDashboard />} />
-                      <Route path="meta-ads-dashboard" element={<MetaAdsDashboard />} />
+                      <Route path="shopify-dashboard" element={<SharedAccountRouteGuard><ShopifyDashboard /></SharedAccountRouteGuard>} />
+                      <Route path="meta-ads-dashboard" element={<SharedAccountRouteGuard><MetaAdsDashboard /></SharedAccountRouteGuard>} />
                       
                       {/* Role-specific routes with RoleGuard */}
                       <Route path="admin" element={

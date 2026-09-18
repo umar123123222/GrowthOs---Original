@@ -130,7 +130,27 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
   const [loading, setLoading] = useState(false);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
+  const [isSharedAccount, setIsSharedAccount] = useState(false);
   const { toast } = useToast();
+
+  // The analytics list that opens this dialog does not carry the shared-account
+  // flag, so read it for the opened student and mark the header accordingly.
+  useEffect(() => {
+    if (!open || !student?.id) {
+      setIsSharedAccount(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('users')
+        .select('is_shared_account')
+        .eq('id', student.id)
+        .maybeSingle();
+      if (!cancelled) setIsSharedAccount(Boolean((data as any)?.is_shared_account));
+    })();
+    return () => { cancelled = true; };
+  }, [open, student?.id]);
 
   useEffect(() => {
     if (!open || !student) return;
@@ -183,8 +203,13 @@ export const StudentEngagementDetail = ({ open, onOpenChange, student }: Props) 
             <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
               {student?.full_name?.charAt(0)?.toUpperCase() || '?'}
             </div>
-            <div>
-              <DialogTitle className="text-lg leading-tight">{student?.full_name}</DialogTitle>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-lg leading-tight">{student?.full_name}</DialogTitle>
+                {isSharedAccount && (
+                  <Badge variant="outline" className="text-xs shrink-0">Shared</Badge>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground">{student?.email}</p>
             </div>
           </div>
