@@ -74,20 +74,12 @@ const Videos = () => {
 
   // In pathway mode, force active course to current pathway course
   const activeCourseId =
-    forcedCourseId ||
-    (usePathwayView && pathwayState
-      ? pathwayState.currentCourseId
-      : defaultActiveCourse?.id || null);
+    forcedCourseId || (usePathwayView && pathwayState ? pathwayState.currentCourseId : defaultActiveCourse?.id || null);
 
   const activeCourse =
     enrolledCourses.find((c) => c.id === activeCourseId) || (forcedCourseId ? null : defaultActiveCourse);
 
-  const {
-    modules,
-    courseProgress,
-    loading: recordingsLoading,
-    refreshData,
-  } = useCourseRecordings(activeCourseId);
+  const { modules, courseProgress, loading: recordingsLoading, refreshData } = useCourseRecordings(activeCourseId);
 
   const { markRecordingWatched } = useProgressTracker(user);
 
@@ -102,11 +94,7 @@ const Videos = () => {
     let cancelled = false;
     const load = async () => {
       if (forcedCourseId) {
-        const { data } = await supabase
-          .from("courses")
-          .select("title")
-          .eq("id", forcedCourseId)
-          .maybeSingle();
+        const { data } = await supabase.from("courses").select("title").eq("id", forcedCourseId).maybeSingle();
         if (!cancelled) setContextTitle(data?.title || null);
       } else if (forcedPathwayId) {
         const { data } = await supabase
@@ -133,20 +121,13 @@ const Videos = () => {
     totalProgress: pathwayTotalProgress,
     loading: pathwayRecordingsLoading,
     refreshData: refreshPathwayRecordings,
-  } = usePathwayGroupedRecordings(
-    usePathwayView && pathwayState ? pathwayState.pathwayId : null,
-    pathwayCourses
-  );
+  } = usePathwayGroupedRecordings(usePathwayView && pathwayState ? pathwayState.pathwayId : null, pathwayCourses);
 
   // Fetch user's LMS status
   React.useEffect(() => {
     const fetchUserLMSStatus = async () => {
       if (!user?.id) return;
-      const { data } = await supabase
-        .from("users")
-        .select("lms_status")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data } = await supabase.from("users").select("lms_status").eq("id", user.id).maybeSingle();
       if (data) {
         setUserLMSStatus(data.lms_status || "active");
       }
@@ -159,19 +140,19 @@ const Videos = () => {
     if (!user?.id) return;
 
     const channel = supabase
-      .channel('videos-submission-updates')
+      .channel("videos-submission-updates")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'submissions',
+          event: "UPDATE",
+          schema: "public",
+          table: "submissions",
           filter: `student_id=eq.${user.id}`,
         },
         () => {
           refreshData();
           if (isInPathwayMode) refreshPathwayRecordings();
-        }
+        },
       )
       .subscribe();
 
@@ -186,15 +167,15 @@ const Videos = () => {
       refreshData();
       if (isInPathwayMode) refreshPathwayRecordings();
     };
-    window.addEventListener('lovable:recording-rated', onRated);
-    return () => window.removeEventListener('lovable:recording-rated', onRated);
+    window.addEventListener("lovable:recording-rated", onRated);
+    return () => window.removeEventListener("lovable:recording-rated", onRated);
   }, [isInPathwayMode]);
 
   const handleWatchRecording = async (recording: any) => {
     if (userLMSStatus !== "active") return;
     if (!recording.isUnlocked || !recording.recording_url) return;
     await markRecordingWatched(recording.id);
-    navigate(`/video-player?id=${recording.id}&title=${encodeURIComponent(recording.title || '')}`);
+    navigate(`/video-player?id=${recording.id}&title=${encodeURIComponent(recording.title || "")}`);
   };
 
   const toggleModule = (moduleId: string) => {
@@ -256,9 +237,7 @@ const Videos = () => {
     if (!query) return modules;
     return modules
       .map((module) => {
-        const matchingRecordings = module.recordings.filter(
-          (r: any) => r.title?.toLowerCase().includes(query)
-        );
+        const matchingRecordings = module.recordings.filter((r: any) => r.title?.toLowerCase().includes(query));
         const moduleMatches = module.title?.toLowerCase().includes(query);
         if (moduleMatches) return module; // show full module if title matches
         if (matchingRecordings.length > 0) return { ...module, recordings: matchingRecordings };
@@ -271,9 +250,7 @@ const Videos = () => {
   // recording and scroll it (and the next one) into view.
   useEffect(() => {
     if (!focusRecordingId || recordingsLoading || modules.length === 0) return;
-    const targetModule = modules.find((m) =>
-      m.recordings.some((r: any) => r.id === focusRecordingId)
-    );
+    const targetModule = modules.find((m) => m.recordings.some((r: any) => r.id === focusRecordingId));
     if (!targetModule) return;
 
     setExpandedModules((prev) => new Set(prev).add(targetModule.id));
@@ -292,9 +269,7 @@ const Videos = () => {
     }
 
     const timer = setTimeout(() => {
-      document
-        .getElementById(`recording-row-${scrollToId}`)
-        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.getElementById(`recording-row-${scrollToId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
     }, 350);
     const clearTimer = setTimeout(() => setHighlightedRecordingId(null), 5000);
     return () => {
@@ -418,7 +393,7 @@ const Videos = () => {
             {/* Course progress card - show when NOT in pathway mode */}
             {activeCourse && totalRecordings > 0 && (
               <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20">
-                <CardContent className="px-4 pb-4 pt-[50px]">
+                <CardContent className="px-4 pb-4 pt-[70px]">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <BookOpen className="h-5 w-5 text-primary" />
