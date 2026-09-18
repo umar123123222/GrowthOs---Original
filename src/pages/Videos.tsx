@@ -376,6 +376,7 @@ const Videos = () => {
               totalProgress={pathwayTotalProgress}
               userLMSStatus={userLMSStatus}
               onWatch={handleWatchRecording}
+              hideProgressCard={isSharedAccount}
             />
           </>
         ) : usePathwayView ? (

@@ -15,6 +15,7 @@ interface BatchPathwayViewProps {
   totalProgress: number;
   userLMSStatus: string;
   onWatch: (recording: CourseRecording) => void;
+  hideProgressCard?: boolean;
 }
 
 export const BatchPathwayView: React.FC<BatchPathwayViewProps> = ({
@@ -24,6 +25,7 @@ export const BatchPathwayView: React.FC<BatchPathwayViewProps> = ({
   totalProgress,
   userLMSStatus,
   onWatch,
+  hideProgressCard = false,
 }) => {
   const [expandedCourses, setExpandedCourses] = useState<Set<string>>(() => {
     // Auto-expand the first course that has unwatched unlocked content
@@ -55,6 +57,7 @@ export const BatchPathwayView: React.FC<BatchPathwayViewProps> = ({
   return (
     <div className="space-y-4">
       {/* Overall pathway progress */}
+      {!hideProgressCard && (
       <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-2">
@@ -69,6 +72,7 @@ export const BatchPathwayView: React.FC<BatchPathwayViewProps> = ({
           <Progress value={totalProgress} className="h-2" />
         </CardContent>
       </Card>
+      )}
 
       {/* Course groups */}
       {courseGroups.map(group => {
