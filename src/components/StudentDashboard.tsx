@@ -1080,7 +1080,9 @@ export function StudentDashboard() {
             )}
           </CardContent>
         </Card>
+        </>)}
 
+        {!isSharedAccount && (<>
         {/* Integrations Card */}
         <Card className="dashboard-metric animate-fade-in" style={{ animationDelay: '300ms' }}>
           <CardHeader className="pb-3">
