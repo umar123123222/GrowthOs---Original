@@ -62,6 +62,7 @@ const VideoPlayer = () => {
     user,
     loading: authLoading
   } = useAuth();
+  const isSharedAccount = user?.role === 'student' && Boolean((user as any)?.is_shared_account);
   const [checkedItems, setCheckedItems] = useState<{
     [key: number]: boolean;
   }>({});
@@ -607,8 +608,9 @@ const VideoPlayer = () => {
                   </div>}
                 
 
-                {/* Lecture Rating - Shows after video is marked complete */}
-                {showRating && currentVideo && (
+                {/* Lecture Rating - Shows after video is marked complete. Hidden on
+                    shared accounts: one person's rating hides the prompt for everyone. */}
+                {showRating && currentVideo && !isSharedAccount && (
                   <>
                     <div id="lecture-rating-anchor" className="mt-6 flex items-center gap-3 rounded-lg border border-orange-200 bg-orange-50 p-4">
                       <Star className="w-5 h-5 text-orange-600 shrink-0" />
