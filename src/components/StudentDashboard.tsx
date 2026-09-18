@@ -1140,7 +1140,8 @@ export function StudentDashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>}
+        </>)}
+      </div>
 
       {/* Interactive Milestones & Leaderboard Grid */}
       {!isSharedAccount && <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
