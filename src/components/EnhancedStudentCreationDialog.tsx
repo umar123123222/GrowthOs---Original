@@ -239,7 +239,8 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
         drip_override: formData.drip_override,
         drip_enabled: formData.drip_override ? formData.drip_enabled : undefined,
         sequential_override: formData.sequential_override,
-        sequential_enabled: formData.sequential_override ? formData.sequential_enabled : undefined
+        sequential_enabled: formData.sequential_override ? formData.sequential_enabled : undefined,
+        is_shared_account: formData.is_shared_account
       })
 
       if (result.success) {
