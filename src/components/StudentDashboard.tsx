@@ -896,7 +896,7 @@ export function StudentDashboard() {
           return (
         <Card
           className="dashboard-metric animate-fade-in"
-          onClick={() => navigate(videosUrl)}
+          onClick={() => navigate(isSharedAccount ? '/catalog' : videosUrl)}
         >
           <CardHeader className="pb-3">
             <CardTitle className={`flex items-center gap-2 text-base font-medium ${
