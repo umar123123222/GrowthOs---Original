@@ -237,6 +237,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    const userId = authUser.user.id;
+
+
     // Get the current user who is creating this student and validate discount permissions
     const authHeader = req.headers.get('authorization');
     let createdBy = null;
