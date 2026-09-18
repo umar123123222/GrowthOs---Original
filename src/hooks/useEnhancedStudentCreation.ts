@@ -18,6 +18,7 @@ export interface EnhancedStudentData {
   drip_enabled?: boolean
   sequential_override?: boolean
   sequential_enabled?: boolean
+  is_shared_account?: boolean
 }
 
 export interface EnhancedStudentResponse {
