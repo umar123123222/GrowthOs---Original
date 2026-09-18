@@ -317,7 +317,7 @@ const Videos = () => {
               <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                 {contextTitle || activeCourse?.title || "Available Lessons"}
               </h1>
-              <PendingFeedbackChip />
+              {!isSharedAccount && <PendingFeedbackChip />}
             </div>
             <p className="text-muted-foreground text-sm sm:text-base">
               Watch lessons and complete assignments to track your progress

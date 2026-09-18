@@ -1348,9 +1348,10 @@ const Layout = memo(({
       {/* Floating Activity Button */}
       <ScrollToTop />
       
-      {/* Motivational Notifications for Students */}
-      {user?.role === 'student' && <MotivationalNotifications />}
-      {user?.role === 'student' && <PendingFeedbackPrompt />}
+      {/* Motivational Notifications for Students (shared accounts skip these:
+          they are driven by one blended watch history) */}
+      {user?.role === 'student' && !isSharedStudentAccount && <MotivationalNotifications />}
+      {user?.role === 'student' && !isSharedStudentAccount && <PendingFeedbackPrompt />}
       
       
       {/* Live Chat Widget for Students */}
