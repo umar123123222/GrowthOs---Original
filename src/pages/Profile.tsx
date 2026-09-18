@@ -470,6 +470,7 @@ const Profile = () => {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );
