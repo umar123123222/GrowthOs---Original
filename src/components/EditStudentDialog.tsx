@@ -333,6 +333,20 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
               />
             </div>
 
+            <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+              <Label htmlFor="shared-account-edit" className="flex flex-col gap-1">
+                <span>Shared account</span>
+                <span className="font-normal text-xs text-muted-foreground">
+                  Used by multiple students. They cannot change the name, email or password themselves.
+                </span>
+              </Label>
+              <Switch
+                id="shared-account-edit"
+                checked={isSharedAccount}
+                onCheckedChange={setIsSharedAccount}
+              />
+            </div>
+
             {/* Batch Assignment */}
             {batches.length > 0 && (
               <Card>
