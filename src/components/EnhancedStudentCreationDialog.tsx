@@ -77,7 +77,8 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
     drip_override: false,
     drip_enabled: false,
     sequential_override: false,
-    sequential_enabled: false
+    sequential_enabled: false,
+    is_shared_account: false
   })
   
   const [accessSettingsOpen, setAccessSettingsOpen] = useState(false)
@@ -414,7 +415,21 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
                   />
                 </div>
               </div>
-              
+
+              <div className="flex items-start justify-between gap-4 rounded-lg border p-3">
+                <Label htmlFor="shared-account-create" className="flex flex-col gap-1">
+                  <span className="text-sm">Shared account</span>
+                  <span className="font-normal text-xs text-muted-foreground">
+                    Used by multiple students. They cannot change the name, email or password themselves.
+                  </span>
+                </Label>
+                <Switch
+                  id="shared-account-create"
+                  checked={formData.is_shared_account}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_shared_account: checked }))}
+                />
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="installments" className="text-xs font-medium text-muted-foreground">Number of Installments *</Label>
                 <Select 
