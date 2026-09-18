@@ -34,6 +34,7 @@ const Profile = () => {
   });
   const [batchName, setBatchName] = useState<string | null>(null);
   const [studentCode, setStudentCode] = useState<string | null>(null);
+  const [isSharedAccount, setIsSharedAccount] = useState(false);
   const { toast } = useToast();
 
   // Update profile data when user changes
