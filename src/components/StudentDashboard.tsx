@@ -780,7 +780,20 @@ export function StudentDashboard() {
           </CardContent>
         </Card>
       )}
-      {/* Your Learning Journey Card - Unified for pathway and course mode */}
+      {/* Shared accounts: centered welcome message replaces the goal/journey card */}
+      {isSharedAccount ? (
+        <Card className="border-primary/20 animate-fade-in">
+          <CardContent className="p-6 sm:p-10 text-center">
+            <div className="mx-auto max-w-2xl space-y-2">
+              <h1 className="text-2xl sm:text-3xl font-medium text-primary">Welcome to IDM GrowthOS</h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Choose a module from the catalog to begin watching. Your lessons open as you go.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+      /* Your Learning Journey Card - Unified for pathway and course mode */
       <Card className="border-primary/20 animate-fade-in">
         <CardContent className="p-4 sm:p-6">
           <div className="space-y-4 sm:space-y-5">
@@ -885,6 +898,7 @@ export function StudentDashboard() {
           </div>
         </CardContent>
       </Card>
+      )}
 
 
       {/* Interactive Three-Card Stats Section */}
