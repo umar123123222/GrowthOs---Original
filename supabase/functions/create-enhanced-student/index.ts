@@ -24,6 +24,7 @@ interface CreateEnhancedStudentRequest {
   drip_enabled?: boolean;
   sequential_override?: boolean;
   sequential_enabled?: boolean;
+  is_shared_account?: boolean;
 }
 
 interface CreateEnhancedStudentResponse {
@@ -128,7 +129,8 @@ const handler = async (req: Request): Promise<Response> => {
       drip_override = false,
       drip_enabled,
       sequential_override = false,
-      sequential_enabled
+      sequential_enabled,
+      is_shared_account = false
     }: CreateEnhancedStudentRequest = await req.json();
     console.log('Request data:', { email, full_name, phone, installment_count, course_id, pathway_id, batch_id, total_fee_amount, discount_amount, discount_percentage, drip_override, drip_enabled, sequential_override, sequential_enabled });
 
@@ -289,6 +291,7 @@ const handler = async (req: Request): Promise<Response> => {
         status: 'active',
         lms_status: 'inactive',
         is_temp_password: true,
+        is_shared_account: Boolean(is_shared_account),
         created_by: createdBy
       })
       .select()
