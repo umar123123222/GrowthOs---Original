@@ -133,7 +133,7 @@ serve(async (req) => {
     // Get current student details
     const { data: existingUser, error: fetchError } = await supabaseAdmin
       .from('users')
-      .select('email, password_display')
+      .select('email, password_display, is_shared_account')
       .eq('id', user_id)
       .single();
 
@@ -161,19 +161,47 @@ serve(async (req) => {
     console.log('✅ Successfully updated email in auth.users');
 
     // Update user in public.users
+    const userUpdate: Record<string, any> = {
+      full_name,
+      email,
+      phone: phone || null,
+      updated_at: new Date().toISOString()
+    };
+    if (is_shared_account !== undefined) {
+      userUpdate.is_shared_account = is_shared_account;
+    }
+
     const { error: updateError } = await supabaseAdmin
       .from('users')
-      .update({
-        full_name,
-        email,
-        phone: phone || null,
-        updated_at: new Date().toISOString()
-      })
+      .update(userUpdate)
       .eq('id', user_id);
 
     if (updateError) {
       throw new Error(`Failed to update user: ${updateError.message}`);
     }
+
+    // Log shared-account flag changes so they appear in Activity Logs
+    if (
+      is_shared_account !== undefined &&
+      Boolean(is_shared_account) !== Boolean(existingUser.is_shared_account)
+    ) {
+      try {
+        await supabaseAdmin.from('admin_logs').insert({
+          entity_type: 'user',
+          entity_id: user_id,
+          target_user_id: user_id,
+          performed_by: user.id,
+          action: is_shared_account ? 'shared_account_enabled' : 'shared_account_disabled',
+          description: is_shared_account
+            ? `Shared account mode enabled for ${full_name} (student cannot change name, email or password)`
+            : `Shared account mode disabled for ${full_name}`,
+          data: { is_shared_account: Boolean(is_shared_account) }
+        });
+      } catch (logError) {
+        console.error('Failed to log shared account change:', logError);
+      }
+    }
+
 
     // Update enrollment access settings and discount if provided
     if (enrollment_id) {
