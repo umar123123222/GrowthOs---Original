@@ -340,19 +340,36 @@ const Profile = () => {
               </div>
             </div>
 
-            <div className="flex justify-end pt-4">
-              <Button 
-                onClick={updateProfile}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
-                disabled={loading}
-              >
-                {loading ? "Saving..." : "Save Changes"}
-              </Button>
-            </div>
+            {!isSharedAccount && (
+              <div className="flex justify-end pt-4">
+                <Button 
+                  onClick={updateProfile}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+                  disabled={loading}
+                >
+                  {loading ? "Saving..." : "Save Changes"}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Password Change */}
+        {isSharedAccount ? (
+        <Card className="bg-white shadow-lg">
+          <CardHeader className="bg-orange-50 border-b">
+            <CardTitle className="flex items-center text-lg text-gray-800">
+              <Lock className="w-5 h-5 mr-2 text-orange-600" />
+              Change Password
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <p className="text-sm text-gray-600">
+              This is a shared account. Contact support to update these details.
+            </p>
+          </CardContent>
+        </Card>
+        ) : (
         <Card className="bg-white shadow-lg">
           <CardHeader className="bg-orange-50 border-b">
             <CardTitle className="flex items-center text-lg text-gray-800">
