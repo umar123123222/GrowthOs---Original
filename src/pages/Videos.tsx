@@ -37,6 +37,7 @@ const PendingFeedbackChip = () => {
 const Videos = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const isSharedAccount = user?.role === 'student' && Boolean(user?.is_shared_account);
 
   // Pathway-aware hook
   const {
@@ -358,7 +359,7 @@ const Videos = () => {
         {showCourseGroupedView ? (
           <>
             {/* Pathway Progress Card */}
-            {usePathwayView && pathwayState && (
+            {!isSharedAccount && usePathwayView && pathwayState && (
               <PathwayProgressCard
                 pathwayState={pathwayState}
                 pathwayCourses={pathwayCourses}
@@ -391,7 +392,7 @@ const Videos = () => {
         ) : (
           <>
             {/* Course progress card - show when NOT in pathway mode */}
-            {activeCourse && totalRecordings > 0 && (
+            {!isSharedAccount && activeCourse && totalRecordings > 0 && (
               <Card className="bg-gradient-to-r from-primary/10 via-primary/5 to-background border-primary/20">
                 <CardContent className="px-4 pb-4 pt-[70px]">
                   <div className="flex items-center justify-between mb-2">
