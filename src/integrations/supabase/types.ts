@@ -3414,6 +3414,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          is_shared_account: boolean
           is_temp_password: boolean | null
           last_active_at: string | null
           last_login_at: string | null
@@ -3438,6 +3439,7 @@ export type Database = {
           email: string
           full_name: string
           id?: string
+          is_shared_account?: boolean
           is_temp_password?: boolean | null
           last_active_at?: string | null
           last_login_at?: string | null
@@ -3462,6 +3464,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          is_shared_account?: boolean
           is_temp_password?: boolean | null
           last_active_at?: string | null
           last_login_at?: string | null
