@@ -45,6 +45,7 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
+  const [isSharedAccount, setIsSharedAccount] = useState(false);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const { hasRole } = useAuth();
@@ -105,6 +106,8 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
       setFullName(student.full_name);
       setEmail(student.email);
       setPhone(student.phone || '');
+      setIsSharedAccount(Boolean((student as any).is_shared_account));
+      
       
       // Fetch enrollment data
       const fetchEnrollment = async () => {
@@ -190,6 +193,7 @@ export const EditStudentDialog = ({ open, onOpenChange, student, onStudentUpdate
           full_name: fullName,
           email: email,
           phone: phone,
+          is_shared_account: isSharedAccount,
           resend_credentials: emailChanged,
           // Access settings
           enrollment_id: enrollmentId,
