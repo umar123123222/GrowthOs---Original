@@ -364,7 +364,7 @@ const Profile = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 pt-[10px]">
               This is a shared account. Contact support to update these details.
             </p>
           </CardContent>
