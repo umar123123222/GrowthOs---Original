@@ -268,7 +268,8 @@ export const EnhancedStudentCreationDialog: React.FC<EnhancedStudentCreationDial
             drip_override: false,
             drip_enabled: false,
             sequential_override: false,
-            sequential_enabled: false
+            sequential_enabled: false,
+            is_shared_account: false
           })
           setAccessSettingsOpen(false)
           setShowSuccess(false)
