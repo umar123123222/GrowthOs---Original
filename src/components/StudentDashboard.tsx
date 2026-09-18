@@ -911,9 +911,22 @@ export function StudentDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={isSharedAccount ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-center" : "space-y-3"}>
+            {isSharedAccount ? (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <p className="text-sm text-muted-foreground flex-1">
+                  Watch relevant content by choosing your module from the catalog.
+                </p>
+                <Button size="sm" className="text-sm font-normal shrink-0">
+                  <span className="flex items-center gap-2">
+                    Go to Catalog
+                    <ArrowRight className="w-4 h-4" />
+                  </span>
+                </Button>
+              </div>
+            ) : (
+            <div className="space-y-3">
               {/* Last watched and next lesson in the active course */}
-              <div className={isSharedAccount ? "grid gap-4 sm:grid-cols-2 lg:col-span-2" : "space-y-2"}>
+              <div className="space-y-2">
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Last watched</p>
                   <p className="text-sm font-medium text-foreground line-clamp-1">
