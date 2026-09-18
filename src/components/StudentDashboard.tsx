@@ -925,7 +925,7 @@ export function StudentDashboard() {
                     </p>
                   )}
                 </div>
-                <div className="border-t border-border pt-2">
+                <div className={isSharedAccount ? "sm:border-l sm:border-border sm:pl-4" : "border-t border-border pt-2"}>
                   <p className="text-xs font-medium text-primary">Up next</p>
                   <p className="text-sm font-medium text-foreground line-clamp-1">
                     {nextVideo?.recording_title || (lastWatchedVideo ? 'Course completed' : currentLockReason?.nextLesson || 'No video available')}
