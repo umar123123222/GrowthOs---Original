@@ -245,6 +245,7 @@ const Layout = memo(({
   const isUserSupportMember = user?.role === 'support_member';
   const isUserViewer = user?.role === 'viewer';
   const isUserAdminOrSuperadmin = isUserSuperadmin || isUserAdmin;
+  const isSharedStudentAccount = user?.role === 'student' && Boolean(user?.is_shared_account);
   
   // Close mobile menu on route change
   useEffect(() => {
@@ -766,29 +767,33 @@ const Layout = memo(({
       href: "/resources",
       icon: FolderOpen
     }, {
-      name: "Connect Accounts",
-      href: "/connect",
-      icon: Activity
-    }, {
-      name: "Support",
-      href: "/support",
-      icon: MessageSquare
-    }, {
       name: "Support Details",
       href: "/support-details",
       icon: MessageCircle
     }];
 
+    if (!isSharedStudentAccount) {
+      baseNavigation.push({
+        name: "Connect Accounts",
+        href: "/connect",
+        icon: Activity
+      }, {
+        name: "Support",
+        href: "/support",
+        icon: MessageSquare
+      });
+    }
+
     // Insert dynamic integrations right after Connect Accounts
     const dynamicItems: any[] = [];
-    if (connectionStatus.shopify) {
+    if (!isSharedStudentAccount && connectionStatus.shopify) {
       dynamicItems.push({
         name: "Shopify Dashboard",
         href: "/shopify-dashboard",
         icon: ShoppingBag
       });
     }
-    if (connectionStatus.meta) {
+    if (!isSharedStudentAccount && connectionStatus.meta) {
       dynamicItems.push({
         name: "Meta Ads Dashboard",
         href: "/meta-ads-dashboard",
@@ -810,7 +815,7 @@ const Layout = memo(({
       icon: User
     };
     return [...withIntegrations, profileItem];
-  }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager, isUserSupportMember, isUserViewer, connectionStatus]);
+  }, [isUserSuperadmin, isUserAdmin, isUserMentor, isUserEnrollmentManager, isUserSupportMember, isUserViewer, isSharedStudentAccount, connectionStatus]);
 
   // Auto-expand course menu if any course tab is active
   useEffect(() => {

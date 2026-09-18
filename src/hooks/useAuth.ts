@@ -197,7 +197,7 @@ useEffect(() => {
         .select(`
           id, email, role, full_name, created_at, last_login_at, status, 
           password_display, is_temp_password, updated_at, created_by,
-          lms_status,
+          lms_status, is_shared_account,
           students(onboarding_completed)
         `)
         .eq('id', userId)

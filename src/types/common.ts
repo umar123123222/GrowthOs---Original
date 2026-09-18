@@ -24,6 +24,7 @@ export interface User {
   password_display?: string;
   password_hash?: string;
   is_temp_password?: boolean;
+  is_shared_account?: boolean;
 }
 
 // Legacy interfaces for backward compatibility

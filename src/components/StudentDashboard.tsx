@@ -679,6 +679,8 @@ export function StudentDashboard() {
     safeLogger.debug('StudentDashboard: Rendering main dashboard content');
   }
 
+  const isSharedAccount = Boolean(user?.is_shared_account);
+
   const lastWatchedVideo = recordings
     .filter(recording => recording.isWatched)
     .sort((a, b) => {
@@ -886,7 +888,7 @@ export function StudentDashboard() {
 
 
       {/* Interactive Three-Card Stats Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {!isSharedAccount && <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* Continue Learning Card - Shows current course/lesson status with lock reason */}
 
         {(() => {
@@ -1135,10 +1137,10 @@ export function StudentDashboard() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </div>}
 
       {/* Interactive Milestones & Leaderboard Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {!isSharedAccount && <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Milestones Card */}
         <Card className="hover:shadow-md transition-shadow duration-300 animate-fade-in" style={{ animationDelay: '450ms' }}>
           <CardHeader className="pb-3">
@@ -1261,7 +1263,7 @@ export function StudentDashboard() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </div>}
 
       {/* Connect Accounts Dialog */}
       <ConnectAccountsDialog 
