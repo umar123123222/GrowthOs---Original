@@ -911,9 +911,9 @@ export function StudentDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className={isSharedAccount ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:items-center" : "space-y-3"}>
               {/* Last watched and next lesson in the active course */}
-              <div className="space-y-2">
+              <div className={isSharedAccount ? "grid gap-4 sm:grid-cols-2 lg:col-span-2" : "space-y-2"}>
                 <div>
                   <p className="text-xs font-medium text-muted-foreground">Last watched</p>
                   <p className="text-sm font-medium text-foreground line-clamp-1">
