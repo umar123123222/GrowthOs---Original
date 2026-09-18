@@ -595,8 +595,32 @@ function ResourceDialog({
               Who sees this resource?
             </Label>
             <p className="text-xs text-muted-foreground mb-3">Only active students matching at least one rule below will see this.</p>
-            <AudienceBuilder value={audiences} onChange={setAudiences} />
+
+            <div className="flex items-start gap-3 rounded-lg border bg-background p-3 mb-3">
+              <Switch
+                checked={showToAll}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    setAudiences([{ audience_type: "all", target_id: null }]);
+                  } else {
+                    setAudiences((prev) => prev.filter((a) => a.audience_type !== "all"));
+                  }
+                }}
+              />
+              <div className="space-y-0.5">
+                <Label className="cursor-pointer text-sm font-medium flex items-center gap-2">
+                  <Globe className="h-3.5 w-3.5 text-primary" />
+                  Show to all students
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Every active student sees this, regardless of their batch, course or pathway.
+                </p>
+              </div>
+            </div>
+
+            {!showToAll && <AudienceBuilder value={audiences} onChange={setAudiences} />}
           </div>
+
 
           <div className="flex items-center gap-2 px-1">
             <Switch checked={isActive} onCheckedChange={setIsActive} />
