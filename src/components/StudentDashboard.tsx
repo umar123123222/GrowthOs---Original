@@ -1032,6 +1032,7 @@ export function StudentDashboard() {
                 </span>
               </Button>
             </div>
+            )}
           </CardContent>
         </Card>
           );
