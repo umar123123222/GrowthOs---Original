@@ -53,6 +53,13 @@ const Profile = () => {
     const fetchStudentAndBatch = async () => {
       if (!user?.id) return;
       try {
+        const { data: me } = await supabase
+          .from('users')
+          .select('is_shared_account')
+          .eq('id', user.id)
+          .maybeSingle();
+        if (!cancelled) setIsSharedAccount(Boolean(me?.is_shared_account));
+
         const { data: stu } = await supabase
           .from('students')
           .select('id, student_id')
@@ -284,6 +291,11 @@ const Profile = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
+            {isSharedAccount && (
+              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                This is a shared account. Contact support to update these details.
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium text-gray-700">Full Name</Label>
               <Input
@@ -291,8 +303,9 @@ const Profile = () => {
                 value={profileData.full_name}
                 onChange={(e) => setProfileData({...profileData, full_name: e.target.value})}
                 placeholder="Enter your full name"
-                className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                disabled={loading}
+                className={isSharedAccount ? "bg-gray-100 border-gray-300 cursor-not-allowed" : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"}
+                disabled={loading || isSharedAccount}
+                readOnly={isSharedAccount}
               />
             </div>
             
