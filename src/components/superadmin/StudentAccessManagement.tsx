@@ -326,12 +326,39 @@ export function StudentAccessManagement({
     }
   };
 
+  // A standalone course enrollment never carries a pathway_id; pathway rows are
+  // matched separately so a pathway's first course is not mistaken for one.
   const getEnrollmentForCourse = (courseId: string) => {
-    return enrollments.find(e => e.course_id === courseId);
+    return enrollments.find(e => e.course_id === courseId && !e.pathway_id);
   };
 
   const getEnrollmentForPathway = (pathwayId: string) => {
     return enrollments.find(e => e.pathway_id === pathwayId);
+  };
+
+  // Bulk grants used to always INSERT, which trips the duplicate-enrollment
+  // guard for any course/pathway the student was previously enrolled in
+  // (cancelled or completed) and aborts the whole batch. Reactivate instead.
+  const upsertCourseEnrollment = async (courseId: string, payload: Record<string, any>) => {
+    const existing = getEnrollmentForCourse(courseId);
+    if (existing) {
+      return supabase
+        .from('course_enrollments')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+    }
+    return supabase.from('course_enrollments').insert({ student_id: studentId, course_id: courseId, ...payload });
+  };
+
+  const upsertPathwayEnrollment = async (pathwayId: string, payload: Record<string, any>) => {
+    const existing = getEnrollmentForPathway(pathwayId);
+    if (existing) {
+      return supabase
+        .from('course_enrollments')
+        .update({ status: 'active', updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+    }
+    return supabase.from('course_enrollments').insert({ student_id: studentId, pathway_id: pathwayId, ...payload });
   };
 
   const handleToggleCourse = async (courseId: string) => {
