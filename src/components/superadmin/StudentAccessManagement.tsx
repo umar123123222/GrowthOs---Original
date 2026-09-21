@@ -762,11 +762,9 @@ export function StudentAccessManagement({
       const unassignedCourses = courses.filter(c => !selectedCourses.has(c.id) && !coursesViaPathway.has(c.id));
       const unassignedPathways = pathways.filter(p => !selectedPathways.has(p.id));
 
-      // Insert assignable courses only
+      // Grant assignable courses only
       for (const course of unassignedCourses) {
-        const { error } = await supabase.from('course_enrollments').insert({
-          student_id: studentId,
-          course_id: course.id,
+        const { error } = await upsertCourseEnrollment(course.id, {
           status: 'active',
           progress_percentage: 0,
           enrolled_at: new Date().toISOString()
