@@ -620,9 +620,7 @@ export function StudentAccessManagement({
     setSaving(true);
     try {
       for (const course of unassignedCourses) {
-        const { error } = await supabase.from('course_enrollments').insert({
-          student_id: studentId,
-          course_id: course.id,
+        const { error } = await upsertCourseEnrollment(course.id, {
           enrollment_source: 'direct',
           status: 'active',
           progress_percentage: 0,
