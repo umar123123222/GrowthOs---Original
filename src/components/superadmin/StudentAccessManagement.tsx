@@ -358,7 +358,7 @@ export function StudentAccessManagement({
         .update({ status: 'active', updated_at: new Date().toISOString() })
         .eq('id', existing.id);
     }
-    return supabase.from('course_enrollments').insert({ student_id: studentId, pathway_id: pathwayId, ...payload });
+    return supabase.from('course_enrollments').insert({ student_id: studentId, pathway_id: pathwayId, ...payload } as any);
   };
 
   const handleToggleCourse = async (courseId: string) => {
