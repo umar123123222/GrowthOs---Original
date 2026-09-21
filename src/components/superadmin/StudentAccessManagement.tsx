@@ -792,10 +792,8 @@ export function StudentAccessManagement({
           accessExpiresAt = expiryDate.toISOString();
         }
 
-        const { error } = await supabase.from('course_enrollments').insert({
-          student_id: studentId,
+        const { error } = await upsertPathwayEnrollment(pathway.id, {
           course_id: firstCourseId,
-          pathway_id: pathway.id,
           status: 'active',
           progress_percentage: 0,
           enrolled_at: enrolledAt.toISOString(),
